@@ -12,6 +12,7 @@ import {
 } from '../data/annetteBlackChatConversation'
 import { AgentDetailScreen } from './AgentDetailScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 
 interface Conversation {
   id: string
@@ -32,26 +33,26 @@ const CONVERSATIONS: Conversation[] = [
     verified: true,
     message: 'I am having a very bad headache. I think it is migraine.',
     location: 'Rock Dental Brands',
-    assignee: 'Front desk agent',
+    assignee: 'Front desk agent - North region',
     date: '5:30 PM',
     unread: true,
   },
-  { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', date: '03:25 PM' },
+  { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', assignee: 'Front desk agent - South region', date: '03:25 PM' },
   {
     id: ANNETTE_BLACK_CONVERSATION_ID,
     name: 'Annette Black',
     verified: true,
     message: 'That helped!',
     location: 'Rock Dental Brands',
-    assignee: 'Myna',
+    assignee: 'Front desk agent - North region',
     date: '02:09 PM',
     unread: true,
   },
-  { id: '3', name: 'Wade Warren',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
-  { id: '4', name: 'Floyd Miles',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
-  { id: '5', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
-  { id: '6', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
-  { id: '7', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
+  { id: '3', name: 'Wade Warren',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022', unread: true },
+  { id: '4', name: 'Floyd Miles',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022', unread: true },
+  { id: '5', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
+  { id: '6', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
+  { id: '7', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
 ]
 
 type ChatEvent =
@@ -674,6 +675,7 @@ export function InboxScreen({
   const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const { submitFeedback } = useFeedbackRecommendationsStore()
 
   const showFeedbackToast = (message: string) => {
     setToastMessage(message)
@@ -693,11 +695,23 @@ export function InboxScreen({
     setShareFeedbackMessageId(null)
   }
 
-  const handleShareFeedbackSubmit = (_details: string) => {
+  const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
     setMessageFeedback((prev) => ({ ...prev, [shareFeedbackMessageId]: 'down' }))
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    submitFeedback({
+      text: details,
+      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      conversation: {
+        name: selectedConvo.name,
+        message: details,
+        channel: selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID ? 'Voice' : 'Chat',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+    })
   }
 
   const feedbackForMessage = (messageId: string): MessageFeedbackValue => {

@@ -18,7 +18,7 @@ import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { WorkflowViewerTab } from './WorkflowViewerTab'
 import { RecommendationsTab } from './RecommendationsTab'
-import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
+import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
@@ -315,6 +315,7 @@ export function AgentInstanceScreen({
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
+  const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -350,6 +351,20 @@ export function AgentInstanceScreen({
             row={selectedRun}
             onBack={() => setSelectedRun(null)}
             onViewConversation={() => onNavigateToInbox?.(FRONT_DESK_INBOX_CONVERSATION_ID)}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  if (selectedRecommendationId) {
+    return (
+      <div className="flex h-full flex-col">
+        <TopNav initials="S" />
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <RecommendationDetailScreen
+            recommendationId={selectedRecommendationId}
+            onBack={() => setSelectedRecommendationId(null)}
           />
         </div>
       </div>
@@ -451,8 +466,8 @@ export function AgentInstanceScreen({
           product={product}
         />
       ) : isRecommendationTab ? (
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          {agentName === 'Front desk agent' ? <FrontdeskRecommendationsTab /> : <RecommendationsTab />}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} />
         </div>
       ) : (
         <div className="flex-1 overflow-auto">
