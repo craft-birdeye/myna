@@ -818,13 +818,44 @@ export function classifyFeedbackType(text: string): GapType {
   return scores.action >= scores.procedure ? 'action' : 'procedure'
 }
 
-/** Cleans up raw feedback text for use as a recommendation title — no LLM summarization available. */
-export function titleFromFeedback(text: string): string {
-  const cleaned = text.trim().replace(/\s+/g, ' ')
-  const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-  return capitalized.length > 90 ? `${capitalized.slice(0, 87)}...` : capitalized
+// Known topic phrases, longest/most-specific first — lets the title generator recognize a
+// familiar subject (e.g. "business hours") inside otherwise messy free-text feedback.
+const ACTIONABLE_TOPIC_PHRASES = [
+  'after-hours callback policy', 'callback policy', 'business hours', 'holiday hours',
+  'weekend hours', 'return policy', 'refund policy', 'pricing', 'policy', 'location',
+  'address', 'cost', 'price', 'hours',
+]
+
+function extractKnownTopic(normalized: string): string | null {
+  return ACTIONABLE_TOPIC_PHRASES.find((phrase) => normalized.includes(phrase)) ?? null
 }
 
+/** Turns raw feedback text into an actionable recommendation title (e.g. "Update business
+ *  hours") instead of just echoing back what was typed — no LLM summarization available, so
+ *  this recognizes known topics first, then falls back to stripping common request framing
+ *  ("we need...", "...is needed") and leading with an action verb. */
+export function titleFromFeedback(text: string, gapType: GapType): string {
+  const normalized = text.trim().toLowerCase()
+  const verb = gapType === 'action' ? 'Add' : 'Update'
+  const knownTopic = extractKnownTopic(normalized)
+  if (knownTopic) return `${verb} ${knownTopic}`
+
+  let topic = normalized
+    .replace(/^(we\s+(should|need|require|must)\s+(to\s+)?(give|provide|add|share|have|update)?\s*)/, '')
+    .replace(/^(please\s+)?(add|update|give|provide|share|need|needs|needed)\s+/, '')
+    .replace(/\s+(is|are)\s+needed\s*[.!]*$/, '')
+    .replace(/\s+needed\s*[.!]*$/, '')
+    .replace(/[.!?]+$/, '')
+    .trim()
+
+  if (!topic) topic = normalized.replace(/[.!?]+$/, '').trim()
+  const title = `${verb} ${topic}`
+  return title.length > 90 ? `${title.slice(0, 87)}...` : title
+}
+
+/** For now this always frames a feedback recommendation as raised by several people — a
+ *  placeholder for a real "similar reports" count, tuned so a fresh single-conversation report
+ *  reads as "4 other similar issues raised by 9 users". */
 export function similarIssuesSummary(count: number): string {
-  return count <= 1 ? '1 issue raised by team' : `${count} similar issues raised by team`
+  return `${count + 3} other similar issues raised by ${count + 8} users`
 }

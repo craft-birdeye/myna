@@ -1088,7 +1088,7 @@ function ChangeSummaryCard({
         : `${GAP_LABEL[change.type]} updated`
 
   return (
-    <div className={`flex flex-col rounded-sm border bg-surface ${pending ? 'border-[#fde68a]' : 'border-border'}`}>
+    <div className="flex flex-col rounded-sm border border-border bg-surface">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -1663,24 +1663,8 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
         <div className="flex shrink-0 items-center gap-sm">
           {view === 'chat' && (
             <Chip
-              label={
-                recStatus === 'accepted'
-                  ? 'Accepted'
-                  : recStatus === 'rejected'
-                    ? 'Rejected'
-                    : (rec.manualUpdates?.length ?? 0) > 0
-                      ? 'Action pending'
-                      : 'Open'
-              }
-              variant={
-                recStatus === 'accepted'
-                  ? 'success'
-                  : recStatus === 'rejected'
-                    ? 'danger'
-                    : (rec.manualUpdates?.length ?? 0) > 0
-                      ? 'warning'
-                      : 'neutral'
-              }
+              label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+              variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
             />
           )}
           <button

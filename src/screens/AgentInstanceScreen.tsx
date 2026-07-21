@@ -22,6 +22,7 @@ import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -336,6 +337,8 @@ export function AgentInstanceScreen({
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
+  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
+  const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
   const showHealthcareLogs =
     activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
@@ -454,8 +457,17 @@ export function AgentInstanceScreen({
       </div>
 
       {/* Tabs */}
-      <div className="shrink-0 px-2xl">
+      <div className="flex shrink-0 items-center justify-between px-2xl">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        {isRecommendationTab && hasFeedbackForAgent && (
+          <button
+            type="button"
+            onClick={clearAllFeedback}
+            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+          >
+            Clear human feedback
+          </button>
+        )}
       </div>
 
       {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}

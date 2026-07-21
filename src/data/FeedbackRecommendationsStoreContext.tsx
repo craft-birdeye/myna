@@ -81,7 +81,7 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
         return next
       }
 
-      const title = titleFromFeedback(text)
+      const title = titleFromFeedback(text, gapType)
       // Human feedback is most often a knowledge gap (the agent didn't know something) — those
       // can't be accepted sight-unseen, so route them through the same "upload the real
       // document, then review" gate used for AI-detected knowledge recommendations.
