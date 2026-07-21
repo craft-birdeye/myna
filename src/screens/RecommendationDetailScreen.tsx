@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { ChatBubble, Chip, Icon, RefChip } from '../components'
+import { ChatBubble, ChatSystemLabel, Chip, Icon, RefChip } from '../components'
 import {
   CONV_THREADS,
   GAP_ICON,
@@ -18,6 +18,10 @@ import {
   type Turn,
 } from '../data/recommendationsData'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
+import {
+  ANNETTE_BLACK_CHAT_EVENTS,
+  ANNETTE_BLACK_CONVERSATION_ID,
+} from '../data/annetteBlackChatConversation'
 import { useRecommendationOverridesStore } from '../data/RecommendationOverridesStoreContext'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
@@ -412,19 +416,81 @@ function ConversationThread({ conv, sim, onBack }: { conv: ConversationItem; sim
   )
 }
 
+/** Read-only replay of the real Inbox transcript a piece of human feedback was raised from —
+ *  no feedback thumbs, no compose box, just what actually happened in the conversation. The
+ *  message that was actually marked thumbs-down is flagged with a thumbs-down icon. */
+function RealConversationThread({ flaggedMessageId, onClose }: { flaggedMessageId?: string; onClose: () => void }) {
+  return (
+    <>
+      <div className="flex shrink-0 items-center justify-between border-b border-border py-lg pl-[28px] pr-xl">
+        <span className="text-h3 text-text-primary">Conversation with Annette Black</span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+        >
+          <Icon name="close" size={18} />
+        </button>
+      </div>
+      <div className="flex flex-1 flex-col gap-md overflow-y-auto px-2xl py-lg">
+        {ANNETTE_BLACK_CHAT_EVENTS.map((event) => {
+          if (event.kind === 'date') return <ChatSystemLabel key={event.id} text={event.label} />
+          if (event.kind === 'status') {
+            const label = event.time ? `${event.text} • ${event.time}` : event.text
+            return <ChatSystemLabel key={event.id} text={label} />
+          }
+          const isAgent = event.sender === 'agent'
+          const isFlagged = event.id === flaggedMessageId
+          const bubbleText =
+            event.fields && event.fields.length > 0 ? (
+              <div className="flex flex-col gap-md">
+                {event.fields.map((field) => (
+                  <div key={field.label}>
+                    <p className="m-0 text-small text-text-secondary">{field.label}</p>
+                    <p className="m-0 text-body text-text-primary">{field.value}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              event.text ?? ''
+            )
+          return (
+            <ChatBubble
+              key={event.id}
+              sender={isAgent ? 'business' : 'user'}
+              text={bubbleText}
+              leadingIcon={isFlagged ? <Icon name="thumb_down" size={16} className="mt-1 shrink-0 text-chip-danger-text" /> : undefined}
+            >
+              <span className="flex items-center gap-xs text-small text-text-tertiary">
+                {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
+                {event.time}
+                {!isAgent && event.showLink && <Icon name="link" size={14} className="text-text-tertiary" />}
+              </span>
+            </ChatBubble>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
 function ConversationsDrawer({ rec, open, onClose }: { rec: Recommendation; open: boolean; onClose: () => void }) {
   const [selected, setSelected] = useState<ConversationItem | null>(null)
 
   if (!open) return null
 
   const handleClose = () => { setSelected(null); onClose() }
+  const isRealFeedbackConversation =
+    rec.source === 'feedback' && rec.sourceConversationId === ANNETTE_BLACK_CONVERSATION_ID
 
   return createPortal(
     <>
       <div className="fixed inset-0 z-[200] bg-black/30" onClick={handleClose} aria-hidden />
 
       <div className="fixed bottom-0 right-0 top-0 z-[210] flex w-[650px] flex-col bg-surface shadow-modal">
-        {selected ? (
+        {isRealFeedbackConversation ? (
+          <RealConversationThread flaggedMessageId={rec.sourceMessageId} onClose={handleClose} />
+        ) : selected ? (
           <ConversationThread conv={selected} sim={rec.sim} onBack={() => setSelected(null)} />
         ) : (
           <>

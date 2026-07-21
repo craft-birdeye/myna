@@ -697,7 +697,8 @@ export function InboxScreen({
 
   const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
-    setMessageFeedback((prev) => ({ ...prev, [shareFeedbackMessageId]: 'down' }))
+    const feedbackMessageId = shareFeedbackMessageId
+    setMessageFeedback((prev) => ({ ...prev, [feedbackMessageId]: 'down' }))
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
 
@@ -711,6 +712,8 @@ export function InboxScreen({
         date: selectedConvo.date,
         location: selectedConvo.location,
       },
+      conversationId: selectedConvo.id,
+      messageId: feedbackMessageId,
     })
   }
 

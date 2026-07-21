@@ -13,11 +13,20 @@ interface SubmitFeedbackInput {
   text: string
   agentName: string
   conversation: ConversationItem
+  /** Inbox conversation id the feedback was raised from — carried onto the recommendation so
+   *  "See conversations" can open the real transcript instead of a synthetic one. */
+  conversationId?: string
+  /** Id of the specific message that was marked thumbs-down — carried onto the recommendation so
+   *  the real transcript preview can highlight that exact message. */
+  messageId?: string
 }
 
 interface FeedbackRecommendationsStore {
   feedbackRecommendations: Recommendation[]
   submitFeedback: (input: SubmitFeedbackInput) => void
+  /** Wipes every Human-feedback recommendation across every agent — a clean-slate control for
+   *  clearing out test/demo feedback before a fresh walkthrough. */
+  clearAllFeedback: () => void
 }
 
 const FeedbackRecommendationsStoreContext = createContext<FeedbackRecommendationsStore | null>(null)
@@ -47,7 +56,7 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
     }
   }, [feedbackRecommendations])
 
-  const submitFeedback = ({ text, agentName, conversation }: SubmitFeedbackInput) => {
+  const submitFeedback = ({ text, agentName, conversation, conversationId, messageId }: SubmitFeedbackInput) => {
     const gapType = classifyFeedbackType(text)
     const feedbackKey = text.trim().toLowerCase().replace(/\s+/g, ' ')
 
@@ -92,13 +101,19 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
         source: 'feedback',
         agentName,
         feedbackKey,
+        sourceConversationId: conversationId,
+        sourceMessageId: messageId,
       }
       return [...prev, newRecommendation]
     })
   }
 
+  const clearAllFeedback = () => {
+    setFeedbackRecommendations([])
+  }
+
   return (
-    <FeedbackRecommendationsStoreContext.Provider value={{ feedbackRecommendations, submitFeedback }}>
+    <FeedbackRecommendationsStoreContext.Provider value={{ feedbackRecommendations, submitFeedback, clearAllFeedback }}>
       {children}
     </FeedbackRecommendationsStoreContext.Provider>
   )

@@ -76,6 +76,12 @@ export interface Recommendation {
   source?: 'ai' | 'feedback'
   /** Restricts a recommendation to one agent's table. Omitted = shown for every agent (existing behavior). */
   agentName?: string
+  /** Inbox conversation id this feedback was raised from — lets "See conversations" open the
+   *  actual real transcript instead of a synthetic one. Only set for `source: 'feedback'` rows. */
+  sourceConversationId?: string
+  /** Id of the specific message that was marked thumbs-down — the real transcript preview
+   *  highlights this one with a thumbs-down icon. Only set for `source: 'feedback'` rows. */
+  sourceMessageId?: string
   /**
    * When a recommendation spans more than one gap type (procedure + knowledge + action all at
    * once), this lists each piece separately for the detail screen. Omitted = single-type

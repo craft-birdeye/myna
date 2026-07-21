@@ -75,20 +75,32 @@ export function ChatBubble({
   showFeedback = false,
   feedback = null,
   onFeedbackChange,
+  leadingIcon,
 }: ChatBubbleProps) {
   const isBusiness = sender === 'business'
 
+  const bubble = (
+    <div
+      className={[
+        'rounded-lg text-body leading-[1.5] text-text-primary',
+        isBusiness ? 'bg-[#dbeafe]' : 'bg-[#f0f0f0]',
+        bubbleClassName || 'max-w-[70%] px-md py-sm',
+      ].join(' ')}
+    >
+      {text}
+    </div>
+  )
+
   return (
     <div className={`flex flex-col ${gap} ${isBusiness ? 'items-end' : 'items-start'} ${className}`}>
-      <div
-        className={[
-          'rounded-lg text-body leading-[1.5] text-text-primary',
-          isBusiness ? 'bg-[#dbeafe]' : 'bg-[#f0f0f0]',
-          bubbleClassName || 'max-w-[70%] px-md py-sm',
-        ].join(' ')}
-      >
-        {text}
-      </div>
+      {leadingIcon ? (
+        <div className="flex items-start gap-sm">
+          {leadingIcon}
+          {bubble}
+        </div>
+      ) : (
+        bubble
+      )}
       {showFeedback ? (
         <div className="flex items-center gap-sm">
           <MessageFeedback value={feedback} onChange={onFeedbackChange} />

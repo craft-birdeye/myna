@@ -60,7 +60,7 @@ const COLUMNS: Column<Recommendation>[] = [
 ]
 
 export function RecommendationsTab({ agentName, onSelect }: RecommendationsTabProps) {
-  const { feedbackRecommendations } = useFeedbackRecommendationsStore()
+  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
   const { overrides } = useRecommendationOverridesStore()
   const feedbackForAgent = feedbackRecommendations.filter((rec) => rec.agentName === agentName)
   const data = sortRecommendations([...RECOMMENDATIONS, ...feedbackForAgent]).map((rec) => ({
@@ -70,6 +70,17 @@ export function RecommendationsTab({ agentName, onSelect }: RecommendationsTabPr
 
   return (
     <div className="px-lg py-lg">
+      {feedbackRecommendations.length > 0 && (
+        <div className="mb-md flex justify-end">
+          <button
+            type="button"
+            onClick={clearAllFeedback}
+            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+          >
+            Clear all human feedback
+          </button>
+        </div>
+      )}
       <DataTable
         columns={COLUMNS}
         data={data}
