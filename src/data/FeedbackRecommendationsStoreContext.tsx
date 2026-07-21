@@ -82,6 +82,10 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
       }
 
       const title = titleFromFeedback(text)
+      // Human feedback is most often a knowledge gap (the agent didn't know something) — those
+      // can't be accepted sight-unseen, so route them through the same "upload the real
+      // document, then review" gate used for AI-detected knowledge recommendations.
+      const needsSourceDocument = gapType === 'knowledge'
       const newRecommendation: Recommendation = {
         id: `feedback-${Date.now()}`,
         gapType,
@@ -103,6 +107,17 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
         feedbackKey,
         sourceConversationId: conversationId,
         sourceMessageId: messageId,
+        manualUpdates: needsSourceDocument
+          ? [
+              {
+                icon: 'upload_file',
+                title: 'Upload supporting document',
+                description:
+                  "We don't have this confirmed anywhere yet — upload the relevant document (e.g. hours, policy, pricing) so we can add accurate information to the agent's knowledge.",
+                relatedType: 'knowledge',
+              },
+            ]
+          : undefined,
       }
       return [...prev, newRecommendation]
     })

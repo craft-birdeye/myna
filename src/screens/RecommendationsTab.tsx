@@ -47,7 +47,9 @@ const COLUMNS: Column<Recommendation>[] = [
     label: 'Status',
     width: 120,
     render: (_, rec) => (
-      <span className="text-small text-text-secondary">{rec.status === 'accepted' ? 'Accepted' : 'Open'}</span>
+      <span className="text-small text-text-secondary">
+        {rec.status === 'accepted' ? 'Accepted' : rec.status === 'action_pending' ? 'Action pending' : 'Open'}
+      </span>
     ),
   },
   {
@@ -65,7 +67,12 @@ export function RecommendationsTab({ agentName, onSelect }: RecommendationsTabPr
   const feedbackForAgent = feedbackRecommendations.filter((rec) => rec.agentName === agentName)
   const data = sortRecommendations([...RECOMMENDATIONS, ...feedbackForAgent]).map((rec) => ({
     ...rec,
-    status: overrides[rec.id]?.status === 'accepted' ? 'accepted' : 'open',
+    status:
+      overrides[rec.id]?.status === 'accepted'
+        ? 'accepted'
+        : (rec.manualUpdates?.length ?? 0) > 0
+          ? 'action_pending'
+          : 'open',
   }))
 
   return (

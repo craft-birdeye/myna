@@ -1618,8 +1618,24 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
         <div className="flex shrink-0 items-center gap-sm">
           {view === 'chat' && (
             <Chip
-              label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-              variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
+              label={
+                recStatus === 'accepted'
+                  ? 'Accepted'
+                  : recStatus === 'rejected'
+                    ? 'Rejected'
+                    : (rec.manualUpdates?.length ?? 0) > 0
+                      ? 'Action pending'
+                      : 'Open'
+              }
+              variant={
+                recStatus === 'accepted'
+                  ? 'success'
+                  : recStatus === 'rejected'
+                    ? 'danger'
+                    : (rec.manualUpdates?.length ?? 0) > 0
+                      ? 'warning'
+                      : 'neutral'
+              }
             />
           )}
           <button
