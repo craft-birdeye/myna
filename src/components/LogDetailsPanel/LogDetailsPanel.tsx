@@ -71,12 +71,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?',
     llmResponseTime: '0.42s',
     tts: '700ms',
+    time: '5:30 PM',
   },
   {
     id: 'c1',
     role: 'caller',
     text: 'I am having a very bad headache. I think it is migraine.',
     durationLabel: '5s',
+    time: '5:30 PM',
   },
   {
     id: 'a2',
@@ -85,6 +87,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     llmResponseTime: '0.51s',
     tts: '820ms',
     knowledgeBase: '5s',
+    time: '5:31 PM',
     reasoning:
       "The caller reported a severe headache and suspected a migraine. I need to determine whether the pain is dental in origin — teeth, jaw, or gums — versus general head pain before routing to urgent care or booking.",
     toolCall: {
@@ -101,6 +104,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: 'Now that you ask — it kind of started near my back tooth and spread up.',
     durationLabel: '4s',
+    time: '5:31 PM',
   },
   {
     id: 'a3',
@@ -108,12 +112,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you, that helps. Pain that radiates from a tooth can sometimes need prompt attention. Are you having any swelling in your face or jaw, fever, or trouble swallowing or breathing?',
     llmResponseTime: '0.48s',
     tts: '640ms',
+    time: '5:31 PM',
   },
   {
     id: 'c3',
     role: 'caller',
     text: 'A little swelling near the tooth, no fever',
     durationLabel: '3s',
+    time: '5:32 PM',
   },
   {
     id: 'a4',
@@ -121,6 +127,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "Good to know there's no fever. Swelling near a tooth is still worth having a dentist look at soon, so let's get you an appointment rather than wait it out.",
     llmResponseTime: '0.39s',
     tts: '610ms',
+    time: '5:32 PM',
   },
   { id: 'sys2', role: 'system', text: 'Routed to appointment booking agent' },
   { id: 'sys3', role: 'system', text: 'Procedure switched : Book appointment' },
@@ -130,12 +137,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'I have an opening this Thursday at 2 PM with Dr. Patel — would that work for you?',
     llmResponseTime: '0.35s',
     tts: '580ms',
+    time: '5:32 PM',
   },
   {
     id: 'c4',
     role: 'caller',
     text: 'Yes please, Thursday at 2 PM works.',
     durationLabel: '3s',
+    time: '5:33 PM',
   },
   {
     id: 'a6',
@@ -143,6 +152,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "You're all set for Thursday at 2 PM with Dr. Patel. Anything else I can help with?",
     llmResponseTime: '0.31s',
     tts: '520ms',
+    time: '5:33 PM',
     toolCall: {
       id: 'tool-2',
       name: 'Schedule Appointment',
@@ -166,6 +176,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: "No, that's all. Thank you!",
     durationLabel: '2s',
+    time: '5:33 PM',
   },
 ]
 
@@ -295,7 +306,7 @@ function AgentTurnAccordions({ tool, reasoning }: { tool: LogToolCall; reasoning
           >
             Reasoning
             <Icon
-              name={reasoningOpen ? 'expand_more' : 'chevron_right'}
+              name={reasoningOpen ? 'expand_less' : 'expand_more'}
               size={16}
               className="shrink-0"
             />
@@ -305,17 +316,18 @@ function AgentTurnAccordions({ tool, reasoning }: { tool: LogToolCall; reasoning
         <button
           type="button"
           onClick={toggleTool}
-          className={`${accordionTrigger} min-w-0 text-left ${
+          className={`${accordionTrigger} min-w-0 text-left text-text-tertiary hover:text-text-secondary ${
             toolOpen ? 'bg-surface-hover hover:bg-surface-hover' : ''
           }`}
         >
-          <span className="truncate text-text-action">Tool : {tool.name}</span>
+          <Icon name="build" size={16} className="shrink-0" />
+          <span className="truncate">{tool.name}</span>
           <Icon name="check_circle" size={16} fill className="shrink-0 text-accent-positive" />
           {tool.durationLabel && (
-            <span className="shrink-0 text-text-tertiary">{tool.durationLabel}</span>
+            <span className="shrink-0 whitespace-nowrap text-text-tertiary">• {tool.durationLabel}</span>
           )}
           <Icon
-            name={toolOpen ? 'expand_more' : 'chevron_right'}
+            name={toolOpen ? 'expand_less' : 'expand_more'}
             size={16}
             className="shrink-0 text-text-tertiary"
           />
@@ -410,10 +422,11 @@ function MetaField({ label, value }: { label: string; value: string }) {
 
 function agentMetaLine(entry: Extract<LogTranscriptEntry, { role: 'agent' }>): string | null {
   const parts: string[] = []
-  if (entry.llmResponseTime) parts.push(`LLM response : ${entry.llmResponseTime}`)
-  if (entry.tts) parts.push(`TTS : ${entry.tts}`)
-  if (entry.knowledgeBase) parts.push(`Knowledge base : ${entry.knowledgeBase}`)
-  return parts.length > 0 ? parts.join(' • ') : null
+  if (entry.llmResponseTime) parts.push(`LLM ${entry.llmResponseTime}`)
+  if (entry.tts) parts.push(`TTS ${entry.tts}`)
+  if (entry.knowledgeBase) parts.push(`Knowledge base ${entry.knowledgeBase}`)
+  if (entry.time) parts.push(entry.time)
+  return parts.length > 0 ? parts.join('  •  ') : null
 }
 
 function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
@@ -433,8 +446,12 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
         gap="gap-sm"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
-        {entry.durationLabel && (
-          <span className="text-small text-text-tertiary">STT : {entry.durationLabel}</span>
+        {(entry.durationLabel || entry.time) && (
+          <span className="text-small text-text-tertiary">
+            {[entry.durationLabel ? `STT ${entry.durationLabel}` : null, entry.time]
+              .filter(Boolean)
+              .join('  •  ')}
+          </span>
         )}
       </ChatBubble>
     )
@@ -449,7 +466,7 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
       gap="gap-sm"
       bubbleClassName="max-w-[85%] px-lg py-md"
     >
-      {meta && <span className="text-small text-text-tertiary">{meta}</span>}
+      {meta && <span className="whitespace-pre-wrap text-small text-text-tertiary">{meta}</span>}
       {entry.toolCall && (
         <AgentTurnAccordions tool={entry.toolCall} reasoning={entry.reasoning} />
       )}

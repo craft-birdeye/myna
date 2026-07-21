@@ -318,14 +318,30 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
     data?.onDropOnEdge?.(type, label, description);
   }, [data]);
 
-  const showAddButton = !viewOnly && source !== '__start__' && target !== '__end__' && !data?.hideAddButton;
+  const showAddButton = source !== '__start__' && target !== '__end__' && !data?.hideAddButton;
 
   const isEndEdge = target === '__end__';
 
   return (
     <>
       {!isEndEdge && <BaseEdge id={id} path={edgePath} style={style} />}
-      {showAddButton && (
+      {showAddButton && viewOnly && (
+        // View-only canvases keep the + as an inert visual marker (no menu, no drop).
+        <foreignObject width={56} height={56} x={labelX - 28} y={labelY - 28} className="flow-canvas__edge-fo">
+          <div className="flow-canvas__edge-add-wrapper">
+            <button
+              type="button"
+              className="flow-canvas__edge-add"
+              disabled
+              aria-hidden
+              tabIndex={-1}
+            >
+              <span className="material-symbols-outlined">add</span>
+            </button>
+          </div>
+        </foreignObject>
+      )}
+      {showAddButton && !viewOnly && (
         <foreignObject width={56} height={56} x={labelX - 28} y={labelY - 28} className="flow-canvas__edge-fo">
           <div
             className="flow-canvas__edge-add-wrapper"
@@ -396,9 +412,11 @@ function FlowCanvasInner({
   viewOnly = false,
   product = 'healthcare',
   agentName = '',
+  initialZoom = 1,
+  runDisabled = false,
 }) {
   const { zoomTo, fitView, setCenter, setViewport, getViewport, getNodes } = useReactFlow();
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(Math.round(initialZoom * 100));
   const [isDraggingFromLHS, setIsDraggingFromLHS] = useState(false);
   const canvasRef = useRef(null);
   const initialPositioned = useRef(false);
@@ -453,15 +471,23 @@ function FlowCanvasInner({
     [nodes, selectedNodeId, viewOnly, isDraggingFromLHS, endEdgeSourceId, onNodeClick, product, agentName]
   );
 
-  // Pin start node 24px below the controls bar, horizontally centered, at zoom=1.
+  // Pin start node 24px below the controls bar, horizontally centered, at the
+  // configured initial zoom (default 1).
   // Controls: top=8px + height≈52px → bottom≈60px → target top = 60+24 = 84px.
   const positionToStart = useCallback(() => {
     const startNode = nodes.find(n => n.type === 'start');
     const canvas = canvasRef.current;
     if (!startNode || !canvas) return;
     const { width } = canvas.getBoundingClientRect();
-    setViewport({ x: width / 2, y: 84 - startNode.position.y, zoom: 1 }, { duration: 0 });
-  }, [nodes, setViewport]);
+    setViewport(
+      {
+        x: width / 2 - startNode.position.x * initialZoom,
+        y: 84 - startNode.position.y * initialZoom,
+        zoom: initialZoom,
+      },
+      { duration: 0 },
+    );
+  }, [nodes, setViewport, initialZoom]);
 
   // Run once on initial load
   useEffect(() => {
@@ -645,6 +671,7 @@ function FlowCanvasInner({
           onZoomSelect={(z) => zoomTo(z, { duration: 200 })}
           onFitView={() => { positionToStart(); }}
           viewOnly={viewOnly}
+          runDisabled={runDisabled}
         />
       </div>
 
@@ -656,7 +683,7 @@ function FlowCanvasInner({
         defaultEdgeOptions={defaultEdgeOptions}
         onNodeClick={handleNodeClick}
         onViewportChange={handleViewportChange}
-        defaultViewport={{ x: 0, y: 84, zoom: 1 }}
+        defaultViewport={{ x: 0, y: 84, zoom: initialZoom }}
         nodeOrigin={[0.5, 0]}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={false}

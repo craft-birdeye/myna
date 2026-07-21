@@ -206,10 +206,11 @@ const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
 
 
 const HEALTHCARE_REMINDER_NODES = [
-  { id: 'hcr-1', flowType: 'trigger',    data: { title: 'Appointment is booked',          subtype: 'Appointment booked', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name',          descriptionPlaceholder: 'Enter description' } },
-  { id: 'hcr-2', flowType: 'task',       data: { title: 'Appointment reminder',            subtype: 'Integration',        hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name',             descriptionPlaceholder: '3 weeks, 3 days and 24 hours before · Email & text' } },
-  { id: 'hcr-3', flowType: 'delay',      data: { title: 'Until 12 hrs before appointment', subtype: 'Delay',              hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Configure delay settings',    descriptionPlaceholder: 'Wait for specific time or event.' } },
-  { id: 'hcr-4', flowType: 'branch',     data: { title: 'Based on conditions',             subtype: 'Branch',             hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name',           descriptionPlaceholder: 'Appointment confirmed or not?' } },
+  { id: 'hcr-1', flowType: 'trigger', data: { title: 'Appointment is booked', subtype: 'Appointment booked', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Agent triggers when an appointment is booked' } },
+  { id: 'hcr-2', flowType: 'task', data: { title: 'Send scheduled reminders', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Send text and email reminders 4 weeks before appointment' } },
+  { id: 'hcr-3', flowType: 'task', data: { title: 'Schedule appointment reminder', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Send text and email reminders 2 weeks before appointment' } },
+  { id: 'hcr-4', flowType: 'delay', data: { title: 'Delay until 2 days before appointment date and time', subtype: 'Delay', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Configure delay settings', descriptionPlaceholder: 'Wait for a specific time or event' } },
+  { id: 'hcr-5', flowType: 'branch', data: { title: 'Based on conditions', subtype: 'Branch', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Build condition-specific flows' } },
 ]
 
 const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
@@ -233,7 +234,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
   },
   'hcr-1': {
     triggerName: 'Appointment is booked',
-    description: 'Fires when a new appointment is created or confirmed in the system for any configured location.',
+    description: 'Agent triggers when an appointment is booked',
     conditions: [
       { id: 1, fieldValue: 'appointment_status', operatorValue: 'equals', valueValue: 'booked' },
     ],
@@ -261,17 +262,49 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
     },
   },
   'hcr-2': {
-    taskName: 'Appointment reminder',
-    description: '3 weeks, 3 days and 24 hours before · Email & text',
+    taskName: 'Send scheduled reminders',
+    description: 'Send text and email reminders 4 weeks before appointment',
     selectedTools: ['reminder-tool'],
   },
-  'hcr-3': { name: 'Until 12 hrs before appointment', duration: '12', unit: 'hours' },
+  'hcr-3': {
+    taskName: 'Schedule appointment reminder',
+    description: 'Send text and email reminders 2 weeks before appointment',
+    selectedTools: ['reminder-tool'],
+  },
   'hcr-4': {
+    name: 'Delay until 2 days before appointment date and time',
+    duration: '2',
+    unit: 'days',
+  },
+  'hcr-5': {
     basedOn: 'conditions',
     branches: [
-      { id: 'hcr-4-path-1', name: 'Appointment not confirmed' },
-      { id: 'hcr-4-path-2', name: 'Appointment confirmed', isFallback: true },
+      { id: 'hcr-5-path-1', name: 'Not confirmed' },
+      { id: 'hcr-5-path-2', name: 'Confirmed', isFallback: true },
     ],
+  },
+  'hcr-5-path-1': {
+    branchName: 'Not confirmed',
+    description: 'The appointment has not been confirmed.',
+    conditions: [
+      { id: 1, fieldValue: 'appointment_status', operatorValue: 'not_equals', valueValue: 'confirmed' },
+    ],
+    parentId: 'hcr-5',
+    isBranchPath: true,
+    nodes: [
+      { id: 'hcr-6', flowType: 'task', data: { title: 'Initiate voice call', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Call the customer' } },
+    ],
+  },
+  'hcr-5-path-2': {
+    branchName: 'Confirmed',
+    description: 'The appointment is confirmed.',
+    conditions: [
+      { id: 1, fieldValue: 'appointment_status', operatorValue: 'equals', valueValue: 'confirmed' },
+    ],
+    parentId: 'hcr-5',
+    isBranchPath: true,
+    isFallback: true,
+    nodes: [],
   },
   'hcr-4-path-1': {
     branchName: 'Appointment not confirmed',
@@ -338,7 +371,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
       { id: 'hcr-10', flowType: 'task', data: { title: 'Send text reminder', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: '3 hours before' } },
     ],
   },
-  'hcr-5': {
+  'hcr-legacy-voice-call': {
     taskName: 'Initiate voice call',
     description: 'Call the patient for their upcoming appointment.',
     toolId: 'initiate-voice-call',
@@ -477,7 +510,11 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
     isBranchPath: true,
     nodes: [],
   },
-  'hcr-6': { selectedAgent: 'frontdesk-north', name: 'Front desk agent - North region', description: 'Transfer to the front desk agent for assisted patient handling with a reminder.', intent: 'Reminder' },
+  'hcr-6': {
+    taskName: 'Initiate voice call',
+    description: 'Call the customer',
+    selectedTools: ['voice-call'],
+  },
   'hcr-7': { name: 'Wait 2 hours',       duration: '2', unit: 'hours' },
   'hcr-8': { taskName: 'Send text reminder', description: '3 hours before', selectedTools: ['send-confirmation'] },
   'hcr-9':  { taskName: 'Send text reminder', description: '3 hours before', selectedTools: ['send-confirmation'] },
@@ -485,9 +522,56 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
   'hcr-11': { name: 'Wait 2 hours', duration: '2', unit: 'hours' },
 }
 
+/** The attached flow is intentionally scoped to Reminder agent - North region. */
+export const HEALTHCARE_REMINDER_NORTH_WORKFLOW: AgentWorkflow = {
+  nodes: HEALTHCARE_REMINDER_NODES,
+  nodeDetails: HEALTHCARE_REMINDER_NODE_DETAILS,
+}
+
+/** Original Reminder workflow retained for East, South, and West regions. */
+const HEALTHCARE_REMINDER_DEFAULT_NODES = [
+  { id: 'hcr-1', flowType: 'trigger', data: { title: 'Appointment is booked', subtype: 'Appointment booked', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Enter description' } },
+  { id: 'hcr-2', flowType: 'task', data: { title: 'Appointment reminder', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: '3 weeks, 3 days and 24 hours before · Email & text' } },
+  { id: 'hcr-3', flowType: 'delay', data: { title: 'Until 12 hrs before appointment', subtype: 'Delay', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Configure delay settings', descriptionPlaceholder: 'Wait for specific time or event.' } },
+  { id: 'hcr-4', flowType: 'branch', data: { title: 'Based on conditions', subtype: 'Branch', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Appointment confirmed or not?' } },
+]
+
+const HEALTHCARE_REMINDER_DEFAULT_NODE_DETAILS: Record<string, any> = {
+  ...HEALTHCARE_REMINDER_NODE_DETAILS,
+  'hcr-1': {
+    ...HEALTHCARE_REMINDER_NODE_DETAILS['hcr-1'],
+    description: 'Fires when a new appointment is created or confirmed in the system for any configured location.',
+  },
+  'hcr-2': {
+    taskName: 'Appointment reminder',
+    description: '3 weeks, 3 days and 24 hours before · Email & text',
+    selectedTools: ['reminder-tool'],
+  },
+  'hcr-3': { name: 'Until 12 hrs before appointment', duration: '12', unit: 'hours' },
+  'hcr-4': {
+    basedOn: 'conditions',
+    branches: [
+      { id: 'hcr-4-path-1', name: 'Appointment not confirmed' },
+      { id: 'hcr-4-path-2', name: 'Appointment confirmed', isFallback: true },
+    ],
+  },
+  'hcr-5': HEALTHCARE_REMINDER_NODE_DETAILS['hcr-legacy-voice-call'],
+  'hcr-6': {
+    selectedAgent: 'frontdesk-north',
+    name: 'Front desk agent - North region',
+    description: 'Transfer to the front desk agent for assisted patient handling with a reminder.',
+    intent: 'Reminder',
+  },
+}
+
+const HEALTHCARE_REMINDER_DEFAULT_WORKFLOW: AgentWorkflow = {
+  nodes: HEALTHCARE_REMINDER_DEFAULT_NODES,
+  nodeDetails: HEALTHCARE_REMINDER_DEFAULT_NODE_DETAILS,
+}
+
 export const AUTOMOTIVE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,           nodeDetails: FRONTDESK_NODE_DETAILS           },
-  'Reminder agent':  { nodes: HEALTHCARE_REMINDER_NODES,  nodeDetails: HEALTHCARE_REMINDER_NODE_DETAILS },
+  'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,             nodeDetails: OUTREACH_NODE_DETAILS            },
 }
 
@@ -1009,7 +1093,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
 
 export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,             nodeDetails: FRONTDESK_HC_NODE_DETAILS          },
-  'Reminder agent':  { nodes: HEALTHCARE_REMINDER_NODES,   nodeDetails: HEALTHCARE_REMINDER_NODE_DETAILS   },
+  'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,              nodeDetails: OUTREACH_NODE_DETAILS              },
   'Pre-visit agent':  { nodes: PREVISIT_NODES,             nodeDetails: PREVISIT_NODE_DETAILS              },
   'Waitlist agent':   { nodes: WAITLIST_NODES,             nodeDetails: WAITLIST_NODE_DETAILS              },

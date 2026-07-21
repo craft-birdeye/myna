@@ -2,6 +2,7 @@ import { Chip, DataTable, type ChipVariant, type Column } from '../components'
 import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
+  REMINDER_LOGS_ROWS,
   type HealthcareLogRow,
   type PrevisitLogRow,
 } from '../data/healthcareAgentLogs'
@@ -25,6 +26,19 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'channel', label: 'Channel', width: 120, sortable: true },
   { key: 'duration', label: 'Duration', width: 110, sortable: true },
   { key: 'topic', label: 'Topic', width: 220, sortable: true },
+]
+
+const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 140,
+    sortable: true,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+  },
+  { key: 'contact', label: 'Contact', width: 220, sortable: true },
+  { key: 'channel', label: 'Channel', width: 180, sortable: true },
 ]
 
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -68,6 +82,22 @@ interface AgentLogsTabProps {
 }
 
 export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
+  if (agentName === 'Reminder agent') {
+    return (
+      <div className="px-lg py-lg">
+        <DataTable
+          columns={REMINDER_LOG_COLUMNS}
+          data={REMINDER_LOGS_ROWS}
+          rowAction={{
+            icon: 'visibility',
+            label: 'View run',
+            onClick: (row) => onViewRun?.(row as HealthcareLogRow),
+          }}
+        />
+      </div>
+    )
+  }
+
   if (agentName === 'Pre-visit agent' || agentName === 'Waitlist agent') {
     return (
       <div className="px-lg py-lg">

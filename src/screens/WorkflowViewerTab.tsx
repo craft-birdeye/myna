@@ -6,7 +6,12 @@
  * - Canvas has left/right padding and rounded corners
  */
 import React, { Suspense } from 'react'
-import { AUTOMOTIVE_AGENT_WORKFLOWS, HEALTHCARE_AGENT_WORKFLOWS, DENTAL_AGENT_WORKFLOWS } from '../data/agentWorkflows'
+import {
+  AUTOMOTIVE_AGENT_WORKFLOWS,
+  DENTAL_AGENT_WORKFLOWS,
+  HEALTHCARE_AGENT_WORKFLOWS,
+  HEALTHCARE_REMINDER_NORTH_WORKFLOW,
+} from '../data/agentWorkflows'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 
 // @ts-ignore
@@ -37,7 +42,10 @@ export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowVie
     product === 'healthcare' ? HEALTHCARE_AGENT_WORKFLOWS :
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
-  const workflow = workflowMap[agentName] ?? EMPTY_WORKFLOW
+  const workflow =
+    product === 'healthcare' && instanceName === 'Reminder agent - North region'
+      ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
+      : workflowMap[agentName] ?? EMPTY_WORKFLOW
 
   return (
     <div className="relative flex-1 overflow-hidden" style={{ height: '100%' }}>

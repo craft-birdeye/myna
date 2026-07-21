@@ -3,6 +3,7 @@ import {
   Chip,
   CoachAgentPanel,
   DataTable,
+  EmptyState,
   Icon,
   MetricTiles,
   Tabs,
@@ -24,13 +25,13 @@ import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
+import { REMINDER_INBOX_CONVERSATION_ID } from '../data/reminderInboxConversation'
 
 interface AgentInstanceScreenProps {
   instanceName: string
   status?: string
   onBack: () => void
   onEditAgent?: (agentName: string) => void
-  onOpenIntegrationSettings?: (integrationId: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
 }
@@ -309,7 +310,6 @@ export function AgentInstanceScreen({
   status = 'Running',
   onBack,
   onEditAgent,
-  onOpenIntegrationSettings,
   onNavigateToInbox,
   product,
 }: AgentInstanceScreenProps) {
@@ -340,7 +340,7 @@ export function AgentInstanceScreen({
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
   const showHealthcareLogs =
-    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
+    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && product === 'dental' && Boolean(dentalOutboundLogRows)
@@ -352,8 +352,14 @@ export function AgentInstanceScreen({
         <div className="min-h-0 flex-1 overflow-hidden">
           <RunDetailView
             row={selectedRun}
+            instanceName={instanceName}
             onBack={() => setSelectedRun(null)}
-            onViewConversation={() => onNavigateToInbox?.(FRONT_DESK_INBOX_CONVERSATION_ID)}
+            onEditAgent={() => onEditAgent?.(instanceName)}
+            onViewConversation={() =>
+              onNavigateToInbox?.(
+                agentName === 'Reminder agent' ? REMINDER_INBOX_CONVERSATION_ID : FRONT_DESK_INBOX_CONVERSATION_ID,
+              )
+            }
           />
         </div>
       </div>
@@ -407,7 +413,7 @@ export function AgentInstanceScreen({
                       coachOpen ? 'bg-surface-selected' : 'bg-surface'
                     }`}
                   >
-                    <Icon name="smart_toy" size={20} />
+                    <Icon name="auto_awesome" size={20} />
                   </button>
                 </Tooltip>
               )}
@@ -502,6 +508,13 @@ export function AgentInstanceScreen({
                   onSelect={setSelectedRecommendationId}
                   onAnalyzeWithAi={() => setCoachOpen(true)}
                 />
+              ) : agentName === 'Reminder agent' ? (
+                <div className="flex flex-1 items-center justify-center">
+                  <EmptyState
+                    title="No recommendations yet"
+                    description="Recommendations will appear here once there's enough activity to analyze."
+                  />
+                </div>
               ) : (
                 <RecommendationsTab />
               )}
@@ -529,7 +542,6 @@ export function AgentInstanceScreen({
                 <AgentSettingsTab
                   product={product}
                   agentName={agentName}
-                  onOpenIntegrationSettings={onOpenIntegrationSettings}
                 />
               ) : (
                 <div className="flex h-64 items-center justify-center text-body text-text-secondary">

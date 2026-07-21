@@ -316,12 +316,6 @@ export function App() {
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
 
-  function openIntegrationSettings(integrationId: string) {
-    setRailActive('settings')
-    setSettingsTab('Integrations')
-    setSettingsSubScreen(`integration-${integrationId}`)
-  }
-
   function handleProductChange(id: string) {
     setActiveProduct(id)
     setNavActive(DEFAULT_NAV_BY_PRODUCT[id] ?? 'manage-appointments')
@@ -579,7 +573,6 @@ export function App() {
             key={navActive}
             agentName={AGENT_NAMES[navActive]}
             onEditAgent={handleEditAgent}
-            onOpenIntegrationSettings={openIntegrationSettings}
             onAgentSetupActiveChange={setIsAgentSetupActive}
             onNavigateToInbox={(conversationId) => {
               setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)

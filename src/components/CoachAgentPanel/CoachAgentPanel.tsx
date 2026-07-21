@@ -1,38 +1,44 @@
 import { useEffect, useState } from 'react'
+import { Chip } from '../Chip/Chip'
 import { Icon } from '../Icon/Icon'
 import { CoachAgentPanelProps } from './CoachAgentPanel.types'
 
 type Feedback = 'up' | 'down' | null
 type Phase = 'prompt' | 'reading' | 'typing' | 'done'
 
-const REPLY_P1 =
-  "Based on this agent's open recommendations, I'd start with Update business hours — it has the highest affected volume and is blocking basic inbound questions. After that, tackle payment guidance and appointment rescheduling, which are also high priority."
+const REPLY_INTRO =
+  "Based on this agent's open recommendations, here's where I'd focus first:"
 
-const REPLY_P2 =
-  'Want me to walk through the business hours fix, or compare impact across the open recommendations?'
+const REPLY_PRIORITIES = [
+  {
+    title: 'Update business hours',
+    reason: 'Highest affected volume — blocking basic inbound questions.',
+    affected: 19,
+  },
+  {
+    title: 'Add a payment processing procedure',
+    reason: 'Customers ask about payments with no agent guidance available.',
+    affected: 12,
+  },
+  {
+    title: 'Update appointment rescheduling procedure',
+    reason: 'Same-day reschedule and waitlist paths are missing.',
+    affected: 8,
+  },
+]
 
-const HIGHLIGHT = 'Update business hours'
+const REPLY_ACTIONS = [
+  'Walk me through the business hours fix',
+  'Compare impact across recommendations',
+]
 
-function TypedReply({ text, complete }: { text: string; complete: boolean }) {
-  if (!complete) {
-    return (
-      <p className="text-body text-text-primary">
-        {text}
-        <span className="coach-caret ml-px inline-block h-[1em] w-px translate-y-px bg-text-primary" aria-hidden />
-      </p>
-    )
-  }
-
-  const idx = REPLY_P1.indexOf(HIGHLIGHT)
-  if (idx < 0) {
-    return <p className="text-body text-text-primary">{REPLY_P1}</p>
-  }
-
+function TypedIntro({ text, complete }: { text: string; complete: boolean }) {
   return (
     <p className="text-body text-text-primary">
-      {REPLY_P1.slice(0, idx)}
-      <span className="text-text-primary">{HIGHLIGHT}</span>
-      {REPLY_P1.slice(idx + HIGHLIGHT.length)}
+      {complete ? REPLY_INTRO : text}
+      {!complete && (
+        <span className="coach-caret ml-px inline-block h-[1em] w-px translate-y-px bg-text-primary" aria-hidden />
+      )}
     </p>
   )
 }
@@ -48,8 +54,8 @@ export function CoachAgentPanel({ agentName, onClose }: CoachAgentPanelProps) {
     setTyped('')
     setFeedback(null)
 
-    const tReading = window.setTimeout(() => setPhase('reading'), 400)
-    const tTyping = window.setTimeout(() => setPhase('typing'), 2400)
+    const tReading = window.setTimeout(() => setPhase('reading'), 300)
+    const tTyping = window.setTimeout(() => setPhase('typing'), 1600)
 
     return () => {
       window.clearTimeout(tReading)
@@ -64,12 +70,12 @@ export function CoachAgentPanel({ agentName, onClose }: CoachAgentPanelProps) {
     setTyped('')
     const id = window.setInterval(() => {
       i += 1
-      setTyped(REPLY_P1.slice(0, i))
-      if (i >= REPLY_P1.length) {
+      setTyped(REPLY_INTRO.slice(0, i))
+      if (i >= REPLY_INTRO.length) {
         window.clearInterval(id)
         setPhase('done')
       }
-    }, 14)
+    }, 12)
 
     return () => window.clearInterval(id)
   }, [phase])
@@ -168,36 +174,75 @@ export function CoachAgentPanel({ agentName, onClose }: CoachAgentPanelProps) {
         )}
 
         {showReply && (
-          <div className="flex flex-col gap-sm">
-            <TypedReply text={typed} complete={phase === 'done'} />
+          <div className="flex flex-col gap-md">
+            <TypedIntro text={typed} complete={phase === 'done'} />
             {phase === 'done' && (
-              <div className="coach-fade-in flex flex-col gap-sm">
-                <p className="text-body text-text-primary">{REPLY_P2}</p>
-                <div className="flex items-center gap-xs pt-xs">
-                  <button
-                    type="button"
-                    aria-label="Good response"
-                    aria-pressed={feedback === 'up'}
-                    onClick={() => toggleFeedback('up')}
-                    className={`flex size-7 items-center justify-center rounded-sm hover:bg-surface-hover ${
-                      feedback === 'up' ? 'text-text-primary' : 'text-text-icon'
-                    }`}
-                  >
-                    <Icon name="thumb_up" size={16} fill={feedback === 'up'} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Bad response"
-                    aria-pressed={feedback === 'down'}
-                    onClick={() => toggleFeedback('down')}
-                    className={`flex size-7 items-center justify-center rounded-sm hover:bg-surface-hover ${
-                      feedback === 'down' ? 'text-text-primary' : 'text-text-icon'
-                    }`}
-                  >
-                    <Icon name="thumb_down" size={16} fill={feedback === 'down'} />
-                  </button>
+              <>
+                <ol className="flex flex-col gap-sm">
+                  {REPLY_PRIORITIES.map((item, i) => (
+                    <li
+                      key={item.title}
+                      className="coach-fade-in flex gap-md rounded-sm border border-border px-md py-sm"
+                      style={{ animationDelay: `${i * 140}ms` }}
+                    >
+                      <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-selected text-small text-text-secondary">
+                        {i + 1}
+                      </span>
+                      <div className="flex min-w-0 flex-col gap-xs">
+                        <span className="text-body text-text-primary">{item.title}</span>
+                        <span className="text-small text-text-secondary">{item.reason}</span>
+                        <div className="flex items-center gap-sm pt-xs">
+                          <Chip label="High" variant="danger" />
+                          <span className="inline-flex items-center gap-xs text-small text-text-tertiary">
+                            <Icon name="chat_bubble_outline" size={14} />
+                            {item.affected} affected
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                <div
+                  className="coach-fade-in flex flex-col gap-sm"
+                  style={{ animationDelay: `${REPLY_PRIORITIES.length * 140 + 80}ms` }}
+                >
+                  <div className="flex flex-wrap gap-sm">
+                    {REPLY_ACTIONS.map((action) => (
+                      <button
+                        key={action}
+                        type="button"
+                        className="rounded-full border border-border-selected px-md py-xs text-small text-text-action hover:bg-surface-l2"
+                      >
+                        {action}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-xs pt-xs">
+                    <button
+                      type="button"
+                      aria-label="Good response"
+                      aria-pressed={feedback === 'up'}
+                      onClick={() => toggleFeedback('up')}
+                      className={`flex size-7 items-center justify-center rounded-sm hover:bg-surface-hover ${
+                        feedback === 'up' ? 'text-text-primary' : 'text-text-icon'
+                      }`}
+                    >
+                      <Icon name="thumb_up" size={16} fill={feedback === 'up'} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Bad response"
+                      aria-pressed={feedback === 'down'}
+                      onClick={() => toggleFeedback('down')}
+                      className={`flex size-7 items-center justify-center rounded-sm hover:bg-surface-hover ${
+                        feedback === 'down' ? 'text-text-primary' : 'text-text-icon'
+                      }`}
+                    >
+                      <Icon name="thumb_down" size={16} fill={feedback === 'down'} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         )}

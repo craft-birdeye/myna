@@ -676,6 +676,8 @@ export default function AgentBuilder({
   onAddProcedure,
   publishDisabled = false,
   defaultOpenSection = 'Tasks',
+  initialZoom = 1,
+  runDisabled = false,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -2164,6 +2166,8 @@ export default function AgentBuilder({
               viewOnly={viewOnly}
               product={product}
               agentName={agentName}
+              initialZoom={initialZoom}
+              runDisabled={runDisabled}
               onEdit={viewOnly ? onEdit : undefined}
               onRun={() => {
                 if (isReminderAgent) {
