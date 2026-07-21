@@ -810,12 +810,12 @@ export function classifyFeedbackType(text: string): GapType {
     action: countMatches(normalized, ACTION_KEYWORDS),
     procedure: countMatches(normalized, PROCEDURE_KEYWORDS),
   }
-  // No keywords matched at all (e.g. short or typo'd feedback) — human feedback is most often a
-  // knowledge gap (the agent didn't know something), so default there instead of 'procedure'.
-  if (scores.knowledge === 0 && scores.action === 0 && scores.procedure === 0) return 'knowledge'
-  return (Object.keys(scores) as GapType[]).reduce((best, key) =>
-    scores[key] > scores[best] ? key : best,
-  'procedure')
+  // Human feedback is most often a knowledge gap (the agent didn't know something) — so any
+  // knowledge-keyword match wins outright, instead of only when it happens to score highest.
+  // Covers both "no keywords matched at all" (short/typo'd feedback) and ties/near-ties against
+  // an incidental procedure or action keyword.
+  if (scores.knowledge > 0 || (scores.action === 0 && scores.procedure === 0)) return 'knowledge'
+  return scores.action >= scores.procedure ? 'action' : 'procedure'
 }
 
 /** Cleans up raw feedback text for use as a recommendation title — no LLM summarization available. */

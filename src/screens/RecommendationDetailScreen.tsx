@@ -10,6 +10,7 @@ import {
   RECOMMENDATIONS,
   type Channel,
   type ConversationItem,
+  type GapType,
   type ManualUpdate,
   type ProcedureStep,
   type RecommendationChange,
@@ -1060,22 +1061,34 @@ function ThoughtsSection({
   )
 }
 
-function ChangeSummaryCard({ change, procedureTitle }: { change: RecommendationChange; procedureTitle: string }) {
+function ChangeSummaryCard({
+  change,
+  procedureTitle,
+  pending = false,
+}: {
+  change: RecommendationChange
+  procedureTitle: string
+  /** True while a manual action (e.g. an upload) that feeds this section is still unresolved —
+   *  keeps the section visible, but honest that nothing's actually been added yet. */
+  pending?: boolean
+}) {
   const [expanded, setExpanded] = useState(false)
   const isAddition = !(change.currentSteps && change.currentSteps.length > 0)
   const count = change.proposedSteps.length
   const typeLabel = GAP_LABEL[change.type].toLowerCase()
   const pluralLabel = change.type === 'knowledge' ? 'knowledge items' : `${typeLabel}s`
-  const summaryLabel = isAddition
-    ? count > 1
-      ? `${count} new ${pluralLabel} added`
-      : `New ${typeLabel} added`
-    : count > 1
-      ? `${count} ${pluralLabel} updated`
-      : `${GAP_LABEL[change.type]} updated`
+  const summaryLabel = pending
+    ? 'Pending — document required'
+    : isAddition
+      ? count > 1
+        ? `${count} new ${pluralLabel} added`
+        : `New ${typeLabel} added`
+      : count > 1
+        ? `${count} ${pluralLabel} updated`
+        : `${GAP_LABEL[change.type]} updated`
 
   return (
-    <div className="flex flex-col rounded-sm border border-border bg-surface">
+    <div className={`flex flex-col rounded-sm border bg-surface ${pending ? 'border-[#fde68a]' : 'border-border'}`}>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -1084,11 +1097,11 @@ function ChangeSummaryCard({ change, procedureTitle }: { change: RecommendationC
         <div className="flex min-w-0 items-center gap-sm">
           <Icon name={GAP_ICON[change.type]} size={18} className="shrink-0 text-text-icon" />
           <span className="truncate text-body text-text-primary">
-            {GAP_LABEL[change.type]} {isAddition ? 'added' : 'updated'}: {procedureTitle}
+            {GAP_LABEL[change.type]} {pending ? 'update needed' : isAddition ? 'added' : 'updated'}: {procedureTitle}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-xs">
-          <span className="text-body text-text-tertiary">{summaryLabel}</span>
+          <span className={`text-body ${pending ? 'text-warning' : 'text-text-tertiary'}`}>{summaryLabel}</span>
           <Icon name={expanded ? 'expand_less' : 'chevron_right'} size={16} className="text-text-icon" />
         </div>
       </button>
@@ -1106,7 +1119,13 @@ function ChangeSummaryCard({ change, procedureTitle }: { change: RecommendationC
               </div>
             </>
           )}
-          <CurrentProposedColumns currentSteps={change.currentSteps} proposedSteps={change.proposedSteps} />
+          {pending ? (
+            <p className="text-body text-text-tertiary">
+              We'll show the current and proposed version here once the required document is uploaded.
+            </p>
+          ) : (
+            <CurrentProposedColumns currentSteps={change.currentSteps} proposedSteps={change.proposedSteps} />
+          )}
         </div>
       )}
     </div>
@@ -1178,6 +1197,7 @@ function ResponseBlock({
   pendingManualUpdate,
   manualUpdateIndex,
   manualUpdateTotal,
+  pendingChangeTypes,
 }: {
   thoughts: string
   toolCount: number
@@ -1190,6 +1210,9 @@ function ResponseBlock({
   showAcceptPrompt: boolean
   recStatus: RecStatus
   onReject: (id: string) => void
+  /** Change types whose feeding manual action hasn't been resolved yet — their cards render in
+   *  a pending state instead of claiming the change already happened. */
+  pendingChangeTypes?: Set<GapType>
   onRequestAccept: () => void
   recId: string
   onOpenConversations?: () => void
@@ -1259,7 +1282,11 @@ function ResponseBlock({
       {changes.map((change, i) =>
         revealStep > changeStartIdx + i ? (
           <div key={change.type} className="chat-reveal-in">
-            <ChangeSummaryCard change={change} procedureTitle={procedureTitle} />
+            <ChangeSummaryCard
+              change={change}
+              procedureTitle={procedureTitle}
+              pending={pendingChangeTypes?.has(change.type)}
+            />
           </div>
         ) : null,
       )}
@@ -1417,11 +1444,10 @@ function RecommendationChatView({
   // showing it upfront before we actually "have" the document.
   const knowledgeManualIdx = manualUpdates.findIndex((m) => m.relatedType === 'knowledge')
   // Don't claim a section was already changed (e.g. "New knowledge added") while the manual
-  // update feeding it is still outstanding — hide that change card until it's actually resolved.
-  const visibleChangesAt = (resolvedCount: number) => {
-    const gatedTypes = new Set(manualUpdates.slice(resolvedCount).map((m) => m.relatedType).filter(Boolean))
-    return effectiveChanges.filter((c) => !gatedTypes.has(c.type))
-  }
+  // update feeding it is still outstanding — the section itself stays visible (so it's clear
+  // there's a knowledge/procedure/action piece coming), just marked pending instead.
+  const pendingChangeTypesAt = (resolvedCount: number) =>
+    new Set(manualUpdates.slice(resolvedCount).map((m) => m.relatedType).filter((t): t is GapType => Boolean(t)))
 
   return (
     <div className="mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
@@ -1443,7 +1469,8 @@ function RecommendationChatView({
         toolCount={rec.tools.length}
         conversationCount={rec.conversationCount}
         bodyText={rec.rationale}
-        changes={visibleChangesAt(0)}
+        changes={effectiveChanges}
+        pendingChangeTypes={pendingChangeTypesAt(0)}
         procedureTitle={rec.procedureTitle}
         diff={knowledgeManualIdx === -1 ? diff : null}
         outcomes={rec.outcomes}
@@ -1486,7 +1513,8 @@ function RecommendationChatView({
                 toolCount={rec.tools.length}
                 conversationCount={rec.conversationCount}
                 bodyText="I've updated the recommendation to reflect your request — here's the current state of every section."
-                changes={visibleChangesAt(resolvedAfterThisTurn)}
+                changes={effectiveChanges}
+                pendingChangeTypes={pendingChangeTypesAt(resolvedAfterThisTurn)}
                 procedureTitle={rec.procedureTitle}
                 diff={i === knowledgeManualIdx ? diff : null}
                 outcomes={rec.outcomes}
