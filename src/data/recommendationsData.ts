@@ -810,7 +810,9 @@ export function classifyFeedbackType(text: string): GapType {
     action: countMatches(normalized, ACTION_KEYWORDS),
     procedure: countMatches(normalized, PROCEDURE_KEYWORDS),
   }
-  if (scores.knowledge === 0 && scores.action === 0 && scores.procedure === 0) return 'procedure'
+  // No keywords matched at all (e.g. short or typo'd feedback) — human feedback is most often a
+  // knowledge gap (the agent didn't know something), so default there instead of 'procedure'.
+  if (scores.knowledge === 0 && scores.action === 0 && scores.procedure === 0) return 'knowledge'
   return (Object.keys(scores) as GapType[]).reduce((best, key) =>
     scores[key] > scores[best] ? key : best,
   'procedure')

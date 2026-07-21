@@ -21,6 +21,7 @@ import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendations
 import {
   ANNETTE_BLACK_CHAT_EVENTS,
   ANNETTE_BLACK_CONVERSATION_ID,
+  ANNETTE_BLACK_IMPROVED_HOURS_REPLY,
 } from '../data/annetteBlackChatConversation'
 import { useRecommendationOverridesStore } from '../data/RecommendationOverridesStoreContext'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
@@ -1115,6 +1116,16 @@ function ChangeSummaryCard({ change, procedureTitle }: { change: RecommendationC
 /** Finds a representative "agent said X, should have said Y" pair from the first sample
  *  conversation — reuses the same before/after transcript data the conversations drawer simulates with. */
 function getMessageDiffPreview(rec: Recommendation): { original: string; revised: string } | null {
+  // Human feedback tied to a real Inbox conversation we have a transcript for — pair the actual
+  // flagged message against the answer the agent should have given once it has the document.
+  if (rec.source === 'feedback' && rec.sourceConversationId === ANNETTE_BLACK_CONVERSATION_ID && rec.sourceMessageId) {
+    const flagged = ANNETTE_BLACK_CHAT_EVENTS.find((e) => e.id === rec.sourceMessageId)
+    if (flagged && flagged.kind === 'bubble' && flagged.text) {
+      return { original: flagged.text, revised: ANNETTE_BLACK_IMPROVED_HOURS_REPLY }
+    }
+    return null
+  }
+
   const conv = rec.conversations[0]
   if (!conv || !rec.sim) return null
 
