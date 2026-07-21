@@ -1405,6 +1405,12 @@ function RecommendationChatView({
   // the Original/Revised preview until that specific manual update has been answered, instead of
   // showing it upfront before we actually "have" the document.
   const knowledgeManualIdx = manualUpdates.findIndex((m) => m.relatedType === 'knowledge')
+  // Don't claim a section was already changed (e.g. "New knowledge added") while the manual
+  // update feeding it is still outstanding — hide that change card until it's actually resolved.
+  const visibleChangesAt = (resolvedCount: number) => {
+    const gatedTypes = new Set(manualUpdates.slice(resolvedCount).map((m) => m.relatedType).filter(Boolean))
+    return effectiveChanges.filter((c) => !gatedTypes.has(c.type))
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
@@ -1426,7 +1432,7 @@ function RecommendationChatView({
         toolCount={rec.tools.length}
         conversationCount={rec.conversationCount}
         bodyText={rec.rationale}
-        changes={effectiveChanges}
+        changes={visibleChangesAt(0)}
         procedureTitle={rec.procedureTitle}
         diff={knowledgeManualIdx === -1 ? diff : null}
         outcomes={rec.outcomes}
@@ -1469,7 +1475,7 @@ function RecommendationChatView({
                 toolCount={rec.tools.length}
                 conversationCount={rec.conversationCount}
                 bodyText="I've updated the recommendation to reflect your request — here's the current state of every section."
-                changes={effectiveChanges}
+                changes={visibleChangesAt(resolvedAfterThisTurn)}
                 procedureTitle={rec.procedureTitle}
                 diff={i === knowledgeManualIdx ? diff : null}
                 outcomes={rec.outcomes}
