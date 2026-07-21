@@ -79,28 +79,27 @@ export function ChatBubble({
 }: ChatBubbleProps) {
   const isBusiness = sender === 'business'
 
+  // leadingIcon is positioned via transform, relative to its own size — not a sibling flex
+  // item — so it can never affect the bubble's width/alignment (which stays exactly the same
+  // shrink-to-fit + items-end behavior as without an icon).
   const bubble = (
     <div
       className={[
-        'rounded-lg text-body leading-[1.5] text-text-primary',
+        'relative rounded-lg text-body leading-[1.5] text-text-primary',
         isBusiness ? 'bg-[#dbeafe]' : 'bg-[#f0f0f0]',
         bubbleClassName || 'max-w-[70%] px-md py-sm',
       ].join(' ')}
     >
       {text}
+      {leadingIcon && (
+        <span className="absolute bottom-0 left-0 -translate-x-[calc(100%+8px)]">{leadingIcon}</span>
+      )}
     </div>
   )
 
   return (
     <div className={`flex flex-col ${gap} ${isBusiness ? 'items-end' : 'items-start'} ${className}`}>
-      {leadingIcon ? (
-        <div className="flex items-start gap-sm">
-          {leadingIcon}
-          {bubble}
-        </div>
-      ) : (
-        bubble
-      )}
+      {bubble}
       {showFeedback ? (
         <div className="flex items-center gap-sm">
           <MessageFeedback value={feedback} onChange={onFeedbackChange} />

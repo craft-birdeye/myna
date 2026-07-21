@@ -459,7 +459,7 @@ function RealConversationThread({ flaggedMessageId, onClose }: { flaggedMessageI
               key={event.id}
               sender={isAgent ? 'business' : 'user'}
               text={bubbleText}
-              leadingIcon={isFlagged ? <Icon name="thumb_down" size={16} className="mt-1 shrink-0 text-chip-danger-text" /> : undefined}
+              leadingIcon={isFlagged ? <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" /> : undefined}
             >
               <span className="flex items-center gap-xs text-small text-text-tertiary">
                 {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
