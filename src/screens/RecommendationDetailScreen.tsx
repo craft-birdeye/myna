@@ -35,23 +35,38 @@ interface RecommendationDetailScreenProps {
 
 // ── Confirm accept modal ──────────────────────────────────────────────────────
 
+// Where each change type's content actually lives, for the confirm-modal copy.
+const TYPE_DESTINATION: Record<GapType, string> = {
+  knowledge: "the agent's knowledge base",
+  procedure: 'the current workflow and your shared procedure library, so it can be reused across other agents',
+  action: "the agent's workflow as an automated action",
+}
+
 function ConfirmAddProcedureModal({
   isNew,
   procedureTitle,
+  changeTypes,
   onCancel,
   onConfirm,
 }: {
   isNew: boolean
   procedureTitle: string
+  changeTypes: GapType[]
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const singleType = changeTypes.length === 1 ? changeTypes[0] : null
+  const typeNoun = singleType ? GAP_LABEL[singleType].toLowerCase() : 'recommendation'
+  const destination = singleType
+    ? TYPE_DESTINATION[singleType]
+    : 'the current workflow and your shared procedure library'
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
       <div className="w-[480px] rounded-md bg-surface p-xl shadow-modal">
         <div className="flex items-center justify-between">
           <h3 className="text-h3 text-text-primary">
-            {isNew ? 'Confirm adding procedure' : 'Confirm updating procedure'}
+            {isNew ? `Confirm adding ${typeNoun}` : `Confirm updating ${typeNoun}`}
           </h3>
           <button
             type="button"
@@ -65,13 +80,11 @@ function ConfirmAddProcedureModal({
         <p className="mt-lg text-body text-text-secondary">
           {isNew ? (
             <>
-              This will add "<span className="text-text-primary">{procedureTitle}</span>" to the current workflow
-              and save it to your shared procedure library, so it can be reused across other agents
+              This will add "<span className="text-text-primary">{procedureTitle}</span>" to {destination}
             </>
           ) : (
             <>
-              This will update "<span className="text-text-primary">{procedureTitle}</span>" in the current workflow
-              and save the changes to your shared procedure library, so other agents using it stay up to date
+              This will update "<span className="text-text-primary">{procedureTitle}</span>" in {destination}
             </>
           )}
         </p>
@@ -1747,12 +1760,24 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
         <ConfirmAddProcedureModal
           isNew={rec.isNew}
           procedureTitle={rec.procedureTitle}
+          changeTypes={effectiveChanges.map((c) => c.type)}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={() => {
             setConfirmOpen(false)
             setRecStatus('accepted')
             setRecommendationStatus(rec.id, 'accepted')
-            showToast({ message: `${rec.procedureTitle} successfully ${rec.isNew ? 'added' : 'updated'}` })
+            const singleType = effectiveChanges.length === 1 ? effectiveChanges[0].type : null
+            const destination =
+              singleType === 'knowledge'
+                ? " to the agent's knowledge base"
+                : singleType === 'action'
+                  ? ' as an automated action'
+                  : singleType === 'procedure'
+                    ? ' to the procedure library'
+                    : ''
+            showToast({
+              message: `${rec.procedureTitle} successfully ${rec.isNew ? 'added' : 'updated'}${destination}`,
+            })
           }}
         />
       )}

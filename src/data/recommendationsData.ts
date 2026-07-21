@@ -830,16 +830,18 @@ function extractKnownTopic(normalized: string): string | null {
   return ACTIONABLE_TOPIC_PHRASES.find((phrase) => normalized.includes(phrase)) ?? null
 }
 
-/** Turns raw feedback text into an actionable recommendation title (e.g. "Update business
- *  hours") instead of just echoing back what was typed — no LLM summarization available, so
- *  this recognizes known topics first, then falls back to stripping common request framing
- *  ("we need...", "...is needed") and leading with an action verb. */
+/** Turns raw feedback text into an actionable recommendation title instead of just echoing back
+ *  what was typed — no LLM summarization available, so this recognizes known topics first (e.g.
+ *  "Business hours" — left as a bare topic name, not verb-prefixed, so it reads distinctly from
+ *  an AI-detected recommendation like "Update business hours" rather than duplicating it), then
+ *  falls back to stripping common request framing ("we need...", "...is needed") and leading
+ *  with an action verb for anything unrecognized. */
 export function titleFromFeedback(text: string, gapType: GapType): string {
   const normalized = text.trim().toLowerCase()
-  const verb = gapType === 'action' ? 'Add' : 'Update'
   const knownTopic = extractKnownTopic(normalized)
-  if (knownTopic) return `${verb} ${knownTopic}`
+  if (knownTopic) return knownTopic.charAt(0).toUpperCase() + knownTopic.slice(1)
 
+  const verb = gapType === 'action' ? 'Add' : 'Update'
   let topic = normalized
     .replace(/^(we\s+(should|need|require|must)\s+(to\s+)?(give|provide|add|share|have|update)?\s*)/, '')
     .replace(/^(please\s+)?(add|update|give|provide|share|need|needs|needed)\s+/, '')
