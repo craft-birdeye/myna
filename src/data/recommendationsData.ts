@@ -12,6 +12,9 @@ export interface ManualUpdate {
   icon: string
   title: string
   description: string
+  /** Which change section this manual action feeds back into once resolved (Chat view routes the
+   *  refinement here directly instead of guessing from the answer text). */
+  relatedType?: GapType
 }
 
 export interface DiffChange {
@@ -376,7 +379,12 @@ export const RECOMMENDATIONS: Recommendation[] = [
       'Once accepted, the updated procedure will replace the existing version in this workflow and your procedure library.',
     ],
     manualUpdates: [
-      { icon: 'calendar_today', title: 'Upload holiday closure calendar', description: 'Provide the list of upcoming holiday closures so the agent can reference them.' },
+      {
+        icon: 'calendar_today',
+        title: 'Upload holiday closure calendar',
+        description: 'Provide the list of upcoming holiday closures so the agent can reference them.',
+        relatedType: 'knowledge',
+      },
       { icon: 'schedule', title: 'Confirm weekend hours', description: 'Verify Saturday and Sunday hours are current for every location.' },
     ],
     tools: [
@@ -493,6 +501,15 @@ export const RECOMMENDATIONS: Recommendation[] = [
       'Automatically logs a callback task for the front desk queue so no message is missed.',
     ],
     changeType: "Adds the after-hours callback policy to the agent's knowledge, updates the after-hours call script to confirm callback details and set expectations, and automatically logs a callback task for the front desk team each morning.",
+    sim: {
+      before: [],
+      after: [
+        { role: 'user' as const,  text: "It's 9pm, will anyone call me back tonight or tomorrow?", time: '09:02 PM' },
+        { role: 'agent' as const, text: "Thanks for calling — we're closed right now, but I can take a message and make sure the team follows up. What's this regarding?", time: '09:02 PM' },
+        { role: 'user' as const,  text: 'My check engine light came on. I just want to know when someone will actually call me back.', time: '09:03 PM' },
+        { role: 'agent' as const, text: "Got it — I've logged your callback request. Per our after-hours policy, you'll hear back within 2 business hours. If this feels urgent in the meantime, you can reach our after-hours emergency line.", time: '09:03 PM' },
+      ],
+    },
     conversations: [
       { name: 'Priya Anand',      message: "It's 9pm, will anyone call me back tonight or tomorrow?", channel: 'Voice', date: 'Jun 10', location: 'Mountain View' },
       { name: 'Marcus Bell',      message: 'I left a message after closing — when should I expect a callback?', channel: 'Voice', date: 'Jun 9', location: 'Palo Alto' },
@@ -500,7 +517,12 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { name: 'Derek Wong',       message: 'No one told me when to expect a call back, so I just called again.', channel: 'Voice', date: 'Jun 8', location: 'Sunnyvale' },
     ],
     manualUpdates: [
-      { icon: 'schedule', title: 'Confirm callback SLA', description: 'Verify the callback window (e.g. within 2 business hours) is accurate for your location.' },
+      {
+        icon: 'upload_file',
+        title: 'Upload callback policy',
+        description: "The agent has no callback policy on file, so we can't confirm the promised callback window is accurate — upload the document so we can add it to its knowledge.",
+        relatedType: 'knowledge',
+      },
     ],
     changes: [
       {
@@ -691,6 +713,14 @@ export const CONV_THREADS: Record<string, Turn[]> = {
     { role: 'agent', text: "I don't currently have a way to create a partial booking in this system. The VIN is required to proceed.", time: '02:16 PM' },
     { role: 'user',  text: 'Why can\'t you just take my name and number and call me back?', time: '02:17 PM' },
     { role: 'agent', text: "That's a reasonable request. Unfortunately I'm not set up to capture callback requests in this flow. Calling the service desk directly would be the best option.", time: '02:17 PM' },
+  ],
+  "It's 9pm, will anyone call me back tonight or tomorrow?": [
+    { role: 'user',  text: "It's 9pm, will anyone call me back tonight or tomorrow?", time: '09:02 PM' },
+    { role: 'agent', text: "Thanks for calling — we're closed right now, but I can take a message and make sure the team follows up. What's this regarding?", time: '09:02 PM' },
+    { role: 'user',  text: 'My check engine light came on. I just want to know when someone will actually call me back.', time: '09:03 PM' },
+    { role: 'agent', text: "I've noted your concern and taken your callback number. I don't have specific timing details available, so I can't say exactly when you'll hear back — someone will follow up when they can.", time: '09:03 PM' },
+    { role: 'user',  text: "That's not very reassuring. Tonight? Tomorrow? Next week?", time: '09:04 PM' },
+    { role: 'agent', text: "I understand the frustration — I just don't have that information available right now. I'll flag this as a gap so it gets fixed.", time: '09:04 PM' },
   ],
 }
 

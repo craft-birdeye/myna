@@ -10,6 +10,7 @@ import {
   RECOMMENDATIONS,
   type Channel,
   type ConversationItem,
+  type ManualUpdate,
   type ProcedureStep,
   type RecommendationChange,
   type RecStatus,
@@ -829,20 +830,24 @@ function RecommendationDetailBody({
 
 // ── Sticky copilot footer ─────────────────────────────────────────────────────
 
+const ATTACHMENT_NAME = 'Callback policy.pdf'
+
 function CopilotFooter({
   isThinking,
   onSubmit,
 }: {
   isThinking: boolean
-  onSubmit: (text: string) => void
+  onSubmit: (text: string, attachmentName?: string) => void
 }) {
   const [copilotInput, setCopilotInput] = useState('')
+  const [attached, setAttached] = useState(false)
 
   const handleSend = () => {
     const text = copilotInput.trim()
-    if (!text || isThinking) return
+    if ((!text && !attached) || isThinking) return
     setCopilotInput('')
-    onSubmit(text)
+    setAttached(false)
+    onSubmit(text || `Here's our callback policy document.`, attached ? ATTACHMENT_NAME : undefined)
   }
 
   return (
@@ -853,34 +858,62 @@ function CopilotFooter({
           <p className="text-body text-text-primary">Refine with copilot</p>
         </div>
 
-        <div className="flex items-end gap-sm rounded-sm border border-border-selected bg-surface p-sm focus-within:border-border-strong">
-          <textarea
-            value={copilotInput}
-            onChange={(e) => setCopilotInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            disabled={isThinking}
-            rows={1}
-            placeholder='Ask for refinements — e.g. "Add a step to verify insurance before scheduling."'
-            className="min-h-9 flex-1 resize-none bg-transparent px-sm py-xs text-body text-text-primary outline-none placeholder:text-text-tertiary"
-          />
-          <button
-            type="button"
-            aria-label="Send refinement"
-            disabled={!copilotInput.trim() || isThinking}
-            onClick={handleSend}
-            className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors ${
-              copilotInput.trim() && !isThinking
-                ? 'bg-primary text-white hover:bg-primary-hover'
-                : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-            }`}
-          >
-            <Icon name="send" size={18} />
-          </button>
+        <div className="flex flex-col gap-sm rounded-sm border border-border-selected bg-surface p-sm focus-within:border-border-strong">
+          {attached && (
+            <div className="flex w-fit items-center gap-xs rounded-sm border border-border bg-surface-subtle px-sm py-xs">
+              <Icon name="picture_as_pdf" size={16} className="shrink-0 text-chip-danger-text" />
+              <span className="text-small text-text-primary">{ATTACHMENT_NAME}</span>
+              <button
+                type="button"
+                aria-label="Remove attachment"
+                onClick={() => setAttached(false)}
+                className="flex size-4 shrink-0 items-center justify-center rounded-full text-text-icon hover:bg-surface-hover"
+              >
+                <Icon name="close" size={12} />
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-xs">
+            <button
+              type="button"
+              aria-label="Attach a document"
+              title="Wait for me to upload the documents"
+              disabled={isThinking}
+              onClick={() => setAttached((v) => !v)}
+              className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors ${
+                attached ? 'bg-surface-selected text-text-primary' : 'text-text-icon hover:bg-surface-hover'
+              }`}
+            >
+              <Icon name="add" size={18} />
+            </button>
+            <textarea
+              value={copilotInput}
+              onChange={(e) => setCopilotInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend()
+                }
+              }}
+              disabled={isThinking}
+              rows={1}
+              placeholder='Ask for refinements — e.g. "Add a step to verify insurance before scheduling."'
+              className="h-9 flex-1 resize-none bg-transparent py-0 pl-0 pr-sm leading-9 text-body text-text-primary outline-none placeholder:text-text-tertiary"
+            />
+            <button
+              type="button"
+              aria-label="Send refinement"
+              disabled={(!copilotInput.trim() && !attached) || isThinking}
+              onClick={handleSend}
+              className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors ${
+                (copilotInput.trim() || attached) && !isThinking
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+              }`}
+            >
+              <Icon name="send" size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1037,6 +1070,14 @@ function getMessageDiffPreview(rec: Recommendation): { original: string; revised
 interface ChatTurn {
   id: string
   text: string
+  attachment?: string
+}
+
+/** Turns a manual-update title into the question the copilot asks in Chat view, e.g.
+ *  "Upload callback policy" -> "Can you upload your callback policy?" */
+function questionFromManualUpdate(title: string): string {
+  const [verb, ...rest] = title.split(' ')
+  return `Can you ${verb.toLowerCase()} your ${rest.join(' ')}?`
 }
 
 /** One AI "answer" — thoughts, rationale, change cards, optionally the message diff and the
@@ -1056,6 +1097,10 @@ function ResponseBlock({
   onReject,
   onRequestAccept,
   recId,
+  onOpenConversations,
+  pendingManualUpdate,
+  manualUpdateIndex,
+  manualUpdateTotal,
 }: {
   thoughts: string
   toolCount: number
@@ -1070,13 +1115,24 @@ function ResponseBlock({
   onReject: (id: string) => void
   onRequestAccept: () => void
   recId: string
+  onOpenConversations?: () => void
+  pendingManualUpdate?: ManualUpdate | null
+  manualUpdateIndex?: number
+  manualUpdateTotal?: number
 }) {
   const changeStartIdx = 2 // 0 = thoughts, 1 = bodyText
   const diffIdx = changeStartIdx + changes.length
+  const afterDiffIdx = diffIdx + (diff ? 1 : 0)
+  const hasQuestion = Boolean(pendingManualUpdate)
   const hasOutcomes = showAcceptPrompt && Boolean(outcomes && outcomes.length > 0)
-  const outcomeIdx = diffIdx + (diff ? 1 : 0)
+  const questionIdx = afterDiffIdx
+  const outcomeIdx = afterDiffIdx
   const acceptIdx = outcomeIdx + (hasOutcomes ? 1 : 0)
-  const totalSteps = showAcceptPrompt ? acceptIdx + 1 : diffIdx + (diff ? 1 : 0)
+  const totalSteps = hasQuestion
+    ? questionIdx + 1
+    : showAcceptPrompt
+      ? acceptIdx + 1
+      : afterDiffIdx
 
   const [revealStep, setRevealStep] = useState(0)
 
@@ -1110,6 +1166,17 @@ function ResponseBlock({
         </div>
       )}
 
+      {revealStep > 0 && onOpenConversations && (
+        <button
+          type="button"
+          onClick={onOpenConversations}
+          className="chat-reveal-in flex w-fit items-center gap-xs text-small text-text-action"
+        >
+          <Icon name="chat_bubble_outline" size={13} />
+          See conversations
+        </button>
+      )}
+
       {revealStep > 1 && <p className="chat-reveal-in text-body text-text-primary">{bodyText}</p>}
 
       {changes.map((change, i) =>
@@ -1135,6 +1202,25 @@ function ResponseBlock({
           </div>
           <div className="rounded-lg bg-[#dbeafe] px-md py-sm">
             <p className="text-body text-text-primary">{diff.revised}</p>
+          </div>
+        </div>
+      )}
+
+      {hasQuestion && pendingManualUpdate && revealStep > questionIdx && (
+        <div className="chat-reveal-in flex flex-col gap-xs rounded-sm border border-[#fde68a] bg-[#fffbeb] p-lg">
+          <p className="text-small text-text-tertiary">
+            Before I can recommend accepting this
+            {manualUpdateTotal && manualUpdateTotal > 1
+              ? ` (question ${(manualUpdateIndex ?? 0) + 1} of ${manualUpdateTotal})`
+              : ''}
+            :
+          </p>
+          <div className="flex items-start gap-sm">
+            <Icon name="warning" size={14} className="mt-0.5 shrink-0 text-warning" />
+            <div className="flex flex-col gap-[2px]">
+              <p className="text-body text-text-primary">{questionFromManualUpdate(pendingManualUpdate.title)}</p>
+              <p className="text-small text-text-secondary">{pendingManualUpdate.description}</p>
+            </div>
           </div>
         </div>
       )}
@@ -1229,6 +1315,7 @@ function RecommendationChatView({
   effectiveChanges,
   turns,
   isThinking,
+  onOpenConversations,
 }: {
   rec: Recommendation
   recStatus: RecStatus
@@ -1237,11 +1324,21 @@ function RecommendationChatView({
   effectiveChanges: RecommendationChange[]
   turns: ChatTurn[]
   isThinking: boolean
+  onOpenConversations: () => void
 }) {
   const diff = getMessageDiffPreview(rec)
   const initialThoughts =
     rec.thoughts ??
     `I reviewed ${rec.conversationCount} related conversation${rec.conversationCount === 1 ? '' : 's'} flagged for this agent. Let me check the procedure library for coverage.`
+
+  // Manual updates (e.g. "upload the callback policy") are asked one at a time in Chat view —
+  // the Accept prompt is withheld until every one of them has been answered by a turn.
+  const manualUpdates = rec.manualUpdates ?? []
+  const totalManual = manualUpdates.length
+  // Knowledge-gap message diffs are the pay-off for uploading the missing document — withhold
+  // the Original/Revised preview until that specific manual update has been answered, instead of
+  // showing it upfront before we actually "have" the document.
+  const knowledgeManualIdx = manualUpdates.findIndex((m) => m.relatedType === 'knowledge')
 
   return (
     <div className="mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
@@ -1265,21 +1362,38 @@ function RecommendationChatView({
         bodyText={rec.rationale}
         changes={effectiveChanges}
         procedureTitle={rec.procedureTitle}
-        diff={diff}
+        diff={knowledgeManualIdx === -1 ? diff : null}
         outcomes={rec.outcomes}
-        showAcceptPrompt={turns.length === 0}
+        showAcceptPrompt={turns.length === 0 && totalManual === 0}
         recStatus={recStatus}
         onReject={onReject}
         onRequestAccept={onRequestAccept}
         recId={rec.id}
+        onOpenConversations={onOpenConversations}
+        pendingManualUpdate={turns.length === 0 && totalManual > 0 ? manualUpdates[0] : null}
+        manualUpdateIndex={0}
+        manualUpdateTotal={totalManual}
       />
 
       {turns.map((turn, i) => {
         const isLastTurn = i === turns.length - 1
         const pending = isLastTurn && isThinking
+        // Manual updates are answered strictly in order, one per turn — turn i answers
+        // manualUpdates[i] (if it exists); once i has caught up to the total, every later turn
+        // is a free-form refinement and the Accept prompt is unlocked.
+        const resolvedAfterThisTurn = Math.min(i + 1, totalManual)
+        const nextPendingIdx = resolvedAfterThisTurn
+        const allResolved = resolvedAfterThisTurn >= totalManual
         return (
           <div key={turn.id} className="flex flex-col gap-xl">
-            <ChatBubble sender="user" text={turn.text} bubbleClassName="max-w-[85%] px-md py-sm" />
+            <ChatBubble sender="user" text={turn.text} bubbleClassName="max-w-[85%] px-md py-sm">
+              {turn.attachment && (
+                <div className="flex items-center gap-xs rounded-sm border border-border bg-surface px-sm py-xs">
+                  <Icon name="picture_as_pdf" size={14} className="shrink-0 text-chip-danger-text" />
+                  <span className="text-small text-text-secondary">{turn.attachment}</span>
+                </div>
+              )}
+            </ChatBubble>
             {pending ? (
               <RefinementThinking />
             ) : (
@@ -1291,13 +1405,16 @@ function RecommendationChatView({
                 bodyText="I've updated the recommendation to reflect your request — here's the current state of every section."
                 changes={effectiveChanges}
                 procedureTitle={rec.procedureTitle}
-                diff={null}
+                diff={i === knowledgeManualIdx ? diff : null}
                 outcomes={rec.outcomes}
-                showAcceptPrompt={isLastTurn}
+                showAcceptPrompt={isLastTurn && allResolved}
                 recStatus={recStatus}
                 onReject={onReject}
                 onRequestAccept={onRequestAccept}
                 recId={rec.id}
+                pendingManualUpdate={!allResolved ? manualUpdates[nextPendingIdx] : null}
+                manualUpdateIndex={nextPendingIdx}
+                manualUpdateTotal={totalManual}
               />
             )}
           </div>
@@ -1311,7 +1428,7 @@ function RecommendationChatView({
 
 export function RecommendationDetailScreen({ recommendationId, onBack }: RecommendationDetailScreenProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
-  const { overrides, submitRefinement } = useRecommendationOverridesStore()
+  const { overrides, submitRefinement, setRecommendationStatus, resetOverrides } = useRecommendationOverridesStore()
   const rec =
     [...RECOMMENDATIONS, ...feedbackRecommendations].find((r) => r.id === recommendationId) ?? RECOMMENDATIONS[0]
 
@@ -1331,13 +1448,13 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
     proposedSteps: changeStepOverrides?.[c.type] ?? c.proposedSteps,
   }))
 
-  const [recStatus, setRecStatus] = useState<RecStatus>('open')
+  const [recStatus, setRecStatus] = useState<RecStatus>(() => overrides[rec.id]?.status ?? 'open')
   const [convsOpen, setConvsOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [toast, setToast] = useState<ToastData | null>(null)
   const [isThinking, setIsThinking] = useState(false)
-  const [view, setView] = useState<'chat' | 'fixed'>('fixed')
+  const [view, setView] = useState<'chat' | 'fixed'>('chat')
   // Chat view's back-and-forth is intentionally ephemeral — in-memory only, reset on refresh (or
   // when navigating to a different recommendation), never written to localStorage.
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([])
@@ -1382,16 +1499,31 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
     setTimeout(() => setToast(null), 5000)
   }
 
-  const handleReject = (_id: string) => {
+  const handleReject = (id: string) => {
     setRecStatus('rejected')
+    setRecommendationStatus(id, 'rejected')
     showToast({ message: 'Recommendation rejected', variant: 'danger' })
   }
 
-  const handleSubmitRefinement = (text: string) => {
-    setChatTurns((prev) => [...prev, { id: `turn-${prev.length + 1}-${Date.now()}`, text }])
+  const handleResetToOriginal = () => {
+    resetOverrides(rec.id)
+    setRecStatus('open')
+    setChatTurns([])
+    showToast({ message: 'Reset to the original recommendation.' })
+  }
+
+  // Manual updates are answered one per turn, in order — the turn at index `chatTurns.length`
+  // (before this submission is added) answers `rec.manualUpdates[chatTurns.length]`, if one is
+  // still pending, so its answer routes straight into the section it's meant to fix.
+  const totalManual = rec.manualUpdates?.length ?? 0
+  const pendingManualUpdate = chatTurns.length < totalManual ? rec.manualUpdates![chatTurns.length] : undefined
+
+  const handleSubmitRefinement = (text: string, attachmentName?: string) => {
+    setChatTurns((prev) => [...prev, { id: `turn-${prev.length + 1}-${Date.now()}`, text, attachment: attachmentName }])
     setIsThinking(true)
+    const refinementText = attachmentName ? `Uploaded ${attachmentName}. ${text}` : text
     setTimeout(() => {
-      submitRefinement(rec.id, effectiveChanges, text)
+      submitRefinement(rec.id, effectiveChanges, refinementText, pendingManualUpdate?.relatedType)
       setIsThinking(false)
     }, 1800)
   }
@@ -1409,40 +1541,50 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
           >
             <BackArrowIcon />
           </button>
-          {rec.source === 'feedback' && (
-            <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" />
-          )}
           <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
-          {view === 'chat' && (
-            <>
-              <Chip label={rec.source === 'feedback' ? 'Human feedback' : 'AI recommendation'} variant="neutral" />
-              <Chip
-                label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-                variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
-              />
-            </>
+          {rec.source === 'feedback' ? (
+            <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" />
+          ) : (
+            <Icon name="auto_awesome" size={16} className="shrink-0 text-ai-brand" />
           )}
         </div>
 
-        <div className="flex h-9 shrink-0 items-center gap-[2px] rounded-sm border border-border-selected bg-surface p-[2px]">
+        <div className="flex shrink-0 items-center gap-sm">
+          {view === 'chat' && (
+            <Chip
+              label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+              variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
+            />
+          )}
           <button
             type="button"
-            onClick={() => setView('chat')}
-            className={`flex h-full items-center rounded-sm px-md text-body transition-colors ${
-              view === 'chat' ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
-            }`}
+            aria-label="Reset to original"
+            title="Reset to original"
+            onClick={handleResetToOriginal}
+            className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
-            Chat
+            <Icon name="restart_alt" size={18} />
           </button>
-          <button
-            type="button"
-            onClick={() => setView('fixed')}
-            className={`flex h-full items-center rounded-sm px-md text-body transition-colors ${
-              view === 'fixed' ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
-            }`}
-          >
-            Fixed
-          </button>
+          <div className="flex h-9 shrink-0 items-center gap-[2px] rounded-sm border border-border-selected bg-surface p-[2px]">
+            <button
+              type="button"
+              onClick={() => setView('chat')}
+              className={`flex h-full items-center rounded-sm px-md text-body transition-colors ${
+                view === 'chat' ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('fixed')}
+              className={`flex h-full items-center rounded-sm px-md text-body transition-colors ${
+                view === 'fixed' ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
+              }`}
+            >
+              Fixed
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1470,6 +1612,7 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
               effectiveChanges={effectiveChanges}
               turns={chatTurns}
               isThinking={isThinking}
+              onOpenConversations={() => setConvsOpen(true)}
             />
           )}
         </div>
@@ -1497,6 +1640,7 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
           onConfirm={() => {
             setConfirmOpen(false)
             setRecStatus('accepted')
+            setRecommendationStatus(rec.id, 'accepted')
             showToast({ message: `${rec.procedureTitle} successfully ${rec.isNew ? 'added' : 'updated'}` })
           }}
         />

@@ -11,11 +11,21 @@ const STORAGE_KEY = 'myna:recommendationOverrides'
 export interface RecommendationOverride {
   /** Proposed-steps overrides, keyed by gap type — supports recommendations with multiple change sections. */
   changeStepOverrides?: Partial<Record<GapType, ProcedureStep[]>>
+  status?: 'accepted' | 'rejected'
 }
 
 interface RecommendationOverridesStore {
   overrides: Record<string, RecommendationOverride>
-  submitRefinement: (id: string, effectiveChanges: RecommendationChange[], text: string) => void
+  submitRefinement: (
+    id: string,
+    effectiveChanges: RecommendationChange[],
+    text: string,
+    forcedType?: GapType,
+  ) => void
+  setRecommendationStatus: (id: string, status: 'accepted' | 'rejected') => void
+  /** Wipes all copilot refinements and status for one recommendation, restoring the authored
+   *  original — an escape hatch for clearing out test/junk input typed into the copilot box. */
+  resetOverrides: (id: string) => void
 }
 
 const RecommendationOverridesStoreContext = createContext<RecommendationOverridesStore | null>(null)
@@ -49,10 +59,18 @@ export function RecommendationOverridesStoreProvider({ children }: { children: R
     }
   }, [overrides])
 
-  const submitRefinement = (id: string, effectiveChanges: RecommendationChange[], text: string) => {
+  const submitRefinement = (
+    id: string,
+    effectiveChanges: RecommendationChange[],
+    text: string,
+    forcedType?: GapType,
+  ) => {
     setOverrides((prev) => {
       const existing = prev[id] ?? {}
-      const targetType = classifyRefinementTarget(text, effectiveChanges.map((c) => c.type))
+      const targetType =
+        forcedType && effectiveChanges.some((c) => c.type === forcedType)
+          ? forcedType
+          : classifyRefinementTarget(text, effectiveChanges.map((c) => c.type))
       const targetChange = effectiveChanges.find((c) => c.type === targetType) ?? effectiveChanges[0]
       const newStep: ProcedureStep = { title: 'Refinement from copilot', bullets: [text] }
 
@@ -68,8 +86,25 @@ export function RecommendationOverridesStoreProvider({ children }: { children: R
     })
   }
 
+  const setRecommendationStatus = (id: string, status: 'accepted' | 'rejected') => {
+    setOverrides((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], status },
+    }))
+  }
+
+  const resetOverrides = (id: string) => {
+    setOverrides((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
   return (
-    <RecommendationOverridesStoreContext.Provider value={{ overrides, submitRefinement }}>
+    <RecommendationOverridesStoreContext.Provider
+      value={{ overrides, submitRefinement, setRecommendationStatus, resetOverrides }}
+    >
       {children}
     </RecommendationOverridesStoreContext.Provider>
   )

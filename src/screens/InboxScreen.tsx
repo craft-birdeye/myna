@@ -42,7 +42,7 @@ const CONVERSATIONS: Conversation[] = [
     id: ANNETTE_BLACK_CONVERSATION_ID,
     name: 'Annette Black',
     verified: true,
-    message: 'That helped!',
+    message: "Seriously? You're a booking assistant and you don't know your own hours?",
     location: 'Rock Dental Brands',
     assignee: 'Front desk agent - North region',
     date: '02:09 PM',
