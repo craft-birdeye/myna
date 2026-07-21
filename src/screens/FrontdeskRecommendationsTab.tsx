@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Chip, Icon } from '../components'
+import { BackArrowIcon } from '../assets/BackArrowIcon'
+import {
+  getAgentFeedbackRecommendations,
+  mapFeedbackToFrontdeskRecommendation,
+  subscribeAgentFeedbackRecommendations,
+} from '../data/agentFeedbackRecommendations'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 
@@ -46,6 +52,8 @@ interface Recommendation {
   timeAgo: string
   conversationCount: number
   isNew: boolean
+  source?: 'human' | 'ai'
+  topics: string[]
   whenToUse: string
   originalWhenToUse?: string
   steps: ProcedureStep[]
@@ -73,6 +81,7 @@ const RECOMMENDATIONS: Recommendation[] = [
     timeAgo: '2h ago',
     conversationCount: 12,
     isNew: true,
+    topics: ['Payments'],
     whenToUse: 'When a customer asks about making a payment for services, parts, or outstanding balances — by phone, online, or in person.',
     steps: [
       {
@@ -137,6 +146,7 @@ const RECOMMENDATIONS: Recommendation[] = [
     timeAgo: '5h ago',
     conversationCount: 8,
     isNew: false,
+    topics: ['Appointments', 'Scheduling'],
     whenToUse: 'When a customer requests to reschedule an existing appointment, including same-day changes and waitlist additions.',
     steps: [
       {
@@ -227,6 +237,7 @@ const RECOMMENDATIONS: Recommendation[] = [
     timeAgo: '3h ago',
     conversationCount: 5,
     isNew: false,
+    topics: ['Escalation', 'Safety'],
     whenToUse: 'When a customer reports a safety concern, breakdown, or any urgent issue requiring immediate human attention.',
     steps: [
       {
@@ -297,6 +308,7 @@ const RECOMMENDATIONS: Recommendation[] = [
     timeAgo: '1h ago',
     conversationCount: 19,
     isNew: false,
+    topics: ['Business hours'],
     whenToUse: 'When a customer asks about operating hours, weekend availability, or holiday schedules.',
     steps: [
       {
@@ -356,6 +368,7 @@ const RECOMMENDATIONS: Recommendation[] = [
     timeAgo: '6h ago',
     conversationCount: 7,
     isNew: true,
+    topics: ['Service intake', 'VIN lookup'],
     whenToUse: 'During any service intake where vehicle identification is needed.',
     steps: [
       {
@@ -401,6 +414,18 @@ const PRIORITY_VARIANT: Record<Priority, 'danger' | 'warning' | 'neutral'> = {
   Low: 'neutral',
 }
 
+const TYPE_LABEL: Record<GapType, string> = {
+  procedure: 'Procedure',
+  knowledge: 'Knowledge',
+  action: 'Action',
+}
+
+const TYPE_ICON: Record<GapType, string> = {
+  procedure: 'description',
+  knowledge: 'menu_book',
+  action: 'build',
+}
+
 type RecStatus = 'open' | 'accepted' | 'rejected'
 
 const PRIORITY_ORDER: Record<Priority, number> = { High: 0, Medium: 1, Low: 2 }
@@ -419,43 +444,149 @@ function getRecStatus(id: string, rejected: Set<string>, accepted: Set<string>):
   return 'open'
 }
 
-// ── Left card ─────────────────────────────────────────────────────────────────
+// ── Recommendations list ───────────────────────────────────────────────────────
 
-function RecCard({
+const REC_LIST_GRID =
+  'grid grid-cols-[minmax(280px,480px)_1fr_1fr_1fr_auto] items-center gap-md'
+
+function RecommendationListItem({
   rec,
-  selected,
-  recStatus,
-  onClick,
+  status,
+  isLast,
+  onSelect,
+  onAnalyze,
 }: {
   rec: Recommendation
-  selected: boolean
-  recStatus: RecStatus
-  onClick: () => void
+  status: RecStatus
+  isLast: boolean
+  onSelect: () => void
+  onAnalyze?: () => void
 }) {
+  const isHuman = rec.source === 'human'
+  const actionLabel = isHuman ? 'Review' : 'Fix'
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-md border border-border-selected p-lg text-left transition-colors ${
-        selected ? 'bg-surface-hover' : 'bg-surface hover:bg-surface-hover'
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      className={`group/row relative ${REC_LIST_GRID} cursor-pointer px-[10px] py-lg transition-colors hover:bg-surface-hover ${
+        isLast ? '' : 'border-b border-border'
       }`}
     >
-      <div className="mb-sm flex items-center justify-between gap-sm">
-        <p className="min-w-0 flex-1 truncate text-body text-text-primary">{rec.title}</p>
-        <div className="flex shrink-0 items-center gap-xs">
-          {recStatus === 'open' && <Chip label={rec.priority} variant={PRIORITY_VARIANT[rec.priority]} />}
-          {recStatus === 'accepted' && <Chip label="Accepted" variant="success" />}
-          {recStatus === 'rejected' && <Chip label="Rejected" variant="danger" />}
+      <div className="min-w-0">
+        <div className="flex items-start gap-sm">
+          {isHuman ? (
+            <Icon name="thumb_down" size={16} className="mt-[2px] shrink-0 text-chip-danger-text" />
+          ) : (
+            <Icon name="auto_awesome" size={16} className="mt-[2px] shrink-0 text-ai-brand" />
+          )}
+          <div className="min-w-0">
+            <p className="text-body text-text-primary">{rec.title}</p>
+            <p className="mt-xs line-clamp-2 text-small text-text-secondary">{rec.summary}</p>
+          </div>
         </div>
       </div>
 
-      <p className="line-clamp-2 text-small text-text-secondary">{rec.summary}</p>
-
-      <div className="mt-sm flex items-center gap-xs text-small text-text-tertiary">
-        <Icon name="chat_bubble_outline" size={12} />
-        {rec.conversationCount} affected
+      <div className="min-w-0">
+        <span className="inline-flex items-center gap-xs text-small text-text-secondary">
+          {isHuman ? (
+            <>
+              <Icon name="thumb_down" size={14} className="shrink-0 text-chip-danger-text" />
+              Human feedback
+            </>
+          ) : (
+            <>
+              <Icon name={TYPE_ICON[rec.gapType]} size={14} className="shrink-0 text-text-icon" />
+              {TYPE_LABEL[rec.gapType]}
+            </>
+          )}
+        </span>
       </div>
-    </button>
+
+      <div className="min-w-0">
+        {status === 'accepted' ? (
+          <Chip label="Accepted" variant="success" />
+        ) : status === 'rejected' ? (
+          <Chip label="Rejected" variant="danger" />
+        ) : (
+          <Chip label={rec.priority} variant={PRIORITY_VARIANT[rec.priority]} />
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <span className="inline-flex items-center gap-xs text-small text-text-tertiary">
+          <Icon name="chat_bubble_outline" size={14} />
+          {rec.conversationCount} affected
+        </span>
+      </div>
+
+      <div className="flex min-h-9 items-center justify-end gap-sm pl-sm">
+        {onAnalyze && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onAnalyze()
+            }}
+            className="hidden h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary group-hover/row:flex hover:bg-surface-l2"
+          >
+            <Icon name="auto_awesome" size={16} className="text-ai-brand" />
+            Analyze with AI
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelect()
+          }}
+          className="hidden h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary group-hover/row:flex hover:bg-surface-l2"
+        >
+          {actionLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function RecommendationsList({
+  items,
+  getStatus,
+  onSelect,
+  onAnalyze,
+}: {
+  items: Recommendation[]
+  getStatus: (id: string) => RecStatus
+  onSelect: (id: string) => void
+  onAnalyze?: (id: string) => void
+}) {
+  return (
+    <div className="flex flex-col">
+      <div className={`${REC_LIST_GRID} border-b border-border px-[10px] pb-sm`}>
+        <span className="text-small text-text-secondary">Recommendation</span>
+        <span className="text-small text-text-secondary">Type</span>
+        <span className="text-small text-text-secondary">Priority</span>
+        <span className="text-small text-text-secondary">Affected</span>
+        <span aria-hidden />
+      </div>
+      {items.map((rec, i) => (
+        <RecommendationListItem
+          key={rec.id}
+          rec={rec}
+          status={getStatus(rec.id)}
+          isLast={i === items.length - 1}
+          onSelect={() => onSelect(rec.id)}
+          onAnalyze={onAnalyze ? () => onAnalyze(rec.id) : undefined}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -1064,6 +1195,181 @@ function ToolbarEditNoteIcon({ className }: { className?: string }) {
 
 // ── Detail panel ──────────────────────────────────────────────────────────────
 
+function RecommendationHeaderChrome({
+  rec,
+  recStatus,
+  applyOpen,
+  setApplyOpen,
+  onPreviewOpen,
+  onReject,
+  onRequestAccept,
+  onToast,
+  dirty,
+  onSave,
+  showTitle = false,
+  showChips = true,
+}: {
+  rec: Recommendation
+  recStatus: RecStatus
+  applyOpen: boolean
+  setApplyOpen: (v: boolean | ((prev: boolean) => boolean)) => void
+  onPreviewOpen: () => void
+  onReject: (id: string) => void
+  onRequestAccept: () => void
+  onToast: (data: ToastData) => void
+  dirty: boolean
+  onSave: () => void
+  showTitle?: boolean
+  showChips?: boolean
+}) {
+  const chips = showChips ? (
+    <>
+      {recStatus === 'open' && <Chip label={rec.priority} variant={PRIORITY_VARIANT[rec.priority]} />}
+      {recStatus === 'open' && rec.manualUpdates && rec.manualUpdates.length > 0 && (
+        <Chip
+          label={`${rec.manualUpdates.length} manual update${rec.manualUpdates.length > 1 ? 's' : ''} needed`}
+          variant="warning"
+        />
+      )}
+      {recStatus === 'accepted' && <Chip label="Accepted" variant="success" />}
+      {recStatus === 'rejected' && <Chip label="Rejected" variant="danger" />}
+    </>
+  ) : null
+
+  const actions = (
+    <div className="flex shrink-0 items-center gap-sm">
+      <button
+        type="button"
+        onClick={onPreviewOpen}
+        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+      >
+        <Icon name="play_arrow" size={16} className="text-text-icon" />
+        Test
+      </button>
+      {recStatus === 'accepted' ? (
+        <div className="relative">
+          <div className="flex h-9 overflow-hidden rounded-sm">
+            <button
+              type="button"
+              disabled={!dirty}
+              onClick={() => {
+                onSave()
+                onToast({ message: 'Changes saved.' })
+              }}
+              className={`flex h-9 items-center px-lg text-body transition-colors ${
+                dirty
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+              }`}
+            >
+              Save
+            </button>
+            <div className={`w-px ${dirty ? 'bg-white/30' : 'bg-border'}`} />
+            <button
+              type="button"
+              disabled={!dirty}
+              onClick={() => setApplyOpen((v) => !v)}
+              aria-label="More save options"
+              className={`flex h-9 items-center px-sm transition-colors ${
+                dirty
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+              }`}
+            >
+              <Icon name="expand_more" size={16} />
+            </button>
+          </div>
+          {dirty && applyOpen && (
+            <>
+              <div className="fixed inset-0 z-[105]" onClick={() => setApplyOpen(false)} aria-hidden />
+              <div className="absolute right-0 top-full z-[110] mt-xs min-w-[220px] rounded-sm border border-border bg-surface py-sm shadow-dropdown">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApplyOpen(false)
+                    onSave()
+                    onToast({ message: `${rec.procedureTitle} successfully added to the library.` })
+                  }}
+                  className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                >
+                  Add to library
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="relative">
+          <div className="flex h-9 overflow-hidden rounded-sm">
+            <button
+              type="button"
+              className="flex h-9 items-center bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              onClick={() => {
+                setApplyOpen(false)
+                onRequestAccept()
+              }}
+            >
+              Accept
+            </button>
+            <div className="w-px bg-white/30" />
+            <button
+              type="button"
+              className="flex h-9 items-center bg-primary px-sm text-white transition-colors hover:bg-primary-hover"
+              onClick={() => setApplyOpen((v) => !v)}
+              aria-label="More apply options"
+            >
+              <Icon name="expand_more" size={16} />
+            </button>
+          </div>
+          {applyOpen && (
+            <>
+              <div className="fixed inset-0 z-[105]" onClick={() => setApplyOpen(false)} aria-hidden />
+              <div className="absolute right-0 top-full z-[110] mt-xs min-w-[220px] rounded-sm border border-border bg-surface py-sm shadow-dropdown">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApplyOpen(false)
+                    onRequestAccept()
+                  }}
+                  className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                >
+                  Add to library
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApplyOpen(false)
+                    onReject(rec.id)
+                  }}
+                  className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                >
+                  Reject
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
+  if (!showTitle && !showChips) {
+    return actions
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-md">
+      <div className="flex min-w-0 flex-1 items-center gap-sm">
+        {showTitle && (
+          <h2 className="min-w-0 truncate text-h2 text-text-primary">{rec.title}</h2>
+        )}
+        {chips}
+      </div>
+      {actions}
+    </div>
+  )
+}
+
 function ConfirmAddProcedureModal({
   isNew,
   procedureTitle,
@@ -1132,6 +1438,7 @@ function DetailPanel({
   onAccept,
   onToast,
   onPreviewOpen,
+  headerActionsEl = null,
 }: {
   rec: Recommendation
   recStatus: RecStatus
@@ -1139,10 +1446,34 @@ function DetailPanel({
   onAccept: (id: string) => void
   onToast: (data: ToastData) => void
   onPreviewOpen: () => void
+  /** When set, chips + Test/Accept render here (page header) instead of in the body. */
+  headerActionsEl?: HTMLElement | null
 }) {
   const [applyOpen, setApplyOpen] = useState(false)
   const [convsOpen, setConvsOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const saveHandlerRef = React.useRef<(() => void) | null>(null)
+  const chromeInHeader = Boolean(headerActionsEl)
+
+  const chrome = (
+    <RecommendationHeaderChrome
+      rec={rec}
+      recStatus={recStatus}
+      applyOpen={applyOpen}
+      setApplyOpen={setApplyOpen}
+      onPreviewOpen={onPreviewOpen}
+      onReject={onReject}
+      onRequestAccept={() => setConfirmOpen(true)}
+      onToast={onToast}
+      dirty={dirty}
+      onSave={() => {
+        saveHandlerRef.current?.()
+      }}
+      showTitle={!chromeInHeader}
+      showChips={!chromeInHeader}
+    />
+  )
 
   return (
     <>
@@ -1159,16 +1490,16 @@ function DetailPanel({
           }}
         />
       )}
+      {chromeInHeader && headerActionsEl ? createPortal(chrome, headerActionsEl) : null}
       <DetailPanelInner
         rec={rec}
         recStatus={recStatus}
-        applyOpen={applyOpen}
-        setApplyOpen={setApplyOpen}
         setConvsOpen={setConvsOpen}
-        onPreviewOpen={onPreviewOpen}
-        onReject={onReject}
-        onRequestAccept={() => setConfirmOpen(true)}
-        onToast={onToast}
+        onDirtyChange={setDirty}
+        onSaveHandlerChange={(handler) => {
+          saveHandlerRef.current = handler
+        }}
+        headerChrome={chromeInHeader ? null : chrome}
       />
     </>
   )
@@ -1177,26 +1508,18 @@ function DetailPanel({
 function DetailPanelInner({
   rec,
   recStatus,
-  applyOpen,
-  setApplyOpen,
   setConvsOpen,
-  onPreviewOpen,
-  onReject,
-  onRequestAccept,
-  onToast,
+  onDirtyChange,
+  onSaveHandlerChange,
+  headerChrome,
 }: {
   rec: Recommendation
   recStatus: RecStatus
-  applyOpen: boolean
-  setApplyOpen: (v: boolean | ((prev: boolean) => boolean)) => void
   setConvsOpen: (v: boolean) => void
-  onPreviewOpen: () => void
-  onReject: (id: string) => void
-  onRequestAccept: () => void
-  onToast: (data: ToastData) => void
-})
-
-{
+  onDirtyChange: (dirty: boolean) => void
+  onSaveHandlerChange: (handler: (() => void) | null) => void
+  headerChrome: React.ReactNode
+}) {
   const [titleValue, setTitleValue] = useState(rec.procedureTitle)
   const [whenToUseValue, setWhenToUseValue] = useState(rec.whenToUse)
   const [savedTitle, setSavedTitle] = useState(rec.procedureTitle)
@@ -1205,175 +1528,55 @@ function DetailPanelInner({
 
   const dirty = titleValue !== savedTitle || whenToUseValue !== savedWhenToUse
 
-  const handleSave = () => {
-    setSavedTitle(titleValue)
-    setSavedWhenToUse(whenToUseValue)
-    onToast({ message: 'Changes saved.' })
-  }
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
+
+  useEffect(() => {
+    onSaveHandlerChange(() => {
+      setSavedTitle(titleValue)
+      setSavedWhenToUse(whenToUseValue)
+    })
+    return () => onSaveHandlerChange(null)
+  }, [titleValue, whenToUseValue, onSaveHandlerChange])
 
   return (
     <div className="min-w-0 flex-1 overflow-y-auto">
-      <div className="flex flex-col gap-xl py-xl pl-lg pr-2xl">
-        {/* Title + CTAs */}
-        <div>
-          <div className="flex items-center justify-between gap-md">
-            <div className="flex min-w-0 flex-1 items-center gap-sm">
-              <h2 className="min-w-0 truncate text-h2 text-text-primary">{rec.title}</h2>
-              {recStatus === 'open' && <Chip label={rec.priority} variant={PRIORITY_VARIANT[rec.priority]} />}
-              {recStatus === 'open' && rec.manualUpdates && rec.manualUpdates.length > 0 && (
-                <Chip
-                  label={`${rec.manualUpdates.length} manual update${rec.manualUpdates.length > 1 ? 's' : ''} needed`}
-                  variant="warning"
-                />
-              )}
-              {recStatus === 'accepted' && <Chip label="Accepted" variant="success" />}
-              {recStatus === 'rejected' && <Chip label="Rejected" variant="danger" />}
-            </div>
-            <div className="flex shrink-0 items-center gap-sm">
-              <button
-                type="button"
-                onClick={onPreviewOpen}
-                className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-              >
-                <Icon name="play_arrow" size={16} className="text-text-icon" />
-                Test
-              </button>
-              {recStatus === 'accepted' ? (
-                <div className="relative">
-                  <div className="flex h-9 overflow-hidden rounded-sm">
-                    <button
-                      type="button"
-                      disabled={!dirty}
-                      onClick={handleSave}
-                      className={`flex h-9 items-center px-lg text-body transition-colors ${
-                        dirty
-                          ? 'bg-primary text-white hover:bg-primary-hover'
-                          : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-                      }`}
-                    >
-                      Save
-                    </button>
-                    <div className={`w-px ${dirty ? 'bg-white/30' : 'bg-border'}`} />
-                    <button
-                      type="button"
-                      disabled={!dirty}
-                      onClick={() => setApplyOpen((v) => !v)}
-                      aria-label="More save options"
-                      className={`flex h-9 items-center px-sm transition-colors ${
-                        dirty
-                          ? 'bg-primary text-white hover:bg-primary-hover'
-                          : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-                      }`}
-                    >
-                      <Icon name="expand_more" size={16} />
-                    </button>
-                  </div>
-                  {dirty && applyOpen && (
-                    <>
-                      <div className="fixed inset-0 z-[105]" onClick={() => setApplyOpen(false)} aria-hidden />
-                      <div className="absolute right-0 top-full z-[110] mt-xs min-w-[220px] rounded-sm border border-border bg-surface py-sm shadow-dropdown">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setApplyOpen(false)
-                            handleSave()
-                            onToast({ message: `${rec.procedureTitle} successfully added to the library.` })
-                          }}
-                          className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                        >
-                          Add to library
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-              <div className="relative">
-                <div className="flex h-9 overflow-hidden rounded-sm">
-                  <button
-                    className="flex h-9 items-center bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                    onClick={() => {
-                      setApplyOpen(false)
-                      onRequestAccept()
-                    }}
-                  >
-                    Accept
-                  </button>
-                  <div className="w-px bg-white/30" />
-                  <button
-                    className="flex h-9 items-center bg-primary px-sm text-white transition-colors hover:bg-primary-hover"
-                    onClick={() => setApplyOpen((v) => !v)}
-                    aria-label="More apply options"
-                  >
-                    <Icon name="expand_more" size={16} />
-                  </button>
-                </div>
-                {applyOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[105]" onClick={() => setApplyOpen(false)} aria-hidden />
-                    <div className="absolute right-0 top-full z-[110] mt-xs min-w-[220px] rounded-sm border border-border bg-surface py-sm shadow-dropdown">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setApplyOpen(false)
-                          onRequestAccept()
-                        }}
-                        className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                      >
-                        Add to library
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setApplyOpen(false)
-                          onReject(rec.id)
-                        }}
-                        className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-              )}
-            </div>
-          </div>
+      <div className="flex flex-col gap-xl px-2xl py-xl">
+        {headerChrome && <div>{headerChrome}</div>}
 
-          {/* AI insight callout */}
-          <div className="mt-md flex items-start gap-sm rounded-sm border border-[#b090e0] bg-[#f9f7fd] px-lg py-md">
-            <Icon name="auto_awesome" size={14} className="mt-0.5 shrink-0 text-ai-brand" />
-            <div className="flex min-w-0 flex-1 flex-col gap-xs">
-              <p className="text-body text-text-secondary">{rec.rationale}</p>
-              {rec.outcomes && rec.outcomes.length > 0 && (
-                <ul className="flex flex-col gap-[4px] pl-md">
-                  {rec.outcomes.map((o, i) => (
-                    <li key={i} className="list-disc text-body text-text-secondary marker:text-text-tertiary">
-                      {o.includes(rec.procedureTitle) ? (
-                        <>
-                          {o.split(rec.procedureTitle)[0]}
-                          <span className="text-text-primary">{rec.procedureTitle}</span>
-                          {o.split(rec.procedureTitle)[1]}
-                        </>
-                      ) : (
-                        o
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button
-                type="button"
-                onClick={() => setConvsOpen(true)}
-                className="flex w-fit items-center gap-xs text-small text-text-action "
-              >
-                <Icon name="chat_bubble_outline" size={13} />
-                View {rec.conversationCount} conversations
-                <Icon name="chevron_right" size={13} />
-              </button>
-            </div>
+        {/* AI insight callout */}
+        <div className="flex items-start gap-sm rounded-sm border border-[#b090e0] bg-[#f9f7fd] px-lg py-md">
+          <Icon name="auto_awesome" size={14} className="mt-0.5 shrink-0 text-ai-brand" />
+          <div className="flex min-w-0 flex-1 flex-col gap-xs">
+            <p className="text-body text-text-secondary">{rec.rationale}</p>
+            {rec.outcomes && rec.outcomes.length > 0 && (
+              <ul className="flex flex-col gap-[4px] pl-md">
+                {rec.outcomes.map((o, i) => (
+                  <li key={i} className="list-disc text-body text-text-secondary marker:text-text-tertiary">
+                    {o.includes(rec.procedureTitle) ? (
+                      <>
+                        {o.split(rec.procedureTitle)[0]}
+                        <span className="text-text-primary">{rec.procedureTitle}</span>
+                        {o.split(rec.procedureTitle)[1]}
+                      </>
+                    ) : (
+                      o
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() => setConvsOpen(true)}
+              className="flex w-fit items-center gap-xs text-small text-text-action "
+            >
+              <Icon name="chat_bubble_outline" size={13} />
+              View {rec.conversationCount} conversations
+              <Icon name="chevron_right" size={13} />
+            </button>
           </div>
-
         </div>
 
         {/* Show original procedure toggle */}
@@ -1498,18 +1701,127 @@ function DetailPanelInner({
   )
 }
 
+// ── Full-page detail ──────────────────────────────────────────────────────────
+
+function RecommendationDetailPage({
+  rec,
+  instanceSubtitle,
+  recStatus,
+  onBack,
+  onReject,
+  onAccept,
+  onToast,
+  previewOpen,
+  onPreviewOpen,
+  onPreviewClose,
+  toast,
+  onDismissToast,
+}: {
+  rec: Recommendation
+  instanceSubtitle: string
+  recStatus: RecStatus
+  onBack: () => void
+  onReject: (id: string) => void
+  onAccept: (id: string) => void
+  onToast: (data: ToastData) => void
+  previewOpen: boolean
+  onPreviewOpen: () => void
+  onPreviewClose: () => void
+  toast: ToastData | null
+  onDismissToast: () => void
+}) {
+  const [headerActionsEl, setHeaderActionsEl] = useState<HTMLDivElement | null>(null)
+
+  return (
+    <div className="relative flex h-full flex-col bg-surface">
+      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-lg">
+        <button
+          type="button"
+          aria-label="Back to recommendations"
+          onClick={onBack}
+          className="mt-xs flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+        >
+          <BackArrowIcon />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-sm">
+            <h1 className="text-h2 text-text-primary">{rec.title}</h1>
+            {recStatus === 'open' && (
+              <Chip label={rec.priority} variant={PRIORITY_VARIANT[rec.priority]} />
+            )}
+            {recStatus === 'open' && rec.manualUpdates && rec.manualUpdates.length > 0 && (
+              <Chip
+                label={`${rec.manualUpdates.length} manual update${rec.manualUpdates.length > 1 ? 's' : ''} needed`}
+                variant="warning"
+              />
+            )}
+            {recStatus === 'accepted' && <Chip label="Accepted" variant="success" />}
+            {recStatus === 'rejected' && <Chip label="Rejected" variant="danger" />}
+          </div>
+          <p className="mt-xs text-small text-text-secondary">{instanceSubtitle}</p>
+        </div>
+        <div ref={setHeaderActionsEl} className="flex shrink-0 items-center self-center" />
+      </div>
+
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        {previewOpen && (
+          <div className="preview-panel-float-wrap">
+            <PreviewPanel
+              onClose={onPreviewClose}
+              onPreviewActiveChange={() => {}}
+              agentName={rec.title}
+            />
+          </div>
+        )}
+        <DetailPanel
+          key={rec.id}
+          rec={rec}
+          recStatus={recStatus}
+          onReject={onReject}
+          onAccept={onAccept}
+          onToast={onToast}
+          onPreviewOpen={onPreviewOpen}
+          headerActionsEl={headerActionsEl}
+        />
+      </div>
+
+      {toast && <Toast data={toast} onDismiss={onDismissToast} />}
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function FrontdeskRecommendationsTab() {
-  const [selected, setSelected] = useState(RECOMMENDATIONS[0].id)
+export interface FrontdeskRecommendationsTabProps {
+  instanceName: string
+  selectedId: string | null
+  onSelect: (id: string | null) => void
+  onAnalyzeWithAi?: (id: string) => void
+}
+
+export function FrontdeskRecommendationsTab({
+  instanceName,
+  selectedId,
+  onSelect,
+  onAnalyzeWithAi,
+}: FrontdeskRecommendationsTabProps) {
   const [accepted, setAccepted] = useState<Set<string>>(new Set())
   const [rejected, setRejected] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<ToastData | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [feedbackRecs, setFeedbackRecs] = useState(() =>
+    getAgentFeedbackRecommendations().map(mapFeedbackToFrontdeskRecommendation),
+  )
+
+  useEffect(() => {
+    return subscribeAgentFeedbackRecommendations(() => {
+      setFeedbackRecs(getAgentFeedbackRecommendations().map(mapFeedbackToFrontdeskRecommendation))
+    })
+  }, [])
 
   useEffect(() => {
     setPreviewOpen(false)
-  }, [selected])
+  }, [selectedId])
 
   const showToast = (data: ToastData) => {
     setToast(data)
@@ -1533,64 +1845,44 @@ export function FrontdeskRecommendationsTab() {
       next.delete(id)
       return next
     })
-    setSelected((s) => (s === id ? '' : s))
+    onSelect(null)
   }
 
-  const visibleRecommendations = sortRecommendations(RECOMMENDATIONS)
-  const rec = visibleRecommendations.find((r) => r.id === selected) ?? visibleRecommendations[0]
+  const visibleRecommendations = sortRecommendations([...feedbackRecs, ...RECOMMENDATIONS])
+  const rec = visibleRecommendations.find((r) => r.id === selectedId) ?? null
+  const instanceSubtitle = instanceName.replace(/\s*-\s*/g, ' ')
+
+  if (rec) {
+    return (
+      <RecommendationDetailPage
+        rec={rec}
+        instanceSubtitle={instanceSubtitle}
+        recStatus={getRecStatus(rec.id, rejected, accepted)}
+        onBack={() => onSelect(null)}
+        onReject={handleReject}
+        onAccept={handleAccept}
+        onToast={showToast}
+        previewOpen={previewOpen}
+        onPreviewOpen={() => setPreviewOpen(true)}
+        onPreviewClose={() => setPreviewOpen(false)}
+        toast={toast}
+        onDismissToast={() => setToast(null)}
+      />
+    )
+  }
 
   return (
-    <div className="flex h-full min-h-0 w-full">
-      <div className="flex h-full min-h-0 flex-1 overflow-hidden">
-      {/* Left panel */}
-      <div
-        className={`flex h-full min-h-0 shrink-0 flex-col transition-[width] duration-200 ${
-          previewOpen ? 'w-[260px]' : 'w-[384px]'
-        }`}
-      >
-        {/* Cards */}
-        <div className="flex flex-1 flex-col gap-md overflow-y-auto py-xl pl-2xl">
-          {visibleRecommendations.map((r) => (
-            <RecCard
-              key={r.id}
-              rec={r}
-              selected={r.id === selected}
-              recStatus={getRecStatus(r.id, rejected, accepted)}
-              onClick={() => setSelected(r.id)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Right panel */}
-      {rec ? (
-        <DetailPanel
-          key={rec.id}
-          rec={rec}
-          recStatus={getRecStatus(rec.id, rejected, accepted)}
-          onReject={handleReject}
-          onAccept={handleAccept}
-          onToast={showToast}
-          onPreviewOpen={() => setPreviewOpen(true)}
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-lg py-lg">
+        <RecommendationsList
+          items={visibleRecommendations}
+          getStatus={(id) => getRecStatus(id, rejected, accepted)}
+          onSelect={onSelect}
+          onAnalyze={onAnalyzeWithAi}
         />
-      ) : (
-        <div className="flex flex-1 items-center justify-center text-small text-text-tertiary">
-          No recommendations found.
-        </div>
-      )}
-
-      {previewOpen && rec && (
-        <div className="preview-panel-float-wrap">
-          <PreviewPanel
-            onClose={() => setPreviewOpen(false)}
-            onPreviewActiveChange={() => {}}
-            agentName={rec.title}
-          />
-        </div>
-      )}
+      </div>
 
       {toast && <Toast data={toast} onDismiss={() => setToast(null)} />}
-      </div>
     </div>
   )
 }

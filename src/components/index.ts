@@ -1,3 +1,5 @@
+export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
+export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { Chip } from './Chip/Chip'
 export { ChatBubble, ChatSystemLabel } from './ChatBubble/ChatBubble'
 export type {

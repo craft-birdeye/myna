@@ -134,6 +134,7 @@ If a component exists here, import it — do not recreate it.
 
 | Component | Path | Props Summary |
 |-----------|------|---------------|
+| CoachAgentPanel | components/CoachAgentPanel/CoachAgentPanel.tsx | agentName, onClose — right-side Copilot-style coach chat (400px) that squeezes page content; New chat header, threaded reply + feedback, Ask-anything composer |
 | Chip        | components/Chip/Chip.tsx               | label, variant?='warning'                                          |
 | ChatBubble / ChatSystemLabel | components/ChatBubble/ChatBubble.tsx | `ChatBubble`: sender='business'\|'user', text, children?, className?, showFeedback?, feedback?, onFeedbackChange? — chat-thread message bubble (business right-aligned blue `bg-[#dbeafe]`, user left-aligned gray `bg-[#f0f0f0]`, `rounded-lg`, meta content passed as children below the bubble). When `showFeedback`, thumbs up/down sit beside the meta row (mutually exclusive; click again to clear). Inbox thumbs-down opens `ShareFeedbackModal` before committing. `ChatSystemLabel`: text — centered gray system/status line (e.g. "Conversation started"). Shared by `InboxScreen` and `LogDetailsPanel`'s call transcript — reuse this instead of hand-rolling bubble markup |
 | ShareFeedbackModal | components/ShareFeedbackModal/ShareFeedbackModal.tsx | open, onClose, onSubmit(details) — centered "Share feedback" modal (required Add details textarea; Cancel / Submit feedback); used after inbox thumbs-down |

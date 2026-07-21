@@ -10,6 +10,7 @@ import {
   ANNETTE_BLACK_CHAT_EVENTS,
   ANNETTE_BLACK_CONVERSATION_ID,
 } from '../data/annetteBlackChatConversation'
+import { addAgentFeedbackRecommendation } from '../data/agentFeedbackRecommendations'
 import { AgentDetailScreen } from './AgentDetailScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 
@@ -693,8 +694,27 @@ export function InboxScreen({
     setShareFeedbackMessageId(null)
   }
 
-  const handleShareFeedbackSubmit = (_details: string) => {
+  const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
+
+    const flaggedEvent = threadEvents.find(
+      (event) => event.kind === 'bubble' && event.id === shareFeedbackMessageId,
+    )
+    const agentResponse =
+      flaggedEvent?.kind === 'bubble' && typeof flaggedEvent.text === 'string'
+        ? flaggedEvent.text
+        : ''
+
+    addAgentFeedbackRecommendation({
+      messageId: shareFeedbackMessageId,
+      feedback: details,
+      agentResponse,
+      conversationName: selectedConvo.name,
+      conversationLocation: selectedConvo.location,
+      channel: isAnnetteChat ? 'Chat' : isFrontDeskCall ? 'Voice' : 'Text',
+      agentName: selectedConvo.assignee ?? 'Front desk agent',
+    })
+
     setMessageFeedback((prev) => ({ ...prev, [shareFeedbackMessageId]: 'down' }))
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
