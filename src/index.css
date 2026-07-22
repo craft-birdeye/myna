@@ -39,6 +39,43 @@
   }
 }
 
+/* Animated pink/purple/violet gradient border — AI prompt composers */
+.ai-gradient-border {
+  position: relative;
+  background: linear-gradient(90deg, #f472b6, #c084fc, #a78bfa, #f472b6);
+  background-size: 300% 100%;
+  animation: ai-gradient-flow 6s ease infinite;
+}
+@keyframes ai-gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Blue-to-violet gradient text — headline accent word */
+.ai-gradient-text {
+  background: linear-gradient(90deg, theme('colors.primary.DEFAULT'), theme('colors.ai.brand'));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Bobbing ghost — "building" loader mascot (bluish-gray, no color) */
+.ghost-float {
+  animation: ghost-bob 2.6s ease-in-out infinite;
+}
+@keyframes ghost-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.ghost-shadow-pulse {
+  animation: ghost-shadow-pulse 2.6s ease-in-out infinite;
+}
+@keyframes ghost-shadow-pulse {
+  0%, 100% { transform: scaleX(1); opacity: 0.35; }
+  50% { transform: scaleX(0.65); opacity: 0.16; }
+}
+
 html,
 body,
 #root {

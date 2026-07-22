@@ -24,7 +24,7 @@ import { RecommendationsTab } from './RecommendationsTab'
 import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
-import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
+import { ANNETTE_BLACK_CONVERSATION_ID } from '../data/annetteBlackChatConversation'
 import { REMINDER_INBOX_CONVERSATION_ID } from '../data/reminderInboxConversation'
 
 interface AgentInstanceScreenProps {
@@ -357,7 +357,7 @@ export function AgentInstanceScreen({
             onEditAgent={() => onEditAgent?.(instanceName)}
             onViewConversation={() =>
               onNavigateToInbox?.(
-                agentName === 'Reminder agent' ? REMINDER_INBOX_CONVERSATION_ID : FRONT_DESK_INBOX_CONVERSATION_ID,
+                agentName === 'Reminder agent' ? REMINDER_INBOX_CONVERSATION_ID : ANNETTE_BLACK_CONVERSATION_ID,
               )
             }
           />

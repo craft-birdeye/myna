@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Chip,
+  ComposerAttachPopover,
   CustomizeColumnsDrawer,
   DataTable,
   FilterPanel,
   HeaderSearchField,
   Icon,
+  INFO_CARD_LAYOUT,
   InfoCard,
   InfoCardListItem,
   MetricTiles,
+  RefChip,
   Tabs,
+  Toast,
   TopNav,
+  type AttachItem,
   type ChipVariant,
   type Column,
   type ColumnOption,
@@ -18,9 +23,16 @@ import {
   type Metric,
   type Tab,
 } from '../components'
+import { ChipSection } from '../workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx'
+import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
+import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
+import type { Procedure, RefKind, Token } from '../data/procedureData'
+import { HC_PROCEDURES } from '../data/procedureData'
+import sendArrowIcon from '../assets/icon-send-arrow.svg'
+import voiceSampleAudio from '../assets/voicemail_sample.mp3'
 
 interface AgentDetailScreenProps {
   agentName: string
@@ -201,6 +213,25 @@ const LIBRARY_TEMPLATES = [
   },
 ]
 
+// ── Healthcare-only "Front desk agents" create screen: library cards ───────
+const HEALTHCARE_FRONTDESK_CREATE_CARDS = [
+  {
+    id: 'routing',
+    title: 'Routing and triage',
+    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+  },
+  {
+    id: 'new-patient',
+    title: 'New patient intake',
+    description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
+  },
+  {
+    id: 'patient-scheduling',
+    title: 'Patient scheduling',
+    description: 'Finds returning patient records, confirms coverage, and books or reschedules visits',
+  },
+]
+
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
@@ -361,6 +392,1665 @@ function CreateAgentEmptyState({
   )
 }
 
+// Loader statuses shown while the agent draft is being "built" after submit.
+const AGENT_BUILD_LOADER_STEPS = [
+  'Building procedures',
+  'Configuring tools',
+  'Checking for integrations',
+  'Checking attached call transcripts',
+  'Building on procedures',
+  'Working on procedures',
+]
+
+// Thinking statuses shown before the location/city follow-up.
+const LOCATION_THINKING_STEPS = [
+  'Thinking',
+  'Collecting your business details',
+  'Looking into your business locations',
+]
+
+// Real Healthcare Frontdesk procedures (see src/data/procedureData.ts) offered
+// as the recommended starting set — unselected until the user picks them.
+const RECOMMENDED_PROCEDURES = [
+  {
+    name: 'General inquiry',
+    description: 'Answers informational questions about hours, location, insurance, services, and directions.',
+  },
+  {
+    name: 'Handle emergency or urgent concern',
+    description: 'Detects urgent symptoms or safety issues and routes the caller fast, for caller safety.',
+  },
+  {
+    name: 'Book, cancel, reschedule appointment',
+    description: 'Verifies patient identity, confirms insurance, matches services, and secures a slot.',
+  },
+  {
+    name: 'Verify insurance',
+    description: 'Runs an eligibility check so the patient knows their copay and coverage before booking.',
+  },
+  {
+    name: 'Appointment confirmation',
+    description: 'Runs the reminder journey that confirms a scheduled appointment.',
+  },
+  {
+    name: 'Talk to human',
+    description: 'Hands off to a live agent when the caller asks for a person or shows frustration.',
+  },
+]
+
+// ── Broad region/country names that should prompt a city follow-up ─────────
+const LOCATION_KEYWORDS = [
+  'australia', 'new zealand', 'canada', 'united kingdom', 'uk', 'united states', 'usa',
+  'india', 'singapore', 'germany', 'france', 'north region', 'south region', 'east region', 'west region',
+]
+
+// Sample cities to offer as pills once a country is recognized — regions
+// (e.g. "north region") have no real city list, so they fall back to the
+// plain free-text follow-up instead of pills.
+const LOCATION_CITIES: Record<string, string[]> = {
+  australia: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide'],
+  'new zealand': ['Auckland', 'Wellington', 'Christchurch'],
+  canada: ['Toronto', 'Vancouver', 'Montreal', 'Calgary'],
+  'united kingdom': ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
+  uk: ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
+  'united states': ['New York', 'Los Angeles', 'Chicago', 'Austin'],
+  usa: ['New York', 'Los Angeles', 'Chicago', 'Austin'],
+  india: ['Mumbai', 'Bengaluru', 'Delhi', 'Hyderabad'],
+  singapore: ['Singapore'],
+  germany: ['Berlin', 'Munich', 'Frankfurt'],
+  france: ['Paris', 'Lyon', 'Marseille'],
+}
+
+// Personality/tone options offered after the location step (multi-select).
+const TONE_OPTIONS = [
+  'Warm and professional',
+  'Friendly and casual',
+  'Calm and clinical',
+  'Energetic and helpful',
+]
+
+// Channel packages offered after the personality step (single-select).
+const CHANNEL_OPTIONS = [
+  'Voice call',
+  'SMS / text',
+  'Web chat',
+  'All channels',
+]
+
+// Voice style options offered after the channels step (single-select).
+const VOICE_OPTIONS = [
+  'Andrea – warm and reassuring',
+  'James – clear and professional',
+  'Sofia – friendly and bright',
+]
+
+// Call recording options shown alongside voice style (single-select).
+const RECORDING_OPTIONS = [
+  'Yes – with announced consent',
+  'No recording',
+  'Ask me later',
+]
+
+// Jobs-to-be-done offered after consent, seeded from common front desk
+// patterns (multi-select). The first four are pre-selected as sensible
+// defaults; the rest are opt-in.
+interface JobOption {
+  id: string
+  title: string
+  description: string
+}
+
+const JOB_OPTIONS: JobOption[] = [
+  { id: 'greet', title: 'Greet and start the conversation', description: 'Identifies the caller, screens for urgency, and routes them to the right procedure.' },
+  { id: 'general-inquiry', title: 'Handle general inquiry', description: 'Answers informational questions like hours, location, insurance, and services.' },
+  { id: 'identify-patient', title: 'Identify patient', description: 'Confirms patient identity before any appointment action is taken.' },
+  { id: 'new-intake', title: 'New patient intake', description: 'Collects details to create a record for patients not found in the system.' },
+  { id: 'emergency', title: 'Handle emergency or urgent concern', description: 'Detects urgent symptoms or concerns and escalates for patient safety.' },
+  { id: 'book', title: 'Book new appointment', description: 'Finds availability and schedules a new visit for the patient.' },
+  { id: 'cancel', title: 'Cancel appointment', description: 'Cancels an existing appointment and releases the slot.' },
+  { id: 'unclear', title: 'Handle unclear message', description: "Clarifies vague or out-of-scope messages to recover the patient's intent." },
+  { id: 'human', title: 'Talk to human', description: 'Hands off to a live agent when the patient asks for a person or shows frustration.' },
+]
+
+interface DetectedLocation {
+  raw: string
+  display: string
+}
+
+function detectLocation(name: string): DetectedLocation | null {
+  const lower = name.toLowerCase()
+  const match = LOCATION_KEYWORDS.find((keyword) => lower.includes(keyword))
+  if (!match) return null
+  return { raw: match, display: match.replace(/\b\w/g, (c) => c.toUpperCase()) }
+}
+
+// Bobbing ghost mascot — bluish-gray only, no color — shown for the final
+// "building the agent" step (see the showProgress gate below).
+function GhostLoader() {
+  return (
+    <div className="flex flex-col items-start" aria-hidden>
+      <div className="ghost-float text-[#e2e5e9]">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+          <path
+            d="M32 4C18 4 8 14 8 28v20c0 1.5 1.7 2.4 3 1.5l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1.3.9 3-.1 3-1.5V28C56 14 46 4 32 4z"
+            fill="currentColor"
+          />
+          <circle cx="24" cy="27" r="3" fill="#9ca3af" />
+          <circle cx="40" cy="27" r="3" fill="#9ca3af" />
+        </svg>
+      </div>
+      <div className="ghost-shadow-pulse mt-xs h-[6px] w-8 rounded-full bg-[#d1d5db]" />
+    </div>
+  )
+}
+
+function AgentBuildLoaderRow({
+  label,
+  animKey,
+  showProgress = false,
+}: {
+  label: string
+  animKey?: number | string
+  showProgress?: boolean
+}) {
+  return (
+    <div className="agent-build-fade mt-lg flex flex-col gap-sm" key={animKey}>
+      {showProgress && <GhostLoader />}
+      <div className="flex items-center gap-xs text-small text-text-secondary">
+        {!showProgress && (
+          <Icon name="progress_activity" size={16} className="animate-spin text-text-icon" />
+        )}
+        <span>{label}</span>
+        <span className="inline-flex items-center gap-px" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="animate-pulse size-1 rounded-full bg-text-secondary"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function UserBubble({ children }: { children: ReactNode }) {
+  return (
+    <div className="mt-[36px] flex justify-end">
+      <span className="max-w-[80%] rounded-lg bg-[#f0f0f0] px-md py-sm text-body leading-[1.5] text-text-primary">{children}</span>
+    </div>
+  )
+}
+
+// Map RefKind ↔ the workflow VariableChip type strings used by ChipSection
+// (the same Context panel component as the procedure detail page).
+const REF_KIND_TO_CHIP_TYPE: Record<RefKind, string> = {
+  context: 'variable',
+  tool: 'tool',
+  file: 'attachment',
+  link: 'link',
+  subagent: 'address',
+  procedure: 'product',
+}
+
+const CHIP_TYPE_TO_REF_KIND: Record<string, RefKind> = {
+  variable: 'context',
+  tool: 'tool',
+  attachment: 'file',
+  link: 'link',
+  address: 'subagent',
+  product: 'procedure',
+}
+
+const CREATE_PHASE_ORDER = [
+  'ask-name',
+  'ask-city',
+  'ask-tone',
+  'ask-channels',
+  'ask-voice',
+  'ask-recording',
+  'ask-context',
+  'ask-procedures',
+  'ask-consent',
+  'ask-jobs',
+  'building',
+  'summary',
+] as const
+
+// Suggested consent announcement played at the start of recorded calls.
+const SUGGESTED_CONSENT_MESSAGE =
+  'This call may be recorded for quality and training purposes.'
+
+type CreatePhase = (typeof CREATE_PHASE_ORDER)[number]
+
+// Rotating status labels shown for ~2.4s before each agent response lands.
+// Two labels per step, 1.2s each (mirrors the location-thinking cadence).
+const STEP_THINKING_LABELS: Partial<Record<CreatePhase, string[]>> = {
+  'ask-tone': ['Analyzing your response', 'Getting context on your business'],
+  'ask-channels': ['Building the personality profile', 'Preparing channel options'],
+  'ask-voice': ['Configuring channels', 'Loading voice samples'],
+  'ask-recording': ['Applying the voice style', 'Checking recording requirements'],
+  'ask-context': ['Saving your preferences', 'Getting context'],
+  'ask-procedures': ['Analyzing your context', 'Mocking up procedures'],
+  'ask-consent': ['Reviewing recording rules', 'Drafting a consent message'],
+  'ask-jobs': ['Analyzing front desk patterns', 'Building the job list'],
+}
+
+function phaseAtLeast(current: CreatePhase, target: CreatePhase) {
+  return CREATE_PHASE_ORDER.indexOf(current) >= CREATE_PHASE_ORDER.indexOf(target)
+}
+
+function isRefToken(token: Token): token is { kind: RefKind; label: string } {
+  return typeof token === 'object' && token !== null && 'kind' in token
+}
+
+function ProcedureStepTokens({ tokens }: { tokens: Token[] }) {
+  return (
+    <span className="text-body leading-6 text-text-primary">
+      {tokens.map((token, i) =>
+        isRefToken(token) ? (
+          <RefChip key={`${token.kind}-${token.label}-${i}`} kind={token.kind} label={token.label} className="mx-xs" />
+        ) : (
+          <span key={i}>{token}</span>
+        ),
+      )}
+    </span>
+  )
+}
+
+function ProcedurePreviewPanel({
+  procedure,
+  onClose,
+}: {
+  procedure: Procedure
+  onClose: () => void
+}) {
+  const visibleContext = procedure.context.slice(0, 4)
+  const moreContext = Math.max(0, procedure.context.length - visibleContext.length)
+
+  return (
+    <div className="flex h-[calc(100vh-140px)] w-full flex-col overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="flex shrink-0 items-center justify-between gap-sm border-b border-border bg-surface px-lg py-md">
+        <div className="flex min-w-0 items-center gap-sm">
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={onClose}
+            className="shrink-0 text-text-icon hover:text-text-primary"
+          >
+            <Icon name="arrow_back" size={18} />
+          </button>
+          <h3 className="truncate text-body text-text-primary">{procedure.name}</h3>
+        </div>
+        <button
+          type="button"
+          aria-label="Close procedure"
+          onClick={onClose}
+          className="shrink-0 text-text-icon hover:text-text-primary"
+        >
+          <Icon name="close" size={18} />
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-lg overflow-y-auto p-lg">
+        <div className="flex flex-col gap-sm">
+          <p className="text-small text-text-secondary">
+            When to use this procedure? <span className="text-chip-danger-text">*</span>
+          </p>
+          <p className="text-body leading-6 text-text-primary">{procedure.whenToUse}</p>
+        </div>
+
+        <div className="flex flex-col gap-sm">
+          <div className="flex items-center gap-xs text-small text-text-secondary">
+            Context
+            <Icon name="info" size={14} className="text-text-icon" />
+          </div>
+          <div className="flex flex-col gap-sm rounded-md border border-border bg-surface-l2 p-md">
+            <div className="flex flex-wrap gap-sm">
+              {visibleContext.map((item) => (
+                <RefChip key={`${item.kind}-${item.label}`} kind={item.kind} label={item.label} />
+              ))}
+            </div>
+            {moreContext > 0 && (
+              <span className="text-body text-text-action">+ {moreContext} more</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-sm">
+          <div className="flex items-center gap-xs text-small text-text-secondary">
+            Steps
+            <Icon name="info" size={14} className="text-text-icon" />
+          </div>
+          <div className="flex flex-col gap-md rounded-md border border-border p-md">
+            {procedure.steps.map((step, stepIndex) => (
+              <div key={step.title} className="flex flex-col gap-sm">
+                <p className="text-body text-text-primary">
+                  {stepIndex + 1}. {step.title}
+                </p>
+                <ul className="flex list-disc flex-col gap-sm pl-lg">
+                  {step.bullets.map((bullet, bulletIndex) => (
+                    <li key={bulletIndex} className="marker:text-text-secondary">
+                      <ProcedureStepTokens tokens={bullet.tokens} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Healthcare-only "Front desk agents" create screen ──────────────────────
+// Matches the Figma "What would you like to build today?" prompt-box layout.
+// Scoped to Front desk agent + Healthcare product only — every other agent
+// keeps the CreateAgentEmptyState illustration above.
+function HealthcareFrontdeskCreateAgentScreen({
+  onCreateFromScratch,
+  onSelectFromLibrary,
+  onCreateAgent,
+}: {
+  onCreateFromScratch: () => void
+  onSelectFromLibrary: (templateId: string) => void
+  onCreateAgent?: (options?: { publish?: boolean }) => void
+}) {
+  const [prompt, setPrompt] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [phase, setPhase] = useState<CreatePhase>('ask-name')
+  const [agentName, setAgentName] = useState('')
+  const [detectedLocation, setDetectedLocation] = useState<DetectedLocation | null>(null)
+  const [cityAnswer, setCityAnswer] = useState('')
+  const [selectedCities, setSelectedCities] = useState<string[]>([])
+  const [selectedTones, setSelectedTones] = useState<string[]>([])
+  const [toneAnswer, setToneAnswer] = useState('')
+  const [channelAnswer, setChannelAnswer] = useState('')
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([])
+  const [voiceAnswer, setVoiceAnswer] = useState('')
+  const [selectedVoiceOption, setSelectedVoiceOption] = useState('')
+  const [recordingAnswer, setRecordingAnswer] = useState('')
+  const [contextAnswer, setContextAnswer] = useState('')
+  const [consentAnswer, setConsentAnswer] = useState('')
+  const [selectedJobs, setSelectedJobs] = useState<string[]>([])
+  const [jobsAnswer, setJobsAnswer] = useState('')
+  const [showAllJobs, setShowAllJobs] = useState(false)
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null)
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [introThinking, setIntroThinking] = useState(false)
+  const [locationThinkingIndex, setLocationThinkingIndex] = useState<number | null>(null)
+  const [stepThinkingPhase, setStepThinkingPhase] = useState<CreatePhase | null>(null)
+  const [stepThinkingIndex, setStepThinkingIndex] = useState(0)
+  const [selectedProcedures, setSelectedProcedures] = useState<string[]>([])
+  const [procedureAnswer, setProcedureAnswer] = useState('')
+  const [showAllProcedures, setShowAllProcedures] = useState(false)
+  const [openProcedureName, setOpenProcedureName] = useState<string | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewActive, setPreviewActive] = useState(false)
+  const [showTestFollowUp, setShowTestFollowUp] = useState(false)
+  const hadPreviewSessionRef = useRef(false)
+  const previewActiveRef = useRef(false)
+  const [loaderIndex, setLoaderIndex] = useState<number | null>(null)
+  const [followUp, setFollowUp] = useState('')
+  const [attachments, setAttachments] = useState<AttachItem[]>([])
+  const [capturedContext, setCapturedContext] = useState<{ id: string; kind: RefKind; label: string }[]>([])
+  const [contextLoading, setContextLoading] = useState(false)
+  const threadRef = useRef<HTMLDivElement | null>(null)
+  const [threadOverflowing, setThreadOverflowing] = useState(false)
+
+  const building = loaderIndex !== null
+  const locationThinking = locationThinkingIndex !== null
+  const stepThinking = stepThinkingPhase !== null
+  const composerLocked = building || locationThinking || stepThinking || previewActive
+
+  const handlePreviewActiveChange = (active: boolean) => {
+    const wasActive = previewActiveRef.current
+    previewActiveRef.current = active
+    setPreviewActive(active)
+    if (active) {
+      hadPreviewSessionRef.current = true
+      return
+    }
+    // Only when a live session ends (active → inactive), not on panel mount.
+    if (wasActive && hadPreviewSessionRef.current) {
+      setShowTestFollowUp(true)
+    }
+  }
+
+  const handlePreviewClose = () => {
+    const wasActive = previewActiveRef.current
+    previewActiveRef.current = false
+    setPreviewOpen(false)
+    setPreviewActive(false)
+    if ((wasActive || hadPreviewSessionRef.current) && hadPreviewSessionRef.current) {
+      setShowTestFollowUp(true)
+    }
+  }
+
+  const resetCreateFlow = () => {
+    setSubmitted(false)
+    setPhase('ask-name')
+    setAgentName('')
+    setDetectedLocation(null)
+    setCityAnswer('')
+    setSelectedCities([])
+    setSelectedTones([])
+    setToneAnswer('')
+    setChannelAnswer('')
+    setSelectedChannels([])
+    setVoiceAnswer('')
+    setSelectedVoiceOption('')
+    setRecordingAnswer('')
+    setContextAnswer('')
+    setSelectedProcedures([])
+    setProcedureAnswer('')
+    setShowAllProcedures(false)
+    setConsentAnswer('')
+    setSelectedJobs([])
+    setJobsAnswer('')
+    setShowAllJobs(false)
+    setLocationThinkingIndex(null)
+    setStepThinkingPhase(null)
+    setOpenProcedureName(null)
+    setPreviewOpen(false)
+    setPreviewActive(false)
+    setShowTestFollowUp(false)
+    hadPreviewSessionRef.current = false
+    previewActiveRef.current = false
+    setFollowUp('')
+  }
+
+  // Advance to the next question behind a short "analyzing / building /
+  // getting context" loader; the new agent response stays hidden until done.
+  const advanceWithThinking = (next: CreatePhase) => {
+    setPhase(next)
+    if (STEP_THINKING_LABELS[next]) {
+      setStepThinkingPhase(next)
+      setStepThinkingIndex(0)
+    }
+  }
+
+  // Reveal a step's block only once its thinking delay has finished.
+  const showStep = (target: CreatePhase) => phaseAtLeast(phase, target) && stepThinkingPhase !== target
+
+  // Show the "Scroll to latest" chevron only when the conversation actually
+  // overflows its scroll container.
+  useEffect(() => {
+    const thread = threadRef.current
+    const scrollEl = thread?.parentElement
+    if (!thread || !scrollEl) return
+    const measure = () => setThreadOverflowing(scrollEl.scrollHeight > scrollEl.clientHeight + 4)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(thread)
+    observer.observe(scrollEl)
+    return () => observer.disconnect()
+  }, [submitted])
+
+  useEffect(() => {
+    if (!introThinking) return
+    const timer = setTimeout(() => setIntroThinking(false), 1500)
+    return () => clearTimeout(timer)
+  }, [introThinking])
+
+  useEffect(() => {
+    if (locationThinkingIndex === null) return
+    const timer = setTimeout(() => {
+      if (locationThinkingIndex < LOCATION_THINKING_STEPS.length - 1) {
+        setLocationThinkingIndex(locationThinkingIndex + 1)
+      } else {
+        setLocationThinkingIndex(null)
+      }
+    }, 1100)
+    return () => clearTimeout(timer)
+  }, [locationThinkingIndex])
+
+  useEffect(() => {
+    if (stepThinkingPhase === null) return
+    const labels = STEP_THINKING_LABELS[stepThinkingPhase] ?? []
+    const timer = setTimeout(() => {
+      if (stepThinkingIndex < labels.length - 1) {
+        setStepThinkingIndex(stepThinkingIndex + 1)
+      } else {
+        setStepThinkingPhase(null)
+      }
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [stepThinkingPhase, stepThinkingIndex])
+
+  useEffect(() => {
+    if (loaderIndex === null) return
+    const timer = setTimeout(() => {
+      if (loaderIndex < AGENT_BUILD_LOADER_STEPS.length - 1) {
+        setLoaderIndex(loaderIndex + 1)
+      } else {
+        setLoaderIndex(null)
+        setPhase('summary')
+      }
+    }, 2600)
+    return () => clearTimeout(timer)
+  }, [loaderIndex])
+
+  // Keep the latest agent response in view: scroll the conversation to the
+  // bottom whenever a new message, loader row, or answer is rendered.
+  useEffect(() => {
+    if (!submitted) return
+    const scrollEl = threadRef.current?.parentElement
+    if (!scrollEl) return
+    const raf = requestAnimationFrame(() => {
+      scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [
+    submitted,
+    phase,
+    introThinking,
+    locationThinkingIndex,
+    stepThinkingPhase,
+    stepThinkingIndex,
+    loaderIndex,
+    agentName,
+    cityAnswer,
+    toneAnswer,
+    channelAnswer,
+    voiceAnswer,
+    recordingAnswer,
+    contextAnswer,
+    procedureAnswer,
+    consentAnswer,
+    jobsAnswer,
+    showTestFollowUp,
+  ])
+
+  const handleSend = () => {
+    if (!prompt.trim()) return
+    setSubmitted(true)
+    setPhase('ask-name')
+    setIntroThinking(true)
+  }
+
+  const selectCity = (value: string) => {
+    setCityAnswer(value)
+    advanceWithThinking('ask-tone')
+  }
+
+  const cityOptions = detectedLocation ? (LOCATION_CITIES[detectedLocation.raw] ?? []) : []
+  const allCitiesSelected = cityOptions.length > 0 && selectedCities.length === cityOptions.length
+
+  const toggleCity = (city: string) => {
+    setSelectedCities((prev) => (prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]))
+  }
+
+  const toggleSelectAllCities = () => {
+    setSelectedCities(allCitiesSelected ? [] : cityOptions)
+  }
+
+  const confirmSelectedCities = () => {
+    if (selectedCities.length === 0) return
+    selectCity(selectedCities.length === cityOptions.length ? `All cities (${cityOptions.join(', ')})` : selectedCities.join(', '))
+  }
+
+  const toggleTone = (tone: string) => {
+    setSelectedTones((prev) => (prev.includes(tone) ? prev.filter((t) => t !== tone) : [...prev, tone]))
+  }
+
+  const confirmSelectedTones = () => {
+    if (selectedTones.length === 0) return
+    setToneAnswer(selectedTones.join(', '))
+    advanceWithThinking('ask-channels')
+  }
+
+  const toggleChannel = (channel: string) => {
+    setSelectedChannels((prev) => (prev.includes(channel) ? prev.filter((c) => c !== channel) : [...prev, channel]))
+  }
+
+  const confirmSelectedChannels = () => {
+    if (selectedChannels.length === 0) return
+    setChannelAnswer(selectedChannels.join(', '))
+    advanceWithThinking('ask-voice')
+  }
+
+  const toggleVoiceOption = (voice: string) => {
+    setSelectedVoiceOption((prev) => (prev === voice ? '' : voice))
+  }
+
+  const confirmSelectedVoice = () => {
+    if (!selectedVoiceOption) return
+    previewAudioRef.current?.pause()
+    setPlayingVoice(null)
+    setVoiceAnswer(selectedVoiceOption)
+    advanceWithThinking('ask-recording')
+  }
+
+  const handlePreviewVoice = (voice: string) => {
+    const audio = previewAudioRef.current
+    if (!audio) return
+    if (playingVoice === voice) {
+      audio.pause()
+      audio.currentTime = 0
+      setPlayingVoice(null)
+      return
+    }
+    audio.pause()
+    audio.currentTime = 0
+    audio.src = voiceSampleAudio
+    audio.play()
+    setPlayingVoice(voice)
+  }
+
+  const selectRecording = (option: string) => {
+    setRecordingAnswer(option)
+    advanceWithThinking('ask-context')
+  }
+
+  const advanceAfterContext = () => {
+    if (recordingAnswer === 'Yes – with announced consent') {
+      advanceWithThinking('ask-consent')
+    } else {
+      advanceWithThinking('ask-jobs')
+    }
+  }
+
+  const submitContext = (url: string) => {
+    setContextAnswer(url)
+    setContextLoading(true)
+    setTimeout(() => {
+      captureContext(url)
+      setContextLoading(false)
+      advanceWithThinking('ask-procedures')
+    }, 2800)
+  }
+
+  const skipContext = () => {
+    captureContext()
+    setContextAnswer('Nothing to add')
+    advanceAfterContext()
+  }
+
+  const toggleProcedure = (name: string) => {
+    setSelectedProcedures((prev) => (prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]))
+  }
+
+  const confirmProcedures = () => {
+    if (selectedProcedures.length === 0) return
+    setProcedureAnswer(selectedProcedures.join(', '))
+    advanceAfterContext()
+  }
+
+  const selectConsent = (answer: string) => {
+    setConsentAnswer(answer)
+    advanceWithThinking('ask-jobs')
+  }
+
+  const toggleJob = (id: string) => {
+    setSelectedJobs((prev) => (prev.includes(id) ? prev.filter((j) => j !== id) : [...prev, id]))
+  }
+
+  const confirmSelectedJobs = () => {
+    if (selectedJobs.length === 0) return
+    const titles = JOB_OPTIONS.filter((job) => selectedJobs.includes(job.id)).map((job) => job.title)
+    setJobsAnswer(titles.join(', '))
+    setPhase('building')
+    setLoaderIndex(0)
+  }
+
+  const handleAttachSelect = (item: AttachItem) => {
+    // "+ Add file" stands in for a real file picker in this prototype.
+    const resolved: AttachItem =
+      item.id === 'add-file'
+        ? { id: `file-${Date.now()}`, kind: 'file', label: 'Front-desk-call-transcripts.pdf' }
+        : item
+    setAttachments((prev) => (prev.some((a) => a.id === resolved.id) ? prev : [...prev, resolved]))
+  }
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  // Move whatever's in the composer's attachment tray — plus an optional typed
+  // link — into the persistent Context panel, emptying the tray.
+  const captureContext = (link?: string) => {
+    setCapturedContext((prev) => {
+      const merged = [...prev]
+      attachments.forEach((item) => {
+        if (!merged.some((m) => m.id === item.id)) merged.push(item)
+      })
+      const trimmedLink = link?.trim()
+      if (trimmedLink) {
+        merged.push({ id: `link-${Date.now()}`, kind: 'link', label: trimmedLink })
+      }
+      return merged
+    })
+    setAttachments([])
+  }
+
+  // Sync ChipSection edits (delete / rename / retype) back into capturedContext.
+  const handleContextChipsChange = (next: { value: string; type: string }[]) => {
+    setCapturedContext(
+      next.map((chip, i) => ({
+        id: `ctx-${i}-${chip.type}-${chip.value}`,
+        kind: CHIP_TYPE_TO_REF_KIND[chip.type] ?? 'context',
+        label: chip.value,
+      })),
+    )
+  }
+
+  const handlePaperclipAttach = () => {
+    const label = 'Call transcripts. April to July 2026.'
+    setAttachments((prev) =>
+      prev.some((a) => a.label === label) ? prev : [...prev, { id: `paperclip-${Date.now()}`, kind: 'file', label }],
+    )
+  }
+
+  const handleFollowUpSend = () => {
+    if (!followUp.trim() || building || introThinking || locationThinking || stepThinking || previewActive) return
+    if (phase === 'ask-name') {
+      const name = followUp.trim()
+      setAgentName(name)
+      const location = detectLocation(name)
+      // Only detour to the city step when we actually have cities to offer.
+      if (location && (LOCATION_CITIES[location.raw] ?? []).length > 0) {
+        setDetectedLocation(location)
+        setPhase('ask-city')
+        setLocationThinkingIndex(0)
+      } else {
+        advanceWithThinking('ask-tone')
+      }
+    } else if (phase === 'ask-city') {
+      setCityAnswer(followUp.trim())
+      advanceWithThinking('ask-tone')
+    } else if (phase === 'ask-tone') {
+      setToneAnswer(followUp.trim())
+      advanceWithThinking('ask-channels')
+    } else if (phase === 'ask-channels') {
+      setChannelAnswer(followUp.trim())
+      advanceWithThinking('ask-voice')
+    } else if (phase === 'ask-voice') {
+      setVoiceAnswer(followUp.trim())
+      advanceWithThinking('ask-recording')
+    } else if (phase === 'ask-recording') {
+      setRecordingAnswer(followUp.trim())
+      advanceWithThinking('ask-context')
+    } else if (phase === 'ask-context') {
+      submitContext(followUp.trim())
+    } else if (phase === 'ask-consent') {
+      // Free text = the user's own consent wording.
+      setConsentAnswer(followUp.trim())
+      advanceWithThinking('ask-jobs')
+    } else if (phase === 'ask-jobs') {
+      setJobsAnswer(followUp.trim())
+      setPhase('building')
+      setLoaderIndex(0)
+    }
+    // Anything still sitting in the attachment tray rides along with the send:
+    // it moves into the Context panel and leaves the input field.
+    if (attachments.length > 0) captureContext()
+    setFollowUp('')
+  }
+
+  if (submitted) {
+    return (
+      <div
+        ref={threadRef}
+        className="relative flex min-h-full w-full max-w-[1600px] flex-1 justify-center gap-xl self-start pb-lg pr-sm"
+      >
+        <style>{`
+          .agent-build-fade { animation: agent-build-fade-in 0.25s ease-out; }
+          @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+        `}</style>
+
+        {/* Spacer mirrors the right panel's width so the chat stays centered on
+            wide screens, but collapses first (shrink-[999]) on narrow ones so the
+            chat keeps its width and the panel stays pinned to the right edge. */}
+        {(contextLoading || capturedContext.length > 0 || openProcedureName || previewOpen) && (
+          <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
+        )}
+
+        <div className="flex w-full min-w-0 max-w-[720px] flex-col">
+        <div className="flex justify-end">
+          <span className="max-w-[80%] rounded-lg bg-[#f0f0f0] px-md py-sm text-body leading-[1.5] text-text-primary">{prompt.trim()}</span>
+        </div>
+
+        {introThinking ? (
+          <AgentBuildLoaderRow label="Thinking" />
+        ) : (
+          <>
+            <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+              <p className="text-body leading-6 text-text-primary">Welcome! 👋 I'll help you build your agent step by step.</p>
+              <p className="mt-md text-body leading-6 text-text-primary">Let's start with the basics. What would you like to name this agent?</p>
+              <p className="text-body text-text-tertiary">
+                Tip: A good name reflects the region or team it serves — like "Front desk – North region" or "Patient intake – Austin".
+              </p>
+            </div>
+
+            {agentName && <UserBubble>{agentName}</UserBubble>}
+
+            {detectedLocation && phaseAtLeast(phase, 'ask-city') && (
+              <>
+                {locationThinking && phase === 'ask-city' ? (
+                  <AgentBuildLoaderRow
+                    label={LOCATION_THINKING_STEPS[locationThinkingIndex ?? 0]}
+                    animKey={locationThinkingIndex ?? 0}
+                  />
+                ) : (
+                  <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                    <p className="text-body leading-6 text-text-primary">
+                      It looks like your business has locations in these cities across {detectedLocation.display} —
+                      would you like this agent to serve all of them, or just one in particular?
+                    </p>
+                    {phase === 'ask-city' && cityOptions.length > 0 && (
+                      <>
+                        <div className="mt-xs flex flex-wrap items-center gap-sm">
+                          <button
+                            type="button"
+                            onClick={toggleSelectAllCities}
+                            aria-pressed={allCitiesSelected}
+                            className={`flex h-10 items-center justify-center gap-xs rounded-full border-2 px-lg text-body text-text-primary ${
+                              allCitiesSelected
+                                ? 'border-primary bg-surface'
+                                : 'border-transparent bg-surface-hover hover:bg-surface-l2'
+                            }`}
+                          >
+                            {allCitiesSelected && <Icon name="check" size={16} />}
+                            Select all
+                          </button>
+                          {cityOptions.map((city) => {
+                            const isSelected = selectedCities.includes(city)
+                            return (
+                              <button
+                                key={city}
+                                type="button"
+                                onClick={() => toggleCity(city)}
+                                aria-pressed={isSelected}
+                                className={`flex h-10 items-center justify-center gap-xs rounded-full border-2 px-lg text-body text-text-primary ${
+                                  isSelected
+                                    ? 'border-primary bg-surface'
+                                    : 'border-transparent bg-surface-hover hover:bg-surface-l2'
+                                }`}
+                              >
+                                {isSelected && <Icon name="check" size={16} />}
+                                {city}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div className="mt-sm">
+                          <button
+                            type="button"
+                            onClick={confirmSelectedCities}
+                            disabled={selectedCities.length === 0}
+                            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+                              selectedCities.length > 0
+                                ? 'bg-primary text-white hover:bg-primary-hover'
+                                : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                            }`}
+                          >
+                            Continue
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {cityAnswer && <UserBubble>{cityAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-tone') && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">Great! Now let's give your agent a personality.</p>
+                  <p className="mt-sm text-body">
+                    <span className="text-text-primary">What tone should your agent have?</span>{' '}
+                    <span className="text-text-secondary">
+                      Think about how your team speaks to patients or customers on the phone. Pick as many as you like.
+                    </span>
+                  </p>
+                  {phase === 'ask-tone' && (
+                    <>
+                      <div className="mt-xs flex flex-wrap items-center gap-sm">
+                        {TONE_OPTIONS.map((tone) => {
+                          const isSelected = selectedTones.includes(tone)
+                          return (
+                            <button
+                              key={tone}
+                              type="button"
+                              onClick={() => toggleTone(tone)}
+                              aria-pressed={isSelected}
+                              className={`flex h-10 items-center justify-center gap-xs rounded-full border-2 px-lg text-body text-text-primary ${
+                                isSelected
+                                  ? 'border-primary bg-surface'
+                                  : 'border-transparent bg-surface-hover hover:bg-surface-l2'
+                              }`}
+                            >
+                              {isSelected && <Icon name="check" size={16} />}
+                              {tone}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="mt-sm">
+                        <button
+                          type="button"
+                          onClick={confirmSelectedTones}
+                          disabled={selectedTones.length === 0}
+                          className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+                            selectedTones.length > 0
+                              ? 'bg-primary text-white hover:bg-primary-hover'
+                              : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                          }`}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {toneAnswer && <UserBubble>{toneAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-channels') && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">Almost there! Let's configure the channels.</p>
+                  <p className="mt-sm text-body leading-6 text-text-primary">Which channels should this agent handle?</p>
+                  {phase === 'ask-channels' && (
+                    <>
+                      <div className="mt-xs flex flex-wrap items-center gap-sm">
+                        {CHANNEL_OPTIONS.map((channel) => {
+                          const isSelected = selectedChannels.includes(channel)
+                          return (
+                            <button
+                              key={channel}
+                              type="button"
+                              onClick={() => toggleChannel(channel)}
+                              aria-pressed={isSelected}
+                              className={`flex h-10 items-center justify-center gap-xs rounded-full border-2 px-lg text-body text-text-primary ${
+                                isSelected
+                                  ? 'border-primary bg-surface'
+                                  : 'border-transparent bg-surface-hover hover:bg-surface-l2'
+                              }`}
+                            >
+                              {isSelected && <Icon name="check" size={16} />}
+                              {channel}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="mt-sm">
+                        <button
+                          type="button"
+                          onClick={confirmSelectedChannels}
+                          disabled={selectedChannels.length === 0}
+                          className={`flex h-9 items-center rounded-sm px-lg text-body text-white transition-colors ${
+                            selectedChannels.length > 0
+                              ? 'bg-primary hover:bg-primary-hover'
+                              : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                          }`}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {channelAnswer && <UserBubble>{channelAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-voice') && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">
+                    Good choice. For voice calls — which voice style fits your brand?
+                  </p>
+                  {phase === 'ask-voice' && (
+                    <>
+                      <div className="mt-xs flex flex-wrap items-center gap-sm">
+                        {VOICE_OPTIONS.map((voice) => {
+                          const isPlaying = playingVoice === voice
+                          const isSelected = selectedVoiceOption === voice
+                          return (
+                            <div
+                              key={voice}
+                              className={`flex h-10 items-center gap-xs rounded-full border-2 py-1 pl-1 pr-lg ${
+                                isSelected
+                                  ? 'border-primary bg-surface'
+                                  : 'border-transparent bg-surface-hover hover:bg-surface-l2'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                aria-label={isPlaying ? `Stop preview of ${voice}` : `Preview ${voice}`}
+                                aria-pressed={isPlaying}
+                                onClick={() => handlePreviewVoice(voice)}
+                                className={`flex size-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                                  isPlaying ? 'bg-surface text-primary' : 'text-text-icon hover:bg-surface'
+                                }`}
+                              >
+                                <Icon name={isPlaying ? 'pause' : 'volume_up'} size={18} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleVoiceOption(voice)}
+                                aria-pressed={isSelected}
+                                className="text-body text-text-primary"
+                              >
+                                {voice}
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <audio
+                        ref={previewAudioRef}
+                        onEnded={() => setPlayingVoice(null)}
+                        className="hidden"
+                      />
+                      <div className="mt-sm">
+                        <button
+                          type="button"
+                          onClick={confirmSelectedVoice}
+                          disabled={!selectedVoiceOption}
+                          className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+                            selectedVoiceOption
+                              ? 'bg-primary text-white hover:bg-primary-hover'
+                              : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                          }`}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {voiceAnswer && <UserBubble>{voiceAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-recording') && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">Should the agent record calls?</p>
+                  {phase === 'ask-recording' && (
+                    <div className="mt-xs flex flex-wrap items-center gap-sm">
+                      {RECORDING_OPTIONS.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => selectRecording(option)}
+                          className="flex h-10 items-center justify-center rounded-full border-2 border-transparent bg-surface-hover px-lg text-body text-text-primary hover:bg-surface-l2"
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {recordingAnswer && <UserBubble>{recordingAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-context') && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">
+                    Got it. Feel free to add any information that will help me build your agent — call
+                    transcripts, PDF documents, website links, or anything else you have on hand.
+                  </p>
+                  {phase === 'ask-context' && (
+                    <div className="mt-xs flex flex-wrap items-center gap-sm">
+                      <button
+                        type="button"
+                        onClick={skipContext}
+                        className="flex h-10 items-center justify-center rounded-full border-2 border-transparent bg-surface-hover px-lg text-body text-text-primary hover:bg-surface-l2"
+                      >
+                        Nothing to add
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {contextAnswer && <UserBubble>{contextAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-procedures') && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">
+                    Based on common patterns for a front desk agent, here's what I'd recommend. Pick the
+                    procedures you'd like this agent to handle, and I'll build it for you.
+                  </p>
+                  {phase === 'ask-procedures' && (
+                    <>
+                      <div className="mt-xs flex flex-col gap-sm">
+                        {(showAllProcedures ? RECOMMENDED_PROCEDURES : RECOMMENDED_PROCEDURES.slice(0, 4)).map((proc) => {
+                          const isSelected = selectedProcedures.includes(proc.name)
+                          return (
+                            <button
+                              key={proc.name}
+                              type="button"
+                              onClick={() => toggleProcedure(proc.name)}
+                              aria-pressed={isSelected}
+                              className={`flex w-full items-start gap-md rounded-lg border px-lg py-md text-left transition-colors ${
+                                isSelected ? 'border-primary bg-surface' : 'border-border bg-surface hover:bg-surface-hover'
+                              }`}
+                            >
+                              <span
+                                className={`mt-px flex size-[18px] shrink-0 items-center justify-center rounded-[2px] border transition-colors ${
+                                  isSelected ? 'border-primary bg-primary' : 'border-control-border bg-surface'
+                                }`}
+                              >
+                                {isSelected && <Icon name="check" size={14} weight={500} className="text-white" />}
+                              </span>
+                              <span className="flex flex-col gap-xs">
+                                <span className="text-body text-text-primary">{proc.name}</span>
+                                <span className="text-small text-text-tertiary">{proc.description}</span>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {RECOMMENDED_PROCEDURES.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllProcedures((prev) => !prev)}
+                          className="mt-xs self-start text-body text-text-action hover:underline"
+                        >
+                          {showAllProcedures ? 'View less' : `View more (${RECOMMENDED_PROCEDURES.length - 4})`}
+                        </button>
+                      )}
+                      <div className="mt-sm">
+                        <button
+                          type="button"
+                          onClick={confirmProcedures}
+                          disabled={selectedProcedures.length === 0}
+                          className={`flex h-9 items-center rounded-sm px-lg text-body text-white transition-colors ${
+                            selectedProcedures.length > 0
+                              ? 'bg-primary hover:bg-primary-hover'
+                              : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                          }`}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {procedureAnswer && <UserBubble>{procedureAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-consent') && recordingAnswer === 'Yes – with announced consent' && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">
+                    Callers must be informed before a recorded call begins. Here's the consent announcement I'll play at the start of every call:
+                  </p>
+                  <div className="mt-xs rounded-lg border border-border bg-surface-l2 px-lg py-md">
+                    <p className="text-body leading-6 italic text-text-primary">"{SUGGESTED_CONSENT_MESSAGE}"</p>
+                  </div>
+                  <p className="mt-sm text-body leading-6 text-text-primary">Would you like to use this wording?</p>
+                  {phase === 'ask-consent' && (
+                    <div className="mt-xs flex flex-wrap items-center gap-sm">
+                      <button
+                        type="button"
+                        onClick={() => selectConsent('Yes, use this wording')}
+                        className="flex h-10 items-center justify-center rounded-full border-2 border-transparent bg-surface-hover px-lg text-body text-text-primary hover:bg-surface-l2"
+                      >
+                        Yes, use this wording
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectConsent("No, I'll write my own")}
+                        className="flex h-10 items-center justify-center rounded-full border-2 border-transparent bg-surface-hover px-lg text-body text-text-primary hover:bg-surface-l2"
+                      >
+                        No, I'll write my own
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {consentAnswer && <UserBubble>{consentAnswer}</UserBubble>}
+              </>
+            )}
+
+            {showStep('ask-jobs') && (
+              <>
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                  <p className="text-body leading-6 text-text-primary">
+                    Based on common front desk patterns, here are the jobs to be done by the front desk agent. Select the ones that will be relevant for your agent.
+                  </p>
+                  {phase === 'ask-jobs' && (
+                    <>
+                      <div className="mt-xs flex flex-col gap-sm">
+                        {(showAllJobs ? JOB_OPTIONS : JOB_OPTIONS.slice(0, 4)).map((job) => {
+                          const isSelected = selectedJobs.includes(job.id)
+                          return (
+                            <button
+                              key={job.id}
+                              type="button"
+                              onClick={() => toggleJob(job.id)}
+                              aria-pressed={isSelected}
+                              className={`flex items-start gap-md rounded-lg border bg-surface px-lg py-md text-left transition-colors ${
+                                isSelected ? 'border-primary' : 'border-border hover:bg-surface-hover'
+                              }`}
+                            >
+                              <span
+                                className={`mt-px flex size-5 shrink-0 items-center justify-center rounded-sm border transition-colors ${
+                                  isSelected ? 'border-primary bg-primary text-white' : 'border-border-strong bg-surface text-transparent'
+                                }`}
+                              >
+                                {isSelected && <Icon name="check" size={14} />}
+                              </span>
+                              <span className="flex flex-col gap-xs">
+                                <span className="text-body text-text-primary">{job.title}</span>
+                                <span className="text-small text-text-secondary">{job.description}</span>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {JOB_OPTIONS.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllJobs((prev) => !prev)}
+                          className="mt-xs self-start text-body text-text-action hover:underline"
+                        >
+                          {showAllJobs ? 'View less' : `View more (${JOB_OPTIONS.length - 4})`}
+                        </button>
+                      )}
+                      <div className="mt-sm">
+                        <button
+                          type="button"
+                          onClick={confirmSelectedJobs}
+                          disabled={selectedJobs.length === 0}
+                          className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+                            selectedJobs.length > 0
+                              ? 'bg-primary text-white hover:bg-primary-hover'
+                              : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                          }`}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {jobsAnswer && <UserBubble>{jobsAnswer}</UserBubble>}
+              </>
+            )}
+
+            {stepThinking && stepThinkingPhase && (
+              <AgentBuildLoaderRow
+                label={(STEP_THINKING_LABELS[stepThinkingPhase] ?? [])[stepThinkingIndex] ?? 'Thinking'}
+                animKey={`${stepThinkingPhase}-${stepThinkingIndex}`}
+              />
+            )}
+
+            {building && (
+              <AgentBuildLoaderRow
+                label={AGENT_BUILD_LOADER_STEPS[loaderIndex ?? 0]}
+                animKey={loaderIndex ?? 0}
+                showProgress
+              />
+            )}
+
+            {phase === 'summary' && (
+              <div className="agent-build-fade mt-2xl flex flex-col gap-md">
+                {selectedProcedures.length > 0 && (
+                  <div className="flex flex-col gap-sm">
+                    <p className="text-body leading-6 text-text-primary">
+                      I have built procedures based on your use cases:
+                    </p>
+                    {selectedProcedures.slice(0, 4).map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => setOpenProcedureName(name)}
+                        className="flex w-full items-center gap-md rounded-xl border border-primary bg-surface px-lg py-md text-left hover:bg-surface-hover"
+                      >
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-hover">
+                          <Icon name="menu_book" size={20} className="text-text-icon" />
+                        </span>
+                        <span className="flex-1 text-body text-text-primary">{name} updated</span>
+                        <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-body leading-6 text-text-secondary">
+                  {agentName} is ready to go. I've set up the basics based on what you described.
+                </p>
+
+                <p className="mt-md text-body leading-6 text-text-primary">Here's how I'm going to work for you:</p>
+                <ul className="flex list-disc flex-col gap-xs pl-lg text-body leading-6 text-text-secondary">
+                  <li>I'll respond to inbound calls, texts, and web chats from patients</li>
+                  <li>I can look up answers from your knowledge base and FAQs</li>
+                  <li>I can check availability, book, confirm, and reschedule appointments</li>
+                  <li>I'll escalate urgent symptoms straight to your front desk team</li>
+                </ul>
+
+                <div className="mt-sm flex items-center gap-sm">
+                  <button
+                    type="button"
+                    onClick={onCreateFromScratch}
+                    className="flex h-9 items-center rounded-full border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                  >
+                    Yes, that's right
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetCreateFlow}
+                    className="flex h-9 items-center rounded-full border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                  >
+                    Make changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenProcedureName(null)
+                      setShowTestFollowUp(false)
+                      hadPreviewSessionRef.current = false
+                      previewActiveRef.current = false
+                      setPreviewActive(false)
+                      setPreviewOpen(true)
+                    }}
+                    className="flex h-9 items-center rounded-full border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                  >
+                    Test agent
+                  </button>
+                </div>
+
+                <div className="mt-sm flex items-center gap-md text-text-icon">
+                  <button type="button" aria-label="Copy" className="hover:text-text-primary">
+                    <Icon name="content_copy" size={18} />
+                  </button>
+                  <button type="button" aria-label="Read aloud" className="hover:text-text-primary">
+                    <Icon name="volume_up" size={18} />
+                  </button>
+                  <button type="button" aria-label="Good response" className="hover:text-text-primary">
+                    <Icon name="thumb_up" size={18} />
+                  </button>
+                  <button type="button" aria-label="Bad response" className="hover:text-text-primary">
+                    <Icon name="thumb_down" size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showTestFollowUp && (
+              <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                <p className="text-body leading-6 text-text-primary">
+                  How did the agent perform? Would you like to make any changes, or create this agent?
+                </p>
+                <div className="mt-sm flex items-center gap-sm">
+                  <button
+                    type="button"
+                    onClick={resetCreateFlow}
+                    className="flex h-9 items-center rounded-full border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                  >
+                    Make changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCreateAgent?.()}
+                    className="flex h-9 items-center rounded-full border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                  >
+                    Create this agent
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCreateAgent?.({ publish: true })}
+                    className="flex h-9 items-center rounded-full bg-primary px-md text-body text-white hover:bg-primary-hover"
+                  >
+                    Create and publish the agent
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="sticky -bottom-lg z-10 mt-auto flex flex-col gap-md bg-surface pb-lg pt-2xl">
+          {threadOverflowing && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                aria-label="Scroll to latest"
+                onClick={() => threadRef.current?.parentElement?.scrollTo({ top: threadRef.current.parentElement.scrollHeight, behavior: 'smooth' })}
+                className="flex size-7 items-center justify-center rounded-full border border-border bg-surface text-text-icon hover:bg-surface-hover"
+              >
+                <Icon name="expand_more" size={18} />
+              </button>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-md rounded-xl border border-border bg-surface px-lg py-md shadow-card">
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap items-center gap-sm">
+                {attachments.map((item) => (
+                  <RefChip key={item.id} kind={item.kind} label={item.label} onRemove={() => removeAttachment(item.id)} />
+                ))}
+              </div>
+            )}
+            <textarea
+              value={followUp}
+              onChange={(e) => setFollowUp(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleFollowUpSend()
+                }
+              }}
+              rows={2}
+              disabled={composerLocked}
+              placeholder={
+                previewActive
+                  ? 'Test in progress...'
+                  : phase === 'ask-name'
+                  ? 'Type a name for your agent...'
+                  : phase === 'ask-city'
+                    ? 'Add a specific city (or say no)...'
+                    : phase === 'ask-tone'
+                      ? 'Or describe the tone in your own words...'
+                      : phase === 'ask-channels'
+                        ? 'Or describe the channels in your own words...'
+                        : phase === 'ask-voice'
+                          ? 'Or describe the voice style in your own words...'
+                          : phase === 'ask-recording'
+                            ? 'Or describe your recording preference...'
+                            : phase === 'ask-context'
+                              ? 'Paste a link, or describe what you\'d like to add...'
+                              : phase === 'ask-procedures'
+                                ? 'Or describe the procedures in your own words...'
+                                : phase === 'ask-consent'
+                                ? 'Or write your own consent wording...'
+                                : phase === 'ask-jobs'
+                                  ? 'Or describe the jobs in your own words...'
+                                  : 'Message your agent...'
+              }
+              className="min-h-9 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary disabled:cursor-not-allowed"
+            />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-sm text-text-icon">
+                <ComposerAttachPopover onSelect={handleAttachSelect} disabled={composerLocked} />
+                <button
+                  type="button"
+                  aria-label="Attach file"
+                  onClick={handlePaperclipAttach}
+                  disabled={composerLocked}
+                  className="hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Icon name="attach_file" size={18} />
+                </button>
+                <button type="button" aria-label="Voice input" className="hover:text-text-primary" disabled={composerLocked}>
+                  <Icon name="mic" size={18} />
+                </button>
+              </div>
+              <button
+                type="button"
+                aria-label="Send"
+                onClick={handleFollowUpSend}
+                disabled={!followUp.trim() || composerLocked}
+                className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
+                  followUp.trim() && !composerLocked
+                    ? 'hover:bg-surface-hover'
+                    : 'cursor-not-allowed opacity-40'
+                }`}
+              >
+                <img src={sendArrowIcon} alt="" className="size-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        {(contextLoading || capturedContext.length > 0 || openProcedureName || previewOpen) && (
+          <div className="sticky top-0 hidden w-[480px] shrink-0 self-start lg:block">
+            {previewOpen ? (
+              <div className="h-[calc(100vh-140px)]">
+                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full">
+                  <PreviewPanel
+                    onClose={handlePreviewClose}
+                    onPreviewActiveChange={handlePreviewActiveChange}
+                    agentName={agentName || 'Front desk agent'}
+                    showViewDetails={false}
+                  />
+                </div>
+              </div>
+            ) : openProcedureName ? (
+              (() => {
+                const procedure = HC_PROCEDURES.find((p) => p.name === openProcedureName)
+                if (!procedure) return null
+                return <ProcedurePreviewPanel procedure={procedure} onClose={() => setOpenProcedureName(null)} />
+              })()
+            ) : contextLoading ? (
+              <aside className="w-full rounded-lg border border-border bg-surface p-md">
+                <div className="mb-md h-3 w-14 animate-pulse rounded-sm bg-surface-hover" />
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="mb-sm h-7 animate-pulse rounded-sm bg-surface-hover"
+                    style={{ animationDelay: `${i * 150}ms`, opacity: 1 - i * 0.15 }}
+                  />
+                ))}
+                <div className="mt-md h-3 w-20 animate-pulse rounded-sm bg-surface-hover" style={{ animationDelay: '600ms' }} />
+              </aside>
+            ) : (
+              <aside className="w-full [&>div>div:first-child]:mb-xs">
+                <ChipSection
+                  label="Context"
+                  chips={capturedContext.map((item) => ({
+                    value: item.label,
+                    type: REF_KIND_TO_CHIP_TYPE[item.kind] ?? 'variable',
+                  }))}
+                  onChange={(next: { value: string; type: string }[]) => handleContextChipsChange(next)}
+                  defaultType="variable"
+                  viewOnly={false}
+                  moreCount={0}
+                  chipsReadOnly={true}
+                  libraryContextStyle
+                  tooltip="Files, links, and variables captured from your answers so far."
+                  onAddContext={null}
+                />
+              </aside>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex w-full max-w-[1000px] flex-col items-center gap-2xl self-start py-lg mt-3xl">
+      <div className="flex flex-col items-center gap-sm text-center">
+        <p className="text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary">
+          Build your <span className="ai-gradient-text">agent</span>
+        </p>
+        <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI co-worker that gets the work done for you</p>
+      </div>
+
+      <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
+        <div className="flex flex-col gap-md rounded-[14px] bg-surface px-lg py-md shadow-card">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={3}
+            placeholder="Describe the agent you want to build..."
+            className="min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-md">
+              <button
+                type="button"
+                className="flex h-8 items-center gap-xs rounded-sm px-sm text-body text-text-primary transition-colors hover:bg-surface-hover"
+              >
+                <Icon name="add" size={18} />
+                Add context
+              </button>
+              <button
+                type="button"
+                aria-label="Attach file"
+                className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
+              >
+                <Icon name="attach_file" size={18} />
+              </button>
+            </div>
+            <button
+              type="button"
+              aria-label="Send"
+              onClick={handleSend}
+              className="flex size-9 items-center justify-center rounded-sm transition-colors hover:bg-surface-hover"
+            >
+              <img src={sendArrowIcon} alt="" className="size-6" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p className="m-0 mt-3xl text-center text-body text-text-secondary">
+        <button
+          type="button"
+          onClick={onCreateFromScratch}
+          className="text-body text-text-action hover:underline"
+        >
+          Setup manually
+        </button>
+        <span className="text-text-primary">{' or select from '}</span>
+        <button type="button" className="text-body text-text-action hover:underline">
+          library
+        </button>
+      </p>
+
+      <div className="grid w-full grid-cols-3 gap-md">
+        {HEALTHCARE_FRONTDESK_CREATE_CARDS.map((tpl) => (
+          <div
+            key={tpl.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`Use agent: ${tpl.title}`}
+            onClick={() => onSelectFromLibrary(tpl.id)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
+            className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
+          >
+            <h3 className="line-clamp-2 shrink-0 text-body text-text-primary">{tpl.title}</h3>
+            <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
+            <div className={INFO_CARD_LAYOUT.ctaWrap}>
+              <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
+                Use agent
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
@@ -371,6 +2061,18 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [selectedInstance, setSelectedInstance] = useState<string | null>(null)
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  const handleCreateAgentSuccess = (options?: { publish?: boolean }) => {
+    setShowCreateFlow(false)
+    setShowSetupWizard(false)
+    setSelectedInstance('Front desk agent - North region')
+    setToastMessage(
+      options?.publish ? 'Agent created and published successfully' : 'Agent created successfully',
+    )
+    setToastVisible(true)
+  }
 
   const METRICS_BY_AGENT: Record<string, Metric[]> = {
     'Front desk agent': [
@@ -614,6 +2316,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
 
   if (showCreateFlow && isFrontdesk) {
+    const isHealthcareFrontdesk = product === 'healthcare'
     return (
       <div className="flex h-full flex-col">
         <TopNav initials="S" />
@@ -632,11 +2335,19 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               <h1 className="text-h3 text-text-primary">New front desk agent</h1>
             </div>
           </div>
-          <div className="flex flex-1 items-center justify-center overflow-auto p-lg">
-            <CreateAgentEmptyState
-              onCreateFromScratch={() => setShowSetupWizard(true)}
-              onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
-            />
+          <div className="flex flex-1 items-start justify-center overflow-auto px-lg pb-lg pt-0">
+            {isHealthcareFrontdesk ? (
+              <HealthcareFrontdeskCreateAgentScreen
+                onCreateFromScratch={() => setShowSetupWizard(true)}
+                onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
+                onCreateAgent={handleCreateAgentSuccess}
+              />
+            ) : (
+              <CreateAgentEmptyState
+                onCreateFromScratch={() => setShowSetupWizard(true)}
+                onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -645,13 +2356,20 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
   if (selectedInstance) {
     return (
-      <AgentInstanceScreen
-        instanceName={selectedInstance}
-        onBack={() => setSelectedInstance(null)}
-        onEditAgent={onEditAgent}
-        onNavigateToInbox={onNavigateToInbox}
-        product={product}
-      />
+      <>
+        <AgentInstanceScreen
+          instanceName={selectedInstance}
+          onBack={() => setSelectedInstance(null)}
+          onEditAgent={onEditAgent}
+          onNavigateToInbox={onNavigateToInbox}
+          product={product}
+        />
+        <Toast
+          message={toastMessage}
+          visible={toastVisible}
+          onClose={() => setToastVisible(false)}
+        />
+      </>
     )
   }
 

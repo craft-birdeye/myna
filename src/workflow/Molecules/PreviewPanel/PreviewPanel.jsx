@@ -743,7 +743,7 @@ export default function PreviewPanel({
                 type="button"
                 onClick={!showViewDetails ? handleReset : mode === 'chat' ? handleReset : handleStartCall}
               >
-                {!showViewDetails ? 'Preview again' : mode === 'chat' ? 'Start a chat' : 'Test again'}
+                {!showViewDetails ? 'Test again' : mode === 'chat' ? 'Start a chat' : 'Test again'}
               </button>
               {showViewDetails && (
                 <button className="preview-panel__details-btn" type="button" onClick={() => setPanelView('details')}>

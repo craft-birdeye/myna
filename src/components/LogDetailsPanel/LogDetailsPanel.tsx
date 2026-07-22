@@ -209,6 +209,135 @@ function FieldRow({ fieldKey, value }: { fieldKey: string; value: string }) {
   )
 }
 
+const LLM_DETAILS_MODEL = 'Qwen3.6-35B-A3B'
+const TTS_DETAILS_MODEL = 'eleven_multilingual_v2'
+
+function parseDurationMs(label: string, fallback = 480): number {
+  const match = label.match(/([\d.]+)\s*(ms|s)/i)
+  if (!match) return fallback
+  const n = Number(match[1])
+  return match[2].toLowerCase() === 's' ? Math.round(n * 1000) : Math.round(n)
+}
+
+function llmDetailMetrics(llmResponseTime: string): { label: string; value: string }[] {
+  // Prototype metrics — first-byte / first-sentence sit under the reported LLM time.
+  const totalMs = parseDurationMs(llmResponseTime, 480)
+  const firstByte = Math.max(80, Math.round(totalMs * 0.21))
+  const firstSentence = Math.max(firstByte + 4, Math.round(totalMs * 0.22))
+  const lastSentence = Math.max(firstSentence + 20, Math.round(totalMs * 0.29))
+  return [
+    { label: 'Time to first byte from LLM service', value: `${firstByte} ms` },
+    { label: 'Time to first sentence from LLM service', value: `${firstSentence} ms` },
+    { label: 'Time to last sentence from LLM service', value: `${lastSentence} ms` },
+  ]
+}
+
+function ttsDetailMetrics(tts: string): { label: string; value: string }[] {
+  const totalMs = parseDurationMs(tts, 640)
+  const firstByte = Math.max(40, Math.round(totalMs * 0.18))
+  return [{ label: 'Time to first byte', value: `${firstByte} ms` }]
+}
+
+function DiagnosticDetailsCard({
+  title,
+  model,
+  metrics,
+  onClose,
+}: {
+  title: string
+  model: string
+  metrics: { label: string; value: string }[]
+  onClose: () => void
+}) {
+  return (
+    <div className="ml-auto w-[380px] max-w-full rounded-[12px] bg-surface-l2 px-md py-md">
+      <div className="mb-md flex items-center justify-between gap-sm">
+        <p className="m-0 text-small leading-[1.6] text-text-secondary">{title}</p>
+        <button
+          type="button"
+          aria-label={`Close ${title}`}
+          onClick={onClose}
+          className="flex size-5 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+        >
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-lg">
+        <div className="flex flex-col gap-xs">
+          <p className="m-0 text-small leading-[1.6] text-text-tertiary">Model</p>
+          <p className="m-0 text-small leading-[1.6] text-text-secondary">{model}</p>
+        </div>
+
+        <div className="flex flex-col gap-sm">
+          <p className="m-0 text-small leading-[1.6] text-text-tertiary">Metrics</p>
+          <div className="flex flex-col gap-sm">
+            {metrics.map((row) => (
+              <div key={row.label} className="flex items-start justify-between gap-md">
+                <p className="m-0 min-w-0 text-small leading-[1.6] text-text-secondary">{row.label}</p>
+                <p className="m-0 shrink-0 text-small leading-[1.6] text-text-secondary">{row.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AgentMetaLine({
+  entry,
+  llmOpen,
+  ttsOpen,
+  onToggleLlm,
+  onToggleTts,
+}: {
+  entry: Extract<LogTranscriptEntry, { role: 'agent' }>
+  llmOpen: boolean
+  ttsOpen: boolean
+  onToggleLlm: () => void
+  onToggleTts: () => void
+}) {
+  const afterTts: string[] = []
+  if (entry.knowledgeBase) afterTts.push(`Knowledge base ${entry.knowledgeBase}`)
+  if (entry.time) afterTts.push(entry.time)
+
+  if (!entry.llmResponseTime && !entry.tts && afterTts.length === 0) return null
+
+  const metaBtn = (active: boolean) =>
+    `rounded-sm transition-colors hover:bg-surface-hover hover:text-text-secondary ${
+      active ? 'bg-surface-hover text-text-secondary' : ''
+    }`
+
+  return (
+    <span className="whitespace-pre-wrap text-small text-text-tertiary">
+      {entry.llmResponseTime && (
+        <button
+          type="button"
+          onClick={onToggleLlm}
+          aria-expanded={llmOpen}
+          className={metaBtn(llmOpen)}
+        >
+          LLM {entry.llmResponseTime}
+        </button>
+      )}
+      {entry.llmResponseTime && entry.tts && '  •  '}
+      {entry.tts && (
+        <button
+          type="button"
+          onClick={onToggleTts}
+          aria-expanded={ttsOpen}
+          className={metaBtn(ttsOpen)}
+        >
+          TTS {entry.tts}
+        </button>
+      )}
+      {(entry.llmResponseTime || entry.tts) && afterTts.length > 0 && '  •  '}
+      {afterTts.join('  •  ')}
+    </span>
+  )
+}
+
 function NestedObjectBlock({
   entry,
 }: {
@@ -420,16 +549,10 @@ function MetaField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function agentMetaLine(entry: Extract<LogTranscriptEntry, { role: 'agent' }>): string | null {
-  const parts: string[] = []
-  if (entry.llmResponseTime) parts.push(`LLM ${entry.llmResponseTime}`)
-  if (entry.tts) parts.push(`TTS ${entry.tts}`)
-  if (entry.knowledgeBase) parts.push(`Knowledge base ${entry.knowledgeBase}`)
-  if (entry.time) parts.push(entry.time)
-  return parts.length > 0 ? parts.join('  •  ') : null
-}
-
 function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
+  const [llmOpen, setLlmOpen] = useState(false)
+  const [ttsOpen, setTtsOpen] = useState(false)
+
   if (entry.role === 'system') {
     return (
       <div className="py-sm">
@@ -457,8 +580,6 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
     )
   }
 
-  const meta = agentMetaLine(entry)
-
   return (
     <ChatBubble
       sender="business"
@@ -466,7 +587,35 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
       gap="gap-sm"
       bubbleClassName="max-w-[85%] px-lg py-md"
     >
-      {meta && <span className="whitespace-pre-wrap text-small text-text-tertiary">{meta}</span>}
+      <AgentMetaLine
+        entry={entry}
+        llmOpen={llmOpen}
+        ttsOpen={ttsOpen}
+        onToggleLlm={() => {
+          setLlmOpen((v) => !v)
+          setTtsOpen(false)
+        }}
+        onToggleTts={() => {
+          setTtsOpen((v) => !v)
+          setLlmOpen(false)
+        }}
+      />
+      {llmOpen && entry.llmResponseTime && (
+        <DiagnosticDetailsCard
+          title="LLM details"
+          model={LLM_DETAILS_MODEL}
+          metrics={llmDetailMetrics(entry.llmResponseTime)}
+          onClose={() => setLlmOpen(false)}
+        />
+      )}
+      {ttsOpen && entry.tts && (
+        <DiagnosticDetailsCard
+          title="TTS details"
+          model={TTS_DETAILS_MODEL}
+          metrics={ttsDetailMetrics(entry.tts)}
+          onClose={() => setTtsOpen(false)}
+        />
+      )}
       {entry.toolCall && (
         <AgentTurnAccordions tool={entry.toolCall} reasoning={entry.reasoning} />
       )}

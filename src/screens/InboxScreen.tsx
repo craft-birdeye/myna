@@ -58,7 +58,7 @@ const CONVERSATIONS: Conversation[] = [
     verified: true,
     message: 'That helped!',
     location: 'Rock Dental Brands',
-    assignee: 'Myna',
+    assignee: 'Front desk agent - North region',
     date: '02:09 PM',
     unread: true,
   },
