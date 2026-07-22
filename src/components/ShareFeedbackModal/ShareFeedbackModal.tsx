@@ -42,7 +42,7 @@ export function ShareFeedbackModal({ open, onClose, onSubmit }: ShareFeedbackMod
         </div>
 
         <p className="mt-lg text-body text-text-secondary">
-          What went wrong? Please share your feedback so our team can investigate this.
+          What went wrong? Share the details and the AI will train on your feedback to improve future responses.
         </p>
 
         <label className="mt-xl flex flex-col gap-xs">
