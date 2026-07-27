@@ -17,6 +17,7 @@ import { AvailabilityScreen } from './screens/AvailabilityScreen'
 import { AutoAppointmentTypeScreen } from './screens/AutoAppointmentTypeScreen'
 import { AutoAvailabilityScreen } from './screens/AutoAvailabilityScreen'
 import { HCFrontdeskOverviewScreen } from './screens/HCFrontdeskOverviewScreen'
+import { HCFrontdeskOverview2Screen } from './screens/HCFrontdeskOverview2Screen'
 import { HCNoShowsScreen } from './screens/HCNoShowsScreen'
 import { HCWaitlistFilledScreen } from './screens/HCWaitlistFilledScreen'
 import { HCIntakesCompletedScreen } from './screens/HCIntakesCompletedScreen'
@@ -35,6 +36,7 @@ import { IntegrationDetailScreen } from './screens/IntegrationDetailScreen'
 import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
+import { ReviewsAllScreen } from './screens/ReviewsAllScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import iconMarketing from './assets/icon-marketing.svg'
 import iconAgents from './assets/icon-agents.svg'
@@ -162,10 +164,11 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     id: 'outcomes',
     label: 'Outcomes',
     items: [
-      { id: 'hc-frontdesk-overview', label: 'Front desk overview' },
-      { id: 'hc-no-shows',           label: 'No-shows prevented'      },
-      { id: 'hc-waitlist',           label: 'Waitlist filled'    },
-      { id: 'hc-intakes',            label: 'Intakes completed'  },
+      { id: 'hc-frontdesk-overview',   label: 'Front desk overview' },
+      { id: 'hc-frontdesk-overview-2', label: 'Front desk overview 2' },
+      { id: 'hc-no-shows',           label: 'No-show rate'       },
+      { id: 'hc-waitlist',           label: 'Waitlist fills'     },
+      { id: 'hc-intakes',            label: 'Intake rate'        },
     ],
   },
   {
@@ -232,6 +235,68 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     ],
   },
 ]
+
+// Reviews AI — Birdeye Healthcare only. Selected via the "Reviews AI" icon-rail item.
+const REVIEWS_NAV_SECTIONS: NavSection[] = [
+  {
+    id: 'human-actions',
+    label: 'Human actions',
+    items: [
+      { id: 'rv-all-reviews',      label: 'View all reviews'      },
+      { id: 'rv-respond',         label: 'Respond to reviews'     },
+      { id: 'rv-monitor-replies', label: 'Monitor agent replies'  },
+      { id: 'rv-campaigns',       label: 'View campaigns'         },
+      { id: 'rv-saved-filters',   label: 'View saved filters'     },
+    ],
+  },
+  {
+    id: 'agent',
+    label: 'Agents',
+    items: [
+      { id: 'rv-generation-agents',       label: 'Generation agents'       },
+      { id: 'rv-response-agents',         label: 'Response agents'         },
+      { id: 'rv-employee-tagging-agents', label: 'Employee tagging agents' },
+      { id: 'rv-marketing-agents',        label: 'Marketing agents'        },
+    ],
+  },
+  {
+    id: 'outcomes',
+    label: 'Outcomes',
+    items: [
+      { id: 'rv-ratings',         label: 'Review & ratings' },
+      { id: 'rv-response-rate',  label: 'Response rate'    },
+      { id: 'rv-contact-reached',label: 'Contact reached'  },
+      { id: 'rv-all-reports',    label: 'All reports', external: true },
+    ],
+  },
+  {
+    id: 'resources',
+    label: 'Resources',
+    items: [
+      { id: 'rv-response-templates', label: 'Response templates' },
+      { id: 'rv-auto-reply-rules',   label: 'Auto-reply rules'   },
+      { id: 'rv-auto-share-rules',   label: 'Auto-share rules'   },
+      { id: 'rv-ratings-display',    label: 'Ratings display'    },
+      { id: 'rv-approvals',          label: 'Approvals'          },
+      { id: 'rv-ai-prompts',         label: 'AI prompts'         },
+    ],
+  },
+]
+
+function SendReviewRequestRow() {
+  return (
+    <div className="flex h-7 shrink-0 items-center justify-between px-2xl py-sm">
+      <span className="text-body text-text-primary">Send review request</span>
+      <button
+        type="button"
+        aria-label="Send review request"
+        className="flex size-7 items-center justify-center rounded-sm hover:bg-surface-hover"
+      >
+        <Icon name="add_circle" size={20} fill className="text-text-action" />
+      </button>
+    </div>
+  )
+}
 
 const NAV_SECTIONS_BY_PRODUCT: Record<string, NavSection[]> = {
   automotive: AUTOMOTIVE_NAV_SECTIONS,
@@ -333,6 +398,19 @@ export function App() {
     setWaitlistDetail(null)
     setLeadDetail(null)
     setServiceRequestDetail(null)
+    // Reviews AI is Healthcare-only — drop back to the front desk rail if the product changes away from it.
+    if (railActive === 'reviews' && id !== 'healthcare') {
+      setRailActive('frontdesk')
+    }
+  }
+
+  function handleRailSelect(id: string) {
+    setRailActive(id)
+    if (id === 'reviews' && activeProduct === 'healthcare') {
+      setNavActive('rv-all-reviews')
+    } else if (navActive.startsWith('rv-')) {
+      setNavActive(DEFAULT_NAV_BY_PRODUCT[activeProduct] ?? 'manage-appointments')
+    }
   }
 
   function handleEditAgent(name: string, draft?: WizardAgentDraft) {
@@ -360,6 +438,7 @@ export function App() {
     () => (initialDetailView?.view === 'service-request' ? (initialDetailView.data as ServiceRequestDetailArgs) : null),
   )
 
+  const isReviewsActive = railActive === 'reviews' && activeProduct === 'healthcare'
   const isEditingWorkflow = editingAgentName !== null
   const isViewingDetail =
     intakeDetail !== null ||
@@ -376,16 +455,17 @@ export function App() {
         brand={PRODUCT_BRAND[activeProduct]}
         groups={RAIL_GROUPS}
         activeId={railActive}
-        onSelect={setRailActive}
+        onSelect={handleRailSelect}
         products={PRODUCTS}
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
       {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && railActive !== 'settings' && railActive !== 'inbox' && (
         <SideNav
-          title="Front desk"
-          sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
+          title={isReviewsActive ? 'Reviews AI' : 'Front desk'}
+          sections={isReviewsActive ? REVIEWS_NAV_SECTIONS : (NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS)}
           activeId={navActive}
+          actionSlot={isReviewsActive ? <SendReviewRequestRow /> : undefined}
           onSelect={(id) => {
             if (id === 'knowledge-base') {
               setRailActive('settings')
@@ -564,6 +644,14 @@ export function App() {
           <AvailabilityScreen />
         ) : navActive === 'hc-frontdesk-overview' || navActive === 'dental-frontdesk-overview' || navActive === 'auto-frontdesk-overview' ? (
           <HCFrontdeskOverviewScreen isDental={navActive === 'dental-frontdesk-overview'} />
+        ) : navActive === 'hc-frontdesk-overview-2' ? (
+          <HCFrontdeskOverview2Screen />
+        ) : navActive === 'rv-all-reviews' ? (
+          <ReviewsAllScreen />
+        ) : navActive.startsWith('rv-') ? (
+          <EmptyResourceScreen
+            label={REVIEWS_NAV_SECTIONS.flatMap((s) => s.items ?? []).find((i) => i.id === navActive)?.label ?? 'Reviews'}
+          />
         ) : navActive === 'hc-no-shows' || navActive === 'dental-no-shows' || navActive === 'auto-no-shows' ? (
           <HCNoShowsScreen isDental={navActive === 'dental-no-shows'} />
         ) : navActive === 'hc-waitlist' || navActive === 'dental-waitlist' ? (

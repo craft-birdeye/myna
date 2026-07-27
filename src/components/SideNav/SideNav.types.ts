@@ -21,4 +21,6 @@ export interface SideNavProps {
   sections: NavSection[]
   activeId: string
   onSelect?: (id: string) => void
+  /** Optional content rendered between the title and the accordion sections (e.g. a primary action row). */
+  actionSlot?: import('react').ReactNode
 }
