@@ -12,9 +12,6 @@ import {
 } from '../data/annetteBlackChatConversation'
 import { AgentDetailScreen } from './AgentDetailScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
-import { CoachCopilotScreen } from './CoachCopilotScreen'
-import { buildCoachingSession, type FeedbackRecord } from '../data/feedbackData'
-import { useFeedbackStore } from '../data/FeedbackStoreContext'
 
 interface Conversation {
   id: string
@@ -677,33 +674,9 @@ export function InboxScreen({
   const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
-  const [toastRecordId, setToastRecordId] = useState<string | null>(null)
-  const [coachModalOpen, setCoachModalOpen] = useState(false)
-  const [coachingRecord, setCoachingRecord] = useState<FeedbackRecord | null>(null)
-  const [coachingPlay, setCoachingPlay] = useState(false)
-  // messageId → submitted coaching record id (drives the "Track submitted feedback" link)
-  const [coachedMessages, setCoachedMessages] = useState<Record<string, string>>({})
-  const { records, addRecord } = useFeedbackStore()
 
-  const openCoachingRecord = (recordId: string, play: boolean) => {
-    const record = records.find((r) => r.id === recordId)
-    if (!record) return
-    setCoachingPlay(play)
-    setCoachingRecord(record)
-  }
-
-  // Submitting feedback does NOT open the copilot — it files the record and
-  // surfaces a "Track submitted feedback" affordance (Podium-style).
-  const submitCoaching = (seedText: string, messageId?: string, sourceMessage?: string): FeedbackRecord => {
-    const record = buildCoachingSession('Front desk agent', seedText, sourceMessage)
-    addRecord(record)
-    if (messageId) setCoachedMessages((prev) => ({ ...prev, [messageId]: record.id }))
-    return record
-  }
-
-  const showFeedbackToast = (message: string, recordId?: string) => {
+  const showFeedbackToast = (message: string) => {
     setToastMessage(message)
-    setToastRecordId(recordId ?? null)
     setToastVisible(true)
   }
 
@@ -718,26 +691,13 @@ export function InboxScreen({
 
   const handleShareFeedbackClose = () => {
     setShareFeedbackMessageId(null)
-    setCoachModalOpen(false)
   }
 
-  const handleShareFeedbackSubmit = (details: string) => {
-    if (coachModalOpen) {
-      setCoachModalOpen(false)
-      const record = submitCoaching(details)
-      showFeedbackToast('Feedback submitted! The agent is training on your input.', record.id)
-      return
-    }
+  const handleShareFeedbackSubmit = (_details: string) => {
     if (!shareFeedbackMessageId) return
-    const sourceEvent = threadEvents.find(
-      (e) => e.kind === 'bubble' && e.id === shareFeedbackMessageId,
-    )
-    const sourceMessage =
-      sourceEvent && sourceEvent.kind === 'bubble' ? sourceEvent.text : undefined
     setMessageFeedback((prev) => ({ ...prev, [shareFeedbackMessageId]: 'down' }))
-    const record = submitCoaching(details, shareFeedbackMessageId, sourceMessage)
     setShareFeedbackMessageId(null)
-    showFeedbackToast('Feedback submitted! The agent is training on your input.', record.id)
+    showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
   }
 
   const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
@@ -783,23 +743,12 @@ export function InboxScreen({
   return (
     <>
     <div className="flex h-full">
-      {/* L2 Nav — full height; collapsed while the agent workflow editor or coach copilot is open */}
-      {!editingAgentName && !coachingRecord && <InboxSideNav activeId={activeNav} onSelect={handleNavSelect} />}
+      {/* L2 Nav — full height; collapsed while the agent workflow editor is open */}
+      {!editingAgentName && <InboxSideNav activeId={activeNav} onSelect={handleNavSelect} />}
 
       {/* Right side: TopNav on top, then conversation list + chat below */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {coachingRecord ? (
-          <>
-            <TopNav initials="S" />
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <CoachCopilotScreen
-                record={coachingRecord}
-                playOnMount={coachingPlay}
-                onBack={() => setCoachingRecord(null)}
-              />
-            </div>
-          </>
-        ) : editingAgentName ? (
+        {editingAgentName ? (
           <WorkflowEditorScreen
             agentName={editingAgentName}
             product="healthcare"
@@ -918,14 +867,6 @@ export function InboxScreen({
                 {selectedConvo.verified && <Icon name="mode_heat" size={16} className="text-text-icon" />}
               </div>
               <div className="flex items-center gap-md">
-                <button
-                  type="button"
-                  onClick={() => setCoachModalOpen(true)}
-                  className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-                >
-                  <Icon name="school" size={18} className="text-text-icon" />
-                  Coach
-                </button>
                 <button type="button" className="flex items-center gap-sm">
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ai-summary">
                     <Icon name="smart_toy" size={16} className="text-ai-brand" />
@@ -1021,28 +962,6 @@ export function InboxScreen({
                         }
                       >
                         <span className="flex items-center gap-xs text-small text-text-tertiary">
-                          {isAgent && (
-                            <>
-                              {coachedMessages[event.id] ? (
-                                <button
-                                  type="button"
-                                  onClick={() => openCoachingRecord(coachedMessages[event.id], true)}
-                                  className="text-small text-text-action hover:underline"
-                                >
-                                  Track submitted feedback
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => setShareFeedbackMessageId(event.id)}
-                                  className="text-small text-text-action hover:underline"
-                                >
-                                  Coach
-                                </button>
-                              )}
-                              <span>•</span>
-                            </>
-                          )}
                           {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
                           {event.time}
                           {!isAgent && event.showLink && (
@@ -1136,7 +1055,7 @@ export function InboxScreen({
     </div>
 
     <ShareFeedbackModal
-      open={shareFeedbackMessageId !== null || coachModalOpen}
+      open={shareFeedbackMessageId !== null}
       onClose={handleShareFeedbackClose}
       onSubmit={handleShareFeedbackSubmit}
     />
@@ -1144,8 +1063,6 @@ export function InboxScreen({
       message={toastMessage}
       visible={toastVisible}
       onClose={() => setToastVisible(false)}
-      actionLabel={toastRecordId ? 'Track feedback' : undefined}
-      onAction={toastRecordId ? () => openCoachingRecord(toastRecordId, true) : undefined}
     />
     </>
   )

@@ -1,8 +1,4 @@
 export { Chip } from './Chip/Chip'
-export { CoachCopilot } from './CoachCopilot/CoachCopilot'
-export { ChangeDetailDrawer } from './ChangeDetailDrawer/ChangeDetailDrawer'
-export type { ChangeDetailDrawerProps } from './ChangeDetailDrawer/ChangeDetailDrawer.types'
-export type { CoachCopilotProps, ChangeDecision } from './CoachCopilot/CoachCopilot.types'
 export { ChatBubble, ChatSystemLabel } from './ChatBubble/ChatBubble'
 export type {
   ChatBubbleProps,

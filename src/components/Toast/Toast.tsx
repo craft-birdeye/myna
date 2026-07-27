@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Icon } from '../Icon/Icon'
 import { ToastProps } from './Toast.types'
 
-export function Toast({ message, visible, onClose, actionLabel, onAction }: ToastProps) {
+export function Toast({ message, visible, onClose }: ToastProps) {
   useEffect(() => {
     if (!visible) return
     const t = setTimeout(onClose, 4000)
@@ -17,18 +17,6 @@ export function Toast({ message, visible, onClose, actionLabel, onAction }: Toas
     >
       <Icon name="check" size={20} className="shrink-0 text-accent-positive" />
       <span className="whitespace-nowrap text-body text-text-primary">{message}</span>
-      {actionLabel && onAction && (
-        <button
-          type="button"
-          onClick={() => {
-            onAction()
-            onClose()
-          }}
-          className="whitespace-nowrap rounded-sm px-sm text-body text-text-action hover:bg-surface-hover"
-        >
-          {actionLabel}
-        </button>
-      )}
       <button
         type="button"
         onClick={onClose}

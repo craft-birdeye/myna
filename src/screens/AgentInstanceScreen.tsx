@@ -17,11 +17,10 @@ import { OutboundAgentLogsTab } from './OutboundAgentLogsTab'
 import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { WorkflowViewerTab } from './WorkflowViewerTab'
-import { FeedbackTab } from './FeedbackTab'
-import { CoachCopilotScreen } from './CoachCopilotScreen'
+import { RecommendationsTab } from './RecommendationsTab'
+import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
-import type { FeedbackRecord } from '../data/feedbackData'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
 
 interface AgentInstanceScreenProps {
@@ -69,13 +68,13 @@ interface LocationRow {
 const TABS: Tab[] = [
   { id: 'outcomes', label: 'Outcomes' },
   { id: 'workflow', label: 'Workflow' },
-  { id: 'feedback', label: 'Feedback' },
+  { id: 'recommendation', label: 'Recommendation' },
   { id: 'logs', label: 'Logs' },
   { id: 'settings', label: 'Settings' },
 ]
 
-// Tagging & routing agent hides Feedback and Settings — only Outcomes / Workflow / Logs apply.
-const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'feedback')
+// Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
+const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
 
 const METRICS_BY_AGENT: Record<string, Metric[]> = {
   'Front desk agent': [
@@ -316,7 +315,6 @@ export function AgentInstanceScreen({
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
-  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackRecord | null>(null)
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -336,23 +334,12 @@ export function AgentInstanceScreen({
   const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
-  const isFeedbackTab = activeTab === 'feedback'
+  const isRecommendationTab = activeTab === 'recommendation'
   const showHealthcareLogs =
     activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && product === 'dental' && Boolean(dentalOutboundLogRows)
-
-  if (selectedFeedback) {
-    return (
-      <div className="flex h-full flex-col">
-        <TopNav initials="S" />
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <CoachCopilotScreen record={selectedFeedback} onBack={() => setSelectedFeedback(null)} />
-        </div>
-      </div>
-    )
-  }
 
   if (selectedRun) {
     return (
@@ -463,9 +450,9 @@ export function AgentInstanceScreen({
           onEdit={() => onEditAgent?.(instanceName)}
           product={product}
         />
-      ) : isFeedbackTab ? (
+      ) : isRecommendationTab ? (
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <FeedbackTab agentName={agentName} onOpenRecord={setSelectedFeedback} />
+          {agentName === 'Front desk agent' ? <FrontdeskRecommendationsTab /> : <RecommendationsTab />}
         </div>
       ) : (
         <div className="flex-1 overflow-auto">
