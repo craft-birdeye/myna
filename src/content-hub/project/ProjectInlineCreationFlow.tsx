@@ -185,7 +185,7 @@ function ToggleRow({ label, sub, checked, onChange }: { label: string; sub?: str
         onClick={() => onChange(!checked)}
         className={cn('w-8 h-5 rounded-full transition-colors relative flex-shrink-0', checked ? 'bg-primary' : 'bg-muted')}
       >
-        <span className={cn('absolute top-0.5 size-3.5 bg-white rounded-full transition-transform shadow-sm', checked ? 'translate-x-[16px]' : 'translate-x-0.5')} />
+        <span className={cn('absolute top-0.5 size-3.5 bg-white rounded-full transition-transform shadow-sm', checked ? 'translate-x-4' : 'translate-x-0.5')} />
       </button>
       <div>
         <p className="text-[13px] text-foreground">{label}</p>
