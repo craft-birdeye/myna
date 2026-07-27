@@ -3,6 +3,7 @@
   height: 100%;
   gap: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .agent-builder__lhs {
@@ -11,6 +12,74 @@
   overflow: visible;
   position: relative;
   z-index: 40;
+  width: 380px;
+  transition: width 0.28s cubic-bezier(0.4,0,0.2,1), padding 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
+  opacity: 1;
+}
+
+.agent-builder__lhs--collapsed {
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ─── Expand pill (floats over canvas when LHS is collapsed) ─── */
+.ab-lhs-expand-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #555;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.ab-lhs-expand-pill .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ab-lhs-expand-pill__label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  letter-spacing: -0.26px;
+  color: #212121;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  display: inline-block;
+  transition: max-width 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.15s ease;
+}
+
+.ab-lhs-expand-pill:hover {
+  border-color: #e5e9f0;
+  background: #f4f6f7;
+  color: #212121;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.ab-lhs-expand-pill:hover .ab-lhs-expand-pill__label {
+  max-width: 80px;
+  opacity: 1;
+  color: #212121;
+  transition: max-width 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.15s ease 0.07s;
 }
 
 .agent-builder__canvas {

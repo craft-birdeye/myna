@@ -13,6 +13,7 @@ export default function GraphControls({
   onZoomSelect,
   onFitView,
   viewOnly = false,
+  runDisabled = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -105,7 +106,13 @@ export default function GraphControls({
       )}
 
       <GraphControlTooltip text="Preview">
-        <button className="graph-controls__run" onClick={onRun} type="button">
+        <button
+          className="graph-controls__run"
+          onClick={onRun}
+          type="button"
+          disabled={runDisabled}
+          aria-disabled={runDisabled}
+        >
           <span className="material-symbols-outlined">play_arrow</span>
         </button>
       </GraphControlTooltip>

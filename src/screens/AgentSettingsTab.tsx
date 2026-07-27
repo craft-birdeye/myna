@@ -1,16 +1,63 @@
-import { useState, useRef, type MouseEvent } from 'react'
-import { Icon, IntegrationsPickerDrawer, RefChip } from '../components'
+import { useEffect, useState, useRef, type MouseEvent } from 'react'
+import {
+  Icon,
+  IntegrationsPickerDrawer,
+  LanguageFlag,
+  LanguageSelectMenu,
+  RefChip,
+} from '../components'
+import {
+  AGENT_LANGUAGES,
+  getAgentLanguage,
+  type AgentLanguageId,
+} from '../data/agentLanguages'
 import {
   DEFAULT_AUTO_ACCOUNT_CONNECTED_INTEGRATION_IDS,
   DEFAULT_AUTO_AGENT_SELECTED_INTEGRATION_ID,
   getAutomotiveIntegration,
   AUTOMOTIVE_INTEGRATION_CATALOG,
 } from '../data/automotiveIntegrations'
+import {
+  BuildIcon,
+  VariableIcon,
+} from '../workflow/Molecules/Inputs/PromptToolbarIcons.jsx'
+import FieldPickerModal from '../workflow/Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx'
 
 interface AgentSettingsTabProps {
   product?: string
   agentName?: string
   onOpenIntegrationSettings?: (integrationId: string) => void
+}
+
+const FRONTDESK_SYSTEM_PROMPT = `# Personality
+You are Myna, the elegant and attentive reservations specialist at the Grand Hotel. You make every caller feel like a VIP — refined, warm, and effortlessly capable. You handle reservation requests with the calm efficiency of someone who has booked thousands of stays.
+
+# Environment
+You handle inbound calls for hotel reservations: new bookings, modifications, cancellations, and general questions about the property. Callers may be planning a special trip, calling on behalf of a guest, or checking on a stay they've already booked. Booking system, room types, and rate plans are managed by the workspace owner — only quote details that are explicitly available to you in this conversation.
+
+# Tone
+- Warm and refined hospitality — never stuffy.
+- Attentive to details: dates, room preferences, special requests (anniversary, accessibility, dietary).`
+
+const FRONTDESK_GREETING =
+  'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?'
+
+const FRONTDESK_CONSENT =
+  'This call may be recorded for quality and training purposes.'
+
+interface AdditionalVoiceChip {
+  label: string
+  language: AgentLanguageId
+}
+
+const DEFAULT_ADDITIONAL_VOICES: AdditionalVoiceChip[] = [
+  { label: 'Andrea_Spanish', language: 'es' },
+  { label: 'Andrea_Italian', language: 'it' },
+  { label: 'Andrea_Korean', language: 'ko' },
+]
+
+function isFrontDeskAgent(agentName?: string): boolean {
+  return (agentName ?? '').startsWith('Front desk agent')
 }
 
 // ── Toggle ──────────────────────────────────────────────────────
@@ -76,7 +123,7 @@ function FallbackField({ prefix, chipLabel, suffix }: FallbackFieldProps) {
         {/* AI icon */}
         <button
           type="button"
-          title="AI personalise"
+          title="AI personalize"
           className="flex h-7 items-center gap-[3px] rounded-sm px-[6px] text-text-icon hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -217,9 +264,11 @@ interface VoiceSelectProps {
   value: string
   options: VoiceOption[]
   onChange: (value: string) => void
+  /** `right` opens like a drawer trigger (Front desk settings). */
+  chevron?: 'down' | 'right'
 }
 
-function VoiceSelect({ value, options, onChange }: VoiceSelectProps) {
+function VoiceSelect({ value, options, onChange, chevron = 'down' }: VoiceSelectProps) {
   const [open, setOpen] = useState(false)
   const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
   const [playing, setPlaying] = useState<string | null>(null)
@@ -268,7 +317,11 @@ function VoiceSelect({ value, options, onChange }: VoiceSelectProps) {
         <span className={`min-w-0 flex-1 truncate text-left text-body ${value ? 'text-text-primary' : 'text-text-tertiary'}`}>
           {value || 'Select voice'}
         </span>
-        <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+        <Icon
+          name={chevron === 'right' ? 'chevron_right' : 'expand_more'}
+          size={20}
+          className="shrink-0 text-text-icon"
+        />
       </button>
       {open && anchor && (
         <>
@@ -477,7 +530,7 @@ function ChannelAccordion({
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-surface">
+    <div className="overflow-hidden rounded-md border border-border bg-surface-l2">
       <div className="flex h-14 items-center justify-between px-lg hover:bg-surface-l2">
         <button
           type="button"
@@ -652,7 +705,415 @@ function IntegrationCard({
 
 type RecordingMode = 'off' | 'announced'
 
-export function AgentSettingsTab({ onOpenIntegrationSettings }: AgentSettingsTabProps) {
+const VOICE_OPTIONS: VoiceOption[] = [
+  {
+    label: 'Andrea (warm, clear, reassuring)',
+    preview: "Hi, I'm Andrea — warm, clear, and reassuring. How can I help you today?",
+  },
+  {
+    label: 'Jordan (professional, calm)',
+    preview: "Hello, this is Jordan. I'm here to assist you professionally and calmly.",
+  },
+  {
+    label: 'Sam (friendly, upbeat)',
+    preview: "Hey there! Sam here — friendly and upbeat. What can I do for you?",
+  },
+  {
+    label: 'Morgan (neutral, clear)',
+    preview: "Hi, I'm Morgan. Clear and neutral, ready to assist you.",
+  },
+]
+
+/** Flat Front desk settings (system prompt → language → voice → greeting → recording). */
+function FrontDeskSettings() {
+  const [systemPrompt, setSystemPrompt] = useState(FRONTDESK_SYSTEM_PROMPT)
+  const [language, setLanguage] = useState<AgentLanguageId>('en')
+  const [additionalLanguages, setAdditionalLanguages] = useState<AgentLanguageId[]>([])
+  const [additionalFieldVisible, setAdditionalFieldVisible] = useState(false)
+  const [langMenuOpen, setLangMenuOpen] = useState(false)
+  const [additionalMenuOpen, setAdditionalMenuOpen] = useState(false)
+  const [fieldPickerOpen, setFieldPickerOpen] = useState(false)
+  const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
+  const [additionalVoices, setAdditionalVoices] =
+    useState<AdditionalVoiceChip[]>(DEFAULT_ADDITIONAL_VOICES)
+  const [greeting, setGreeting] = useState(FRONTDESK_GREETING)
+  const [recording, setRecording] = useState<RecordingMode>('announced')
+  const [consent, setConsent] = useState(FRONTDESK_CONSENT)
+
+  const promptRef = useRef<HTMLTextAreaElement>(null)
+  const fieldsBtnRef = useRef<HTMLButtonElement>(null)
+  const langRef = useRef<HTMLDivElement>(null)
+  const additionalRef = useRef<HTMLDivElement>(null)
+  const savedSelectionRef = useRef<{ start: number; end: number } | null>(null)
+
+  const selectedLang = getAgentLanguage(language)
+  const additionalOptions = AGENT_LANGUAGES.filter((l) => l.id !== language)
+  const selectedAdditional = additionalLanguages
+    .map((id) => getAgentLanguage(id))
+    .filter((l) => l.id !== language)
+
+  useEffect(() => {
+    function handleClick(e: Event) {
+      const target = e.target as Node
+      if (langRef.current && !langRef.current.contains(target)) {
+        setLangMenuOpen(false)
+      }
+      if (additionalRef.current && !additionalRef.current.contains(target)) {
+        setAdditionalMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function savePromptSelection() {
+    const el = promptRef.current
+    if (!el) return
+    savedSelectionRef.current = { start: el.selectionStart, end: el.selectionEnd }
+  }
+
+  function insertFieldIntoPrompt(fieldValue: string) {
+    const el = promptRef.current
+    if (!el) {
+      setSystemPrompt(`${systemPrompt}{{${fieldValue}}}`)
+      return
+    }
+    const token = `{{${fieldValue}}}`
+    const start = savedSelectionRef.current?.start ?? el.selectionStart
+    const end = savedSelectionRef.current?.end ?? el.selectionEnd
+    const next = `${systemPrompt.slice(0, start)}${token}${systemPrompt.slice(end)}`
+    setSystemPrompt(next)
+    const caret = start + token.length
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(caret, caret)
+    })
+    savedSelectionRef.current = null
+  }
+
+  function handlePrimaryLanguageChange(id: string) {
+    setLanguage(id as AgentLanguageId)
+    if (additionalLanguages.includes(id as AgentLanguageId)) {
+      setAdditionalLanguages(additionalLanguages.filter((x) => x !== id))
+    }
+    setLangMenuOpen(false)
+  }
+
+  function revealAdditionalLanguage() {
+    setAdditionalFieldVisible(true)
+    setLangMenuOpen(false)
+    setAdditionalMenuOpen(true)
+  }
+
+  function handleRemoveAdditionalVoice(label: string) {
+    setAdditionalVoices(additionalVoices.filter((v) => v.label !== label))
+  }
+
+  function handleAddAdditionalVoice() {
+    const used = new Set(additionalVoices.map((v) => v.language))
+    const nextLang = AGENT_LANGUAGES.find(
+      (l) => l.id !== language && !used.has(l.id as AgentLanguageId),
+    )
+    if (!nextLang) return
+    const baseName = voice.split(' (')[0] || 'Andrea'
+    setAdditionalVoices([
+      ...additionalVoices,
+      { label: `${baseName}_${nextLang.label}`, language: nextLang.id as AgentLanguageId },
+    ])
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-md">
+      {/* System prompt */}
+      <div className="flex flex-col gap-xs">
+        <div className="flex items-center gap-xs">
+          <label className="text-body text-text-primary">System prompt</label>
+          <span className="text-body text-chip-danger-text" aria-hidden>
+            *
+          </span>
+        </div>
+        <div
+          className={`flex flex-col overflow-hidden bg-surface ${FIELD_BORDER_CLASS} focus-within:border-primary`}
+        >
+          <textarea
+            ref={promptRef}
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            onSelect={savePromptSelection}
+            onBlur={savePromptSelection}
+            rows={12}
+            className="h-[360px] w-full resize-y bg-transparent px-md py-sm text-body leading-[1.55] text-text-primary outline-none"
+            aria-required
+          />
+          <div className="flex items-center gap-xs px-sm py-[6px]">
+            <button
+              ref={fieldsBtnRef}
+              type="button"
+              title="Insert variable"
+              aria-label="Insert variable"
+              aria-expanded={fieldPickerOpen}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                savePromptSelection()
+                setFieldPickerOpen(true)
+              }}
+              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            >
+              <VariableIcon />
+            </button>
+            <button
+              type="button"
+              title="Add tool"
+              aria-label="Add tool"
+              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            >
+              <BuildIcon />
+            </button>
+          </div>
+        </div>
+        {fieldPickerOpen && (
+          <FieldPickerModal
+            onClose={() => setFieldPickerOpen(false)}
+            onSelectField={(value: string) => {
+              insertFieldIntoPrompt(value)
+              setFieldPickerOpen(false)
+            }}
+            anchorEl={fieldsBtnRef.current}
+          />
+        )}
+      </div>
+
+      {/* Language */}
+      <div className="flex flex-col gap-md">
+        <div className="flex flex-col gap-sm">
+          <div>
+            <label className="text-body text-text-primary">Language</label>
+            <p className="mt-[2px] text-small text-text-secondary">
+              Choose the default and additional languages the agent will communicate in.
+            </p>
+          </div>
+          <div ref={langRef} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setLangMenuOpen((o) => !o)
+                setAdditionalMenuOpen(false)
+              }}
+              className={`flex h-9 w-full items-center gap-sm bg-surface px-md text-left ${FIELD_BORDER_CLASS}`}
+              aria-haspopup="listbox"
+              aria-expanded={langMenuOpen}
+            >
+              <LanguageFlag countryCode={selectedLang.countryCode} label={selectedLang.label} />
+              <span className="flex-1 text-body text-text-primary">{selectedLang.label}</span>
+              <Icon name="expand_more" size={18} className="text-text-icon" />
+            </button>
+            {langMenuOpen && (
+              <LanguageSelectMenu
+                options={AGENT_LANGUAGES}
+                value={language}
+                onSelect={handlePrimaryLanguageChange}
+              />
+            )}
+          </div>
+        </div>
+
+        {additionalFieldVisible ? (
+          <div className="flex flex-col gap-sm">
+            <label className="text-body text-text-primary">Additional language</label>
+            <div ref={additionalRef} className="relative">
+              <div
+                className={`flex min-h-9 w-full items-center gap-sm rounded-sm border bg-surface py-xs pr-sm transition-colors ${
+                  selectedAdditional.length === 0 ? 'pl-md' : 'pl-xs'
+                } ${additionalMenuOpen ? 'border-primary' : 'border-border-input'}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdditionalMenuOpen((o) => !o)
+                    setLangMenuOpen(false)
+                  }}
+                  className="flex min-h-7 min-w-0 flex-1 flex-wrap items-center gap-sm text-left"
+                  aria-haspopup="listbox"
+                  aria-expanded={additionalMenuOpen}
+                >
+                  {selectedAdditional.length === 0 ? (
+                    <span className="text-body text-text-tertiary">Select</span>
+                  ) : (
+                    selectedAdditional.map((lang) => (
+                      <span
+                        key={lang.id}
+                        className="flex h-7 items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary"
+                      >
+                        <LanguageFlag
+                          countryCode={lang.countryCode}
+                          label={lang.label}
+                          size="sm"
+                        />
+                        {lang.label}
+                      </span>
+                    ))
+                  )}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Toggle additional languages"
+                  onClick={() => {
+                    setAdditionalMenuOpen((o) => !o)
+                    setLangMenuOpen(false)
+                  }}
+                  className="flex size-7 shrink-0 items-center justify-center text-text-icon"
+                >
+                  <Icon name="expand_more" size={18} />
+                </button>
+              </div>
+              {additionalMenuOpen && (
+                <LanguageSelectMenu
+                  multi
+                  options={additionalOptions}
+                  values={additionalLanguages.filter((id) => id !== language)}
+                  onChange={(ids) => setAdditionalLanguages(ids as AgentLanguageId[])}
+                />
+              )}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={revealAdditionalLanguage}
+            className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
+          >
+            <Icon name="add_circle" size={18} className="text-primary" />
+            Add additional language
+          </button>
+        )}
+      </div>
+
+      {/* Voice call settings */}
+      <div className="flex flex-col gap-md pt-3xl">
+        <h2 className="text-[16px] font-medium leading-6 tracking-[-0.32px] text-text-primary">
+          Voice call settings
+        </h2>
+
+        <div className="flex flex-col gap-xs">
+          <label className="text-small text-text-secondary">
+            Default voice <span className="text-chip-danger-text">*</span>
+          </label>
+          <VoiceSelect
+            value={voice}
+            options={VOICE_OPTIONS}
+            onChange={setVoice}
+            chevron="right"
+          />
+        </div>
+
+        <div className="flex flex-col gap-xs">
+          {additionalVoices.length > 0 && (
+            <label className="text-small text-text-secondary">Additional voice</label>
+          )}
+          {additionalVoices.length > 0 ? (
+            <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
+              <div className="flex flex-wrap gap-sm">
+                {additionalVoices.map((cfg) => {
+                  const lang = getAgentLanguage(cfg.language)
+                  return (
+                    <span
+                      key={cfg.label}
+                      className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary"
+                    >
+                      <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
+                      <span className="truncate">{cfg.label}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${cfg.label}`}
+                        onClick={() => handleRemoveAdditionalVoice(cfg.label)}
+                        className="flex size-4 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+                      >
+                        <Icon name="close" size={14} />
+                      </button>
+                    </span>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={handleAddAdditionalVoice}
+                className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
+              >
+                <Icon name="add_circle" size={18} className="text-primary" />
+                Add
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAddAdditionalVoice}
+              className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
+            >
+              <Icon name="add_circle" size={18} className="text-primary" />
+              Add additional voice
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Greeting message */}
+      <div className="flex flex-col gap-xs">
+        <label className="text-body text-text-primary">Greeting message</label>
+        <textarea
+          value={greeting}
+          onChange={(e) => setGreeting(e.target.value)}
+          rows={4}
+          className={`${INPUT_CLASS} resize-none py-sm`}
+        />
+      </div>
+
+      {/* Recording */}
+      <div>
+        <p className="text-body text-text-primary">Recording</p>
+        <div className="mt-sm flex flex-col gap-sm">
+          <label className="flex cursor-pointer items-center gap-sm">
+            <input
+              type="radio"
+              name="frontdesk-recording"
+              checked={recording === 'off'}
+              onChange={() => setRecording('off')}
+              className="accent-primary"
+            />
+            <span className="text-body text-text-primary">Off</span>
+          </label>
+          <div>
+            <label className="flex cursor-pointer items-center gap-sm">
+              <input
+                type="radio"
+                name="frontdesk-recording"
+                checked={recording === 'announced'}
+                onChange={() => setRecording('announced')}
+                className="accent-primary"
+              />
+              <span className="text-body text-text-primary">Record with announced consent</span>
+            </label>
+            {recording === 'announced' && (
+              <div className="mt-sm pl-2xl">
+                <label className="mb-xs block text-small text-text-secondary">Consent message</label>
+                <textarea
+                  value={consent}
+                  onChange={(e) => setConsent(e.target.value)}
+                  rows={3}
+                  className={`${INPUT_CLASS} resize-none py-sm`}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function AgentSettingsTab({
+  agentName,
+  onOpenIntegrationSettings,
+}: AgentSettingsTabProps) {
   const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
   const [greeting, setGreeting] = useState(
     'Thank you for calling — my name is Myna, your virtual assistant. How can I help you today?'
@@ -685,17 +1146,21 @@ export function AgentSettingsTab({ onOpenIntegrationSettings }: AgentSettingsTab
     onOpenIntegrationSettings?.(integrationId)
   }
 
-  const VOICES: VoiceOption[] = [
-    { label: 'Andrea (warm, clear, reassuring)',    preview: "Hi, I'm Andrea — warm, clear, and reassuring. How can I help you today?" },
-    { label: 'Jordan (professional, calm)',          preview: "Hello, this is Jordan. I'm here to assist you professionally and calmly." },
-    { label: 'Sam (friendly, upbeat)',               preview: "Hey there! Sam here — friendly and upbeat. What can I do for you?" },
-    { label: 'Morgan (neutral, clear)',              preview: "Hi, I'm Morgan. Clear and neutral, ready to assist you." },
-  ]
+  if (isFrontDeskAgent(agentName)) {
+    return (
+      <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <FrontDeskSettings />
+        </div>
+        {/* Same right-column width as ProcedureDetailScreen Context panel */}
+        <div className="w-[400px] shrink-0" aria-hidden />
+      </div>
+    )
+  }
 
   return (
-    <div className="px-2xl pt-lg pb-2xl">
-      {/* constrain settings content to ~700px */}
-      <div className="w-full max-w-[700px] space-y-xl">
+    <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
+      <div className="min-w-0 flex-1 space-y-xl">
 
         {/* Channel settings */}
         <section>
@@ -712,7 +1177,7 @@ export function AgentSettingsTab({ onOpenIntegrationSettings }: AgentSettingsTab
               <div className="flex flex-col gap-lg">
                 <div>
                   <label className="block text-small text-text-secondary">Voice</label>
-                  <VoiceSelect value={voice} options={VOICES} onChange={setVoice} />
+                  <VoiceSelect value={voice} options={VOICE_OPTIONS} onChange={setVoice} />
                 </div>
 
                 <div>
@@ -730,7 +1195,7 @@ export function AgentSettingsTab({ onOpenIntegrationSettings }: AgentSettingsTab
                 <div>
                   <p className="text-small text-text-secondary">Recording</p>
                   <SettingSubtext tone="tertiary">
-                    Configure consent wording in each channel settings below
+                    Applies to voice calls only
                   </SettingSubtext>
                   <div className="mt-sm flex flex-col gap-sm">
                     <label className="flex cursor-pointer items-center gap-sm">
@@ -839,6 +1304,8 @@ export function AgentSettingsTab({ onOpenIntegrationSettings }: AgentSettingsTab
         </section>
 
       </div>
+      {/* Same right-column width as ProcedureDetailScreen Context panel */}
+      <div className="w-[400px] shrink-0" aria-hidden />
     </div>
   )
 }

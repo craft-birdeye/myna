@@ -6,6 +6,7 @@ import {
   DataTable,
   DateChange,
   FilterPanel,
+  HeaderSearchField,
   Icon,
   MessageDrawer,
   QuickSendModal,
@@ -25,10 +26,12 @@ import {
   type Column,
   type ColumnOption,
   type FilterField,
+  type PatientDetail,
   type QuickViewAppointment,
+  type RecordDetailScreenProps,
 } from '../components'
 
-interface Appointment {
+export interface Appointment {
   name: string
   location: string
   status: string
@@ -40,6 +43,105 @@ interface Appointment {
   phone: string
   email: string
   [key: string]: string
+}
+
+export interface AppointmentDetailArgs {
+  detail: PatientDetail
+  row: Appointment
+  fromTabLabel?: string
+}
+
+interface CalendarAppointmentEvent {
+  name: string
+  phone: string
+  email: string
+  provider: string
+  apptType: string
+  insuranceStatus: string
+  start: string
+  end: string
+  checks: string[]
+}
+
+function calendarEventToAppointment(evt: CalendarAppointmentEvent): Appointment {
+  return {
+    name: evt.name,
+    location: '',
+    status: evt.checks.includes('Appointment confirmed') ? 'Confirmed' : 'Unconfirmed',
+    staff: evt.provider,
+    apptType: evt.apptType,
+    insuranceStatus: evt.insuranceStatus,
+    dateTime: `${evt.start} - ${evt.end}`,
+    opCode: '',
+    phone: evt.phone,
+    email: evt.email,
+  }
+}
+
+function toAppointmentDetailArgs(row: Appointment, fromTabLabel?: string): AppointmentDetailArgs {
+  return {
+    detail: {
+      patient: row.name,
+      status: row.status,
+      phone: row.phone,
+      email: row.email,
+      appointmentType: row.apptType,
+      appointmentTime: row.dateTime,
+      location: row.location,
+    },
+    row,
+    fromTabLabel,
+  }
+}
+
+export function buildAppointmentDetailProps(args: AppointmentDetailArgs): RecordDetailScreenProps {
+  const { row } = args
+  return {
+    name: row.name,
+    accordions: [
+      {
+        title: 'Appointment details',
+        defaultOpen: true,
+        fields: [
+          { label: 'Provider', value: row.staff },
+          { label: 'Appointment type', value: row.apptType },
+          { label: 'Operation code', value: row.opCode },
+          { label: 'Date & time', value: row.dateTime },
+          { label: 'Insurance status', value: row.insuranceStatus },
+          { label: 'Location', value: row.location },
+        ],
+      },
+      {
+        title: 'Contact information',
+        fields: [
+          { label: 'Phone', value: row.phone },
+          { label: 'Email', value: row.email },
+        ],
+      },
+    ],
+    metrics: [
+      { value: row.dateTime, label: 'Date & time' },
+      { value: row.staff, label: 'Provider' },
+      { value: row.status, label: 'Status' },
+      { value: row.insuranceStatus, label: 'Insurance status' },
+    ],
+    activities: [
+      {
+        id: '1',
+        type: 'booked',
+        title: `${row.name} booked an appointment for '${row.apptType}'`,
+        subtitle: `Scheduled: ${row.dateTime}`,
+        date: row.dateTime,
+      },
+      {
+        id: '2',
+        type: 'check',
+        title: 'Insurance verification',
+        subtitle: `Status: ${row.insuranceStatus}`,
+        date: row.dateTime,
+      },
+    ],
+  }
 }
 
 const APPOINTMENTS: Appointment[] = [
@@ -68,6 +170,11 @@ const TAB_STATUS_MAP: Record<string, string> = {
   'no-shows':    'No-show',
 }
 
+function parseDateTime(dateTime: string): number {
+  const t = new Date(dateTime).getTime()
+  return Number.isNaN(t) ? 0 : t
+}
+
 const STATUS_CHIP: Record<string, ChipVariant> = {
   'Unconfirmed': 'warning',
   'Cancelled':   'danger',
@@ -78,7 +185,7 @@ const STATUS_CHIP: Record<string, ChipVariant> = {
 
 const STATUS_COLUMN: Column<Appointment> = {
   key: 'status',
-  label: 'Appt status',
+  label: 'Appointment status',
   sortable: true,
   render: (val) => (
     <Chip label={String(val)} variant={STATUS_CHIP[String(val)] ?? 'neutral'} />
@@ -87,7 +194,7 @@ const STATUS_COLUMN: Column<Appointment> = {
 
 const TABS = [
   { id: 'unconfirmed',   label: 'Unconfirmed',   count: 5  },
-  { id: 'cancellations', label: 'Cancellations', count: 5  },
+  { id: 'cancellations', label: 'Cancelled',     count: 5  },
   { id: 'no-shows',      label: 'No-shows',      count: 4  },
   { id: 'all',           label: 'All',           count: 14 },
 ]
@@ -113,9 +220,9 @@ const AUTO_DEFAULT_VISIBLE = ['name', 'staff', 'apptType', 'opCode', 'insuranceS
 const HC_COLUMN_DEFS: ColumnDef[] = [
   { key: 'name',            label: 'Patient',          sortable: true, locked: true, render: (_val, row) => <PatientCell name={row.name as string} location={row.location as string} /> },
   { key: 'staff',           label: 'Provider',         sortable: true },
-  { key: 'apptType',        label: 'Appt type',        sortable: true },
+  { key: 'apptType',        label: 'Appointment type', sortable: true },
   { key: 'insuranceStatus', label: 'Insurance status', sortable: true },
-  { key: 'dateTime',        label: 'Appt time',        sortable: true },
+  { key: 'dateTime',        label: 'Appointment time', sortable: true },
   { key: 'phone',           label: 'Phone',            sortable: true },
   { key: 'email',           label: 'Email',            sortable: true },
 ]
@@ -152,7 +259,7 @@ const FILTER_FIELDS: FilterField[] = [
 
 const BASE_DATE = new Date(2026, 4, 25)
 
-export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?: string }) {
+export function ManageAppointmentsScreen({ product = 'healthcare', onViewDetail }: { product?: string; onViewDetail?: (args: AppointmentDetailArgs) => void }) {
   const COLUMN_DEFS = COLUMN_DEFS_BY_PRODUCT[product] ?? HC_COLUMN_DEFS
   const DEFAULT_VISIBLE = DEFAULT_VISIBLE_BY_PRODUCT[product] ?? HC_DEFAULT_VISIBLE
   const DEFAULT_ORDER = COLUMN_DEFS.map((c) => String(c.key))
@@ -165,16 +272,20 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
   const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false)
   const [statusAnchor, setStatusAnchor] = useState<{ top: number; left: number } | null>(null)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(ALL_STATUS_IDS)
   const [appliedStatuses, setAppliedStatuses] = useState<string[]>(ALL_STATUS_IDS)
   const [messagingRow, setMessagingRow] = useState<Appointment | null>(null)
+  const [messagingChannel, setMessagingChannel] = useState<'message' | 'email'>('message')
   const [quickSendRow, setQuickSendRow] = useState<Appointment | null>(null)
   const [toastVisible, setToastVisible] = useState(false)
   const [activityRow, setActivityRow] = useState<Appointment | null>(null)
   const [quickViewRow, setQuickViewRow] = useState<QuickViewAppointment | null>(null)
+  const [quickViewSourceRow, setQuickViewSourceRow] = useState<Appointment | null>(null)
   const [bookApptOpen, setBookApptOpen] = useState(false)
 
 
@@ -200,13 +311,17 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
     [order],
   )
 
-  const filteredData = useMemo(
-    () =>
+  const filteredData = useMemo(() => {
+    const byTab =
       activeTab === 'all'
         ? APPOINTMENTS
-        : APPOINTMENTS.filter((a) => a.status === TAB_STATUS_MAP[activeTab]),
-    [activeTab],
-  )
+        : APPOINTMENTS.filter((a) => a.status === TAB_STATUS_MAP[activeTab])
+    const q = searchQuery.trim().toLowerCase()
+    const matched = q
+      ? byTab.filter((a) => a.name.toLowerCase().includes(q) || a.staff.toLowerCase().includes(q))
+      : byTab
+    return [...matched].sort((a, b) => parseDateTime(b.dateTime) - parseDateTime(a.dateTime))
+  }, [activeTab, searchQuery])
 
   return (
     <div className="flex h-full flex-col">
@@ -225,6 +340,8 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
 
             {/* Right side controls */}
             <div className="flex items-center gap-sm">
+              <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
+
               {view === 'calendar' && (
                 <>
                   <button
@@ -292,7 +409,7 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
                 onClick={() => setBookApptOpen(true)}
                 className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
               >
-                Book an appointment
+                Book appointment
               </button>
 
               {view !== 'calendar' && (
@@ -321,9 +438,19 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
             <div className="flex flex-1 overflow-hidden px-2xl py-lg">
               <div className="flex flex-1 flex-col overflow-hidden rounded-sm border border-border">
                 {timescale === 'day' ? (
-                  <DayCalendar day={date} visibleColumns={visible} />
+                  <DayCalendar
+                    day={date}
+                    visibleColumns={visible}
+                    searchQuery={searchQuery}
+                    onViewDetails={(evt) => onViewDetail?.(toAppointmentDetailArgs(calendarEventToAppointment(evt)))}
+                  />
                 ) : (
-                  <WeekCalendar weekStart={date} visibleColumns={visible} />
+                  <WeekCalendar
+                    weekStart={date}
+                    visibleColumns={visible}
+                    searchQuery={searchQuery}
+                    onViewDetails={(evt) => onViewDetail?.(toAppointmentDetailArgs(calendarEventToAppointment(evt)))}
+                  />
                 )}
               </div>
             </div>
@@ -333,21 +460,21 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
                 <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
               </div>
 
-              <div className="px-lg py-lg">
+              <div className="flex flex-1 flex-col px-lg py-lg">
                 <DataTable
                   rowHeight={56}
                   columns={columns}
                   data={filteredData}
                   rowAction={{
-                    icon: 'chat',
-                    label: (row) => `Message ${row.name}`,
-                    onClick: (row) => setMessagingRow(row),
+                    icon: 'sms',
+                    label: 'Message',
+                    onClick: (row) => { setMessagingChannel('message'); setMessagingRow(row) },
                   }}
                   rowMenuItems={[
                     { label: 'Quick send',    onClick: (row) => setQuickSendRow(row) },
-                    { label: 'Quick view',    onClick: (row) => setQuickViewRow({ patient: row.patient, provider: row.provider, apptType: row.apptType, dateTime: row.dateTime, status: row.status }) },
+                    { label: 'Quick view',    onClick: (row) => { setQuickViewRow({ patient: row.name, provider: row.staff, apptType: row.apptType, dateTime: row.dateTime, status: row.status }); setQuickViewSourceRow(row) } },
                     { label: 'View activity', onClick: (row) => setActivityRow(row) },
-                    { label: 'View details',  onClick: () => {}, icon: 'open_in_new' },
+                    { label: 'View details',  onClick: (row) => onViewDetail?.(toAppointmentDetailArgs(row, TABS.find((t) => t.id === activeTab)?.label)), icon: 'open_in_new' },
                   ]}
                 />
               </div>
@@ -382,6 +509,7 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
         open={messagingRow !== null}
         patient={messagingRow?.name ?? ''}
         status={messagingRow?.status}
+        initialChannel={messagingChannel}
         onClose={() => setMessagingRow(null)}
       />
 
@@ -397,12 +525,36 @@ export function ManageAppointmentsScreen({ product = 'healthcare' }: { product?:
         open={activityRow !== null}
         patient={activityRow?.name ?? ''}
         onClose={() => setActivityRow(null)}
+        onViewAllDetails={() => {
+          if (!activityRow) return
+          onViewDetail?.(toAppointmentDetailArgs(activityRow, TABS.find((t) => t.id === activeTab)?.label))
+          setActivityRow(null)
+        }}
       />
 
       <QuickViewDrawer
         open={quickViewRow !== null}
         appointment={quickViewRow}
         onClose={() => setQuickViewRow(null)}
+        onQuickSend={() => {
+          setQuickSendRow(quickViewSourceRow)
+          setQuickViewRow(null)
+        }}
+        onMessage={() => {
+          setMessagingChannel('message')
+          setMessagingRow(quickViewSourceRow)
+          setQuickViewRow(null)
+        }}
+        onEmail={() => {
+          setMessagingChannel('email')
+          setMessagingRow(quickViewSourceRow)
+          setQuickViewRow(null)
+        }}
+        onViewDetails={() => {
+          if (!quickViewSourceRow) return
+          onViewDetail?.(toAppointmentDetailArgs(quickViewSourceRow, TABS.find((t) => t.id === activeTab)?.label))
+          setQuickViewRow(null)
+        }}
       />
 
       <BookAppointmentDrawer

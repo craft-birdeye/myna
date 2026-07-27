@@ -15,10 +15,11 @@ import {
   type ColumnOption,
   type FilterField,
   type FormField,
+  type RecordDetailScreenProps,
   // type Metric,
 } from '../components'
 
-interface Lead {
+export interface Lead {
   name: string
   channel: string
   apptType: string
@@ -62,6 +63,53 @@ const TAB_STATUS_MAP: Record<string, string> = {
 // }
 
 const CHANNEL_ICON: Record<string, string> = { sms: 'sms', call: 'call', mail: 'mail' }
+
+export interface LeadDetailArgs {
+  row: Lead
+  fromTabLabel?: string
+}
+
+export function buildLeadDetailProps({ row }: LeadDetailArgs): RecordDetailScreenProps {
+  return {
+    name: row.name,
+    accordions: [
+      {
+        title: 'Prospect details',
+        defaultOpen: true,
+        fields: [
+          { label: 'Outreach channel', value: row.channel },
+          { label: 'Appointment type', value: row.apptType },
+          { label: 'Looking for', value: row.lookingFor },
+          { label: 'Operation code', value: row.opCode },
+          { label: 'Staff', value: row.staff },
+          { label: 'Date & time', value: row.dateTime },
+        ],
+      },
+      {
+        title: 'Contact information',
+        fields: [
+          { label: 'Phone', value: row.phone },
+          { label: 'Email', value: row.email },
+        ],
+      },
+    ],
+    metrics: [
+      { value: row.dateTime, label: 'Date & time' },
+      { value: row.lookingFor, label: 'Looking for' },
+      { value: row.staff, label: 'Staff' },
+      { value: row.status, label: 'Status' },
+    ],
+    activities: [
+      {
+        id: '1',
+        type: 'booked',
+        title: `${row.name} booked an appointment for '${row.apptType}'`,
+        subtitle: `Looking for ${row.lookingFor}`,
+        date: row.dateTime,
+      },
+    ],
+  }
+}
 
 const LEADS: Lead[] = [
   // Confirmed — 8 (sorted Jun 11 → future)
@@ -135,11 +183,13 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'looking-for', label: 'Looking for', options: opts('Toyota RAV4', 'Ford F-Series', 'Honda CR-V', 'Chevrolet Equinox') },
 ]
 
-export function SalesPipelineScreen() {
+export function SalesPipelineScreen({ onViewDetail }: { onViewDetail?: (args: LeadDetailArgs) => void } = {}) {
   const [activeTab, setActiveTab] = useState('confirmed')
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
   const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [appointmentFor, setAppointmentFor] = useState<string | null>(null)
   const [addProspectOpen, setAddProspectOpen] = useState(false)
@@ -158,10 +208,19 @@ export function SalesPipelineScreen() {
     [order],
   )
 
-  const filteredData = useMemo(
-    () => LEADS.filter((l) => l.status === TAB_STATUS_MAP[activeTab]),
-    [activeTab],
-  )
+  const filteredData = useMemo(() => {
+    const byTab = LEADS.filter((l) => l.status === TAB_STATUS_MAP[activeTab])
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return byTab
+    return byTab.filter(
+      (l) =>
+        l.name.toLowerCase().includes(q) ||
+        l.lookingFor.toLowerCase().includes(q) ||
+        l.staff.toLowerCase().includes(q) ||
+        l.phone.toLowerCase().includes(q) ||
+        l.email.toLowerCase().includes(q),
+    )
+  }, [activeTab, searchQuery])
 
   return (
     <div className="flex h-full flex-col">
@@ -173,13 +232,46 @@ export function SalesPipelineScreen() {
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
             <h1 className="text-h3 text-text-primary">Sales pipeline</h1>
             <div className="flex items-center gap-sm">
-              <button
-                type="button"
-                aria-label="Search"
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              <div
+                className={`flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface transition-all ${
+                  searchOpen ? 'w-56 px-md' : 'w-9 justify-center'
+                }`}
               >
-                <Icon name="search" size={20} />
-              </button>
+                <button
+                  type="button"
+                  aria-label="Search"
+                  onClick={() => {
+                    if (searchOpen) return
+                    setSearchOpen(true)
+                  }}
+                  className="flex shrink-0 items-center justify-center text-text-icon"
+                >
+                  <Icon name="search" size={20} />
+                </button>
+                {searchOpen && (
+                  <>
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => {
+                        setSearchOpen(false)
+                        setSearchQuery('')
+                      }}
+                      className="flex shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+                    >
+                      <Icon name="close" size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setAddProspectOpen(true)}
@@ -214,7 +306,7 @@ export function SalesPipelineScreen() {
             <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
           </div>
 
-          <div className="px-lg py-lg">
+          <div className="flex flex-1 flex-col px-lg py-lg">
             <DataTable
               columns={columns}
               data={filteredData}
@@ -227,7 +319,7 @@ export function SalesPipelineScreen() {
                 { label: 'Quick send', onClick: () => {} },
                 { label: 'Quick view', onClick: () => {} },
                 { label: 'View activity', onClick: () => {} },
-                { label: 'View details', onClick: () => {} },
+                { label: 'View details', onClick: (row) => onViewDetail?.({ row, fromTabLabel: TABS.find((t) => t.id === activeTab)?.label }) },
               ]}
             />
           </div>

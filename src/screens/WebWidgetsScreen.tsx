@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DataTable, Icon, Link, TopNav } from '../components'
+import { DataTable, HeaderSearchField, Icon, Link, TopNav } from '../components'
 
 interface WebWidgetRow {
   name: string
@@ -85,25 +85,7 @@ export function WebWidgetsScreen({ onBack }: WebWidgetsScreenProps) {
         <h1 className="text-h3 text-text-primary">{DATA.length} Web widgets</h1>
 
         <div className="flex items-center gap-sm">
-          {searchOpen && (
-            <input
-              autoFocus
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onBlur={() => { if (!search) setSearchOpen(false) }}
-              placeholder="Search widgets…"
-              className="h-9 rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary"
-            />
-          )}
-          <button
-            type="button"
-            aria-label="Search"
-            onClick={() => { setSearchOpen((o) => !o); if (searchOpen) setSearch('') }}
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-          >
-            <Icon name="search" size={20} />
-          </button>
+          <HeaderSearchField open={searchOpen} value={search} onOpenChange={setSearchOpen} onChange={setSearch} placeholder="Search widgets…" />
           <button
             type="button"
             className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"

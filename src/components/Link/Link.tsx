@@ -8,17 +8,17 @@ export function Link(props: LinkProps) {
   const classes = [LINK_BASE, className].filter(Boolean).join(' ')
 
   if (props.as === 'button') {
-    const { as: _as, ...buttonProps } = props as LinkAsButtonProps
+    const { as: _as, className: _className, ...buttonProps } = props as LinkAsButtonProps
     return (
-      <button type="button" className={classes} {...buttonProps}>
+      <button type="button" {...buttonProps} className={classes}>
         {children}
       </button>
     )
   }
 
-  const { as: _as, ...anchorProps } = props as LinkAsAnchorProps
+  const { as: _as, className: _className, ...anchorProps } = props as LinkAsAnchorProps
   return (
-    <a className={classes} {...anchorProps}>
+    <a {...anchorProps} className={classes}>
       {children}
     </a>
   )

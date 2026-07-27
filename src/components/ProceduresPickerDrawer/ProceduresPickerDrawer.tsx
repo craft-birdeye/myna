@@ -1,7 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
-import { BackArrowIcon } from '../../assets/BackArrowIcon'
-import { Icon } from '../Icon/Icon'
-import { ProcedureListCard } from '../ProcedureListCard/ProcedureListCard'
+import { useEffect, useState } from 'react'
 import { ProcedurePickerDetailView } from './ProcedurePickerDetailView'
 import {
   buildProcedureDetailDraft,
@@ -11,7 +8,7 @@ import {
 } from './procedurePickerDetailData'
 import type { ProcedurePickerItem, ProceduresPickerDrawerProps } from './ProceduresPickerDrawer.types'
 
-type DrawerView = 'list' | 'detail' | 'create'
+type DrawerView = 'detail' | 'create'
 
 function slugifyId(title: string): string {
   const base = title
@@ -27,24 +24,28 @@ export function ProceduresPickerDrawer({
   procedures,
   selectedIds,
   initialDetailId = null,
-  initialView = 'list',
+  readOnly = false,
   onClose,
   onSave,
   onCreateProcedure,
+  onProcedureCreated,
   closeOnCreateCancel = false,
 }: ProceduresPickerDrawerProps) {
-  const [query, setQuery] = useState('')
   const [draftIds, setDraftIds] = useState<string[]>(selectedIds)
-  const [view, setView] = useState<DrawerView>('list')
+  const [view, setView] = useState<DrawerView>('create')
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [detailDrafts, setDetailDrafts] = useState<Record<string, ProcedureDetailDraft>>({})
   const [createDraft, setCreateDraft] = useState<ProcedureDetailDraft>(createNewProcedureDraft)
+  // Bumped every time a fresh create session starts, forcing ProcedurePickerDetailView
+  // to remount instead of reusing its stale internal `local` state from the last save.
+  const [createSessionId, setCreateSessionId] = useState(0)
 
+  // This drawer only ever opens directly into a specific procedure's detail
+  // view or the create-new form — there is no intermediate browse/list view.
   useEffect(() => {
     if (!open) return
 
     setDraftIds(selectedIds)
-    setQuery('')
     setCreateDraft(createNewProcedureDraft())
 
     if (initialDetailId) {
@@ -60,27 +61,16 @@ export function ProceduresPickerDrawer({
         setView('detail')
         return
       }
-    }
-
-    if (initialView === 'create') {
-      setView('create')
-      setViewingId(null)
-      setDetailDrafts({})
+      // Requested procedure no longer exists — nothing valid to show.
+      onClose()
       return
     }
 
-    setView('list')
+    setView('create')
     setViewingId(null)
     setDetailDrafts({})
-  }, [open, selectedIds, initialDetailId, initialView, procedures])
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return procedures
-    return procedures.filter(
-      (p) => p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
-    )
-  }, [procedures, query])
+    setCreateSessionId((id) => id + 1)
+  }, [open, selectedIds, initialDetailId, procedures, onClose])
 
   const viewingProcedure = viewingId
     ? procedures.find((p) => p.id === viewingId)
@@ -93,43 +83,10 @@ export function ProceduresPickerDrawer({
         : null)
     : null
 
-  const toggle = (id: string) => {
-    setDraftIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    )
-  }
-
-  const openDetail = (id: string) => {
-    const procedure = procedures.find((p) => p.id === id)
-    if (!procedure) return
-    setDetailDrafts((current) => ({
-      ...current,
-      [id]: current[id] ?? buildProcedureDetailDraft(id, procedure.title),
-    }))
-    setViewingId(id)
-    setView('detail')
-  }
-
-  const openCreate = () => {
-    setCreateDraft(createNewProcedureDraft())
-    setView('create')
-    setViewingId(null)
-  }
-
-  const closeSubView = () => {
-    setView('list')
-    setViewingId(null)
-    setCreateDraft(createNewProcedureDraft())
-  }
-
   const isDirectEditEntry = Boolean(initialDetailId)
 
   const exitDetailView = () => {
-    if (isDirectEditEntry) {
-      onClose()
-      return
-    }
-    closeSubView()
+    onClose()
   }
 
   const saveDetail = (draft: ProcedureDetailDraft) => {
@@ -149,35 +106,18 @@ export function ProceduresPickerDrawer({
 
     const procedure: ProcedurePickerItem = { id, title, description }
     onCreateProcedure?.(procedure)
-    setDraftIds((current) =>
-      current.includes(id) ? current : [...current, id],
-    )
     setDetailDrafts((current) => ({
       ...current,
       [id]: { ...draft, id, name: title },
     }))
-    closeSubView()
+    onSave(draftIds.includes(id) ? draftIds : [...draftIds, id])
+    onProcedureCreated?.(title, Boolean(draft.addToLibrary))
+    onClose()
   }
 
   const handleOverlayClick = () => {
     if (view === 'detail' && isDirectEditEntry) {
       onClose()
-      return
-    }
-    if (view === 'detail' || view === 'create') {
-      closeSubView()
-      return
-    }
-    onClose()
-  }
-
-  const handleBack = () => {
-    if (view === 'detail' && isDirectEditEntry) {
-      onClose()
-      return
-    }
-    if (view === 'detail' || view === 'create') {
-      closeSubView()
       return
     }
     onClose()
@@ -197,86 +137,22 @@ export function ProceduresPickerDrawer({
       >
         {view === 'create' ? (
           <ProcedurePickerDetailView
-            key={NEW_PROCEDURE_ID}
+            key={`${NEW_PROCEDURE_ID}-${createSessionId}`}
             draft={createDraft}
             isNew
-            onBack={closeSubView}
+            onBack={onClose}
             onSave={saveCreate}
             onCancel={closeOnCreateCancel ? onClose : undefined}
           />
-        ) : view === 'detail' && activeDetailDraft ? (
+        ) : activeDetailDraft ? (
           <ProcedurePickerDetailView
             key={viewingId}
             draft={activeDetailDraft}
+            readOnly={readOnly}
             onBack={exitDetailView}
             onSave={saveDetail}
           />
-        ) : (
-          <>
-            <div className="flex shrink-0 items-center justify-between px-2xl pb-lg pt-2xl">
-              <div className="flex items-center gap-sm">
-                <button
-                  type="button"
-                  aria-label="Back"
-                  onClick={handleBack}
-                  className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                >
-                  <BackArrowIcon />
-                </button>
-                <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Procedures</h2>
-              </div>
-              <div className="flex items-center gap-sm">
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  className="flex items-center gap-xs rounded-sm px-md py-xs text-body text-text-action transition-colors hover:text-primary-hover"
-                >
-                  <Icon name="add_circle" size={16} />
-                  New
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSave(draftIds)}
-                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-1 flex-col gap-md overflow-hidden px-2xl pb-2xl">
-              <div className="flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-input bg-surface px-md">
-                <Icon name="search" size={20} className="shrink-0 text-text-icon" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search procedure"
-                  className="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
-                />
-              </div>
-
-              <div className="flex flex-1 flex-col gap-[16px] overflow-y-auto">
-                {filtered.length === 0 ? (
-                  <div className="flex h-32 items-center justify-center text-body text-text-tertiary">
-                    No procedures match your search.
-                  </div>
-                ) : (
-                  filtered.map((procedure) => (
-                    <ProcedureListCard
-                      key={procedure.id}
-                      title={procedure.title}
-                      description={procedure.description}
-                      selectable
-                      selected={draftIds.includes(procedure.id)}
-                      onToggle={() => toggle(procedure.id)}
-                      onView={() => openDetail(procedure.id)}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </>
-        )}
+        ) : null}
       </aside>
     </div>
   )

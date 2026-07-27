@@ -1,18 +1,11 @@
-import { useMemo, useState } from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { Chip } from '../components'
+import { Chip, LogDetailsPanel } from '../components'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import StartNode from '../workflow/Molecules/Canvas/StartNode/StartNode'
 import CanvasNode from '../workflow/Molecules/Canvas/CanvasNode/CanvasNode'
 import ProceduresNode from '../workflow/Molecules/Canvas/ProceduresNode/ProceduresNode'
 import EndNode from '../workflow/Molecules/Canvas/EndNode/EndNode'
 import GraphControls from '../workflow/Modules/FlowCanvas/GraphControls/GraphControls'
-import {
-  buildStaticPreviewMessages,
-  PreviewLogsView,
-  PreviewSidePanelHeader,
-  PreviewStaticTranscript,
-} from '../workflow/Molecules/PreviewPanel/PreviewPanelViews'
 import {
   FLOW_CONNECTOR_GAP,
   FLOW_START_GAP,
@@ -23,6 +16,7 @@ import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 interface RunDetailViewProps {
   row: HealthcareLogRow
   onBack: () => void
+  onViewConversation?: () => void
 }
 
 const PROCEDURE_CHIPS = [
@@ -70,10 +64,14 @@ const RUN_PROCEDURE_ITEMS = PROCEDURE_CHIPS.map((name) => ({ id: name, name }))
 /* ── workflow canvas ── */
 function WorkflowCanvas({ instanceName }: { instanceName: string }) {
   return (
-    <div className="flow-canvas flex flex-1 flex-col overflow-auto">
-      <div className="flow-canvas__toolbar-anchor">
+    <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
+      <div
+        className="flow-canvas__toolbar-anchor"
+        style={{ left: 'calc((100% - 620px) / 2)' }}
+      >
         <GraphControls
           viewOnly
+          runDisabled
           zoom={100}
           onRun={() => {}}
           onEdit={() => {}}
@@ -83,7 +81,8 @@ function WorkflowCanvas({ instanceName }: { instanceName: string }) {
         />
       </div>
 
-      <div className="flex flex-col items-center pb-2xl pt-[84px]">
+      {/* Right padding keeps the flow clear of the overlaid details panel */}
+      <div className="flex flex-col items-center pb-2xl pr-[620px] pt-[84px]">
         <StartNode title={instanceName} subtitle="All locations" />
 
         <RunFlowConnector height={FLOW_START_GAP} showAdd={false} />
@@ -130,34 +129,11 @@ function WorkflowCanvas({ instanceName }: { instanceName: string }) {
   )
 }
 
-/* ── read-only logs / preview side panel (matches workflow preview panel) ── */
-function RunDetailSidePanel() {
-  const [panel, setPanel] = useState<'logs' | 'preview'>('preview')
-  const previewMessages = useMemo(
-    () => buildStaticPreviewMessages(),
-    [],
-  )
-
-  return (
-    <div className="preview-panel">
-      <PreviewSidePanelHeader
-        panel={panel}
-        onToggle={() => setPanel((p) => (p === 'logs' ? 'preview' : 'logs'))}
-      />
-      <div className="preview-panel__body">
-        {panel === 'logs' ? (
-          <PreviewLogsView />
-        ) : (
-          <PreviewStaticTranscript messages={previewMessages} />
-        )}
-      </div>
-    </div>
-  )
-}
-
 /* ── main export ── */
-export function RunDetailView({ row, onBack }: RunDetailViewProps) {
+export function RunDetailView({ row, onBack, onViewConversation }: RunDetailViewProps) {
   const instanceName = 'Front desk agent north region'
+  const statusVariant =
+    row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
 
   return (
     <div className="relative flex h-full flex-col bg-surface">
@@ -171,19 +147,16 @@ export function RunDetailView({ row, onBack }: RunDetailViewProps) {
         >
           <BackArrowIcon />
         </button>
-        <span className="text-body text-text-primary">
-          Run – {row.timestamp}
-        </span>
-        <Chip label={row.status} variant="success" />
-        <span className="text-small text-text-secondary">{row.duration}s</span>
+        <h1 className="text-h3 text-text-primary">Run - {row.timestamp}</h1>
+        <Chip label={row.status} variant={statusVariant} />
       </div>
 
-      {/* Body */}
-      <div className="relative flex flex-1 overflow-hidden">
+      {/* Body — full-bleed canvas with overlaid details panel (matches trigger/task RHS) */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <WorkflowCanvas instanceName={instanceName} />
 
-        <div className="preview-panel-float-wrap">
-          <RunDetailSidePanel />
+        <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
+          <LogDetailsPanel row={row} onViewConversation={onViewConversation} />
         </div>
       </div>
     </div>

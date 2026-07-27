@@ -36,13 +36,23 @@ const MOCK_CARD: ApptCard = {
 
 const DATE_LABEL = 'Thu • Dec 17'
 
-export function MessageDrawer({ open, patient, status = 'Unconfirmed', onClose }: MessageDrawerProps) {
+const CHANNEL_LABEL: Record<'message' | 'email', string> = {
+  message: 'Message',
+  email: 'Email',
+}
+
+export function MessageDrawer({ open, patient, status = 'Unconfirmed', initialChannel = 'email', onClose }: MessageDrawerProps) {
   const [message, setMessage] = useState('')
+  const [channel, setChannel] = useState(initialChannel)
+  const [channelMenuOpen, setChannelMenuOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [open])
+    if (open) {
+      setChannel(initialChannel)
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [open, initialChannel])
 
   return (
     <>
@@ -145,10 +155,33 @@ export function MessageDrawer({ open, patient, status = 'Unconfirmed', onClose }
           {/* Bordered compose box */}
           <div className="rounded-md border border-border p-md">
             {/* Channel selector */}
-            <button type="button" className="mb-sm flex items-center gap-xs text-body text-text-action">
-              Email
-              <Icon name="expand_more" size={16} />
-            </button>
+            <div className="relative mb-sm">
+              <button
+                type="button"
+                onClick={() => setChannelMenuOpen((o) => !o)}
+                className="flex items-center gap-xs text-body text-text-action"
+              >
+                {CHANNEL_LABEL[channel]}
+                <Icon name="expand_more" size={16} />
+              </button>
+              {channelMenuOpen && (
+                <div className="absolute left-0 top-full z-10 mt-xs min-w-[140px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+                  {(Object.keys(CHANNEL_LABEL) as Array<'message' | 'email'>).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setChannel(key)
+                        setChannelMenuOpen(false)
+                      }}
+                      className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                    >
+                      {CHANNEL_LABEL[key]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Text input */}
             <div className="mb-md min-h-[48px]">

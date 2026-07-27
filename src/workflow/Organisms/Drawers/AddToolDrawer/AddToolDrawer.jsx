@@ -273,9 +273,9 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
     }
     const matchedEntity = ENTITY_OPTIONS.find(e => e.id === activeNavId);
     if (matchedEntity) setEntityFilter(matchedEntity.label);
-    const seedTools = getSeedTools();
+    const seedTools = getSeedTools().filter(t => !t.hideFromInternalPicker);
     const unsub = subscribeToCustomTools(custom => {
-      setInternalTools([...seedTools, ...custom]);
+      setInternalTools([...seedTools, ...custom.filter(t => !t.hideFromInternalPicker)]);
     });
     setInternalTools(seedTools);
     return unsub;

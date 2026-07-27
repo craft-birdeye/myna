@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import LHSDrawer from '../LHSDrawer/LHSDrawer';
+import LHSDrawer, { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK } from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
 import RHS from '../Organisms/Panels/RHS/RHS';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
@@ -14,6 +14,9 @@ import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/Reminder
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
 import QueryConfigDrawer from '../Organisms/Drawers/QueryConfigDrawer/QueryConfigDrawer';
+import AssignContactStatusDrawer from '../Organisms/Drawers/AssignContactStatusDrawer/AssignContactStatusDrawer';
+import AssignConversationDrawer from '../Organisms/Drawers/AssignConversationDrawer/AssignConversationDrawer';
+import AssignConversationStatusDrawer from '../Organisms/Drawers/AssignConversationStatusDrawer/AssignConversationStatusDrawer';
 import ToolLibraryDrawer from '../Organisms/Drawers/ToolLibraryDrawer/ToolLibraryDrawer';
 import AddToolDrawer from '../Organisms/Drawers/AddToolDrawer/AddToolDrawer';
 import {
@@ -138,6 +141,8 @@ function makeNodeDetails(type, label) {
 
 const TASK_DROP_DEFAULTS = {
   'Initiate voice call': { description: 'Call the customer' },
+  'In-call SMS': { description: 'Send a text message to the caller during the active call', selectedTools: ['in-call-sms'] },
+  'Send response': { selectedTools: ['send-response'] },
   'Schedule appointment': { description: 'Book a new appointment for the customer' },
   'Reschedule appointment': { description: 'Change an existing appointment date or time' },
   'Cancel appointment': { description: 'Cancel a scheduled appointment' },
@@ -413,7 +418,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       source: prevId,
       target: nodeId,
       type: 'addButton',
-      ...(prevIsProcedures ? { data: { hideAddButton: true } } : {}),
+      data: { betweenCards: true, ...(prevIsProcedures ? { hideAddButton: true } : {}) },
     });
 
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
@@ -460,7 +465,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
               vcChildData = { ...vcChildData, title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title, subtitle: vcChildDet.description ?? vcChildData.subtitle };
             }
             nodes.push({ id: vcChildId, type: vcChild.flowType, position: { x: vcBranchX, y: vcNodeStartY + vcIdx * 250 }, data: vcChildData });
-            edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId } });
+            edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId, betweenCards: vcPrevId !== vcBranch.id } });
             vcPrevId = vcChildId;
           });
           const vcEndId = `${vcBranch.id}-end`;
@@ -494,7 +499,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
           }
           const childY = branchNodeStartY + childYOffset;
           nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
-          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
+          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
           previousId = childNode.id;
           previousChildFlowType = childNode.flowType;
           childYOffset += 250;
@@ -531,7 +536,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                 }
                 const innerChildY = innerNodeStartY + innerYOff;
                 nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
-                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId } });
+                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
                 innerPrevId = innerChildId;
                 innerYOff += 250;
                 if (innerChild.flowType === 'voiceCall') {
@@ -592,6 +597,78 @@ function nextId() {
   return `node-${nodeIdCounter}`;
 }
 
+/** Find where a node lives — the top-level trunk, or a branch/loop container's `nodes` array. */
+function locateNodeContainer(nodeId, nodeList, nodeDetails) {
+  const rootIdx = nodeList.findIndex((n) => n.id === nodeId);
+  if (rootIdx !== -1) return { containerId: null, index: rootIdx };
+  for (const [key, details] of Object.entries(nodeDetails)) {
+    if (Array.isArray(details?.nodes)) {
+      const idx = details.nodes.findIndex((n) => n.id === nodeId);
+      if (idx !== -1) return { containerId: key, index: idx };
+    }
+  }
+  return null;
+}
+
+/** Recursively snapshot a node's nodeDetails entry plus every entry it references (branch paths, loop children). */
+function collectDetailsSnapshot(nodeId, nodeDetails, out = {}) {
+  if (out[nodeId]) return out;
+  const details = nodeDetails[nodeId];
+  if (!details) return out;
+  out[nodeId] = JSON.parse(JSON.stringify(details));
+  (details.nodes || []).forEach((child) => collectDetailsSnapshot(child.id, nodeDetails, out));
+  (details.branches || []).forEach((b) => collectDetailsSnapshot(b.id, nodeDetails, out));
+  return out;
+}
+
+/** Recursively collect a node's own id plus every id it references (branch paths, loop children). */
+function collectAllIds(nodeId, nodeDetails, out = []) {
+  if (out.includes(nodeId)) return out;
+  out.push(nodeId);
+  const details = nodeDetails[nodeId];
+  if (!details) return out;
+  (details.nodes || []).forEach((child) => collectAllIds(child.id, nodeDetails, out));
+  (details.branches || []).forEach((b) => collectAllIds(b.id, nodeDetails, out));
+  return out;
+}
+
+/**
+ * Clone a node (and, recursively, any branch/loop children it references) with fresh ids,
+ * reading source data from a `detailsSnapshot` map rather than live nodeDetails. Fills
+ * `extraOut` with `{ [newId]: clonedDetails }` for the node itself and every cloned descendant.
+ */
+function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
+  const newId = nextId();
+  const clonedEntry = { ...nodeEntry, id: newId, data: { ...nodeEntry.data } };
+  const sourceDetails = detailsSnapshot[nodeEntry.id] || {};
+  const clonedDetails = JSON.parse(JSON.stringify(sourceDetails));
+
+  if (Array.isArray(clonedDetails.nodes)) {
+    clonedDetails.nodes = clonedDetails.nodes.map((child) =>
+      cloneSubtreeForPaste(child, detailsSnapshot, extraOut));
+  }
+
+  if (Array.isArray(clonedDetails.branches)) {
+    clonedDetails.branches = clonedDetails.branches.map((branch) => {
+      const branchSource = detailsSnapshot[branch.id];
+      const newBranchId = `${newId}-path-${nextId()}`;
+      if (branchSource) {
+        const clonedBranch = JSON.parse(JSON.stringify(branchSource));
+        clonedBranch.parentId = newId;
+        if (Array.isArray(clonedBranch.nodes)) {
+          clonedBranch.nodes = clonedBranch.nodes.map((child) =>
+            cloneSubtreeForPaste(child, detailsSnapshot, extraOut));
+        }
+        extraOut[newBranchId] = clonedBranch;
+      }
+      return { ...branch, id: newBranchId };
+    });
+  }
+
+  extraOut[newId] = clonedDetails;
+  return clonedEntry;
+}
+
 export default function AgentBuilder({
   agentId: propAgentId,
   agentSlug: propAgentSlug,
@@ -640,6 +717,8 @@ export default function AgentBuilder({
   const [navId, setNavId] = useState(activeNavId);
   const [nodeList, setNodeList] = useState(() => initialNodes || []);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  // Canvas node clipboard — holds a copied node's entry + a snapshot of its (and any referenced branch/loop) details
+  const [clipboard, setClipboard] = useState(null);
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
@@ -654,8 +733,12 @@ export default function AgentBuilder({
   const [voiceCallToolOpen, setVoiceCallToolOpen] = useState(false);
   const [transferToolOpen, setTransferToolOpen] = useState(false);
   const [queryConfigOpen, setQueryConfigOpen] = useState(false);
+  const [assignContactStatusToolOpen, setAssignContactStatusToolOpen] = useState(false);
+  const [assignConversationToolOpen, setAssignConversationToolOpen] = useState(false);
+  const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [lhsCollapsed, setLhsCollapsed] = useState(false);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];
@@ -1086,6 +1169,93 @@ export default function AgentBuilder({
     }
   }, [selectedNodeId]);
 
+  const handleCopyNode = useCallback((nodeId) => {
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const nodeEntry = located.containerId
+      ? nodeDetails[located.containerId]?.nodes?.[located.index]
+      : nodeList[located.index];
+    if (!nodeEntry) return;
+    setClipboard({
+      nodeEntry: JSON.parse(JSON.stringify(nodeEntry)),
+      detailsSnapshot: collectDetailsSnapshot(nodeId, nodeDetails),
+    });
+  }, [nodeList, nodeDetails]);
+
+  const handlePasteBelow = useCallback((afterNodeId) => {
+    if (!clipboard) return;
+    const located = locateNodeContainer(afterNodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const extraOut = {};
+    const newEntry = cloneSubtreeForPaste(clipboard.nodeEntry, clipboard.detailsSnapshot, extraOut);
+
+    if (located.containerId) {
+      setNodeDetails((prev) => {
+        const container = prev[located.containerId] || {};
+        const existingNodes = container.nodes || [];
+        const nextNodes = [
+          ...existingNodes.slice(0, located.index + 1),
+          newEntry,
+          ...existingNodes.slice(located.index + 1),
+        ].map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+        return {
+          ...prev,
+          ...extraOut,
+          [located.containerId]: { ...container, nodes: nextNodes },
+        };
+      });
+    } else {
+      setNodeList((prev) => {
+        const next = [
+          ...prev.slice(0, located.index + 1),
+          newEntry,
+          ...prev.slice(located.index + 1),
+        ];
+        return next.map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+      });
+      setNodeDetails((prev) => ({ ...prev, ...extraOut }));
+    }
+  }, [clipboard, nodeList, nodeDetails]);
+
+  const handlePasteReplace = useCallback((nodeId) => {
+    if (!clipboard) return;
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const extraOut = {};
+    const newEntry = cloneSubtreeForPaste(clipboard.nodeEntry, clipboard.detailsSnapshot, extraOut);
+    const oldIds = collectAllIds(nodeId, nodeDetails);
+
+    if (located.containerId) {
+      setNodeDetails((prev) => {
+        const parentContainer = prev[located.containerId] || {};
+        const nodes = (parentContainer.nodes || []).map((n, i) => {
+          const updated = n.id === nodeId ? newEntry : n;
+          return { ...updated, data: { ...updated.data, stepNumber: i + 1 } };
+        });
+        const copy = { ...prev };
+        oldIds.forEach((id) => { delete copy[id]; });
+        Object.assign(copy, extraOut);
+        copy[located.containerId] = { ...parentContainer, nodes };
+        return copy;
+      });
+    } else {
+      setNodeList((prev) => prev.map((n, i) => {
+        const updated = n.id === nodeId ? newEntry : n;
+        return { ...updated, data: { ...updated.data, stepNumber: i + 1 } };
+      }));
+      setNodeDetails((prev) => {
+        const copy = { ...prev };
+        oldIds.forEach((id) => { delete copy[id]; });
+        Object.assign(copy, extraOut);
+        return copy;
+      });
+    }
+    if (oldIds.includes(selectedNodeId)) {
+      setSelectedNodeId(null);
+      setDrawerOpen(false);
+    }
+  }, [clipboard, nodeList, nodeDetails, selectedNodeId]);
+
   const handleAddBranchPath = useCallback((branchNodeId) => {
     const newPathId = `${branchNodeId}-path-${Date.now()}`;
     setNodeDetails((prev) => {
@@ -1196,6 +1366,10 @@ export default function AgentBuilder({
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
       onDelete: () => handleDeleteNode(n.id),
+      onCopy: () => handleCopyNode(n.id),
+      hasClipboard: !!clipboard,
+      onPasteBelow: () => handlePasteBelow(n.id),
+      onPasteReplace: () => handlePasteReplace(n.id),
       onMoveUp: () => handleMoveNode(n.id, 'up'),
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
@@ -1285,7 +1459,14 @@ export default function AgentBuilder({
     // Nothing can be inserted above the first trigger — start node is always the entry point
     if (insertAtBeginning || afterNodeId === START_NODE_ID) return;
 
-    const isVoiceCallDrop = type === 'task' && (description === 'Initiate voice call' || label === 'Initiate voice call');
+    if (
+      isFrontDeskAgent(agentName)
+      && (description === INITIATE_VOICE_CALL_TASK || label === INITIATE_VOICE_CALL_TASK)
+    ) {
+      return;
+    }
+
+    const isVoiceCallDrop = type === 'task' && (description === INITIATE_VOICE_CALL_TASK || label === INITIATE_VOICE_CALL_TASK);
     const effectiveType = isVoiceCallDrop ? 'voiceCall' : type;
 
     const id = nextId();
@@ -1427,7 +1608,7 @@ export default function AgentBuilder({
       setDrawerOpen(true);
       setActiveProcedureId(CUSTOM_PROCEDURE_ID);
     }
-  }, []);
+  }, [agentName, product]);
 
   const handleNodeClick = useCallback((node) => {
     if (node.type === 'end' || node.type === 'branchEnd') return;
@@ -1748,6 +1929,7 @@ export default function AgentBuilder({
                 showTitle: true,
                 showLibraryCheckbox: true,
                 contextEditable: true,
+                isNewProcedure: true,
                 onFieldChange: (field, value) => {
                   const overridesNext = {
                     ...(currentDetails.procedureOverrides || {}),
@@ -1846,6 +2028,23 @@ export default function AgentBuilder({
       );
     }
 
+    if (flowType === 'task' && (currentDetails.selectedTools || []).includes('send-response')) {
+      return (
+        <RHS
+          variant="sendResponseTask"
+          title="Task"
+          viewOnly={viewOnly}
+          product={product}
+          bodyProps={{
+            initialValues: currentDetails,
+            onFieldChange: activeFieldChange,
+          }}
+          onClose={handleCloseDrawer}
+          onSave={handleCloseDrawer}
+        />
+      );
+    }
+
     return (
       <RHS
         variant="entityTask"
@@ -1857,10 +2056,14 @@ export default function AgentBuilder({
           onOpenTool: (toolId) => {
             if (toolId === 'reminder-tool') { setReminderToolOpen(true); return; }
             if (toolId === 'get-unscheduled-treatment-plans') { setQueryConfigOpen(true); return; }
+            if (toolId === 'assign-contact-status') { setAssignContactStatusToolOpen(true); return; }
+            if (toolId === 'assign-conversation') { setAssignConversationToolOpen(true); return; }
+            if (toolId === 'assign-conversation-status') { setAssignConversationStatusToolOpen(true); return; }
             getCustomToolsByIds([toolId]).then((tools) => {
               if (tools[0]) setViewingTool(tools[0]);
             });
           },
+          onSwapTool: () => setToolPickerOpen(true),
         }}
         onClose={handleCloseDrawer}
         onSave={handleCloseDrawer}
@@ -1970,13 +2173,15 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          <div className="agent-builder__lhs">
+          <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
             <LHSDrawer
               defaultTab="Create manually"
               defaultOpenSection={defaultOpenSection}
               viewOnly={viewOnly}
               product={product}
+              agentName={agentName}
               procedures={procedures}
+              onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
               onProcedureClick={viewOnly ? undefined : (procedureId) => {
                 setLhsPreviewProcedureId(procedureId);
                 setSelectedNodeId(null);
@@ -1986,6 +2191,16 @@ export default function AgentBuilder({
             />
           </div>
 
+          {lhsCollapsed && (
+            <button
+              className="ab-lhs-expand-pill"
+              onClick={() => setLhsCollapsed(false)}
+            >
+              <span className="material-symbols-outlined">left_panel_open</span>
+              <span className="ab-lhs-expand-pill__label">Editor</span>
+            </button>
+          )}
+
           <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
             <FlowCanvas
               nodes={nodes}
@@ -1993,9 +2208,13 @@ export default function AgentBuilder({
               onNodeClick={handleNodeClick}
               onDropNode={viewOnly ? undefined : handleDropNode}
               onNodesReorder={viewOnly ? undefined : handleNodesReorder}
+              hasClipboard={!viewOnly && !!clipboard}
+              onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
               selectedNodeId={selectedNodeId}
               orientation="vertical"
               viewOnly={viewOnly}
+              product={product}
+              agentName={agentName}
               onEdit={viewOnly ? onEdit : undefined}
               onRun={() => {
                 if (isReminderAgent) {
@@ -2068,6 +2287,15 @@ export default function AgentBuilder({
 
       {/* ─── Query config drawer (Get all unscheduled treatment plans) ─── */}
       <QueryConfigDrawer isOpen={queryConfigOpen} onClose={() => setQueryConfigOpen(false)} />
+
+      {/* ─── Assign contact status tool drawer ─── */}
+      <AssignContactStatusDrawer isOpen={assignContactStatusToolOpen} onClose={() => setAssignContactStatusToolOpen(false)} />
+
+      {/* ─── Assign conversation tool drawer ─── */}
+      <AssignConversationDrawer isOpen={assignConversationToolOpen} onClose={() => setAssignConversationToolOpen(false)} />
+
+      {/* ─── Assign conversation status tool drawer ─── */}
+      <AssignConversationStatusDrawer isOpen={assignConversationStatusToolOpen} onClose={() => setAssignConversationStatusToolOpen(false)} />
 
       {/* ─── Tool configuration overlay ─── */}
       {viewingTool && (

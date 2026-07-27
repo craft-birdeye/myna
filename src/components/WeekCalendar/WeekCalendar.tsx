@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { EmptyState } from '../EmptyState/EmptyState'
 import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 
@@ -26,6 +27,8 @@ interface TooltipPos {
 interface WeekCalendarProps {
   weekStart: Date
   visibleColumns?: string[]
+  searchQuery?: string
+  onViewDetails?: (event: CalendarEvent) => void
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -33,7 +36,7 @@ const HOURS = ['07:00am', '08:00am', '09:00am', '10:00am', '11:00am', '12:00pm',
 const TOOLTIP_WIDTH = 256
 
 const MOCK_EVENTS: CalendarEvent[] = [
-  { id: '1', name: 'Robin Willams',    phone: '(501) 336-7516', email: 'r.willams@email.com',    provider: 'Dr. Smith Lee', apptType: 'Follow Up',       insuranceStatus: 'Verified',     start: '08:00am', end: '09:00am', day: 0, color: 'green', checks: ['Appointment confirmed', 'Insurance verified', 'Intake form completed'] },
+  { id: '1', name: 'Robin Williams',   phone: '(501) 336-7516', email: 'r.williams@email.com',   provider: 'Dr. Smith Lee', apptType: 'Follow Up',       insuranceStatus: 'Verified',     start: '08:00am', end: '09:00am', day: 0, color: 'green', checks: ['Appointment confirmed', 'Insurance verified', 'Intake form completed'] },
   { id: '2', name: 'David Goggins',    phone: '(415) 555-0101', email: 'd.goggins@email.com',    provider: 'Dr. Lopez',     apptType: 'Urgent Care',     insuranceStatus: 'Pending',      start: '08:00am', end: '08:30am', day: 1, color: 'green', warning: true, checks: ['Appointment confirmed'] },
   { id: '3', name: 'Rafeque Mohammed', phone: '(650) 555-0177', email: 'r.mohammed@email.com',   provider: 'Dr. Williams',  apptType: 'New Consult',     insuranceStatus: 'In Progress',  start: '08:30am', end: '09:00am', day: 1, color: 'green', checks: ['Appointment confirmed', 'Insurance verified'] },
   { id: '4', name: 'David Goggins',    phone: '(415) 555-0101', email: 'd.goggins@email.com',    provider: 'Dr. Lopez',     apptType: 'Urgent Care',     insuranceStatus: 'Pending',      start: '08:00am', end: '08:30am', day: 2, color: 'green', checks: ['Appointment confirmed'] },
@@ -60,7 +63,7 @@ function parseHour(t: string): number {
   return h + min / 60
 }
 
-function EventTooltip({ event, pos, onClose }: { event: CalendarEvent; pos: TooltipPos; onClose: () => void }) {
+function EventTooltip({ event, pos, onClose, onViewDetails }: { event: CalendarEvent; pos: TooltipPos; onClose: () => void; onViewDetails?: (event: CalendarEvent) => void }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -98,7 +101,7 @@ function EventTooltip({ event, pos, onClose }: { event: CalendarEvent; pos: Tool
           ))}
         </div>
         <div className="h-px w-full bg-border" />
-        <Link as="button" onClick={onClose} className="text-left text-body">
+        <Link as="button" onClick={() => { onViewDetails?.(event); onClose() }} className="text-left text-body text-primary hover:text-primary-hover">
           View details
         </Link>
       </div>
@@ -114,11 +117,16 @@ const COLUMN_FIELD_MAP: Record<string, (evt: CalendarEvent) => string> = {
   email:           (e) => e.email,
 }
 
-export function WeekCalendar({ weekStart, visibleColumns = ['name', 'dateTime'] }: WeekCalendarProps) {
+export function WeekCalendar({ weekStart, visibleColumns = ['name', 'dateTime'], searchQuery = '', onViewDetails }: WeekCalendarProps) {
   const startHour = 7
   const rowHeight = 80
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [tooltipPos, setTooltipPos] = useState<TooltipPos>({ x: 0, y: 0 })
+
+  const q = searchQuery.trim().toLowerCase()
+  const events = q
+    ? MOCK_EVENTS.filter((e) => e.name.toLowerCase().includes(q) || e.provider.toLowerCase().includes(q))
+    : MOCK_EVENTS
 
   function getDates() {
     const d = new Date(weekStart)
@@ -176,13 +184,22 @@ export function WeekCalendar({ weekStart, visibleColumns = ['name', 'dateTime'] 
 
         {/* Day columns */}
         <div className="relative flex flex-1">
+          {/* Empty state — search returned no appointments */}
+          {q && events.length === 0 && (
+            <EmptyState
+              className="pointer-events-none absolute inset-0 z-10"
+              title="No appointments found"
+              description="Try searching with other keywords"
+            />
+          )}
+
           {dates.map((_, dayIdx) => (
             <div key={dayIdx} className="relative flex-1 border-l border-border">
               {HOURS.map((h) => (
                 <div key={h} className="h-[80px] border-b border-border" />
               ))}
 
-              {MOCK_EVENTS.filter((e) => e.day === dayIdx).map((evt) => {
+              {events.filter((e) => e.day === dayIdx).map((evt) => {
                 const top = (parseHour(evt.start) - startHour) * rowHeight
                 const height = (parseHour(evt.end) - parseHour(evt.start)) * rowHeight
                 const c = COLOR_MAP[evt.color ?? 'green']
@@ -238,6 +255,7 @@ export function WeekCalendar({ weekStart, visibleColumns = ['name', 'dateTime'] 
           event={activeEvent}
           pos={tooltipPos}
           onClose={() => setActiveEvent(null)}
+          onViewDetails={onViewDetails}
         />
       )}
     </div>

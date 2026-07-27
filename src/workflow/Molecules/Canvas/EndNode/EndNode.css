@@ -47,6 +47,21 @@
   padding: 0;
 }
 
+.end-node__add-slot {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.end-node__add-slot .add-step-btn-wrap {
+  width: 24px;
+  height: 24px;
+}
+
 .end-node__add:hover {
   background: #f5f5f5;
 }

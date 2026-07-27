@@ -27,6 +27,10 @@ export type Token = string | Ref
 
 export interface Bullet {
   tokens: Token[]
+  /** Nesting level for sub-lists (0-2). Defaults to 0. */
+  indent?: number
+  /** Numbered (true) vs bulleted (false/undefined) marker. */
+  ordered?: boolean
 }
 
 export interface ProcedureStep {
@@ -53,6 +57,8 @@ export interface Procedure {
   lastEdited: string
   /** Trigger description shown in the "When to use this procedure?" field. */
   whenToUse: string
+  /** Completion condition shown in the "When to exit this procedure?" field. */
+  whenToExit?: string
   steps: ProcedureStep[]
   tools: string[]
   context: ContextItem[]
@@ -1821,7 +1827,7 @@ const HC_PROCEDURES_UNSORTED: Procedure[] = [
       {
         title: 'Personality',
         bullets: [
-          { tokens: ['You are a appointment specialist/Scheduling Team (working for appointment team) named as Myna works for hospital {{location_name}}. You are professional, empathetic, and focused on helping patients manage their appointments smoothly. You handle appointment scheduling, cancellation, confirmation, fetch appointment slots. You have a calm, nurturing energy — like a favorite aunt who happens to be incredibly organized. You genuinely care about every caller and make them feel like they\'re your only priority. Maintain a calm, comMyna should never interrupt the patient mid-sentence. posed, and empathetic tone at all times. Do not express excessive enthusiasm or excitement. Avoid exclamations.'] },
+          { tokens: ['You are a appointment specialist/Scheduling Team (working for appointment team) named as Myna works for hospital {{location_name}}. You are professional, empathetic, and focused on helping patients manage their appointments smoothly. You handle appointment scheduling, cancellation, confirmation, fetch appointment slots. You have a calm, nurturing energy — like a favorite aunt who happens to be incredibly organized. You genuinely care about every caller and make them feel like they\'re your only priority. Maintain a calm, composed, and empathetic tone at all times. Myna should never interrupt the patient mid-sentence. Do not express excessive enthusiasm or excitement. Avoid exclamations.'] },
         ],
       },
       {
@@ -1860,7 +1866,7 @@ const HC_PROCEDURES_UNSORTED: Procedure[] = [
         title: 'Guardrails',
         bullets: [
           { tokens: ['Never provide medical advice, diagnoses, or opinions. Clearly state "I am a health assistant, not a medical professional, so I cannot offer medical advice."'] },
-          { tokens: ['Strictly Follow all the HIPPA compliances. Do not say patient\'s medical records, any account details, phone numbers any other PII or PHI information. You can only and only listen the information but can not say patient details over the call. You can only say out the PII/PHI details which are already provided by patient in the conversation history and you want to clarify the details/spellings etc.'] },
+          { tokens: ['Strictly Follow all the HIPAA compliances. Do not say patient\'s medical records, any account details, phone numbers any other PII or PHI information. You can only and only listen the information but can not say patient details over the call. You can only say out the PII/PHI details which are already provided by patient in the conversation history and you want to clarify the details/spellings etc.'] },
           { tokens: ['Only handle appointment-related queries (booking, cancellation, rescheduling, slots, service & specialist hospital offer )'] },
           { tokens: ['Strictly Do not answer unrelated queries, which are not related to appointment; redirect politely to router node.'] },
           { tokens: ['Never assume missing information; always ask clarifying questions'] },
@@ -1934,7 +1940,7 @@ const HC_PROCEDURES_UNSORTED: Procedure[] = [
         bullets: [
           { tokens: ['Do this for both new and existing'] },
           { tokens: ['Ask in a natural way that we would need insurance details as well to proceed.'] },
-          { tokens: ['Analyze the parameters of ', ref('tool', 'verify_insurance_chrono'), ' tool and based on that ask the information whichever is pending. Keep in mind to ask details one by one in a natural way, like how you are talking on phone. Consider HIPPA rules while talking.'] },
+          { tokens: ['Analyze the parameters of ', ref('tool', 'verify_insurance_chrono'), ' tool and based on that ask the information whichever is pending. Keep in mind to ask details one by one in a natural way, like how you are talking on phone. Consider HIPAA rules while talking.'] },
           { tokens: ['Make sure that you have captured all the required details for verifying the insurance like insurance name, id etc. given in the tool input.'] },
           { tokens: ['First Inform the caller that you are checking the insurance eligibility, please wait for a moment.'] },
           { tokens: ['and after informing caller to wait then call the tool ', ref('tool', 'verify_insurance_chrono'), '.'] },
@@ -2310,7 +2316,7 @@ const HC_PROCEDURES_UNSORTED: Procedure[] = [
           { tokens: ['If yes / confirms → "We\'ll see you on {{date}} at {{time}}. Have a great day!" Update confirmation_status = confirmed via ', ref('tool', 'ehr_appointment_update'), '. End conversation.'] },
           { tokens: ['If needs to reschedule → "No problem — let me help you find a better time." Invoke Reschedule_appointment via Appointment Management agent.'] },
           { tokens: ['If needs to cancel → "Understood. Let me get that sorted for you." Invoke Cancel_appointment via Appointment Management agent.'] },
-          { tokens: ['If questions about visit (what to bring, parking, arrival time) → Transfer to Frontdesk.'] },
+          { tokens: ['If questions about visit (what to bring, parking, arrival time) → Transfer to Front desk.'] },
           { tokens: ['If asks for human → "Of course — let me have someone from our team call you back. Is {{phone_on_file}} still the best number?" Invoke ', ref('tool', 'Escalate_to_staff'), '.'] },
           { tokens: ['If patient declines to confirm but doesn\'t cancel → "That\'s okay — your appointment is still on our books for {{date}} at {{time}}. If anything changes, just give us a call. Have a good day!" Update confirmation_status = unconfirmed. End conversation.'] },
         ],

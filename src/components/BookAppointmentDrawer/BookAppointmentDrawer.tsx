@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, forwardRef } from 'react'
 import { BackArrowIcon } from '../../assets/BackArrowIcon'
+import iconGoogle from '../../assets/icon-google.svg'
+import iconIcal from '../../assets/icon-ical.svg'
+import iconOutlook from '../../assets/icon-outlook.svg'
 import { Icon } from '../Icon/Icon'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
 import { DatePickerModal } from '../DatePickerModal/DatePickerModal'
@@ -8,10 +11,10 @@ import { BookAppointmentDrawerProps } from './BookAppointmentDrawer.types'
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const WIDGET_OPTIONS = [
-  'All scripts appointment widget',
-  'New patient widget',
-  'Follow-up appointment widget',
-  'Urgent care widget',
+  'All scripts appointment',
+  'New patient',
+  'Follow-up appointment',
+  'Urgent care',
 ]
 
 const LOCATION_OPTIONS = ['Los Angeles, CA', 'Chicago, IL', 'Houston, TX', 'Miami, FL', 'Seattle, WA']
@@ -27,12 +30,106 @@ const APPT_FIELDS: { key: ApptKey; label: string; isDatePicker?: boolean; option
   { key: 'location',        label: 'Location',         options: LOCATION_OPTIONS },
   { key: 'appointmentType', label: 'Appointment type', options: APPT_TYPE_OPTIONS },
   { key: 'provider',        label: 'Provider',         options: PROVIDER_OPTIONS },
-  { key: 'dateTime',        label: 'Date & time',      isDatePicker: true },
+  { key: 'dateTime',        label: 'Appointment time', isDatePicker: true },
 ]
 
 const PATIENT_REQUIRED: PatientKey[] = ['bookFor', 'firstName', 'phone', 'email', 'dob', 'address', 'zipcode', 'city', 'state']
 
-const MAP_IMAGE = 'https://www.figma.com/api/mcp/asset/0b3ceb6c-10ea-4ea2-80c4-01a26a9cc376'
+const APPT_DURATION_MS = 30 * 60 * 1000
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// ─── Calendar event helpers ────────────────────────────────────────────────────
+
+// Parses the "MMM d, yyyy, h:mm AM/PM" label produced by DatePickerModal's datetime variant
+function parseApptDateTime(label: string): Date | null {
+  const match = label.match(/^([A-Za-z]{3}) (\d{1,2}), (\d{4}), (\d{1,2}):(\d{2}) (AM|PM)$/)
+  if (!match) return null
+  const [, monStr, dayStr, yearStr, hourStr, minStr, ampm] = match
+  const month = MONTHS_SHORT.indexOf(monStr)
+  if (month === -1) return null
+  let hour = parseInt(hourStr, 10) % 12
+  if (ampm === 'PM') hour += 12
+  return new Date(parseInt(yearStr, 10), month, parseInt(dayStr, 10), hour, parseInt(minStr, 10))
+}
+
+function toUTCStamp(d: Date): string {
+  return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+}
+
+interface ApptEvent {
+  start: Date
+  end: Date
+  title: string
+  description: string
+  location: string
+}
+
+function buildApptEvent(appt: Partial<Record<ApptKey, string>>, patient: Partial<Record<PatientKey, string>>): ApptEvent | null {
+  const start = appt.dateTime ? parseApptDateTime(appt.dateTime) : null
+  if (!start) return null
+
+  const title = `${appt.appointmentType || 'Appointment'} with ${appt.provider || 'provider'}`
+  const description = [
+    appt.provider && `Provider: ${appt.provider}`,
+    appt.appointmentType && `Appointment type: ${appt.appointmentType}`,
+    (patient.firstName || patient.lastName) && `Patient: ${[patient.firstName, patient.lastName].filter(Boolean).join(' ')}`,
+    patient.phone && `Phone: (+1) ${patient.phone}`,
+    patient.email && `Email: ${patient.email}`,
+  ].filter(Boolean).join('\n')
+
+  return { start, end: new Date(start.getTime() + APPT_DURATION_MS), title, description, location: appt.location || '' }
+}
+
+function openGoogleCalendar(event: ApptEvent) {
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title,
+    dates: `${toUTCStamp(event.start)}/${toUTCStamp(event.end)}`,
+    details: event.description,
+    location: event.location,
+  })
+  window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank', 'noopener,noreferrer')
+}
+
+function openOutlookCalendar(event: ApptEvent) {
+  const params = new URLSearchParams({
+    path: '/calendar/action/compose',
+    rru: 'addevent',
+    subject: event.title,
+    startdt: event.start.toISOString(),
+    enddt: event.end.toISOString(),
+    body: event.description,
+    location: event.location,
+  })
+  window.open(`https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`, '_blank', 'noopener,noreferrer')
+}
+
+function downloadICSFile(event: ApptEvent) {
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//MYNA//Appointments//EN',
+    'BEGIN:VEVENT',
+    `UID:${toUTCStamp(new Date())}-${Math.random().toString(36).slice(2)}@myna`,
+    `DTSTAMP:${toUTCStamp(new Date())}`,
+    `DTSTART:${toUTCStamp(event.start)}`,
+    `DTEND:${toUTCStamp(event.end)}`,
+    `SUMMARY:${event.title}`,
+    `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`,
+    `LOCATION:${event.location}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+
+  const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'appointment.ics'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -78,11 +175,11 @@ function DropdownButton({ value, open, onClick, placeholder = 'Select' }: {
 
 // ─── Accordion wrapper ────────────────────────────────────────────────────────
 
-function Accordion({ title, open, onToggle, children, topDivider }: {
+const Accordion = forwardRef<HTMLDivElement, {
   title: string; open: boolean; onToggle: () => void; children: React.ReactNode; topDivider?: boolean
-}) {
+}>(function Accordion({ title, open, onToggle, children, topDivider }, ref) {
   return (
-    <div className={`border-b border-border${topDivider ? ' border-t' : ''}`}>
+    <div ref={ref} className={`border-b border-border last:border-b-0${topDivider ? ' border-t' : ''}`}>
       {/* Header row */}
       <button
         type="button"
@@ -99,7 +196,7 @@ function Accordion({ title, open, onToggle, children, topDivider }: {
       )}
     </div>
   )
-}
+})
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -112,9 +209,10 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
   const [widgetMenuOpen, setWidgetMenuOpen] = useState(false)
   const widgetBtnRef = useRef<HTMLButtonElement>(null)
 
-  // Accordion open state
-  const [apptOpen, setApptOpen] = useState(true)
-  const [patientOpen, setPatientOpen] = useState(true)
+  // Accordion open state — only one section open at a time
+  const [openSection, setOpenSection] = useState<'appt' | 'patient' | null>('appt')
+  const apptSectionRef = useRef<HTMLDivElement>(null)
+  const patientSectionRef = useRef<HTMLDivElement>(null)
 
   // Appointment fields
   const [appt, setAppt] = useState<Partial<Record<ApptKey, string>>>({})
@@ -136,8 +234,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
       setTransitioning(false)
       setWidget('')
       setWidgetMenuOpen(false)
-      setApptOpen(true)
-      setPatientOpen(true)
+      setOpenSection('appt')
       setAppt({})
       setOpenApptField(null)
       setDatePickerOpen(false)
@@ -194,6 +291,22 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
   const apptComplete = APPT_FIELDS.every(f => !!appt[f.key])
   const patientComplete = PATIENT_REQUIRED.every(k => !!patient[k]) && agreed
   const canBook = hasWidget && apptComplete && patientComplete
+  const apptEvent = buildApptEvent(appt, patient)
+
+  // Auto-collapse a section into the next one as soon as it's fully filled out
+  const wasApptComplete = useRef(false)
+  useEffect(() => {
+    if (apptComplete && !wasApptComplete.current && openSection === 'appt') {
+      setOpenSection('patient')
+    }
+    wasApptComplete.current = apptComplete
+  }, [apptComplete, openSection])
+
+  // Scroll the newly opened (or reopened) section into view
+  useEffect(() => {
+    const sectionRef = openSection === 'appt' ? apptSectionRef : openSection === 'patient' ? patientSectionRef : null
+    sectionRef?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [openSection])
 
   const patientDropdownOptions: Partial<Record<PatientKey, string[]>> = {
     bookFor: BOOK_FOR_OPTIONS,
@@ -233,7 +346,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
             >
               <BackArrowIcon />
             </button>
-            <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Book an appointment</h2>
+            <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Book appointment</h2>
           </div>
           {!booked && (
             <button
@@ -290,9 +403,10 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
               <div className="mt-lg flex flex-col">
                 {/* Accordion 1 — Appointment details */}
                 <Accordion
+                  ref={apptSectionRef}
                   title="Appointment details"
-                  open={apptOpen}
-                  onToggle={() => setApptOpen(o => !o)}
+                  open={openSection === 'appt'}
+                  onToggle={() => setOpenSection(s => (s === 'appt' ? null : 'appt'))}
                   topDivider
                 >
                   <div className="flex flex-col gap-[12px]">
@@ -321,10 +435,11 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
 
                 {/* Accordion 2 — Patient information */}
                 <Accordion
+                  ref={patientSectionRef}
                   title="Patient information"
-                  open={patientOpen}
-                  onToggle={() => setPatientOpen(o => !o)}
-                                  >
+                  open={openSection === 'patient'}
+                  onToggle={() => setOpenSection(s => (s === 'patient' ? null : 'patient'))}
+                >
                   <div className="flex flex-col gap-[12px]">
                     {/* Booking for */}
                     <div className="flex flex-col gap-xs">
@@ -445,13 +560,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
             </div>
 
             {/* Map with tooltip */}
-            <div className="relative mx-2xl h-[266px] shrink-0 overflow-hidden rounded-sm border border-border-selected">
-              <img
-                src={MAP_IMAGE}
-                alt="Location map"
-                className="h-full w-full object-cover"
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
+            <div className="relative mx-2xl h-[266px] shrink-0 overflow-hidden rounded-sm border border-border-selected bg-surface-l2">
               <div className="absolute left-[calc(50%-8px)] top-[190px] flex flex-col items-center">
                 <div className="flex size-4 items-center justify-center rounded-full bg-[#e53935] shadow-md ring-2 ring-white">
                   <div className="size-[6px] rounded-full bg-white" />
@@ -474,7 +583,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
                     </div>
                   </div>
                   <div className="pl-[48px]">
-                    <p className="text-body text-text-primary">{appt.dateTime || 'Date & time'}</p>
+                    <p className="text-body text-text-primary">{appt.dateTime || 'Appointment time'}</p>
                   </div>
                 </div>
               </div>
@@ -494,16 +603,31 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
             <div className="mt-lg flex flex-col items-center gap-md px-2xl pb-2xl">
               <p className="text-body text-text-secondary">Add to your calendar?</p>
               <div className="grid w-full grid-cols-3 gap-[10px]">
-                <button type="button" className="flex flex-col items-center gap-[5px] rounded-[6px] bg-[#f9fafb] px-[26px] py-[12px] hover:bg-surface-hover">
-                  <img src="https://www.figma.com/api/mcp/asset/b9c85012-e0f1-43ad-92f2-7645a903be5e" alt="Google Calendar" className="size-6 object-cover" />
+                <button
+                  type="button"
+                  disabled={!apptEvent}
+                  onClick={() => apptEvent && openGoogleCalendar(apptEvent)}
+                  className="flex flex-col items-center gap-[5px] rounded-[6px] bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <img src={iconGoogle} alt="Google Calendar" className="size-5" />
                   <span className="text-[12px] leading-[16px] text-text-primary">Google</span>
                 </button>
-                <button type="button" className="flex flex-col items-center gap-[5px] rounded-[6px] bg-[#f9fafb] px-[26px] py-[12px] hover:bg-surface-hover">
-                  <img src="https://www.figma.com/api/mcp/asset/a20f743a-dda9-45e8-bdc1-8239d4f2a5e3" alt="iCal" className="h-5 w-[16px] object-cover" />
+                <button
+                  type="button"
+                  disabled={!apptEvent}
+                  onClick={() => apptEvent && downloadICSFile(apptEvent)}
+                  className="flex flex-col items-center gap-[5px] rounded-[6px] bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <img src={iconIcal} alt="iCal" className="size-5" />
                   <span className="text-[12px] leading-[16px] text-text-primary">iCal</span>
                 </button>
-                <button type="button" className="flex flex-col items-center gap-[5px] rounded-[6px] bg-[#f9fafb] px-[26px] py-[12px] hover:bg-surface-hover">
-                  <img src="https://www.figma.com/api/mcp/asset/ebda18eb-c171-40e1-9ab7-fed73bb8774b" alt="Outlook" className="size-6 object-cover" />
+                <button
+                  type="button"
+                  disabled={!apptEvent}
+                  onClick={() => apptEvent && openOutlookCalendar(apptEvent)}
+                  className="flex flex-col items-center gap-[5px] rounded-[6px] bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <img src={iconOutlook} alt="Outlook" className="size-5" />
                   <span className="text-[12px] leading-[16px] text-text-primary">Outlook</span>
                 </button>
               </div>
@@ -520,6 +644,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
             <SelectMenu
               options={WIDGET_OPTIONS.map(o => ({ value: o, label: o }))}
               value={widget ? [widget] : []}
+              searchable={false}
               onChange={val => { setWidget(val[0] ?? ''); setWidgetMenuOpen(false) }}
             />
           </div>

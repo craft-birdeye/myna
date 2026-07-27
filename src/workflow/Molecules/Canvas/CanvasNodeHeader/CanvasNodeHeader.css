@@ -70,6 +70,15 @@
   flex-shrink: 0;
 }
 
+.cnh__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
 .cnh__ai-icon {
   display: flex;
   align-items: center;

@@ -9,8 +9,13 @@ export type WizardRecordingMode = 'off' | 'announced' | 'silent'
 
 export interface WizardAgentDraft {
   agentName: string
+  systemPrompt: string
+  language: string
+  additionalLanguages: string[]
   selectedChannels: WizardChannelId[]
   voice: string
+  voiceSpeed: number
+  additionalVoices: string[]
   greeting: string
   recording: WizardRecordingMode
   consent: string

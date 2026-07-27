@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Icon, DataTable, SelectMenu, TopNav, type Column } from '../components'
+import { Icon, DataTable, HeaderSearchField, SelectMenu, TopNav, type Column } from '../components'
 import emptyPhoneNumberUrl from '../assets/empty-phone-number.svg'
 
 // --- Phone number 1 data & helpers (Abhishek's version — do not delete) ---
@@ -15,17 +15,17 @@ import emptyPhoneNumberUrl from '../assets/empty-phone-number.svg'
 // }
 // 
 // const DATA: PhoneNumberRow[] = [
-//   { name: 'Main reception',   phoneNumber: '(202) 555-0123', connection: 'Birdeye number',  routingMode: 'AI-first', assignedAgents: 'Frontdesk',              locations: 'North Austin',  provider: 'Twilio'    },
+//   { name: 'Main reception',   phoneNumber: '(202) 555-0123', connection: 'Birdeye number',  routingMode: 'AI-first', assignedAgents: 'Front desk',              locations: 'North Austin',  provider: 'Twilio'    },
 //   { name: 'Schedule line',    phoneNumber: '(303) 555-0198', connection: 'Call forwarding', routingMode: 'Overflow', assignedAgents: 'Scheduling & Frontdesk', locations: 'South Austin',  provider: 'Twilio'    },
 //   { name: 'Outreach',         phoneNumber: '(404) 555-0167', connection: 'SIP trunk',       routingMode: 'Overflow', assignedAgents: 'Pre-visit',              locations: 'San Francisco', provider: 'Vonage'    },
 //   { name: 'Outreach',         phoneNumber: '(505) 555-0189', connection: 'Birdeye number',  routingMode: 'AI-first', assignedAgents: '-',                      locations: '-',             provider: 'Twilio'    },
-//   { name: 'Patient services', phoneNumber: '(606) 555-0145', connection: 'Call forwarding', routingMode: 'IVR',      assignedAgents: 'Frontdesk & Waitlist',   locations: 'South Austin',  provider: 'Bandwidth' },
-//   { name: 'Insurance',        phoneNumber: '(707) 555-0132', connection: 'SIP trunk',       routingMode: 'IVR',      assignedAgents: 'Frontdesk',              locations: '-',             provider: 'Bandwidth' },
+//   { name: 'Patient services', phoneNumber: '(606) 555-0145', connection: 'Call forwarding', routingMode: 'IVR',      assignedAgents: 'Front desk & Waitlist',   locations: 'South Austin',  provider: 'Bandwidth' },
+//   { name: 'Insurance',        phoneNumber: '(707) 555-0132', connection: 'SIP trunk',       routingMode: 'IVR',      assignedAgents: 'Front desk',              locations: '-',             provider: 'Bandwidth' },
 //   { name: 'Night coverage',   phoneNumber: '(808) 555-0156', connection: 'Birdeye number',  routingMode: 'AI-first', assignedAgents: '-',                      locations: 'All locations', provider: 'Twilio'    },
-//   { name: 'Toll-free main',   phoneNumber: '(909) 555-0173', connection: 'Call forwarding', routingMode: 'Overflow', assignedAgents: 'Frontdesk & Pre-vist',   locations: 'All locations', provider: 'Twilio'    },
+//   { name: 'Toll-free main',   phoneNumber: '(909) 555-0173', connection: 'Call forwarding', routingMode: 'Overflow', assignedAgents: 'Front desk & Pre-visit',  locations: 'All locations', provider: 'Twilio'    },
 //   { name: 'Insurance verify', phoneNumber: '(212) 555-0111', connection: 'Birdeye number',  routingMode: 'IVR',      assignedAgents: 'Scheduling',             locations: 'North Austin',  provider: 'Twilio'    },
 //   { name: 'Reminder line',    phoneNumber: '(415) 555-0100', connection: 'SIP trunk',       routingMode: 'AI-first', assignedAgents: '-',                      locations: '-',             provider: 'Vonage'    },
-//   { name: 'Billing',          phoneNumber: '(310) 555-0192', connection: 'Call forwarding', routingMode: 'IVR',      assignedAgents: 'Frontdesk',              locations: 'San Francisco', provider: 'Twilio'    },
+//   { name: 'Billing',          phoneNumber: '(310) 555-0192', connection: 'Call forwarding', routingMode: 'IVR',      assignedAgents: 'Front desk',              locations: 'San Francisco', provider: 'Twilio'    },
 // ]
 // 
 // const COLUMNS: Column<PhoneNumberRow>[] = [
@@ -822,6 +822,13 @@ export function PhoneNumber2Screen() {
   const [addMode, setAddMode] = useState<'sip' | 'forwarding' | null>(null)
   const [editRow, setEditRow] = useState<PhoneNumber2Row | null>(null)
   const [callForwardingOpen, setCallForwardingOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const q = searchQuery.trim().toLowerCase()
+  const visibleRows = q
+    ? rows.filter((r) => r.name.toLowerCase().includes(q) || r.phoneNumber.toLowerCase().includes(q))
+    : rows
 
 
   return (
@@ -834,9 +841,7 @@ export function PhoneNumber2Screen() {
           <h1 className="text-h3 text-text-primary">Phone number</h1>
           {rows.length > 0 && (
             <div className="flex items-center gap-sm">
-              <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Icon name="search" size={20} />
-              </button>
+              <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
               <button
                 type="button"
                 onClick={() => setCallForwardingOpen(true)}
@@ -868,7 +873,7 @@ export function PhoneNumber2Screen() {
             <div className="px-lg">
               <DataTable
                 columns={COLUMNS2}
-                data={rows}
+                data={visibleRows}
                 rowMenuItems={[
                   { label: 'Edit',   onClick: (row) => setEditRow(row) },
                   { label: 'Delete', onClick: (row) => setRows((prev) => prev.filter((r) => r !== row)) },

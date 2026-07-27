@@ -359,13 +359,13 @@ export default function ReminderToolDrawer({ isOpen, onClose }) {
         </Accordion>
 
         {/* On a response */}
-        <Accordion title="On a response" subtitle="Configure how and when to route to a Frontdesk agent"
+        <Accordion title="On a response" subtitle="Configure how and when to route to a Front desk agent"
           open={openPanel === 'response'} onToggle={() => toggle('response')}>
           <div style={{ marginBottom: 14 }}>
             <label style={labelSm}>Hand off to</label>
             <StyledSelect value={handoffTo} onChange={setHandoffTo} options={[
-              { value: 'frontdesk-4', label: 'Frontdesk agent (4 locations)' },
-              { value: 'frontdesk-all', label: 'Frontdesk agent (all locations)' },
+              { value: 'frontdesk-4', label: 'Front desk agent (4 locations)' },
+              { value: 'frontdesk-all', label: 'Front desk agent (all locations)' },
             ]} />
           </div>
           <div style={{ marginBottom: 14 }}>

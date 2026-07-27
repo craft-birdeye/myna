@@ -514,7 +514,7 @@ function DetailPanel({ rec }: { rec: Recommendation }) {
             </div>
             <p className="text-body text-text-primary">{rec.description}</p>
             <button className="flex items-center gap-xs text-small text-text-action hover:underline">
-              <Icon name="chat" size={14} />
+              <Icon name="sms" size={14} />
               View {rec.conversationCount} conversations
             </button>
           </div>

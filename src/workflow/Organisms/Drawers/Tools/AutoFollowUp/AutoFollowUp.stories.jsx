@@ -15,6 +15,6 @@ export default {
 
 export const Default = {
   args: {
-    title: 'Visitor Follow-up',
+    title: 'Auto follow up',
   },
 };

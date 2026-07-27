@@ -18,6 +18,10 @@ import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { WorkflowViewerTab } from './WorkflowViewerTab'
 import { RecommendationsTab } from './RecommendationsTab'
+import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
+import { RunDetailView } from './RunDetailView'
+import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
+import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -25,6 +29,7 @@ interface AgentInstanceScreenProps {
   onBack: () => void
   onEditAgent?: (agentName: string) => void
   onOpenIntegrationSettings?: (integrationId: string) => void
+  onNavigateToInbox?: (conversationId?: string) => void
   product?: string
 }
 
@@ -35,10 +40,10 @@ interface LocationRow {
   aht?: string
   escalation?: string
   count: string
-  remindersSent?: string
-  responseRate?: string
-  avgResponseTime?: string
-  noshowRate?: string
+  bookings?: string
+  confirmed?: string
+  confirmRate?: string
+  timeSaved?: string
   patientsContacted?: string
   recallConversionRate?: string
   avgTouchesToBook?: string
@@ -54,6 +59,9 @@ interface LocationRow {
   avgTouchesToAccept?: string
   callToBookingConversion?: string
   warmTransferRate?: string
+  statusUpdated?: string
+  conversationsAssigned?: string
+  conversationsManaged?: string
   [key: string]: string | undefined
 }
 
@@ -64,6 +72,9 @@ const TABS: Tab[] = [
   { id: 'logs', label: 'Logs' },
   { id: 'settings', label: 'Settings' },
 ]
+
+// Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
+const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
 
 const METRICS_BY_AGENT: Record<string, Metric[]> = {
   'Front desk agent': [
@@ -85,10 +96,10 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'timeSaved', value: '2.5 hrs', label: 'Time saved', delta: '20%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved by automating waitlist outreach instead of manually calling through the list.' },
   ],
   'Pre-visit agent': [
-    { id: 'outreach',   value: '1,000', label: 'Outreach sent',     delta: '+1.3%', trend: 'up', info: true },
-    { id: 'intakes',    value: '900',   label: 'Intakes completed',  delta: '+1.3%', trend: 'up', info: true },
-    { id: 'completion', value: '95%',   label: 'Completion rate',    delta: '+1.3%', trend: 'up', info: true },
-    { id: 'timeSaved',  value: '32m',   label: 'Time saved',         delta: '+1.3%', trend: 'up', info: true },
+    { id: 'outreach',   value: '1,000', label: 'Outreach sent',     delta: '1.3%', trend: 'up', info: true, tooltip: 'Total intake reminder outreach sent by the agent at this location in the selected period.' },
+    { id: 'intakes',    value: '900',   label: 'Intakes completed',  delta: '1.3%', trend: 'up', info: true, tooltip: 'Number of patient intake forms fully completed following agent outreach at this location.' },
+    { id: 'completion', value: '95%',   label: 'Completion rate',    delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of outreach that resulted in a completed intake. Calculated as intakes completed ÷ outreach sent.' },
+    { id: 'timeSaved',  value: '32m',   label: 'Time saved',         delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating intake collection instead of manual follow-up calls.' },
   ],
   'Outreach agent': [
     { id: 'leads', value: '2,103', label: 'Leads contacted', delta: '3.7%', trend: 'up', info: true, tooltip: 'Total leads the agent reached out to at this location in the selected period.' },
@@ -114,6 +125,12 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'revenueUnlocked', value: '$223K', label: 'Revenue unlocked', delta: '7.1%', trend: 'up', info: true, tooltip: 'Estimated value of accepted + booked plans attributable to the agent.' },
     { id: 'staffHoursSaved', value: '88h', label: 'Staff hours saved', delta: '7.8%', trend: 'up', info: true, tooltip: 'Staff follow-up time avoided by automating outreach.' },
   ],
+  'Tagging & routing agent': [
+    { id: 'statusUpdated', value: '1000', label: 'Statuses updated', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations that received an updated contact status at this location in the selected period.' },
+    { id: 'conversationsAssigned', value: '900', label: 'Conversations assigned', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations assigned to a team or user at this location.' },
+    { id: 'conversationsManaged', value: '95%', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Share of conversations tagged and routed end-to-end at this location.' },
+    { id: 'timeSaved', value: '32m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing at this location.' },
+  ],
 }
 
 const DEFAULT_METRICS: Metric[] = [
@@ -131,10 +148,10 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Philadelphia, PA', interactions: '1,590', fcr: '1,431', aht: '90%', escalation: '3h', count: '60'  },
   ],
   'Reminder agent': [
-    { location: 'Atlanta, GA',      interactions: '590', fcr: '79%', aht: '1m 08s', escalation: '9%',  count: '124', remindersSent: '410', responseRate: '93%', avgResponseTime: '1 day',  noshowRate: '10%' },
-    { location: 'Chicago, IL',      interactions: '440', fcr: '77%', aht: '1m 15s', escalation: '10%', count: '98',  remindersSent: '298', responseRate: '91%', avgResponseTime: '2 days', noshowRate: '11%' },
-    { location: 'Boston, MA',       interactions: '360', fcr: '76%', aht: '1m 20s', escalation: '11%', count: '76',  remindersSent: '240', responseRate: '89%', avgResponseTime: '2 days', noshowRate: '12%' },
-    { location: 'Philadelphia, PA', interactions: '290', fcr: '75%', aht: '1m 24s', escalation: '11%', count: '60',  remindersSent: '154', responseRate: '87%', avgResponseTime: '3 days', noshowRate: '13%' },
+    { location: 'Atlanta, GA',      interactions: '590', fcr: '79%', aht: '1m 08s', escalation: '9%',  count: '124', bookings: '44', confirmed: '11', confirmRate: '25.0%', timeSaved: '8 min' },
+    { location: 'Chicago, IL',      interactions: '440', fcr: '77%', aht: '1m 15s', escalation: '10%', count: '98',  bookings: '32', confirmed: '8',  confirmRate: '25.0%', timeSaved: '8 min' },
+    { location: 'Boston, MA',       interactions: '360', fcr: '76%', aht: '1m 20s', escalation: '11%', count: '76',  bookings: '22', confirmed: '5',  confirmRate: '22.7%', timeSaved: '7 min' },
+    { location: 'Philadelphia, PA', interactions: '290', fcr: '75%', aht: '1m 24s', escalation: '11%', count: '60',  bookings: '14', confirmed: '3',  confirmRate: '21.4%', timeSaved: '7 min' },
   ],
   'Outreach agent': [
     { location: 'Atlanta, GA',      interactions: '320', fcr: '44%', aht: '2m 40s', escalation: '8%',  count: '124' },
@@ -171,6 +188,12 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Chicago, IL',      count: '98',  plansFollowedUp: '132', acceptanceRate: '61%', revenueUnlocked: '$54K',  callToBookingConversion: '44%', warmTransferRate: '11%', avgTouchesToAccept: '2.1', staffHoursSaved: '20h' },
     { location: 'Boston, MA',       count: '76',  plansFollowedUp: '141', acceptanceRate: '59%', revenueUnlocked: '$58K',  callToBookingConversion: '41%', warmTransferRate: '12%', avgTouchesToAccept: '2.2', staffHoursSaved: '22h' },
     { location: 'Philadelphia, PA', count: '60',  plansFollowedUp: '114', acceptanceRate: '58%', revenueUnlocked: '$49K',  callToBookingConversion: '38%', warmTransferRate: '14%', avgTouchesToAccept: '2.3', staffHoursSaved: '18h' },
+  ],
+  'Tagging & routing agent': [
+    { location: 'Atlanta, GA',     count: '500', statusUpdated: '500', conversationsAssigned: '400', conversationsManaged: '95%', timeSaved: '20m' },
+    { location: 'Chicago, IL',     count: '250', statusUpdated: '400', conversationsAssigned: '200', conversationsManaged: '92%', timeSaved: '5m'  },
+    { location: 'Los Angeles, CA', count: '200', statusUpdated: '50',  conversationsAssigned: '200', conversationsManaged: '88%', timeSaved: '10m' },
+    { location: 'Stamford, CT',    count: '100', statusUpdated: '50',  conversationsAssigned: '100', conversationsManaged: '88%', timeSaved: '2m'  },
   ],
 }
 
@@ -221,11 +244,11 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
 }
 
 const REMINDER_COLUMNS: Column<LocationRow>[] = [
-  { key: 'location',         label: 'Locations',              width: 240, sortable: true },
-  { key: 'remindersSent',    label: 'Reminders sent',         width: 170, sortable: true },
-  { key: 'responseRate',     label: 'Reminder response rate', width: 210, sortable: true },
-  { key: 'avgResponseTime',  label: 'Average response time',  width: 200, sortable: true },
-  { key: 'noshowRate',       label: 'No-show rate',           width: 160, sortable: true },
+  { key: 'location',    label: 'Locations',             width: 240, sortable: true },
+  { key: 'bookings',    label: 'Total bookings',        width: 160, sortable: true },
+  { key: 'confirmed',   label: 'Appointments confirmed',width: 200, sortable: true },
+  { key: 'confirmRate', label: 'Confirmation rate',     width: 170, sortable: true },
+  { key: 'timeSaved',   label: 'Time saved',            width: 140, sortable: true },
 ]
 
 const WAITLIST_COLUMNS: Column<LocationRow>[] = [
@@ -271,17 +294,27 @@ const TREATMENT_PLAN_COLUMNS: Column<LocationRow>[] = [
   { key: 'staffHoursSaved',        label: 'Staff hours saved',         width: 155, sortable: true },
 ]
 
+const TAGGING_ROUTING_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location',              label: 'Locations',              width: 220, sortable: true },
+  { key: 'statusUpdated',         label: 'Statuses updated',       width: 160, sortable: true },
+  { key: 'conversationsAssigned', label: 'Conversations assigned', width: 180, sortable: true },
+  { key: 'conversationsManaged',  label: 'Conversations managed',  width: 180, sortable: true },
+  { key: 'timeSaved',             label: 'Time saved',             width: 140, sortable: true },
+]
+
 export function AgentInstanceScreen({
   instanceName,
   status = 'Running',
   onBack,
   onEditAgent,
   onOpenIntegrationSettings,
+  onNavigateToInbox,
   product,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState('outcomes')
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
+  const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -294,16 +327,34 @@ export function AgentInstanceScreen({
     : agentName === 'Recall agent'        ? RECALL_COLUMNS
     : agentName === 'Revenue agent'       ? REVENUE_COLUMNS
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
+    : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
     : DEFAULT_COLUMNS
   const locations = LOCATIONS_BY_AGENT[agentName] ?? LOCATIONS_BY_AGENT['Front desk agent']
+  const isTaggingRouting = agentName === 'Tagging & routing agent'
+  const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
   const showHealthcareLogs =
-    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent')
+    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && product === 'dental' && Boolean(dentalOutboundLogRows)
+
+  if (selectedRun) {
+    return (
+      <div className="flex h-full flex-col">
+        <TopNav initials="S" />
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <RunDetailView
+            row={selectedRun}
+            onBack={() => setSelectedRun(null)}
+            onViewConversation={() => onNavigateToInbox?.(FRONT_DESK_INBOX_CONVERSATION_ID)}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -389,7 +440,7 @@ export function AgentInstanceScreen({
 
       {/* Tabs */}
       <div className="shrink-0 px-2xl">
-        <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>
 
       {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -401,7 +452,7 @@ export function AgentInstanceScreen({
         />
       ) : isRecommendationTab ? (
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <RecommendationsTab />
+          {agentName === 'Front desk agent' ? <FrontdeskRecommendationsTab /> : <RecommendationsTab />}
         </div>
       ) : (
         <div className="flex-1 overflow-auto">
@@ -415,18 +466,22 @@ export function AgentInstanceScreen({
               </div>
             </>
           ) : showHealthcareLogs ? (
-            <AgentLogsTab agentName={agentName} />
+            <AgentLogsTab
+              agentName={agentName}
+              onNavigateToInbox={onNavigateToInbox}
+              onViewRun={setSelectedRun}
+            />
           ) : showDentalOutboundLogs ? (
             <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
           ) : activeTab === 'settings' ? (
             <AgentSettingsTab
               product={product}
-              agentName={instanceName}
+              agentName={agentName}
               onOpenIntegrationSettings={onOpenIntegrationSettings}
             />
           ) : (
             <div className="flex h-64 items-center justify-center text-body text-text-secondary">
-              No {TABS.find((t) => t.id === activeTab)?.label.toLowerCase()} data yet.
+              No {tabs.find((t) => t.id === activeTab)?.label.toLowerCase()} data yet.
             </div>
           )}
         </div>

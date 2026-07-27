@@ -35,7 +35,7 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'custom-test',     label: 'Custom test',         options: opts('Test Group A', 'Test Group B', 'Cohort 1', 'Cohort 2', 'Cohort 3') },
   { id: 'location',              label: 'Location',                        options: opts('North Austin', 'South Austin', 'San Francisco', 'Phoenix, AZ', 'Denver, CO', 'Seattle, WA') },
   { id: 'conversation-status',   label: 'Conversation status',             options: opts('Open', 'Closed', 'Pending', 'Escalated', 'Unread') },
-  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Frontdesk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
+  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Front desk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
   { id: 'time-period',           label: 'Time period',                     options: opts('Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months') },
   { id: 'last-incoming-channel', label: 'Last incoming message (Channel)', options: opts('Voice', 'Text', 'Webchat', 'Chat') },
 ]
@@ -143,7 +143,7 @@ export function HCNoShowsScreen({ isDental = false }: { isDental?: boolean }) {
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
           title="No-shows prevented"
-          subtitle="Insights into no-shows prevented across different channels and locations."
+          subtitle="No-show prevention and appointment confirmation outcomes across your locations"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector
@@ -167,7 +167,7 @@ export function HCNoShowsScreen({ isDental = false }: { isDental?: boolean }) {
 
           <SummaryStats stats={SUMMARY_STATS} />
 
-          <HCCard title="Appointment confirmation funnel">
+          <HCCard title="Appointment confirmation funnel" tooltip="Traces reminders from the channel they were sent on, through the confirmation outcome, to how long it took to confirm.">
             <SankeyChart
               nodes={FUNNEL_NODES}
               links={FUNNEL_LINKS}
@@ -203,7 +203,7 @@ export function HCNoShowsScreen({ isDental = false }: { isDental?: boolean }) {
             </HCCard>
           </div>
 
-          <HCCard title="Appointment confirmation by location">
+          <HCCard title="Appointment confirmation by location" tooltip="Breaks down appointment confirmation outcomes by location, aggregated over the selected date range.">
             <DataTable columns={LOCATION_COLUMNS} data={LOCATION_DATA} scrollOnHover={isDental} />
           </HCCard>
 

@@ -106,6 +106,8 @@
   cursor: pointer;
   padding: 0;
   font-family: 'Roboto', arial, sans-serif;
+  align-self: flex-start;
+  text-align: left;
 }
 
 .moreLink:hover {

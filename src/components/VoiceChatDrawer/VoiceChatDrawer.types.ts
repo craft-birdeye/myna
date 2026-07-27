@@ -11,5 +11,7 @@ export interface VoiceChatDrawerProps {
   audioUrl?: string
   durationSecs?: number
   mode?: 'voice' | 'chat'
+  /** Drawer header title. Defaults to "Call with Myna" / "Chat with Myna". */
+  title?: string
   onClose: () => void
 }

@@ -4,7 +4,11 @@ import {
   CustomizeColumnsDrawer,
   DataTable,
   FilterPanel,
+  HeaderSearchField,
   Icon,
+  MessageDrawer,
+  PatientCell,
+  QuickSendModal,
   QuickViewDrawer,
   SendReminderDrawer,
   ViewActivityDrawer,
@@ -18,10 +22,10 @@ import {
 } from '../components'
 import iconInbox from '../assets/icon-inbox.svg'
 import iconMail from '../assets/icon-mail.svg'
-import { SendIcon } from '../assets/SendIcon'
 
 export interface IntakePatient {
   patient: string
+  location: string
   appointmentDate: string
   bookedOn: string
   formType: string
@@ -56,30 +60,35 @@ const TAB_STATUS_MAP: Record<string, string> = {
 
 const TODAY_DATE = 'May 27'
 
+function parseIntakeDate(appointmentDate: string): number {
+  const t = new Date(`${appointmentDate}, 2026`).getTime()
+  return Number.isNaN(t) ? 0 : t
+}
+
 const PATIENTS: IntakePatient[] = [
-  { patient: 'John Smith',          appointmentDate: 'May 27', bookedOn: 'Apr 10', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Alice Johnson',       appointmentDate: 'May 27', bookedOn: 'Apr 12', formType: 'Follow-up',   sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Robert Williams',     appointmentDate: 'May 27', bookedOn: 'Apr 15', formType: 'Referral',    sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Mary Brown',          appointmentDate: 'May 27', bookedOn: 'Apr 18', formType: 'New patient', sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Michael Davis',       appointmentDate: 'May 27', bookedOn: 'Apr 20', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Jennifer Wilson',     appointmentDate: 'May 27', bookedOn: 'Apr 22', formType: 'Referral',    sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
-  { patient: 'David Garcia',        appointmentDate: 'May 27', bookedOn: 'Apr 25', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Linda Rodriguez',     appointmentDate: 'May 27', bookedOn: 'Apr 28', formType: 'Referral',    sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Christopher Martinez',appointmentDate: 'May 27', bookedOn: 'May 01', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Angela Anderson',     appointmentDate: 'May 27', bookedOn: 'May 03', formType: 'Follow-up',   sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Thomas Taylor',       appointmentDate: 'May 27', bookedOn: 'May 05', formType: 'Text/Number', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
-  { patient: 'Sarah Moore',         appointmentDate: 'May 28', bookedOn: 'Apr 14', formType: 'New patient', sentVia: 'email', sentOn: 'May 21', status: 'Not started' },
-  { patient: 'Kevin Jackson',       appointmentDate: 'May 28', bookedOn: 'Apr 16', formType: 'Follow-up',   sentVia: 'sms',   sentOn: 'May 21', status: 'Not started' },
-  { patient: 'Emily White',         appointmentDate: 'May 28', bookedOn: 'Apr 18', formType: 'Referral',    sentVia: 'email', sentOn: 'May 21', status: 'In progress' },
-  { patient: 'James Harris',        appointmentDate: 'May 28', bookedOn: 'Apr 20', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 21', status: 'In progress' },
-  { patient: 'Patricia Clark',      appointmentDate: 'May 29', bookedOn: 'Apr 22', formType: 'Follow-up',   sentVia: 'email', sentOn: 'May 22', status: 'In progress' },
-  { patient: 'Daniel Lewis',        appointmentDate: 'May 29', bookedOn: 'Apr 24', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 22', status: 'In progress' },
-  { patient: 'Nancy Robinson',      appointmentDate: 'May 29', bookedOn: 'Apr 26', formType: 'Text/Number', sentVia: 'email', sentOn: 'May 22', status: 'In progress' },
-  { patient: 'Mark Walker',         appointmentDate: 'May 30', bookedOn: 'Apr 28', formType: 'Referral',    sentVia: 'sms',   sentOn: 'May 23', status: 'In progress' },
-  { patient: 'Betty Hall',          appointmentDate: 'May 30', bookedOn: 'Apr 30', formType: 'New patient', sentVia: 'email', sentOn: 'May 23', status: 'Completed' },
-  { patient: 'Steven Allen',        appointmentDate: 'May 30', bookedOn: 'May 02', formType: 'Follow-up',   sentVia: 'sms',   sentOn: 'May 23', status: 'Completed' },
-  { patient: 'Sandra Young',        appointmentDate: 'May 31', bookedOn: 'May 04', formType: 'Referral',    sentVia: 'email', sentOn: 'May 24', status: 'Completed' },
-  { patient: 'Joseph Hernandez',    appointmentDate: 'May 31', bookedOn: 'May 06', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 24', status: 'Completed' },
+  { patient: 'John Smith',          location: 'Atlanta, GA',      appointmentDate: 'May 27', bookedOn: 'Apr 10', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Alice Johnson',       location: 'Austin, TX',       appointmentDate: 'May 27', bookedOn: 'Apr 12', formType: 'Follow-up',   sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Robert Williams',     location: 'Charlotte, NC',    appointmentDate: 'May 27', bookedOn: 'Apr 15', formType: 'Referral',    sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Mary Brown',          location: 'Phoenix, AZ',      appointmentDate: 'May 27', bookedOn: 'Apr 18', formType: 'New patient', sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Michael Davis',       location: 'Denver, CO',       appointmentDate: 'May 27', bookedOn: 'Apr 20', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Jennifer Wilson',     location: 'Seattle, WA',      appointmentDate: 'May 27', bookedOn: 'Apr 22', formType: 'Referral',    sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
+  { patient: 'David Garcia',        location: 'San Antonio, TX',  appointmentDate: 'May 27', bookedOn: 'Apr 25', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Linda Rodriguez',     location: 'Houston, TX',      appointmentDate: 'May 27', bookedOn: 'Apr 28', formType: 'Referral',    sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Christopher Martinez',location: 'Las Vegas, NV',    appointmentDate: 'May 27', bookedOn: 'May 01', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Angela Anderson',     location: 'Portland, OR',     appointmentDate: 'May 27', bookedOn: 'May 03', formType: 'Follow-up',   sentVia: 'email', sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Thomas Taylor',       location: 'Nashville, TN',    appointmentDate: 'May 27', bookedOn: 'May 05', formType: 'Text/Number', sentVia: 'sms',   sentOn: 'May 20', status: 'Not started' },
+  { patient: 'Sarah Moore',         location: 'Minneapolis, MN',  appointmentDate: 'May 28', bookedOn: 'Apr 14', formType: 'New patient', sentVia: 'email', sentOn: 'May 21', status: 'Not started' },
+  { patient: 'Kevin Jackson',       location: 'Columbus, OH',     appointmentDate: 'May 28', bookedOn: 'Apr 16', formType: 'Follow-up',   sentVia: 'sms',   sentOn: 'May 21', status: 'Not started' },
+  { patient: 'Emily White',         location: 'Chicago, IL',      appointmentDate: 'May 28', bookedOn: 'Apr 18', formType: 'Referral',    sentVia: 'email', sentOn: 'May 21', status: 'In progress' },
+  { patient: 'James Harris',        location: 'Miami, FL',        appointmentDate: 'May 28', bookedOn: 'Apr 20', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 21', status: 'In progress' },
+  { patient: 'Patricia Clark',      location: 'Baltimore, MD',    appointmentDate: 'May 29', bookedOn: 'Apr 22', formType: 'Follow-up',   sentVia: 'email', sentOn: 'May 22', status: 'In progress' },
+  { patient: 'Daniel Lewis',        location: 'Indianapolis, IN', appointmentDate: 'May 29', bookedOn: 'Apr 24', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 22', status: 'In progress' },
+  { patient: 'Nancy Robinson',      location: 'Louisville, KY',   appointmentDate: 'May 29', bookedOn: 'Apr 26', formType: 'Text/Number', sentVia: 'email', sentOn: 'May 22', status: 'In progress' },
+  { patient: 'Mark Walker',         location: 'Memphis, TN',      appointmentDate: 'May 30', bookedOn: 'Apr 28', formType: 'Referral',    sentVia: 'sms',   sentOn: 'May 23', status: 'In progress' },
+  { patient: 'Betty Hall',          location: 'Dallas, TX',       appointmentDate: 'May 30', bookedOn: 'Apr 30', formType: 'New patient', sentVia: 'email', sentOn: 'May 23', status: 'Completed' },
+  { patient: 'Steven Allen',        location: 'Oklahoma City, OK',appointmentDate: 'May 30', bookedOn: 'May 02', formType: 'Follow-up',   sentVia: 'sms',   sentOn: 'May 23', status: 'Completed' },
+  { patient: 'Sandra Young',        location: 'Albuquerque, NM',  appointmentDate: 'May 31', bookedOn: 'May 04', formType: 'Referral',    sentVia: 'email', sentOn: 'May 24', status: 'Completed' },
+  { patient: 'Joseph Hernandez',    location: 'El Paso, TX',      appointmentDate: 'May 31', bookedOn: 'May 06', formType: 'New patient', sentVia: 'sms',   sentOn: 'May 24', status: 'Completed' },
 ]
 
 interface ColumnDef extends Column<IntakePatient> {
@@ -87,8 +96,24 @@ interface ColumnDef extends Column<IntakePatient> {
 }
 
 const COLUMN_DEFS: ColumnDef[] = [
-  { key: 'patient',         label: 'Patient',           width: 220, sortable: true,  locked: true },
-  { key: 'appointmentDate', label: 'Appointment date',  width: 180, sortable: true  },
+  {
+    key: 'patient',
+    label: 'Patient',
+    width: 220,
+    sortable: true,
+    locked: true,
+    render: (_val, row) => <PatientCell name={row.patient} location={row.location} />,
+  },
+  {
+    key: 'appointmentDate',
+    label: 'Appointment time',
+    width: 200,
+    sortable: true,
+    render: (val, row) => {
+      const time = PATIENT_DETAILS[row.patient]?.appointmentTime
+      return <>{time ? `${val}, ${time}` : val}</>
+    },
+  },
   { key: 'formType',        label: 'Form type',         width: 180, sortable: true  },
   {
     key: 'sentVia',
@@ -301,11 +326,16 @@ export function IntakeScreen({ onViewDetail: _onViewDetail }: { onViewDetail?: (
   const [order, setOrder]         = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible]     = useState<string[]>(DEFAULT_VISIBLE)
   const [customizeOpen, setCustomizeOpen]         = useState(false)
+  const [searchOpen, setSearchOpen]               = useState(false)
+  const [searchQuery, setSearchQuery]             = useState('')
   const [filterOpen, setFilterOpen]               = useState(false)
   const [quickViewPatient, setQuickViewPatient]   = useState<PatientDetail | null>(null)
   const [quickViewRow, setQuickViewRow]             = useState<IntakePatient | null>(null)
   const [activityRow, setActivityRow]               = useState<IntakePatient | null>(null)
   const [sendReminderRow, setSendReminderRow]         = useState<IntakePatient | null>(null)
+  const [quickSendRow, setQuickSendRow]               = useState<IntakePatient | null>(null)
+  const [messagingRow, setMessagingRow]               = useState<IntakePatient | null>(null)
+  const [messagingChannel, setMessagingChannel]       = useState<'message' | 'email'>('message')
 
   const columns = useMemo<Column<IntakePatient>[]>(() => {
     const base = order
@@ -327,10 +357,15 @@ export function IntakeScreen({ onViewDetail: _onViewDetail }: { onViewDetail?: (
   )
 
   const filteredData = useMemo(() => {
-    if (activeTab === 'all') return PATIENTS
-    if (activeTab === 'overdue') return PATIENTS.filter((r) => r.appointmentDate === TODAY_DATE)
-    return PATIENTS.filter((r) => r.status === TAB_STATUS_MAP[activeTab])
-  }, [activeTab])
+    const byTab = activeTab === 'all'
+      ? PATIENTS
+      : activeTab === 'overdue'
+        ? PATIENTS.filter((r) => r.appointmentDate === TODAY_DATE)
+        : PATIENTS.filter((r) => r.status === TAB_STATUS_MAP[activeTab])
+    const q = searchQuery.trim().toLowerCase()
+    const matched = q ? byTab.filter((r) => r.patient.toLowerCase().includes(q)) : byTab
+    return [...matched].sort((a, b) => parseIntakeDate(a.appointmentDate) - parseIntakeDate(b.appointmentDate))
+  }, [activeTab, searchQuery])
 
   return (
     <div className="flex h-full flex-col">
@@ -341,16 +376,9 @@ export function IntakeScreen({ onViewDetail: _onViewDetail }: { onViewDetail?: (
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
             <div className="flex items-center gap-sm">
               <h1 className="text-h3 text-text-primary">Manage intake</h1>
-              <Icon name="info" size={18} className="text-text-icon" />
             </div>
             <div className="flex items-center gap-sm">
-              <button
-                type="button"
-                aria-label="Search"
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-              >
-                <Icon name="search" size={20} />
-              </button>
+              <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
               <button
                 type="button"
                 aria-label="Customize columns"
@@ -358,13 +386,6 @@ export function IntakeScreen({ onViewDetail: _onViewDetail }: { onViewDetail?: (
                 className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
                 <Icon name="view_column" size={20} />
-              </button>
-              <button
-                type="button"
-                aria-label="More options"
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-              >
-                <Icon name="more_vert" size={20} />
               </button>
               <button
                 type="button"
@@ -383,14 +404,16 @@ export function IntakeScreen({ onViewDetail: _onViewDetail }: { onViewDetail?: (
 
           <div className="px-lg py-lg">
             <DataTable
+              rowHeight={56}
               columns={columns}
               data={filteredData}
               rowAction={{
-                iconElement: <SendIcon size={20} />,
-                label: 'Message',
+                icon: 'notifications',
+                label: 'Send reminder',
                 onClick: (row) => setSendReminderRow(row),
               }}
               rowMenuItems={[
+                { label: 'Quick send', onClick: (row) => setQuickSendRow(row) },
                 {
                   label: 'Quick view',
                   onClick: (row) => {
@@ -440,6 +463,38 @@ export function IntakeScreen({ onViewDetail: _onViewDetail }: { onViewDetail?: (
             fromTabLabel: TABS.find(t => t.id === activeTab)?.label,
           })
         }}
+        onQuickSend={() => {
+          setQuickSendRow(quickViewRow)
+          setQuickViewPatient(null)
+          setQuickViewRow(null)
+        }}
+        onMessage={() => {
+          setMessagingChannel('message')
+          setMessagingRow(quickViewRow)
+          setQuickViewPatient(null)
+          setQuickViewRow(null)
+        }}
+        onEmail={() => {
+          setMessagingChannel('email')
+          setMessagingRow(quickViewRow)
+          setQuickViewPatient(null)
+          setQuickViewRow(null)
+        }}
+      />
+
+      <QuickSendModal
+        open={quickSendRow !== null}
+        patient={quickSendRow?.patient ?? ''}
+        email={quickSendRow ? PATIENT_DETAILS[quickSendRow.patient]?.email : undefined}
+        onClose={() => setQuickSendRow(null)}
+      />
+
+      <MessageDrawer
+        open={messagingRow !== null}
+        patient={messagingRow?.patient ?? ''}
+        status={messagingRow?.status}
+        initialChannel={messagingChannel}
+        onClose={() => setMessagingRow(null)}
       />
 
       <SendReminderDrawer

@@ -1,6 +1,7 @@
 import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 import { Chip } from '../Chip/Chip'
+import { Tooltip } from '../Tooltip/Tooltip'
 import type { QuickViewDrawerProps, QuickViewDrawerIntakeProps } from './QuickViewDrawer.types'
 import type { ChipVariant } from '../Chip/Chip.types'
 import aiIcon from '../../assets/ai-icon.svg'
@@ -47,11 +48,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function DrawerShell({ patient, status, onClose, onViewDetails, aiSummary, children }: {
+function DrawerShell({ patient, status, onClose, onViewDetails, onQuickSend, onMessage, onEmail, aiSummary, children }: {
   patient: string
   status: string
   onClose: () => void
   onViewDetails?: () => void
+  onQuickSend?: () => void
+  onMessage?: () => void
+  onEmail?: () => void
   aiSummary: string[]
   children: React.ReactNode
 }) {
@@ -62,15 +66,18 @@ function DrawerShell({ patient, status, onClose, onViewDetails, aiSummary, child
       <div className="fixed inset-0 z-[150] bg-black/20" onClick={onClose} />
       <div className="fixed right-0 top-0 z-[160] flex h-full w-[650px] flex-col bg-white shadow-modal">
         {/* Header */}
-        <div className="flex items-center justify-between px-2xl py-lg">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center gap-sm text-body text-text-primary hover:text-text-secondary"
-          >
-            <Icon name="arrow_back" size={18} />
-            Quick view
-          </button>
+        <div className="flex shrink-0 items-center justify-between px-2xl pb-lg pt-2xl">
+          <div className="flex items-center gap-sm">
+            <button
+              type="button"
+              aria-label="Back"
+              onClick={onClose}
+              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            >
+              <Icon name="arrow_back" size={18} />
+            </button>
+            <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Quick view</h2>
+          </div>
           <Link
             as="button"
             onClick={onViewDetails}
@@ -89,15 +96,36 @@ function DrawerShell({ patient, status, onClose, onViewDetails, aiSummary, child
             </div>
             <span className="text-lg text-text-primary">{patient}</span>
             <div className="flex items-center gap-md">
-              <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Icon name="send" size={18} />
-              </button>
-              <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Icon name="chat" size={18} />
-              </button>
-              <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Icon name="mail" size={18} />
-              </button>
+              <Tooltip content="Quick send" variant="brief">
+                <button
+                  type="button"
+                  aria-label="Quick send"
+                  onClick={onQuickSend}
+                  className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                >
+                  <Icon name="send" size={18} />
+                </button>
+              </Tooltip>
+              <Tooltip content="Message" variant="brief">
+                <button
+                  type="button"
+                  aria-label="Message"
+                  onClick={onMessage}
+                  className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                >
+                  <Icon name="sms" size={18} />
+                </button>
+              </Tooltip>
+              <Tooltip content="Email" variant="brief">
+                <button
+                  type="button"
+                  aria-label="Email"
+                  onClick={onEmail}
+                  className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                >
+                  <Icon name="mail" size={18} />
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -145,11 +173,18 @@ export function QuickViewDrawer(props: QuickViewDrawerProps) {
       <div className="fixed inset-0 z-[150]">
         <div className="absolute inset-0 bg-black/20" onClick={onClose} />
         <aside className="absolute right-0 top-0 flex h-full w-[650px] flex-col bg-white shadow-modal">
-          <div className="flex items-center justify-between px-2xl py-lg">
-            <button type="button" onClick={onClose} className="flex items-center gap-sm text-body text-text-primary hover:text-text-secondary">
-              <Icon name="arrow_back" size={18} />
-              Quick view
-            </button>
+          <div className="flex shrink-0 items-center justify-between px-2xl pb-lg pt-2xl">
+            <div className="flex items-center gap-sm">
+              <button
+                type="button"
+                aria-label="Back"
+                onClick={onClose}
+                className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              >
+                <Icon name="arrow_back" size={18} />
+              </button>
+              <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Quick view</h2>
+            </div>
             <Link as="button" onClick={props.onViewDetails} className="text-body">
               View details
             </Link>
@@ -159,9 +194,15 @@ export function QuickViewDrawer(props: QuickViewDrawerProps) {
               <div className="flex size-14 items-center justify-center rounded-full bg-green-100 text-[18px] text-green-700">{initials}</div>
               <p className="text-[18px] text-text-primary">{name}</p>
               <div className="flex items-center gap-sm">
-                <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border text-text-icon hover:bg-surface-l2"><Icon name="send" size={18} /></button>
-                <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border text-text-icon hover:bg-surface-l2"><Icon name="chat_bubble" size={18} /></button>
-                <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border text-text-icon hover:bg-surface-l2"><Icon name="mail" size={18} /></button>
+                <Tooltip content="Quick send" variant="brief">
+                  <button type="button" aria-label="Quick send" onClick={props.onQuickSend} className="flex size-9 items-center justify-center rounded-sm border border-border text-text-icon hover:bg-surface-l2"><Icon name="send" size={18} /></button>
+                </Tooltip>
+                <Tooltip content="Message" variant="brief">
+                  <button type="button" aria-label="Message" onClick={props.onMessage} className="flex size-9 items-center justify-center rounded-sm border border-border text-text-icon hover:bg-surface-l2"><Icon name="sms" size={18} /></button>
+                </Tooltip>
+                <Tooltip content="Email" variant="brief">
+                  <button type="button" aria-label="Email" onClick={props.onEmail} className="flex size-9 items-center justify-center rounded-sm border border-border text-text-icon hover:bg-surface-l2"><Icon name="mail" size={18} /></button>
+                </Tooltip>
               </div>
             </div>
             {summaryBullets ? (
@@ -215,7 +256,7 @@ export function QuickViewDrawer(props: QuickViewDrawerProps) {
   }
 
   // Appointment/waitlist mode
-  const { appointment, waitlist, onViewDetails } = props
+  const { appointment, waitlist, onViewDetails, onQuickSend, onMessage, onEmail } = props
   if (waitlist) {
     const aiSummary = [
       `Patient has been waiting since ${waitlist.waitingSince}`,
@@ -223,7 +264,7 @@ export function QuickViewDrawer(props: QuickViewDrawerProps) {
       `Outreach to be initiated via primary channel`,
     ]
     return (
-      <DrawerShell patient={waitlist.patient} status={waitlist.status} onClose={onClose} onViewDetails={onViewDetails} aiSummary={aiSummary}>
+      <DrawerShell patient={waitlist.patient} status={waitlist.status} onClose={onClose} onViewDetails={onViewDetails} onQuickSend={onQuickSend} onMessage={onMessage} onEmail={onEmail} aiSummary={aiSummary}>
         <Field label="Preferred provider">{waitlist.provider}</Field>
         <Field label="Location">{waitlist.location}</Field>
         <Field label="Appointments type">{waitlist.apptType}</Field>
@@ -243,7 +284,7 @@ export function QuickViewDrawer(props: QuickViewDrawerProps) {
   ]
 
   return (
-    <DrawerShell patient={appointment.patient} status={appointment.status} onClose={onClose} onViewDetails={onViewDetails} aiSummary={aiSummary}>
+    <DrawerShell patient={appointment.patient} status={appointment.status} onClose={onClose} onViewDetails={onViewDetails} onQuickSend={onQuickSend} onMessage={onMessage} onEmail={onEmail} aiSummary={aiSummary}>
       <Field label="Provider">{appointment.provider}</Field>
       <Field label="Appointments type">{appointment.apptType}</Field>
       <Field label="Appointment type">{appointment.dateTime}</Field>

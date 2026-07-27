@@ -59,8 +59,8 @@ export function FilterPanel({
           )}
         </div>
 
-        {/* Fields — scrollable, padded bottom so content clears the sticky footer */}
-        <div className={`flex flex-1 flex-col gap-sm overflow-y-auto px-xl ${onAdvancedFilters ? 'pb-[56px]' : 'pb-xl'}`}>
+        {/* Fields — scrollable */}
+        <div className="flex flex-1 flex-col gap-sm overflow-y-auto px-xl pb-xl">
           <div className="flex flex-col gap-sm">
             {fields.map((field) => {
               const count = selections[field.id]?.length ?? 0
@@ -86,19 +86,17 @@ export function FilterPanel({
               )
             })}
           </div>
-        </div>
 
-        {onAdvancedFilters && (
-          <div className="sticky bottom-0 w-[280px] bg-surface px-xl py-md">
+          {onAdvancedFilters && (
             <Link
               as="button"
               onClick={onAdvancedFilters}
-              className="rounded-sm py-xs text-body font-normal text-primary"
+              className="self-start rounded-sm py-xs text-body font-normal text-primary"
             >
               Advanced filters
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Select menu popover */}

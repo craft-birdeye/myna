@@ -1,0 +1,169 @@
+.acvd {
+  font-family: 'Roboto', sans-serif;
+}
+
+.acvd__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: #fff;
+}
+
+.acvd__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.acvd__back {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  border-radius: 4px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.acvd__back:hover {
+  background: #f2f4f7;
+}
+
+.acvd__title {
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.acvd__save {
+  height: 36px;
+  padding: 0 20px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 20px;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.acvd__save:hover {
+  background: #1565c0;
+}
+
+.acvd__body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+}
+
+.acvd__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.acvd__label {
+  font-size: 13px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.acvd__select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  color: #212121;
+}
+
+.acvd__select-trigger--placeholder {
+  color: #9e9e9e;
+}
+
+.acvd__select-trigger .material-symbols-outlined {
+  font-size: 20px;
+  color: #757575;
+}
+
+.acvd__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.acvd__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.acvd__search .material-symbols-outlined {
+  font-size: 18px;
+  color: #9e9e9e;
+}
+
+.acvd__search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #212121;
+  font-family: inherit;
+}
+
+.acvd__group-label {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9e9e9e;
+}
+
+.acvd__option {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #212121;
+  cursor: pointer;
+}
+
+.acvd__option:hover {
+  background: #f2f4f7;
+}
+
+.acvd__empty {
+  padding: 12px;
+  font-size: 13px;
+  color: #9e9e9e;
+  text-align: center;
+}

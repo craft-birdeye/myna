@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { EmptyState } from '../EmptyState/EmptyState'
 import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 
@@ -24,6 +25,8 @@ interface TooltipPos {
 interface DayCalendarProps {
   day: Date
   visibleColumns?: string[]
+  searchQuery?: string
+  onViewDetails?: (event: CalendarEvent) => void
 }
 
 function buildSlots() {
@@ -44,12 +47,12 @@ const TOOLTIP_WIDTH = 256
 
 const MOCK_EVENTS: CalendarEvent[] = [
   {
-    id: '1', name: 'Robin Willams',  phone: '(501) 336-7516', email: 'r.willams@email.com', provider: 'Dr. Smith Lee', apptType: 'Follow Up',      insuranceStatus: 'Verified',
+    id: '1', name: 'Robin Williams',  phone: '(501) 336-7516', email: 'r.williams@email.com', provider: 'Dr. Smith Lee', apptType: 'Follow Up',      insuranceStatus: 'Verified',
     start: '08:00am', end: '09:00am', color: 'green',
     checks: ['Appointment confirmed', 'Insurance verified', 'Intake form completed'],
   },
   {
-    id: '2', name: 'Robin Willams',  phone: '(501) 336-7516', email: 'r.willams@email.com', provider: 'Dr. Smith Lee', apptType: 'Follow Up',      insuranceStatus: 'Verified',
+    id: '2', name: 'Robin Williams',  phone: '(501) 336-7516', email: 'r.williams@email.com', provider: 'Dr. Smith Lee', apptType: 'Follow Up',      insuranceStatus: 'Verified',
     start: '08:00am', end: '09:00am', color: 'green',
     checks: ['Appointment confirmed', 'Insurance verified', 'Intake form completed'],
   },
@@ -81,7 +84,7 @@ function parseHour(t: string): number {
   return h + min / 60
 }
 
-function EventTooltip({ event, pos, onClose }: { event: CalendarEvent; pos: TooltipPos; onClose: () => void }) {
+function EventTooltip({ event, pos, onClose, onViewDetails }: { event: CalendarEvent; pos: TooltipPos; onClose: () => void; onViewDetails?: (event: CalendarEvent) => void }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -135,8 +138,8 @@ function EventTooltip({ event, pos, onClose }: { event: CalendarEvent; pos: Tool
         {/* View details */}
         <Link
           as="button"
-          onClick={onClose}
-          className="text-left text-body"
+          onClick={() => { onViewDetails?.(event); onClose() }}
+          className="text-left text-body text-primary hover:text-primary-hover"
         >
           View details
         </Link>
@@ -153,10 +156,15 @@ const COLUMN_FIELD_MAP: Record<string, (evt: CalendarEvent) => string> = {
   email:           (e) => e.email,
 }
 
-export function DayCalendar({ day: _day, visibleColumns = ['name', 'dateTime'] }: DayCalendarProps) {
+export function DayCalendar({ day: _day, visibleColumns = ['name', 'dateTime'], searchQuery = '', onViewDetails }: DayCalendarProps) {
   const pxPerHour = SLOT_HEIGHT * 2
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [tooltipPos, setTooltipPos] = useState<TooltipPos>({ x: 0, y: 0 })
+
+  const q = searchQuery.trim().toLowerCase()
+  const events = q
+    ? MOCK_EVENTS.filter((e) => e.name.toLowerCase().includes(q) || e.provider.toLowerCase().includes(q))
+    : MOCK_EVENTS
 
   const now = new Date()
   const currentH = now.getHours() + now.getMinutes() / 60
@@ -193,8 +201,17 @@ export function DayCalendar({ day: _day, visibleColumns = ['name', 'dateTime'] }
             <div key={i} className="border-t border-[#e8e8e8]" style={{ height: SLOT_HEIGHT }} />
           ))}
 
+          {/* Empty state — search returned no appointments */}
+          {q && events.length === 0 && (
+            <EmptyState
+              className="pointer-events-none absolute inset-0 z-10"
+              title="No appointments found"
+              description="Try searching with other keywords"
+            />
+          )}
+
           {/* Events */}
-          {MOCK_EVENTS.map((evt) => {
+          {events.map((evt) => {
             const top = (parseHour(evt.start) - START_HOUR) * pxPerHour
             const height = (parseHour(evt.end) - parseHour(evt.start)) * pxPerHour
             const c = COLOR_MAP[evt.color]
@@ -246,6 +263,7 @@ export function DayCalendar({ day: _day, visibleColumns = ['name', 'dateTime'] }
           event={activeEvent}
           pos={tooltipPos}
           onClose={() => setActiveEvent(null)}
+          onViewDetails={onViewDetails}
         />
       )}
     </div>

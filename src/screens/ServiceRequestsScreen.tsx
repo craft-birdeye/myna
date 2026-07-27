@@ -14,10 +14,11 @@ import {
   type ColumnOption,
   type FilterField,
   type FormField,
+  type RecordDetailScreenProps,
   // type Metric,
 } from '../components'
 
-interface ServiceRequest {
+export interface ServiceRequest {
   customer: string
   vehicle: string
   serviceType: string
@@ -107,6 +108,54 @@ const DEFAULT_ORDER = COLUMN_DEFS.map((c) => String(c.key))
 const DEFAULT_VISIBLE = ['customer', 'vehicle', 'serviceType', 'opCode', 'advisor', 'insuranceStatus', 'dateTime']
 const DEF_BY_KEY = new Map(COLUMN_DEFS.map((c) => [String(c.key), c]))
 
+export interface ServiceRequestDetailArgs {
+  row: ServiceRequest
+  fromTabLabel?: string
+}
+
+export function buildServiceRequestDetailProps({ row }: ServiceRequestDetailArgs): RecordDetailScreenProps {
+  return {
+    name: row.customer,
+    accordions: [
+      {
+        title: 'Service details',
+        defaultOpen: true,
+        fields: [
+          { label: 'Vehicle', value: row.vehicle },
+          { label: 'Service type', value: row.serviceType },
+          { label: 'Operation code', value: row.opCode },
+          { label: 'Advisor', value: row.advisor },
+          { label: 'Insurance status', value: row.insuranceStatus },
+          { label: 'Priority', value: row.priority },
+          { label: 'Date & time', value: row.dateTime },
+        ],
+      },
+      {
+        title: 'Contact information',
+        fields: [
+          { label: 'Phone', value: row.phone },
+          { label: 'Email', value: row.email },
+        ],
+      },
+    ],
+    metrics: [
+      { value: row.dateTime, label: 'Date & time' },
+      { value: row.vehicle, label: 'Vehicle' },
+      { value: row.priority, label: 'Priority' },
+      { value: row.status, label: 'Status' },
+    ],
+    activities: [
+      {
+        id: '1',
+        type: 'booked',
+        title: `${row.customer} scheduled '${row.serviceType}'`,
+        subtitle: `Vehicle: ${row.vehicle}`,
+        date: row.dateTime,
+      },
+    ],
+  }
+}
+
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l }))
 
 const SERVICE_TYPES = ['Oil change', 'Brake repair', 'Tire rotation', 'Diagnostics', 'Recall service', 'Battery replacement', 'AC repair', 'Transmission service']
@@ -144,11 +193,13 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'vehicle-make', label: 'Vehicle make', options: opts('Toyota', 'Honda', 'Ford', 'Chevrolet', 'Nissan', 'Jeep', 'Subaru') },
 ]
 
-export function ServiceRequestsScreen() {
+export function ServiceRequestsScreen({ onViewDetail }: { onViewDetail?: (args: ServiceRequestDetailArgs) => void } = {}) {
   const [activeTab, setActiveTab] = useState('confirmed')
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
   const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [scheduleFor, setScheduleFor] = useState<string | null>(null)
@@ -167,10 +218,19 @@ export function ServiceRequestsScreen() {
     [order],
   )
 
-  const filteredData = useMemo(
-    () => REQUESTS.filter((r) => r.status === TAB_STATUS_MAP[activeTab]),
-    [activeTab],
-  )
+  const filteredData = useMemo(() => {
+    const byTab = REQUESTS.filter((r) => r.status === TAB_STATUS_MAP[activeTab])
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return byTab
+    return byTab.filter(
+      (r) =>
+        r.customer.toLowerCase().includes(q) ||
+        r.vehicle.toLowerCase().includes(q) ||
+        r.advisor.toLowerCase().includes(q) ||
+        r.phone.toLowerCase().includes(q) ||
+        r.email.toLowerCase().includes(q),
+    )
+  }, [activeTab, searchQuery])
 
   return (
     <div className="flex h-full flex-col">
@@ -182,13 +242,46 @@ export function ServiceRequestsScreen() {
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
             <h1 className="text-h3 text-text-primary">Service requests</h1>
             <div className="flex items-center gap-sm">
-              <button
-                type="button"
-                aria-label="Search"
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              <div
+                className={`flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface transition-all ${
+                  searchOpen ? 'w-56 px-md' : 'w-9 justify-center'
+                }`}
               >
-                <Icon name="search" size={20} />
-              </button>
+                <button
+                  type="button"
+                  aria-label="Search"
+                  onClick={() => {
+                    if (searchOpen) return
+                    setSearchOpen(true)
+                  }}
+                  className="flex shrink-0 items-center justify-center text-text-icon"
+                >
+                  <Icon name="search" size={20} />
+                </button>
+                {searchOpen && (
+                  <>
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => {
+                        setSearchOpen(false)
+                        setSearchQuery('')
+                      }}
+                      className="flex shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+                    >
+                      <Icon name="close" size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
@@ -223,7 +316,7 @@ export function ServiceRequestsScreen() {
             <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
           </div>
 
-          <div className="px-lg py-lg">
+          <div className="flex flex-1 flex-col px-lg py-lg">
             <DataTable
               columns={columns}
               data={filteredData}
@@ -236,7 +329,7 @@ export function ServiceRequestsScreen() {
                 { label: 'Quick send', onClick: () => {} },
                 { label: 'Quick view', onClick: () => {} },
                 { label: 'View activity', onClick: () => {} },
-                { label: 'View details', onClick: () => {} },
+                { label: 'View details', onClick: (row) => onViewDetail?.({ row, fromTabLabel: TABS.find((t) => t.id === activeTab)?.label }) },
               ]}
             />
           </div>

@@ -218,7 +218,7 @@ function LocationDropdown({ value, onChange }: { value: string; onChange: (v: st
         onClick={() => setOpen(v => !v)}
         className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2 focus:outline-none"
       >
-        <Icon name="location_on" size={16} className="shrink-0 text-text-icon" />
+        <Icon name="place" size={16} className="shrink-0 text-text-icon" />
         <span>{selectedLabel}</span>
         <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
       </button>
@@ -722,11 +722,11 @@ export function AvailabilityScreen() {
                 })}
               </div>
 
-              {/* Time off & closures */}
+              {/* Time off and closures */}
               <div className="flex flex-col gap-lg">
                 <div className="flex items-start justify-between gap-lg">
                   <div>
-                    <h2 className="text-[16px] text-text-primary">Time off & closures</h2>
+                    <h2 className="text-[16px] text-text-primary">Time off and closures</h2>
                     <p className="mt-xs text-small text-text-secondary">
                       Block full days when the clinic is closed or a provider is unavailable. The agent won't offer slots on these dates, overriding the weekly booking windows.
                     </p>

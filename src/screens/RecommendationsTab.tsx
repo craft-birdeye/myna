@@ -480,7 +480,7 @@ function RecCard({
 
       <div className="mt-sm flex items-center justify-between gap-sm">
         <span className="inline-flex items-center gap-xs text-small text-text-tertiary">
-          <Icon name="chat_bubble_outline" size={12} />
+          <Icon name="sms" size={12} />
           {rec.conversationCount} affected
         </span>
         <span className="text-small text-text-tertiary">{rec.timeAgo}</span>
@@ -1236,7 +1236,7 @@ function DetailPanelInner({
                 onClick={() => setConvsOpen(true)}
                 className="flex w-fit items-center gap-xs text-small text-text-action "
               >
-                <Icon name="chat_bubble_outline" size={13} />
+                <Icon name="sms" size={13} />
                 View {rec.conversationCount} conversations
                 <Icon name="chevron_right" size={13} />
               </button>

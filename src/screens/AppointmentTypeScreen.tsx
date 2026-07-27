@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { DataTable, Icon, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { DataTable, HeaderSearchField, Icon, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
 interface ToggleProps { value: boolean; onChange: (v: boolean) => void }
@@ -92,6 +92,7 @@ interface ATDropdownFieldProps {
   label: string
   required?: boolean
   infoIcon?: boolean
+  tooltip?: string
   options: SelectOption[]
   value: string[]
   multi?: boolean
@@ -99,7 +100,7 @@ interface ATDropdownFieldProps {
   placeholder?: string
   onChange: (v: string[]) => void
 }
-function ATDropdownField({ label, required, infoIcon, options, value, multi = false, searchable, placeholder = 'Select', onChange }: ATDropdownFieldProps) {
+function ATDropdownField({ label, required, infoIcon, tooltip, options, value, multi = false, searchable, placeholder = 'Select', onChange }: ATDropdownFieldProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -124,7 +125,7 @@ function ATDropdownField({ label, required, infoIcon, options, value, multi = fa
         <label className="text-small text-text-secondary">
           {label}{required && <span className="text-danger"> *</span>}
         </label>
-        {infoIcon && <Icon name="info" size={14} className="text-text-tertiary" />}
+        {infoIcon && tooltip && <InfoTooltip text={tooltip} />}
       </div>
       <div ref={ref} className="relative">
         <button
@@ -209,7 +210,7 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
 
         {/* Body */}
         <div className="flex flex-1 flex-col gap-lg overflow-auto p-2xl">
-          <ATDropdownField label="Location" required infoIcon options={AT_LOCATION_OPTIONS} value={location} onChange={setLocation} />
+          <ATDropdownField label="Location" required infoIcon tooltip="The locations where this appointment type can be booked. Leave blank to make it available everywhere." options={AT_LOCATION_OPTIONS} value={location} onChange={setLocation} />
 
           {/* Display name */}
           <div className="flex flex-col gap-xs">
@@ -302,9 +303,19 @@ export function AppointmentTypeScreen() {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [editDrawerOpen, setEditDrawerOpen] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [activeMap, setActiveMap] = useState<Record<number, boolean>>(
     Object.fromEntries(APPT_TYPES.map((r, i) => [i, r.active]))
   )
+
+  const visibleApptTypes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return APPT_TYPES
+    return APPT_TYPES.filter(
+      (t) => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.providers.toLowerCase().includes(q),
+    )
+  }, [searchQuery])
 
   const COLUMNS: Column<ApptTypeRow>[] = [
     {
@@ -365,9 +376,7 @@ export function AppointmentTypeScreen() {
             <span className="text-h3 text-text-primary">9 Appointment types</span>
           </div>
           <div className="flex items-center gap-sm">
-            <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-              <Icon name="search" size={20} />
-            </button>
+            <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
             <select className="h-9 rounded-sm border border-border-selected bg-surface pl-md pr-2xl text-body text-text-primary hover:bg-surface-l2 focus:outline-none">
               <option>All locations</option>
             </select>
@@ -389,10 +398,10 @@ export function AppointmentTypeScreen() {
           </div>
         </div>
 
-        <div className="px-2xl pb-2xl">
+        <div className="flex flex-1 flex-col px-2xl pb-2xl">
           <DataTable
             columns={COLUMNS}
-            data={APPT_TYPES}
+            data={visibleApptTypes}
             rowMenuItems={rowMenuItems}
             rowClassName={() => ''}
           />

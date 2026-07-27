@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '../../../elemental-stubs';
 import PlayArrowIcon from './icons/play_arrow.svg';
-import CloseIcon from './icons/close.svg';
 
 export default function RHSPanelHeader({
   title = 'Title',
@@ -12,6 +11,12 @@ export default function RHSPanelHeader({
   showMoreMenu = false,
 }) {
   const svgStyle = { width: 24, height: 24, display: 'block' };
+  const iconStyle = {
+    fontSize: 24,
+    lineHeight: 1,
+    color: '#303030',
+    fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
+  };
 
   return (
     <div style={{
@@ -72,7 +77,11 @@ export default function RHSPanelHeader({
         )}
         <Button
           type="link"
-          customIcon={<img src={CloseIcon} alt="Close" style={svgStyle} />}
+          customIcon={
+            <span className="material-symbols-outlined" style={iconStyle} aria-hidden>
+              close
+            </span>
+          }
           onClick={onClose}
           noHover
           aria-label="Close"

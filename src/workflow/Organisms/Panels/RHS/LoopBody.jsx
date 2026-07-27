@@ -81,6 +81,7 @@ function LoopOverField({ chips, onAdd, onRemove }) {
             onAdd(value);
             setFieldPickerOpen(false);
           }}
+          showTriggerFields
         />
       )}
     </>

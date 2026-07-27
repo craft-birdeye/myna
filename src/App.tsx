@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
-import { Icon, IconRail, Link, SideNav, TopNav, type NavSection, type RailGroup, type Product } from './components'
-import { ManageAppointmentsScreen } from './screens/ManageAppointmentsScreen'
-import { SalesPipelineScreen } from './screens/SalesPipelineScreen'
-import { ServiceRequestsScreen } from './screens/ServiceRequestsScreen'
+import { Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
+import { SalesPipelineScreen, buildLeadDetailProps, type LeadDetailArgs } from './screens/SalesPipelineScreen'
+import { ServiceRequestsScreen, buildServiceRequestDetailProps, type ServiceRequestDetailArgs } from './screens/ServiceRequestsScreen'
 import { IntakeScreen, type IntakeDetailArgs } from './screens/IntakeScreen'
 import { IntakePatientDetailScreen } from './screens/IntakePatientDetailScreen'
 import { AppointmentOverviewScreen } from './screens/AppointmentOverviewScreen'
@@ -24,7 +25,7 @@ import { ManageTreatmentPlansScreen } from './screens/ManageTreatmentPlansScreen
 import { AgentDetailScreen } from './screens/AgentDetailScreen'
 import { WorkflowEditorScreen } from './screens/WorkflowEditorScreen'
 import { ProceduresScreen } from './screens/ProceduresScreen'
-import { ReviewWaitlistScreen } from './screens/ReviewWaitlistScreen'
+import { ReviewWaitlistScreen, buildWaitlistDetailProps, type WaitlistDetailArgs } from './screens/ReviewWaitlistScreen'
 // PhoneNumberScreen (Phone number 1 — Abhishek's version) is commented out from the UI.
 // Do not delete. Restore by uncommenting the import and its route below.
 // import { PhoneNumberScreen } from './screens/PhoneNumberScreen'
@@ -62,8 +63,8 @@ const RAIL_GROUPS: RailGroup[] = [
     header: 'Marketing',
     items: [
       { id: 'search', label: 'Search AI', icon: 'lightbulb' },
-      { id: 'listings', label: 'Listings AI', icon: 'location_on' },
-      { id: 'reviews', label: 'Reviews AI', icon: 'grade' },
+      { id: 'listings', label: 'Listings AI', icon: 'place' },
+      { id: 'reviews', label: 'Reviews AI', icon: 'star' },
       { id: 'social', label: 'Social AI', icon: 'workspaces' },
       { id: 'referral', label: 'Referral', icon: 'featured_seasonal_and_gifts' },
       { id: 'marketing-automation', label: 'Marketing Automation AI', icon: iconMarketing, kind: 'image' },
@@ -119,7 +120,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
     id: 'outcomes',
     label: 'Outcomes',
     items: [
-      { id: 'auto-frontdesk-overview',   label: 'Frontdesk overview' },
+      { id: 'auto-frontdesk-overview',   label: 'Front desk overview' },
       { id: 'auto-no-shows',             label: 'No shows prevented' },
     ],
   },
@@ -161,7 +162,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     id: 'outcomes',
     label: 'Outcomes',
     items: [
-      { id: 'hc-frontdesk-overview', label: 'Frontdesk overview' },
+      { id: 'hc-frontdesk-overview', label: 'Front desk overview' },
       { id: 'hc-no-shows',           label: 'No-shows prevented'      },
       { id: 'hc-waitlist',           label: 'Waitlist filled'    },
       { id: 'hc-intakes',            label: 'Intakes completed'  },
@@ -210,7 +211,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     id: 'outcomes',
     label: 'Outcomes',
     items: [
-      { id: 'dental-frontdesk-overview', label: 'Frontdesk overview'       },
+      { id: 'dental-frontdesk-overview', label: 'Front desk overview'       },
       { id: 'dental-no-shows',           label: 'Appointment confirmation' },
       { id: 'dental-waitlist',           label: 'Waitlist filled'          },
       { id: 'dental-intakes',            label: 'Intakes completed'        },
@@ -267,16 +268,53 @@ const AGENT_NAMES: Record<string, string> = {
   'treatment-plan-agent': 'Treatment plan agent',
 }
 
+// ─── "View details" deep links ─────────────────────────────────────────────
+// Detail views open in a new browser tab. Since this prototype has no URL
+// router, the clicked row's args are JSON-encoded into the URL so the fresh
+// tab can reconstruct the exact same detail screen on load.
+const DETAIL_VIEW_NAV: Record<string, string> = {
+  waitlist:         'review-waitlist',
+  lead:             'sales-pipeline',
+  'service-request':'service-requests',
+  intake:           'manage-intake',
+  appointment:      'manage-appointments',
+}
+
+function parseInitialDetailView(): { view: string; data: unknown } | null {
+  const params = new URLSearchParams(window.location.search)
+  const view = params.get('view')
+  const data = params.get('data')
+  if (!view || !data || !DETAIL_VIEW_NAV[view]) return null
+  try {
+    return { view, data: JSON.parse(data) }
+  } catch {
+    return null
+  }
+}
+
+function openDetailInNewTab(view: string, args: unknown) {
+  const url = new URL(import.meta.env.BASE_URL, window.location.origin)
+  url.searchParams.set('view', view)
+  url.searchParams.set('data', JSON.stringify(args))
+  window.open(url.toString(), '_blank', 'noopener,noreferrer')
+}
+
 
 export function App() {
+  const [initialDetailView] = useState(() => parseInitialDetailView())
   const [railActive, setRailActive] = useState('frontdesk')
-  const [navActive, setNavActive] = useState('manage-appointments')
+  const [navActive, setNavActive] = useState(
+    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'manage-appointments',
+  )
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
   const [settingsSubScreen, setSettingsSubScreen] = useState<string | null>(null)
+  const [agentToastMessage, setAgentToastMessage] = useState('')
+  const [agentToastVisible, setAgentToastVisible] = useState(false)
+  const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')
@@ -290,17 +328,45 @@ export function App() {
     setEditingAgentName(null)
     setWizardAgentDraft(null)
     setIsAgentSetupActive(false)
+    setIntakeDetail(null)
+    setAppointmentDetail(null)
+    setWaitlistDetail(null)
+    setLeadDetail(null)
+    setServiceRequestDetail(null)
   }
 
   function handleEditAgent(name: string, draft?: WizardAgentDraft) {
     setWizardAgentDraft(draft ?? null)
     setEditingAgentName(name)
+    if (draft) {
+      setAgentToastMessage(`${draft.agentName} created successfully`)
+      setAgentToastVisible(true)
+    }
   }
 
-  const [intakeDetail, setIntakeDetail] = useState<IntakeDetailArgs | null>(null)
+  const [intakeDetail, setIntakeDetail] = useState<IntakeDetailArgs | null>(
+    () => (initialDetailView?.view === 'intake' ? (initialDetailView.data as IntakeDetailArgs) : null),
+  )
+  const [appointmentDetail, setAppointmentDetail] = useState<AppointmentDetailArgs | null>(
+    () => (initialDetailView?.view === 'appointment' ? (initialDetailView.data as AppointmentDetailArgs) : null),
+  )
+  const [waitlistDetail, setWaitlistDetail] = useState<WaitlistDetailArgs | null>(
+    () => (initialDetailView?.view === 'waitlist' ? (initialDetailView.data as WaitlistDetailArgs) : null),
+  )
+  const [leadDetail, setLeadDetail] = useState<LeadDetailArgs | null>(
+    () => (initialDetailView?.view === 'lead' ? (initialDetailView.data as LeadDetailArgs) : null),
+  )
+  const [serviceRequestDetail, setServiceRequestDetail] = useState<ServiceRequestDetailArgs | null>(
+    () => (initialDetailView?.view === 'service-request' ? (initialDetailView.data as ServiceRequestDetailArgs) : null),
+  )
 
   const isEditingWorkflow = editingAgentName !== null
-  const isViewingDetail = intakeDetail !== null
+  const isViewingDetail =
+    intakeDetail !== null ||
+    appointmentDetail !== null ||
+    waitlistDetail !== null ||
+    leadDetail !== null ||
+    serviceRequestDetail !== null
 
   return (
     <ProcedureStoreProvider>
@@ -351,7 +417,10 @@ export function App() {
             <SettingsScreen initialTab={settingsTab} onTabConsumed={() => setSettingsTab(null)} onWebWidgets={() => setSettingsSubScreen('web-widgets')} onAppointmentWidgets={() => setSettingsSubScreen('appointment-widgets')} />
           )
         ) : railActive === 'inbox' ? (
-          <InboxScreen />
+          <InboxScreen
+            initialConversationId={inboxFocusId}
+            onInitialConversationConsumed={() => setInboxFocusId(null)}
+          />
         ) : isEditingWorkflow ? (
           <>
             <TopNav title="Front desk" initials="S" />
@@ -372,11 +441,45 @@ export function App() {
               />
             </div>
           </>
+        ) : navActive === 'review-waitlist' && waitlistDetail ? (
+          <>
+            <TopNav title="Contacts" initials="S" />
+            <div className="flex shrink-0 items-center gap-xs border-b border-border px-2xl py-md">
+              <Link
+                as="button"
+                className="text-body"
+              >
+                All contacts
+              </Link>
+              <Icon name="chevron_right" size={16} className="text-text-icon" />
+              <span className="text-body text-text-primary">{waitlistDetail.row.patient}</span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <RecordDetailScreen {...buildWaitlistDetailProps(waitlistDetail)} />
+            </div>
+          </>
         ) : navActive === 'review-waitlist' ? (
-          <ReviewWaitlistScreen />
+          <ReviewWaitlistScreen onViewDetail={(args) => openDetailInNewTab('waitlist', args)} />
+        ) : navActive === 'sales-pipeline' && leadDetail ? (
+          <>
+            <TopNav title="Contacts" initials="S" />
+            <div className="flex shrink-0 items-center gap-xs border-b border-border px-2xl py-md">
+              <Link
+                as="button"
+                className="text-body"
+              >
+                All contacts
+              </Link>
+              <Icon name="chevron_right" size={16} className="text-text-icon" />
+              <span className="text-body text-text-primary">{leadDetail.row.name}</span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <RecordDetailScreen {...buildLeadDetailProps(leadDetail)} />
+            </div>
+          </>
         ) : navActive === 'sales-pipeline' ? (
-          <SalesPipelineScreen />
-        ) : navActive === 'manage-intake' && isViewingDetail ? (
+          <SalesPipelineScreen onViewDetail={(args) => openDetailInNewTab('lead', args)} />
+        ) : navActive === 'manage-intake' && intakeDetail ? (
           <>
             <TopNav title="Front desk" initials="S" />
             <div className="flex shrink-0 items-center gap-xs border-b border-border px-2xl py-md">
@@ -405,9 +508,26 @@ export function App() {
             </div>
           </>
         ) : navActive === 'manage-intake' ? (
-          <IntakeScreen onViewDetail={setIntakeDetail} />
+          <IntakeScreen onViewDetail={(args) => openDetailInNewTab('intake', args)} />
+        ) : navActive === 'service-requests' && serviceRequestDetail ? (
+          <>
+            <TopNav title="Contacts" initials="S" />
+            <div className="flex shrink-0 items-center gap-xs border-b border-border px-2xl py-md">
+              <Link
+                as="button"
+                className="text-body"
+              >
+                All contacts
+              </Link>
+              <Icon name="chevron_right" size={16} className="text-text-icon" />
+              <span className="text-body text-text-primary">{serviceRequestDetail.row.customer}</span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <RecordDetailScreen {...buildServiceRequestDetailProps(serviceRequestDetail)} />
+            </div>
+          </>
         ) : navActive === 'service-requests' ? (
-          <ServiceRequestsScreen />
+          <ServiceRequestsScreen onViewDetail={(args) => openDetailInNewTab('service-request', args)} />
         ) : navActive === 'conversations' ? (
           <AppointmentOverviewScreen />
         ) : navActive === 'sales' ? (
@@ -461,12 +581,39 @@ export function App() {
             onEditAgent={handleEditAgent}
             onOpenIntegrationSettings={openIntegrationSettings}
             onAgentSetupActiveChange={setIsAgentSetupActive}
+            onNavigateToInbox={(conversationId) => {
+              setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
+              setRailActive('inbox')
+            }}
             product={activeProduct}
           />
+        ) : appointmentDetail ? (
+          <>
+            <TopNav title="Contacts" initials="S" />
+            <div className="flex shrink-0 items-center gap-xs border-b border-border px-2xl py-md">
+              <Link
+                as="button"
+                className="text-body"
+              >
+                All contacts
+              </Link>
+              <Icon name="chevron_right" size={16} className="text-text-icon" />
+              <span className="text-body text-text-primary">{appointmentDetail.row.name}</span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <RecordDetailScreen {...buildAppointmentDetailProps(appointmentDetail)} />
+            </div>
+          </>
         ) : (
-          <ManageAppointmentsScreen product={activeProduct} />
+          <ManageAppointmentsScreen product={activeProduct} onViewDetail={(args) => openDetailInNewTab('appointment', args)} />
         )}
       </main>
+
+      <Toast
+        message={agentToastMessage}
+        visible={agentToastVisible}
+        onClose={() => setAgentToastVisible(false)}
+      />
     </div>
     </ProcedureStoreProvider>
   )

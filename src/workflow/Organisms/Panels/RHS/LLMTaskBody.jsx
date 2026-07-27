@@ -224,6 +224,7 @@ export default function LLMTaskBody({ initialValues = {}, onFieldChange, onOpenT
         required
         onOpenToolDrawer={onOpenToolDrawer}
         onOpenTool={onOpenTool}
+        showTriggerFields
       />
 
       <OutputFields

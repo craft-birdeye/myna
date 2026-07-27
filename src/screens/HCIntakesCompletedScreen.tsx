@@ -35,7 +35,7 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'custom-test',     label: 'Custom test',         options: opts('Test Group A', 'Test Group B', 'Cohort 1', 'Cohort 2', 'Cohort 3') },
   { id: 'location',              label: 'Location',                        options: opts('North Austin', 'South Austin', 'San Francisco', 'Phoenix, AZ', 'Denver, CO', 'Seattle, WA') },
   { id: 'conversation-status',   label: 'Conversation status',             options: opts('Open', 'Closed', 'Pending', 'Escalated', 'Unread') },
-  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Frontdesk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
+  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Front desk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
   { id: 'time-period',           label: 'Time period',                     options: opts('Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months') },
   { id: 'last-incoming-channel', label: 'Last incoming message (Channel)', options: opts('Voice', 'Text', 'Chat') },
 ]
@@ -146,7 +146,7 @@ export function HCIntakesCompletedScreen({ isDental = false }: { isDental?: bool
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
           title="Intakes completed"
-          subtitle="Patient intake form completion rates and drop-off analysis driven by the pre-visit agent."
+          subtitle="Intake completion rates and outreach performance across your locations"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector
@@ -170,11 +170,11 @@ export function HCIntakesCompletedScreen({ isDental = false }: { isDental?: bool
 
           <SummaryStats stats={SUMMARY_STATS} />
 
-          <HCCard title="Intake funnel">
+          <HCCard title="Intake funnel" tooltip="Traces intake reminders from the channel they were sent on, through patient type, to the final completion outcome.">
             <SankeyChart nodes={FUNNEL_NODES} links={FUNNEL_LINKS} height={400} nodeColors={FUNNEL_NODE_COLORS} columnHeaders={['Intake reminders sent by channel', 'Patient type', 'Outcome']} />
           </HCCard>
 
-          <HCCard title="Intake overtime" tooltip="Monthly breakdown of patient intakes by status — completed, in progress, and pending.">
+          <HCCard title="Intake over time" tooltip="Monthly breakdown of patient intakes by status — completed, in progress, and pending.">
             <StackedBarChart
               data={INTAKE_OVERTIME_DATA}
               series={INTAKE_OVERTIME_SERIES}
@@ -185,7 +185,7 @@ export function HCIntakesCompletedScreen({ isDental = false }: { isDental?: bool
           </HCCard>
 
           <div className="grid grid-cols-2 gap-lg">
-            <HCCard title="Completion by patient type">
+            <HCCard title="Completion by patient type" tooltip="Breaks down completed intakes by new vs. returning patient, counting each patient once.">
               <ChartStatRow stats={[
                 { value: '428', label: 'New patient'       },
                 { value: '326', label: 'Returning patient' },
@@ -197,7 +197,7 @@ export function HCIntakesCompletedScreen({ isDental = false }: { isDental?: bool
               />
             </HCCard>
 
-            <HCCard title="Completion by channel">
+            <HCCard title="Completion by channel" tooltip="Breaks down completed intakes by the channel the form was sent on, counting each patient once.">
               <ChartStatRow stats={[
                 { value: '4.4K', label: 'Forms sent' },
                 { value: '2.4K', label: 'Voice'      },
@@ -211,7 +211,7 @@ export function HCIntakesCompletedScreen({ isDental = false }: { isDental?: bool
             </HCCard>
           </div>
 
-          <HCCard title="Intakes by location">
+          <HCCard title="Intakes by location" tooltip="Breaks down intake completion and drop-off by location, aggregated over the selected date range.">
             <DataTable columns={LOCATION_COLUMNS} data={LOCATION_DATA} scrollOnHover={isDental} />
           </HCCard>
 

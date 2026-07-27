@@ -56,6 +56,14 @@ export function IntakePatientDetailScreen({
   }
   const activities = buildActivities(activityProps)
   const [activeActivityTab, setActiveActivityTab] = useState('all-activity')
+  const [activitySearch, setActivitySearch] = useState('')
+
+  const q = activitySearch.trim().toLowerCase()
+  const visibleActivities = q
+    ? activities.filter(
+        (a) => a.title.toLowerCase().includes(q) || (a.subtitle ?? '').toLowerCase().includes(q),
+      )
+    : activities
 
   const initials = patient.patient
     .split(' ')
@@ -170,8 +178,20 @@ export function IntakePatientDetailScreen({
               <input
                 type="text"
                 placeholder="Search"
+                value={activitySearch}
+                onChange={(e) => setActivitySearch(e.target.value)}
                 className="flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
               />
+              {activitySearch && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => setActivitySearch('')}
+                  className="shrink-0 text-text-icon hover:text-text-primary"
+                >
+                  <Icon name="close" size={16} />
+                </button>
+              )}
             </div>
             <button
               type="button"
@@ -191,8 +211,8 @@ export function IntakePatientDetailScreen({
 
           {/* Activity timeline */}
           <div className="mx-lg mt-lg pb-xl">
-            {activities.map((activity, i) => (
-              <ActivityRow key={activity.id} activity={activity} isLast={i === activities.length - 1} />
+            {visibleActivities.map((activity, i) => (
+              <ActivityRow key={activity.id} activity={activity} isLast={i === visibleActivities.length - 1} />
             ))}
           </div>
 

@@ -67,7 +67,7 @@ const sankeyLinks = [
   { source: 7, target: 10, value: 1 },
 ]
 
-// Intake overtime — stacked bar
+// Intake over time — stacked bar
 const INTAKE_SERIES: BarSeries[] = [
   { key: 'completed',    label: 'Completed',     color: c.resolved   },
   { key: 'attempted',    label: 'Attempted',     color: c.escalated  },
@@ -218,7 +218,7 @@ export function IntakeOutcomeScreen() {
           <SankeyChart nodes={sankeyNodes} links={sankeyLinks} height={260} />
         </ChartCard>
 
-        <ChartCard title="Intake overtime">
+        <ChartCard title="Intake over time">
           <StackedBarChart data={intakeOverTime} series={INTAKE_SERIES} xKey="month" height={300} />
         </ChartCard>
 

@@ -35,7 +35,7 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'custom-test',     label: 'Custom test',         options: opts('Test Group A', 'Test Group B', 'Cohort 1', 'Cohort 2', 'Cohort 3') },
   { id: 'location',              label: 'Location',                        options: opts('North Austin', 'South Austin', 'San Francisco', 'Phoenix, AZ', 'Denver, CO', 'Seattle, WA') },
   { id: 'conversation-status',   label: 'Conversation status',             options: opts('Open', 'Closed', 'Pending', 'Escalated', 'Unread') },
-  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Frontdesk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
+  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Front desk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
   { id: 'time-period',           label: 'Time period',                     options: opts('Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months') },
   { id: 'last-incoming-channel', label: 'Last incoming message (Channel)', options: opts('Voice', 'Text', 'Chat') },
 ]
@@ -171,7 +171,7 @@ export function HCWaitlistFilledScreen({ isDental = false }: { isDental?: boolea
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
           title="Waitlist filled"
-          subtitle="Cancellation recovery and waitlist slot outcomes driven by the waitlist agent."
+          subtitle="Cancellation recovery and slot fill outcomes across your locations"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector
@@ -195,7 +195,7 @@ export function HCWaitlistFilledScreen({ isDental = false }: { isDental?: boolea
 
           <SummaryStats stats={SUMMARY_STATS} />
 
-          <HCCard title="Waitlist funnel">
+          <HCCard title="Waitlist funnel" tooltip="Traces waitlist reminders from the channel they were sent on, through the response outcome, to how long it took to confirm.">
             <SankeyChart
               nodes={FUNNEL_NODES}
               links={FUNNEL_LINKS}
@@ -237,7 +237,7 @@ export function HCWaitlistFilledScreen({ isDental = false }: { isDental?: boolea
             <DataTable columns={CHANNEL_COLUMNS} data={CHANNEL_DATA} scrollOnHover={isDental} />
           </HCCard>
 
-          <HCCard title="Waitlist by location">
+          <HCCard title="Waitlist by location" tooltip="Breaks down waitlist outreach and fill outcomes by location, aggregated over the selected date range.">
             <DataTable columns={WAITLIST_LOCATION_COLUMNS} data={WAITLIST_LOCATION_DATA} scrollOnHover={isDental} />
           </HCCard>
 

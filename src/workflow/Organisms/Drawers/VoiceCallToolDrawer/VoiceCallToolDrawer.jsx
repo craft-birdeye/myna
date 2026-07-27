@@ -468,6 +468,7 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
       {fieldPickerOpen && (
         <FieldPickerModal
           overlayZIndex={10000}
+          showTriggerFields
           onClose={() => setFieldPickerOpen(false)}
           onSelectField={(value, name) => {
             setContextVariables((prev) => {

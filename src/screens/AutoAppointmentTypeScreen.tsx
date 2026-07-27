@@ -399,6 +399,8 @@ export function AutoAppointmentTypeScreen() {
   const [colVisible, setColVisible] = useState<string[]>(ST_DEFAULT_VISIBLE)
   const [filterOpen,     setFilterOpen]     = useState(false)
   const [hintTooltip,    setHintTooltip]    = useState<{ hints: string[]; x: number; y: number } | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [activeMap, setActiveMap] = useState<Record<number, boolean>>(
     Object.fromEntries(SERVICE_TYPES.map((r, i) => [i, r.active]))
   )
@@ -411,8 +413,10 @@ export function AutoAppointmentTypeScreen() {
     if (filterValues['department']?.length) rows = rows.filter(r => filterValues['department'].includes(r.department))
     if (filterValues['duration']?.length)   rows = rows.filter(r => filterValues['duration'].includes(r.duration))
     if (filterValues['active']?.length)     rows = rows.filter(r => filterValues['active'].includes(String(r.active)))
+    const q = searchQuery.trim().toLowerCase()
+    if (q) rows = rows.filter(r => r.name.toLowerCase().includes(q) || r.description.toLowerCase().includes(q) || r.advisors.toLowerCase().includes(q))
     return rows
-  }, [filterValues])
+  }, [filterValues, searchQuery])
 
   const columnOptions = useMemo(
     () => colOrder.map(k => ({ key: k, label: ST_DEF_BY_KEY.get(k)!.label, locked: ST_DEF_BY_KEY.get(k)!.locked })),
@@ -474,9 +478,46 @@ export function AutoAppointmentTypeScreen() {
             <span className="text-h3 text-text-primary">{SERVICE_TYPES.length} Appointment types</span>
           </div>
           <div className="flex items-center gap-sm">
-            <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-              <Icon name="search" size={20} />
-            </button>
+            <div
+              className={`flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface transition-all ${
+                searchOpen ? 'w-56 px-md' : 'w-9 justify-center'
+              }`}
+            >
+              <button
+                type="button"
+                aria-label="Search"
+                onClick={() => {
+                  if (searchOpen) return
+                  setSearchOpen(true)
+                }}
+                className="flex shrink-0 items-center justify-center text-text-icon"
+              >
+                <Icon name="search" size={20} />
+              </button>
+              {searchOpen && (
+                <>
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setSearchOpen(false)
+                      setSearchQuery('')
+                    }}
+                    className="flex shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+                  >
+                    <Icon name="close" size={18} />
+                  </button>
+                </>
+              )}
+            </div>
             <div className="relative w-[200px]">
               <button
                 type="button"
@@ -513,7 +554,7 @@ export function AutoAppointmentTypeScreen() {
           </div>
         </div>
 
-        <div className="px-2xl pb-2xl pt-lg">
+        <div className="flex flex-1 flex-col px-2xl pb-2xl pt-lg">
           <DataTable columns={COLUMNS} data={filtered} rowMenuItems={rowMenuItems} rowClassName={() => ''} />
         </div>
       </div>

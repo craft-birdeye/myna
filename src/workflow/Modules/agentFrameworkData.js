@@ -20,7 +20,7 @@ export const MODULE_DEFINITIONS = {
   },
   reviews: {
     name: 'Reviews',
-    icon: 'grade',
+    icon: 'star',
     description: 'Automate review response, escalation, tagging, and quality monitoring workflows.',
     agents: [
       {
@@ -131,7 +131,7 @@ export const MODULE_DEFINITIONS = {
   },
   listings: {
     name: 'Listings',
-    icon: 'location_on',
+    icon: 'place',
     description: 'Keep profile data accurate across location networks and flag sync issues.',
     agents: [
       {

@@ -166,7 +166,7 @@ export function ConversationsScreen() {
       <div className="flex flex-1 flex-col gap-lg overflow-auto bg-surface px-2xl pb-2xl pt-md">
         <SummaryStats stats={SUMMARY} />
 
-        <ChartCard title="Involvement overtime">
+        <ChartCard title="Involvement over time">
           <StackedBarChart data={overTime} series={OUTCOME_SERIES} xKey="month" height={300} />
         </ChartCard>
 
@@ -198,7 +198,7 @@ export function ConversationsScreen() {
           <StackedBarChart data={byChannel} series={CHANNEL_SERIES} xKey="month" height={300} />
         </ChartCard>
 
-        <ChartCard title="Questions category overtime">
+        <ChartCard title="Questions category over time">
           <StackedBarChart data={categoryData} series={CATEGORY_SERIES} xKey="day" height={320} />
         </ChartCard>
 

@@ -1,19 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 
+import { FRONT_DESK_VOICE_MESSAGES } from '../../data/frontDeskCallConversation'
 import { VoiceChatDrawer } from '../VoiceChatDrawer/VoiceChatDrawer'
 import type { VoicemailMessageProps } from './VoicemailMessage.types'
-
-const DEMO_MESSAGES = [
-  { id: 1, role: 'system' as const, text: 'Call started • 02.40 PM' },
-  { id: 2, role: 'agent'  as const, text: 'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?' },
-  { id: 3, role: 'user'   as const, text: 'I am having a very bad headache. I think it is migraine.' },
-  { id: 4, role: 'agent'  as const, text: "I'm really sorry you're dealing with that — a bad headache is no fun. Just so I point you in the right direction: is the pain coming from your teeth, jaw, or gums, or is it more of a general head pain?" },
-  { id: 5, role: 'user'   as const, text: 'Now that you ask — it kind of started near my back tooth and spread up.' },
-  { id: 6, role: 'agent'  as const, text: 'Thank you, that helps. Pain that radiates from a tooth can sometimes need prompt attention. Are you having any swelling in your face or jaw, fever, or trouble swallowing or breathing?' },
-  { id: 7, role: 'user'   as const, text: 'A little swelling near the tooth, no fever' },
-  { id: 8, role: 'system' as const, text: 'You ended the call' },
-]
 
 // Fallback static bars when no audioUrl is provided
 const WAVE_BARS = [
@@ -72,7 +62,17 @@ function StaticWaveform({ progress, onClick }: { progress: number; onClick: (e: 
   )
 }
 
-export function VoicemailMessage({ variant = 'voicemail', transcript, summary, duration, durationSecs, time, audioUrl }: VoicemailMessageProps) {
+export function VoicemailMessage({
+  variant = 'voicemail',
+  transcript,
+  summary,
+  duration,
+  durationSecs,
+  time,
+  audioUrl,
+  messages = FRONT_DESK_VOICE_MESSAGES,
+  contactName,
+}: VoicemailMessageProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [elapsed, setElapsed] = useState(0)
@@ -203,10 +203,11 @@ export function VoicemailMessage({ variant = 'voicemail', transcript, summary, d
       {variant === 'voice-chat' && (
         <VoiceChatDrawer
           open={drawerOpen}
-          messages={DEMO_MESSAGES}
+          messages={messages}
           summary={summary}
           audioUrl={audioUrl}
           durationSecs={durationSecs}
+          title={contactName ? `Call with ${contactName}` : undefined}
           onClose={() => setDrawerOpen(false)}
         />
       )}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Chip, CustomizeColumnsDrawer, FilterPanel, Icon, MessageDrawer, Tabs, TopNav, type ChipVariant, type ColumnOption, type FilterField } from '../components'
+import { Chip, CustomizeColumnsDrawer, FilterPanel, Icon, InfoTooltip, MessageDrawer, Tabs, TopNav, type ChipVariant, type ColumnOption, type FilterField } from '../components'
 
 type ProcedureStatus = 'Diagnosed' | 'Accepted' | 'Rejected' | 'Completed'
 
@@ -217,12 +217,7 @@ function ProcedureDrawer({ proc, onClose, onSendCommunication }: { proc: Procedu
             <DetailField label="Procedure">
               <div className="flex items-start gap-xs">
                 <span>{proc.code} — {proc.description}</span>
-                <div className="group/tip relative mt-[1px] flex shrink-0 items-center">
-                  <Icon name="info" size={14} className="cursor-default text-text-tertiary" />
-                  <div className="pointer-events-none absolute left-5 top-0 z-20 w-56 rounded-sm border border-border bg-surface px-md py-sm text-small text-text-secondary opacity-0 shadow-dropdown transition-opacity group-hover/tip:opacity-100">
-                    ADA procedure code · tooth {proc.tooth}
-                  </div>
-                </div>
+                <InfoTooltip text={`ADA procedure code · tooth ${proc.tooth}`} variant="brief" />
               </div>
             </DetailField>
             <DetailField label="Status">
@@ -390,12 +385,7 @@ export function ManageTreatmentPlansScreen() {
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
             <div className="flex items-center gap-sm">
               <h1 className="text-h3 text-text-primary">Manage treatment plans</h1>
-              <div className="group/tip relative flex items-center">
-                <Icon name="info" size={16} className="cursor-default text-text-tertiary" />
-                <div className="pointer-events-none absolute left-6 top-0 z-20 w-72 rounded-sm border border-border bg-surface px-md py-sm text-small text-text-secondary opacity-0 shadow-dropdown transition-opacity group-hover/tip:opacity-100">
-                  Every planned procedure is one row — targeted by code/tooth, not just the latest plan.
-                </div>
-              </div>
+              <InfoTooltip text="Every planned procedure is one row — targeted by code/tooth, not just the latest plan." />
             </div>
             <div className="flex items-center gap-sm">
               {/* Search — icon toggles input, same pattern as ProceduresScreen */}

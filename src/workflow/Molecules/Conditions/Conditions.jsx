@@ -184,6 +184,7 @@ export default function Conditions({
   logic = 'OR',
   onConditionChange,
   onLogicChange,
+  onConnectorChange,
   onAddCondition,
   onRemoveCondition,
   onAdvancedFilters,
@@ -200,49 +201,79 @@ export default function Conditions({
               const fieldOpts = conditionOptions?.field ?? condition.fieldOptions ?? [];
               const operatorOpts = conditionOptions?.operator ?? condition.operatorOptions ?? [];
               const valueOpts = conditionOptions?.value ?? condition.valueOptions ?? [];
+              // Indentation nests a condition under the previous one (Figma: nested AND/OR groups).
+              // Falls back to 0 for plain flat condition lists used by other agents.
+              const indent = condition.indent ?? 0;
+              // Per-row connector lets sibling groups differ (AND within a group, OR between groups).
+              // Falls back to the single shared `logic` prop for callers that haven't opted in yet.
+              const connector = condition.connector ?? logic;
+
+              const conditionFields = (
+                <div className={styles.conditionDropdowns}>
+                  <Dropdown
+                    name={`field-${condition.id}`}
+                    selected={condition.fieldValue}
+                    options={fieldOpts}
+                    onChange={(opt) => onConditionChange?.(condition.id, 'field', opt.value)}
+                    onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('field', opts) : undefined}
+                  />
+                  <Dropdown
+                    name={`operator-${condition.id}`}
+                    selected={condition.operatorValue}
+                    options={operatorOpts}
+                    onChange={(opt) => onConditionChange?.(condition.id, 'operator', opt.value)}
+                    onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('operator', opts) : undefined}
+                  />
+                  <Dropdown
+                    name={`value-${condition.id}`}
+                    selected={condition.valueValue}
+                    options={valueOpts}
+                    onChange={(opt) => onConditionChange?.(condition.id, 'value', opt.value)}
+                    onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('value', opts) : undefined}
+                  />
+                </div>
+              );
+
+              const connectorRow = index > 0 && (
+                <div className={styles.connectorRow}>
+                  <LogicConnector
+                    value={connector}
+                    onChange={(val) =>
+                      onConnectorChange ? onConnectorChange(condition.id, val) : onLogicChange?.(val)
+                    }
+                  />
+                  {onRemoveCondition && (
+                    <button
+                      type="button"
+                      className={styles.removeBtn}
+                      onClick={() => onRemoveCondition(condition.id)}
+                      title="Remove condition"
+                    >
+                      <span className={`material-symbols-outlined ${styles.removeBtnIcon}`}>delete</span>
+                    </button>
+                  )}
+                </div>
+              );
+
+              // Wrap the connector + its condition in `indent` nested left-border guides,
+              // so consecutive conditions at deeper levels read as visually grouped.
+              let body = (
+                <div className="trigger-conditions__condition">
+                  {conditionFields}
+                </div>
+              );
+              for (let i = 0; i < indent; i++) {
+                body = <div className={styles.indentWrap}>{body}</div>;
+              }
+              let connectorBody = connectorRow;
+              for (let i = 0; i < indent && connectorBody; i++) {
+                connectorBody = <div className={styles.indentWrap}>{connectorBody}</div>;
+              }
 
               return (
                 <React.Fragment key={condition.id}>
-                  {index > 0 && (
-                    <div className={styles.connectorRow}>
-                      <LogicConnector value={logic} onChange={onLogicChange ?? (() => {})} />
-                      {onRemoveCondition && (
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={() => onRemoveCondition(condition.id)}
-                          title="Remove condition"
-                        >
-                          <span className={`material-symbols-outlined ${styles.removeBtnIcon}`}>delete</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <div className="trigger-conditions__condition">
-                    <div className={styles.conditionDropdowns}>
-                      <Dropdown
-                        name={`field-${condition.id}`}
-                        selected={condition.fieldValue}
-                        options={fieldOpts}
-                        onChange={(opt) => onConditionChange?.(condition.id, 'field', opt.value)}
-                        onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('field', opts) : undefined}
-                      />
-                      <Dropdown
-                        name={`operator-${condition.id}`}
-                        selected={condition.operatorValue}
-                        options={operatorOpts}
-                        onChange={(opt) => onConditionChange?.(condition.id, 'operator', opt.value)}
-                        onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('operator', opts) : undefined}
-                      />
-                      <Dropdown
-                        name={`value-${condition.id}`}
-                        selected={condition.valueValue}
-                        options={valueOpts}
-                        onChange={(opt) => onConditionChange?.(condition.id, 'value', opt.value)}
-                        onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('value', opts) : undefined}
-                      />
-                    </div>
-                  </div>
+                  {connectorBody}
+                  {body}
                 </React.Fragment>
               );
             })}

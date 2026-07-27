@@ -72,6 +72,14 @@ export default function EntityTriggerBody({ initialValues = {}, onFieldChange })
     });
   }
 
+  function handleConnectorChange(id, value) {
+    setConditions((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, connector: value } : c));
+      onFieldChange?.('conditions', next);
+      return next;
+    });
+  }
+
   function handleAddCondition() {
     setConditions((prev) => {
       const next = [...prev, makeCondition(Date.now())];
@@ -112,6 +120,7 @@ export default function EntityTriggerBody({ initialValues = {}, onFieldChange })
         logic={logic}
         onConditionChange={handleConditionChange}
         onLogicChange={(val) => { setLogic(val); onFieldChange?.('logic', val); }}
+        onConnectorChange={handleConnectorChange}
         onAddCondition={handleAddCondition}
         onRemoveCondition={handleRemoveCondition}
         onAdvancedFilters={() => {}}

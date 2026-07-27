@@ -18,7 +18,7 @@ export const HEALTHCARE_INTEGRATION_CATALOG: HealthcareIntegration[] = [
     id: 'epic',
     iconBg: '#C8102E',
     iconLabel: 'E',
-    name: 'Epics',
+    name: 'Epic',
     description: 'Connect to Epic to manage patient charts and scheduling.',
   },
   {

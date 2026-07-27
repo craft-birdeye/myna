@@ -49,7 +49,7 @@ const FUNNEL_LINKS: SankeyLink[] = [
   { source: 5, target: 10, value: 1 },
 ]
 
-// ── Appointments overtime ───────────────────────────────────────────────────
+// ── Appointments over time ──────────────────────────────────────────────────
 const OVERTIME_DATA = [
   { month: 'Dec 2023', completed: 254, rescheduled: 80,  noShow: 60,  cancelled: 60  },
   { month: 'Jan 2024', completed: 234, rescheduled: 90,  noShow: 50,  cancelled: 50  },
@@ -158,12 +158,12 @@ export function AppointmentOverviewScreen() {
           <SummaryStats stats={SUMMARY_STATS} />
 
           {/* Appointments funnel */}
-          <ChartCard title="Appointments funnel">
+          <ChartCard title="Appointments funnel" tooltip="Traces conversations from the channel they came in on, through whether an AI or human agent handled them, to the final booking outcome.">
             <SankeyChart nodes={FUNNEL_NODES} links={FUNNEL_LINKS} height={380} />
           </ChartCard>
 
-          {/* Appointments overtime */}
-          <ChartCard title="Appointments overtime">
+          {/* Appointments over time */}
+          <ChartCard title="Appointments over time" tooltip="Monthly breakdown of booked, rescheduled, and cancelled appointments.">
             <StackedBarChart
               data={OVERTIME_DATA}
               series={OVERTIME_SERIES}
@@ -175,7 +175,7 @@ export function AppointmentOverviewScreen() {
 
           {/* Appointment confirmation + Insurances verified */}
           <div className="grid grid-cols-2 gap-lg">
-            <ChartCard title="Appointment confirmation">
+            <ChartCard title="Appointment confirmation" tooltip="Monthly view of confirmed appointments and the resulting no-show rate.">
               <ChartStatRow stats={[
                 { value: '275',  label: 'Appointment confirmation' },
                 { value: '9.7%', label: 'No-show rate'       },
@@ -189,7 +189,7 @@ export function AppointmentOverviewScreen() {
               />
             </ChartCard>
 
-            <ChartCard title="Insurances verified">
+            <ChartCard title="Insurances verified" tooltip="Monthly view of unique conversations where the patient's insurance was successfully verified by the agent.">
               <ChartStatRow stats={[
                 { value: '1.2K',   label: 'Total verified'    },
                 { value: '94.2%',  label: 'Verification rate' },
@@ -205,12 +205,12 @@ export function AppointmentOverviewScreen() {
           </div>
 
           {/* Appointments by location */}
-          <ChartCard title="Appointments by location">
+          <ChartCard title="Appointments by location" tooltip="Breaks down appointment outcomes by location, aggregated over the selected date range.">
             <DataTable columns={LOCATION_COLUMNS} data={LOCATION_DATA} />
           </ChartCard>
 
           {/* Peak booking times and days */}
-          <ChartCard title="Peak booking times and days">
+          <ChartCard title="Peak booking times and days" tooltip="Shows booking request volume by day of week and hour, to highlight peak demand periods.">
             <Heatmap
               rowLabels={HEATMAP_ROWS}
               colLabels={HEATMAP_COLS}

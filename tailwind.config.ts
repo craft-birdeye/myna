@@ -3,7 +3,7 @@ import type { Config } from 'tailwindcss'
 // Design tokens extracted from Figma (MYNA — Automotive · Frontdesk)
 // via get_variable_defs. Do not hardcode raw hex/px in components — use these.
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: ['./index.html', './src/**/*.{ts,tsx,js,jsx}'],
   theme: {
     extend: {
       colors: {
@@ -47,6 +47,7 @@ export default {
           danger: { bg: '#fef6f5', text: '#de1b0c' }, // Red/10 · negative
           neutral: { bg: '#eaeaea', text: '#555555' }, // Gray/40 · Gray/300
         },
+        tooltip: { DEFAULT: '#252525' }, // Gray/800 — Tooltip / Web (Aero DS, node 2180:72)
       },
       spacing: {
         xs: '4px', // Spacing/xs
@@ -55,6 +56,8 @@ export default {
         lg: '16px', // Spacing/lg
         xl: '20px', // Spacing/xl
         '2xl': '24px', // Spacing/2xl
+        '3xl': '32px', // Spacing/3xl — section rhythm
+        '4xl': '40px', // Spacing/4xl — page section gaps
       },
       borderRadius: {
         sm: '4px', // Corner Radius/sm (Default-Web)
@@ -66,6 +69,7 @@ export default {
       boxShadow: {
         dropdown: '0 4px 16px rgba(0,0,0,0.12)',
         modal: '0 8px 40px rgba(0,0,0,0.22)',
+        tooltip: '0px 4px 8px rgba(33,33,33,0.18)', // Shadow/sm — Tooltip / Web (Aero DS, node 2180:72)
       },
       fontFamily: {
         sans: ['Roboto', 'sans-serif'],

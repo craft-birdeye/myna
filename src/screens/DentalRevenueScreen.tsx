@@ -162,7 +162,7 @@ export function DentalRevenueScreen() {
 
             <SummaryStats stats={SUMMARY_STATS} />
 
-            <HCCard title="Payment collection funnel">
+            <HCCard title="Payment collection funnel" tooltip="Traces contacted balances from the outreach channel, through response time, to the final payment outcome.">
               <SankeyChart
                 nodes={FUNNEL_NODES}
                 links={FUNNEL_LINKS}
@@ -173,7 +173,7 @@ export function DentalRevenueScreen() {
             </HCCard>
 
             <div className="grid grid-cols-2 gap-lg">
-              <HCCard title="Amount collected by channel">
+              <HCCard title="Amount collected by channel" tooltip="Breaks down the total amount collected by the outreach channel used, counting each balance once.">
                 <DonutChart
                   data={CHANNEL_DONUT}
                   centerValue="$142K"
@@ -181,7 +181,7 @@ export function DentalRevenueScreen() {
                 />
               </HCCard>
 
-              <HCCard title="Balances contacted vs amount collected">
+              <HCCard title="Balances contacted vs amount collected" tooltip="Compares the total balance amount contacted each month to the amount actually collected.">
                 <StackedBarChart
                   data={MONTHLY_DATA}
                   series={MONTHLY_SERIES}
@@ -192,7 +192,7 @@ export function DentalRevenueScreen() {
               </HCCard>
             </div>
 
-            <HCCard title="A/R performance by location">
+            <HCCard title="A/R performance by location" tooltip="Breaks down accounts-receivable collection performance by location, aggregated over the selected date range.">
               <DataTable columns={LOCATION_COLUMNS} data={LOCATION_DATA} scrollOnHover />
             </HCCard>
 

@@ -1,5 +1,5 @@
 export interface IconProps {
-  /** Material Symbols (Outlined) ligature name, e.g. "location_on". */
+  /** Material Symbols (Outlined) ligature name, e.g. "place". */
   name: string
   /** Rendered glyph size in px. */
   size?: number

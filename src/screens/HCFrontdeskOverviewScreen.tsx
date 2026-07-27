@@ -33,36 +33,36 @@ interface FunnelConversation {
 
 const CONVERSATIONS_BY_NODE: Record<string, FunnelConversation[]> = {
   'Webchat': [
-    { id: 'w1', name: 'Marcus Thompson',  verified: true,  message: 'Interested in scheduling a test drive for the 2024 F-150', location: 'North Austin',  assignee: 'Frontdesk AI', date: '09:14 AM', unread: true },
-    { id: 'w2', name: 'Priya Nair',                        message: 'Can I book a service appointment for this Saturday?',       location: 'South Austin',  assignee: 'Frontdesk AI', date: '08:52 AM', unread: true },
+    { id: 'w1', name: 'Marcus Thompson',  verified: true,  message: 'Interested in scheduling a test drive for the 2024 F-150', location: 'North Austin',  assignee: 'Front desk AI', date: '09:14 AM', unread: true },
+    { id: 'w2', name: 'Priya Nair',                        message: 'Can I book a service appointment for this Saturday?',       location: 'South Austin',  assignee: 'Front desk AI', date: '08:52 AM', unread: true },
     { id: 'w3', name: 'Derek Okafor',                      message: 'What are your current lease offers on the Tacoma?',         location: 'San Francisco', assignee: 'USA - Sales',  date: 'Jun 10, 2025' },
-    { id: 'w4', name: 'Sofia Mendez',                      message: 'I filled out the online form — waiting for a callback.',    location: 'North Austin',  assignee: 'Frontdesk AI', date: 'Jun 10, 2025' },
+    { id: 'w4', name: 'Sofia Mendez',                      message: 'I filled out the online form — waiting for a callback.',    location: 'North Austin',  assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'w5', name: 'James Whitfield',                   message: 'Looking for a used SUV under $35k.',                        location: 'San Francisco', assignee: 'USA - Sales',  date: 'Jun 9, 2025' },
   ],
   'Voice': [
-    { id: 'v1', name: 'Linda Hargrove',   verified: true,  message: 'Called in — asking about oil change availability today.',   location: 'North Austin',  assignee: 'Frontdesk AI', date: '10:03 AM', unread: true },
+    { id: 'v1', name: 'Linda Hargrove',   verified: true,  message: 'Called in — asking about oil change availability today.',   location: 'North Austin',  assignee: 'Front desk AI', date: '10:03 AM', unread: true },
     { id: 'v2', name: 'Ray Castellano',                    message: 'Voicemail: needs a callback re: financing pre-approval.',   location: 'South Austin',  assignee: 'USA - Sales',  date: '09:41 AM', unread: true },
     { id: 'v3', name: 'Tasha Winters',                     message: 'Spoke with agent — scheduled for tire rotation Thu.',       location: 'San Francisco', assignee: 'Kelsy Hiltz',  date: 'Jun 10, 2025' },
-    { id: 'v4', name: 'Omar Farouk',                       message: 'Robin: Was your question answered?',                        location: 'North Austin',  assignee: 'Frontdesk AI', date: 'Jun 9, 2025' },
+    { id: 'v4', name: 'Omar Farouk',                       message: 'Robin: Was your question answered?',                        location: 'North Austin',  assignee: 'Front desk AI', date: 'Jun 9, 2025' },
   ],
   'Text': [
-    { id: 't1', name: 'Brianna Cole',                      message: 'Hey, can I reschedule my 2pm to Friday instead?',           location: 'South Austin',  assignee: 'Frontdesk AI', date: '11:22 AM', unread: true },
+    { id: 't1', name: 'Brianna Cole',                      message: 'Hey, can I reschedule my 2pm to Friday instead?',           location: 'South Austin',  assignee: 'Front desk AI', date: '11:22 AM', unread: true },
     { id: 't2', name: 'Nathan Cruz',                       message: 'Texted back — confirmed appointment for Mon at 10am.',      location: 'North Austin',  assignee: 'Kelsy Hiltz',  date: '10:58 AM' },
     { id: 't3', name: 'Alicia Park',    verified: true,    message: 'Is the 2023 Civic still available? Saw it on your site.',   location: 'San Francisco', assignee: 'USA - Sales',  date: 'Jun 10, 2025' },
-    { id: 't4', name: 'Kevin Marsh',                       message: 'Robin: Was your question answered?',                        location: 'South Austin',  assignee: 'Frontdesk AI', date: 'Jun 9, 2025' },
+    { id: 't4', name: 'Kevin Marsh',                       message: 'Robin: Was your question answered?',                        location: 'South Austin',  assignee: 'Front desk AI', date: 'Jun 9, 2025' },
   ],
   'Email': [
     { id: 'e1', name: 'Grace Liu',                         message: 'Re: Service quote — attached invoice looks different.',     location: 'San Francisco', assignee: 'USA - Sales',  date: 'Jun 10, 2025', unread: true },
-    { id: 'e2', name: 'Todd Bergman',                      message: 'Inquiry about extended warranty options for my Silverado.', location: 'North Austin',  assignee: 'Frontdesk AI', date: 'Jun 9, 2025' },
+    { id: 'e2', name: 'Todd Bergman',                      message: 'Inquiry about extended warranty options for my Silverado.', location: 'North Austin',  assignee: 'Front desk AI', date: 'Jun 9, 2025' },
     { id: 'e3', name: 'Yvonne Santos',                     message: 'Can you email me the full service history for my vehicle?', location: 'South Austin',  assignee: 'Kelsy Hiltz',  date: 'Jun 8, 2025' },
   ],
   'AI agents': [
-    { id: 'ai1', name: 'Marcus Thompson', verified: true,  message: 'AI scheduled test drive for Jun 14 at 11am.',              location: 'North Austin',  assignee: 'Frontdesk AI', date: '09:14 AM', unread: true },
-    { id: 'ai2', name: 'Priya Nair',                       message: 'Service appointment booked for Sat 9am — confirmed.',      location: 'South Austin',  assignee: 'Frontdesk AI', date: '08:52 AM', unread: true },
-    { id: 'ai3', name: 'Brianna Cole',                     message: 'AI handled rescheduling — new slot: Fri 2pm.',             location: 'South Austin',  assignee: 'Frontdesk AI', date: '11:22 AM' },
-    { id: 'ai4', name: 'Linda Hargrove',  verified: true,  message: 'Oil change walk-in slot confirmed via AI.',                location: 'North Austin',  assignee: 'Frontdesk AI', date: '10:03 AM' },
-    { id: 'ai5', name: 'Nathan Cruz',                      message: 'Appointment reminder sent and acknowledged by customer.',  location: 'North Austin',  assignee: 'Frontdesk AI', date: 'Jun 10, 2025' },
-    { id: 'ai6', name: 'Omar Farouk',                      message: 'AI resolved inquiry — FAQ response delivered.',            location: 'North Austin',  assignee: 'Frontdesk AI', date: 'Jun 9, 2025' },
+    { id: 'ai1', name: 'Marcus Thompson', verified: true,  message: 'AI scheduled test drive for Jun 14 at 11am.',              location: 'North Austin',  assignee: 'Front desk AI', date: '09:14 AM', unread: true },
+    { id: 'ai2', name: 'Priya Nair',                       message: 'Service appointment booked for Sat 9am — confirmed.',      location: 'South Austin',  assignee: 'Front desk AI', date: '08:52 AM', unread: true },
+    { id: 'ai3', name: 'Brianna Cole',                     message: 'AI handled rescheduling — new slot: Fri 2pm.',             location: 'South Austin',  assignee: 'Front desk AI', date: '11:22 AM' },
+    { id: 'ai4', name: 'Linda Hargrove',  verified: true,  message: 'Oil change walk-in slot confirmed via AI.',                location: 'North Austin',  assignee: 'Front desk AI', date: '10:03 AM' },
+    { id: 'ai5', name: 'Nathan Cruz',                      message: 'Appointment reminder sent and acknowledged by customer.',  location: 'North Austin',  assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'ai6', name: 'Omar Farouk',                      message: 'AI resolved inquiry — FAQ response delivered.',            location: 'North Austin',  assignee: 'Front desk AI', date: 'Jun 9, 2025' },
   ],
   'Human agents': [
     { id: 'h1', name: 'Ray Castellano',                    message: 'Transferred — financing pre-approval requires human.',     location: 'South Austin',  assignee: 'USA - Sales',  date: '09:41 AM', unread: true },
@@ -71,26 +71,26 @@ const CONVERSATIONS_BY_NODE: Record<string, FunnelConversation[]> = {
     { id: 'h4', name: 'Yvonne Santos',                     message: 'Complex service history request — rep pulling records.',   location: 'South Austin',  assignee: 'Kelsy Hiltz',  date: 'Jun 8, 2025' },
   ],
   'Answered': [
-    { id: 'an1', name: 'Marcus Thompson', verified: true,  message: 'Test drive confirmed for Jun 14 at 11am.',                 location: 'North Austin',  assignee: 'Frontdesk AI', date: '09:14 AM' },
-    { id: 'an2', name: 'Priya Nair',                       message: 'Service appointment confirmed — Sat 9am.',                 location: 'South Austin',  assignee: 'Frontdesk AI', date: '08:52 AM' },
-    { id: 'an3', name: 'Linda Hargrove',  verified: true,  message: 'Oil change walk-in confirmed — 10:30 AM today.',           location: 'North Austin',  assignee: 'Frontdesk AI', date: '10:03 AM' },
+    { id: 'an1', name: 'Marcus Thompson', verified: true,  message: 'Test drive confirmed for Jun 14 at 11am.',                 location: 'North Austin',  assignee: 'Front desk AI', date: '09:14 AM' },
+    { id: 'an2', name: 'Priya Nair',                       message: 'Service appointment confirmed — Sat 9am.',                 location: 'South Austin',  assignee: 'Front desk AI', date: '08:52 AM' },
+    { id: 'an3', name: 'Linda Hargrove',  verified: true,  message: 'Oil change walk-in confirmed — 10:30 AM today.',           location: 'North Austin',  assignee: 'Front desk AI', date: '10:03 AM' },
     { id: 'an4', name: 'Nathan Cruz',                      message: 'Appointment Mon 10am acknowledged by customer.',           location: 'North Austin',  assignee: 'Kelsy Hiltz',  date: 'Jun 10, 2025' },
-    { id: 'an5', name: 'Tasha Winters',                    message: 'Tire rotation Thu at 2pm — customer confirmed.',           location: 'San Francisco', assignee: 'Frontdesk AI', date: 'Jun 10, 2025' },
+    { id: 'an5', name: 'Tasha Winters',                    message: 'Tire rotation Thu at 2pm — customer confirmed.',           location: 'San Francisco', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
   ],
   'Bookings': [
     { id: 'b1', name: 'Alicia Park',     verified: true,   message: 'New booking: test drive 2023 Civic — Jun 13 at 1pm.',     location: 'San Francisco', assignee: 'USA - Sales',  date: 'Jun 10, 2025', unread: true },
-    { id: 'b2', name: 'Priya Nair',                        message: 'Booked: oil change + tire rotation — Sat 9am.',           location: 'South Austin',  assignee: 'Frontdesk AI', date: '08:52 AM' },
-    { id: 'b3', name: 'Marcus Thompson',                   message: 'Test drive booking confirmed for Jun 14 at 11am.',        location: 'North Austin',  assignee: 'Frontdesk AI', date: '09:14 AM' },
-    { id: 'b4', name: 'Kevin Marsh',                       message: 'Multi-point inspection booked for Jun 12.',               location: 'South Austin',  assignee: 'Frontdesk AI', date: 'Jun 9, 2025' },
+    { id: 'b2', name: 'Priya Nair',                        message: 'Booked: oil change + tire rotation — Sat 9am.',           location: 'South Austin',  assignee: 'Front desk AI', date: '08:52 AM' },
+    { id: 'b3', name: 'Marcus Thompson',                   message: 'Test drive booking confirmed for Jun 14 at 11am.',        location: 'North Austin',  assignee: 'Front desk AI', date: '09:14 AM' },
+    { id: 'b4', name: 'Kevin Marsh',                       message: 'Multi-point inspection booked for Jun 12.',               location: 'South Austin',  assignee: 'Front desk AI', date: 'Jun 9, 2025' },
   ],
   'Rescheduled': [
-    { id: 'r1', name: 'Brianna Cole',                      message: 'Rescheduled from Tue 2pm → Fri 2pm at customer request.', location: 'South Austin',  assignee: 'Frontdesk AI', date: '11:22 AM', unread: true },
+    { id: 'r1', name: 'Brianna Cole',                      message: 'Rescheduled from Tue 2pm → Fri 2pm at customer request.', location: 'South Austin',  assignee: 'Front desk AI', date: '11:22 AM', unread: true },
     { id: 'r2', name: 'Todd Bergman',                      message: 'Service moved from Jun 8 to Jun 15 — parts delay.',       location: 'North Austin',  assignee: 'Kelsy Hiltz',  date: 'Jun 9, 2025' },
-    { id: 'r3', name: 'Sofia Mendez',                      message: 'Appointment rescheduled — customer requested later time.',location: 'North Austin',  assignee: 'Frontdesk AI', date: 'Jun 9, 2025' },
+    { id: 'r3', name: 'Sofia Mendez',                      message: 'Appointment rescheduled — customer requested later time.',location: 'North Austin',  assignee: 'Front desk AI', date: 'Jun 9, 2025' },
   ],
   'Cancellations': [
     { id: 'c1', name: 'James Whitfield',                   message: 'Cancelled test drive — no longer interested in SUV.',     location: 'San Francisco', assignee: 'USA - Sales',  date: 'Jun 9, 2025', unread: true },
-    { id: 'c2', name: 'Omar Farouk',                       message: 'Service appointment cancelled — vehicle sold.',           location: 'North Austin',  assignee: 'Frontdesk AI', date: 'Jun 9, 2025' },
+    { id: 'c2', name: 'Omar Farouk',                       message: 'Service appointment cancelled — vehicle sold.',           location: 'North Austin',  assignee: 'Front desk AI', date: 'Jun 9, 2025' },
   ],
   'Pending': [
     { id: 'p1', name: 'Ray Castellano',                    message: 'Awaiting callback confirmation from financing team.',     location: 'South Austin',  assignee: 'USA - Sales',  date: '09:41 AM', unread: true },
@@ -277,7 +277,7 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'custom-test',     label: 'Custom test',         options: opts('Test Group A', 'Test Group B', 'Cohort 1', 'Cohort 2', 'Cohort 3') },
   { id: 'location',              label: 'Location',                        options: opts('North Austin', 'South Austin', 'San Francisco', 'Phoenix, AZ', 'Denver, CO', 'Seattle, WA') },
   { id: 'conversation-status',   label: 'Conversation status',             options: opts('Open', 'Closed', 'Pending', 'Escalated', 'Unread') },
-  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Frontdesk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
+  { id: 'assigned-to',           label: 'Assigned to',                     options: opts('Front desk AI', 'Kelsy Hiltz', 'USA - Sales', 'Marcus Webb', 'Ana Reyes', 'Unassigned') },
   { id: 'time-period',           label: 'Time period',                     options: opts('Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months') },
   { id: 'last-incoming-channel', label: 'Last incoming message (Channel)', options: opts('Voice', 'Text', 'Webchat', 'Chat') },
 ]
@@ -314,8 +314,8 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
       <div className="flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
-          title="Frontdesk overview"
-          subtitle="All human and agent-driven appointment outcomes across all channels and locations."
+          title="Front desk overview"
+          subtitle="Appointment outcomes across all channels and locations"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector
@@ -339,7 +339,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
 
           <SummaryStats stats={SUMMARY_STATS} />
 
-          <HCCard title="Appointments funnel">
+          <HCCard title="Appointments funnel" tooltip="Traces conversations from the channel they came in on, through whether an AI or human agent handled them, to the final booking outcome.">
             <SankeyChart
               nodes={FUNNEL_NODES}
               links={FUNNEL_LINKS}
@@ -349,7 +349,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
             />
           </HCCard>
 
-          <HCCard title="Response rate overtime" tooltip="Monthly view of unique conversations that received a response from the front desk agent.">
+          <HCCard title="Response rate over time" tooltip="Monthly view of unique conversations that received a response from the front desk agent.">
             <StackedBarChart
               data={OVERTIME_DATA}
               series={OVERTIME_SERIES}
@@ -369,7 +369,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
               <DonutChart data={SOURCE_DONUT} centerValue="6.8k" centerLabel="Total responses" />
             </HCCard>
 
-            <HCCard title="Involvement overtime" tooltip="Monthly breakdown of unique conversations handled by the AI agent, a human, or left unresolved.">
+            <HCCard title="Involvement over time" tooltip="Monthly breakdown of unique conversations handled by the AI agent, a human, or left unresolved.">
               <StackedBarChart
                 data={CONV_OVERTIME_DATA}
                 series={CONV_OVERTIME_SERIES}
@@ -406,7 +406,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
             </HCCard>
           </div>
 
-          <HCCard title="Appointments by location">
+          <HCCard title="Appointments by location" tooltip="Breaks down appointment outcomes by location, aggregated over the selected date range.">
             <DataTable columns={LOCATION_COLUMNS} data={LOCATION_DATA} scrollOnHover={isDental} />
           </HCCard>
 
@@ -489,8 +489,10 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
             </div>
             <div className="flex items-center gap-md">
               <button type="button" className="flex items-center gap-sm">
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=32&h=32&fit=crop&crop=face" alt="" className="size-7 rounded-full object-cover" />
-                <span className="text-body text-text-primary">{selectedConvo.assignee ?? 'Savannah'}</span>
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                  <Icon name="auto_awesome" size={16} className="text-ai-brand" />
+                </span>
+                <span className="text-body text-text-primary">{selectedConvo.assignee ?? 'Front desk agent - North region'}</span>
                 <Icon name="expand_more" size={14} className="text-text-icon" />
               </button>
               <button type="button" className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">

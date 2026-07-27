@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChartCard, DataTable, Icon, SankeyChart, StackedBarChart, SummaryStats, TopNav, VoicemailMessage, type Column, type NavSection } from '../components'
+import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection } from '../components'
 import voicemailSample from '../assets/voicemail_sample.mp3'
+import {
+  FRONT_DESK_CALL_SUMMARY,
+  FRONT_DESK_INBOX_CONVERSATION_ID,
+  FRONT_DESK_VOICE_MESSAGES,
+} from '../data/frontDeskCallConversation'
+import {
+  ANNETTE_BLACK_CHAT_EVENTS,
+  ANNETTE_BLACK_CONVERSATION_ID,
+} from '../data/annetteBlackChatConversation'
+import { AgentDetailScreen } from './AgentDetailScreen'
+import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 
 interface Conversation {
   id: string
@@ -15,8 +26,27 @@ interface Conversation {
 }
 
 const CONVERSATIONS: Conversation[] = [
+  {
+    id: FRONT_DESK_INBOX_CONVERSATION_ID,
+    name: 'Dana Whitfield',
+    verified: true,
+    message: 'I am having a very bad headache. I think it is migraine.',
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent',
+    date: '5:30 PM',
+    unread: true,
+  },
   { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', date: '03:25 PM' },
-  { id: '2', name: 'Annette Black',      verified: true, message: 'Kelsy Hiltz: yes',                                   location: 'San Francisco', assignee: 'Kelsy Hiltz', date: 'Dec 31, 2022', unread: true },
+  {
+    id: ANNETTE_BLACK_CONVERSATION_ID,
+    name: 'Annette Black',
+    verified: true,
+    message: 'That helped!',
+    location: 'Rock Dental Brands',
+    assignee: 'Myna',
+    date: '02:09 PM',
+    unread: true,
+  },
   { id: '3', name: 'Wade Warren',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
   { id: '4', name: 'Floyd Miles',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
   { id: '5', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
@@ -26,8 +56,18 @@ const CONVERSATIONS: Conversation[] = [
 
 type ChatEvent =
   | { kind: 'date';      id: string; label: string }
-  | { kind: 'status';    id: string; text: string; time: string }
-  | { kind: 'bubble';    id: string; sender: 'customer' | 'agent'; text: string; attribution?: string; time: string }
+  | { kind: 'status';    id: string; text: string; time?: string }
+  | {
+      kind: 'bubble'
+      id: string
+      sender: 'customer' | 'agent'
+      text?: string
+      fields?: { label: string; value: string }[]
+      attribution?: string
+      time: string
+      showLink?: boolean
+      isBot?: boolean
+    }
   | { kind: 'recording'; id: string; time: string }
 
 const CHAT_EVENTS: ChatEvent[] = [
@@ -62,16 +102,16 @@ const INBOX_NAV_SECTIONS: NavSection[] = [
       { id: 'tagging-routing-agent', label: 'Tagging & routing agent' },
     ],
   },
-  {
-    id: 'outcomes',
-    label: 'Outcomes',
-    defaultExpanded: true,
-    items: [
-      // { id: 'responses',              label: 'Responses' },
-      { id: 'conversation-managed',   label: 'Conversation managed' },
-      { id: 'all-reports',            label: 'All reports', external: true },
-    ],
-  },
+  // 'Outcomes' section (Conversation managed / All reports) hidden for now — keep for future re-enablement.
+  // {
+  //   id: 'outcomes',
+  //   label: 'Outcomes',
+  //   defaultExpanded: true,
+  //   items: [
+  //     { id: 'conversation-managed',   label: 'Conversation managed' },
+  //     { id: 'all-reports',            label: 'All reports', external: true },
+  //   ],
+  // },
 ]
 
 interface TabSet {
@@ -344,7 +384,7 @@ function InboxTabs({ tabSet, activeTab, onSelect }: { tabSet: TabSet; activeTab:
 //           </div>
 //           <SankeyChart nodes={SANKEY_NODES} links={SANKEY_LINKS} height={520} />
 //         </ChartCard>
-//         <ChartCard title="Conversations overtime" className="h-[556px]">
+//         <ChartCard title="Conversations over time" className="h-[556px]">
 //           <StackedBarChart data={OVERTIME_DATA} series={OVERTIME_SERIES} xKey="month" height={430} showBarLabels />
 //         </ChartCard>
 //         <ChartCard title="Conversation by channel" className="h-[556px]" showActions={false} toolbar={<div className="flex items-center gap-xs text-text-icon"><button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><Icon name="tune" size={20} /></button><button type="button" aria-label="More" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><Icon name="more_vert" size={20} /></button></div>}>
@@ -611,14 +651,88 @@ function InboxSideNav({ activeId, onSelect }: { activeId: string; onSelect: (id:
   )
 }
 
-export function InboxScreen() {
+export function InboxScreen({
+  initialConversationId,
+  onInitialConversationConsumed,
+}: {
+  initialConversationId?: string | null
+  onInitialConversationConsumed?: () => void
+} = {}) {
   const [activeNav, setActiveNav] = useState('view-all-interactions')
-  const [selectedConvo, setSelectedConvo] = useState(CONVERSATIONS[0])
+  const [selectedConvo, setSelectedConvo] = useState(() => {
+    if (initialConversationId) {
+      return CONVERSATIONS.find((c) => c.id === initialConversationId) ?? CONVERSATIONS[0]
+    }
+    return CONVERSATIONS[0]
+  })
   const [activeTab, setActiveTab] = useState('all')
   const [message, setMessage] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
+  const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  const showFeedbackToast = (message: string) => {
+    setToastMessage(message)
+    setToastVisible(true)
+  }
+
+  const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
+    if (value === 'down') {
+      setShareFeedbackMessageId(messageId)
+      return
+    }
+    setMessageFeedback((prev) => ({ ...prev, [messageId]: value }))
+    if (value === 'up') showFeedbackToast('Thanks for the feedback!')
+  }
+
+  const handleShareFeedbackClose = () => {
+    setShareFeedbackMessageId(null)
+  }
+
+  const handleShareFeedbackSubmit = (_details: string) => {
+    if (!shareFeedbackMessageId) return
+    setMessageFeedback((prev) => ({ ...prev, [shareFeedbackMessageId]: 'down' }))
+    setShareFeedbackMessageId(null)
+    showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+  }
+
+  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
+    if (shareFeedbackMessageId === messageId) return 'down'
+    return messageFeedback[messageId] ?? null
+  }
+
+  useEffect(() => {
+    if (!initialConversationId) return
+    const match = CONVERSATIONS.find((c) => c.id === initialConversationId)
+    if (match) {
+      setSelectedConvo(match)
+      setActiveNav('view-all-interactions')
+    }
+    onInitialConversationConsumed?.()
+    // Only react to deep-link id changes; consume callback is intentionally unstable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConversationId])
 
   const isInternalChat = activeNav === 'chat-internal-team'
   const currentTabSet = TABS_BY_NAV[activeNav] ?? DEFAULT_TAB_SET
+  const isFrontDeskCall = selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID
+  const isAnnetteChat = selectedConvo.id === ANNETTE_BLACK_CONVERSATION_ID
+  const threadEvents: ChatEvent[] = isAnnetteChat
+    ? ANNETTE_BLACK_CHAT_EVENTS
+    : isFrontDeskCall
+      ? []
+      : CHAT_EVENTS
+
+  const searchQ = searchQuery.trim().toLowerCase()
+  const visibleConversations = searchQ
+    ? CONVERSATIONS.filter(
+        (c) => c.name.toLowerCase().includes(searchQ) || c.message.toLowerCase().includes(searchQ),
+      )
+    : CONVERSATIONS
 
   function handleNavSelect(id: string) {
     setActiveNav(id)
@@ -627,12 +741,23 @@ export function InboxScreen() {
   }
 
   return (
+    <>
     <div className="flex h-full">
-      {/* L2 Nav — full height */}
-      <InboxSideNav activeId={activeNav} onSelect={handleNavSelect} />
+      {/* L2 Nav — full height; collapsed while the agent workflow editor is open */}
+      {!editingAgentName && <InboxSideNav activeId={activeNav} onSelect={handleNavSelect} />}
 
       {/* Right side: TopNav on top, then conversation list + chat below */}
       <div className="flex flex-1 flex-col overflow-hidden">
+        {editingAgentName ? (
+          <WorkflowEditorScreen
+            agentName={editingAgentName}
+            product="healthcare"
+            onClose={() => setEditingAgentName(null)}
+          />
+        ) : activeNav === 'tagging-routing-agent' ? (
+          <AgentDetailScreen agentName="Tagging & routing agent" product="healthcare" onEditAgent={setEditingAgentName} />
+        ) : (
+        <>
         <TopNav initials="S" />
 
         {activeNav === 'conversation-managed' ? (
@@ -641,42 +766,60 @@ export function InboxScreen() {
         <div className="flex flex-1 overflow-hidden">
           {/* Middle panel — conversation list */}
           <div className="flex w-[370px] shrink-0 flex-col border-r border-border">
-            {isInternalChat ? (
-              <div className="flex items-center justify-end gap-sm px-lg pt-lg">
-                <button type="button" className="flex size-8 items-center justify-center text-text-icon hover:text-text-primary"><Icon name="search" size={20} /></button>
-                <button type="button" className="flex h-8 items-center rounded-sm bg-[#4CAE3D] px-lg text-body text-white hover:opacity-90">
-                  New
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="px-lg pt-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="flex flex-col gap-xs">
-                      <div className="flex items-center gap-xs">
-                        <span className="text-body text-text-primary">OPEN</span>
-                        <Icon name="expand_more" size={16} className="text-text-icon" />
-                      </div>
-                      <span className="text-small text-text-secondary">192 total messages • 2 unread</span>
+            <div className="shrink-0 border-b border-border bg-surface px-lg pt-lg pb-md transition-colors focus-within:border-primary">
+              {searchOpen ? (
+                <div className="flex h-9 items-center gap-xs">
+                  <Icon name="search" size={20} className="shrink-0 text-text-icon" />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="min-w-0 flex-1 bg-transparent text-body text-text-primary caret-primary outline-none placeholder:text-text-tertiary"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setSearchOpen(false)
+                      setSearchQuery('')
+                    }}
+                    className="shrink-0 text-text-icon hover:text-text-primary"
+                  >
+                    <Icon name="close" size={20} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex w-full items-start justify-between gap-sm">
+                  <div className="flex min-w-0 flex-col gap-xs">
+                    <div className="flex items-center gap-xs">
+                      <span className="text-body text-text-primary">OPEN</span>
+                      <Icon name="expand_more" size={16} className="text-text-icon" />
                     </div>
-                    <div className="flex items-center gap-md">
-                      <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="search" size={20} /></button>
-                      <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="filter_list" size={20} /></button>
-                      <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="swap_vert" size={20} /></button>
-                      <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="more_vert" size={20} /></button>
-                    </div>
+                    <span className="text-small text-text-secondary">192 total messages • 2 unread</span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-md">
+                    <button type="button" aria-label="Search" onClick={() => setSearchOpen(true)} className="text-text-icon hover:text-text-primary">
+                      <Icon name="search" size={20} />
+                    </button>
+                    <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="filter_list" size={20} /></button>
+                    <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="swap_vert" size={20} /></button>
+                    <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="more_vert" size={20} /></button>
                   </div>
                 </div>
+              )}
+            </div>
 
-                <div className="px-lg">
-                  <InboxTabs tabSet={currentTabSet} activeTab={activeTab} onSelect={setActiveTab} />
-                </div>
-              </>
+            {!isInternalChat && (
+              <div className="px-lg">
+                <InboxTabs tabSet={currentTabSet} activeTab={activeTab} onSelect={setActiveTab} />
+              </div>
             )}
 
             {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto px-sm py-sm">
-              {CONVERSATIONS.map((convo) => (
+            <div className="flex-1 overflow-y-auto px-lg pt-md pb-sm">
+              {visibleConversations.map((convo) => (
                 <button
                   key={convo.id}
                   type="button"
@@ -725,12 +868,10 @@ export function InboxScreen() {
               </div>
               <div className="flex items-center gap-md">
                 <button type="button" className="flex items-center gap-sm">
-                  <img
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=32&h=32&fit=crop&crop=face"
-                    alt=""
-                    className="size-7 rounded-full object-cover"
-                  />
-                  <span className="text-body text-text-primary">{selectedConvo.sublocation ?? 'Savannah'}</span>
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                    <Icon name="smart_toy" size={16} className="text-ai-brand" />
+                  </span>
+                  <span className="text-body text-text-primary">{selectedConvo.assignee ?? 'Front desk agent - North region'}</span>
                   <Icon name="expand_more" size={14} className="text-text-icon" />
                 </button>
                 <button type="button" className="flex size-7 items-center justify-center text-text-icon hover:text-text-primary">
@@ -742,77 +883,116 @@ export function InboxScreen() {
             {/* Chat messages */}
             <div className="flex flex-1 flex-col gap-md overflow-y-auto px-2xl py-lg">
 
-              {/* Date separator */}
-              <div className="flex items-center justify-center">
-                <span className="text-small text-text-tertiary">Fri • Jun 12</span>
-              </div>
+              {isFrontDeskCall ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">Tue • Feb 25</span>
+                  </div>
+                  <VoicemailMessage
+                    variant="voice-chat"
+                    transcript=""
+                    summary={FRONT_DESK_CALL_SUMMARY}
+                    duration="00:53"
+                    durationSecs={53}
+                    time="5:30 PM"
+                    audioUrl={voicemailSample}
+                    messages={FRONT_DESK_VOICE_MESSAGES}
+                    contactName={selectedConvo.name}
+                  />
+                </>
+              ) : !isAnnetteChat ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">Fri • Jun 12</span>
+                  </div>
+                  <VoicemailMessage
+                    variant="voice-chat"
+                    transcript="Hello. I was trying to get a hold of Joanne about her rental. She can call me back at 5807437121. Thank you."
+                    summary="Patient reported tooth-origin pain with mild swelling (no fever or breathing issues). Myna screened symptoms and offered an urgent appointment, but the patient ended the call."
+                    duration="00:11"
+                    durationSecs={11}
+                    time="10:42 PM"
+                    audioUrl={voicemailSample}
+                    contactName={selectedConvo.name}
+                  />
+                </>
+              ) : null}
 
-              {/* Voicemail bubble */}
-              <VoicemailMessage
-                variant="voice-chat"
-                transcript="Hello. I was trying to get a hold of Joanne about her rental. She can call me back at 5807437121. Thank you."
-                summary="Patient reported tooth-origin pain with mild swelling (no fever or breathing issues). Myna screened symptoms and offered an urgent appointment, but the patient ended the call."
-                duration="00:11"
-                durationSecs={11}
-                time="10:42 PM"
-                audioUrl={voicemailSample}
-              />
+              {!isFrontDeskCall &&
+                threadEvents.map((event) => {
+                  if (event.kind === 'date') {
+                    return <ChatSystemLabel key={event.id} text={event.label} />
+                  }
 
-              {/* Subsequent events */}
-              {CHAT_EVENTS.map(event => {
-                if (event.kind === 'date') {
-                  return (
-                    <div key={event.id} className="flex items-center justify-center">
-                      <span className="text-small text-text-tertiary">{event.label}</span>
-                    </div>
-                  )
-                }
+                  if (event.kind === 'status') {
+                    const label =
+                      event.time != null && event.time !== ''
+                        ? `${event.text} • ${event.time}`
+                        : event.text
+                    return <ChatSystemLabel key={event.id} text={label} />
+                  }
 
-                if (event.kind === 'status') {
-                  return (
-                    <div key={event.id} className="flex items-center justify-center">
-                      <span className="text-small text-text-tertiary">
-                        {event.text} • {event.time}
-                      </span>
-                    </div>
-                  )
-                }
-
-                if (event.kind === 'bubble') {
-                  const isAgent = event.sender === 'agent'
-                  return (
-                    <div key={event.id} className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'}`}>
-                      <div className={`max-w-[70%] rounded-lg px-md py-sm text-body text-text-primary ${isAgent ? 'bg-[#dbeafe]' : 'bg-[#f0f0f0]'}`}>
-                        {event.text}
-                      </div>
-                      <span className="mt-xs text-small text-text-tertiary">
-                        {event.attribution ? `${event.attribution} • ` : ''}{event.time}
-                      </span>
-                    </div>
-                  )
-                }
-
-                if (event.kind === 'recording') {
-                  return (
-                    <div key={event.id} className="flex flex-col items-end">
-                      <div className="flex w-[220px] flex-col gap-sm rounded-lg border border-border bg-[#dbeafe] px-md py-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-body text-text-primary">Call recording</span>
-                          <span className="text-small text-text-secondary">{event.time}</span>
+                  if (event.kind === 'bubble') {
+                    const isAgent = event.sender === 'agent'
+                    const bubbleText =
+                      event.fields && event.fields.length > 0 ? (
+                        <div className="flex flex-col gap-md">
+                          {event.fields.map((field) => (
+                            <div key={field.label}>
+                              <p className="m-0 text-small text-text-secondary">{field.label}</p>
+                              <p className="m-0 text-body text-text-primary">{field.value}</p>
+                            </div>
+                          ))}
                         </div>
-                        <button type="button" className="flex items-center gap-sm">
-                          <div className="flex size-9 items-center justify-center rounded-full bg-[#1f1f1f]">
-                            <Icon name="play_arrow" size={20} fill className="text-white" />
-                          </div>
-                          <span className="text-body text-text-primary">Play recording</span>
-                        </button>
-                      </div>
-                    </div>
-                  )
-                }
+                      ) : (
+                        event.text ?? ''
+                      )
 
-                return null
-              })}
+                    return (
+                      <ChatBubble
+                        key={event.id}
+                        sender={isAgent ? 'business' : 'user'}
+                        text={bubbleText}
+                        showFeedback={isAgent}
+                        feedback={isAgent ? feedbackForMessage(event.id) : undefined}
+                        onFeedbackChange={
+                          isAgent
+                            ? (value) => handleFeedbackChange(event.id, value)
+                            : undefined
+                        }
+                      >
+                        <span className="flex items-center gap-xs text-small text-text-tertiary">
+                          {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
+                          {event.time}
+                          {!isAgent && event.showLink && (
+                            <Icon name="link" size={14} className="text-text-tertiary" />
+                          )}
+                        </span>
+                      </ChatBubble>
+                    )
+                  }
+
+                  if (event.kind === 'recording') {
+                    return (
+                      <div key={event.id} className="flex flex-col items-end">
+                        <div className="flex w-[220px] flex-col gap-sm rounded-lg border border-border bg-[#dbeafe] px-md py-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-body text-text-primary">Call recording</span>
+                            <span className="text-small text-text-secondary">{event.time}</span>
+                          </div>
+                          <button type="button" className="flex items-center gap-sm">
+                            <div className="flex size-9 items-center justify-center rounded-full bg-[#1f1f1f]">
+                              <Icon name="play_arrow" size={20} fill className="text-white" />
+                            </div>
+                            <span className="text-body text-text-primary">Play recording</span>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return null
+                })}
             </div>
 
             {/* Compose box */}
@@ -869,7 +1049,21 @@ export function InboxScreen() {
           </div>
         </div>
         )}
+        </>
+        )}
       </div>
     </div>
+
+    <ShareFeedbackModal
+      open={shareFeedbackMessageId !== null}
+      onClose={handleShareFeedbackClose}
+      onSubmit={handleShareFeedbackSubmit}
+    />
+    <Toast
+      message={toastMessage}
+      visible={toastVisible}
+      onClose={() => setToastVisible(false)}
+    />
+    </>
   )
 }

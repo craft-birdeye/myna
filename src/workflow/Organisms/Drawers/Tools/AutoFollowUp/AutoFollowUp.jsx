@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { FormInput, TabHeader, TextArea, Toggle, Tooltip, DrawerHeader } from '../../../../elemental-stubs';
+import { TabHeader, TextArea, Toggle, Tooltip, DrawerHeader } from '../../../../elemental-stubs';
+import { Icon } from '../../../../../components/Icon/Icon';
 
 
 
 
 
-const font = '"Inter", sans-serif';
+const font = '"Roboto", sans-serif';
 
 const COLORS = {
   primary: '#212121',
@@ -20,9 +21,10 @@ const COLORS = {
 };
 
 const TABS = [
-  { label: 'Voice', value: 'voice' },
-  { label: 'Chat', value: 'chat' },
+  { label: 'Webchat', value: 'webchat' },
   { label: 'Text', value: 'text' },
+  { label: 'Email', value: 'email' },
+  { label: 'Social', value: 'social' },
 ];
 
 const TIMING_OPTIONS = [
@@ -41,29 +43,8 @@ const TIMING_OPTIONS = [
 ];
 
 const TAB_DEFAULTS = {
-  voice: {
-    channels: { email: true, text: true, call: true },
-    steps: [
-      {
-        id: 'step_1',
-        timing: '3m',
-        duringMessage:
-          "Hey [First name], we missed your call at [Business name]. We'd love to help—feel free to call us back at [Business phone] or reply to this message.",
-        outsideMessage:
-          "Hey [First name], we missed your call at [Business name]. We're currently outside business hours, but feel free to text us here or call [Business phone] during 9 AM – 6 PM.",
-      },
-      {
-        id: 'step_2',
-        timing: '24h',
-        duringMessage:
-          "Hi [First name], just following up from [Business name]. We noticed you called yesterday—we'd love to help. Give us a call at [Business phone] or text us here!",
-        outsideMessage:
-          "Hi [First name], this is [Business name] following up on your call. We're outside business hours right now, but we'll be available at [Business phone] during 9 AM – 6 PM.",
-      },
-    ],
-  },
-  chat: {
-    channels: { email: true, text: true, call: false },
+  webchat: {
+    channels: { email: true, text: true },
     steps: [
       {
         id: 'step_1',
@@ -84,7 +65,7 @@ const TAB_DEFAULTS = {
     ],
   },
   text: {
-    channels: { email: true, text: true, call: false },
+    channels: { email: true, text: true },
     steps: [
       {
         id: 'step_1',
@@ -105,7 +86,7 @@ const TAB_DEFAULTS = {
     ],
   },
   email: {
-    channels: { email: true, text: true, call: false },
+    channels: { email: true, text: true },
     steps: [
       {
         id: 'step_1',
@@ -122,6 +103,27 @@ const TAB_DEFAULTS = {
           "Hi [First name],\n\nJust following up on your previous inquiry with [Business name]. We want to make sure we address your needs—please reply to this email or call us at [Business phone].\n\nBest regards,\n[Business name] Team",
         outsideMessage:
           "Hi [First name],\n\nWe're following up from [Business name] regarding your recent inquiry. We apologize for any delay and will respond as soon as we're back in office.\n\nFeel free to call [Business phone] during business hours (9 AM – 6 PM).\n\nBest regards,\n[Business name] Team",
+      },
+    ],
+  },
+  social: {
+    channels: { email: true, text: true },
+    steps: [
+      {
+        id: 'step_1',
+        timing: '3m',
+        duringMessage:
+          "Hey [First name], this is [Business name] and we couldn't finish the conversation on social, feel free to call us on [Business phone] for your needs or text us on this number.",
+        outsideMessage:
+          "Hey [First name], this is [Business name] and we couldn't finish the conversation on social. We're not operational right now—feel free to call [Business phone] or text us during 9 AM – 6 PM.",
+      },
+      {
+        id: 'step_2',
+        timing: '24h',
+        duringMessage:
+          "Hey [First name], just checking in from [Business name]. We missed connecting with you yesterday on social—if you're still interested, feel free to call us at [Business phone] or text us here. We're happy to help!",
+        outsideMessage:
+          "Hey [First name], this is [Business name].\nWe couldn't finish our conversation on social yesterday. We're currently outside business hours, but feel free to call us at [Business phone] or text us here during 9 AM – 6 PM.",
       },
     ],
   },
@@ -151,59 +153,6 @@ const ChevronIcon = ({ size = 12, color = COLORS.accent }) => (
   </svg>
 );
 
-const PencilIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={COLORS.accent}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
-
-const CheckIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={COLORS.accent}
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const PhoneIcon = ({ color = COLORS.tertiary }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    style={{ flexShrink: 0 }}
-  >
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.89a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 16z" />
-  </svg>
-);
-
 function StepNumber({ n }) {
   return (
     <div
@@ -219,9 +168,9 @@ function StepNumber({ n }) {
         justifyContent: 'center',
         fontFamily: font,
         fontSize: 12,
-        fontWeight: 400,
+        fontWeight: 500,
         lineHeight: '18px',
-        color: COLORS.primary,
+        color: '#000',
         letterSpacing: '-0.24px',
         boxSizing: 'border-box',
         flexShrink: 0,
@@ -267,9 +216,48 @@ function TimingSelect({ value, onChange }) {
   );
 }
 
+function EditButton({ visible, isEditing, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      tabIndex={visible ? 0 : -1}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 28,
+        height: 28,
+        border: `1px solid ${hovered ? COLORS.accent : COLORS.border}`,
+        borderRadius: 4,
+        background: hovered ? '#e8f0fe' : COLORS.white,
+        cursor: 'pointer',
+        padding: 0,
+        flexShrink: 0,
+        opacity: visible ? 1 : 0,
+        pointerEvents: visible ? 'auto' : 'none',
+        transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
+      }}
+      aria-label={isEditing ? 'Save message' : 'Edit message'}
+    >
+      <span style={{ color: COLORS.accent, display: 'flex' }}>
+        <Icon name={isEditing ? 'check' : 'edit'} size={16} />
+      </span>
+    </button>
+  );
+}
+
 function MessageCard({ title, message, isEditing, onEdit, onSave, onMessageChange }) {
+  const [hovered, setHovered] = useState(false);
+  const showAction = hovered || isEditing;
+
   return (
     <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         background: COLORS.white,
         border: `1px solid ${COLORS.border}`,
@@ -294,26 +282,11 @@ function MessageCard({ title, message, isEditing, onEdit, onSave, onMessageChang
         >
           {title}
         </p>
-        <button
-          type="button"
+        <EditButton
+          visible={showAction}
+          isEditing={isEditing}
           onClick={isEditing ? onSave : onEdit}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: 4,
-            background: COLORS.white,
-            cursor: 'pointer',
-            padding: 0,
-            flexShrink: 0,
-          }}
-          aria-label={isEditing ? 'Save message' : 'Edit message'}
-        >
-          {isEditing ? <CheckIcon /> : <PencilIcon />}
-        </button>
+        />
       </div>
 
       {isEditing ? (
@@ -321,7 +294,7 @@ function MessageCard({ title, message, isEditing, onEdit, onSave, onMessageChang
           name={`followup-msg-${title}`}
           value={message}
           rows={4}
-          onChange={(_cmp, e) => onMessageChange(e?.target?.value ?? '')}
+          onChange={(e) => onMessageChange(e?.target?.value ?? '')}
         />
       ) : (
         <p
@@ -342,52 +315,7 @@ function MessageCard({ title, message, isEditing, onEdit, onSave, onMessageChang
   );
 }
 
-function CallCard({ title, description }) {
-  return (
-    <div
-      style={{
-        background: COLORS.white,
-        border: `1px solid ${COLORS.border}`,
-        borderRadius: 4,
-        padding: 16,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <PhoneIcon color={COLORS.accent} />
-        <p
-          style={{
-            margin: 0,
-            fontFamily: font,
-            fontSize: 14,
-            fontWeight: 400,
-            lineHeight: '20px',
-            color: COLORS.primary,
-            letterSpacing: '-0.28px',
-          }}
-        >
-          {title}
-        </p>
-      </div>
-      <p
-        style={{
-          margin: 0,
-          fontFamily: font,
-          fontSize: 12,
-          fontWeight: 400,
-          lineHeight: '18px',
-          color: COLORS.secondary,
-        }}
-      >
-        {description}
-      </p>
-    </div>
-  );
-}
-
-function FollowUpStep({ stepIndex, step, isLast, channels, onTimingChange, onMessageChange, editingMap, onEdit, onSave }) {
+function FollowUpStep({ stepIndex, step, isLast, onTimingChange, onMessageChange, editingMap, onEdit, onSave }) {
   return (
     <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
@@ -449,31 +377,18 @@ function FollowUpStep({ stepIndex, step, isLast, channels, onTimingChange, onMes
           onSave={() => onSave(`${step.id}_outside`)}
           onMessageChange={(val) => onMessageChange(step.id, 'outsideMessage', val)}
         />
-
-        {channels?.call && (
-          <>
-            <CallCard
-              title="During business hours"
-              description="A follow-up call will be placed to the visitor's phone number. A voicemail will be left if the call goes unanswered."
-            />
-            <CallCard
-              title="Outside business hours"
-              description="No call will be placed outside business hours. The visitor will receive a text or email follow-up instead."
-            />
-          </>
-        )}
       </div>
     </div>
   );
 }
 
-export default function AutoFollowUp({ title = 'Visitor Follow-up', onBack, onSave }) {
-  const [activeTab, setActiveTab] = useState('voice');
+export default function AutoFollowUp({ title = 'Auto follow up', onBack, onSave }) {
+  const [activeTab, setActiveTab] = useState('webchat');
   const [tabState, setTabState] = useState(() => ({
-    voice: buildTabState('voice'),
-    chat: buildTabState('chat'),
+    webchat: buildTabState('webchat'),
     text: buildTabState('text'),
     email: buildTabState('email'),
+    social: buildTabState('social'),
   }));
   const [editingMap, setEditingMap] = useState({});
 
@@ -515,7 +430,7 @@ export default function AutoFollowUp({ title = 'Visitor Follow-up', onBack, onSa
     >
       <DrawerHeader title={title} onBack={onBack} actions={[{ label: 'Save', onClick: onSave }]} />
 
-      <div style={{ padding: '0 30px', borderBottom: `1px solid ${COLORS.divider}` }}>
+      <div style={{ padding: '0 30px' }}>
         <TabHeader
           content={TABS}
           activeTab={activeTab}
@@ -527,20 +442,8 @@ export default function AutoFollowUp({ title = 'Visitor Follow-up', onBack, onSa
 
       <div style={{ padding: '24px 30px', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Master toggle */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 512 }}>
-            <p
-              style={{
-                margin: 0,
-                fontFamily: font,
-                fontSize: 14,
-                fontWeight: 400,
-                lineHeight: '20px',
-                color: COLORS.primary,
-              }}
-            >
-              Visitor follow-up
-            </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <p
               style={{
                 margin: 0,
@@ -548,39 +451,60 @@ export default function AutoFollowUp({ title = 'Visitor Follow-up', onBack, onSa
                 fontSize: 12,
                 fontWeight: 400,
                 lineHeight: '18px',
-                color: COLORS.secondary,
+                color: COLORS.primary,
               }}
             >
-              Send follow-up messages or calls to visitor through text, email, or phone. Configure the content and timing in the settings below.
+              Visitor follow up
             </p>
+            <Tooltip
+              text="Send follow-up messages to the visitor through webchat, text, email, or social. Configure the content and timing in the settings below."
+              position="top"
+              display="inline-flex"
+              doNotTriggerMouseOverOnMount
+            >
+              <span style={{ color: COLORS.tertiary, cursor: 'pointer', display: 'flex' }}>
+                <Icon name="info" size={16} />
+              </span>
+            </Tooltip>
           </div>
           <Toggle
             name="followup-enabled"
             checked={state.enabled}
             roundedToggle
-            onChange={(_cmp, e) => setEnabled(!!e?.target?.checked)}
+            onChange={(val) => setEnabled(!!val)}
           />
         </div>
 
         {/* Follow-up channel checkboxes */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p
-            style={{
-              margin: 0,
-              fontFamily: font,
-              fontSize: 14,
-              fontWeight: 400,
-              lineHeight: '20px',
-              color: COLORS.primary,
-            }}
-          >
-            Follow-up using
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: font,
+                fontSize: 12,
+                fontWeight: 400,
+                lineHeight: '18px',
+                color: COLORS.primary,
+              }}
+            >
+              Follow up using
+            </p>
+            <Tooltip
+              text="Choose which channels the visitor will receive follow-up messages on."
+              position="top"
+              display="inline-flex"
+              doNotTriggerMouseOverOnMount
+            >
+              <span style={{ color: COLORS.tertiary, cursor: 'pointer', display: 'flex' }}>
+                <Icon name="info" size={16} />
+              </span>
+            </Tooltip>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               { key: 'email', label: 'Email' },
               { key: 'text', label: 'Text' },
-              { key: 'call', label: 'Call' },
             ].map(({ key, label }) => (
               <label
                 key={key}
@@ -625,7 +549,6 @@ export default function AutoFollowUp({ title = 'Visitor Follow-up', onBack, onSa
               stepIndex={i}
               step={step}
               isLast={i === state.steps.length - 1}
-              channels={state.channels}
               onTimingChange={setTiming}
               onMessageChange={setMessage}
               editingMap={editingMap}

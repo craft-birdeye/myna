@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FormInput, TabHeader, TextArea, Toggle, Tooltip, DrawerHeader } from '../../../../elemental-stubs';
+import { FormInput, TabHeader, TextArea, Tooltip, DrawerHeader } from '../../../../elemental-stubs';
 
 
 
@@ -21,16 +21,17 @@ const COLORS = {
 };
 
 const TABS = [
-  { label: 'Voice', value: 'voice' },
-  { label: 'Chat', value: 'chat' },
+  { label: 'Webchat', value: 'webchat' },
   { label: 'Text', value: 'text' },
+  { label: 'Email', value: 'email' },
+  { label: 'Social', value: 'social' },
 ];
 
-const CHAT_FIELDS = [
-  { id: 'locations', label: 'Select locations', mandatory: true, locked: true },
+const WEBCHAT_FIELDS = [
+  { id: 'locations', label: 'Location', mandatory: true, locked: true },
   { id: 'name', label: 'Name', mandatory: true, locked: true },
-  { id: 'country_code', label: 'Country code', mandatory: true, locked: true },
-  { id: 'mobile', label: 'Mobile number', mandatory: true, locked: true },
+  { id: 'mobile', label: 'Mobile number', mandatory: true, locked: false },
+  { id: 'email', label: 'Email', mandatory: true, locked: true },
   { id: 'message', label: 'Message', mandatory: true, locked: true },
 ];
 
@@ -39,20 +40,20 @@ const TEXT_FIELDS = [
   { id: 'name', label: 'Name', mandatory: false, locked: false },
 ];
 
-const VOICE_FIELDS = [
-  { id: 'locations', label: 'Select locations', mandatory: true, locked: true },
-  { id: 'name', label: 'Name', mandatory: true, locked: true },
-  { id: 'reason', label: 'Reason for call', mandatory: true, locked: true },
-  { id: 'mobile', label: 'Mobile number', mandatory: false, locked: false },
-  { id: 'email', label: 'Email', mandatory: false, locked: false },
-];
-
 const EMAIL_FIELDS = [
   { id: 'locations', label: 'Select locations', mandatory: true, locked: true },
   { id: 'name', label: 'Name', mandatory: true, locked: true },
   { id: 'country_code', label: 'Country code', mandatory: true, locked: true },
   { id: 'mobile', label: 'Mobile number', mandatory: true, locked: true },
   { id: 'subject', label: 'Subject', mandatory: true, locked: true },
+  { id: 'message', label: 'Message', mandatory: true, locked: true },
+];
+
+const SOCIAL_FIELDS = [
+  { id: 'locations', label: 'Location', mandatory: true, locked: true },
+  { id: 'name', label: 'Name', mandatory: true, locked: true },
+  { id: 'mobile', label: 'Mobile number', mandatory: true, locked: false },
+  { id: 'email', label: 'Email', mandatory: true, locked: true },
   { id: 'message', label: 'Message', mandatory: true, locked: true },
 ];
 
@@ -74,6 +75,14 @@ const AddCircleIcon = () => (
 const ChevronDownIcon = ({ size = 20 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={COLORS.tertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+const InfoIcon = ({ size = 16 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={COLORS.tertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="11" x2="12" y2="16" />
+    <circle cx="12" cy="8" r="0.5" fill={COLORS.tertiary} stroke="none" />
   </svg>
 );
 
@@ -361,8 +370,67 @@ function MobilePreview() {
   );
 }
 
+function SocialPreview() {
+  return (
+    <div
+      style={{
+        width: 316,
+        height: 606,
+        borderRadius: 40,
+        border: `9px solid ${COLORS.mobileFrame}`,
+        background: COLORS.white,
+        position: 'relative',
+        boxSizing: 'border-box',
+        fontFamily: font,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Status pill */}
+      <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 74, height: 9, borderRadius: 10.5, background: '#dde2ef' }} />
+
+      {/* Header: back + gradient avatar ring + handle */}
+      <div style={{ position: 'absolute', top: 48, left: 0, right: 0, display: 'flex', alignItems: 'center', padding: '0 20px' }}>
+        <BackIconSmall />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div
+            style={{
+              width: 28, height: 28, borderRadius: '50%', padding: 2,
+              background: 'linear-gradient(45deg, #feda75, #d62976, #4f5bd5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: COLORS.white, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AccountCircleIcon />
+            </div>
+          </div>
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 400, lineHeight: '18px', color: COLORS.primary, letterSpacing: '-0.24px' }}>
+            @customer.handle
+          </p>
+        </div>
+        <div style={{ width: 16 }} />
+      </div>
+
+      {/* DM bubble */}
+      <div
+        style={{
+          position: 'absolute', top: 144, left: 19, width: 227, minHeight: 60,
+          background: COLORS.hoverBg,
+          borderRadius: '16px 16px 16px 4px',
+          padding: '10px 12px 8px 12px',
+          display: 'flex', flexDirection: 'column', gap: 3,
+        }}
+      >
+        <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', color: COLORS.primary }}>
+          Incoming DM from the customer.
+        </p>
+        <span style={{ fontSize: 10, lineHeight: '15px', color: '#999' }}>09:12 PM</span>
+      </div>
+    </div>
+  );
+}
+
 const TAB_CONFIG = {
-  chat: {
+  webchat: {
     subtitle: 'Define when and how the agent should collect customer information to generate leads.',
     captureOptions: [
       { value: 'before', label: 'Before conversation starts' },
@@ -370,7 +438,7 @@ const TAB_CONFIG = {
       { value: 'none', label: 'Do not capture leads' },
     ],
     defaultCapture: 'before',
-    defaultFields: CHAT_FIELDS,
+    defaultFields: WEBCHAT_FIELDS,
     Preview: ChatPreview,
   },
   text: {
@@ -383,16 +451,6 @@ const TAB_CONFIG = {
     defaultFields: TEXT_FIELDS,
     Preview: MobilePreview,
   },
-  voice: {
-    subtitle: 'Define when and how the agent should collect customer information during voice calls.',
-    captureOptions: [
-      { value: 'capture', label: 'Capture leads' },
-      { value: 'none', label: 'Do not capture leads' },
-    ],
-    defaultCapture: 'capture',
-    defaultFields: VOICE_FIELDS,
-    Preview: null,
-  },
   email: {
     subtitle: 'Define what lead information the agent should collect from email conversations.',
     captureOptions: [
@@ -402,6 +460,17 @@ const TAB_CONFIG = {
     defaultCapture: 'capture',
     defaultFields: EMAIL_FIELDS,
     Preview: EmailPreview,
+  },
+  social: {
+    subtitle: 'Define when and how the agent should collect customer information across social DMs.',
+    captureOptions: [
+      { value: 'before', label: 'Before conversation starts' },
+      { value: 'during', label: 'During the conversation' },
+      { value: 'none', label: 'Do not capture leads' },
+    ],
+    defaultCapture: 'before',
+    defaultFields: SOCIAL_FIELDS,
+    Preview: SocialPreview,
   },
 };
 
@@ -418,13 +487,12 @@ export default function LeadCapture({
   onBack,
   onSave,
 }) {
-  const [activeTab, setActiveTab] = useState('voice');
-  const [captureEnabled, setCaptureEnabled] = useState(true);
+  const [activeTab, setActiveTab] = useState('webchat');
   const [tabState, setTabState] = useState(() => ({
-    chat: { captureWhen: 'before', fields: CHAT_FIELDS },
+    webchat: { captureWhen: 'before', fields: WEBCHAT_FIELDS },
     text: { captureWhen: 'capture', fields: TEXT_FIELDS },
-    voice: { captureWhen: 'capture', fields: VOICE_FIELDS },
     email: { captureWhen: 'capture', fields: EMAIL_FIELDS },
+    social: { captureWhen: 'before', fields: SOCIAL_FIELDS },
   }));
 
   const config = TAB_CONFIG[activeTab] || EMPTY_CONFIG;
@@ -462,7 +530,7 @@ export default function LeadCapture({
         actions={[{ label: 'Save', onClick: onSave }]}
       />
 
-      <div style={{ padding: '0 30px', borderBottom: `1px solid ${COLORS.divider}` }}>
+      <div style={{ padding: '0 30px' }}>
         <TabHeader
           content={TABS}
           activeTab={activeTab}
@@ -475,26 +543,18 @@ export default function LeadCapture({
       <div style={{ padding: '24px 30px 16px', display: 'flex', flexDirection: 'column', gap: 32 }}>
         {/* Capture leads */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 400, lineHeight: '20px', color: COLORS.primary }}>
-                Capture leads
-              </p>
-              <Tooltip
-                text={config.subtitle}
-                position="top"
-                display="inline-flex"
-                doNotTriggerMouseOverOnMount
-              >
-                <i className="icon_phoenix-info" style={{ fontSize: 16, color: COLORS.tertiary, cursor: 'pointer' }} />
-              </Tooltip>
-            </div>
-            <Toggle
-              name="capture-leads"
-              checked={captureEnabled}
-              roundedToggle
-              onChange={(_cmp, e) => setCaptureEnabled(!!e?.target?.checked)}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 400, lineHeight: '20px', color: COLORS.primary }}>
+              Capture leads
+            </p>
+            <Tooltip
+              text={config.subtitle}
+              position="right"
+              display="inline-flex"
+              doNotTriggerMouseOverOnMount
+            >
+              <InfoIcon />
+            </Tooltip>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
@@ -526,10 +586,11 @@ export default function LeadCapture({
                   {/* Mandatory column */}
                   <div style={{ width: 100, display: 'flex', flexDirection: 'column' }}>
                     <div style={{
-                      height: 52, padding: 16, display: 'flex', alignItems: 'center',
+                      height: 52, padding: 16, display: 'flex', alignItems: 'center', gap: 4,
                       borderBottom: `1px solid ${COLORS.dividerLight}`, boxSizing: 'border-box',
                     }}>
                       <span style={{ fontSize: 14, fontWeight: 400, lineHeight: '20px', color: COLORS.secondary }}>Mandatory</span>
+                      <ChevronDownIcon size={16} />
                     </div>
                     {current.fields.map((f) => (
                       <div
@@ -553,10 +614,11 @@ export default function LeadCapture({
                   {/* Fields column */}
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{
-                      height: 52, padding: 16, display: 'flex', alignItems: 'center',
+                      height: 52, padding: 16, display: 'flex', alignItems: 'center', gap: 4,
                       borderBottom: `1px solid ${COLORS.dividerLight}`, boxSizing: 'border-box',
                     }}>
-                      <span style={{ fontSize: 14, fontWeight: 400, lineHeight: '20px', color: COLORS.secondary }}>Fields</span>
+                      <span style={{ fontSize: 14, fontWeight: 400, lineHeight: '20px', color: COLORS.secondary }}>Field</span>
+                      <ChevronDownIcon size={16} />
                     </div>
                     {current.fields.map((f) => (
                       <div

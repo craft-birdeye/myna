@@ -7,6 +7,7 @@
  * that do not exist in the generic node system.
  */
 import { useState } from 'react'
+import { InfoTooltip } from '../components'
 
 // ─── Design constants ────────────────────────────────────────────────────────
 
@@ -425,7 +426,7 @@ function AppointmentReminderPanel({ onOpenTool }: { onOpenTool: () => void }) {
       <div>
         <RHSSectionLabel>
           <span>Tools</span>
-          <MatIcon name="info" size={14} color="#9e9e9e" />
+          <InfoTooltip text="The tool used to send this reminder." variant="brief" />
         </RHSSectionLabel>
         <ToolChip icon="notifications" name="Reminder tool" onEdit={onOpenTool} />
       </div>
@@ -441,7 +442,7 @@ function VoiceCallPanel({ onOpenTool }: { onOpenTool: () => void }) {
       <div>
         <RHSSectionLabel>
           <span>Tools</span>
-          <MatIcon name="info" size={14} color="#9e9e9e" />
+          <InfoTooltip text="The tool used to place this call." variant="brief" />
         </RHSSectionLabel>
         <ToolChip icon="call" name="Initiate voice call" onEdit={onOpenTool} onSwap={() => {}} />
       </div>
@@ -463,7 +464,7 @@ function SubAgentPanel() {
           <MatIcon name="expand_more" size={18} color="#555" />
         </div>
       </div>
-      <RHSTextarea label="Description" value="Pass appointment context to the Frontdesk agent for assisted patient handling." />
+      <RHSTextarea label="Description" value="Pass appointment context to the Front desk agent for assisted patient handling." />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
         <span style={{ fontSize: 13, color: '#212121', fontFamily: font }}>Pass appointment context on handoff</span>
         <SmallToggle />
@@ -542,7 +543,7 @@ function SendTextPanel() {
       <div>
         <RHSSectionLabel>
           <span>Tools</span>
-          <MatIcon name="info" size={14} color="#9e9e9e" />
+          <InfoTooltip text="The tool used to send this text." variant="brief" />
         </RHSSectionLabel>
         <ToolChip icon="sms" name="Send SMS" onEdit={() => {}} onSwap={() => {}} />
       </div>
@@ -586,7 +587,7 @@ export function HealthcareReminderCanvas({
       nodeId: 'hc-rem-6',
       title: 'Front desk agent',
       nodeType: 'subagent',
-      desc: 'Frontdesk agent handles the call.',
+      desc: 'Front desk agent handles the call.',
       extra: undefined,
     },
     {

@@ -156,7 +156,7 @@ const OUTREACH_NODE_DETAILS: Record<string, any> = {
   'out-5': {
     taskName: 'Voicemail + Follow-Up SMS',
     description: 'Leave professional voicemail referencing the inquiry, then send follow-up SMS with callback link and top inventory match.',
-    selectedTools: ['voice-call'],
+    selectedTools: ['initiate-voice-call', 'send-confirmation'],
   },
   'out-6': {
     taskName: 'Transfer to Sales Manager',
@@ -831,12 +831,192 @@ const PREVISIT_NODE_DETAILS: Record<string, any> = {
   'pv-7-missed':    { branchName: 'Call missed',    conditions: [], parentId: 'pv-7', isBranchPath: true, isVoiceCallBranch: true, isFallback: true, nodes: [] },
 }
 
+// ─── Tagging & routing agent ────────────────────────────────────────────────
+// Workflow: Inbox trigger → identify message intent → branch on conversation history
+//   → "Pricing request" / "Scheduling request": assign contact status → assign conversation
+//   → "Referral": wait 3 days → check message received → branch (appointment confirmed?)
+//       → "No new message": assign conversation status
+//   → "No conditions match" fallback: end
+
+const TAGGING_ROUTING_NODES = [
+  { id: 'tr-1', flowType: 'trigger' as const, data: { title: 'Inbox', subtype: 'Inactivity', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Agent triggers based on inactivity' } },
+  { id: 'tr-2', flowType: 'task' as const, data: { title: 'Identify message intent or action taken', subtype: 'Custom', hasToggle: true, toggleEnabled: true, hasAiIcon: true, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Understand what the user needs and help accordingly.' } },
+  { id: 'tr-3', flowType: 'branch' as const, data: { title: 'Based on conditions', subtype: 'Branch', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Conversation history contains' } },
+]
+
+const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
+  '__start__': {
+    agentName: 'Tagging & routing agent - North region',
+    goals: 'Analyzes incoming conversations to detect intent, assigns the appropriate contact status, and routes messages to the right team or user based on conversation history.',
+    outcomes: [
+      '1. Conversation intent is identified from message content',
+      '2. Contact status is assigned automatically without manual triage',
+      '3. Conversations are routed to the correct team or user',
+      '4. Referral conversations are monitored and escalated if no response is received',
+      '5. No conversation is left untagged or unrouted',
+    ].join('\n'),
+    locations: ['Atlanta, GA', 'Chicago, IL', 'Los Angeles, CA', 'Stamford, CT'],
+  },
+  'tr-1': {
+    triggerName: 'Agent triggers based on inactivity',
+    description: 'Agent triggers when no new message is received.',
+    logic: 'AND',
+    conditions: [
+      { id: 1, fieldValue: 'conversation_inactive', operatorValue: 'since',        valueValue: '15_mins',  indent: 0 },
+      { id: 2, fieldValue: 'channel',               operatorValue: 'is',           valueValue: 'web',       indent: 1, connector: 'AND' },
+      { id: 3, fieldValue: 'conversation_assigned', operatorValue: 'assigned_to',  valueValue: '3_selected', indent: 2, connector: 'AND' },
+      { id: 4, fieldValue: 'channel',               operatorValue: 'is',           valueValue: '5_selected', indent: 1, connector: 'OR' },
+      { id: 5, fieldValue: 'conversation_assigned', operatorValue: 'assigned_to',  valueValue: '3_selected', indent: 2, connector: 'AND' },
+    ],
+    conditionOptions: {
+      field: [
+        { value: 'conversation_inactive', label: 'Conversation inactive' },
+        { value: 'channel',               label: 'Channel' },
+        { value: 'conversation_assigned', label: 'Conversation assigned to' },
+      ],
+      operator: [
+        { value: 'since',       label: 'since' },
+        { value: 'is',          label: 'is' },
+        { value: 'assigned_to', label: 'assigned to' },
+      ],
+      value: [
+        { value: '15_mins',   label: '15mins' },
+        { value: 'web',       label: 'Web' },
+        { value: '3_selected', label: '3 selected' },
+        { value: '5_selected', label: '5 selected' },
+      ],
+    },
+  },
+  'tr-2': {
+    taskName: 'Identify message intent or action taken',
+    description: 'Understand what the user needs and help accordingly.',
+    llmModel: 'Fast',
+    systemPrompt: '',
+    userPrompt: 'If visitor/patient is asking about referrals then its a referral conversation\nIf patient is asking about rescheduling or modifying dates then its rescheduling',
+    outputFields: ['Intent'],
+  },
+  'tr-3': {
+    basedOn: 'conditions',
+    branches: [
+      { id: 'tr-3-path-1', name: 'Pricing request' },
+      { id: 'tr-3-path-2', name: 'Scheduling request' },
+      { id: 'tr-3-path-3', name: 'Referral' },
+      { id: 'tr-3-path-fallback', name: 'No conditions match', isFallback: true },
+    ],
+  },
+  'tr-3-path-1': {
+    branchName: 'Pricing request',
+    description: 'Conversation history contains a pricing request.',
+    conditions: [
+      { id: 1, fieldValue: 'conversation_history', operatorValue: 'contains', valueValue: 'pricing_request' },
+    ],
+    conditionOptions: {
+      field:    [{ value: 'conversation_history', label: 'Conversation history' }],
+      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
+    },
+    parentId: 'tr-3',
+    isBranchPath: true,
+    nodes: [
+      { id: 'tr-4', flowType: 'task' as const, data: { title: 'Assign contact status', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Update the status as per the messages.' } },
+      { id: 'tr-5', flowType: 'task' as const, data: { title: 'Assign conversation', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Conversation will be managed by team or user' } },
+    ],
+  },
+  'tr-3-path-2': {
+    branchName: 'Scheduling request',
+    description: 'Conversation history contains a scheduling request.',
+    conditions: [
+      { id: 1, fieldValue: 'conversation_history', operatorValue: 'contains', valueValue: 'scheduling_request' },
+    ],
+    conditionOptions: {
+      field:    [{ value: 'conversation_history', label: 'Conversation history' }],
+      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
+    },
+    parentId: 'tr-3',
+    isBranchPath: true,
+    nodes: [
+      { id: 'tr-6', flowType: 'task' as const, data: { title: 'Assign contact status', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Update the status as per the messages.' } },
+      { id: 'tr-7', flowType: 'task' as const, data: { title: 'Assign conversation', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Conversation will be managed by team or user' } },
+    ],
+  },
+  'tr-3-path-3': {
+    branchName: 'Referral',
+    description: 'Conversation history contains a referral.',
+    conditions: [
+      { id: 1, fieldValue: 'conversation_history', operatorValue: 'contains', valueValue: 'referral' },
+    ],
+    conditionOptions: {
+      field:    [{ value: 'conversation_history', label: 'Conversation history' }],
+      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
+    },
+    parentId: 'tr-3',
+    isBranchPath: true,
+    nodes: [
+      { id: 'tr-8', flowType: 'delay' as const, data: { title: 'Wait 3 days', subtype: 'Delay', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Configure delay settings', descriptionPlaceholder: 'Description' } },
+      { id: 'tr-9', flowType: 'task' as const, data: { title: 'Check message received', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Check whether the contact has replied since the referral was sent.' } },
+      { id: 'tr-10', flowType: 'branch' as const, data: { title: 'Based on conditions', subtype: 'Branch', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Appointment confirmed or not?' } },
+    ],
+  },
+  'tr-3-path-fallback': {
+    branchName: 'No conditions match',
+    description: 'None of the above conditions matched.',
+    conditions: [],
+    parentId: 'tr-3',
+    isBranchPath: true,
+    isFallback: true,
+    nodes: [],
+  },
+  'tr-4': { taskName: 'Assign contact status', description: 'Analyze the incoming messages and assign the contact status', selectedTools: ['assign-contact-status'] },
+  'tr-5': { taskName: 'Assign conversation', description: 'Analyze the incoming messages and assign the conversation to team or agent', selectedTools: ['assign-conversation'] },
+  'tr-6': { taskName: 'Assign contact status', description: 'Analyze the incoming messages and assign the contact status', selectedTools: ['assign-contact-status'] },
+  'tr-7': { taskName: 'Assign conversation', description: 'Analyze the incoming messages and assign the conversation to team or agent', selectedTools: ['assign-conversation'] },
+  'tr-8': { name: 'Wait 3 days', duration: '3', unit: 'days' },
+  'tr-9': { taskName: 'Check message received', description: 'Check whether the contact has replied since the referral was sent.', selectedTools: [] },
+  'tr-10': {
+    basedOn: 'conditions',
+    branches: [
+      { id: 'tr-10-path-1', name: 'No new message' },
+      { id: 'tr-10-path-fallback', name: 'Message received', isFallback: true },
+    ],
+  },
+  'tr-10-path-1': {
+    branchName: 'No new message',
+    description: 'No new message received from the contact.',
+    conditions: [
+      { id: 1, fieldValue: 'message_received', operatorValue: 'equals', valueValue: 'false' },
+    ],
+    conditionOptions: {
+      field:    [{ value: 'message_received', label: 'Message received' }],
+      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      value:    [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
+    },
+    parentId: 'tr-10',
+    isBranchPath: true,
+    nodes: [
+      { id: 'tr-11', flowType: 'task' as const, data: { title: 'Assign conversation status', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Mark the conversation as needing follow-up since no reply was received.' } },
+    ],
+  },
+  'tr-10-path-fallback': {
+    branchName: 'Message received',
+    description: 'Contact responded before the wait period elapsed.',
+    conditions: [],
+    parentId: 'tr-10',
+    isBranchPath: true,
+    isFallback: true,
+    nodes: [],
+  },
+  'tr-11': { taskName: 'Assign conversation status', description: 'Mark the conversation as needing follow-up since no reply was received.', selectedTools: ['assign-conversation-status'] },
+}
+
 export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,             nodeDetails: FRONTDESK_HC_NODE_DETAILS          },
   'Reminder agent':  { nodes: HEALTHCARE_REMINDER_NODES,   nodeDetails: HEALTHCARE_REMINDER_NODE_DETAILS   },
   'Outreach agent':  { nodes: OUTREACH_NODES,              nodeDetails: OUTREACH_NODE_DETAILS              },
   'Pre-visit agent':  { nodes: PREVISIT_NODES,             nodeDetails: PREVISIT_NODE_DETAILS              },
   'Waitlist agent':   { nodes: WAITLIST_NODES,             nodeDetails: WAITLIST_NODE_DETAILS              },
+  'Tagging & routing agent': { nodes: TAGGING_ROUTING_NODES, nodeDetails: TAGGING_ROUTING_NODE_DETAILS      },
 }
 
 // ─── Shared voice-call conditionOptions (reused across all three dental agents) ─
@@ -1737,7 +1917,7 @@ const TPE_NODE_DETAILS: Record<string, unknown> = {
   '__start__': {
     agentName: 'Treatment plan agent — Event trigger based',
     goals: 'Convert unscheduled treatment plans into booked appointments by reaching out as soon as a new plan is created.',
-    outcomes: 'Patients with unscheduled treatment plans receive timely, personalised outreach across email, text, and voice.',
+    outcomes: 'Patients with unscheduled treatment plans receive timely, personalized outreach across email, text, and voice.',
     locations: ['All locations'],
   },
   'tpe-1': {

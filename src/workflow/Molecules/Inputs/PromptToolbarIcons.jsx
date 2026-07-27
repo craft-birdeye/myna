@@ -31,3 +31,18 @@ export function ExpandIcon() {
     </svg>
   );
 }
+
+export function ProcedureIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M10 5.83C9.2 5.2 7.9 4.83 6.5 4.83C5.4 4.83 4.35 5.05 3.5 5.45C3.31 5.54 3.17 5.73 3.17 5.94V14.44C3.17 14.79 3.52 15.02 3.84 14.87C4.62 14.51 5.53 14.33 6.5 14.33C7.9 14.33 9.2 14.7 10 15.33C10.8 14.7 12.1 14.33 13.5 14.33C14.47 14.33 15.38 14.51 16.16 14.87C16.48 15.02 16.83 14.79 16.83 14.44V5.94C16.83 5.73 16.69 5.54 16.5 5.45C15.65 5.05 14.6 4.83 13.5 4.83C12.1 4.83 10.8 5.2 10 5.83Z"
+        stroke="#303030"
+        strokeWidth="1.15"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path d="M10 5.83V15.33" stroke="#303030" strokeWidth="1.15" strokeLinecap="round" />
+    </svg>
+  );
+}

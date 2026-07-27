@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { Chip, DataTable, FilterPanel, FormDrawer, Icon, PatientCell, QuickSendModal, QuickViewDrawer, Tabs, Toast, TopNav, ViewActivityDrawer, type ChipVariant, type Column, type FilterField, type QuickViewWaitlist } from '../components'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Chip, CustomizeColumnsDrawer, DataTable, FilterPanel, FormDrawer, HeaderSearchField, Icon, MessageDrawer, PatientCell, QuickSendModal, QuickViewDrawer, Tabs, Toast, TopNav, ViewActivityDrawer, type ChipVariant, type Column, type ColumnOption, type FilterField, type PatientDetail, type QuickViewWaitlist, type RecordDetailScreenProps } from '../components'
 
 type WaitlistStatus = 'Waitlisted' | 'Slot offered' | 'Slot filled'
 type OutreachChannel = 'chat' | 'call' | 'text'
 type Priority = 'High' | 'Medium' | 'Low' | 'low'
 
-interface WaitlistRow {
+export interface WaitlistRow {
   patient: string
   location: string
   outreach: OutreachChannel
@@ -14,6 +14,60 @@ interface WaitlistRow {
   apptType: string
   status: WaitlistStatus
   [key: string]: string
+}
+
+export interface WaitlistDetailArgs {
+  detail: PatientDetail
+  row: WaitlistRow
+  fromTabLabel?: string
+}
+
+function toWaitlistDetailArgs(row: WaitlistRow, fromTabLabel?: string): WaitlistDetailArgs {
+  return {
+    detail: {
+      patient: row.patient,
+      status: row.status,
+      location: row.location,
+      appointmentType: row.apptType,
+    },
+    row,
+    fromTabLabel,
+  }
+}
+
+export function buildWaitlistDetailProps(args: WaitlistDetailArgs): RecordDetailScreenProps {
+  const { row } = args
+  return {
+    name: row.patient,
+    accordions: [
+      {
+        title: 'Waitlist details',
+        defaultOpen: true,
+        fields: [
+          { label: 'Location', value: row.location },
+          { label: 'Outreach channel', value: row.outreach },
+          { label: 'Waiting since', value: row.waitingSince },
+          { label: 'Priority', value: row.priority },
+          { label: 'Appointment type', value: row.apptType },
+        ],
+      },
+    ],
+    metrics: [
+      { value: row.waitingSince, label: 'Waiting since' },
+      { value: row.priority, label: 'Priority' },
+      { value: row.apptType, label: 'Appointment type' },
+      { value: row.status, label: 'Status' },
+    ],
+    activities: [
+      {
+        id: '1',
+        type: 'booked',
+        title: `${row.patient} added to the waitlist for '${row.apptType}'`,
+        subtitle: `Waiting since ${row.waitingSince} · Priority: ${row.priority}`,
+        date: row.waitingSince,
+      },
+    ],
+  }
 }
 
 const ALL_ROWS: WaitlistRow[] = [
@@ -59,7 +113,7 @@ const STATUS_VARIANT: Record<WaitlistStatus, ChipVariant> = {
 }
 
 const OUTREACH_ICON: Record<OutreachChannel, string> = {
-  chat: 'chat',
+  chat: 'sms',
   call: 'phone',
   text: 'sms',
 }
@@ -71,8 +125,12 @@ const STATUS_COLUMN: Column<WaitlistRow> = {
   render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[v as WaitlistStatus] ?? 'neutral'} />,
 }
 
-const BASE_COLUMNS: Column<WaitlistRow>[] = [
-  { key: 'patient', label: 'Patient', sortable: true, render: (_val, row) => <PatientCell name={row.patient as string} location={row.location as string} /> },
+interface ColumnDef extends Column<WaitlistRow> {
+  locked?: boolean
+}
+
+const COLUMN_DEFS: ColumnDef[] = [
+  { key: 'patient', label: 'Patient', sortable: true, locked: true, render: (_val, row) => <PatientCell name={row.patient as string} location={row.location as string} /> },
   {
     key: 'outreach',
     label: 'Outreach channel',
@@ -81,8 +139,12 @@ const BASE_COLUMNS: Column<WaitlistRow>[] = [
   },
   { key: 'waitingSince', label: 'Waiting since',    sortable: true },
   { key: 'priority',     label: 'Priority',         sortable: true },
-  { key: 'apptType',     label: 'Appt type',        sortable: true },
+  { key: 'apptType',     label: 'Appointment type', sortable: true },
 ]
+
+const DEFAULT_ORDER = COLUMN_DEFS.map((c) => String(c.key))
+const DEFAULT_VISIBLE = DEFAULT_ORDER
+const DEF_BY_KEY = new Map(COLUMN_DEFS.map((c) => [String(c.key), c]))
 
 function AddToWaitlistButton({ onSelect }: { onSelect: (mode: 'existing' | 'new') => void }) {
   const [open, setOpen] = useState(false)
@@ -195,16 +257,24 @@ const FILTER_FIELDS: FilterField[] = [
 const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 }
 const parseDays = (s: string) => parseInt(s) || 0
 
-export function ReviewWaitlistScreen() {
+export function ReviewWaitlistScreen({ onViewDetail }: { onViewDetail?: (args: WaitlistDetailArgs) => void } = {}) {
   const [rows, setRows] = useState<WaitlistRow[]>(ALL_ROWS)
   const [activeTab, setActiveTab] = useState('waitlisted')
+  const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
+  const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
+  const [customizeOpen, setCustomizeOpen] = useState(false)
   const [offerSlotFor, setOfferSlotFor] = useState<WaitlistRow | null>(null)
   const [addMode, setAddMode] = useState<'existing' | 'new' | null>(null)
   const [quickSendRow, setQuickSendRow] = useState<WaitlistRow | null>(null)
+  const [messagingRow, setMessagingRow] = useState<WaitlistRow | null>(null)
+  const [messagingChannel, setMessagingChannel] = useState<'message' | 'email'>('message')
   const [activityRow, setActivityRow] = useState<WaitlistRow | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [quickViewRow, setQuickViewRow] = useState<QuickViewWaitlist | null>(null)
+  const [quickViewSourceRow, setQuickViewSourceRow] = useState<WaitlistRow | null>(null)
 
   const counts = {
     waitlisted:     rows.filter((r) => r.status === 'Waitlisted').length,
@@ -220,23 +290,44 @@ export function ReviewWaitlistScreen() {
     { id: 'all',          label: 'All',          count: counts.all                 },
   ]
 
-  const columns: Column<WaitlistRow>[] =
-    activeTab === 'all' ? [...BASE_COLUMNS, STATUS_COLUMN] : BASE_COLUMNS
+  const columns = useMemo<Column<WaitlistRow>[]>(() => {
+    const base = order
+      .filter((k) => visible.includes(k))
+      .map((k) => DEF_BY_KEY.get(k))
+      .filter((c): c is ColumnDef => Boolean(c))
+    return activeTab === 'all' ? [...base, STATUS_COLUMN] : base
+  }, [order, visible, activeTab])
+
+  const columnOptions = useMemo<ColumnOption[]>(
+    () => order.map((k) => ({ key: k, label: DEF_BY_KEY.get(k)!.label, locked: DEF_BY_KEY.get(k)!.locked })),
+    [order],
+  )
 
   const tableData = (() => {
-    const filtered = activeTab === 'all'
+    let filtered = activeTab === 'all'
       ? [...rows]
       : rows.filter((r) => r.status === TAB_FILTER[activeTab])
 
-    if (activeTab === 'waitlisted') {
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      filtered = filtered.filter(
+        (r) =>
+          r.patient.toLowerCase().includes(q) ||
+          r.location.toLowerCase().includes(q) ||
+          r.apptType.toLowerCase().includes(q),
+      )
+    }
+
+    if (activeTab === 'slot-offered') {
+      filtered.sort((a, b) => parseDays(b.waitingSince) - parseDays(a.waitingSince))
+    } else if (activeTab === 'slot-filled') {
+      filtered.sort((a, b) => parseDays(a.waitingSince) - parseDays(b.waitingSince))
+    } else {
+      // 'waitlisted' and 'all' — default sort by priority (high to low)
       filtered.sort((a, b) => {
         const pDiff = (PRIORITY_ORDER[a.priority.toLowerCase()] ?? 9) - (PRIORITY_ORDER[b.priority.toLowerCase()] ?? 9)
         return pDiff !== 0 ? pDiff : parseDays(b.waitingSince) - parseDays(a.waitingSince)
       })
-    } else if (activeTab === 'slot-offered') {
-      filtered.sort((a, b) => parseDays(b.waitingSince) - parseDays(a.waitingSince))
-    } else if (activeTab === 'slot-filled') {
-      filtered.sort((a, b) => parseDays(a.waitingSince) - parseDays(b.waitingSince))
     }
 
     return filtered
@@ -260,11 +351,14 @@ export function ReviewWaitlistScreen() {
         <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
           <h1 className="text-h3 text-text-primary">Review waitlist</h1>
           <div className="flex items-center gap-sm">
-            <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-              <Icon name="search" size={20} />
-            </button>
+            <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
             <AddToWaitlistButton onSelect={setAddMode} />
-            <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+            <button
+              type="button"
+              aria-label="Customize columns"
+              onClick={() => setCustomizeOpen(true)}
+              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            >
               <Icon name="view_column" size={20} />
             </button>
             <button
@@ -283,7 +377,7 @@ export function ReviewWaitlistScreen() {
         </div>
 
         {/* Table */}
-        <div className="px-lg py-lg">
+        <div className="flex flex-1 flex-col px-lg py-lg">
           <DataTable
             rowHeight={56}
             columns={columns}
@@ -296,9 +390,9 @@ export function ReviewWaitlistScreen() {
             }}
             rowMenuItems={[
               { label: 'Quick send',    onClick: (row) => setQuickSendRow(row) },
-              { label: 'Quick view',    onClick: (row) => setQuickViewRow({ patient: row.patient, provider: 'Dr. Smith', location: 'New York, NY', apptType: row.apptType, slotPreference: 'Morning', waitingSince: row.waitingSince, status: row.status }) },
+              { label: 'Quick view',    onClick: (row) => { setQuickViewRow({ patient: row.patient, provider: 'Dr. Smith', location: 'New York, NY', apptType: row.apptType, slotPreference: 'Morning', waitingSince: row.waitingSince, status: row.status }); setQuickViewSourceRow(row) } },
               { label: 'View activity', onClick: (row) => setActivityRow(row) },
-              { label: 'View details',  onClick: () => {}, icon: 'open_in_new' },
+              { label: 'View details',  onClick: (row) => onViewDetail?.(toWaitlistDetailArgs(row, tabs.find((t) => t.id === activeTab)?.label)), icon: 'open_in_new' },
             ]}
           />
         </div>
@@ -311,6 +405,21 @@ export function ReviewWaitlistScreen() {
           onAdvancedFilters={() => {}}
         />
       </div>
+
+      <CustomizeColumnsDrawer
+        open={customizeOpen}
+        options={columnOptions}
+        visibleKeys={visible}
+        onClose={() => setCustomizeOpen(false)}
+        onSave={(orderedKeys, visibleKeys) => {
+          setOrder(orderedKeys)
+          setVisible(visibleKeys)
+        }}
+        onRestoreDefault={() => {
+          setOrder(DEFAULT_ORDER)
+          setVisible(DEFAULT_VISIBLE)
+        }}
+      />
 
       <FormDrawer
         open={offerSlotFor !== null}
@@ -354,12 +463,44 @@ export function ReviewWaitlistScreen() {
         open={activityRow !== null}
         patient={activityRow?.patient ?? ''}
         onClose={() => setActivityRow(null)}
+        onViewAllDetails={() => {
+          if (!activityRow) return
+          onViewDetail?.(toWaitlistDetailArgs(activityRow, tabs.find((t) => t.id === activeTab)?.label))
+          setActivityRow(null)
+        }}
       />
 
       <QuickViewDrawer
         open={quickViewRow !== null}
         waitlist={quickViewRow}
         onClose={() => setQuickViewRow(null)}
+        onQuickSend={() => {
+          setQuickSendRow(quickViewSourceRow)
+          setQuickViewRow(null)
+        }}
+        onMessage={() => {
+          setMessagingChannel('message')
+          setMessagingRow(quickViewSourceRow)
+          setQuickViewRow(null)
+        }}
+        onEmail={() => {
+          setMessagingChannel('email')
+          setMessagingRow(quickViewSourceRow)
+          setQuickViewRow(null)
+        }}
+        onViewDetails={() => {
+          if (!quickViewSourceRow) return
+          onViewDetail?.(toWaitlistDetailArgs(quickViewSourceRow, tabs.find((t) => t.id === activeTab)?.label))
+          setQuickViewRow(null)
+        }}
+      />
+
+      <MessageDrawer
+        open={messagingRow !== null}
+        patient={messagingRow?.patient ?? ''}
+        status={messagingRow?.status}
+        initialChannel={messagingChannel}
+        onClose={() => setMessagingRow(null)}
       />
 
       <Toast

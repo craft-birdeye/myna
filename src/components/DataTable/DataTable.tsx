@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EmptyState } from '../EmptyState/EmptyState'
 import { Icon } from '../Icon/Icon'
 import { Column, DataTableProps, SortDir } from './DataTable.types'
 
@@ -79,7 +80,13 @@ export function DataTable<T extends Record<string, unknown>>({
     return <div className="flex h-48 items-center justify-center text-body text-text-secondary">Loading…</div>
   }
   if (data.length === 0) {
-    return <div className="flex h-48 items-center justify-center text-body text-text-secondary">No records found.</div>
+    return (
+      <EmptyState
+        className="h-full min-h-[300px] flex-1"
+        title="No results found"
+        description="Try adjusting your search or filters"
+      />
+    )
   }
 
   const totalWidth = columns.reduce((sum, c) => sum + (widths[String(c.key)] ?? DEFAULT_WIDTH), 0)
@@ -236,7 +243,7 @@ export function DataTable<T extends Record<string, unknown>>({
       {/* Tooltip — fixed so it is never clipped by overflow containers */}
       {tooltip && (
         <div
-          className="pointer-events-none fixed z-[120] -translate-x-1/2 whitespace-nowrap rounded-sm bg-[#1c1c1c] px-sm py-xs text-small text-white"
+          className="pointer-events-none fixed z-[120] -translate-x-1/2 whitespace-nowrap rounded-sm bg-tooltip px-sm py-xs text-small text-white shadow-tooltip"
           style={{ left: tooltip.x, top: tooltip.y }}
         >
           {tooltip.text}

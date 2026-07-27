@@ -15,6 +15,7 @@ import ConversationTriggerBody from './ConversationTriggerBody';
 import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
+import SendResponseTaskBody from './SendResponseTaskBody';
 
 const VARIANTS = {
   start: {
@@ -39,6 +40,11 @@ const VARIANTS = {
   },
   voiceCallTask: {
     body: VoiceCallTaskBody,
+    showActions: true,
+    showPromptStrength: false,
+  },
+  sendResponseTask: {
+    body: SendResponseTaskBody,
     showActions: true,
     showPromptStrength: false,
   },

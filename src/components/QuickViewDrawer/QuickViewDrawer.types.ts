@@ -69,6 +69,9 @@ export interface QuickViewDrawerBaseProps {
   waitlist?: QuickViewWaitlist | null
   onClose: () => void
   onViewDetails?: () => void
+  onQuickSend?: () => void
+  onMessage?: () => void
+  onEmail?: () => void
 }
 
 // Intake variant (IntakeScreen)
@@ -77,6 +80,9 @@ export interface QuickViewDrawerIntakeProps {
   patient: PatientDetail | null
   onClose: () => void
   onViewDetails?: () => void
+  onQuickSend?: () => void
+  onMessage?: () => void
+  onEmail?: () => void
 }
 
 export type QuickViewDrawerProps = QuickViewDrawerBaseProps | QuickViewDrawerIntakeProps

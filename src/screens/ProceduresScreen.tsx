@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { TopNav, Icon } from '../components'
+import { TopNav, Icon, HeaderSearchField } from '../components'
 
 // Uploaded procedure.svg icon
 function ProcedureBookIcon({ size = 24, className = '' }: { size?: number; className?: string }) {
@@ -60,7 +60,7 @@ function ThreeDotMenu({ onDuplicate, onDelete }: { onDuplicate: () => void; onDe
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { type Procedure } from '../data/procedureData'
 import { ProcedureDetailScreen } from './ProcedureDetailScreen'
-import { DataTable, FilterPanel } from '../components'
+import { DataTable, FilterPanel, Toast } from '../components'
 import type { Column } from '../components/DataTable/DataTable.types'
 
 type ViewMode = 'grid' | 'list'
@@ -83,12 +83,18 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
   const [filterSelections, setFilterSelections] = useState<Record<string, string[]>>({})
   // null = list view; a Procedure = editing existing; 'new' = create flow.
   const [editing, setEditing] = useState<Procedure | 'new' | null>(null)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastVisible, setToastVisible] = useState(false)
 
   if (editing) {
     return (
       <ProcedureDetailScreen
         procedure={editing === 'new' ? null : editing}
         onBack={() => setEditing(null)}
+        onSaved={(isNew) => {
+          setToastMessage(isNew ? 'Procedure created' : 'Procedure updated')
+          setToastVisible(true)
+        }}
         product={product}
       />
     )
@@ -144,27 +150,7 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
           <h1 className="text-h3 text-text-primary">Procedures</h1>
 
           <div className="flex items-center gap-sm">
-            {searchOpen && (
-              <input
-                autoFocus
-                type="text"
-                placeholder="Search procedures..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-56 rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
-              />
-            )}
-            <button
-              type="button"
-              aria-label="Search"
-              onClick={() => {
-                setSearchOpen((o) => !o)
-                if (searchOpen) setSearchQuery('')
-              }}
-              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-            >
-              <Icon name="search" size={20} />
-            </button>
+            <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} placeholder="Search procedures..." />
 
             {/* View toggle — same chrome as PageHeader's ViewToggle */}
             <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
@@ -249,6 +235,12 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
         onClose={() => setFilterOpen(false)}
       />
       </div>
+
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
+      />
     </div>
   )
 }

@@ -553,11 +553,11 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
                   </div>
                 </div>{/* end booking constraints section */}
 
-                {/* Time off & closures */}
+                {/* Time off and closures */}
                 <div className="flex flex-col gap-sm">
                   <div className="flex items-start justify-between gap-lg">
                     <div className="flex flex-col gap-[2px]">
-                      <h2 className="text-[14px] text-text-primary">Time off & closures</h2>
+                      <h2 className="text-[14px] text-text-primary">Time off and closures</h2>
                       <p className="text-small text-text-secondary">
                         Block full days when the dealership is closed or an advisor is unavailable. The agent won't offer slots on these dates, overriding the weekly booking windows.
                       </p>

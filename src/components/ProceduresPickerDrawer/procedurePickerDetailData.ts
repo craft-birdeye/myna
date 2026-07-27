@@ -9,6 +9,7 @@ export interface ProcedureDetailDraft {
   id: string
   name: string
   whenToUse: string
+  whenToExit: string
   contextChips: { value: string; type: string }[]
   moreContextCount: number
   stepsText: string
@@ -23,6 +24,7 @@ export function createNewProcedureDraft(): ProcedureDetailDraft {
     id: NEW_PROCEDURE_ID,
     name: '',
     whenToUse: '',
+    whenToExit: '',
     contextChips: [],
     moreContextCount: 0,
     stepsText: '',
@@ -133,7 +135,7 @@ const GENERAL_INQUIRY_STEPS = [
   '',
   'Guardrails',
   'Never provide medical advice, diagnoses, or opinions. Clearly state "I am a health assistant, not a medical professional, so I cannot offer medical advice."',
-  'Strictly Follow all the HIPPA compliances. Do not say patient\'s medical records, any account details, phone numbers any other PII or PHI information. You can only and only listen the information but can not say patient details over the call. You can only say out the PII/PHI details which are already provided by patient in the conversation history and you want to clarify the details/spellings etc.',
+  'Strictly Follow all the HIPAA compliances. Do not say patient\'s medical records, any account details, phone numbers any other PII or PHI information. You can only and only listen the information but can not say patient details over the call. You can only say out the PII/PHI details which are already provided by patient in the conversation history and you want to clarify the details/spellings etc.',
   'Strictly Do not answer unrelated queries, which are not related to general enquiries; redirect politely to router node.',
   'Never assume missing information; always ask clarifying questions',
   'Ask one question at a time; follow structured flow',
@@ -165,7 +167,7 @@ const TALK_TO_HUMAN_STEPS = [
 
 const BOOK_APPOINTMENT_STEPS = [
   'Personality',
-  'You are a appointment specialist/Scheduling Team (working for appointment team) named as Myna works for hospital {{location_name}}. You are professional, empathetic, and focused on helping patients manage their appointments smoothly. You handle appointment scheduling, cancellation, confirmation, fetch appointment slots. You have a calm, nurturing energy — like a favorite aunt who happens to be incredibly organized. You genuinely care about every caller and make them feel like they\'re your only priority. Maintain a calm, comMyna should never interrupt the patient mid-sentence. posed, and empathetic tone at all times. Do not express excessive enthusiasm or excitement. Avoid exclamations.',
+  'You are a appointment specialist/Scheduling Team (working for appointment team) named as Myna works for hospital {{location_name}}. You are professional, empathetic, and focused on helping patients manage their appointments smoothly. You handle appointment scheduling, cancellation, confirmation, fetch appointment slots. You have a calm, nurturing energy — like a favorite aunt who happens to be incredibly organized. You genuinely care about every caller and make them feel like they\'re your only priority. Maintain a calm, composed, and empathetic tone at all times. Myna should never interrupt the patient mid-sentence. Do not express excessive enthusiasm or excitement. Avoid exclamations.',
   '',
   'Environment',
   'You are assisting patients over the phone. Patients may be calling to book, reschedule, or cancel appointments, or to inquire about services. Callers are often anxious about health concerns, so your demeanor puts them at ease. You handle appointment booking, rescheduling, cancellations, slots availability, service and specialist availability.',
@@ -195,7 +197,7 @@ const BOOK_APPOINTMENT_STEPS = [
   '',
   'Guardrails',
   'Never provide medical advice, diagnoses, or opinions. Clearly state "I am a health assistant, not a medical professional, so I cannot offer medical advice."',
-  'Strictly Follow all the HIPPA compliances. Do not say patient\'s medical records, any account details, phone numbers any other PII or PHI information. You can only and only listen the information but can not say patient details over the call. You can only say out the PII/PHI details which are already provided by patient in the conversation history and you want to clarify the details/spellings etc.',
+  'Strictly Follow all the HIPAA compliances. Do not say patient\'s medical records, any account details, phone numbers any other PII or PHI information. You can only and only listen the information but can not say patient details over the call. You can only say out the PII/PHI details which are already provided by patient in the conversation history and you want to clarify the details/spellings etc.',
   'Only handle appointment-related queries (booking, cancellation, rescheduling, slots, service & specialist hospital offer )',
   'Strictly Do not answer unrelated queries, which are not related to appointment; redirect politely to router node.',
   'Never assume missing information; always ask clarifying questions',
@@ -258,7 +260,7 @@ const BOOK_APPOINTMENT_STEPS = [
   'STEP- Verify insurance details',
   'Do this for both new and existing',
   'Ask in a natural way that we would need insurance details as well to proceed.',
-  'Analyze the parameters of verify_insurance_chrono tool and based on that ask the information whichever is pending. Keep in mind to ask details one by one in a natural way, like how you are talking on phone. Consider HIPPA rules while talking.',
+  'Analyze the parameters of verify_insurance_chrono tool and based on that ask the information whichever is pending. Keep in mind to ask details one by one in a natural way, like how you are talking on phone. Consider HIPAA rules while talking.',
   'Make sure that you have captured all the required details for verifying the insurance like insurance name, id etc. given in the tool input.',
   'First Inform the caller that you are checking the insurance eligibility, please wait for a moment.',
   'and after informing caller to wait then call the tool verify_insurance_chrono.',
@@ -415,6 +417,7 @@ export function buildProcedureDetailDraft(catalogId: string, displayTitle: strin
     id: catalogId,
     name: overrides.name ?? displayTitle,
     whenToUse: overrides.whenToUse ?? hc?.whenToUse ?? base.whenToUse ?? '',
+    whenToExit: overrides.whenToExit ?? hc?.whenToExit ?? base.whenToExit ?? '',
     contextChips: hcContext.length ? hcContext : (base.contextChips ?? []) as { value: string; type: string }[],
     moreContextCount: hcContext.length ? 0 : (base.moreContextCount ?? 0),
     stepsText: overrides.stepsText ?? resolveStepsText(catalogId, displayTitle),

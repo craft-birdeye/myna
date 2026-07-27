@@ -310,9 +310,9 @@ export function ReminderToolDrawer({ open, onClose }: Props) {
           </Accordion>
 
           {/* ── Section 4: On a response ── */}
-          <Accordion title="On a response" subtitle="Configure how and when do you want to route to a Frontdesk agent">
+          <Accordion title="On a response" subtitle="Configure how and when do you want to route to a Front desk agent">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 12 }}>
-              <SelectField label="Hand off to" value="Frontdesk agent (4 locations)" options={['Frontdesk agent (4 locations)', 'Frontdesk agent (all locations)']} />
+              <SelectField label="Hand off to" value="Front desk agent (4 locations)" options={['Front desk agent (4 locations)', 'Front desk agent (all locations)']} />
               <div>
                 <Label>Procedures</Label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

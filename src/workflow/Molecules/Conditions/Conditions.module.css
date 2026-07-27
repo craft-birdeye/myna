@@ -238,3 +238,10 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* ─── Indent guide: nests a condition/connector one level deeper ─── */
+.indentWrap {
+  border-left: 2px solid #e5e9f0;
+  padding-left: 12px;
+  margin-left: 4px;
+}

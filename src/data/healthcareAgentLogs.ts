@@ -1,6 +1,6 @@
 import type { Metric } from '../components/MetricTiles/MetricTiles.types'
 
-export type LogStatus = 'Resolved' | 'Transferred' | 'Abandoned'
+export type LogStatus = 'Complete' | 'Failed' | 'In progress'
 
 export interface HealthcareLogRow {
   timestamp: string
@@ -84,42 +84,42 @@ export const PREVISIT_LOGS_ROWS: PrevisitLogRow[] = [
 export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
   {
     timestamp: 'Feb 25, 2024, 5:30 pm',
-    status: 'Resolved',
+    status: 'Complete',
     contact: 'Dana Whitfield',
-    channel: 'Voice',
+    channel: 'Voice call',
     duration: '0:53',
-    topic: 'Service appointment',
+    topic: 'Tooth pain screening',
   },
   {
-    timestamp: 'Feb 09, 2024, 5:30 pm',
-    status: 'Resolved',
+    timestamp: 'Feb 09, 2024, 11:12 am',
+    status: 'Complete',
     contact: 'Robert Cho',
-    channel: 'Voice',
+    channel: 'Voice call',
     duration: '1:36',
-    topic: 'New vehicle inquiry',
+    topic: 'New patient scheduling',
   },
   {
-    timestamp: 'Feb 05, 2024, 5:30 pm',
-    status: 'Resolved',
+    timestamp: 'Feb 05, 2024, 2:47 pm',
+    status: 'Complete',
     contact: '+1 (628) 555-0110',
-    channel: 'Chat',
+    channel: 'Web chat',
     duration: '1:11',
     topic: 'Appointment reschedule',
   },
   {
-    timestamp: 'Jan 25, 2024, 5:30 pm',
-    status: 'Abandoned',
+    timestamp: 'Jan 25, 2024, 9:05 am',
+    status: 'Failed',
     contact: '+1 (310) 555-0190',
-    channel: 'Chat',
+    channel: 'Web chat',
     duration: '1:04',
-    topic: 'Vehicle breakdown',
+    topic: 'Emergency dental concern',
   },
   {
-    timestamp: 'Jan 18, 2024, 5:30 pm',
-    status: 'Transferred',
+    timestamp: 'Jan 18, 2024, 4:18 pm',
+    status: 'In progress',
     contact: 'Elena Sokolova',
-    channel: 'Voice',
+    channel: 'Voice call',
     duration: '0:18',
-    topic: 'Not stated',
+    topic: 'Insurance inquiry',
   },
 ]

@@ -43,6 +43,7 @@ const INTERNAL_TOOLS = [
   { id: 'update-tags',      name: 'Update tags',        desc: 'Modify or refine tags based on latest insights and trends',               icon: 'sell',               size: 'md', bg: 'blue' },
   { id: 'send-surveys',     name: 'Send Surveys',       desc: 'Send surveys to customers to collect feedback and insights',              icon: 'assignment_turned_in', size: 'sm', bg: 'blue' },
   { id: 'get-surveys',      name: 'Get Surveys',        desc: 'Access and analyze survey responses to drive insights',                   icon: 'assignment_turned_in', size: 'sm', bg: 'blue' },
+  { id: 'in-call-sms',      name: 'In-call SMS',        desc: 'Send a text message to the caller during an active call',                 icon: 'sms',                size: 'sm', bg: 'blue' },
 ];
 
 const EXTERNAL_TOOLS = [

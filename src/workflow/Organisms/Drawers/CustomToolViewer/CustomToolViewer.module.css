@@ -340,6 +340,45 @@
   border-color: #1976d2;
 }
 
+.iconInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.iconInputRow:focus-within {
+  border-color: #1976d2;
+}
+
+.iconInputLeading {
+  font-size: 20px !important;
+  color: #6b7280;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.iconInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  color: #212121;
+  background: transparent;
+}
+
+.iconInput::placeholder {
+  color: #9e9e9e;
+}
+
 .fieldSuffix {
   font-size: 14px;
   line-height: 20px;

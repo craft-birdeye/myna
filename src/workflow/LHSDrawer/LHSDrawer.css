@@ -136,10 +136,59 @@
   z-index: 5;
   background: #fff;
   padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
+/* FormInput stub / elemental wrapper — fill row beside collapse btn */
+.lhs-drawer__search > div,
 .lhs-drawer__search .el-forminput {
   margin: 0 !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.lhs-drawer__search > div input,
+.lhs-drawer__search .el-forminput input {
+  width: 100% !important;
+}
+
+/* ─── Collapse button inside search row ─── */
+.lhs-drawer__search > span {
+  flex-shrink: 0;
+}
+
+.lhs-drawer__collapse-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.lhs-drawer__collapse-btn:hover {
+  background: #f2f4f7;
+  color: #212121;
+  border-color: #c8cdd8;
+}
+
+.lhs-drawer__collapse-btn .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
 .lhs-drawer__search .form-input-wrapper {
@@ -321,6 +370,8 @@
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  padding-left: 16px;
+  box-sizing: border-box;
 }
 
 .lhs-drawer__cards--scrollable {

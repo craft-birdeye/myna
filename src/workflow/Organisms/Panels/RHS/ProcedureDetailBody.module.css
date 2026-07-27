@@ -25,7 +25,7 @@
 .readOnlyField {
   width: 100%;
   height: 40px;
-  padding: 0 16px;
+  padding: 0 12px;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   font-weight: 400;
@@ -35,17 +35,46 @@
   border: 1px solid #e5e9f0;
   border-radius: 4px;
   outline: none;
-  background: #fff;
+  /* Arrow Elemental read-only / disabled fill (L2 BG) */
+  background: #fafafa;
   box-sizing: border-box;
   cursor: default;
+  pointer-events: none;
+  user-select: text;
 }
 
 .readOnlyTextarea {
   height: auto;
   min-height: 120px;
-  padding: 16px;
-  resize: vertical;
+  padding: 12px;
+  resize: none;
   line-height: 20px;
+  /* Allow scroll inside long read-only text */
+  pointer-events: auto;
+  overflow-y: auto;
+}
+
+.readOnlySteps {
+  height: auto;
+  min-height: 120px;
+  padding: 16px;
+  pointer-events: auto;
+}
+
+.readOnlySteps .stepsList {
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+}
+
+.readOnlySteps .stepsEmpty {
+  margin: 0;
+}
+
+.libraryContextBoxReadOnly {
+  background: #fafafa;
+  pointer-events: none;
 }
 
 /* ── Library-style context box (matches ProcedureDetailScreen) ── */
@@ -56,17 +85,6 @@
   background: #fff;
   box-sizing: border-box;
   width: 100%;
-}
-
-.libraryContextEmpty {
-  margin: 0;
-  padding: 12px;
-  font-size: 14px;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 400;
-  line-height: 20px;
-  letter-spacing: -0.28px;
-  color: #9e9e9e;
 }
 
 .libraryContextChips {
@@ -216,10 +234,16 @@
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
-  line-height: 20px;
+  line-height: 26px;
   letter-spacing: -0.28px;
   flex: 1;
   min-width: 0;
+}
+
+/* Give inline variable/tool chips a bit more breathing room from surrounding
+   step text so dense steps don't read as a wall of chips. */
+.stepsEditorBody :global(.prompt-chip) {
+  margin: 2px 4px;
 }
 
 .stepsListWithHint {
@@ -261,7 +285,9 @@
   white-space: pre-wrap;
 }
 
-/* ── Steps editor shell (edit mode + toolbar) ── */
+/* ── Steps editor shell (edit mode + toolbar) ──
+ * No max-height/internal scroll — the box has a min-height and grows with
+ * content, same as the create-mode variant below. */
 .stepsEditorShell {
   display: flex;
   flex-direction: column;
@@ -269,10 +295,7 @@
   border: 1px solid #e5e9f0;
   border-radius: 4px;
   box-sizing: border-box;
-  resize: vertical;
-  overflow: hidden;
   min-height: 160px;
-  max-height: 70vh;
 }
 
 .stepsEditorShellFocused {
@@ -280,23 +303,20 @@
 }
 
 .stepsEditorShellCreate {
-  /* Default create height — grows with content, no inner scroll */
-  min-height: 300px;
-  max-height: none;
-  overflow: visible;
-  resize: none;
+  /* Matches STEPS_FIELD_MIN_HEIGHT in ProcedureDetailScreen.tsx. */
+  min-height: 250px;
 }
 
 .stepsEditorBody {
   flex: 1;
-  overflow: auto;
+  overflow: visible;
   min-height: 100px;
 }
 
 .stepsEditorBodyCreate {
   flex: 1 1 auto;
   overflow: visible;
-  min-height: calc(300px - 36px);
+  min-height: calc(250px - 36px);
 }
 
 .stepsEditorBodyCreate .stepsListNestedEmpty {
@@ -307,11 +327,49 @@
   min-height: 100%;
 }
 
+/* Create-mode freeform steps — match EmptyHintField paragraph padding (p-md / 12px) */
+.stepsCreatePrompt :global([class*="inputBox"]) {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.stepsCreatePrompt :global([class*="inputBox"]):focus-within {
+  border: none !important;
+}
+
+.stepsCreatePrompt :global([class*="editor"]) {
+  padding: 12px !important;
+}
+
+.stepsCreatePrompt :global([class*="placeholderOverlay"]) {
+  top: 12px !important;
+  right: 12px !important;
+  left: 12px !important;
+}
+
+.stepsCreatePrompt :global([class*="inputBox"] > [class*="toolbar"]) {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.stepsCreatePrompt :global([class*="toolbarBtn"]) {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+
+.stepsCreatePrompt :global([class*="toolbarBtn"] svg) {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 /* ── Steps panel (view + edit) ── */
 .stepsList {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 22px;
   padding: 24px;
   background: #fff;
   border: 1px solid #e5e9f0;
@@ -338,13 +396,13 @@
 .step {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
 
 .stepTitleRow {
   display: flex;
   align-items: flex-start;
-  gap: 0;
+  gap: 4px;
 }
 
 .stepNumberPrefix {
@@ -352,7 +410,7 @@
   font-family: 'Roboto', sans-serif;
   font-weight: 400;
   color: #212121;
-  line-height: 20px;
+  line-height: 26px;
   letter-spacing: -0.28px;
   flex-shrink: 0;
 }
@@ -362,36 +420,56 @@
   font-family: 'Roboto', sans-serif;
   font-weight: 400;
   color: #212121;
-  line-height: 20px;
+  line-height: 26px;
   letter-spacing: -0.28px;
   flex: 1;
   min-width: 0;
 }
 
 .stepBullets {
-  list-style-type: disc;
-  list-style-position: outside;
-  margin: 2px 0 0;
+  display: flex;
+  flex-direction: column;
+  margin: 4px 0 0;
   padding-left: 24px;
 }
 
 .stepBulletRow {
-  display: list-item;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
-  line-height: 20px;
+  line-height: 26px;
   letter-spacing: -0.28px;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .stepBulletRow:last-child {
   margin-bottom: 0;
 }
 
-.stepBulletRow::marker {
+.bulletMarker {
+  flex-shrink: 0;
+  min-width: 14px;
+  line-height: 26px;
   font-size: 1.15em;
   color: #212121;
+  text-align: center;
+}
+
+/* ── Inline rich text marks (bold/italic/underline/link) ── */
+.stepTitleText a,
+.stepBulletText a,
+.stepsEmptyEditable a {
+  color: #1976d2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.stepLink {
+  color: #1976d2;
+  text-decoration: underline;
 }
 
 .stepsEmpty {

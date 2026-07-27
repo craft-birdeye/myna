@@ -150,6 +150,18 @@
   background: #f2f4f7;
 }
 
+.graph-controls__run:disabled,
+.graph-controls__run[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.graph-controls__run:disabled:hover,
+.graph-controls__run[aria-disabled='true']:hover {
+  background: #fff;
+}
+
 .graph-control-tooltip {
   position: relative;
   display: inline-flex;

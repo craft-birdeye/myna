@@ -802,6 +802,7 @@ export function getProcedureDetailContent(id, fieldOverrides = {}, product) {
     id,
     name: fieldOverrides.name || panel.name,
     whenToUse: fieldOverrides.whenToUse ?? detail.whenToUse ?? panel.whenToUse ?? proc?.whenToUse ?? '',
+    whenToExit: fieldOverrides.whenToExit ?? detail.whenToExit ?? proc?.whenToExit ?? '',
     contextChips: fieldOverrides.contextChips ?? liveContext ?? detail.contextChips ?? liveContextToChips(proc?.context),
     moreContextCount: liveContext ? 0 : (detail.moreContextCount ?? 0),
     stepsText: fieldOverrides.stepsText ?? liveSteps ?? detail.stepsText ?? formatProcedureSteps(proc?.steps),

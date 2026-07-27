@@ -1,5 +1,15 @@
 export { Chip } from './Chip/Chip'
+export { ChatBubble, ChatSystemLabel } from './ChatBubble/ChatBubble'
+export type {
+  ChatBubbleProps,
+  ChatSender,
+  MessageFeedbackValue,
+} from './ChatBubble/ChatBubble.types'
+export { EmptyState } from './EmptyState/EmptyState'
+export type { EmptyStateProps } from './EmptyState/EmptyState.types'
 export { InfoTooltip } from './InfoTooltip/InfoTooltip'
+export { Tooltip } from './Tooltip/Tooltip'
+export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'
 export { TestCallModal } from './TestCallModal/TestCallModal'
 export type { TestCallModalProps } from './TestCallModal/TestCallModal.types'
 export { BookTestAppointmentModal } from './BookTestAppointmentModal/BookTestAppointmentModal'
@@ -14,6 +24,7 @@ export { DateChange } from './DateChange/DateChange'
 export { DateRangeSelector } from './DateRangeSelector/DateRangeSelector'
 export { ReportHeader } from './ReportHeader/ReportHeader'
 export { FilterPanel } from './FilterPanel/FilterPanel'
+export { HeaderSearchField } from './HeaderSearchField/HeaderSearchField'
 export { FormDrawer } from './FormDrawer/FormDrawer'
 export { ProceduresPickerDrawer } from './ProceduresPickerDrawer/ProceduresPickerDrawer'
 export { IntegrationsPickerDrawer } from './IntegrationsPickerDrawer/IntegrationsPickerDrawer'
@@ -28,6 +39,13 @@ export { IntakeFormPreviewDrawer } from './IntakeFormPreviewDrawer/IntakeFormPre
 export { InfoCard } from './InfoCard/InfoCard'
 export { InfoCardListItem } from './InfoCard/InfoCardListItem'
 export { Link } from './Link/Link'
+export { LogDetailsPanel } from './LogDetailsPanel/LogDetailsPanel'
+export type {
+  LogDetailsPanelProps,
+  LogDetailsMetric,
+  LogTranscriptEntry,
+  LogToolCall,
+} from './LogDetailsPanel/LogDetailsPanel.types'
 export { Icon } from './Icon/Icon'
 export { IconRail } from './IconRail/IconRail'
 export { SideNav } from './SideNav/SideNav'
@@ -35,6 +53,7 @@ export { TopNav } from './TopNav/TopNav'
 export { PageHeader } from './PageHeader/PageHeader'
 export { RefChip } from './RefChip/RefChip'
 export { SelectMenu } from './SelectMenu/SelectMenu'
+export { LanguageSelectMenu, LanguageFlag } from './LanguageSelectMenu/LanguageSelectMenu'
 export { StatusFilterDropdown } from './StatusFilterDropdown/StatusFilterDropdown'
 export { SetupAppointmentDrawer } from './SetupAppointmentDrawer/SetupAppointmentDrawer'
 export { BookAppointmentDrawer } from './BookAppointmentDrawer/BookAppointmentDrawer'
@@ -42,6 +61,8 @@ export { DatePickerModal } from './DatePickerModal/DatePickerModal'
 export { MessageDrawer } from './MessageDrawer/MessageDrawer'
 export { QuickSendModal } from './QuickSendModal/QuickSendModal'
 export { Toast } from './Toast/Toast'
+export { ShareFeedbackModal } from './ShareFeedbackModal/ShareFeedbackModal'
+export type { ShareFeedbackModalProps } from './ShareFeedbackModal/ShareFeedbackModal.types'
 export { ViewActivityDrawer } from './ViewActivityDrawer/ViewActivityDrawer'
 export { WeekCalendar } from './WeekCalendar/WeekCalendar'
 export { DayCalendar } from './DayCalendar/DayCalendar'
@@ -52,6 +73,13 @@ export { Tabs } from './Tabs/Tabs'
 export { TabCountPill } from './Tabs/TabCountPill'
 export { DataTable } from './DataTable/DataTable'
 export { PatientCell } from './PatientCell/PatientCell'
+export { RecordDetailScreen } from './RecordDetailScreen/RecordDetailScreen'
+export type {
+  RecordDetailScreenProps,
+  RecordDetailAccordion,
+  RecordDetailField,
+  RecordDetailMetric,
+} from './RecordDetailScreen/RecordDetailScreen.types'
 
 // Charts (Recharts-based + CSS heatmap) — reusable across report pages
 export { ChartCard } from './charts/ChartCard'
@@ -73,6 +101,8 @@ export type { RatingBar, RatingBarChartProps } from './charts/RatingBarChart'
 export type { TrendPoint, TrendLineChartProps } from './charts/TrendLineChart'
 export type { ChartStat, ChartStatRowProps } from './charts/ChartStatRow'
 export type { SummaryStat, SummaryStatsProps } from './charts/SummaryStats'
+export { CallRecordingPlayer } from './CallRecordingPlayer/CallRecordingPlayer'
+export type { CallRecordingPlayerProps } from './CallRecordingPlayer/CallRecordingPlayer.types'
 export { VoicemailMessage } from './VoicemailMessage/VoicemailMessage'
 export type { VoicemailMessageProps } from './VoicemailMessage/VoicemailMessage.types'
 export { VoiceChatDrawer } from './VoiceChatDrawer/VoiceChatDrawer'

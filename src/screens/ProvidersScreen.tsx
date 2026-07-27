@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { DataTable, Icon, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
+import { DataTable, HeaderSearchField, Icon, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
 
 // ── Toggle ───────────────────────────────────────────────────────────────────
 interface ToggleProps {
@@ -118,6 +118,7 @@ interface DropdownFieldProps {
   label: string
   required?: boolean
   infoIcon?: boolean
+  tooltip?: string
   options: SelectOption[]
   value: string[]
   multi?: boolean
@@ -125,7 +126,7 @@ interface DropdownFieldProps {
   disabled?: boolean
   onChange: (v: string[]) => void
 }
-function DropdownField({ label, required, infoIcon, options, value, multi = false, placeholder = 'Select', disabled = false, onChange }: DropdownFieldProps) {
+function DropdownField({ label, required, infoIcon, tooltip, options, value, multi = false, placeholder = 'Select', disabled = false, onChange }: DropdownFieldProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -150,7 +151,7 @@ function DropdownField({ label, required, infoIcon, options, value, multi = fals
         <label className="text-small text-text-secondary">
           {label}{required && <span className="text-danger"> *</span>}
         </label>
-        {infoIcon && <Icon name="info" size={14} className="text-text-tertiary" />}
+        {infoIcon && tooltip && <InfoTooltip text={tooltip} />}
       </div>
       <div ref={ref} className="relative">
         <button
@@ -255,7 +256,7 @@ function EditDrawer({ open, onClose }: EditDrawerProps) {
           <DropdownField label="Location" required options={LOCATION_OPTIONS} value={location} onChange={setLocation} />
           <DropdownField label="Role" options={ROLE_OPTIONS} value={role} onChange={setRole} />
           <DropdownField label="Operatory" options={OPERATORY_OPTIONS} value={operatories} multi onChange={setOperatories} placeholder="Select operatories" />
-          <DropdownField label="Appointment type" infoIcon options={APPT_TYPE_OPTIONS} value={apptTypes} multi onChange={setApptTypes} placeholder="Select appointment types" />
+          <DropdownField label="Appointment type" infoIcon tooltip="The appointment types this provider can be booked for. Patients only see this provider as an option when booking one of these types." options={APPT_TYPE_OPTIONS} value={apptTypes} multi onChange={setApptTypes} placeholder="Select appointment types" />
 
           {/* Bookable */}
           <div className="flex items-center justify-between gap-md">
@@ -318,6 +319,8 @@ export function ProvidersScreen() {
     Object.fromEntries(PROVIDERS.map((p, i) => [i, p.available]))
   )
   const [selectedLocation, setSelectedLocation] = useState<string[]>([])
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Sort: available rows first
   const sortedProviders = [...PROVIDERS].sort((a, b) => {
@@ -325,6 +328,16 @@ export function ProvidersScreen() {
     const bAvail = availableMap[PROVIDERS.indexOf(b)] ?? b.available
     return (bAvail ? 1 : 0) - (aAvail ? 1 : 0)
   })
+
+  const q = searchQuery.trim().toLowerCase()
+  const visibleProviders = q
+    ? sortedProviders.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.role.toLowerCase().includes(q) ||
+          p.location.toLowerCase().includes(q),
+      )
+    : sortedProviders
 
   const COLUMNS: Column<ProviderRow>[] = [
     {
@@ -400,9 +413,7 @@ export function ProvidersScreen() {
             <span className="text-small text-text-secondary">Manage your business providers here</span>
           </div>
           <div className="flex items-center gap-sm">
-            <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-              <Icon name="search" size={20} />
-            </button>
+            <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
             <div className="w-48 [&>div>div:first-child]:hidden">
               <DropdownField
                 label=""
@@ -423,7 +434,7 @@ export function ProvidersScreen() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-md px-2xl pb-2xl">
+        <div className="flex flex-1 flex-col gap-md px-2xl pb-2xl">
           {/* Banner */}
           {!bannerDismissed && (
             <div className="flex items-start gap-sm rounded-sm border border-primary/30 bg-primary/5 px-md py-sm">
@@ -437,12 +448,14 @@ export function ProvidersScreen() {
             </div>
           )}
 
-          <DataTable
-            columns={COLUMNS}
-            data={sortedProviders}
-            rowMenuItems={rowMenuItems}
-            rowClassName={() => ''}
-          />
+          <div className="flex flex-1 flex-col">
+            <DataTable
+              columns={COLUMNS}
+              data={visibleProviders}
+              rowMenuItems={rowMenuItems}
+              rowClassName={() => ''}
+            />
+          </div>
         </div>
       </div>
 

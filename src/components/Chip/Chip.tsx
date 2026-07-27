@@ -10,7 +10,7 @@ const VARIANTS: Record<NonNullable<ChipProps['variant']>, string> = {
 export function Chip({ label, variant = 'warning' }: ChipProps) {
   return (
     <span
-      className={`inline-flex items-center gap-xs rounded-sm px-sm py-xs text-small text-center ${VARIANTS[variant]}`}
+      className={`inline-flex shrink-0 items-center gap-xs whitespace-nowrap rounded-sm px-sm py-xs text-small text-center ${VARIANTS[variant]}`}
     >
       {label}
     </span>

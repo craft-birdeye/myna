@@ -20,6 +20,10 @@ export default function CanvasNode({
   hasAddButton = false,
   onAddClick,
   onDelete,
+  onCopy = undefined,
+  hasClipboard = false,
+  onPasteBelow = undefined,
+  onPasteReplace = undefined,
   state = 'default',
 }) {
   const [on, setOn] = useState(toggleEnabled);
@@ -51,6 +55,10 @@ export default function CanvasNode({
         hasAddButton={hasAddButton && !viewOnly}
         onAddClick={onAddClick}
         onDelete={onDelete}
+        onCopy={onCopy}
+        hasClipboard={hasClipboard}
+        onPasteBelow={onPasteBelow}
+        onPasteReplace={onPasteReplace}
       />
       {(stepNumber != null || title) && (
         <div className={isOff ? 'canvas-node__body--disabled' : undefined}>
