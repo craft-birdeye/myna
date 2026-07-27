@@ -113,13 +113,13 @@ export function ContentFlowStepper({
             >
               <span
                 className={cn(
-                  'flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px]',
-                  done && 'border-primary bg-primary text-primary-foreground',
-                  active && !done && 'border-primary bg-primary text-primary-foreground',
+                  'flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px]',
+                  done && 'border-accent-positive bg-accent-positive text-white',
+                  active && !done && 'border-[#eaeaea] bg-white text-foreground',
                   !active && !done && 'border-border bg-background text-muted-foreground',
                 )}
               >
-                {done ? <Check size={12} strokeWidth={1.6} absoluteStrokeWidth /> : index + 1}
+                {done ? <Check size={11} strokeWidth={1.6} absoluteStrokeWidth /> : index + 1}
               </span>
               <span>{step.label}</span>
             </button>
