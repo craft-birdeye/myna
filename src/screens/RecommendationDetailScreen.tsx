@@ -1,21 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { ChatBubble, ChatSystemLabel, Chip, Icon, RefChip } from '../components'
+import { ChatBubble, ChatSystemLabel, Chip, Icon } from '../components'
 import {
   CONV_THREADS,
   GAP_ICON,
   GAP_LABEL,
-  PRIORITY_VARIANT,
   RECOMMENDATIONS,
   type Channel,
   type ConversationItem,
   type GapType,
+  type IntroBlock,
   type ManualUpdate,
   type ProcedureStep,
   type RecommendationChange,
   type RecStatus,
   type Recommendation,
+  type ScriptedTurnResponse,
   type Turn,
 } from '../data/recommendationsData'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
@@ -595,7 +596,7 @@ function CurrentProposedColumns({
   return (
     <div className="grid grid-cols-1 gap-lg md:grid-cols-2">
       {/* Current version */}
-      <div className="flex flex-col gap-md rounded-sm border border-border bg-surface p-lg">
+      <div className="flex flex-col gap-md rounded-sm bg-surface p-lg">
         <div className="flex items-center gap-xs">
           <Icon name="history" size={16} className="text-text-icon" />
           <p className="text-body text-text-primary">Current version</p>
@@ -610,301 +611,13 @@ function CurrentProposedColumns({
       </div>
 
       {/* Proposed version */}
-      <div className="flex flex-col gap-md rounded-sm border border-accent-positive bg-chip-success-bg p-lg">
+      <div className="flex flex-col gap-md rounded-sm bg-chip-success-bg p-lg">
         <div className="flex items-center gap-xs">
           <Icon name="auto_awesome" size={16} className="text-accent-positive" />
           <p className="text-body text-text-primary">Proposed version</p>
         </div>
         <StepsList steps={proposedSteps} />
       </div>
-    </div>
-  )
-}
-
-function RecommendationWorkspaceSkeleton({ sectionCount = 1 }: { sectionCount?: number }) {
-  const bar = (w: string, h = 'h-4', delay = 0) => (
-    <div className={`${h} animate-pulse rounded-sm bg-surface-selected`} style={{ width: w, animationDelay: `${delay}ms` }} />
-  )
-
-  return (
-    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
-      {/* Title + CTAs */}
-      <div className="flex items-center justify-between gap-md">
-        <div className="flex items-center gap-sm">
-          {bar('280px', 'h-7')}
-          {bar('70px', 'h-6', 60)}
-        </div>
-        <div className="flex items-center gap-sm">
-          {bar('80px', 'h-9', 120)}
-          {bar('100px', 'h-9', 180)}
-        </div>
-      </div>
-
-      {/* AI banner */}
-      <div className="flex flex-col gap-sm rounded-sm border border-border bg-surface-subtle px-lg py-md">
-        {bar('95%', 'h-4', 0)}
-        {bar('60%', 'h-4', 60)}
-      </div>
-
-      {/* Action needed */}
-      <div className="flex flex-col gap-xs">
-        {bar('100px', 'h-3')}
-        {bar('70%', 'h-5', 60)}
-      </div>
-
-      {/* Per-type sections */}
-      {Array.from({ length: sectionCount }).map((_, s) => (
-        <div key={s} className="flex flex-col gap-md">
-          <div className="flex items-center gap-xs">
-            {bar('20px', 'h-5', s * 40)}
-            {bar('160px', 'h-5', s * 40 + 20)}
-          </div>
-          {bar('80%', 'h-4', s * 40 + 40)}
-          <div className="grid grid-cols-1 gap-lg md:grid-cols-2">
-            {[0, 120].map((delay, i) => (
-              <div key={i} className="flex flex-col gap-md rounded-sm border border-border bg-surface p-lg">
-                {bar('140px', 'h-5', delay)}
-                <div className="mt-sm flex flex-col gap-sm">
-                  {Array.from({ length: 3 }).map((_, j) => (
-                    <React.Fragment key={j}>{bar(`${90 - j * 8}%`, 'h-4', delay + 100 + j * 40)}</React.Fragment>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {/* Tools */}
-      <div className="flex flex-col gap-xs">
-        {bar('60px', 'h-3')}
-        <div className="flex gap-sm">
-          {bar('120px', 'h-8', 60)}
-          {bar('140px', 'h-8', 120)}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function RecommendationDetailBody({
-  rec,
-  recStatus,
-  onReject,
-  onRequestAccept,
-  onToast,
-  onPreviewOpen,
-  setConvsOpen,
-  effectiveChanges,
-  isThinking,
-}: {
-  rec: Recommendation
-  recStatus: RecStatus
-  onReject: (id: string) => void
-  onRequestAccept: () => void
-  onToast: (data: ToastData) => void
-  onPreviewOpen: () => void
-  setConvsOpen: (v: boolean) => void
-  effectiveChanges: RecommendationChange[]
-  isThinking: boolean
-}) {
-  const [applyOpen, setApplyOpen] = useState(false)
-
-  if (isThinking) {
-    return <RecommendationWorkspaceSkeleton sectionCount={effectiveChanges.length} />
-  }
-
-  return (
-    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
-      {/* Title + CTAs */}
-      <div>
-        <div className="flex items-center justify-between gap-md">
-          <div className="flex min-w-0 flex-1 items-center gap-sm">
-            <h2 className="min-w-0 truncate text-h2 text-text-primary">{rec.title}</h2>
-            {recStatus === 'open' && <Chip label={rec.priority} variant={PRIORITY_VARIANT[rec.priority]} />}
-            {recStatus === 'open' && rec.manualUpdates && rec.manualUpdates.length > 0 && (
-              <Chip
-                label={`${rec.manualUpdates.length} manual update${rec.manualUpdates.length > 1 ? 's' : ''} needed`}
-                variant="warning"
-              />
-            )}
-            {recStatus === 'accepted' && <Chip label="Accepted" variant="success" />}
-            {recStatus === 'rejected' && <Chip label="Rejected" variant="danger" />}
-          </div>
-          <div className="flex shrink-0 items-center gap-sm">
-            <button
-              type="button"
-              onClick={onPreviewOpen}
-              className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-            >
-              <Icon name="play_arrow" size={16} className="text-text-icon" />
-              Test
-            </button>
-            {recStatus === 'accepted' ? (
-              <button
-                type="button"
-                onClick={() => onToast({ message: `${rec.procedureTitle} successfully added to the library.` })}
-                className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-              >
-                Add to library
-              </button>
-            ) : (
-              <div className="relative">
-                <div className="flex h-9 overflow-hidden rounded-sm">
-                  <button
-                    className="flex h-9 items-center bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                    onClick={() => {
-                      setApplyOpen(false)
-                      onRequestAccept()
-                    }}
-                  >
-                    Accept
-                  </button>
-                  <div className="w-px bg-white/30" />
-                  <button
-                    className="flex h-9 items-center bg-primary px-sm text-white transition-colors hover:bg-primary-hover"
-                    onClick={() => setApplyOpen((v) => !v)}
-                    aria-label="More apply options"
-                  >
-                    <Icon name="expand_more" size={16} />
-                  </button>
-                </div>
-                {applyOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[105]" onClick={() => setApplyOpen(false)} aria-hidden />
-                    <div className="absolute right-0 top-full z-[110] mt-xs min-w-[220px] rounded-sm border border-border bg-surface py-sm shadow-dropdown">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setApplyOpen(false)
-                          onRequestAccept()
-                        }}
-                        className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                      >
-                        Add to library
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setApplyOpen(false)
-                          onReject(rec.id)
-                        }}
-                        className="block w-full px-lg py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* What's the problem */}
-        <p className="mt-lg text-small text-text-tertiary">What's the problem</p>
-        <div className="mt-xs flex items-start gap-sm rounded-sm border border-[#b090e0] bg-[#f9f7fd] px-lg py-md">
-          <Icon name="auto_awesome" size={14} className="mt-0.5 shrink-0 text-ai-brand" />
-          <div className="flex min-w-0 flex-1 flex-col gap-xs">
-            <p className="text-body text-text-secondary">{rec.rationale}</p>
-            {rec.outcomes && rec.outcomes.length > 0 && (
-              <ul className="flex flex-col gap-[4px] pl-md">
-                {rec.outcomes.map((o, i) => (
-                  <li key={i} className="list-disc text-body text-text-secondary marker:text-text-tertiary">
-                    {o.includes(rec.procedureTitle) ? (
-                      <>
-                        {o.split(rec.procedureTitle)[0]}
-                        <span className="text-text-primary">{rec.procedureTitle}</span>
-                        {o.split(rec.procedureTitle)[1]}
-                      </>
-                    ) : (
-                      o
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <button
-              type="button"
-              onClick={() => setConvsOpen(true)}
-              className="flex w-fit items-center gap-xs text-small text-text-action"
-            >
-              <Icon name="chat_bubble_outline" size={13} />
-              View {rec.conversationCount} conversations
-              <Icon name="chevron_right" size={13} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Action needed */}
-      <div className="flex flex-col gap-xs">
-        <p className="text-small text-text-tertiary">Action needed</p>
-        <p className="text-body text-text-primary">{rec.changeType}</p>
-      </div>
-
-      {/* One section per change type (procedure / knowledge / action) */}
-      {effectiveChanges.map((change) => (
-        <div key={change.type} className="flex flex-col gap-md">
-          <div className="flex items-center gap-xs">
-            <Icon name={GAP_ICON[change.type]} size={18} className="text-text-icon" />
-            <p className="text-h3 text-text-primary">{GAP_LABEL[change.type]} change</p>
-          </div>
-          <p className="text-body text-text-secondary">{change.description}</p>
-          {change.type === 'procedure' && (
-            <>
-              <div className="flex flex-col gap-xs">
-                <p className="text-small text-text-tertiary">Procedure title</p>
-                <p className="text-body text-text-primary">{rec.procedureTitle}</p>
-              </div>
-              <div className="flex flex-col gap-xs">
-                <p className="text-small text-text-tertiary">Context</p>
-                <p className="text-body text-text-tertiary">No context added</p>
-              </div>
-            </>
-          )}
-          <CurrentProposedColumns currentSteps={change.currentSteps} proposedSteps={change.proposedSteps} />
-        </div>
-      ))}
-
-      {/* Tools */}
-      {rec.tools.length > 0 && (
-        <div className="flex flex-col gap-xs">
-          <p className="text-small text-text-primary">Tools</p>
-          <div className="flex flex-wrap gap-sm">
-            {rec.tools.map((t) => (
-              <RefChip key={t.label} kind="tool" label={t.label} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Manual updates needed */}
-      {recStatus === 'open' && rec.manualUpdates && rec.manualUpdates.length > 0 && (
-        <div className="flex flex-col gap-md">
-          <p className="text-small text-text-primary">Manual updates needed</p>
-          <div className="flex items-start gap-sm rounded-sm border border-[#fde68a] bg-[#fffbeb] px-md py-sm">
-            <Icon name="warning" size={14} className="mt-[2px] shrink-0 text-warning" />
-            <p className="text-[12px] leading-[18px] text-text-secondary">
-              Complete these steps to finish setting up this procedure. They require your input and can't be
-              completed automatically.
-            </p>
-          </div>
-          <div className="flex flex-col gap-md">
-            {rec.manualUpdates.map((m, i) => (
-              <div key={i} className="flex items-start gap-md">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-l2">
-                  <Icon name={m.icon} size={16} className="text-text-icon" />
-                </span>
-                <div className="flex flex-col gap-[2px]">
-                  <p className="text-body text-text-primary">{m.title}</p>
-                  <p className="text-small text-text-secondary">{m.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -916,12 +629,27 @@ const ATTACHMENT_NAME = 'Callback policy.pdf'
 function CopilotFooter({
   isThinking,
   onSubmit,
+  prefill,
 }: {
   isThinking: boolean
   onSubmit: (text: string, attachmentName?: string) => void
+  /** Fills the composer with this text the first time it's focused (while still empty) — see
+   *  `Recommendation.composerPrefill`. */
+  prefill?: string
 }) {
   const [copilotInput, setCopilotInput] = useState('')
   const [attached, setAttached] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-grow the composer to fit its content (e.g. a long pre-filled reply) instead of
+  // scrolling inside a fixed-height box. useLayoutEffect (not useEffect) so the resize
+  // happens before paint — no flash of the old, wrong height.
+  React.useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = '0px'
+    el.style.height = `${el.scrollHeight}px`
+  }, [copilotInput])
 
   const handleSend = () => {
     const text = copilotInput.trim()
@@ -934,12 +662,7 @@ function CopilotFooter({
   return (
     <div className="shrink-0 bg-surface px-2xl py-md">
       <div className="mx-auto flex w-full max-w-[900px] flex-col gap-sm">
-        <div className="flex items-center gap-xs">
-          <Icon name="auto_awesome" size={16} className="text-ai-brand" />
-          <p className="text-body text-text-primary">Refine with copilot</p>
-        </div>
-
-        <div className="flex flex-col gap-sm rounded-sm border border-border-selected bg-surface p-sm focus-within:border-border-strong">
+        <div className="flex flex-col gap-sm rounded-md border border-border-selected bg-surface px-lg pb-sm pt-md focus-within:border-border-strong">
           {attached && (
             <div className="flex w-fit items-center gap-xs rounded-sm border border-border bg-surface-subtle px-sm py-xs">
               <Icon name="picture_as_pdf" size={16} className="shrink-0 text-chip-danger-text" />
@@ -954,45 +677,55 @@ function CopilotFooter({
               </button>
             </div>
           )}
-          <div className="flex items-center gap-xs">
-            <button
-              type="button"
-              aria-label="Attach a document"
-              title="Wait for me to upload the documents"
-              disabled={isThinking}
-              onClick={() => setAttached((v) => !v)}
-              className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors ${
-                attached ? 'bg-surface-selected text-text-primary' : 'text-text-icon hover:bg-surface-hover'
-              }`}
-            >
-              <Icon name="add" size={18} />
-            </button>
-            <textarea
-              value={copilotInput}
-              onChange={(e) => setCopilotInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSend()
-                }
-              }}
-              disabled={isThinking}
-              rows={1}
-              placeholder='Ask for refinements — e.g. "Add a step to verify insurance before scheduling."'
-              className="h-9 flex-1 resize-none bg-transparent py-0 pl-0 pr-sm leading-9 text-body text-text-primary outline-none placeholder:text-text-tertiary"
-            />
+          <textarea
+            ref={textareaRef}
+            value={copilotInput}
+            onChange={(e) => setCopilotInput(e.target.value)}
+            onFocus={() => {
+              if (!copilotInput && !attached && prefill) setCopilotInput(prefill)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
+            disabled={isThinking}
+            rows={1}
+            placeholder="Message your agent…"
+            className="max-h-[240px] min-h-6 w-full resize-none overflow-y-auto bg-transparent p-0 leading-6 text-body text-text-primary outline-none placeholder:text-text-tertiary"
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-md text-text-icon">
+              <button type="button" aria-label="More options" className="flex items-center justify-center hover:text-text-primary">
+                <Icon name="add" size={20} />
+              </button>
+              <button
+                type="button"
+                aria-label="Attach a document"
+                title="Wait for me to upload the documents"
+                disabled={isThinking}
+                onClick={() => setAttached((v) => !v)}
+                className={`flex items-center justify-center transition-colors ${attached ? 'text-text-primary' : 'hover:text-text-primary'}`}
+              >
+                <Icon name="attach_file" size={20} />
+              </button>
+              <button type="button" aria-label="Voice input" className="flex items-center justify-center hover:text-text-primary">
+                <Icon name="mic" size={20} />
+              </button>
+            </div>
             <button
               type="button"
               aria-label="Send refinement"
               disabled={(!copilotInput.trim() && !attached) || isThinking}
               onClick={handleSend}
-              className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors ${
+              className={`flex items-center justify-center transition-colors ${
                 (copilotInput.trim() || attached) && !isThinking
-                  ? 'bg-primary text-white hover:bg-primary-hover'
-                  : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                  ? 'text-ai-brand hover:opacity-80'
+                  : 'cursor-not-allowed text-text-tertiary'
               }`}
             >
-              <Icon name="send" size={18} />
+              <Icon name="send" size={22} />
             </button>
           </div>
         </div>
@@ -1021,7 +754,7 @@ function ThinkingChecklist({ toolCount, conversationCount }: { toolCount: number
   }, [])
 
   return (
-    <div className="flex flex-col gap-sm rounded-sm border border-border bg-surface p-lg">
+    <div className="flex flex-col gap-sm">
       {visibleCount >= 1 && (
         <div className="chat-reveal-in flex items-center gap-xs text-body text-text-primary">
           <Icon name="check" size={14} className="shrink-0 text-accent-positive" />
@@ -1046,21 +779,30 @@ function ThoughtsSection({
   thoughts,
   toolCount,
   conversationCount,
+  autoExpanded,
 }: {
   thoughts: string
   toolCount: number
   conversationCount: number
+  /** Collapsed by default — expands while the enclosing response is still being revealed
+   *  (i.e. the agent is "thinking"), then auto-collapses once it's fully shown. A manual
+   *  toggle afterward is respected until the next such transition. */
+  autoExpanded: boolean
 }) {
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(autoExpanded)
+
+  useEffect(() => {
+    setExpanded(autoExpanded)
+  }, [autoExpanded])
 
   return (
     <div className="flex flex-col gap-md">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-fit items-center gap-xs text-body text-text-secondary"
+        className="flex w-fit items-center gap-[2px] text-body text-text-secondary"
       >
-        <Icon name="bolt" size={16} className="text-text-icon" />
+        <Icon name="bolt" size={16} weight={300} className="text-text-icon" />
         Thoughts
         <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
       </button>
@@ -1070,6 +812,293 @@ function ThoughtsSection({
           <ThinkingChecklist toolCount={toolCount} conversationCount={conversationCount} />
         </>
       )}
+    </div>
+  )
+}
+
+/** A single collapsible "Thoughts"/"Searched X" note used by `IntroBlocksView`. Un-labeled
+ *  (default "Thoughts") notes render italic, matching the app's chain-of-thought convention;
+ *  a custom label (e.g. "Searched procedures") reads as a plain finding instead. */
+function CollapsibleNote({
+  label = 'Thoughts',
+  text,
+  autoExpanded,
+}: {
+  label?: string
+  text: string
+  /** Collapsed by default — expands while the enclosing response is still being revealed
+   *  (i.e. the agent is "thinking"), then auto-collapses once it's fully shown. */
+  autoExpanded: boolean
+}) {
+  const [expanded, setExpanded] = useState(autoExpanded)
+  const isThought = label === 'Thoughts'
+
+  useEffect(() => {
+    setExpanded(autoExpanded)
+  }, [autoExpanded])
+
+  return (
+    <div className="flex flex-col gap-md">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-fit items-center gap-[2px] text-body text-text-secondary"
+      >
+        <Icon name="bolt" size={16} weight={300} className="text-text-icon" />
+        {label}
+        <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
+      </button>
+      {expanded && <p className={`text-body text-text-secondary ${isThought ? 'italic' : ''}`}>{text}</p>}
+    </div>
+  )
+}
+
+function TranscriptBlock({ lines }: { lines: { speaker: string; text: string }[] }) {
+  return (
+    <div className="flex flex-col gap-xs">
+      {lines.map((line, i) => (
+        <p key={i} className="text-body italic text-text-secondary">
+          <span className="not-italic text-text-primary">{line.speaker}: </span>"{line.text}"
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function CollapsibleSummaryLine({
+  label,
+  meta,
+  defaultExpanded = false,
+  children,
+  autoExpanded,
+}: {
+  label: string
+  meta?: string
+  defaultExpanded?: boolean
+  children: IntroBlock[]
+  autoExpanded: boolean
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
+  const hasChildren = children.length > 0
+
+  return (
+    <div className="flex flex-col gap-sm">
+      <button
+        type="button"
+        onClick={() => hasChildren && setExpanded((v) => !v)}
+        disabled={!hasChildren}
+        className="flex w-fit items-center gap-xs text-body text-text-primary"
+      >
+        <span>
+          {label}
+          {meta && <span className="text-text-tertiary"> · {meta}</span>}
+        </span>
+        {hasChildren && <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />}
+      </button>
+      {expanded && hasChildren && (
+        <div className="flex flex-col gap-sm">
+          {children.map((child, i) => (
+            <IntroBlockItem key={i} block={child} autoExpanded={autoExpanded} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Renders one `IntroBlock` — shared by `IntroBlocksView` (the initial message) and
+ *  `ScriptedTurnResponse` (a hand-authored refinement-turn reply). `autoExpanded` only
+ *  affects "Thoughts"-style notes — see `CollapsibleNote`. `onOpenConversations` only
+ *  applies to a `section` block with `showConversationsLink`. */
+function IntroBlockItem({
+  block,
+  autoExpanded,
+  onOpenConversations,
+}: {
+  block: IntroBlock
+  autoExpanded: boolean
+  onOpenConversations?: () => void
+}) {
+  switch (block.kind) {
+    case 'thought':
+      return <CollapsibleNote label={block.label} text={block.text} autoExpanded={autoExpanded} />
+    case 'text':
+      return <p className="text-body text-text-primary">{block.text}</p>
+    case 'section':
+      return (
+        <div className="flex flex-col gap-xs">
+          <p className="text-small text-text-secondary">{block.heading}</p>
+          <p className="text-body text-text-primary">
+            {block.text}
+            {block.showConversationsLink && onOpenConversations && (
+              <>
+                {' — '}
+                <button
+                  type="button"
+                  onClick={onOpenConversations}
+                  className="italic text-text-action underline-offset-2 hover:underline"
+                >
+                  View all conversations
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+      )
+    case 'list':
+      return (
+        <ul className="flex flex-col gap-xs pl-md">
+          {block.items.map((item, j) => (
+            <li key={j} className="list-disc text-body text-text-primary marker:text-text-tertiary">
+              {item.label} — {item.text}
+            </li>
+          ))}
+        </ul>
+      )
+    case 'divider':
+      return <p className="text-small text-text-tertiary">— {block.text} —</p>
+    case 'collapsible':
+      return (
+        <CollapsibleSummaryLine
+          label={block.label}
+          meta={block.meta}
+          defaultExpanded={block.defaultExpanded}
+          children={block.children}
+          autoExpanded={autoExpanded}
+        />
+      )
+    case 'transcript':
+      return <TranscriptBlock lines={block.lines} />
+    default:
+      return null
+  }
+}
+
+/** Renders a hand-authored `Recommendation.introBlocks` sequence in place of the generic
+ *  thoughts + bodyText pairing. */
+function IntroBlocksView({
+  blocks,
+  autoExpanded,
+  onOpenConversations,
+}: {
+  blocks: IntroBlock[]
+  autoExpanded: boolean
+  onOpenConversations?: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-lg">
+      {blocks.map((block, i) => (
+        <IntroBlockItem key={i} block={block} autoExpanded={autoExpanded} onOpenConversations={onOpenConversations} />
+      ))}
+    </div>
+  )
+}
+
+/** A right-aligned user chat bubble — shared by real typed refinement turns and synthetic
+ *  ones (e.g. the "Approved" turn after a scripted approval). */
+function UserTurnBubble({ text, children }: { text: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-end gap-xs">
+      <div className="max-w-[85%] rounded-lg bg-[#f0f0f0] px-md py-sm text-body leading-[1.5] text-text-primary">{text}</div>
+      {children}
+    </div>
+  )
+}
+
+/** A plain, un-animated AI reply — used for the agent's confirmation after a scripted approval. */
+function SimpleAgentReply({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-md">
+      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
+        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
+      </span>
+      <p className="min-w-0 flex-1 text-body text-text-primary">{text}</p>
+    </div>
+  )
+}
+
+/** Renders a `Recommendation.scriptedTurnResponse` — a hand-authored reply to the first
+ *  refinement turn, revealed block-by-block, ending in a formal approve/reject prompt. */
+function ScriptedTurnResponse({
+  response,
+  recStatus,
+  onApprove,
+  onReject,
+}: {
+  response: ScriptedTurnResponse
+  recStatus: RecStatus
+  onApprove: () => void
+  onReject: () => void
+}) {
+  const totalSteps = response.introBlocks.length + 1
+  const [revealStep, setRevealStep] = useState(0)
+  // Still actively being revealed ("thinking") — Thoughts sections auto-expand while this is
+  // true and auto-collapse once the whole response (including the approval prompt) is shown.
+  const isRevealing = revealStep < totalSteps
+
+  useEffect(() => {
+    setRevealStep(0)
+    let cancelled = false
+    let i = 0
+    const scheduleNext = () => {
+      setTimeout(() => {
+        if (cancelled) return
+        i++
+        setRevealStep(i)
+        if (i < totalSteps) scheduleNext()
+      }, i === 0 ? 400 : 700)
+    }
+    scheduleNext()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div className="flex items-start gap-md">
+      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
+        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-lg">
+        {response.introBlocks.map((block, i) =>
+          revealStep > i ? (
+            <div key={i} className="chat-reveal-in">
+              <IntroBlockItem block={block} autoExpanded={isRevealing} />
+            </div>
+          ) : null,
+        )}
+
+        {revealStep > response.introBlocks.length && (
+          <div className="chat-reveal-in flex flex-col gap-md rounded-sm bg-surface">
+            <p className="text-body text-text-primary">{response.approvalPrompt}</p>
+            {recStatus === 'open' && (
+              <div className="flex items-center gap-sm">
+                <button
+                  type="button"
+                  onClick={onReject}
+                  className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={onApprove}
+                  className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                >
+                  Approve
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {revealStep < totalSteps && (
+          <div className="flex items-center px-md py-sm">
+            <TypingDots />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -1101,11 +1130,11 @@ function ChangeSummaryCard({
         : `${GAP_LABEL[change.type]} updated`
 
   return (
-    <div className="flex flex-col rounded-sm border border-border bg-surface">
+    <div className="flex flex-col rounded-sm bg-surface">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between px-lg py-md text-left"
+        className="flex w-full items-center justify-between py-md text-left"
       >
         <div className="flex min-w-0 items-center gap-sm">
           <Icon name={GAP_ICON[change.type]} size={18} className="shrink-0 text-text-icon" />
@@ -1119,7 +1148,7 @@ function ChangeSummaryCard({
         </div>
       </button>
       {expanded && (
-        <div className="flex flex-col gap-lg border-t border-border p-lg">
+        <div className="flex flex-col gap-lg py-lg">
           {change.type === 'procedure' && (
             <>
               <div className="flex flex-col gap-xs">
@@ -1211,11 +1240,15 @@ function ResponseBlock({
   manualUpdateIndex,
   manualUpdateTotal,
   pendingChangeTypes,
+  introBlocks,
 }: {
   thoughts: string
   toolCount: number
   conversationCount: number
   bodyText: string
+  /** Hand-authored replacement for the thoughts + bodyText + "See conversations" trio — see
+   *  `Recommendation.introBlocks`. Only ever passed for the very first message. */
+  introBlocks?: IntroBlock[]
   changes: RecommendationChange[]
   procedureTitle: string
   diff: { original: string; revised: string } | null
@@ -1233,21 +1266,29 @@ function ResponseBlock({
   manualUpdateIndex?: number
   manualUpdateTotal?: number
 }) {
+  // A hand-authored intro (see `Recommendation.introBlocks`) replaces the entire generic
+  // reveal sequence — thoughts, change cards, diff, outcomes, and the accept prompt all stay
+  // hidden; the recommendation isn't ready to propose anything until the user replies.
   const changeStartIdx = 2 // 0 = thoughts, 1 = bodyText
-  const diffIdx = changeStartIdx + changes.length
-  const afterDiffIdx = diffIdx + (diff ? 1 : 0)
-  const hasQuestion = Boolean(pendingManualUpdate)
-  const hasOutcomes = showAcceptPrompt && Boolean(outcomes && outcomes.length > 0)
+  const diffIdx = changeStartIdx + (introBlocks ? 0 : changes.length)
+  const afterDiffIdx = diffIdx + (!introBlocks && diff ? 1 : 0)
+  const hasQuestion = !introBlocks && Boolean(pendingManualUpdate)
+  const hasOutcomes = !introBlocks && showAcceptPrompt && Boolean(outcomes && outcomes.length > 0)
   const questionIdx = afterDiffIdx
   const outcomeIdx = afterDiffIdx
   const acceptIdx = outcomeIdx + (hasOutcomes ? 1 : 0)
-  const totalSteps = hasQuestion
-    ? questionIdx + 1
-    : showAcceptPrompt
-      ? acceptIdx + 1
-      : afterDiffIdx
+  const totalSteps = introBlocks
+    ? 2 // 1 = intro content appears (still "thinking"), 2 = settled — collapses Thoughts
+    : hasQuestion
+      ? questionIdx + 1
+      : showAcceptPrompt
+        ? acceptIdx + 1
+        : afterDiffIdx
 
   const [revealStep, setRevealStep] = useState(0)
+  // Still actively being revealed ("thinking") — Thoughts sections auto-expand while this is
+  // true and auto-collapse once the whole response has finished appearing.
+  const isRevealing = revealStep < totalSteps
 
   useEffect(() => {
     setRevealStep(0)
@@ -1272,40 +1313,60 @@ function ResponseBlock({
   }, [])
 
   return (
-    <div className="flex flex-col gap-xl">
-      {revealStep > 0 && (
-        <div className="chat-reveal-in">
-          <ThoughtsSection thoughts={thoughts} toolCount={toolCount} conversationCount={conversationCount} />
-        </div>
-      )}
-
-      {revealStep > 0 && onOpenConversations && (
-        <button
-          type="button"
-          onClick={onOpenConversations}
-          className="chat-reveal-in flex w-fit items-center gap-xs text-small text-text-action"
-        >
-          <Icon name="chat_bubble_outline" size={13} />
-          See conversations
-        </button>
-      )}
-
-      {revealStep > 1 && <p className="chat-reveal-in text-body text-text-primary">{bodyText}</p>}
-
-      {changes.map((change, i) =>
-        revealStep > changeStartIdx + i ? (
-          <div key={change.type} className="chat-reveal-in">
-            <ChangeSummaryCard
-              change={change}
-              procedureTitle={procedureTitle}
-              pending={pendingChangeTypes?.has(change.type)}
-            />
+    <div className="flex items-start gap-md">
+      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
+        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-xl">
+      {introBlocks ? (
+        revealStep > 0 && (
+          <div className="chat-reveal-in">
+            <IntroBlocksView blocks={introBlocks} autoExpanded={isRevealing} onOpenConversations={onOpenConversations} />
           </div>
-        ) : null,
+        )
+      ) : (
+        <>
+          {revealStep > 0 && (
+            <div className="chat-reveal-in">
+              <ThoughtsSection
+                thoughts={thoughts}
+                toolCount={toolCount}
+                conversationCount={conversationCount}
+                autoExpanded={isRevealing}
+              />
+            </div>
+          )}
+
+          {revealStep > 0 && onOpenConversations && (
+            <button
+              type="button"
+              onClick={onOpenConversations}
+              className="chat-reveal-in flex w-fit items-center gap-xs text-small text-text-action"
+            >
+              <Icon name="chat_bubble_outline" size={13} />
+              See conversations
+            </button>
+          )}
+
+          {revealStep > 1 && <p className="chat-reveal-in text-body text-text-primary">{bodyText}</p>}
+        </>
       )}
+
+      {!introBlocks &&
+        changes.map((change, i) =>
+          revealStep > changeStartIdx + i ? (
+            <div key={change.type} className="chat-reveal-in">
+              <ChangeSummaryCard
+                change={change}
+                procedureTitle={procedureTitle}
+                pending={pendingChangeTypes?.has(change.type)}
+              />
+            </div>
+          ) : null,
+        )}
 
       {diff && revealStep > diffIdx && (
-        <div className="chat-reveal-in flex flex-col gap-md rounded-sm border border-border bg-surface p-lg">
+        <div className="chat-reveal-in flex flex-col gap-md">
           <div className="flex items-center gap-xs text-body text-text-primary">
             <Icon name="remove_circle" size={16} className="shrink-0 text-chip-danger-text" />
             Original message
@@ -1324,7 +1385,7 @@ function ResponseBlock({
       )}
 
       {hasQuestion && pendingManualUpdate && revealStep > questionIdx && (
-        <div className="chat-reveal-in flex flex-col gap-xs rounded-sm border border-[#fde68a] bg-[#fffbeb] p-lg">
+        <div className="chat-reveal-in flex flex-col gap-xs rounded-sm bg-[#fffbeb] p-lg">
           <p className="text-small text-text-tertiary">
             Before I can recommend accepting this
             {manualUpdateTotal && manualUpdateTotal > 1
@@ -1343,7 +1404,7 @@ function ResponseBlock({
       )}
 
       {hasOutcomes && revealStep > outcomeIdx && (
-        <div className="chat-reveal-in flex flex-col gap-xs rounded-sm border border-border bg-surface-subtle p-lg">
+        <div className="chat-reveal-in flex flex-col gap-xs">
           <p className="text-body text-text-primary">If you accept, here's what to expect:</p>
           <ul className="flex flex-col gap-xs pl-md">
             {outcomes!.map((o, i) => (
@@ -1356,7 +1417,7 @@ function ResponseBlock({
       )}
 
       {showAcceptPrompt && revealStep > acceptIdx && (
-        <div className="chat-reveal-in flex items-center justify-between gap-md rounded-sm border border-border bg-surface p-lg">
+        <div className="chat-reveal-in flex items-center justify-between gap-md">
           {recStatus === 'open' ? (
             <>
               <p className="text-body text-text-primary">Do you accept this recommendation?</p>
@@ -1364,14 +1425,14 @@ function ResponseBlock({
                 <button
                   type="button"
                   onClick={() => onReject(recId)}
-                  className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                  className="flex h-9 items-center rounded-lg border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                 >
                   Keep original
                 </button>
                 <button
                   type="button"
                   onClick={onRequestAccept}
-                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                  className="flex h-9 items-center rounded-lg bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                 >
                   Accept
                 </button>
@@ -1393,6 +1454,7 @@ function ResponseBlock({
           <TypingDots />
         </div>
       )}
+      </div>
     </div>
   )
 }
@@ -1410,16 +1472,21 @@ function RefinementThinking() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-xs rounded-sm border border-border bg-surface p-lg">
-      {items.map((item, i) =>
-        visibleCount >= i + 1 ? (
-          <div key={item} className="chat-reveal-in flex items-center gap-xs text-body text-text-secondary">
-            <Icon name="check" size={14} className="shrink-0 text-accent-positive" />
-            {item}
-          </div>
-        ) : null,
-      )}
-      {visibleCount < items.length && <TypingDots />}
+    <div className="flex items-start gap-md">
+      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
+        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-xs">
+        {items.map((item, i) =>
+          visibleCount >= i + 1 ? (
+            <div key={item} className="chat-reveal-in flex items-center gap-xs text-body text-text-secondary">
+              <Icon name="check" size={14} className="shrink-0 text-accent-positive" />
+              {item}
+            </div>
+          ) : null,
+        )}
+        {visibleCount < items.length && <TypingDots />}
+      </div>
     </div>
   )
 }
@@ -1433,6 +1500,8 @@ function RecommendationChatView({
   turns,
   isThinking,
   onOpenConversations,
+  onApproveScripted,
+  onRejectScripted,
 }: {
   rec: Recommendation
   recStatus: RecStatus
@@ -1442,6 +1511,8 @@ function RecommendationChatView({
   turns: ChatTurn[]
   isThinking: boolean
   onOpenConversations: () => void
+  onApproveScripted: () => void
+  onRejectScripted: () => void
 }) {
   const diff = getMessageDiffPreview(rec)
   const initialThoughts =
@@ -1482,6 +1553,7 @@ function RecommendationChatView({
         toolCount={rec.tools.length}
         conversationCount={rec.conversationCount}
         bodyText={rec.rationale}
+        introBlocks={rec.introBlocks}
         changes={effectiveChanges}
         pendingChangeTypes={pendingChangeTypesAt(0)}
         procedureTitle={rec.procedureTitle}
@@ -1507,18 +1579,35 @@ function RecommendationChatView({
         const resolvedAfterThisTurn = Math.min(i + 1, totalManual)
         const nextPendingIdx = resolvedAfterThisTurn
         const allResolved = resolvedAfterThisTurn >= totalManual
+        const isScriptedTurn = i === 0 && Boolean(rec.scriptedTurnResponse)
+
         return (
           <div key={turn.id} className="flex flex-col gap-xl">
-            <ChatBubble sender="user" text={turn.text} bubbleClassName="max-w-[85%] px-md py-sm">
+            <UserTurnBubble text={turn.text}>
               {turn.attachment && (
                 <div className="flex items-center gap-xs rounded-sm border border-border bg-surface px-sm py-xs">
                   <Icon name="picture_as_pdf" size={14} className="shrink-0 text-chip-danger-text" />
                   <span className="text-small text-text-secondary">{turn.attachment}</span>
                 </div>
               )}
-            </ChatBubble>
+            </UserTurnBubble>
             {pending ? (
               <RefinementThinking />
+            ) : isScriptedTurn ? (
+              <>
+                <ScriptedTurnResponse
+                  response={rec.scriptedTurnResponse!}
+                  recStatus={recStatus}
+                  onApprove={onApproveScripted}
+                  onReject={onRejectScripted}
+                />
+                {recStatus === 'accepted' && (
+                  <>
+                    <UserTurnBubble text="Approved" />
+                    <SimpleAgentReply text={rec.approvedReply ?? 'This procedure has been added to the workflow.'} />
+                  </>
+                )}
+              </>
             ) : (
               <ResponseBlock
                 key={`${turn.id}-response`}
@@ -1578,7 +1667,6 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
   const [previewOpen, setPreviewOpen] = useState(false)
   const [toast, setToast] = useState<ToastData | null>(null)
   const [isThinking, setIsThinking] = useState(false)
-  const [view, setView] = useState<'chat' | 'fixed'>('chat')
   // Chat view's back-and-forth is intentionally ephemeral — in-memory only, reset on refresh (or
   // when navigating to a different recommendation), never written to localStorage.
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([])
@@ -1593,7 +1681,7 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
   // user has scrolled up to read something earlier, in which case don't yank them back down.
   useEffect(() => {
     const container = chatScrollRef.current
-    if (!container || view !== 'chat') return
+    if (!container) return
     const content = container.firstElementChild
     if (!content) return
 
@@ -1616,7 +1704,7 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
       container.removeEventListener('scroll', handleScroll)
       observer.disconnect()
     }
-  }, [view, rec.id])
+  }, [rec.id])
 
   const showToast = (data: ToastData) => {
     setToast(data)
@@ -1636,6 +1724,12 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
     showToast({ message: 'Reset to the original recommendation.' })
   }
 
+  const handleApproveScripted = () => {
+    setRecStatus('accepted')
+    setRecommendationStatus(rec.id, 'accepted')
+    showToast({ message: `${rec.procedureTitle} successfully added to the procedure library.` })
+  }
+
   // Manual updates are answered one per turn, in order — the turn at index `chatTurns.length`
   // (before this submission is added) answers `rec.manualUpdates[chatTurns.length]`, if one is
   // still pending, so its answer routes straight into the section it's meant to fix.
@@ -1643,11 +1737,16 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
   const pendingManualUpdate = chatTurns.length < totalManual ? rec.manualUpdates![chatTurns.length] : undefined
 
   const handleSubmitRefinement = (text: string, attachmentName?: string) => {
+    // The first reply to a scripted flow (see `rec.scriptedTurnResponse`) gets a hand-authored
+    // response instead of a generic store-derived one — don't also file it as a step override.
+    const isScriptedFirstTurn = chatTurns.length === 0 && Boolean(rec.scriptedTurnResponse)
     setChatTurns((prev) => [...prev, { id: `turn-${prev.length + 1}-${Date.now()}`, text, attachment: attachmentName }])
     setIsThinking(true)
     const refinementText = attachmentName ? `Uploaded ${attachmentName}. ${text}` : text
     setTimeout(() => {
-      submitRefinement(rec.id, effectiveChanges, refinementText, pendingManualUpdate?.relatedType)
+      if (!isScriptedFirstTurn) {
+        submitRefinement(rec.id, effectiveChanges, refinementText, pendingManualUpdate?.relatedType)
+      }
       setIsThinking(false)
     }, 1800)
   }
@@ -1674,12 +1773,10 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
         </div>
 
         <div className="flex shrink-0 items-center gap-sm">
-          {view === 'chat' && (
-            <Chip
-              label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-              variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
-            />
-          )}
+          <Chip
+            label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+            variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
+          />
           <button
             type="button"
             aria-label="Reset to original"
@@ -1689,56 +1786,24 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
           >
             <Icon name="restart_alt" size={18} />
           </button>
-          <div className="flex h-9 shrink-0 items-center gap-[2px] rounded-sm border border-border-selected bg-surface p-[2px]">
-            <button
-              type="button"
-              onClick={() => setView('chat')}
-              className={`flex h-full items-center rounded-sm px-md text-body transition-colors ${
-                view === 'chat' ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
-              }`}
-            >
-              Chat
-            </button>
-            <button
-              type="button"
-              onClick={() => setView('fixed')}
-              className={`flex h-full items-center rounded-sm px-md text-body transition-colors ${
-                view === 'fixed' ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
-              }`}
-            >
-              Fixed
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Body */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div ref={chatScrollRef} className="min-w-0 flex-1 overflow-y-auto px-2xl">
-          {view === 'fixed' ? (
-            <RecommendationDetailBody
-              rec={rec}
-              recStatus={recStatus}
-              onReject={handleReject}
-              onRequestAccept={() => setConfirmOpen(true)}
-              onToast={showToast}
-              onPreviewOpen={() => setPreviewOpen(true)}
-              setConvsOpen={setConvsOpen}
-              effectiveChanges={effectiveChanges}
-              isThinking={isThinking}
-            />
-          ) : (
-            <RecommendationChatView
-              rec={rec}
-              recStatus={recStatus}
-              onReject={handleReject}
-              onRequestAccept={() => setConfirmOpen(true)}
-              effectiveChanges={effectiveChanges}
-              turns={chatTurns}
-              isThinking={isThinking}
-              onOpenConversations={() => setConvsOpen(true)}
-            />
-          )}
+          <RecommendationChatView
+            rec={rec}
+            recStatus={recStatus}
+            onReject={handleReject}
+            onRequestAccept={() => setConfirmOpen(true)}
+            effectiveChanges={effectiveChanges}
+            turns={chatTurns}
+            isThinking={isThinking}
+            onOpenConversations={() => setConvsOpen(true)}
+            onApproveScripted={handleApproveScripted}
+            onRejectScripted={() => handleReject(rec.id)}
+          />
         </div>
 
         {previewOpen && (
@@ -1752,7 +1817,11 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
         )}
       </div>
 
-      <CopilotFooter isThinking={isThinking} onSubmit={handleSubmitRefinement} />
+      <CopilotFooter
+        isThinking={isThinking}
+        onSubmit={handleSubmitRefinement}
+        prefill={chatTurns.length === 0 ? rec.composerPrefill : undefined}
+      />
 
       <ConversationsDrawer rec={rec} open={convsOpen} onClose={() => setConvsOpen(false)} />
 

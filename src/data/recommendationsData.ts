@@ -48,6 +48,26 @@ export interface RecommendationChange {
   proposedSteps: ProcedureStep[]
 }
 
+/** One piece of a bespoke, hand-authored initial Chat-view message — used instead of the
+ *  generic `thoughts` + `rationale` pairing when a recommendation's opening message needs a
+ *  specific narrative (e.g. multiple named "thinking" steps) that doesn't fit that template. */
+export type IntroBlock =
+  | { kind: 'thought'; label?: string; text: string }
+  | { kind: 'text'; text: string }
+  | { kind: 'list'; items: { label: string; text: string }[] }
+  | { kind: 'divider'; text: string }
+  | { kind: 'collapsible'; label: string; meta?: string; defaultExpanded?: boolean; children: IntroBlock[] }
+  | { kind: 'transcript'; lines: { speaker: string; text: string }[] }
+  | { kind: 'section'; heading: string; text: string; showConversationsLink?: boolean }
+
+/** A hand-authored reply to the first Chat-view refinement turn — replaces the generic
+ *  "I've updated the recommendation..." response, and ends in a custom approve/reject prompt
+ *  instead of the standard "Do you accept this recommendation?" one. */
+export interface ScriptedTurnResponse {
+  introBlocks: IntroBlock[]
+  approvalPrompt: string
+}
+
 export interface Recommendation {
   id: string
   gapType: GapType
@@ -66,6 +86,17 @@ export interface Recommendation {
   rationale: string
   /** First-person "chain of thought" line shown in the Chat view's collapsible Thoughts section. */
   thoughts?: string
+  /** Overrides the initial Chat-view message (normally `thoughts` + `rationale`) with a
+   *  hand-authored sequence of thought/searched/text/list blocks. Only applies to the very
+   *  first message — refinement turns are unaffected. */
+  introBlocks?: IntroBlock[]
+  /** Text that pre-fills the Chat-view composer the first time it's focused, before the user
+   *  has sent a refinement — lets a bespoke scripted flow demo without retyping the answer. */
+  composerPrefill?: string
+  /** Hand-authored reply to the first refinement turn — see `ScriptedTurnResponse`. */
+  scriptedTurnResponse?: ScriptedTurnResponse
+  /** Agent's reply once a `scriptedTurnResponse`'s Approve button is clicked. */
+  approvedReply?: string
   changeType: string
   diff?: DiffChange
   conversations: ConversationItem[]
@@ -105,7 +136,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
   {
     id: 'r1',
     gapType: 'procedure',
-    title: 'Add a payment processing procedure',
+    title: 'Add payment procedure',
     procedureTitle: 'Payment processing procedure',
     summary: '12 customers asked about payments with no agent guidance available.',
     priority: 'High',
@@ -152,6 +183,54 @@ export const RECOMMENDATIONS: Recommendation[] = [
     ],
     thoughts: 'I clustered 12 recent conversations where customers asked about payments and the agent had no guidance. Let me review the current procedure library for coverage.',
     rationale: "Based on the last 7 days of conversations, we identified that 12 customers couldn't complete a payment because the agent lacked the necessary guidance. We've generated the following recommendation:",
+    introBlocks: [
+      { kind: 'thought', text: 'The gap is that Myna has no payment info, so let me first check whether any payment content already exists before I ask the user for anything.' },
+      { kind: 'thought', label: 'Searched procedures', text: "Myna has procedures for booking, insurance collection, and cancellation — but nothing for payments or pricing. So the moment a caller mentions paying, there's nothing to fall back on and it transfers." },
+      { kind: 'thought', text: "This is a content gap, not a logic change — how to pay and what a visit costs are fixed, non-private facts that are safe for Myna to say. But I don't have those details, and I shouldn't invent a payment link or a price. I need to get them from the user before I can build anything. I'll lay out exactly what's needed and stop here." },
+      { kind: 'section', heading: 'Issue', text: "Callers ask how to pay a bill, or what a visit will cost. Myna has no payment or pricing information, so it sends every one of these calls to a live agent — and outside business hours, when billing is closed, the call just ends with no help." },
+      { kind: 'section', heading: 'Impact: Medium', text: 'In the last 24 hours, 12 calls about payments were routed to a live agent — 3 of them outside business hours. Agents spent an average of 3 minutes on each.', showConversationsLink: true },
+      { kind: 'section', heading: 'Recommendation', text: "Give Myna a Payments & Cost procedure so it can answer these directly instead of transferring. To build it, I need a few details from you (or upload a billing/pricing doc and I'll pull them from it):" },
+      { kind: 'list', items: [
+        { label: 'How to pay', text: 'online link, phone number for billing, in person?' },
+        { label: 'Billing hours', text: 'e.g., Mon–Fri, 9am–5pm' },
+        { label: 'Payment plans', text: 'do you offer them, and how does someone set one up?' },
+        { label: 'Self-pay price for a standard visit', text: 'a rough figure is fine; Myna will say "around" or "starting at"' },
+      ] },
+    ],
+    composerPrefill: 'Pay online at pay.kidzpulm.com/bill, or by phone at (305) 555-0190. Billing is open Mon–Fri, 9 to 5. Yes we do payment plans — patients call that same billing number to set one up. A standard self-pay visit is around $150.',
+    scriptedTurnResponse: {
+      introBlocks: [
+        { kind: 'thought', text: "Now I have everything. I'll create a Payments & Cost procedure with these details, and add a line so Myna offers to text the payment link — that's the fastest path for the caller. Then I'll test it before locking it in." },
+        {
+          kind: 'collapsible',
+          label: 'Procedure created: Payments & Cost',
+          meta: '+4 additions',
+          children: [
+            { kind: 'list', items: [
+              { label: 'How to pay', text: 'online link or phone for billing' },
+              { label: 'Billing hours', text: 'Mon–Fri, 9 to 5' },
+              { label: 'Payment plans', text: 'call the billing number to set one up' },
+              { label: 'Self-pay price', text: 'around $150 for a standard visit' },
+            ] },
+          ],
+        },
+        { kind: 'thought', text: 'Let me test it with a sample first message to make sure Myna answers directly instead of transferring.' },
+        {
+          kind: 'collapsible',
+          label: 'Testing agent response',
+          meta: '18.4s',
+          defaultExpanded: true,
+          children: [
+            { kind: 'transcript', lines: [
+              { speaker: 'Test — caller', text: "Hi, I got a bill for my son's visit, how do I pay?" },
+              { speaker: 'Myna', text: 'You can pay online — I can text you the secure payment link right now. You can also pay by phone at (305) 555-0190, Monday to Friday, 9 to 5, or in person at the front desk. Would you like me to text you the link?' },
+            ] },
+          ],
+        },
+      ],
+      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please approve to continue, or reject to discard these changes.",
+    },
+    approvedReply: 'The Payments & Cost procedure has been added to the workflow and saved to your procedure library.',
     outcomes: [
       'Added a Payment processing procedure to help the agent handle future payment requests more effectively.',
       'Once accepted, the procedure will be added to this workflow and saved to your procedure library for reuse.',
