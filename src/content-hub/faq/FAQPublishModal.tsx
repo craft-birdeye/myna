@@ -133,7 +133,7 @@ export const FAQPublishModal = ({ open, onClose }: FAQPublishModalProps) => {
   function handlePublish() {
     if (!selectedPage) return;
     toast.success(`FAQ published to "${selectedPage.title}"`, {
-      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-text-primary flex-none" />,
+      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-accent-positive flex-none" />,
     });
     resetAndClose();
   }
@@ -207,7 +207,7 @@ export const FAQPublishModal = ({ open, onClose }: FAQPublishModalProps) => {
                       <p className="mt-1 text-[12px] text-muted-foreground">{page.type} · {page.updatedAt}</p>
                     </div>
                     {selected && (
-                      <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="flex-none text-primary" />
+                      <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="flex-none text-accent-positive" />
                     )}
                   </button>
                 );

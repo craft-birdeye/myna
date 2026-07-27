@@ -66,7 +66,7 @@ function StepRow({ step, status }: { step: GenStep; status: StepStatus }) {
         'flex size-5 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300',
         status === 'pending' && 'border-border bg-background',
         status === 'pending' && 'border-2',
-        status === 'done'    && 'border-primary bg-primary',
+        status === 'done'    && 'border-accent-positive bg-accent-positive',
       )}>
         {status === 'active' && (
           <span className="size-5 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />

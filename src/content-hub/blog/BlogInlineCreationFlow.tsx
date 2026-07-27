@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Check, ChevronDown, ChevronUp, Loader2, Sparkles, ArrowUpRight, Lightbulb } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Loader2, Sparkles, ArrowUpRight, Lightbulb, Upload, X } from 'lucide-react';
 import { MOCK_RECOMMENDATIONS } from '@/search-ai/SearchAIRecommendationsPanel';
 import { cn } from '@/contenthub-ui/utils';
 import {
@@ -50,6 +50,13 @@ export interface BlogFlowData {
   objective: string;
   funnelStage: string;
   length: string;
+  brief?: string;
+  attachedFiles?: string[];
+  includeImages?: boolean;
+  includeCTAs?: boolean;
+  includeFAQ?: boolean;
+  internalLinks?: boolean;
+  refUrls?: string[];
   signalSources: string[];
   publishTo: string[];
   attachments: string[];
@@ -234,7 +241,7 @@ function StepIndicator({ current }: { current: number }) {
             <div className="flex items-center gap-2">
               <div className={cn(
                 'w-6 h-6 rounded-full flex items-center justify-center text-[11px] transition-colors flex-shrink-0',
-                done || active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+                done ? 'bg-accent-positive text-white' : active ? 'bg-white border border-[#eaeaea] text-foreground' : 'bg-muted text-muted-foreground',
               )}>
                 {done ? <Check size={12} strokeWidth={1.6} absoluteStrokeWidth /> : i + 1}
               </div>
@@ -248,7 +255,7 @@ function StepIndicator({ current }: { current: number }) {
             {i < STEP_LABELS.length - 1 && (
               <div className={cn(
                 'w-[75px] h-px shrink-0 transition-colors',
-                done ? 'bg-primary' : 'bg-border',
+                done ? 'bg-accent-positive' : 'bg-border',
               )} />
             )}
           </React.Fragment>
@@ -357,6 +364,23 @@ function Step1BrandKit({ contentName, brandKit, locations, agentId, onChange, on
   );
 }
 
+// ── Toggle row helper ─────────────────────────────────────────────────────────
+
+function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-[13px] text-foreground">{label}</span>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className={cn('w-8 h-4 rounded-full transition-colors relative flex-shrink-0', checked ? 'bg-primary' : 'bg-muted')}
+      >
+        <span className={cn('absolute top-0.5 size-3 bg-white rounded-full transition-transform shadow-sm', checked ? 'translate-x-[18px]' : 'translate-x-0.5')} />
+      </button>
+    </div>
+  );
+}
+
 // ── Step 2: Blog setup ────────────────────────────────────────────────────────
 
 interface Step2Props {
@@ -368,13 +392,30 @@ interface Step2Props {
   length: string;
   createMode: 'topic' | 'url';
   sourceUrl: string;
-  onChange: (patch: Partial<Pick<BlogFlowData, 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length' | 'createMode' | 'sourceUrl'>>) => void;
+  brief: string;
+  attachedFiles: string[];
+  includeImages: boolean;
+  includeCTAs: boolean;
+  includeFAQ: boolean;
+  internalLinks: boolean;
+  refUrls: string[];
+  onChange: (patch: Partial<Pick<BlogFlowData,
+    | 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length'
+    | 'createMode' | 'sourceUrl' | 'brief' | 'attachedFiles'
+    | 'includeImages' | 'includeCTAs' | 'includeFAQ' | 'internalLinks' | 'refUrls'
+  >>) => void;
 }
 
-function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, createMode, sourceUrl, onChange }: Step2Props) {
+function Step2Setup({
+  topic, keywords, intent, objective, funnelStage, length,
+  createMode, sourceUrl,
+  brief, attachedFiles, includeImages, includeCTAs, includeFAQ, internalLinks, refUrls,
+  onChange,
+}: Step2Props) {
   const [generatingTopic, setGeneratingTopic] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [recommendationsOpen, setRecommendationsOpen] = useState(false);
+  const [refUrlInput, setRefUrlInput] = useState('');
   const topicIdxRef = useRef(0);
   const topicTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -397,6 +438,20 @@ function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, c
     }, 900);
   }
 
+  function handleAddUrl() {
+    const url = refUrlInput.trim();
+    if (!url || refUrls.length >= 5 || refUrls.includes(url)) return;
+    onChange({ refUrls: [...refUrls, url] });
+    setRefUrlInput('');
+  }
+
+  function handleMockFileBrowse() {
+    const mockName = 'document-brief.pdf';
+    if (!attachedFiles.includes(mockName)) {
+      onChange({ attachedFiles: [...attachedFiles, mockName] });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -417,10 +472,10 @@ function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, c
             className="flex items-start gap-3 w-full text-left"
           >
             <span className={cn(
-              'mt-0.5 h-4 w-4 flex-none rounded-full border-2 flex items-center justify-center transition-colors',
-              createMode === 'topic' ? 'border-primary bg-primary' : 'border-border bg-background',
+              'mt-0.5 h-4 w-4 flex-none rounded-full border-[1.5px] flex items-center justify-center transition-colors bg-background',
+              createMode === 'topic' ? 'border-primary' : 'border-[#cccccc]',
             )}>
-              {createMode === 'topic' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+              {createMode === 'topic' && <span className="h-2 w-2 rounded-full bg-primary" />}
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-[13px] text-foreground">Start with a topic</span>
@@ -507,10 +562,10 @@ function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, c
             className="flex items-start gap-3 w-full text-left"
           >
             <span className={cn(
-              'mt-0.5 h-4 w-4 flex-none rounded-full border-2 flex items-center justify-center transition-colors',
-              createMode === 'url' ? 'border-primary bg-primary' : 'border-border bg-background',
+              'mt-0.5 h-4 w-4 flex-none rounded-full border-[1.5px] flex items-center justify-center transition-colors bg-background',
+              createMode === 'url' ? 'border-primary' : 'border-[#cccccc]',
             )}>
-              {createMode === 'url' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+              {createMode === 'url' && <span className="h-2 w-2 rounded-full bg-primary" />}
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-[13px] text-foreground">Start with a YouTube video</span>
@@ -545,6 +600,8 @@ function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, c
         </button>
         {advancedOpen && (
           <div className="flex flex-col gap-5 border-t border-border px-4 py-4">
+
+            {/* 1. Keywords */}
             <div className="space-y-1.5">
               <ContentFlowInfoLabel tooltip="Type a keyword and press Enter, or pick from suggestions.">
                 Keywords
@@ -556,22 +613,122 @@ function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, c
                 placeholder="Select or enter keywords"
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[13px] text-foreground">Intent</label>
-              <ContentFlowSelect value={intent} options={INTENT_OPTIONS} onChange={val => onChange({ intent: val })} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[13px] text-foreground">Objective</label>
-              <ContentFlowSelect value={objective} options={OBJECTIVE_OPTIONS} onChange={val => onChange({ objective: val })} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[13px] text-foreground">Funnel stage</label>
-              <ContentFlowSelect value={funnelStage} options={FUNNEL_OPTIONS} onChange={val => onChange({ funnelStage: val })} />
-            </div>
+
+            {/* 2. Length */}
             <div className="space-y-1.5">
               <label className="text-[13px] text-foreground">Length</label>
               <ContentFlowSelect value={length} options={LENGTH_OPTIONS} onChange={val => onChange({ length: val })} />
             </div>
+
+            {/* 3. Anything specific */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Anything specific you want covered?</label>
+              <ContentFlowTextarea
+                value={brief}
+                onChange={e => onChange({ brief: e.target.value })}
+                placeholder="What angle, tone, or specific points should the agent know about?"
+                rows={3}
+              />
+            </div>
+
+            {/* 4. Attachments */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Attachments</label>
+              <button
+                type="button"
+                onClick={handleMockFileBrowse}
+                className="w-full rounded-lg border-2 border-dashed border-border px-4 py-4 flex flex-col items-center gap-2 transition-colors hover:border-primary/30 hover:bg-muted/30"
+              >
+                <Upload size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
+                <span className="text-[13px] text-foreground">Drop files or click to browse</span>
+                <span className="text-[11px] text-muted-foreground">.pdf · .docx · .txt · .png · .jpg</span>
+              </button>
+              {attachedFiles.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {attachedFiles.map(name => (
+                    <div key={name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-[12px]">
+                      <span className="flex-1 text-foreground truncate">{name}</span>
+                      <button
+                        type="button"
+                        onClick={() => onChange({ attachedFiles: attachedFiles.filter(f => f !== name) })}
+                        className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      >
+                        <X size={12} strokeWidth={1.6} absoluteStrokeWidth />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 5. Include in blog toggles */}
+            <div className="flex flex-col gap-3">
+              <label className="text-[13px] text-foreground">Include in blog</label>
+              <ToggleRow label="Images" checked={includeImages} onChange={v => onChange({ includeImages: v })} />
+              <ToggleRow label="CTAs" checked={includeCTAs} onChange={v => onChange({ includeCTAs: v })} />
+              <ToggleRow label="FAQ section" checked={includeFAQ} onChange={v => onChange({ includeFAQ: v })} />
+              <ToggleRow label="Internal links" checked={internalLinks} onChange={v => onChange({ internalLinks: v })} />
+            </div>
+
+            {/* 6. Intent */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Intent</label>
+              <ContentFlowSelect value={intent} options={INTENT_OPTIONS} onChange={val => onChange({ intent: val })} />
+            </div>
+
+            {/* 7. Objective */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Objective</label>
+              <ContentFlowSelect value={objective} options={OBJECTIVE_OPTIONS} onChange={val => onChange({ objective: val })} />
+            </div>
+
+            {/* 8. Funnel stage */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Funnel stage</label>
+              <ContentFlowSelect value={funnelStage} options={FUNNEL_OPTIONS} onChange={val => onChange({ funnelStage: val })} />
+            </div>
+
+            {/* 9. Reference URLs */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Reference URLs</label>
+              <div className="flex items-center gap-2">
+                <ContentFlowTextInput
+                  value={refUrlInput}
+                  onChange={e => setRefUrlInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddUrl(); } }}
+                  placeholder="https://..."
+                  className="flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddUrl}
+                  disabled={!refUrlInput.trim() || refUrls.length >= 5}
+                  className="h-10 px-4 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                >
+                  Add
+                </button>
+              </div>
+              {refUrls.length > 0 && (
+                <div className="flex flex-col gap-1 mt-1">
+                  {refUrls.map(url => (
+                    <div key={url} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-[12px]">
+                      <span className="flex-1 text-foreground truncate">{url}</span>
+                      <button
+                        type="button"
+                        onClick={() => onChange({ refUrls: refUrls.filter(u => u !== url) })}
+                        className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                      >
+                        <X size={12} strokeWidth={1.6} absoluteStrokeWidth />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {refUrls.length >= 5 && (
+                <p className="text-[11px] text-muted-foreground">Maximum 5 URLs added</p>
+              )}
+            </div>
+
           </div>
         )}
       </div>
@@ -679,8 +836,14 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
   const [objective, setObjective]     = useState(initialData?.objective ?? 'agent');
   const [funnelStage, setFunnelStage] = useState(initialData?.funnelStage ?? 'agent');
   const [length, setLength]           = useState(initialData?.length ?? 'medium');
+  const [brief, setBrief]             = useState(initialData?.brief ?? '');
+  const [attachedFiles, setAttachedFiles] = useState<string[]>(initialData?.attachedFiles ?? []);
+  const [includeImages, setIncludeImages] = useState(initialData?.includeImages ?? true);
+  const [includeCTAs, setIncludeCTAs]     = useState(initialData?.includeCTAs ?? true);
+  const [includeFAQ, setIncludeFAQ]       = useState(initialData?.includeFAQ ?? true);
+  const [internalLinks, setInternalLinks] = useState(initialData?.internalLinks ?? true);
+  const [refUrls, setRefUrls]             = useState<string[]>(initialData?.refUrls ?? []);
   const [signalSources, setSignalSources] = useState<string[]>([]);
-  const [attachments, setAttachments] = useState<string[]>([]);
   const [blogCount, setBlogCount]     = useState(1);
 
   // Step 3 state — synced to blogCount
@@ -698,7 +861,12 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
     });
   }, [blogCount]);
 
-  const handleStep2Change = (patch: Partial<Pick<BlogFlowData, 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length' | 'signalSources' | 'attachments' | 'blogCount' | 'createMode' | 'sourceUrl'>>) => {
+  const handleStep2Change = (patch: Partial<Pick<BlogFlowData,
+    | 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length'
+    | 'signalSources' | 'attachments' | 'blogCount' | 'createMode' | 'sourceUrl'
+    | 'brief' | 'attachedFiles' | 'includeImages' | 'includeCTAs' | 'includeFAQ'
+    | 'internalLinks' | 'refUrls'
+  >>) => {
     if (patch.topic !== undefined) setTopic(patch.topic);
     if (patch.createMode !== undefined) setCreateMode(patch.createMode);
     if (patch.sourceUrl !== undefined) setSourceUrl(patch.sourceUrl);
@@ -707,8 +875,14 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
     if (patch.objective !== undefined) setObjective(patch.objective);
     if (patch.funnelStage !== undefined) setFunnelStage(patch.funnelStage);
     if (patch.length !== undefined) setLength(patch.length);
+    if (patch.brief !== undefined) setBrief(patch.brief);
+    if (patch.attachedFiles !== undefined) setAttachedFiles(patch.attachedFiles);
+    if (patch.includeImages !== undefined) setIncludeImages(patch.includeImages);
+    if (patch.includeCTAs !== undefined) setIncludeCTAs(patch.includeCTAs);
+    if (patch.includeFAQ !== undefined) setIncludeFAQ(patch.includeFAQ);
+    if (patch.internalLinks !== undefined) setInternalLinks(patch.internalLinks);
+    if (patch.refUrls !== undefined) setRefUrls(patch.refUrls);
     if (patch.signalSources !== undefined) setSignalSources(patch.signalSources);
-    if (patch.attachments !== undefined) setAttachments(patch.attachments);
     if (patch.blogCount !== undefined) setBlogCount(patch.blogCount);
   };
 
@@ -721,12 +895,13 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
     onComplete({
       contentName, brandKit, locations, agentId, topic, keywords,
       intent, objective, funnelStage, length,
+      brief, attachedFiles, includeImages, includeCTAs, includeFAQ, internalLinks, refUrls,
       signalSources, publishTo: ['library'],
-      attachments, blogCount,
+      attachments: attachedFiles, blogCount,
       contentBrief: sections.map(section => `${section.heading}: ${section.description}`).join('\n\n'),
       sections,
     });
-  }, [agentId, attachments, blogCount, brandKit, contentName, funnelStage, intent, keywords, length, locations, objective, onComplete, sections, signalSources, topic]);
+  }, [agentId, attachedFiles, blogCount, brandKit, brief, contentName, funnelStage, includeCTAs, includeFAQ, includeImages, internalLinks, intent, keywords, length, locations, objective, onComplete, refUrls, sections, signalSources, topic]);
 
   useEffect(() => {
     if (controlRef) {
@@ -785,6 +960,13 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
               length={length}
               createMode={createMode}
               sourceUrl={sourceUrl}
+              brief={brief}
+              attachedFiles={attachedFiles}
+              includeImages={includeImages}
+              includeCTAs={includeCTAs}
+              includeFAQ={includeFAQ}
+              internalLinks={internalLinks}
+              refUrls={refUrls}
               onChange={handleStep2Change}
             />
           )}

@@ -68,6 +68,8 @@ import { BlogPublishModal } from '../blog/BlogPublishModal';
 import { BlogMetaPanel } from '../blog/BlogMetaPanel';
 import { BlogInlineCreationFlow } from '../blog/BlogInlineCreationFlow';
 import type { BlogFlowData } from '../blog/BlogInlineCreationFlow';
+import { ProjectInlineCreationFlow } from '../project/ProjectInlineCreationFlow';
+import type { ProjectFlowData } from '../project/ProjectInlineCreationFlow';
 import { BlogGenerationProgress } from '../blog/BlogGenerationProgress';
 import { BlogSectionCanvas } from '../blog/BlogSectionCanvas';
 import { ProjectGenerationProgress } from '../ProjectGenerationProgress';
@@ -997,6 +999,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
         : DEFAULT_REC_BLOG_FLOW_DATA
       : null
   );
+  const [projectFlowData, setProjectFlowData] = useState<ProjectFlowData | null>(null);
   const initialBlogEditorBlocks = useMemo(
     () => blogFlowData
       ? buildBlogEditorBlocks({
@@ -1036,7 +1039,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
 
   const handleSaveFaq = useCallback(() => {
     toast.success('FAQ content saved to project', {
-      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-text-primary flex-none" />,
+      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-accent-positive flex-none" />,
     });
     onBack();
   }, [onBack]);
@@ -1050,7 +1053,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
       preview: { title: title || 'FAQ content', snippets },
     });
     toast.success('FAQ saved to library', {
-      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-text-primary flex-none" />,
+      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-accent-positive flex-none" />,
     });
     onBack();
   }, [preloadedFAQs, title, onBack]);
@@ -1061,7 +1064,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
         ? ` · scheduled for ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(scheduleDate)}`
         : '';
       toast.success(`FAQ sent to ${approvalWorkflow}${when}`, {
-        icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-text-primary flex-none" />,
+        icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-accent-positive flex-none" />,
       });
       setSendForApprovalOpen(false);
       onBack();
@@ -1075,7 +1078,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
         ? ` · scheduled for ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(scheduleDate)}`
         : '';
       toast.success(`Blog post sent to ${approvalWorkflow}${when}`, {
-        icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-text-primary flex-none" />,
+        icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-accent-positive flex-none" />,
       });
       setBlogSendForApprovalOpen(false);
     },
@@ -1090,7 +1093,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
       preview: { title: title || 'Blog post', snippets: [] },
     });
     toast.success('Blog post saved to library', {
-      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-text-primary flex-none" />,
+      icon: <CheckCircle2 size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-accent-positive flex-none" />,
     });
   }, [title]);
 
@@ -1215,6 +1218,13 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
     setBlogFlowData(data);
     const totalWords = data.sections.reduce((s, sec) => s + sec.wordCount, 0);
     const label = `${data.length ?? 'medium'} · ${totalWords} words · ${data.sections.length} sections`;
+    setGenerationInfo({ label, wizardData: null as unknown as import('../wizard/wizardTypes').WizardData });
+    setSetupPhase('generating');
+  }
+
+  function handleProjectFlowComplete(data: ProjectFlowData) {
+    setProjectFlowData(data);
+    const label = `${data.objective} · ${data.tone} · ${data.contentMix.length} content types`;
     setGenerationInfo({ label, wizardData: null as unknown as import('../wizard/wizardTypes').WizardData });
     setSetupPhase('generating');
   }
@@ -1861,6 +1871,15 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
                 onNavStateChange={setWizardNavState}
                 hideProgress
                 initialData={isEditingSettings && blogFlowData ? blogFlowData : undefined}
+              />
+            ) : mode === 'project' ? (
+              <ProjectInlineCreationFlow
+                onComplete={handleProjectFlowComplete}
+                onCancel={isEditingSettings ? () => setSetupPhase('done') : onBack}
+                controlRef={flowNavRef}
+                onNavStateChange={setWizardNavState}
+                hideProgress
+                initialData={isEditingSettings && projectFlowData ? projectFlowData : undefined}
               />
             ) : (
               <InlineCreationFlow

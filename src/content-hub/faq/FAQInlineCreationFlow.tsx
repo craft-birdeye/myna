@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowUpRight, Check, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, Check, ChevronDown, Sparkles, X } from 'lucide-react';
 import { cn } from '@/contenthub-ui/utils';
 import {
   CONTENT_FLOW_STEP_TITLE_CLASS,
@@ -167,7 +167,7 @@ function StepIndicator({ current }: { current: number }) {
             <div className="flex items-center gap-2">
               <div className={cn(
                 'w-6 h-6 rounded-full flex items-center justify-center text-[11px] transition-colors flex-shrink-0',
-                done || active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+                done ? 'bg-accent-positive text-white' : active ? 'bg-white border border-[#eaeaea] text-foreground' : 'bg-muted text-muted-foreground',
               )}>
                 {done ? <Check size={12} strokeWidth={1.6} absoluteStrokeWidth /> : i + 1}
               </div>
@@ -181,7 +181,7 @@ function StepIndicator({ current }: { current: number }) {
             {i < STEP_LABELS.length - 1 && (
               <div className={cn(
                 'w-[75px] h-px shrink-0 transition-colors',
-                done ? 'bg-primary' : 'bg-border',
+                done ? 'bg-accent-positive' : 'bg-border',
               )} />
             )}
           </React.Fragment>
@@ -338,37 +338,234 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
   );
 }
 
+// ── Toggle row helper ─────────────────────────────────────────────────────────
+
+function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-[13px] text-foreground">{label}</span>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className={cn('w-8 h-4 rounded-full transition-colors relative flex-shrink-0', checked ? 'bg-primary' : 'bg-muted')}
+      >
+        <span className={cn('absolute top-0.5 size-3 bg-white rounded-full transition-transform shadow-sm', checked ? 'translate-x-[18px]' : 'translate-x-0.5')} />
+      </button>
+    </div>
+  );
+}
+
 // ── Step 2: Content setup ─────────────────────────────────────────────────────
 
 interface Step2Props {
+  template: string;
   customAgent: string;
   sourceUrl: string;
   additionalContext: string;
-  onChange: (patch: Partial<Pick<FAQFlowData, 'customAgent' | 'sourceUrl' | 'additionalContext'>>) => void;
+  signalSources: string[];
+  onChange: (patch: Partial<Pick<FAQFlowData, 'customAgent' | 'sourceUrl' | 'additionalContext' | 'signalSources'>>) => void;
 }
 
-function Step2Setup({ customAgent, sourceUrl, additionalContext, onChange }: Step2Props) {
+type TabId = 'upload' | 'url' | 'paste';
+
+function Step2Setup({ template, sourceUrl, additionalContext, signalSources, onChange }: Step2Props) {
+  const [urlScraping, setUrlScraping] = useState(false);
+  const [urlScraped, setUrlScraped] = useState(false);
+  const [autoFilled, setAutoFilled] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>('url');
+  const [pasteText, setPasteText] = useState('');
+  const [supportToggles, setSupportToggles] = useState({ reviews: true, tickets: false, nps: false });
+
+  function handleAutoFill() {
+    onChange({ sourceUrl: 'https://lushgreen.com/services' });
+    setAutoFilled(true);
+  }
+
+  function handleScrape() {
+    if (!sourceUrl) return;
+    setUrlScraping(true);
+    setTimeout(() => {
+      setUrlScraping(false);
+      setUrlScraped(true);
+    }, 1500);
+  }
+
+  function toggleSignal(id: string) {
+    const next = signalSources.includes(id)
+      ? signalSources.filter(s => s !== id)
+      : [...signalSources, id];
+    onChange({ signalSources: next });
+  }
+
+  const showSignalSources = template !== 'custom';
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className={CONTENT_FLOW_STEP_TITLE_CLASS}>Content setup</h2>
       </div>
 
-      {/* Website URL */}
-      <div className="space-y-1.5">
-        <ContentFlowInfoLabel
-          required
-          tooltip="We'll crawl this page to understand your offerings and generate relevant FAQs."
+      {/* Auto-suggest banner */}
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center gap-3">
+        <Sparkles size={15} strokeWidth={1.6} absoluteStrokeWidth className="text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] text-foreground">Use your project context</p>
+          <p className="text-[12px] text-muted-foreground">We found lushgreen.com/services from your brand identity</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleAutoFill}
+          className="h-8 px-3 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors shrink-0"
         >
-          Website URL
-        </ContentFlowInfoLabel>
-        <ContentFlowTextInput
-          required
-          value={sourceUrl}
-          onChange={e => onChange({ sourceUrl: e.target.value })}
-          placeholder="https://yourwebsite.com"
-        />
+          Use this
+        </button>
       </div>
+
+      {/* Template-conditional URL input */}
+      {(template === 'aeo' || template === 'newpage') && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <ContentFlowInfoLabel required tooltip="We'll extract questions your customers are already asking.">
+              {template === 'aeo' ? 'Page to optimise' : 'Page URL'}
+            </ContentFlowInfoLabel>
+            {autoFilled && (
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-green-50 text-green-700">Auto-filled</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <ContentFlowTextInput
+              required
+              value={sourceUrl}
+              onChange={e => { onChange({ sourceUrl: e.target.value }); setUrlScraped(false); }}
+              placeholder="https://example.com/services"
+              className="flex-1"
+            />
+            <button
+              type="button"
+              onClick={handleScrape}
+              disabled={!sourceUrl || urlScraping}
+              className="h-10 px-4 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            >
+              {urlScraping ? 'Scraping...' : 'Scrape page'}
+            </button>
+          </div>
+          {urlScraped && (
+            <div className="flex items-center gap-2 text-[12px] rounded-lg px-3 py-2 bg-green-50 border border-green-100 text-green-700">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="6" fill="#4CAE3D" />
+                <path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="flex-1">LushGreen Landscapes · Services page</span>
+              <button type="button" onClick={() => setUrlScraped(false)} className="text-green-600 hover:text-green-800">
+                <X size={12} strokeWidth={1.6} absoluteStrokeWidth />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {template === 'existing' && (
+        <div className="space-y-2">
+          <p className="text-[13px] text-foreground">Import your existing FAQs</p>
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 w-fit">
+            {(['upload', 'url', 'paste'] as TabId[]).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-[12px] transition-colors capitalize',
+                  activeTab === tab ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          {activeTab === 'url' && (
+            <ContentFlowTextInput
+              value={sourceUrl}
+              onChange={e => onChange({ sourceUrl: e.target.value })}
+              placeholder="https://example.com/faq"
+            />
+          )}
+          {activeTab === 'paste' && (
+            <ContentFlowTextarea
+              value={pasteText}
+              onChange={e => setPasteText(e.target.value)}
+              placeholder="Paste your existing FAQ content here..."
+              rows={5}
+            />
+          )}
+          {activeTab === 'upload' && (
+            <div className="rounded-lg border-2 border-dashed border-border px-4 py-6 text-center text-[13px] text-muted-foreground hover:border-primary/30 transition-colors cursor-pointer">
+              Drop a file or click to browse (.pdf · .docx · .txt)
+            </div>
+          )}
+        </div>
+      )}
+
+      {template === 'support' && (
+        <div className="flex flex-col gap-3">
+          <label className="text-[13px] text-foreground">Data sources</label>
+          <ToggleRow label="Reviews data" checked={supportToggles.reviews} onChange={v => setSupportToggles(p => ({ ...p, reviews: v }))} />
+          <ToggleRow label="Ticketing data" checked={supportToggles.tickets} onChange={v => setSupportToggles(p => ({ ...p, tickets: v }))} />
+          <ToggleRow label="NPS responses" checked={supportToggles.nps} onChange={v => setSupportToggles(p => ({ ...p, nps: v }))} />
+        </div>
+      )}
+
+      {template === 'location' && (
+        <div className="rounded-lg bg-muted px-4 py-3 text-[13px] text-muted-foreground">
+          FAQs will be generated per selected location using your brand identity and location context.
+        </div>
+      )}
+
+      {template === 'custom' && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <ContentFlowInfoLabel tooltip="Paste a URL or add context for your custom FAQ set.">
+              Source URL (optional)
+            </ContentFlowInfoLabel>
+            <ContentFlowTextInput
+              value={sourceUrl}
+              onChange={e => onChange({ sourceUrl: e.target.value })}
+              placeholder="https://yourwebsite.com"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] text-foreground">Custom sources</label>
+            {SIGNAL_SOURCES.map(src => (
+              <label key={src.id} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={signalSources.includes(src.id)}
+                  onChange={() => toggleSignal(src.id)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-[13px] text-foreground">{src.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Signal sources (shown for all non-custom templates) */}
+      {showSignalSources && (
+        <div className="flex flex-col gap-2">
+          <label className="text-[13px] text-foreground">Signal sources</label>
+          {SIGNAL_SOURCES.slice(0, 4).map(src => (
+            <label key={src.id} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={signalSources.includes(src.id)}
+                onChange={() => toggleSignal(src.id)}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="text-[13px] text-foreground">{src.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
 
       {/* Additional context */}
       <div className="space-y-1.5">
@@ -451,10 +648,11 @@ export function FAQInlineCreationFlow({ onComplete, onCancel, controlRef, onNavS
   const [contentBrief, setContentBrief] = useState('Create an AEO-ready FAQ set that answers the most common customer questions about pricing, bookings, services, locations, response times, and edge cases. Use the selected brand identity and location context, pull supporting signals from reviews and website content, and keep answers clear, direct, and useful for search and AI-generated responses.');
   const [sections] = useState<FAQSection[]>(DEFAULT_SECTIONS);
 
-  const handleStep2Change = (patch: Partial<Pick<FAQFlowData, 'customAgent' | 'sourceUrl' | 'additionalContext'>>) => {
+  const handleStep2Change = (patch: Partial<Pick<FAQFlowData, 'customAgent' | 'sourceUrl' | 'additionalContext' | 'signalSources'>>) => {
     if (patch.customAgent !== undefined) setCustomAgent(patch.customAgent);
     if (patch.sourceUrl !== undefined) setSourceUrl(patch.sourceUrl);
     if (patch.additionalContext !== undefined) setContext(patch.additionalContext);
+    if (patch.signalSources !== undefined) setSignals(patch.signalSources);
   };
 
   const canAdvance = [
@@ -536,9 +734,11 @@ export function FAQInlineCreationFlow({ onComplete, onCancel, controlRef, onNavS
 
           {step === 1 && (
             <Step2Setup
+              template={template}
               customAgent={customAgent}
               sourceUrl={sourceUrl}
               additionalContext={additionalContext}
+              signalSources={signalSources}
               onChange={handleStep2Change}
             />
           )}

@@ -29,7 +29,7 @@ interface GateRowProps {
 const GateRow = ({ label, met, detail }: GateRowProps) => (
   <div className="flex items-start gap-2">
     {met
-      ? <CheckCircle2 size={14} strokeWidth={1.6} className="text-text-primary mt-0.5 shrink-0" />
+      ? <CheckCircle2 size={14} strokeWidth={1.6} className="text-accent-positive mt-0.5 shrink-0" />
       : <XCircle size={14} strokeWidth={1.6} className="text-red-500 mt-0.5 shrink-0" />
     }
     <div>
@@ -124,7 +124,7 @@ export const EditorialScorePanel = ({
           className="w-full flex items-center gap-2 text-left"
         >
           {compliance.passed
-            ? <ShieldCheck size={14} strokeWidth={1.6} className="text-text-primary shrink-0" />
+            ? <ShieldCheck size={14} strokeWidth={1.6} className="text-accent-positive shrink-0" />
             : <ShieldX size={14} strokeWidth={1.6} className="text-red-500 shrink-0" />
           }
           <span
@@ -142,7 +142,7 @@ export const EditorialScorePanel = ({
           <div className="mt-2 ml-6 flex flex-col gap-1">
             {['Brand claims verified', 'No PII detected', 'No competitor mentions', 'No regulated terms', 'Hallucination check passed'].map(rule => (
               <div key={rule} className="flex items-center gap-2">
-                <CheckCircle2 size={12} strokeWidth={1.6} className="text-text-primary shrink-0" />
+                <CheckCircle2 size={12} strokeWidth={1.6} className="text-accent-positive shrink-0" />
                 <span className="text-[11px] text-muted-foreground">{rule}</span>
               </div>
             ))}
