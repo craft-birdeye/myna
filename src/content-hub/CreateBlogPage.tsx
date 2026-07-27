@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowLeft, ArrowUpRight, Sparkles, Loader2, Upload, X, FileText, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import { cn } from '@/contenthub-ui/utils';
 import { Button } from '@/contenthub-ui/button';
@@ -267,8 +267,18 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
   const [internalLinks, setInternalLinks]   = useState(true);
   const [generatingTopic, setGeneratingTopic] = useState(false);
   const [recommendationsOpen, setRecommendationsOpen] = useState(false);
-  const topicIdxRef  = useRef(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const topicIdxRef   = useRef(0);
+  const fileInputRef  = useRef<HTMLInputElement>(null);
+  const topicTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeTopic = useCallback(() => {
+    const el = topicTextareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => { autoResizeTopic(); }, [topic, autoResizeTopic]);
 
   const canAdvance = step === 0
     ? blogName.trim().length > 0 && selectedLocations.length > 0
@@ -378,13 +388,13 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
             {createMode === 'topic' && (
               <div className="ml-7 mt-4 rounded-lg border border-border overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
                 <textarea
+                  ref={topicTextareaRef}
                   value={topic}
-                  onChange={e => setTopic(e.target.value)}
+                  onChange={e => { setTopic(e.target.value); autoResizeTopic(); }}
                   placeholder="e.g. Top 5 ways restaurants can respond to negative reviews to make it industry-relevant"
-                  rows={4}
-                  className="w-full resize-none bg-background px-4 pt-3 pb-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 outline-none border-none"
+                  className="w-full resize-none overflow-hidden bg-background px-4 pt-3 pb-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 outline-none border-none min-h-[100px]"
                 />
-                <div className="border-t border-border px-3 py-2 bg-background flex items-center gap-1">
+                <div className="px-3 py-2 bg-background flex items-center gap-1">
                   <Popover open={recommendationsOpen} onOpenChange={setRecommendationsOpen}>
                     <PopoverTrigger asChild>
                       <button
@@ -395,30 +405,42 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
                         <Lightbulb size={13} strokeWidth={1.6} absoluteStrokeWidth />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" className="w-[440px] p-1">
-                      <div className="px-3 py-2 text-[11px] font-medium text-muted-foreground">
+                    <PopoverContent align="start" className="w-[480px] p-0">
+                      <div className="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground border-b border-border">
                         Search AI recommendations
                       </div>
-                      <div className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">
-                        {MOCK_RECOMMENDATIONS.map(rec => (
-                          <button
-                            key={rec.id}
-                            type="button"
-                            onClick={() => {
-                              setTopic(rec.title);
-                              setRecommendationsOpen(false);
-                            }}
-                            className="flex flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted"
-                          >
-                            <span className="text-[11px] text-muted-foreground">{rec.category}</span>
-                            <span className="text-[13px] leading-snug text-foreground line-clamp-2">{rec.title}</span>
-                          </button>
+                      <div className="flex max-h-[360px] flex-col overflow-y-auto py-1">
+                        {MOCK_RECOMMENDATIONS.map((rec) => (
+                          <div key={rec.id} className="group/rec relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTopic(`Write a blog post based on this Search AI recommendation: "${rec.title}". Focus on making it locally relevant, authoritative, and optimised for AI search assistants.`);
+                                setRecommendationsOpen(false);
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted"
+                            >
+                              <span className="text-[13px] text-foreground leading-snug pr-3">{rec.title}</span>
+                              <span className={cn(
+                                'shrink-0 rounded-full px-2 py-0.5 text-[11px]',
+                                rec.impact === 'High'
+                                  ? 'bg-red-50 text-red-500'
+                                  : rec.impact === 'Medium'
+                                    ? 'bg-amber-50 text-amber-600'
+                                    : 'bg-muted text-muted-foreground',
+                              )}>
+                                {rec.impact}
+                              </span>
+                            </button>
+                            <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-[240px] rounded-lg border border-border bg-background p-3 shadow-lg opacity-0 transition-opacity group-hover/rec:opacity-100">
+                              <p className="text-[12px] font-medium text-foreground mb-1">{rec.impact} impact</p>
+                              <p className="text-[12px] leading-relaxed text-muted-foreground">{rec.description}</p>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </PopoverContent>
                   </Popover>
-
-                  <div className="h-4 w-px bg-border" />
 
                   <button
                     type="button"

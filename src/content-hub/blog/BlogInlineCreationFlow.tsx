@@ -10,7 +10,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Check, ChevronDown, Loader2, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Loader2, Sparkles, ArrowUpRight, Lightbulb } from 'lucide-react';
+import { MOCK_RECOMMENDATIONS } from '@/search-ai/SearchAIRecommendationsPanel';
 import { cn } from '@/contenthub-ui/utils';
 import {
   CONTENT_FLOW_STEP_TITLE_CLASS,
@@ -41,6 +42,8 @@ export interface BlogFlowData {
   brandKit: string;
   locations: string[];
   agentId: string;
+  createMode?: 'topic' | 'url';
+  sourceUrl?: string;
   topic: string;
   keywords: string[];
   intent: string;
@@ -363,12 +366,26 @@ interface Step2Props {
   objective: string;
   funnelStage: string;
   length: string;
-  onChange: (patch: Partial<Pick<BlogFlowData, 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length'>>) => void;
+  createMode: 'topic' | 'url';
+  sourceUrl: string;
+  onChange: (patch: Partial<Pick<BlogFlowData, 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length' | 'createMode' | 'sourceUrl'>>) => void;
 }
 
-function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, onChange }: Step2Props) {
+function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, createMode, sourceUrl, onChange }: Step2Props) {
   const [generatingTopic, setGeneratingTopic] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [recommendationsOpen, setRecommendationsOpen] = useState(false);
   const topicIdxRef = useRef(0);
+  const topicTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeTopic = useCallback(() => {
+    const el = topicTextareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => { autoResizeTopic(); }, [topic, autoResizeTopic]);
 
   function handleGenerateTopic() {
     setGeneratingTopic(true);
@@ -386,66 +403,177 @@ function Step2Setup({ topic, keywords, intent, objective, funnelStage, length, o
         <h2 className={CONTENT_FLOW_STEP_TITLE_CLASS}>Blog setup</h2>
       </div>
 
-      {/* Topic */}
-      <div className="space-y-1.5">
+      {/* Create mode */}
+      <div className="space-y-1">
         <label className="text-[13px] text-foreground">
-          Topic <span className="text-destructive">*</span>
+          How would you like to create this blog?
         </label>
-        <ContentFlowTextarea
-          value={topic}
-          onChange={e => onChange({ topic: e.target.value })}
-          placeholder="e.g. How to overcome dental anxiety as an adult"
-          className="min-h-[100px]"
-        />
+
+        {/* Option 1 — topic */}
+        <div className="pt-4">
+          <button
+            type="button"
+            onClick={() => onChange({ createMode: 'topic' })}
+            className="flex items-start gap-3 w-full text-left"
+          >
+            <span className={cn(
+              'mt-0.5 h-4 w-4 flex-none rounded-full border-2 flex items-center justify-center transition-colors',
+              createMode === 'topic' ? 'border-primary bg-primary' : 'border-border bg-background',
+            )}>
+              {createMode === 'topic' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+            </span>
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[13px] text-foreground">Start with a topic</span>
+              <span className="text-[12px] text-muted-foreground">Describe what you want the blog to cover</span>
+            </span>
+          </button>
+
+          {createMode === 'topic' && (
+            <div className="ml-7 mt-4 rounded-lg border border-border overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
+              <textarea
+                ref={topicTextareaRef}
+                value={topic}
+                onChange={e => { onChange({ topic: e.target.value }); autoResizeTopic(); }}
+                placeholder="e.g. Top 5 ways restaurants can respond to negative reviews to make it industry-relevant"
+                className="w-full resize-none overflow-hidden bg-background px-4 pt-3 pb-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 outline-none border-none min-h-[100px]"
+              />
+              <div className="px-3 py-2 bg-background flex items-center gap-1">
+                <Popover open={recommendationsOpen} onOpenChange={setRecommendationsOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Insert a Search AI recommendation"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <Lightbulb size={13} strokeWidth={1.6} absoluteStrokeWidth />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-[480px] p-0">
+                    <div className="px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+                      Search AI recommendations
+                    </div>
+                    <div className="flex max-h-[360px] flex-col overflow-y-auto py-1">
+                      {MOCK_RECOMMENDATIONS.map((rec) => (
+                        <div key={rec.id} className="group/rec relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onChange({ topic: `Write a blog post based on this Search AI recommendation: "${rec.title}". Focus on making it locally relevant, authoritative, and optimised for AI search assistants.` });
+                              setRecommendationsOpen(false);
+                            }}
+                            className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted"
+                          >
+                            <span className="text-[13px] text-foreground leading-snug pr-3">{rec.title}</span>
+                            <span className={cn(
+                              'shrink-0 rounded-full px-2 py-0.5 text-[11px]',
+                              rec.impact === 'High' ? 'bg-red-50 text-red-500'
+                                : rec.impact === 'Medium' ? 'bg-amber-50 text-amber-600'
+                                  : 'bg-muted text-muted-foreground',
+                            )}>
+                              {rec.impact}
+                            </span>
+                          </button>
+                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-[240px] rounded-lg border border-border bg-background p-3 shadow-lg opacity-0 transition-opacity group-hover/rec:opacity-100">
+                            <p className="text-[12px] text-foreground mb-1">{rec.impact} impact</p>
+                            <p className="text-[12px] leading-relaxed text-muted-foreground">{rec.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <button
+                  type="button"
+                  disabled={generatingTopic}
+                  onClick={handleGenerateTopic}
+                  className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground disabled:opacity-60 transition-colors"
+                >
+                  {generatingTopic
+                    ? <Loader2 size={13} strokeWidth={1.6} absoluteStrokeWidth className="animate-spin text-[#7c3aed]" />
+                    : <Sparkles size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-[#7c3aed]" />
+                  }
+                  {generatingTopic ? 'Generating...' : topic ? 'Regenerate topic' : 'Generate a topic for me'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Option 2 — YouTube URL */}
+        <div className="pt-4">
+          <button
+            type="button"
+            onClick={() => onChange({ createMode: 'url' })}
+            className="flex items-start gap-3 w-full text-left"
+          >
+            <span className={cn(
+              'mt-0.5 h-4 w-4 flex-none rounded-full border-2 flex items-center justify-center transition-colors',
+              createMode === 'url' ? 'border-primary bg-primary' : 'border-border bg-background',
+            )}>
+              {createMode === 'url' && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+            </span>
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[13px] text-foreground">Start with a YouTube video</span>
+              <span className="text-[12px] text-muted-foreground">Paste a YouTube video link to use as source material</span>
+            </span>
+          </button>
+
+          {createMode === 'url' && (
+            <div className="ml-7 mt-4">
+              <ContentFlowTextInput
+                value={sourceUrl}
+                onChange={e => onChange({ sourceUrl: e.target.value })}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Advanced settings */}
+      <div className="rounded-lg border border-border">
         <button
           type="button"
-          disabled={generatingTopic}
-          onClick={handleGenerateTopic}
-          className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground disabled:opacity-60 transition-colors"
+          onClick={() => setAdvancedOpen(o => !o)}
+          className="flex items-center justify-between w-full px-4 py-3"
         >
-          {generatingTopic
-            ? <Loader2 size={13} strokeWidth={1.6} absoluteStrokeWidth className="animate-spin text-primary" />
-            : <Sparkles size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" />
+          <span className="text-[13px] text-foreground">Advanced settings</span>
+          {advancedOpen
+            ? <ChevronUp size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
+            : <ChevronDown size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
           }
-          {generatingTopic ? 'Generating...' : topic ? 'Regenerate topic' : 'Generate a topic for me'}
         </button>
-      </div>
-
-      {/* Keywords */}
-      <div className="space-y-1.5">
-        <ContentFlowInfoLabel tooltip="Type a keyword and press Enter, or pick from suggestions.">
-          Keywords
-        </ContentFlowInfoLabel>
-        <ContentFlowKeywordTagInput
-          values={keywords}
-          suggestions={KEYWORD_OPTIONS}
-          onChange={vals => onChange({ keywords: vals })}
-          placeholder="Select or enter keywords"
-        />
-      </div>
-
-      {/* Intent */}
-      <div className="space-y-1.5">
-        <label className="text-[13px] text-foreground">Intent</label>
-        <ContentFlowSelect value={intent} options={INTENT_OPTIONS} onChange={val => onChange({ intent: val })} />
-      </div>
-
-      {/* Objective */}
-      <div className="space-y-1.5">
-        <label className="text-[13px] text-foreground">Objective</label>
-        <ContentFlowSelect value={objective} options={OBJECTIVE_OPTIONS} onChange={val => onChange({ objective: val })} />
-      </div>
-
-      {/* Funnel stage */}
-      <div className="space-y-1.5">
-        <label className="text-[13px] text-foreground">Funnel stage</label>
-        <ContentFlowSelect value={funnelStage} options={FUNNEL_OPTIONS} onChange={val => onChange({ funnelStage: val })} />
-      </div>
-
-      {/* Length */}
-      <div className="space-y-1.5">
-        <label className="text-[13px] text-foreground">Length</label>
-        <ContentFlowSelect value={length} options={LENGTH_OPTIONS} onChange={val => onChange({ length: val })} />
+        {advancedOpen && (
+          <div className="flex flex-col gap-5 border-t border-border px-4 py-4">
+            <div className="space-y-1.5">
+              <ContentFlowInfoLabel tooltip="Type a keyword and press Enter, or pick from suggestions.">
+                Keywords
+              </ContentFlowInfoLabel>
+              <ContentFlowKeywordTagInput
+                values={keywords}
+                suggestions={KEYWORD_OPTIONS}
+                onChange={vals => onChange({ keywords: vals })}
+                placeholder="Select or enter keywords"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Intent</label>
+              <ContentFlowSelect value={intent} options={INTENT_OPTIONS} onChange={val => onChange({ intent: val })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Objective</label>
+              <ContentFlowSelect value={objective} options={OBJECTIVE_OPTIONS} onChange={val => onChange({ objective: val })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Funnel stage</label>
+              <ContentFlowSelect value={funnelStage} options={FUNNEL_OPTIONS} onChange={val => onChange({ funnelStage: val })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-foreground">Length</label>
+              <ContentFlowSelect value={length} options={LENGTH_OPTIONS} onChange={val => onChange({ length: val })} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -544,6 +672,8 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
   // Step 2 state
   const [agentId, setAgentId]         = useState(initialData?.agentId ?? 'blog-default');
   const [topic, setTopic]             = useState(initialData?.topic ?? '');
+  const [createMode, setCreateMode]   = useState<'topic' | 'url'>(initialData?.createMode ?? 'topic');
+  const [sourceUrl, setSourceUrl]     = useState(initialData?.sourceUrl ?? '');
   const [keywords, setKeywords]       = useState<string[]>(Array.isArray(initialData?.keywords) ? initialData.keywords : []);
   const [intent, setIntent]           = useState(initialData?.intent ?? 'agent');
   const [objective, setObjective]     = useState(initialData?.objective ?? 'agent');
@@ -568,8 +698,10 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
     });
   }, [blogCount]);
 
-  const handleStep2Change = (patch: Partial<Pick<BlogFlowData, 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length' | 'signalSources' | 'attachments' | 'blogCount'>>) => {
+  const handleStep2Change = (patch: Partial<Pick<BlogFlowData, 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length' | 'signalSources' | 'attachments' | 'blogCount' | 'createMode' | 'sourceUrl'>>) => {
     if (patch.topic !== undefined) setTopic(patch.topic);
+    if (patch.createMode !== undefined) setCreateMode(patch.createMode);
+    if (patch.sourceUrl !== undefined) setSourceUrl(patch.sourceUrl);
     if (patch.keywords !== undefined) setKeywords(patch.keywords);
     if (patch.intent !== undefined) setIntent(patch.intent);
     if (patch.objective !== undefined) setObjective(patch.objective);
@@ -582,7 +714,7 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
 
   const canAdvance = [
     contentName.trim() !== '' && brandKit !== '' && locations.length > 0,
-    topic.trim() !== '',
+    createMode === 'topic' ? topic.trim() !== '' : sourceUrl.trim() !== '',
   ][step];
 
   const handleGenerate = useCallback(() => {
@@ -651,6 +783,8 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
               objective={objective}
               funnelStage={funnelStage}
               length={length}
+              createMode={createMode}
+              sourceUrl={sourceUrl}
               onChange={handleStep2Change}
             />
           )}
