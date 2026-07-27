@@ -240,7 +240,7 @@ function StepIndicator({ current }: { current: number }) {
           <React.Fragment key={label}>
             <div className="flex items-center gap-2">
               <div className={cn(
-                'w-6 h-6 rounded-full flex items-center justify-center text-[11px] transition-colors flex-shrink-0',
+                'w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-colors flex-shrink-0',
                 done ? 'bg-accent-positive text-white' : active ? 'bg-white border border-[#eaeaea] text-foreground' : 'bg-muted text-muted-foreground',
               )}>
                 {done ? <Check size={12} strokeWidth={1.6} absoluteStrokeWidth /> : i + 1}
@@ -373,9 +373,9 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={cn('w-8 h-4 rounded-full transition-colors relative flex-shrink-0', checked ? 'bg-primary' : 'bg-muted')}
+        className={cn('w-8 h-5 rounded-full transition-colors relative flex-shrink-0', checked ? 'bg-primary' : 'bg-muted')}
       >
-        <span className={cn('absolute top-0.5 size-3 bg-white rounded-full transition-transform shadow-sm', checked ? 'translate-x-[18px]' : 'translate-x-0.5')} />
+        <span className={cn('absolute top-0.5 size-3.5 bg-white rounded-full transition-transform shadow-sm', checked ? 'translate-x-[16px]' : 'translate-x-0.5')} />
       </button>
     </div>
   );
