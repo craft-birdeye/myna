@@ -94,6 +94,67 @@ const TYPE_BADGE_VARIANT: Record<ContentType, 'default' | 'secondary' | 'outline
   ads:      'secondary',
 };
 
+// ── Library table row ─────────────────────────────────────────────────────────
+
+type LibraryRow = Record<string, unknown> & {
+  id: string;
+  name: string;
+  contentType: ContentType;
+  score: number;
+  brand: string;
+  lastUpdated: string;
+  createdBy: string;
+  tmpl: TemplateItem;
+};
+
+const LIBRARY_COLUMNS: import('../components').Column<LibraryRow>[] = [
+  {
+    key: 'name',
+    label: 'Name',
+    width: 320,
+    sortable: true,
+    render: (_v, row) => (
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-8 rounded overflow-hidden shrink-0 border border-border/60" style={{ background: TYPE_THUMB_BG[row.contentType] }}>
+          <TemplateThumbnail template={row.tmpl} />
+        </div>
+        <span className="text-body text-text-action truncate">{row.name}</span>
+      </div>
+    ),
+  },
+  {
+    key: 'contentType',
+    label: 'Content type',
+    width: 140,
+    sortable: true,
+    render: (_v, row) => (
+      row.contentType === 'faq'
+        ? <span className="text-body text-text-primary">FAQ</span>
+        : <span className="inline-flex items-center rounded-sm px-2 py-0.5 text-small" style={{ background: '#EDE9FE', color: '#5B21B6' }}>Blog</span>
+    ),
+  },
+  {
+    key: 'score',
+    label: 'Content score',
+    width: 180,
+    sortable: true,
+    render: (_v, row) => {
+      const color = row.score >= 90 ? '#377e2c' : '#94a3b8';
+      return (
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-1.5 bg-surface-selected rounded-full overflow-hidden">
+            <div className="h-full rounded-full" style={{ width: `${row.score}%`, background: color }} />
+          </div>
+          <span className="text-small text-text-primary tabular-nums whitespace-nowrap">{row.score}/100</span>
+        </div>
+      );
+    },
+  },
+  { key: 'brand',       label: 'Brand identity', width: 180, sortable: true },
+  { key: 'lastUpdated', label: 'Last updated',   width: 160, sortable: true },
+  { key: 'createdBy',   label: 'Created by',     width: 140, sortable: true },
+];
+
 const TYPE_THUMB: Record<ContentType, { iconBg: string; iconColor: string; Icon: React.ElementType }> = {
   faq:      { iconBg: 'bg-primary/10',   iconColor: 'text-primary',   Icon: MessageSquare },
   social:   { iconBg: 'bg-purple-100', iconColor: 'text-purple-600', Icon: Share2        },
@@ -731,6 +792,24 @@ export const ProjectsView = ({
     });
   }, [libQuery, librarySelections]);
 
+  const libraryRows = useMemo<LibraryRow[]>(() => {
+    const brands = ['Aspen dental', 'Oakwood Services', 'Olive Garden'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return filteredTemplates.map(tmpl => {
+      const seed = tmpl.id.split('').reduce((s, c) => (s * 31 + c.charCodeAt(0)) & 0xffff, 0);
+      return {
+        id: tmpl.id,
+        name: tmpl.name,
+        contentType: tmpl.type,
+        score: [87,88,89,90,91,92,93,94,95,96][seed % 10],
+        brand: brands[seed % brands.length],
+        lastUpdated: `${months[seed % 12]} ${String((seed % 28) + 1).padStart(2,'0')}, 2025`,
+        createdBy: 'Birdeye',
+        tmpl,
+      };
+    });
+  }, [filteredTemplates]);
+
   const visibleColumns = ALL_COLUMNS.filter(c => visibleColKeys.includes(String(c.key)));
 
   return (
@@ -895,66 +974,19 @@ export const ProjectsView = ({
                 ))}
               </div>
             ) : (
-              /* Table view — matches Figma node 9234-77733 */
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border">
-                    {['Name', 'Content type', 'Content score', 'Brand identity', 'Last updated', 'Created by'].map(col => (
-                      <th key={col} className="py-2.5 pr-6 text-[11px] text-muted-foreground font-normal whitespace-nowrap">{col}</th>
-                    ))}
-                    <th className="w-14" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredTemplates.map(tmpl => {
-                    const seed = tmpl.id.split('').reduce((s, c) => (s * 31 + c.charCodeAt(0)) & 0xffff, 0);
-                    const score = [87,88,89,90,91,92,93,94,95,96][seed % 10];
-                    const brands = ['Aspen dental', 'Oakwood Services', 'Olive Garden'];
-                    const brand = brands[seed % brands.length];
-                    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                    const date = `${months[seed % 12]} ${String((seed % 28) + 1).padStart(2,'0')}, 2025`;
-                    const scoreColor = score >= 90 ? '#377e2c' : '#94a3b8';
-                    return (
-                      <tr key={tmpl.id} className="group transition-colors hover:bg-surface-hover/40">
-                        <td className="py-3 pr-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-8 rounded overflow-hidden shrink-0 border border-border/60" style={{ background: TYPE_THUMB_BG[tmpl.type] }}>
-                              <TemplateThumbnail template={tmpl} />
-                            </div>
-                            <button className="text-[13px] text-primary hover:underline text-left" onClick={() => setPreviewTemplate(tmpl)}>
-                              {tmpl.name}
-                            </button>
-                          </div>
-                        </td>
-                        <td className="py-3 pr-6">
-                          <Badge variant={TYPE_BADGE_VARIANT[tmpl.type]}>{TYPE_LABEL[tmpl.type]}</Badge>
-                        </td>
-                        <td className="py-3 pr-6">
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${score}%`, background: scoreColor }} />
-                            </div>
-                            <span className="text-[12px] text-foreground whitespace-nowrap">{score}/100</span>
-                          </div>
-                        </td>
-                        <td className="py-3 pr-6"><span className="text-[12px] text-foreground">{brand}</span></td>
-                        <td className="py-3 pr-6"><span className="text-[12px] text-muted-foreground">{date}</span></td>
-                        <td className="py-3 pr-6"><span className="text-[12px] text-foreground">Birdeye</span></td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setPreviewTemplate(tmpl)} className="flex size-7 items-center justify-center rounded hover:bg-surface-hover transition-colors">
-                              <Eye size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
-                            </button>
-                            <button className="flex size-7 items-center justify-center rounded hover:bg-surface-hover transition-colors">
-                              <MoreVertical size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <DataTable<LibraryRow>
+                columns={LIBRARY_COLUMNS}
+                data={libraryRows}
+                rowActions={[{
+                  iconElement: <Eye size={13} strokeWidth={1.6} absoluteStrokeWidth />,
+                  label: 'Preview',
+                  onClick: row => setPreviewTemplate(row.tmpl),
+                }]}
+                rowMenuItems={[
+                  { label: 'Preview',      onClick: row => setPreviewTemplate(row.tmpl) },
+                  { label: 'Use template', onClick: () => onNavigate('content-hub-create') },
+                ]}
+              />
             )}
           </div>
         </div>
