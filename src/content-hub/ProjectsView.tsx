@@ -552,6 +552,9 @@ export const ProjectsView = ({
     const goal        = librarySelections['goal']?.[0];
 
     return TEMPLATES.filter(t => {
+      // Library tab only shows blog and FAQ types
+      if (t.type !== 'blog' && t.type !== 'faq') return false;
+
       const matchesQ = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
       const matchesType =
         isAllFilter(contentType, 'All') ||

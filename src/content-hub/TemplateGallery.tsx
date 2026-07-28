@@ -3,6 +3,11 @@ import {
   ArrowLeft, FileText, MessageSquare, Mail, Star, Megaphone, Share2,
   Search, LayoutGrid, List, Eye, MoreHorizontal, ChevronRight, X,
 } from 'lucide-react';
+import thumbBlogAnnouncement from '@/assets/thumbnails/blog-announcement.png';
+import thumbBlogWelcome from '@/assets/thumbnails/blog-welcome.png';
+import thumbBlogNewDish from '@/assets/thumbnails/blog-new-dish.png';
+import thumbBlogSurvey from '@/assets/thumbnails/blog-survey.png';
+import thumbFaq from '@/assets/thumbnails/faq.png';
 import { Input } from '@/contenthub-ui/input';
 import { Button } from '@/contenthub-ui/button';
 import { TextTabsRow, type TextTabItem } from '@/contenthub-ui/text-tabs';
@@ -209,84 +214,24 @@ function BlogSceneChart() {
   );
 }
 
-function BlogThumbnailDark({ title }: { title: string }) {
-  return (
-    <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: '#111827' }}>
-      {/* Business header */}
-      <div className="flex items-center gap-1.5 px-2 py-[4px]" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
-        <div className="w-[11px] h-[11px] rounded-full shrink-0 flex items-center justify-center text-white" style={{ background: '#3B82F6', fontSize: 5 }}>B</div>
-        <div className="flex-1 min-w-0">
-          <div style={{ fontSize: 4.5, color: 'rgba(255,255,255,0.75)' }}>Birdeye Blog</div>
-        </div>
-        <div className="flex gap-[1px]">
-          {[1,2,3,4,5].map(i => <span key={i} style={{ fontSize: 4, color: '#F59E0B' }}>★</span>)}
-        </div>
-      </div>
-      {/* Hero photo placeholder */}
-      <div style={{ height: 46, background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2040 100%)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(17,24,39,0.9), transparent)' }} />
-        <div style={{ position: 'absolute', top: 8, left: 8, width: 32, height: 16, borderRadius: 3, background: 'rgba(255,255,255,0.12)' }} />
-        <div style={{ position: 'absolute', top: 8, right: 12, width: 16, height: 16, borderRadius: '50%', background: 'rgba(59,130,246,0.3)' }} />
-      </div>
-      {/* Content */}
-      <div className="px-2 pt-[4px] pb-[3px] flex flex-col gap-[3px] flex-1 overflow-hidden">
-        <div style={{ fontSize: 5.5, color: 'rgba(255,255,255,0.9)', lineHeight: '8px' }} className="line-clamp-2">{title}</div>
-        {[100, 88, 72, 60].map((w, i) => (
-          <div key={i} style={{ height: 2, borderRadius: 2, background: `rgba(255,255,255,${i < 2 ? 0.15 : 0.08})`, width: `${w}%` }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BlogThumbnailLight({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden">
-      {/* Business card header */}
-      <div className="flex items-center gap-1.5 px-2 py-[4px]" style={{ borderBottom: '0.5px solid #f3f4f6' }}>
-        <div className="w-[12px] h-[12px] rounded-full shrink-0 flex items-center justify-center text-white" style={{ background: '#EF4444', fontSize: 5 }}>O</div>
-        <div className="flex-1 min-w-0">
-          <div style={{ fontSize: 5, color: '#111827' }}>Olive Garden, LA</div>
-          <div className="flex items-center gap-[2px]">
-            {[1,2,3,4].map(i => <span key={i} style={{ fontSize: 4, color: '#F59E0B' }}>★</span>)}
-            <span style={{ fontSize: 4, color: '#D1D5DB' }}>★</span>
-            <span style={{ fontSize: 4, color: '#9CA3AF', marginLeft: 2 }}>4.4 · 118</span>
-          </div>
-        </div>
-      </div>
-      {/* Photo with gradient overlay */}
-      <div style={{ height: 38, background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(236,72,153,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 10 }}>📣</span>
-          </div>
-        </div>
-      </div>
-      {/* Content */}
-      <div className="px-2 pt-[4px] pb-[3px] flex flex-col gap-[2.5px] flex-1 overflow-hidden">
-        <div style={{ fontSize: 5.5, color: '#111827', lineHeight: '8px' }} className="line-clamp-2">{title}</div>
-        <div style={{ fontSize: 4.5, color: '#6B7280', lineHeight: '7px' }} className="line-clamp-1">{subtitle}</div>
-        {[100, 85, 68].map((w, i) => (
-          <div key={i} style={{ height: 2, borderRadius: 2, background: i === 0 ? '#e5e7eb' : '#f3f4f6', width: `${w}%` }} />
-        ))}
-      </div>
-    </div>
-  );
-}
+// Image map: blog template id -> actual thumbnail image
+const BLOG_THUMB_IMG: Record<string, string> = {
+  'bl-1': thumbBlogAnnouncement,
+  'bl-2': thumbBlogWelcome,
+  'bl-3': thumbBlogNewDish,
+  'bl-4': thumbBlogSurvey,
+};
 
 function BlogThumbnail({ id }: { id: string }) {
-  const data = BLOG_DATA[id] ?? BLOG_DATA['bl-1'];
-
-  // Dark-themed blog (How-to guide, Case study)
-  if (id === 'bl-1' || id === 'bl-4') {
-    return <BlogThumbnailDark title={data.title} />;
-  }
-
-  // Light announcement / social-post-style blog (Local SEO, Listicle)
-  const subtitle = id === 'bl-2'
-    ? "A major announcement for you — don’t miss out on this exciting news!"
-    : 'Top tips and insights from our expert team to help you get started.';
-  return <BlogThumbnailLight title={data.title} subtitle={subtitle} />;
+  const src = BLOG_THUMB_IMG[id] ?? thumbBlogAnnouncement;
+  return (
+    <img
+      src={src}
+      alt="Blog preview"
+      className="w-full h-full object-cover object-top"
+      draggable={false}
+    />
+  );
 }
 
 // ── FAQ thumbnail ──────────────────────────────────────────────────────────────
@@ -330,32 +275,14 @@ const FAQ_DATA: Record<string, { section: string; items: { q: string }[] }> = {
   },
 };
 
-function FAQThumbnail({ id }: { id: string }) {
-  const data = FAQ_DATA[id] ?? FAQ_DATA['faq-1'];
+function FAQThumbnail({ id: _id }: { id: string }) {
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden">
-      {/* Document header */}
-      <div className="px-2 py-[5px]" style={{ borderBottom: '0.5px solid #e5e7eb' }}>
-        <div style={{ fontSize: 6.5, color: '#111827', lineHeight: '10px' }}>Frequently Asked Questions</div>
-        <div style={{ fontSize: 4.5, color: '#6B7280', marginTop: 1 }}>{data.section}</div>
-      </div>
-      {/* Divider line */}
-      <div style={{ height: 1.5, background: '#e5e7eb', margin: '0' }} />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {data.items.slice(0, 3).map((item, i) => (
-          <div key={i} className="px-2" style={{ paddingTop: 3, paddingBottom: 3, borderBottom: i < 2 ? '0.5px solid #f3f4f6' : 'none' }}>
-            <div className="flex items-start gap-1">
-              <span className="shrink-0" style={{ fontSize: 4.5, color: '#374151', lineHeight: '7px', minWidth: 8 }}>{i + 1}.</span>
-              <span style={{ fontSize: 4.5, color: '#111827', lineHeight: '7px' }} className="line-clamp-1">{item.q}</span>
-            </div>
-            <div className="ml-[9px] flex flex-col gap-[1.5px] mt-[2px]">
-              <div style={{ height: 1.5, background: '#e5e7eb', borderRadius: 2, width: '90%' }} />
-              <div style={{ height: 1.5, background: '#f3f4f6', borderRadius: 2, width: '70%' }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <img
+      src={thumbFaq}
+      alt="FAQ preview"
+      className="w-full h-full object-cover object-top"
+      draggable={false}
+    />
   );
 }
 
@@ -543,12 +470,12 @@ export function TemplateThumbnail({ template }: { template: TemplateItem }) {
 // ── Thumbnail bg tint per type ─────────────────────────────────────────────────
 
 export const TYPE_THUMB_BG: Record<ContentType, string> = {
-  blog:     '#FFFFFF',
-  faq:      '#FFFFFF',
-  social:   '#FFFFFF',
-  email:    '#FFFFFF',
-  response: '#FFFFFF',
-  ads:      '#FFFFFF',
+  blog:     '#E5E9F0',
+  faq:      '#E5E9F0',
+  social:   '#E5E9F0',
+  email:    '#E5E9F0',
+  response: '#E5E9F0',
+  ads:      '#E5E9F0',
 };
 
 // ── Preview modal ──────────────────────────────────────────────────────────────
