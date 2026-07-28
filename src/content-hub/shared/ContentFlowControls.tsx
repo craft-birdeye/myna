@@ -191,7 +191,7 @@ export function ContentFlowChoiceCard({
     >
       <span
         className={cn(
-          'mt-0.5 flex size-[34px] shrink-0 items-center justify-center rounded-lg',
+          'mt-0.5 flex size-[34px] shrink-0 items-center justify-center rounded-sm',
           selected ? 'bg-primary/10' : 'bg-muted',
         )}
       >
@@ -417,7 +417,7 @@ export function ContentFlowMultiSelect({
                 type="button"
                 onClick={() => toggleValue(option.value)}
                 className={cn(
-                  'flex h-[34px] w-full items-center gap-2 rounded-lg px-4 text-left text-[13px] transition-colors',
+                  'flex h-[34px] w-full items-center gap-2 rounded-sm px-4 text-left text-[13px] transition-colors',
                   selected ? 'bg-muted text-foreground' : 'text-foreground hover:bg-surface-hover',
                 )}
               >

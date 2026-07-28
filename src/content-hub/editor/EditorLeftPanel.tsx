@@ -14,6 +14,7 @@ import {
   FileText, Mail, MessageSquare, Monitor, Video,
   Sparkles, Plus, Paperclip, SendHorizontal, GripHorizontal,
 } from 'lucide-react';
+import { AIIcon } from '@/assets/icons/AIIcon';
 import { cn } from '@/contenthub-ui/utils';
 import { SegmentedToggle } from '@/contenthub-ui/segmented-toggle.v1';
 import {
@@ -51,7 +52,7 @@ const ITEM_ICON: Record<ContentItemType, React.ElementType> = {
 // ── Mode toggle items ─────────────────────────────────────────────────────────
 
 const MODE_ITEMS = [
-  { value: 'ai'     as const, label: 'AI',     icon: <Sparkles size={11} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" /> },
+  { value: 'ai'     as const, label: 'AI',     icon: <AIIcon size={20} /> },
   { value: 'manual' as const, label: 'Manual' },
 ];
 

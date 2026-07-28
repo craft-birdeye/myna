@@ -61,12 +61,12 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
     <div className="flex flex-col h-full bg-background">
 
       {/* ── Header ── */}
-      <div className="flex h-[49px] shrink-0 items-center justify-between border-b border-border px-6">
-        <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center justify-between px-6 py-[9px]">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={onCancel}
-            className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover transition-colors"
+            className="flex size-[34px] items-center justify-center rounded-md text-text-icon hover:bg-surface-hover transition-colors"
           >
             <ArrowLeft size={16} strokeWidth={1.6} absoluteStrokeWidth />
           </button>
@@ -105,14 +105,14 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
       <div className="flex-1 min-h-0 flex overflow-hidden">
 
         {/* Stepper sidebar */}
-        <aside className="w-[250px] shrink-0 border-r border-border bg-background">
+        <aside className="w-[250px] shrink-0 bg-background">
           <div className="px-4 py-4">
             <ContentFlowStepper steps={STEPS} currentStep={navState.step} />
           </div>
         </aside>
 
         {/* Blog inline creation flow */}
-        <div className="flex-1 min-w-0 min-h-0 bg-background">
+        <div className="flex-1 min-w-0 min-h-0 bg-background rounded-[8px] overflow-hidden">
           <BlogInlineCreationFlow
             onComplete={onGenerate}
             onCancel={onCancel}

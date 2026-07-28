@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowUpRight, Check, ChevronDown, Sparkles, X } from 'lucide-react';
+import { ArrowUpRight, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/contenthub-ui/utils';
 import {
   CONTENT_FLOW_STEP_TITLE_CLASS,
@@ -128,15 +128,6 @@ const BRAND_FAQ_AGENTS: Record<string, string[]> = {
   'local-seo':     ['local-seo', 'voice-opt', 'on-demand'],
 };
 
-const SIGNAL_SOURCES = [
-  { id: 'reviews', label: 'Reviews data' },
-  { id: 'tickets', label: 'Ticketing data' },
-  { id: 'website', label: 'Website content' },
-  { id: 'helpcenter', label: 'Help center articles' },
-  { id: 'social', label: 'Social media posts' },
-  { id: 'competitor', label: 'Competitor FAQs' },
-];
-
 
 const DEFAULT_SECTIONS: FAQSection[] = [
   { id: 's1', title: 'FAQ overview', description: 'Cover the most common questions customers have about pricing, bookings, services, locations, and any edge cases worth addressing upfront', count: 14 },
@@ -240,7 +231,7 @@ function Step1BrandKit({ contentName, brandKit, locations, customAgent, onChange
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-lg border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
+                className="flex w-full items-center justify-between rounded-sm border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
               >
                 <span className="truncate">{selectedAgent?.label ?? 'Choose an agent...'}</span>
                 <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-[#888] dark:text-[#6b7280]" />
@@ -301,7 +292,7 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center justify-between rounded-lg border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
+          className="flex w-full items-center justify-between rounded-sm border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
         >
           <span className="truncate">{displayLabel}</span>
           <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-[#888] dark:text-[#6b7280]" />
@@ -338,247 +329,37 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
   );
 }
 
-// ── Toggle row helper ─────────────────────────────────────────────────────────
-
-function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-[13px] text-foreground">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={cn('relative flex-shrink-0 rounded-full transition-colors', checked ? 'bg-primary' : 'bg-muted')}
-        style={{ width: 32, height: 20 }}
-      >
-        <span
-          className="absolute rounded-full bg-white shadow-sm"
-          style={{
-            top: 3,
-            left: 0,
-            width: 14,
-            height: 14,
-            transition: 'transform 150ms ease',
-            transform: `translateX(${checked ? 15 : 3}px)`,
-          }}
-        />
-      </button>
-    </div>
-  );
-}
 
 // ── Step 2: Content setup ─────────────────────────────────────────────────────
 
 interface Step2Props {
-  template: string;
-  customAgent: string;
   sourceUrl: string;
   additionalContext: string;
-  signalSources: string[];
-  onChange: (patch: Partial<Pick<FAQFlowData, 'customAgent' | 'sourceUrl' | 'additionalContext' | 'signalSources'>>) => void;
+  onChange: (patch: Partial<Pick<FAQFlowData, 'sourceUrl' | 'additionalContext'>>) => void;
 }
 
-type TabId = 'upload' | 'url' | 'paste';
-
-function Step2Setup({ template, sourceUrl, additionalContext, signalSources, onChange }: Step2Props) {
-  const [urlScraping, setUrlScraping] = useState(false);
-  const [urlScraped, setUrlScraped] = useState(false);
-  const [autoFilled, setAutoFilled] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>('url');
-  const [pasteText, setPasteText] = useState('');
-  const [supportToggles, setSupportToggles] = useState({ reviews: true, tickets: false, nps: false });
-
-  function handleAutoFill() {
-    onChange({ sourceUrl: 'https://lushgreen.com/services' });
-    setAutoFilled(true);
-  }
-
-  function handleScrape() {
-    if (!sourceUrl) return;
-    setUrlScraping(true);
-    setTimeout(() => {
-      setUrlScraping(false);
-      setUrlScraped(true);
-    }, 1500);
-  }
-
-  function toggleSignal(id: string) {
-    const next = signalSources.includes(id)
-      ? signalSources.filter(s => s !== id)
-      : [...signalSources, id];
-    onChange({ signalSources: next });
-  }
-
-  const showSignalSources = template !== 'custom';
-
+function Step2Setup({ sourceUrl, additionalContext, onChange }: Step2Props) {
   return (
     <div className="space-y-6">
       <div>
         <h2 className={CONTENT_FLOW_STEP_TITLE_CLASS}>Content setup</h2>
       </div>
 
-      {/* Auto-suggest banner */}
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center gap-3">
-        <Sparkles size={15} strokeWidth={1.6} absoluteStrokeWidth className="text-primary shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] text-foreground">Use your project context</p>
-          <p className="text-[12px] text-muted-foreground">We found lushgreen.com/services from your brand identity</p>
-        </div>
-        <button
-          type="button"
-          onClick={handleAutoFill}
-          className="h-8 px-3 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors shrink-0"
+      {/* Website URL */}
+      <div className="space-y-1.5">
+        <ContentFlowInfoLabel
+          required
+          tooltip="We'll crawl this page to understand your offerings and generate relevant FAQs."
         >
-          Use this
-        </button>
+          Website URL
+        </ContentFlowInfoLabel>
+        <ContentFlowTextInput
+          required
+          value={sourceUrl}
+          onChange={e => onChange({ sourceUrl: e.target.value })}
+          placeholder="https://yourwebsite.com"
+        />
       </div>
-
-      {/* Template-conditional URL input */}
-      {(template === 'aeo' || template === 'newpage') && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <ContentFlowInfoLabel required tooltip="We'll extract questions your customers are already asking.">
-              {template === 'aeo' ? 'Page to optimise' : 'Page URL'}
-            </ContentFlowInfoLabel>
-            {autoFilled && (
-              <span className="text-[11px] px-2 py-0.5 rounded-md bg-green-50 text-green-700">Auto-filled</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <ContentFlowTextInput
-              required
-              value={sourceUrl}
-              onChange={e => { onChange({ sourceUrl: e.target.value }); setUrlScraped(false); }}
-              placeholder="https://example.com/services"
-              className="flex-1"
-            />
-            <button
-              type="button"
-              onClick={handleScrape}
-              disabled={!sourceUrl || urlScraping}
-              className="h-10 px-4 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-            >
-              {urlScraping ? 'Scraping...' : 'Scrape page'}
-            </button>
-          </div>
-          {urlScraped && (
-            <div className="flex items-center gap-2 text-[12px] rounded-lg px-3 py-2 bg-green-50 border border-green-100 text-green-700">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="6" fill="#4CAE3D" />
-                <path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="flex-1">LushGreen Landscapes · Services page</span>
-              <button type="button" onClick={() => setUrlScraped(false)} className="text-green-600 hover:text-green-800">
-                <X size={12} strokeWidth={1.6} absoluteStrokeWidth />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {template === 'existing' && (
-        <div className="space-y-2">
-          <p className="text-[13px] text-foreground">Import your existing FAQs</p>
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 w-fit">
-            {(['upload', 'url', 'paste'] as TabId[]).map(tab => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-[12px] transition-colors capitalize',
-                  activeTab === tab ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-          {activeTab === 'url' && (
-            <ContentFlowTextInput
-              value={sourceUrl}
-              onChange={e => onChange({ sourceUrl: e.target.value })}
-              placeholder="https://example.com/faq"
-            />
-          )}
-          {activeTab === 'paste' && (
-            <ContentFlowTextarea
-              value={pasteText}
-              onChange={e => setPasteText(e.target.value)}
-              placeholder="Paste your existing FAQ content here..."
-              rows={5}
-            />
-          )}
-          {activeTab === 'upload' && (
-            <div className="rounded-lg border-2 border-dashed border-border px-4 py-6 text-center text-[13px] text-muted-foreground hover:border-primary/30 transition-colors cursor-pointer">
-              Drop a file or click to browse (.pdf · .docx · .txt)
-            </div>
-          )}
-        </div>
-      )}
-
-      {template === 'support' && (
-        <div className="flex flex-col gap-3">
-          <label className="text-[13px] text-foreground">Data sources</label>
-          <ToggleRow label="Reviews data" checked={supportToggles.reviews} onChange={v => setSupportToggles(p => ({ ...p, reviews: v }))} />
-          <ToggleRow label="Ticketing data" checked={supportToggles.tickets} onChange={v => setSupportToggles(p => ({ ...p, tickets: v }))} />
-          <ToggleRow label="NPS responses" checked={supportToggles.nps} onChange={v => setSupportToggles(p => ({ ...p, nps: v }))} />
-        </div>
-      )}
-
-      {template === 'location' && (
-        <div className="rounded-lg bg-muted px-4 py-3 text-[13px] text-muted-foreground">
-          FAQs will be generated per selected location using your brand identity and location context.
-        </div>
-      )}
-
-      {template === 'custom' && (
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <ContentFlowInfoLabel tooltip="Paste a URL or add context for your custom FAQ set.">
-              Source URL (optional)
-            </ContentFlowInfoLabel>
-            <ContentFlowTextInput
-              value={sourceUrl}
-              onChange={e => onChange({ sourceUrl: e.target.value })}
-              placeholder="https://yourwebsite.com"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] text-foreground">Custom sources</label>
-            {SIGNAL_SOURCES.map(src => (
-              <label key={src.id} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={signalSources.includes(src.id)}
-                  onChange={() => toggleSignal(src.id)}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span className="text-[13px] text-foreground">{src.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Signal sources (shown for all non-custom templates) */}
-      {showSignalSources && (
-        <div className="flex flex-col gap-2">
-          <label className="text-[13px] text-foreground">Signal sources</label>
-          {SIGNAL_SOURCES.slice(0, 4).map(src => (
-            <label key={src.id} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={signalSources.includes(src.id)}
-                onChange={() => toggleSignal(src.id)}
-                className="w-4 h-4 accent-primary"
-              />
-              <span className="text-[13px] text-foreground">{src.label}</span>
-            </label>
-          ))}
-        </div>
-      )}
 
       {/* Additional context */}
       <div className="space-y-1.5">
@@ -661,11 +442,9 @@ export function FAQInlineCreationFlow({ onComplete, onCancel, controlRef, onNavS
   const [contentBrief, setContentBrief] = useState('Create an AEO-ready FAQ set that answers the most common customer questions about pricing, bookings, services, locations, response times, and edge cases. Use the selected brand identity and location context, pull supporting signals from reviews and website content, and keep answers clear, direct, and useful for search and AI-generated responses.');
   const [sections] = useState<FAQSection[]>(DEFAULT_SECTIONS);
 
-  const handleStep2Change = (patch: Partial<Pick<FAQFlowData, 'customAgent' | 'sourceUrl' | 'additionalContext' | 'signalSources'>>) => {
-    if (patch.customAgent !== undefined) setCustomAgent(patch.customAgent);
+  const handleStep2Change = (patch: Partial<Pick<FAQFlowData, 'sourceUrl' | 'additionalContext'>>) => {
     if (patch.sourceUrl !== undefined) setSourceUrl(patch.sourceUrl);
     if (patch.additionalContext !== undefined) setContext(patch.additionalContext);
-    if (patch.signalSources !== undefined) setSignals(patch.signalSources);
   };
 
   const canAdvance = [
@@ -723,7 +502,7 @@ export function FAQInlineCreationFlow({ onComplete, onCancel, controlRef, onNavS
 
       {/* Scrollable content */}
       <div className="flex-1 min-h-0 overflow-hidden py-4 pl-4 pr-6">
-        <div className="h-full overflow-y-auto rounded-lg border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
+        <div className="h-full overflow-y-auto rounded-sm border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
           <div className="w-1/2 min-w-[520px] max-w-[720px]">
 
           {step === 0 && (
@@ -747,11 +526,8 @@ export function FAQInlineCreationFlow({ onComplete, onCancel, controlRef, onNavS
 
           {step === 1 && (
             <Step2Setup
-              template={template}
-              customAgent={customAgent}
               sourceUrl={sourceUrl}
               additionalContext={additionalContext}
-              signalSources={signalSources}
               onChange={handleStep2Change}
             />
           )}

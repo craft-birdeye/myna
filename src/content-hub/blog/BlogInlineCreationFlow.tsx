@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Check, ChevronDown, ChevronUp, Loader2, Sparkles, ArrowUpRight, Lightbulb, Upload, X } from 'lucide-react';
+import { AttachmentPickerModal, AttachedFile } from './AttachmentPickerModal';
 import { MOCK_RECOMMENDATIONS } from '@/search-ai/SearchAIRecommendationsPanel';
 import { cn } from '@/contenthub-ui/utils';
 import {
@@ -314,7 +315,7 @@ function Step1BrandKit({ contentName, brandKit, locations, agentId, onChange, on
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-lg border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
+                className="flex w-full items-center justify-between rounded-sm border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
               >
                 <span className="truncate">{selectedAgent?.label ?? 'Choose an agent...'}</span>
                 <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-[#888] dark:text-[#6b7280]" />
@@ -406,7 +407,7 @@ interface Step2Props {
   createMode: 'topic' | 'url';
   sourceUrl: string;
   brief: string;
-  attachedFiles: string[];
+  attachedFileMeta: AttachedFile[];
   includeImages: boolean;
   includeCTAs: boolean;
   includeFAQ: boolean;
@@ -414,20 +415,21 @@ interface Step2Props {
   refUrls: string[];
   onChange: (patch: Partial<Pick<BlogFlowData,
     | 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length'
-    | 'createMode' | 'sourceUrl' | 'brief' | 'attachedFiles'
+    | 'createMode' | 'sourceUrl' | 'brief'
     | 'includeImages' | 'includeCTAs' | 'includeFAQ' | 'internalLinks' | 'refUrls'
-  >>) => void;
+  >> & { attachedFileMeta?: AttachedFile[] }) => void;
 }
 
 function Step2Setup({
   topic, keywords, intent, objective, funnelStage, length,
   createMode, sourceUrl,
-  brief, attachedFiles, includeImages, includeCTAs, includeFAQ, internalLinks, refUrls,
+  brief, attachedFileMeta, includeImages, includeCTAs, includeFAQ, internalLinks, refUrls,
   onChange,
 }: Step2Props) {
   const [generatingTopic, setGeneratingTopic] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [recommendationsOpen, setRecommendationsOpen] = useState(false);
+  const [attachmentModalOpen, setAttachmentModalOpen] = useState(false);
   const [refUrlInput, setRefUrlInput] = useState('');
   const topicIdxRef = useRef(0);
   const topicTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -459,13 +461,10 @@ function Step2Setup({
   }
 
   function handleMockFileBrowse() {
-    const mockName = 'document-brief.pdf';
-    if (!attachedFiles.includes(mockName)) {
-      onChange({ attachedFiles: [...attachedFiles, mockName] });
-    }
+    setAttachmentModalOpen(true);
   }
 
-  return (
+  return (<>
     <div className="space-y-6">
       <div>
         <h2 className={CONTENT_FLOW_STEP_TITLE_CLASS}>Blog setup</h2>
@@ -497,7 +496,7 @@ function Step2Setup({
           </button>
 
           {createMode === 'topic' && (
-            <div className="ml-7 mt-4 rounded-lg border border-border overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
+            <div className="ml-7 mt-4 rounded-sm border border-border overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-colors">
               <textarea
                 ref={topicTextareaRef}
                 value={topic}
@@ -541,7 +540,7 @@ function Step2Setup({
                               {rec.impact}
                             </span>
                           </button>
-                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-[240px] rounded-lg border border-border bg-background p-3 shadow-lg opacity-0 transition-opacity group-hover/rec:opacity-100">
+                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-[240px] rounded-sm border border-border bg-background p-3 shadow-lg opacity-0 transition-opacity group-hover/rec:opacity-100">
                             <p className="text-[12px] text-foreground mb-1">{rec.impact} impact</p>
                             <p className="text-[12px] leading-relaxed text-muted-foreground">{rec.description}</p>
                           </div>
@@ -599,7 +598,7 @@ function Step2Setup({
       </div>
 
       {/* Advanced settings */}
-      <div className="rounded-lg border border-border">
+      <div className="rounded-sm border border-border">
         <button
           type="button"
           onClick={() => setAdvancedOpen(o => !o)}
@@ -650,21 +649,36 @@ function Step2Setup({
               <button
                 type="button"
                 onClick={handleMockFileBrowse}
-                className="w-full rounded-lg border-2 border-dashed border-border px-4 py-4 flex flex-col items-center gap-2 transition-colors hover:border-primary/30 hover:bg-muted/30"
+                className="w-full rounded-sm border-2 border-dashed border-border px-4 py-4 flex flex-col items-center gap-2 transition-colors hover:border-primary/30 hover:bg-muted/30"
               >
                 <Upload size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
                 <span className="text-[13px] text-foreground">Drop files or click to browse</span>
                 <span className="text-[11px] text-muted-foreground">.pdf · .docx · .txt · .png · .jpg</span>
               </button>
-              {attachedFiles.length > 0 && (
+              {attachedFileMeta.length > 0 && (
                 <div className="flex flex-col gap-1">
-                  {attachedFiles.map(name => (
-                    <div key={name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-[12px]">
-                      <span className="flex-1 text-foreground truncate">{name}</span>
+                  {attachedFileMeta.map(file => (
+                    <div key={file.name} className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-muted/60 border border-border/40">
+                      {/* Thumbnail */}
+                      {file.thumbUrl && (file.kind === 'image' || file.kind === 'video') ? (
+                        <div className="relative size-[36px] rounded-[4px] overflow-hidden flex-shrink-0 border border-border/40 bg-white">
+                          <img src={file.thumbUrl} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
+                          {file.kind === 'video' && (
+                            <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
+                              <svg viewBox="0 0 10 10" className="size-2.5 text-white fill-white"><polygon points="2,1 9,5 2,9" /></svg>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="size-[36px] rounded-[4px] flex items-center justify-center bg-surface-muted flex-shrink-0 text-[8px] text-text-secondary border border-border/40">
+                          {file.name.split('.').pop()?.toUpperCase() ?? 'FILE'}
+                        </div>
+                      )}
+                      <span className="flex-1 text-small text-text-primary truncate">{file.name}</span>
                       <button
                         type="button"
-                        onClick={() => onChange({ attachedFiles: attachedFiles.filter(f => f !== name) })}
-                        className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                        onClick={() => onChange({ attachedFileMeta: attachedFileMeta.filter(f => f.name !== file.name) })}
+                        className="text-text-secondary hover:text-text-primary transition-colors shrink-0"
                       >
                         <X size={12} strokeWidth={1.6} absoluteStrokeWidth />
                       </button>
@@ -716,7 +730,7 @@ function Step2Setup({
                   type="button"
                   onClick={handleAddUrl}
                   disabled={!refUrlInput.trim() || refUrls.length >= 5}
-                  className="h-10 px-4 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  className="h-10 px-4 rounded-sm border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 >
                   Add
                 </button>
@@ -724,7 +738,7 @@ function Step2Setup({
               {refUrls.length > 0 && (
                 <div className="flex flex-col gap-1 mt-1">
                   {refUrls.map(url => (
-                    <div key={url} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-[12px]">
+                    <div key={url} className="flex items-center gap-2 px-3 py-2 rounded-sm bg-muted text-[12px]">
                       <span className="flex-1 text-foreground truncate">{url}</span>
                       <button
                         type="button"
@@ -746,7 +760,14 @@ function Step2Setup({
         )}
       </div>
     </div>
-  );
+
+    <AttachmentPickerModal
+      open={attachmentModalOpen}
+      onClose={() => setAttachmentModalOpen(false)}
+      onSave={files => onChange({ attachedFileMeta: files })}
+      initialSelected={attachedFileMeta.map(f => f.name)}
+    />
+  </>);
 }
 
 // ── Step 3: Content brief ─────────────────────────────────────────────────────
@@ -779,7 +800,7 @@ function BlogSummaryCard({
 function BlogSummarySkeleton({ index = 0 }: { index?: number }) {
   return (
     <div
-      className="px-4 py-2 rounded-xl border border-border bg-background animate-pulse"
+      className="px-4 py-2 rounded-sm border border-border bg-background animate-pulse"
       style={{ animationDelay: `${index * 100}ms` }}
     >
       <div className="space-y-2">
@@ -850,7 +871,9 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
   const [funnelStage, setFunnelStage] = useState(initialData?.funnelStage ?? 'agent');
   const [length, setLength]           = useState(initialData?.length ?? 'medium');
   const [brief, setBrief]             = useState(initialData?.brief ?? '');
-  const [attachedFiles, setAttachedFiles] = useState<string[]>(initialData?.attachedFiles ?? []);
+  const [attachedFileMeta, setAttachedFileMeta] = useState<AttachedFile[]>(
+    initialData?.attachedFiles?.map(name => ({ name })) ?? []
+  );
   const [includeImages, setIncludeImages] = useState(initialData?.includeImages ?? true);
   const [includeCTAs, setIncludeCTAs]     = useState(initialData?.includeCTAs ?? true);
   const [includeFAQ, setIncludeFAQ]       = useState(initialData?.includeFAQ ?? true);
@@ -877,7 +900,7 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
   const handleStep2Change = (patch: Partial<Pick<BlogFlowData,
     | 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length'
     | 'signalSources' | 'attachments' | 'blogCount' | 'createMode' | 'sourceUrl'
-    | 'brief' | 'attachedFiles' | 'includeImages' | 'includeCTAs' | 'includeFAQ'
+    | 'brief' | 'includeImages' | 'includeCTAs' | 'includeFAQ'
     | 'internalLinks' | 'refUrls'
   >>) => {
     if (patch.topic !== undefined) setTopic(patch.topic);
@@ -889,7 +912,9 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
     if (patch.funnelStage !== undefined) setFunnelStage(patch.funnelStage);
     if (patch.length !== undefined) setLength(patch.length);
     if (patch.brief !== undefined) setBrief(patch.brief);
-    if (patch.attachedFiles !== undefined) setAttachedFiles(patch.attachedFiles);
+    if ((patch as { attachedFileMeta?: AttachedFile[] }).attachedFileMeta !== undefined) {
+      setAttachedFileMeta((patch as { attachedFileMeta: AttachedFile[] }).attachedFileMeta);
+    }
     if (patch.includeImages !== undefined) setIncludeImages(patch.includeImages);
     if (patch.includeCTAs !== undefined) setIncludeCTAs(patch.includeCTAs);
     if (patch.includeFAQ !== undefined) setIncludeFAQ(patch.includeFAQ);
@@ -908,13 +933,14 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
     onComplete({
       contentName, brandKit, locations, agentId, topic, keywords,
       intent, objective, funnelStage, length,
-      brief, attachedFiles, includeImages, includeCTAs, includeFAQ, internalLinks, refUrls,
+      brief, attachedFiles: attachedFileMeta.map(f => f.name),
+      includeImages, includeCTAs, includeFAQ, internalLinks, refUrls,
       signalSources, publishTo: ['library'],
-      attachments: attachedFiles, blogCount,
+      attachments: attachedFileMeta.map(f => f.name), blogCount,
       contentBrief: sections.map(section => `${section.heading}: ${section.description}`).join('\n\n'),
       sections,
     });
-  }, [agentId, attachedFiles, blogCount, brandKit, brief, contentName, funnelStage, includeCTAs, includeFAQ, includeImages, internalLinks, intent, keywords, length, locations, objective, onComplete, refUrls, sections, signalSources, topic]);
+  }, [agentId, attachedFileMeta, blogCount, brandKit, brief, contentName, funnelStage, includeCTAs, includeFAQ, includeImages, internalLinks, intent, keywords, length, locations, objective, onComplete, refUrls, sections, signalSources, topic]);
 
   useEffect(() => {
     if (controlRef) {
@@ -941,7 +967,7 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
 
       {/* Scrollable content */}
       <div className="flex-1 min-h-0 overflow-hidden py-4 pl-4 pr-6">
-        <div className="h-full overflow-y-auto rounded-lg border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
+        <div className="h-full overflow-y-auto rounded-sm border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
           <div className="w-1/2 min-w-[520px] max-w-[720px]">
 
           {step === 0 && (
@@ -974,7 +1000,7 @@ export function BlogInlineCreationFlow({ onComplete, onCancel, controlRef, onNav
               createMode={createMode}
               sourceUrl={sourceUrl}
               brief={brief}
-              attachedFiles={attachedFiles}
+              attachedFileMeta={attachedFileMeta}
               includeImages={includeImages}
               includeCTAs={includeCTAs}
               includeFAQ={includeFAQ}

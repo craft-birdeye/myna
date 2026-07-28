@@ -6,6 +6,7 @@ import {
   CheckCircle2, RefreshCw, Sliders, Zap, X, BookOpen, Wand2, Plus, GripVertical,
   User, Paperclip, Send, PenLine, Loader2, Check,
 } from 'lucide-react';
+import { AIIcon } from '@/assets/icons/AIIcon';
 import { cn } from '@/contenthub-ui/utils';
 import { CopilotPromptBox } from '@/contenthub-ui/copilot-prompt-box';
 import { MAIN_VIEW_PRIMARY_HEADING_CLASS } from '@/contenthub-ui/mainViewTitleClasses';
@@ -114,7 +115,7 @@ const DEFAULT_SCORE_DIMS: ScoreDimension[] = [
 // ── Left-panel mode toggle items (shared by all three panel states) ───────────
 
 const LEFT_TAB_ITEMS = [
-  { value: 'ai'     as const, label: 'AI',     icon: <Sparkles size={11} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" /> },
+  { value: 'ai'     as const, label: 'AI',     icon: <AIIcon size={20} /> },
   { value: 'wizard' as const, label: 'Manual' },
 ];
 

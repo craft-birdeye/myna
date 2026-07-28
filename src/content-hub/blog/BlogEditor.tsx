@@ -11,6 +11,7 @@ import {
   AlignLeft, Heading1, Heading2, Bold, Italic, List, Link,
   CheckCircle2, TriangleAlert,
 } from 'lucide-react';
+import { AIIcon } from '@/assets/icons/AIIcon';
 import { Button } from '@/contenthub-ui/button';
 import { SegmentedToggle } from '@/contenthub-ui/segmented-toggle.v1';
 import {
@@ -425,7 +426,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({
           <div className="flex-shrink-0 px-4 py-2 border-b border-border">
             <SegmentedToggle
               items={[
-                { value: 'ai' as Mode,     label: 'AI',     icon: <Sparkles size={11} strokeWidth={1.6} absoluteStrokeWidth /> },
+                { value: 'ai' as Mode,     label: 'AI',     icon: <AIIcon size={20} /> },
                 { value: 'manual' as Mode, label: 'Manual' },
               ]}
               value={mode}

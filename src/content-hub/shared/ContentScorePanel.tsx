@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, AlertTriangle, Check } from 'lucide-react';
 import { cn } from '@/contenthub-ui/utils';
 import { scoreColor, scoreStrokeColor } from './scoreColors';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/contenthub-ui/tooltip';
+import { ContentScoreInfoTooltip } from './ContentScoreInfoTooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/contenthub-ui/dialog';
 import { Checkbox } from '@/contenthub-ui/checkbox';
 
@@ -359,16 +359,7 @@ export function ContentScorePanel({
       <div className="flex-shrink-0 flex items-center justify-between bg-surface px-2xl py-xl">
         <div className="flex items-center gap-1.5">
           <span className="text-[13px] text-foreground">{title}</span>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-4 h-4 rounded-full border border-muted-foreground/40 flex items-center justify-center flex-shrink-0 cursor-default select-none">
-                <span className="text-[10px] text-muted-foreground leading-none italic font-serif">i</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={6} className="max-w-[280px]">
-              Calculated using a weighted scoring model across five quality signals: Intent Match (30%), Search Visibility (25%), Content Depth (20%), Brand Alignment (15%), and Publishing Readiness (10%).
-            </TooltipContent>
-          </Tooltip>
+          <ContentScoreInfoTooltip side="bottom" sideOffset={6} />
         </div>
         {showClose && (
           <button

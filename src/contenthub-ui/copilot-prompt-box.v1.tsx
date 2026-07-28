@@ -1,6 +1,9 @@
 import * as React from "react";
-import { Paperclip, Wand2, MoreVertical, ArrowUp, X } from "lucide-react";
+import { X } from "lucide-react";
 import { cn } from "./utils";
+import { AttachFileIcon } from "@/assets/icons/AttachFileIcon";
+import { EditNoteIcon } from "@/assets/icons/EditNoteIcon";
+import { PaperPlaneRightIcon } from "@/assets/icons/PaperPlaneRightIcon";
 import {
   PromptInput,
   PromptInputTextarea,
@@ -76,15 +79,12 @@ export function CopilotPromptBox({
           <PromptInputAction
             tooltip="Attach file"
             onClick={onAttach}
-            disabled={!onAttach || disabled}
+            disabled={disabled}
           >
-            <Paperclip className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+            <AttachFileIcon className="size-6" />
           </PromptInputAction>
-          <PromptInputAction tooltip="Enhance prompt" disabled={disabled}>
-            <Wand2 className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
-          </PromptInputAction>
-          <PromptInputAction tooltip="More options" disabled={disabled}>
-            <MoreVertical className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+          <PromptInputAction tooltip="Edit note" disabled={disabled}>
+            <EditNoteIcon className="size-6" />
           </PromptInputAction>
         </div>
         <PromptInputAction
@@ -93,12 +93,10 @@ export function CopilotPromptBox({
           disabled={!canSend}
           className={cn(
             'transition-colors',
-            canSend
-              ? 'rounded-full bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground p-1.5'
-              : 'text-muted-foreground/40',
+            canSend ? 'hover:opacity-80' : 'opacity-30',
           )}
         >
-          <ArrowUp className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+          <PaperPlaneRightIcon className="size-6" />
         </PromptInputAction>
       </PromptInputActions>
     </PromptInput>

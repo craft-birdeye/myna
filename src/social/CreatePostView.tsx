@@ -1,11 +1,13 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import svgPaths from './imports/svg-zf6pg056p3';
 import svgMain from './imports/svg-q05k7ytov1';
 import { imgHelp } from './imports/svg-ss3mz';
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from './PlatformIcons';
+import { Tabs } from '../components';
 import {
   Grid3X3, List, Trash2, Upload,
-  Camera, Smile, Type, Lightbulb, X, Plus, ChevronDown
+  Camera, Smile, Hash, Lightbulb, X, Plus, ChevronDown, ArrowLeft
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -140,10 +142,64 @@ function GoogleIcon() {
 }
 
 type GooglePublishAs = 'updates' | 'offers' | 'events';
+type GoogleRecurrence = 'none' | 'daily' | 'weekly' | 'custom_weekly' | 'monthly_last' | 'monthly_nth';
+
+// ─── Platform icon assets (from Figma, ~7-day CDN URLs) ──────────────────────
+const PLATFORM_ICON_SRCS: Record<Platform, string> = {
+  facebook: 'https://www.figma.com/api/mcp/asset/4c762688-ec28-45c6-a7ef-80053a46063a',
+  instagram: 'https://www.figma.com/api/mcp/asset/c6a0b541-5e6f-4fe8-9a49-aa2ceed72614',
+  google:   'https://www.figma.com/api/mcp/asset/e82bef00-6d8c-41cf-92da-d1b9a0066012',
+  linkedin: 'https://www.figma.com/api/mcp/asset/6155bb89-17de-438a-b84a-a64ce00cc46f',
+  apple:    'https://www.figma.com/api/mcp/asset/00fc37be-e64e-41f4-8260-ebb19ca1660d',
+};
+const PLATFORM_CHECK_BADGE = 'https://www.figma.com/api/mcp/asset/51521078-8aab-4731-a1a6-8423ed7bfed8';
+
+// ─── Channel selector demo data ───────────────────────────────────────────────
+const DEMO_LOCATIONS = [
+  { id: 'loc-1', name: 'Lushgreen Atlanta',   handle: '@lushatlanta',   city: 'Atlanta, GA',    initials: 'LA', color: '#2e7d32' },
+  { id: 'loc-2', name: 'Lushgreen Baltimore', handle: '@lushbaltimore', city: 'Baltimore, MD',  initials: 'LB', color: '#1565c0' },
+  { id: 'loc-3', name: 'Lushgreen Chicago',   handle: '@lushchicago',   city: 'Chicago, IL',    initials: 'LC', color: '#6a1b9a' },
+  { id: 'loc-4', name: 'Lushgreen Detroit',   handle: '@lushdetroit',   city: 'Detroit, MI',    initials: 'LD', color: '#c62828' },
+  { id: 'loc-5', name: 'Lushgreen Phoenix',   handle: '@lushphoenix',   city: 'Phoenix, AZ',    initials: 'LP', color: '#e65100' },
+  { id: 'loc-6', name: 'Lushgreen Seattle',   handle: '@lushseattle',   city: 'Seattle, WA',    initials: 'LS', color: '#00695c' },
+];
+const DEMO_CONTENT_STREAMS = [
+  'Review site', 'Motto mortgage - Holidays', 'Summer campaign 2026', 'Weekly updates',
+];
 
 const GOOGLE_BUTTON_TYPES = ['Book', 'Order online', 'Buy', 'Learn more', 'Sign up', 'Get offer', 'Call now'] as const;
 const GOOGLE_EVENT_BUTTON_TYPES = ['None', 'Book', 'Buy', 'Learn more', 'Order online', 'Sign up'] as const;
 type GoogleButtonType = typeof GOOGLE_BUTTON_TYPES[number];
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_ABBR  = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const NTH_LABELS = ['first', 'second', 'third', 'fourth'];
+
+function getRecurrenceOptions(startDate: string): { value: GoogleRecurrence; label: string }[] {
+  const opts: { value: GoogleRecurrence; label: string }[] = [
+    { value: 'none', label: 'Does not repeat' },
+    { value: 'daily', label: 'Daily' },
+  ];
+  if (startDate) {
+    const d = new Date(startDate + 'T00:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    opts.push({ value: 'weekly', label: `Weekly on ${dayName}` });
+    opts.push({ value: 'custom_weekly', label: 'Custom weekly' });
+    const nth = Math.ceil(d.getDate() / 7);
+    opts.push({ value: 'monthly_nth', label: `Monthly on the ${NTH_LABELS[Math.min(nth - 1, 3)]} ${dayName}` });
+    opts.push({ value: 'monthly_last', label: `Monthly on the last ${dayName}` });
+  } else {
+    opts.push({ value: 'weekly', label: 'Weekly' });
+    opts.push({ value: 'custom_weekly', label: 'Custom weekly' });
+    opts.push({ value: 'monthly_nth', label: 'Monthly (nth weekday)' });
+    opts.push({ value: 'monthly_last', label: 'Monthly (last weekday)' });
+  }
+  return opts;
+}
+
+function getRecurrenceLabel(recurrence: GoogleRecurrence, startDate: string): string {
+  return getRecurrenceOptions(startDate).find(o => o.value === recurrence)?.label ?? 'Does not repeat';
+}
 
 
 function PlatformChip({ platform, onRemove }: { platform: Platform; onRemove: () => void }) {
@@ -168,11 +224,11 @@ function PlatformChip({ platform, onRemove }: { platform: Platform; onRemove: ()
 // ─── Tag Chip ─────────────────────────────────────────────────────────────────
 function TagChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <div className="content-stretch flex gap-[4px] items-center relative shrink-0" style={{ border: '1px solid var(--s-border-subtle)', borderRadius: 4, padding: '2px 8px', height: 24, backgroundColor: 'var(--s-bg-primary)' }}>
+    <div className="content-stretch flex gap-[4px] items-center relative shrink-0" style={{ borderRadius: 8, padding: '3px 8px', height: 26, backgroundColor: '#EAECF0' }}>
       <p className="font-normal leading-[normal] relative shrink-0 text-foreground text-[13px] tracking-[-0.26px] whitespace-nowrap">
         {label}
       </p>
-      <button onClick={onRemove} className="flex items-center justify-center text-muted-foreground hover:text-[#212121] dark:hover:text-[#e4e8f0]">
+      <button onClick={onRemove} className="flex items-center justify-center" style={{ color: '#555' }}>
         <X size={10} strokeWidth={2} />
       </button>
     </div>
@@ -651,7 +707,47 @@ function MediaSection({ mediaItems, setMediaItems }: {
 
 // ─── Per-platform preview sub-components ──────────────────────────────────────
 
-function FacebookPreview({ content, mediaItems }: { content: string; mediaItems: MediaItem[] }) {
+// ── Shared: "Preview content for [stream]" row ────────────────────────────────
+function PreviewContentRow({ contentStream }: { contentStream: string }) {
+  const streams = ['Motto mortgage - Holidays', 'Review site', 'Summer campaign 2026', 'Weekly updates'];
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState(contentStream);
+  return (
+    <div className="relative flex items-center gap-[4px] px-[14px] py-[8px] text-[12px]">
+      <span style={{ color: '#888' }}>Preview content for</span>
+      <button type="button" className="inline-flex items-center gap-[2px]" style={{ color: '#1976d2' }} onClick={() => setOpen(v => !v)}>
+        <span>{selected}</span>
+        <ChevronDown size={11} strokeWidth={2} />
+      </button>
+      {open && (
+        <div className="absolute left-[130px] top-full z-20 py-[4px]" style={{ minWidth: 220, marginTop: 2, backgroundColor: 'white', border: '1px solid var(--s-border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          {streams.map(s => (
+            <button key={s} type="button" className="w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px]"
+              style={{ color: '#212121' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onClick={() => { setSelected(s); setOpen(false); }}>
+              {selected === s && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#1976d2" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              {selected !== s && <span style={{ width: 12, display: 'inline-block' }} />}
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Shared: brand logo avatar ─────────────────────────────────────────────────
+function BrandAvatar({ size = 38, radius = '50%' }: { size?: number; radius?: string }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: radius, backgroundColor: '#1B3A6B', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: size * 0.32, letterSpacing: '0.5px' }}>
+      MM
+    </div>
+  );
+}
+
+function FacebookPreview({ content, mediaItems, contentStream }: { content: string; mediaItems: MediaItem[]; contentStream: string }) {
   const [expanded, setExpanded] = useState(true);
   const imgSrc = mediaItems.length > 0 ? mediaItems[0].url : 'https://picsum.photos/seed/fb1/800/420';
   const caption = content ? (content.length > 220 ? content.substring(0, 220) + '...' : content) : 'Nothing beats a freshly grilled burger stacked with juicy patties, soft buns, and bold flavors in every bite.';
@@ -659,34 +755,31 @@ function FacebookPreview({ content, mediaItems }: { content: string; mediaItems:
   return (
     <div className="rounded-[8px] bg-background" style={{ border: '1px solid var(--s-border)' }}>
       {/* Accordion header */}
-      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'var(--s-bg-muted)' }} onClick={() => setExpanded(v => !v)}>
+      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'white' }} onClick={() => setExpanded(v => !v)}>
         <div className="flex items-center gap-[8px]">
           <div className="shrink-0 size-[22px]"><FacebookIcon /></div>
-          <span className="text-foreground text-[13px] tracking-[-0.26px]" >Facebook</span>
+          <span className="text-foreground text-[13px] tracking-[-0.26px]">Facebook</span>
           <span className="text-muted-foreground text-[12px]">3 Pages</span>
         </div>
         {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
       </div>
       {expanded && (
-        <div style={{ borderTop: '1px solid var(--s-border)' }}>
+        <div>
+          <PreviewContentRow contentStream={contentStream} />
           {/* Post card */}
           <div className="px-[14px] pt-[12px] pb-[14px]">
-            {/* Business header */}
             <div className="flex items-center gap-[9px] mb-[10px]">
-              <div className="shrink-0 w-[38px] h-[38px] rounded-full flex items-center justify-center text-white text-[15px]" style={{ backgroundColor: '#1877F2' }}>M</div>
+              <BrandAvatar size={38} />
               <div>
-                <p className="text-foreground text-[14px] leading-[18px]" >Motto Mortgage · Holidays</p>
+                <p className="text-foreground text-[14px] leading-[18px]">Motto Mortgage · Holidays</p>
                 <p className="text-muted-foreground text-[12px] leading-[16px]">Just now · 🌐</p>
               </div>
             </div>
-            {/* Caption */}
             <p className="text-foreground text-[14px] leading-[20px] mb-[10px]">{caption}</p>
           </div>
-          {/* Full-bleed image */}
           <div className="w-full" style={{ backgroundColor: 'var(--s-bg-muted)' }}>
             <img src={imgSrc} alt="" style={{ display: 'block', width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
           </div>
-          {/* Reactions bar */}
           <div className="flex items-center gap-[16px] px-[14px] py-[10px]">
             <button className="flex items-center gap-[5px] text-muted-foreground text-[13px] hover:text-foreground transition-colors">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
@@ -707,28 +800,29 @@ function FacebookPreview({ content, mediaItems }: { content: string; mediaItems:
   );
 }
 
-function InstagramPreview({ content, mediaItems }: { content: string; mediaItems: MediaItem[] }) {
+function InstagramPreview({ content, mediaItems, contentStream }: { content: string; mediaItems: MediaItem[]; contentStream: string }) {
   const [expanded, setExpanded] = useState(true);
   const imgSrc = mediaItems.length > 0 ? mediaItems[0].url : 'https://picsum.photos/seed/ig1/600/600';
   const caption = content ? (content.length > 150 ? content.substring(0, 150) + '...' : content) : 'Nothing beats a freshly grilled burger! Come hungry, eat happy. 😍🔥';
 
   return (
     <div className="rounded-[8px] bg-background" style={{ border: '1px solid var(--s-border)' }}>
-      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'var(--s-bg-muted)' }} onClick={() => setExpanded(v => !v)}>
+      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'white' }} onClick={() => setExpanded(v => !v)}>
         <div className="flex items-center gap-[8px]">
           <div className="shrink-0 size-[22px]"><InstagramIcon /></div>
-          <span className="text-foreground text-[13px] tracking-[-0.26px]" >Instagram</span>
+          <span className="text-foreground text-[13px] tracking-[-0.26px]">Instagram</span>
           <span className="text-muted-foreground text-[12px]">2 Profiles</span>
         </div>
         {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
       </div>
       {expanded && (
-        <div style={{ borderTop: '1px solid var(--s-border)' }}>
+        <div>
+          <PreviewContentRow contentStream={contentStream} />
           {/* Business header */}
           <div className="flex items-center justify-between px-[14px] py-[10px]">
             <div className="flex items-center gap-[9px]">
-              <div className="shrink-0 w-[32px] h-[32px] rounded-full overflow-hidden flex items-center justify-center text-white text-[13px]" style={{ background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }}>M</div>
-              <span className="text-foreground text-[13px]" >motto_mortgage</span>
+              <BrandAvatar size={32} />
+              <span className="text-foreground text-[13px]">motto_mortgage</span>
             </div>
             <span className="text-foreground text-[18px] tracking-[3px] cursor-pointer">···</span>
           </div>
@@ -765,26 +859,27 @@ function InstagramPreview({ content, mediaItems }: { content: string; mediaItems
   );
 }
 
-function LinkedInPreview({ content, mediaItems }: { content: string; mediaItems: MediaItem[] }) {
+function LinkedInPreview({ content, mediaItems, contentStream }: { content: string; mediaItems: MediaItem[]; contentStream: string }) {
   const [expanded, setExpanded] = useState(true);
   const imgSrc = mediaItems.length > 0 ? mediaItems[0].url : 'https://picsum.photos/seed/li1/800/420';
   const caption = content ? (content.length > 220 ? content.substring(0, 220) + '...' : content) : 'Nothing beats a freshly grilled burger stacked with juicy patties, soft buns, and bold flavors.';
 
   return (
     <div className="rounded-[8px] bg-background" style={{ border: '1px solid var(--s-border)' }}>
-      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'var(--s-bg-muted)' }} onClick={() => setExpanded(v => !v)}>
+      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'white' }} onClick={() => setExpanded(v => !v)}>
         <div className="flex items-center gap-[8px]">
           <div className="shrink-0 size-[22px]"><LinkedInIcon /></div>
-          <span className="text-foreground text-[13px] tracking-[-0.26px]" >LinkedIn</span>
+          <span className="text-foreground text-[13px] tracking-[-0.26px]">LinkedIn</span>
           <span className="text-muted-foreground text-[12px]">1 Company</span>
         </div>
         {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
       </div>
       {expanded && (
-        <div style={{ borderTop: '1px solid var(--s-border)' }}>
+        <div>
+          <PreviewContentRow contentStream={contentStream} />
           <div className="px-[14px] pt-[12px] pb-[10px]">
             <div className="flex items-center gap-[9px] mb-[10px]">
-              <div className="shrink-0 w-[44px] h-[44px] rounded-[4px] flex items-center justify-center text-white text-[16px]" style={{ backgroundColor: '#0A66C2' }}>M</div>
+              <BrandAvatar size={44} radius="4px" />
               <div>
                 <p className="text-foreground text-[14px] leading-[18px]" >Motto Mortgage</p>
                 <p className="text-muted-foreground text-[12px] leading-[16px]">Financial Services · Just now · 🌐</p>
@@ -795,7 +890,7 @@ function LinkedInPreview({ content, mediaItems }: { content: string; mediaItems:
           <div className="w-full" style={{ backgroundColor: 'var(--s-bg-muted)' }}>
             <img src={imgSrc} alt="" style={{ display: 'block', width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
           </div>
-          <div className="flex items-center gap-[16px] px-[14px] py-[10px]" style={{ borderTop: '1px solid var(--s-border)' }}>
+          <div className="flex items-center gap-[16px] px-[14px] py-[10px]">
             <button className="flex items-center gap-[5px] text-muted-foreground text-[12px] hover:text-foreground transition-colors">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
               Like
@@ -819,25 +914,27 @@ function LinkedInPreview({ content, mediaItems }: { content: string; mediaItems:
   );
 }
 
-function ApplePreview({ content, mediaItems, appleHeader, appleButtonType }: { content: string; mediaItems: MediaItem[]; appleHeader: string; appleButtonType: AppleButtonType }) {
+function ApplePreview({ content, mediaItems, appleHeader, appleButtonType, contentStream }: { content: string; mediaItems: MediaItem[]; appleHeader: string; appleButtonType: AppleButtonType; contentStream: string }) {
   const [expanded, setExpanded] = useState(true);
   const imgSrc = mediaItems.length > 0 ? mediaItems[0].url : 'https://picsum.photos/seed/apple1/400/400';
   const bodyText = content ? (content.length > 120 ? content.substring(0, 120) + '...' : content) : 'Happy Labor Day, USA! Celebrating hardworking individuals and their contributions.';
 
   return (
     <div className="rounded-[8px] bg-background" style={{ border: '1px solid var(--s-border)' }}>
-      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'var(--s-bg-muted)' }} onClick={() => setExpanded(v => !v)}>
+      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'white' }} onClick={() => setExpanded(v => !v)}>
         <div className="flex items-center gap-[8px]">
           <div className="shrink-0 size-[22px] rounded-full flex items-center justify-center text-white" style={{ backgroundColor: '#000' }}>
             <div className="size-[13px]"><AppleIcon /></div>
           </div>
-          <span className="text-foreground text-[13px] tracking-[-0.26px]" >Apple</span>
-          <span className="text-[12px]" style={{ color: 'var(--s-blue)' }}>3 locations</span>
+          <span className="text-foreground text-[13px] tracking-[-0.26px]">Apple</span>
+          <span className="text-muted-foreground text-[12px]">3 listings</span>
         </div>
         {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
       </div>
       {expanded && (
-        <div className="p-[12px]" style={{ borderTop: '1px solid var(--s-border)' }}>
+        <div>
+          <PreviewContentRow contentStream={contentStream} />
+          <div className="p-[12px]">
           <div className="flex rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--s-border-subtle)', minHeight: 150 }}>
             <div className="flex flex-col justify-between p-[14px] flex-1 min-w-0">
               <div>
@@ -854,6 +951,7 @@ function ApplePreview({ content, mediaItems, appleHeader, appleButtonType }: { c
               <img src={imgSrc} alt="" className="w-full h-full object-cover" style={{ display: 'block' }} />
             </div>
           </div>
+          </div>
         </div>
       )}
     </div>
@@ -862,8 +960,8 @@ function ApplePreview({ content, mediaItems, appleHeader, appleButtonType }: { c
 
 // ─── Per-platform preview sub-components ──────────────────────────────────────
 
-function GooglePreview({ content, mediaItems, googlePublishAs, googleTitle, googleDurationStart, googleDurationEnd, googleCouponCode, googleButtonType, googleIncludeTimes, googleEventStartTime, googleEventEndTime, googleEventButtonType }: {
-  content: string; mediaItems: MediaItem[]; googlePublishAs: GooglePublishAs;
+function GooglePreview({ content, mediaItems, contentStream, googlePublishAs, googleTitle, googleDurationStart, googleDurationEnd, googleCouponCode, googleButtonType, googleIncludeTimes, googleEventStartTime, googleEventEndTime, googleEventButtonType }: {
+  content: string; mediaItems: MediaItem[]; contentStream: string; googlePublishAs: GooglePublishAs;
   googleTitle: string; googleDurationStart: string; googleDurationEnd: string;
   googleCouponCode: string; googleButtonType: GoogleButtonType;
   googleIncludeTimes: boolean; googleEventStartTime: string; googleEventEndTime: string;
@@ -885,74 +983,69 @@ function GooglePreview({ content, mediaItems, googlePublishAs, googleTitle, goog
   };
 
   return (
-    <div style={{ border: '1px solid var(--s-border)', borderRadius: 8, backgroundColor: 'var(--s-bg-secondary)' }}>
+    <div className="rounded-[8px] bg-background" style={{ border: '1px solid var(--s-border)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-[14px] py-[12px] cursor-pointer" onClick={() => setExpanded(v => !v)}>
+      <div className="flex items-center justify-between px-[14px] py-[11px] cursor-pointer rounded-t-[8px]" style={{ backgroundColor: 'white' }} onClick={() => setExpanded(v => !v)}>
         <div className="flex items-center gap-[8px]">
           <div className="shrink-0 size-[22px]"><GoogleIcon /></div>
-          <p className="font-normal text-foreground text-[14px] tracking-[-0.28px]">Google</p>
-          <p className="font-normal text-[14px]" style={{ color: 'var(--s-blue)' }}>1 Page</p>
+          <span className="text-foreground text-[13px] tracking-[-0.26px]">Google</span>
+          <span className="text-muted-foreground text-[12px]">1 Page</span>
         </div>
         {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
       </div>
 
       {expanded && (
-        <div className="px-[14px] pb-[14px]">
-          <div className="rounded-[10px] overflow-hidden" style={{ backgroundColor: '#fff', border: '1px solid var(--s-border-subtle)' }}>
-            {/* Business name row */}
-            <div className="flex items-center gap-[10px] px-[14px] py-[12px]">
-              <div className="shrink-0 w-[32px] h-[32px] rounded-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#34a853' }}>
-                <p className="text-white text-[13px]" >L</p>
+        <div>
+          <PreviewContentRow contentStream={contentStream} />
+          {/* Business name row */}
+          <div className="flex items-center gap-[10px] px-[14px] py-[12px]">
+            <BrandAvatar size={32} />
+            <p className="text-foreground text-[14px] tracking-[-0.28px]">Motto Mortgage · Holidays</p>
+          </div>
+          {/* Full-width image */}
+          <div className="w-full" style={{ backgroundColor: 'var(--s-bg-muted)' }}>
+            <img src={imgSrc} alt="" style={{ display: 'block', width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
+          </div>
+          {/* Content area */}
+          <div className="px-[14px] py-[12px]">
+            {(googlePublishAs === 'offers' || googlePublishAs === 'events') && googleTitle && (
+              <p className="text-foreground text-[15px] leading-[20px] mb-[4px]">{googleTitle}</p>
+            )}
+            {(googlePublishAs === 'offers' || googlePublishAs === 'events') && (googleDurationStart || googleDurationEnd) && (
+              <div className="mb-[6px]">
+                {googleDurationStart && (
+                  <p className="text-foreground text-[13px] leading-[18px]">
+                    {formatDate(googleDurationStart)}{googleIncludeTimes && googleEventStartTime ? `, ${formatTime(googleEventStartTime)}` : ''}
+                  </p>
+                )}
+                {googleDurationEnd && (
+                  <p className="text-muted-foreground text-[12px] leading-[17px]">
+                    Ends {formatDate(googleDurationEnd)}{googleIncludeTimes && googleEventEndTime ? `, ${formatTime(googleEventEndTime)}` : ''}
+                  </p>
+                )}
               </div>
-              <p className="text-foreground text-[14px] tracking-[-0.28px]" >Lush Green Landscapes</p>
-            </div>
-            {/* Full-width image */}
-            <div className="w-full" style={{ backgroundColor: 'var(--s-bg-muted)' }}>
-              <img src={imgSrc} alt="" style={{ display: 'block', width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
-            </div>
-            {/* Content area */}
-            <div className="px-[14px] py-[12px]">
-              {(googlePublishAs === 'offers' || googlePublishAs === 'events') && googleTitle && (
-                <p className="text-foreground text-[15px] leading-[20px] mb-[4px]" >{googleTitle}</p>
-              )}
-              {(googlePublishAs === 'offers' || googlePublishAs === 'events') && (googleDurationStart || googleDurationEnd) && (
-                <div className="mb-[6px]">
-                  {/* Start row */}
-                  {googleDurationStart && (
-                    <p className="text-foreground text-[13px] leading-[18px]">
-                      {formatDate(googleDurationStart)}{googleIncludeTimes && googleEventStartTime ? `, ${formatTime(googleEventStartTime)}` : ''}
-                    </p>
-                  )}
-                  {/* End row */}
-                  {googleDurationEnd && (
-                    <p className="text-muted-foreground text-[12px] leading-[17px]">
-                      Ends {formatDate(googleDurationEnd)}{googleIncludeTimes && googleEventEndTime ? `, ${formatTime(googleEventEndTime)}` : ''}
-                    </p>
-                  )}
-                </div>
-              )}
-              <p className="text-muted-foreground text-[13px] leading-[19px] mb-[10px] line-clamp-3">
-                {content || 'Save big this season! Exclusive deals and limited-time offers just for you.'}
+            )}
+            <p className="text-muted-foreground text-[13px] leading-[19px] mb-[10px] line-clamp-3">
+              {content || 'Save big this season! Exclusive deals and limited-time offers just for you.'}
+            </p>
+            {googlePublishAs === 'offers' && googleCouponCode && (
+              <div className="rounded-[6px] mb-[10px] py-[12px] px-[14px] text-center" style={{ border: '1.5px dashed var(--s-border)' }}>
+                <p className="text-muted-foreground text-[12px] mb-[6px]">Show this code at the shop</p>
+                <p className="text-foreground text-[18px] tracking-[2px] mb-[4px]">{googleCouponCode}</p>
+                {(googleDurationStart || googleDurationEnd) && (
+                  <p className="text-muted-foreground text-[12px]">Valid {formatDate(googleDurationStart)} - {formatDate(googleDurationEnd)}</p>
+                )}
+              </div>
+            )}
+            {(googlePublishAs !== 'events' || googleEventButtonType !== 'None') && (
+              <p className="text-[13px] tracking-[0.5px]" style={{ color: 'var(--s-blue)' }}>
+                {googlePublishAs === 'updates'
+                  ? googleButtonType.toUpperCase()
+                  : googlePublishAs === 'events'
+                    ? googleEventButtonType.toUpperCase()
+                    : 'VIEW OFFER'}
               </p>
-              {googlePublishAs === 'offers' && googleCouponCode && (
-                <div className="rounded-[6px] mb-[10px] py-[12px] px-[14px] text-center" style={{ border: '1.5px dashed var(--s-border)' }}>
-                  <p className="text-muted-foreground text-[12px] mb-[6px]">Show this code at the shop</p>
-                  <p className="text-foreground text-[18px] tracking-[2px] mb-[4px]" >{googleCouponCode}</p>
-                  {(googleDurationStart || googleDurationEnd) && (
-                    <p className="text-muted-foreground text-[12px]">Valid {formatDate(googleDurationStart)} - {formatDate(googleDurationEnd)}</p>
-                  )}
-                </div>
-              )}
-              {(googlePublishAs !== 'events' || googleEventButtonType !== 'None') && (
-                <p className="text-[13px] tracking-[0.5px]" style={{ color: 'var(--s-blue)' }}>
-                  {googlePublishAs === 'updates'
-                    ? googleButtonType.toUpperCase()
-                    : googlePublishAs === 'events'
-                      ? googleEventButtonType.toUpperCase()
-                      : 'VIEW OFFER'}
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -961,7 +1054,7 @@ function GooglePreview({ content, mediaItems, googlePublishAs, googleTitle, goog
 }
 
 // ─── Preview Panel ─────────────────────────────────────────────────────────────
-function PreviewPanel({ content, mediaItems, activeTab, appleHeader, appleButtonType, selectedPlatforms,
+function PreviewPanel({ content, mediaItems, activeTab, appleHeader, appleButtonType, selectedPlatforms, contentStream,
   googlePublishAs, googleTitle, googleDurationStart, googleDurationEnd, googleCouponCode, googleButtonType,
   googleIncludeTimes, googleEventStartTime, googleEventEndTime, googleEventButtonType }: {
   content: string;
@@ -970,6 +1063,7 @@ function PreviewPanel({ content, mediaItems, activeTab, appleHeader, appleButton
   appleHeader: string;
   appleButtonType: AppleButtonType;
   selectedPlatforms: Platform[];
+  contentStream: string;
   googlePublishAs: GooglePublishAs;
   googleTitle: string;
   googleDurationStart: string;
@@ -1007,11 +1101,11 @@ function PreviewPanel({ content, mediaItems, activeTab, appleHeader, appleButton
       </div>
 
       <div className="flex-1 overflow-y-auto px-[20px] pb-[20px] flex flex-col gap-[12px]">
-        {showFacebook  && <FacebookPreview  content={content} mediaItems={mediaItems} />}
-        {showInstagram && <InstagramPreview content={content} mediaItems={mediaItems} />}
-        {showLinkedIn  && <LinkedInPreview  content={content} mediaItems={mediaItems} />}
-        {showApple     && <ApplePreview     content={content} mediaItems={mediaItems} appleHeader={appleHeader} appleButtonType={appleButtonType} />}
-        {showGoogle    && <GooglePreview    content={content} mediaItems={mediaItems} googlePublishAs={googlePublishAs} googleTitle={googleTitle} googleDurationStart={googleDurationStart} googleDurationEnd={googleDurationEnd} googleCouponCode={googleCouponCode} googleButtonType={googleButtonType} googleIncludeTimes={googleIncludeTimes} googleEventStartTime={googleEventStartTime} googleEventEndTime={googleEventEndTime} googleEventButtonType={googleEventButtonType} />}
+        {showFacebook  && <FacebookPreview  content={content} mediaItems={mediaItems} contentStream={contentStream} />}
+        {showInstagram && <InstagramPreview content={content} mediaItems={mediaItems} contentStream={contentStream} />}
+        {showLinkedIn  && <LinkedInPreview  content={content} mediaItems={mediaItems} contentStream={contentStream} />}
+        {showApple     && <ApplePreview     content={content} mediaItems={mediaItems} appleHeader={appleHeader} appleButtonType={appleButtonType} contentStream={contentStream} />}
+        {showGoogle    && <GooglePreview    content={content} mediaItems={mediaItems} contentStream={contentStream} googlePublishAs={googlePublishAs} googleTitle={googleTitle} googleDurationStart={googleDurationStart} googleDurationEnd={googleDurationEnd} googleCouponCode={googleCouponCode} googleButtonType={googleButtonType} googleIncludeTimes={googleIncludeTimes} googleEventStartTime={googleEventStartTime} googleEventEndTime={googleEventEndTime} googleEventButtonType={googleEventButtonType} />}
         {!showFacebook && !showInstagram && !showLinkedIn && !showApple && !showGoogle && (
           <p className="text-[13px] text-muted-foreground text-center mt-[20px]">No preview available for this tab.</p>
         )}
@@ -1069,7 +1163,40 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
   const [googleEventButtonType, setGoogleEventButtonType] = useState('None');
   const [googleEventButtonTypeOpen, setGoogleEventButtonTypeOpen] = useState(false);
   const [googleEventButtonLink, setGoogleEventButtonLink] = useState('');
+  const [googleEventRecurrence, setGoogleEventRecurrence] = useState<GoogleRecurrence>('none');
+  const [googleEventRecurrenceOpen, setGoogleEventRecurrenceOpen] = useState(false);
+  const [googleEventRecurrenceEndDate, setGoogleEventRecurrenceEndDate] = useState('');
+  const [googleEventRecurrenceCustomDays, setGoogleEventRecurrenceCustomDays] = useState<number[]>([]);
 
+  // ── Channel selector dropdown ──────────────────────────────────────────────
+  const channelSelectorRef = useRef<HTMLDivElement>(null);
+  const channelPanelRef    = useRef<HTMLDivElement>(null);
+  const [channelSelectorOpen, setChannelSelectorOpen] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [channelSelectorTab, setChannelSelectorTab] = useState<'locations' | 'content-streams' | 'brand-identity'>('locations');
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationFilter, setLocationFilter] = useState('All locations');
+  const [locationFilterOpen, setLocationFilterOpen] = useState(false);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(DEMO_LOCATIONS.map(l => l.id));
+  const [activeChannelTab, setActiveChannelTab] = useState<Platform>('facebook');
+  const [selectedPagesByPlatform, setSelectedPagesByPlatform] = useState<Record<Platform, string[]>>({
+    facebook:  DEMO_LOCATIONS.map(l => l.id),
+    instagram: DEMO_LOCATIONS.slice(0, 2).map(l => l.id),
+    google:    DEMO_LOCATIONS.map(l => l.id),
+    linkedin:  DEMO_LOCATIONS.map(l => l.id),
+    apple:     DEMO_LOCATIONS.map(l => l.id),
+  });
+  const [contentStream, setContentStream] = useState('Motto mortgage - Holidays');
+  const [contentStreamDropOpen, setContentStreamDropOpen] = useState(false);
+  const [csChannels, setCsChannels] = useState<Platform[]>(['facebook', 'instagram', 'linkedin']);
+  const [csChannelsOpen, setCsChannelsOpen] = useState(false);
+  const [brandIdentityFilter, setBrandIdentityFilter] = useState('Brand identity 2');
+  const [brandIdentityFilterOpen, setBrandIdentityFilterOpen] = useState(false);
+
+  const platformPageLabel: Record<Platform, string> = {
+    facebook: 'pages', instagram: 'profiles', google: 'profiles',
+    linkedin: 'pages', apple: 'listings',
+  };
 
   const [addToLibrary, setAddToLibrary] = useState(true);
   const [draftCalendarEnabled, setDraftCalendarEnabled] = useState(false);
@@ -1177,6 +1304,44 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
     if (activeTab === p) setActiveTab('initial');
   };
 
+  // Click-outside: close channel selector panel (portal panel is outside the ref, so check both)
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const inTrigger = channelSelectorRef.current?.contains(e.target as Node);
+      const inPanel   = channelPanelRef.current?.contains(e.target as Node);
+      if (!inTrigger && !inPanel) {
+        setChannelSelectorOpen(false);
+        setLocationFilterOpen(false);
+        setContentStreamDropOpen(false);
+        setCsChannelsOpen(false);
+        setBrandIdentityFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filteredLocations = useMemo(() =>
+    DEMO_LOCATIONS.filter(l =>
+      !locationSearch ||
+      l.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
+      l.handle.toLowerCase().includes(locationSearch.toLowerCase()) ||
+      l.city.toLowerCase().includes(locationSearch.toLowerCase())
+    ), [locationSearch]
+  );
+
+  // Updates page selections for a platform and syncs selectedPlatforms
+  const updatePlatformPages = useCallback((platform: Platform, ids: string[]) => {
+    setSelectedPagesByPlatform(prev => {
+      const next = { ...prev, [platform]: ids };
+      const active = (Object.entries(next) as [Platform, string[]][])
+        .filter(([, v]) => v.length > 0)
+        .map(([p]) => p);
+      setSelectedPlatforms(active);
+      return next;
+    });
+  }, []);
+
   const APPROVAL_OPTIONS = ['Standard Review', 'Manager Approval', 'Legal Review', 'Executive Sign-off'];
 
   const tabs: { key: TabKey; label: string }[] = [
@@ -1273,38 +1438,29 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
         }
       `}</style>
 
-      {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between shrink-0"
-        style={{ backgroundColor: 'var(--s-bg-primary)', borderBottom: '1px solid var(--s-border)', padding: '16px 20px' }}
-      >
+      {/* ── Header — matches frontdesk/content hub pages ── */}
+      <div className="flex items-center justify-between shrink-0 bg-surface px-2xl py-xl">
         {/* Left: back arrow + title */}
-        <div className="flex items-center gap-[10px]">
+        <div className="flex items-center gap-sm">
           <button
             onClick={onBack}
-            className="flex items-center justify-center rounded-[6px] hover:bg-muted transition-colors"
-            style={{ width: 32, height: 32 }}
+            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2 transition-colors"
             aria-label="Back"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--s-icon-fill)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 5l-7 7 7 7" />
-            </svg>
+            <ArrowLeft size={18} strokeWidth={1.6} />
           </button>
-          <p className="font-normal leading-[26px] text-foreground text-[18px] tracking-[-0.36px] whitespace-nowrap">
-            Create post
-          </p>
+          <p className="text-h3 text-text-primary whitespace-nowrap">Create post</p>
         </div>
 
         {/* Right: add to library + schedule */}
-        <div className="flex items-center gap-[14px]">
-          {/* Add to post library checkbox */}
-          <label className="flex items-center gap-[7px] cursor-pointer">
+        <div className="flex items-center gap-lg">
+          <label className="flex items-center gap-xs cursor-pointer">
             <div
               className="flex items-center justify-center rounded-[3px] shrink-0"
               style={{
                 width: 16, height: 16,
-                backgroundColor: addToLibrary ? 'var(--s-blue)' : 'var(--s-bg-primary)',
-                border: addToLibrary ? '1px solid var(--s-blue)' : '1px solid #c4c4c4',
+                backgroundColor: addToLibrary ? '#1976d2' : 'white',
+                border: addToLibrary ? '1px solid #1976d2' : '1px solid #c4c4c4',
               }}
               onClick={() => setAddToLibrary(v => !v)}
             >
@@ -1314,18 +1470,12 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
                 </svg>
               )}
             </div>
-            <p className="font-normal leading-[20px] text-foreground text-[14px] tracking-[-0.28px] whitespace-nowrap">
-              Add to post library
-            </p>
-            <div className="flex items-center">
-              <InfoIcon />
-            </div>
+            <p className="text-body text-text-primary whitespace-nowrap">Add to post library</p>
+            <InfoIcon />
           </label>
 
-          {/* Schedule post — opens timing modal */}
           <button
-            className="flex items-center justify-center hover:bg-primary/90 transition-colors"
-            style={{ backgroundColor: '#1976d2', color: 'white', height: 36, padding: '0 20px', borderRadius: '4px',fontSize: 14, fontWeight: 500, letterSpacing: '-0.28px' }}
+            className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
             onClick={() => setTimingModalOpen(true)}
           >
             Schedule post
@@ -1337,47 +1487,379 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
       <div className="flex flex-1" style={{ overflow: 'hidden' }}>
 
         {/* ── Left Form Panel ── */}
-        <div className="overflow-y-auto bg-background" style={{ flex: '0 0 62%', borderRight: '1px solid var(--s-border)', minWidth: 0 }}>
+        <div className="overflow-y-auto bg-background" style={{ flex: '0 0 calc(62% - 100px)', minWidth: 0 }}>
           <div style={{ padding: '20px 30px' }} className="flex flex-col gap-[16px]">
 
             {/* ── Post Content ── */}
-            <div className="border border-border rounded-[8px] bg-background">
-              <div className="px-[16px] py-[16px]">
-                {/* Platform selector */}
-                <div
-                  className="flex items-center gap-[8px] flex-wrap mb-[12px]"
-                  style={{ border: '1px solid var(--s-border)', borderRadius: 4, padding: '6px 12px', minHeight: 40 }}
-                >
-                  {selectedPlatforms.map(p => (
-                    <PlatformChip key={p} platform={p} onRemove={() => removePlatform(p)} />
-                  ))}
-                  <div className="ml-auto">
-                    <ChevronDownIcon />
+            <div>
+              <div className="flex flex-col gap-[12px]">
+                {/* ── Channel selector ───────────────────────────────── */}
+                <div ref={channelSelectorRef} className="relative mb-[12px]">
+                  {/* Trigger bar */}
+                  <div
+                    className="flex items-center gap-[8px] flex-wrap cursor-pointer select-none"
+                    style={{ border: '1px solid var(--s-border)', borderRadius: 4, padding: '6px 12px', minHeight: 40 }}
+                    onClick={() => {
+                      if (!channelSelectorOpen && channelSelectorRef.current) {
+                        const r = channelSelectorRef.current.getBoundingClientRect();
+                        // Align top of dropdown with top of trigger so it covers/replaces it
+                        setDropdownRect({ top: r.top, left: r.left, width: r.width });
+                      }
+                      setChannelSelectorOpen(v => !v);
+                    }}
+                  >
+                    {selectedPlatforms.length === 0 ? (
+                      <span className="text-[13px]" style={{ color: 'var(--s-text-muted)' }}>Select channels</span>
+                    ) : (
+                      selectedPlatforms.map(p => {
+                        const count = selectedPagesByPlatform[p]?.length ?? 0;
+                        const label = platformPageLabel[p]; // e.g. "pages" or "profiles"
+                        return (
+                          <div key={p} className="flex items-center gap-[6px] shrink-0"
+                            style={{ backgroundColor: '#f4f4f5', borderRadius: 8, padding: '4px 10px 4px 8px', height: 32 }}>
+                            <div className="shrink-0" style={{ width: 18, height: 18 }}>
+                              {p === 'facebook' ? <FacebookIcon /> : p === 'instagram' ? <InstagramIcon /> : p === 'linkedin' ? <LinkedInIcon /> : p === 'google' ? <GoogleIcon /> : <AppleIcon />}
+                            </div>
+                            <span className="text-[13px]" style={{ color: '#212121' }}>{count} {label}</span>
+                            <button onClick={e => { e.stopPropagation(); removePlatform(p); updatePlatformPages(p, []); }}
+                              className="flex items-center justify-center ml-[2px]">
+                              <X size={12} strokeWidth={2} style={{ color: '#888' }} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div className="ml-auto" onClick={e => e.stopPropagation()}>
+                      {channelSelectorOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                    </div>
                   </div>
                 </div>
 
+                {/* ── Channel selector floating panel (portal) ────────── */}
+                {channelSelectorOpen && dropdownRect && createPortal(
+                  <div
+                    ref={channelPanelRef}
+                    style={{
+                      position: 'fixed',
+                      top: dropdownRect.top,
+                      left: dropdownRect.left,
+                      width: dropdownRect.width,
+                      zIndex: 9999,
+                      backgroundColor: 'white',
+                      border: '1px solid var(--s-border)',
+                      borderRadius: 8,
+                      boxShadow: '0px 10px 24px 0px rgba(33,33,33,0.2)',
+                      maxHeight: 'calc(100vh - 120px)',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {/* Outer 20px padding — wraps tabs + content */}
+                    <div style={{ padding: 20 }}>
+
+                    {/* Tab bar — shared Tabs component, no bottom border */}
+                    <div style={{ marginBottom: 16 }}>
+                      <Tabs
+                        tabs={[
+                          { id: 'locations',       label: 'Locations' },
+                          { id: 'content-streams', label: 'Content streams' },
+                          { id: 'brand-identity',  label: 'Brand identity' },
+                        ]}
+                        activeTab={channelSelectorTab}
+                        onChange={(id) => setChannelSelectorTab(id as typeof channelSelectorTab)}
+                      />
+                    </div>
+
+                    {/* ── Locations / Brand identity tab content ── */}
+                    {(channelSelectorTab === 'locations' || channelSelectorTab === 'brand-identity') && (() => {
+                      const isBI = channelSelectorTab === 'brand-identity';
+                      const filter      = isBI ? brandIdentityFilter      : locationFilter;
+                      const filterOpen  = isBI ? brandIdentityFilterOpen  : locationFilterOpen;
+                      const setFilter   = isBI
+                        ? (v: string) => setBrandIdentityFilter(v)
+                        : (v: string) => setLocationFilter(v);
+                      const setFOpen    = isBI
+                        ? (v: boolean) => setBrandIdentityFilterOpen(v)
+                        : (v: boolean) => setLocationFilterOpen(v);
+                      const filterOpts  = isBI
+                        ? ['Brand identity 1', 'Brand identity 2', 'Brand identity 3']
+                        : ['All locations', 'Location group 1', 'Location group 2'];
+
+                      // Per-platform tab selection model
+                      const currentPagesForTab = selectedPagesByPlatform[activeChannelTab] ?? [];
+                      const allIds = filteredLocations.map(l => l.id);
+                      const selCount = allIds.filter(id => currentPagesForTab.includes(id)).length;
+                      const allSel = selCount === allIds.length && allIds.length > 0;
+                      const indeterminate = selCount > 0 && !allSel;
+
+                      const platformLabel: Record<Platform, string> = {
+                        facebook: 'Facebook', instagram: 'Instagram', google: 'Google',
+                        linkedin: 'LinkedIn', apple: 'Apple',
+                      };
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                          {/* ── Channel tab row: icons act as tabs ── */}
+                          <div className="flex items-center gap-[8px]">
+                            <div className="flex items-center gap-[8px] flex-1">
+                              {(['facebook', 'instagram', 'google', 'linkedin', 'apple'] as Platform[]).map(p => {
+                                const isActive = activeChannelTab === p;
+                                const hasPages = (selectedPagesByPlatform[p] ?? []).length > 0;
+                                return (
+                                  <button key={p} type="button"
+                                    className="relative shrink-0 flex items-center justify-center"
+                                    title={`${platformLabel[p]} ${platformPageLabel[p]}`}
+                                    style={{
+                                      width: 36, height: 36, borderRadius: '50%',
+                                      border: isActive ? '2.5px solid #1976d2' : '1.5px solid #d9d9d9',
+                                      padding: 0, background: 'none', cursor: 'pointer',
+                                      transition: 'border-color 0.12s',
+                                    }}
+                                    onClick={() => setActiveChannelTab(p)}
+                                  >
+                                    {/* Filled platform icon — 20px fixed then scaled up to fill 36px circle */}
+                                    <div style={{ width: 20, height: 20, flexShrink: 0, transform: 'scale(1.55)', transformOrigin: 'center', pointerEvents: 'none', overflow: 'hidden' }}>
+                                      {p === 'facebook' ? <FacebookIcon /> : p === 'instagram' ? <InstagramIcon /> : p === 'linkedin' ? <LinkedInIcon /> : (
+                                        // GoogleIcon / AppleIcon are bare SVGs — constrain them explicitly
+                                        <svg viewBox={p === 'apple' ? '0 0 814 1000' : '0 0 24 24'} style={{ width: 20, height: 20 }}
+                                          fill={p === 'apple' ? 'currentColor' : 'none'}>
+                                          {p === 'google' ? <>
+                                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                          </> : <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105-43.4-154.4-112.7C47.5 751 0 641 0 549.7c0-158 103.8-241.5 205.5-241.5 52.8 0 97.3 32.5 131.2 32.5 31.2 0 80.9-35.3 143.7-35.3 22.8 0 108.2 2.6 167.9 79.3zm-74.9-211.3c31.9-37.9 54.3-90.8 54.3-143.7 0-7.7-.6-15.5-1.9-23.2C713.4 14.5 618.7 67.9 564.9 131.4c-29.5 33.8-56.6 86.1-56.6 138.9 0 8.3.6 16.6 2.6 24.3 4.5.6 9 1.3 13.5 1.3 40.5 0 123.6-49.5 159.8-116.1z" fill="currentColor" />}
+                                        </svg>
+                                      )}
+                                    </div>
+                                    {/* ✓ badge = pages selected for this platform */}
+                                    {hasPages && (
+                                      <div className="absolute flex items-center justify-center rounded-full"
+                                        style={{ width: 13, height: 13, top: -1, right: -1, backgroundColor: '#1976d2', border: '1.5px solid white' }}>
+                                        <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
+                                          <path d="M1.5 5l2.5 2.5 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <button type="button" onClick={() => setChannelSelectorOpen(false)}
+                              style={{ color: '#888', flexShrink: 0 }}>
+                              <ChevronDown size={16} strokeWidth={1.8} style={{ transform: 'rotate(180deg)' }} />
+                            </button>
+                          </div>
+
+                          {/* Current tab label */}
+                          <div className="text-[12px]" style={{ color: '#555' }}>
+                            Showing <span style={{ color: '#1976d2' }}>{platformLabel[activeChannelTab]}</span> {platformPageLabel[activeChannelTab]} · Filter by{' '}
+                            <span className="relative inline-block">
+                              <button type="button" className="inline-flex items-center gap-[2px]" style={{ color: '#1976d2' }}
+                                onClick={() => setFOpen(!filterOpen)}>
+                                {filter} <ChevronDown size={11} strokeWidth={2} />
+                              </button>
+                              {filterOpen && (
+                                <div className="absolute left-0 top-full z-10 rounded-[4px] py-[4px]"
+                                  style={{ minWidth: 180, marginTop: 2, backgroundColor: 'white', border: '1px solid #eaeaea', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                  {filterOpts.map(opt => (
+                                    <button key={opt} type="button"
+                                      className="w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px]"
+                                      style={{ color: '#212121' }}
+                                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                      onClick={() => { setFilter(opt); setFOpen(false); }}>
+                                      {filter === opt
+                                        ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#1976d2" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                        : <span style={{ width: 12, display: 'inline-block' }} />}
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </span>
+                          </div>
+
+                          {/* Search bar */}
+                          <div className="flex items-center" style={{ border: '1px solid #eaeaea', borderRadius: 4, height: 36 }}>
+                            <div className="flex items-center gap-[6px] flex-1 px-[10px]">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8f8f8f" strokeWidth="2">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                              </svg>
+                              <input type="text" placeholder={`Search ${platformPageLabel[activeChannelTab]}`}
+                                value={locationSearch}
+                                onChange={e => setLocationSearch(e.target.value)}
+                                className="flex-1 outline-none bg-transparent text-[13px]"
+                                style={{ color: '#212121' }} />
+                            </div>
+                          </div>
+
+                          {/* Select all row */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 18, height: 18, flexShrink: 0 }} onClick={() => {
+                                const newIds = allSel ? [] : filteredLocations.map(l => l.id);
+                                updatePlatformPages(activeChannelTab, newIds);
+                              }}>
+                                {indeterminate ? (
+                                  <div style={{ width: 18, height: 18, borderRadius: 3, backgroundColor: '#1976d2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ width: 10, height: 2, backgroundColor: 'white', borderRadius: 99 }} />
+                                  </div>
+                                ) : <CustomCheckbox checked={allSel} />}
+                              </div>
+                              <span style={{ fontSize: 14, color: '#212121' }}>Select all</span>
+                            </div>
+                            <span style={{ fontSize: 14, color: '#555' }}>
+                              {currentPagesForTab.length} {platformPageLabel[activeChannelTab]} selected
+                            </span>
+                          </div>
+
+                          {/* Page/profile list for active channel tab */}
+                          <div className="flex flex-col">
+                            {filteredLocations.map(loc => {
+                              const checked = currentPagesForTab.includes(loc.id);
+                              const toggle = () => {
+                                const newIds = checked
+                                  ? currentPagesForTab.filter(id => id !== loc.id)
+                                  : [...currentPagesForTab, loc.id];
+                                updatePlatformPages(activeChannelTab, newIds);
+                              };
+                              return (
+                                <div key={loc.id}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 4px', borderRadius: 4, cursor: 'pointer' }}
+                                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  onClick={toggle}>
+                                  <div style={{ width: 18, height: 18, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                                    <CustomCheckbox checked={checked} onClick={toggle} />
+                                  </div>
+                                  <div className="w-[32px] h-[32px] rounded-full flex items-center justify-center text-white text-[11px] shrink-0"
+                                    style={{ backgroundColor: loc.color }}>
+                                    {loc.initials}
+                                  </div>
+                                  <div className="flex flex-col gap-[2px]">
+                                    <span className="text-[14px]" style={{ color: '#212121' }}>{loc.name}</span>
+                                    <span className="text-[12px]" style={{ color: '#8f8f8f' }}>{loc.handle} · {loc.city}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {filteredLocations.length === 0 && (
+                              <div className="py-[24px] text-center text-[13px]" style={{ color: '#8f8f8f' }}>No results found</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── Content streams tab ── */}
+                    {channelSelectorTab === 'content-streams' && (
+                      <div className="flex flex-col gap-[16px]">
+                        <div className="flex flex-col gap-[6px]">
+                          <label className="text-[13px]" style={{ color: '#555' }}>Select content stream</label>
+                          <div className="relative">
+                            <button type="button"
+                              className="w-full flex items-center justify-between outline-none"
+                              style={{ border: '1px solid #eaeaea', borderRadius: 4, padding: '8px 12px', fontSize: 14, color: '#212121', backgroundColor: 'white' }}
+                              onClick={() => setContentStreamDropOpen(v => !v)}>
+                              <span>{contentStream || 'Select content stream'}</span>
+                              <ChevronDown size={14} strokeWidth={1.6} style={{ color: '#555' }} />
+                            </button>
+                            {contentStreamDropOpen && (
+                              <div className="absolute left-0 right-0 top-full z-10 py-[4px]"
+                                style={{ marginTop: 2, backgroundColor: 'white', border: '1px solid #eaeaea', borderRadius: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                {DEMO_CONTENT_STREAMS.map(cs => (
+                                  <button key={cs} type="button"
+                                    className="w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left"
+                                    style={{ fontSize: 14, color: '#212121' }}
+                                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                    onClick={() => { setContentStream(cs); setContentStreamDropOpen(false); }}>
+                                    {contentStream === cs
+                                      ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#1976d2" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                      : <span style={{ width: 12, display: 'inline-block' }} />}
+                                    {cs}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-[6px]">
+                          <label className="text-[13px]" style={{ color: '#555' }}>Select channels</label>
+                          <div className="relative">
+                            <div className="flex items-center gap-[6px] flex-wrap cursor-pointer"
+                              style={{ border: '1px solid #eaeaea', borderRadius: 4, padding: '6px 10px', minHeight: 40 }}
+                              onClick={() => setCsChannelsOpen(v => !v)}>
+                              {csChannels.length === 0 && <span className="text-[13px]" style={{ color: '#8f8f8f' }}>Select channels</span>}
+                              {csChannels.map(p => (
+                                <div key={p} className="flex items-center gap-[4px] shrink-0"
+                                  style={{ backgroundColor: '#f0f0f0', borderRadius: 4, padding: '2px 8px', height: 26 }}>
+                                  <div className="shrink-0 size-[14px]">
+                                    {p === 'facebook' ? <FacebookIcon /> : p === 'instagram' ? <InstagramIcon /> : p === 'linkedin' ? <LinkedInIcon /> : p === 'google' ? <GoogleIcon /> : <AppleIcon />}
+                                  </div>
+                                  <span className="text-[12px]" style={{ color: '#212121' }}>
+                                    {p === 'facebook' ? 'Facebook' : p === 'instagram' ? 'Instagram' : p === 'linkedin' ? 'LinkedIn' : p === 'google' ? 'Google' : 'Apple'}
+                                  </span>
+                                  <button type="button" onClick={e => { e.stopPropagation(); setCsChannels(prev => prev.filter(x => x !== p)); }}>
+                                    <X size={10} strokeWidth={2} style={{ color: '#555' }} />
+                                  </button>
+                                </div>
+                              ))}
+                              <ChevronDown size={14} className="ml-auto shrink-0" strokeWidth={1.6} style={{ color: '#555' }} />
+                            </div>
+                            {csChannelsOpen && (
+                              <div className="absolute left-0 right-0 top-full z-10 py-[4px]"
+                                style={{ marginTop: 2, backgroundColor: 'white', border: '1px solid #eaeaea', borderRadius: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                {(['facebook', 'instagram', 'linkedin', 'google', 'apple'] as Platform[]).map(p => {
+                                  const lbl = p === 'facebook' ? 'Facebook' : p === 'instagram' ? 'Instagram' : p === 'linkedin' ? 'LinkedIn' : p === 'google' ? 'Google' : 'Apple';
+                                  return (
+                                    <button key={p} type="button"
+                                      className="w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left"
+                                      style={{ fontSize: 14, color: '#212121' }}
+                                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                      onClick={() => setCsChannels(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])}>
+                                      <div className="shrink-0 size-[18px]">
+                                        {p === 'facebook' ? <FacebookIcon /> : p === 'instagram' ? <InstagramIcon /> : p === 'linkedin' ? <LinkedInIcon /> : p === 'google' ? <GoogleIcon /> : <AppleIcon />}
+                                      </div>
+                                      {lbl}
+                                      {csChannels.includes(p) && (
+                                        <svg className="ml-auto" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                          <path d="M2 6l3 3 5-5" stroke="#1976d2" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button type="button" onClick={() => setChannelSelectorOpen(false)}
+                            style={{ backgroundColor: '#1976d2', borderRadius: 4, padding: '0 20px', height: 36, fontSize: 14, color: '#fff' }}>
+                            Done
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    </div>{/* end outer 20px padding wrapper */}
+                  </div>,
+                  document.body
+                )}
+
                 {/* Content area (tabs + textarea) */}
-                <div style={{ border: '1px solid var(--s-border)', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-                  {/* Tab row */}
-                  <div className="flex" style={{ borderBottom: 'none' }}>
-                    {tabs.map(tab => (
-                      <button
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        className="transition-colors"
-                        style={{
-                          padding: '9px 14px',
-                          fontSize: 13,letterSpacing: '-0.26px',
-                          borderBottom: activeTab === tab.key ? '2px solid var(--s-blue)' : '2px solid transparent',
-                          color: activeTab === tab.key ? 'var(--s-blue)' : 'var(--s-text-secondary)',
-                          fontWeight: activeTab === tab.key ? 500 : 400,
-                          backgroundColor: 'transparent',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
+                <div style={{ border: '1px solid var(--s-border)', borderRadius: 4, overflow: 'hidden' }}>
+                  {/* Tab row — shared Tabs component */}
+                  <div className="px-xs" style={{ borderBottom: '1px solid var(--s-border)' }}>
+                    <Tabs
+                      tabs={tabs.map(t => ({ id: t.key, label: t.label }))}
+                      activeTab={activeTab}
+                      onChange={(id) => setActiveTab(id as TabKey)}
+                    />
                   </div>
 
                   {/* Textarea */}
@@ -1409,18 +1891,24 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
                     className="flex items-center justify-between"
                     style={{ padding: '8px 14px', borderTop: 'none' }}
                   >
-                    <div className="flex items-center gap-[10px]">
-                      {/* Camera icon */}
-                      <button className="flex items-center justify-center" style={{ color: 'var(--s-text-muted)', width: 20, height: 20 }} title="Add image">
+                    <div className="flex items-center gap-[12px]">
+                      <button className="flex items-center justify-center text-text-icon hover:text-text-primary transition-colors" style={{ width: 20, height: 20 }} title="Add image">
                         <Camera size={18} strokeWidth={1.5} />
                       </button>
-                      {/* Emoji icon */}
-                      <button className="flex items-center justify-center" style={{ color: 'var(--s-text-muted)', width: 20, height: 20 }} title="Add emoji">
+                      <button className="flex items-center justify-center text-text-icon hover:text-text-primary transition-colors" style={{ width: 20, height: 20 }} title="Add emoji">
                         <Smile size={18} strokeWidth={1.5} />
                       </button>
-                      {/* GIF / text icon */}
-                      <button className="flex items-center justify-center" style={{ color: 'var(--s-text-muted)', width: 20, height: 20 }} title="Text format">
-                        <Type size={16} strokeWidth={1.5} />
+                      <button className="flex items-center justify-center text-text-icon hover:text-text-primary transition-colors" style={{ width: 20, height: 20 }} title="Add hashtag">
+                        <Hash size={16} strokeWidth={1.5} />
+                      </button>
+                      <button className="flex items-center justify-center hover:opacity-80 transition-opacity" style={{ width: 20, height: 20 }} title="AI assist">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M8.51931 12.0887H6.57118L6.24883 13.0207H5.2187L6.97763 8.12236H8.11988L9.8788 13.0207H8.84167L8.51931 12.0887ZM8.25302 11.3038L7.54525 9.25761L6.83747 11.3038H8.25302Z" fill="#6834B7"/>
+                          <path d="M11.5173 8.12937V13.0207H10.5363V8.12937H11.5173Z" fill="#6834B7"/>
+                          <path d="M11.3239 5.12083H3.8628C2.83401 5.12083 2 5.95484 2 6.98364V14.4349C2 15.4637 2.83401 16.2977 3.86281 16.2977H13.1768C14.2056 16.2977 15.0396 15.4637 15.0396 14.4349V8.85539C14.8579 8.94499 14.673 8.97287 14.523 8.97287C14.3815 8.97287 14.241 8.94766 14.1082 8.89686V14.4349C14.1082 14.9493 13.6912 15.3663 13.1768 15.3663H3.86281C3.34841 15.3663 2.9314 14.9493 2.9314 14.4349V6.98364C2.9314 6.46924 3.3484 6.05224 3.8628 6.05224H11.2664C11.2157 5.91308 11.1962 5.77401 11.1962 5.64919C11.1962 5.47286 11.2358 5.28997 11.3239 5.12083Z" fill="#6834B7"/>
+                          <path d="M16.3135 3.88781C16.2909 3.87008 16.2773 3.84761 16.2727 3.8204C16.2684 3.79607 16.2737 3.77277 16.2886 3.75049C16.3932 3.57115 16.4698 3.42736 16.5185 3.31913C16.5688 3.21216 16.5876 3.11705 16.5749 3.0338C16.5651 2.9502 16.5229 2.85811 16.4483 2.75752C16.3736 2.65693 16.2655 2.52605 16.1238 2.36488C16.0815 2.31591 16.0782 2.26881 16.1138 2.22356C16.1316 2.20093 16.1535 2.18805 16.1794 2.1849C16.2054 2.18176 16.2301 2.1868 16.2535 2.20004C16.4371 2.30788 16.5853 2.38785 16.6981 2.43996C16.8122 2.49045 16.911 2.51063 16.9946 2.50049C17.081 2.49001 17.1717 2.44758 17.2668 2.37319C17.363 2.2972 17.4865 2.18501 17.6371 2.03663C17.683 1.9916 17.7301 1.98809 17.7784 2.02609C17.8267 2.06409 17.8329 2.11084 17.797 2.16636C17.6908 2.34443 17.6125 2.48695 17.5622 2.59392C17.5136 2.70215 17.4956 2.7979 17.5083 2.88115C17.5226 2.96566 17.567 3.05822 17.6417 3.15881C17.7176 3.25778 17.8255 3.38722 17.9656 3.54712C18.0079 3.59609 18.0112 3.64319 17.9756 3.68844C17.94 3.7337 17.8902 3.739 17.8262 3.70437C17.6417 3.60102 17.4932 3.52474 17.3807 3.47552C17.2683 3.42629 17.1695 3.40611 17.0843 3.41498C17.0007 3.42511 16.9115 3.46737 16.8164 3.54175C16.723 3.6174 16.6023 3.7278 16.4542 3.87294C16.4087 3.92086 16.3617 3.92581 16.3135 3.88781Z" fill="#6834B7"/>
+                          <path d="M14.5714 8.04144C14.5135 8.04144 14.4639 8.02275 14.4225 7.98537C14.3853 7.95214 14.3646 7.90854 14.3604 7.85454C14.3025 7.43922 14.2446 7.11526 14.1867 6.88268C14.1329 6.6501 14.0439 6.47566 13.9198 6.35937C13.7998 6.23892 13.6178 6.14548 13.3737 6.07902C13.1296 6.01257 12.7945 5.93989 12.3684 5.86098C12.2401 5.83606 12.176 5.76545 12.176 5.64916C12.176 5.59102 12.1946 5.54325 12.2318 5.50587C12.2691 5.4685 12.3146 5.44565 12.3684 5.43735C12.7945 5.3792 13.1296 5.32105 13.3737 5.26291C13.6178 5.20061 13.7998 5.10924 13.9198 4.98879C14.0439 4.8642 14.135 4.68353 14.1929 4.44679C14.2508 4.20591 14.3066 3.87364 14.3604 3.45001C14.377 3.32126 14.4473 3.25689 14.5714 3.25689C14.6955 3.25689 14.7638 3.32334 14.7762 3.45624C14.83 3.87157 14.8838 4.19552 14.9376 4.4281C14.9955 4.66069 15.0865 4.83512 15.2106 4.95142C15.3389 5.06771 15.525 5.15908 15.7691 5.22553C16.0132 5.28783 16.3463 5.35843 16.7683 5.43735C16.8965 5.46227 16.9607 5.53287 16.9607 5.64916C16.9607 5.76545 16.8883 5.83606 16.7434 5.86098C16.3215 5.92743 15.9905 5.99181 15.7505 6.0541C15.5106 6.1164 15.3285 6.20778 15.2044 6.32822C15.0844 6.44866 14.9955 6.62725 14.9376 6.86399C14.8838 7.10073 14.83 7.42676 14.7762 7.84208C14.7638 7.97499 14.6955 8.04144 14.5714 8.04144Z" fill="#6834B7"/>
+                        </svg>
                       </button>
                     </div>
 
@@ -1793,6 +2281,76 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
                         </button>
                       </div>
 
+                      {/* Recurring schedule */}
+                      <div className="flex flex-col gap-[6px]">
+                        <label className="font-normal text-[13px] tracking-[-0.26px]" style={{ color: 'var(--s-text-secondary)' }}>Repeats</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between outline-none bg-transparent"
+                            style={{ border: '1px solid var(--s-border)', borderRadius: 4, padding: '8px 10px', fontSize: 14, color: 'var(--s-text-primary)' }}
+                            onClick={() => setGoogleEventRecurrenceOpen(v => !v)}
+                          >
+                            <span>{getRecurrenceLabel(googleEventRecurrence, googleDurationStart)}</span>
+                            <ChevronDown size={14} strokeWidth={1.6} absoluteStrokeWidth style={{ color: 'var(--s-text-muted)' }} />
+                          </button>
+                          {googleEventRecurrenceOpen && (
+                            <div className="absolute left-0 right-0 top-full z-20 bg-background border border-border rounded-[6px] shadow-dropdown overflow-hidden" style={{ marginTop: 2 }}>
+                              {getRecurrenceOptions(googleDurationStart).map(opt => (
+                                <button key={opt.value} type="button"
+                                  className="w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left hover:bg-muted transition-colors"
+                                  style={{ fontSize: 14, color: 'var(--s-text-primary)' }}
+                                  onClick={() => { setGoogleEventRecurrence(opt.value); setGoogleEventRecurrenceOpen(false); }}>
+                                  {googleEventRecurrence === opt.value && (
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="var(--s-blue)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  )}
+                                  {googleEventRecurrence !== opt.value && <span style={{ width: 12, display: 'inline-block' }} />}
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Custom weekly day toggles */}
+                        {googleEventRecurrence === 'custom_weekly' && (
+                          <div className="flex gap-[6px] mt-[4px]">
+                            {DAY_ABBR.map((day, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setGoogleEventRecurrenceCustomDays(prev =>
+                                  prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i]
+                                )}
+                                className="flex items-center justify-center text-[12px] font-normal transition-colors"
+                                style={{
+                                  width: 32, height: 32, borderRadius: '50%',
+                                  border: '1px solid var(--s-border)',
+                                  backgroundColor: googleEventRecurrenceCustomDays.includes(i) ? 'var(--s-blue)' : 'transparent',
+                                  color: googleEventRecurrenceCustomDays.includes(i) ? '#fff' : 'var(--s-text-primary)',
+                                }}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Repeat until */}
+                        {googleEventRecurrence !== 'none' && (
+                          <div className="flex items-center gap-[10px] mt-[4px] pl-[12px]" style={{ borderLeft: '2px solid var(--s-border)' }}>
+                            <label className="font-normal text-[13px] shrink-0" style={{ color: 'var(--s-text-secondary)' }}>Repeat until</label>
+                            <div className="relative" style={{ border: '1px solid var(--s-border)', borderRadius: 4, height: 34, display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', flex: 1 }}>
+                              <PickCalendarIcon />
+                              <input type="date" value={googleEventRecurrenceEndDate} onChange={e => setGoogleEventRecurrenceEndDate(e.target.value)}
+                                className="full-picker outline-none bg-transparent"
+                                style={{ fontSize: 13, color: googleEventRecurrenceEndDate ? 'var(--s-text-primary)' : 'var(--s-text-muted)', flex: 1, minWidth: 0 }} />
+                              <ChevronDown size={12} strokeWidth={1.6} absoluteStrokeWidth style={{ color: 'var(--s-text-muted)', pointerEvents: 'none', flexShrink: 0 }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Button Type (optional) */}
                       <div className="flex flex-col gap-[6px]">
                         <label className="font-normal text-[13px] tracking-[-0.26px]" style={{ color: 'var(--s-text-secondary)' }}>Button type (optional)</label>
@@ -1857,13 +2415,13 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
                   </p>
                 </button>
               </div>
-              <div className="px-[16px] py-[16px]">
-                <div className="flex flex-wrap gap-[6px] items-center">
+              <div className="px-[16px] pb-[16px]">
+                <div className="flex items-center gap-[6px] flex-wrap" style={{ border: '1px solid var(--s-border)', borderRadius: 8, padding: '8px 10px', minHeight: 40 }}>
                   {tags.map(tag => (
                     <TagChip key={tag.id} label={tag.label} onRemove={() => setTags(prev => prev.filter(t => t.id !== tag.id))} />
                   ))}
                   {tags.length > 0 && (
-                    <button onClick={() => setTags([])} className="flex items-center justify-center" style={{ color: '#888', width: 20, height: 20 }}>
+                    <button onClick={() => setTags([])} className="flex items-center justify-center ml-auto shrink-0" style={{ color: '#888', width: 20, height: 20 }}>
                       <X size={14} strokeWidth={1.5} />
                     </button>
                   )}
@@ -1962,8 +2520,10 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
         </div>
 
         {/* ── Right Preview Panel ── */}
-        <div className="flex flex-col overflow-hidden" style={{ flex: '0 0 38%', backgroundColor: 'var(--s-bg-muted)', borderLeft: '1px solid var(--s-border)' }}>
-          <PreviewPanel content={postContent} mediaItems={mediaItems} activeTab={activeTab} appleHeader={appleHeader} appleButtonType={appleButtonType} selectedPlatforms={selectedPlatforms} googlePublishAs={googlePublishAs} googleTitle={googleTitle} googleDurationStart={googleDurationStart} googleDurationEnd={googleDurationEnd} googleCouponCode={googleCouponCode} googleButtonType={googleButtonType} googleIncludeTimes={googleIncludeTimes} googleEventStartTime={googleEventStartTime} googleEventEndTime={googleEventEndTime} googleEventButtonType={googleEventButtonType} />
+        <div className="overflow-y-auto" style={{ flex: '1 1 0', backgroundColor: 'white', padding: '16px 20px 16px 12px' }}>
+          <div style={{ borderRadius: 8, overflow: 'hidden', backgroundColor: 'var(--s-bg-muted)' }}>
+            <PreviewPanel content={postContent} mediaItems={mediaItems} activeTab={activeTab} appleHeader={appleHeader} appleButtonType={appleButtonType} selectedPlatforms={selectedPlatforms} contentStream={contentStream} googlePublishAs={googlePublishAs} googleTitle={googleTitle} googleDurationStart={googleDurationStart} googleDurationEnd={googleDurationEnd} googleCouponCode={googleCouponCode} googleButtonType={googleButtonType} googleIncludeTimes={googleIncludeTimes} googleEventStartTime={googleEventStartTime} googleEventEndTime={googleEventEndTime} googleEventButtonType={googleEventButtonType} />
+          </div>
         </div>
       </div>
 

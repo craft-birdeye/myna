@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { AIIcon } from '@/assets/icons/AIIcon';
 import {
   GripVertical, GripHorizontal, ChevronDown, Trash2, Plus,
   AlertTriangle, XCircle,
@@ -261,7 +262,7 @@ const LEFT_TAB_ITEMS = [
   {
     value: 'ai' as const,
     label: 'AI',
-    icon: <Sparkles size={11} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" />,
+    icon: <AIIcon size={20} />,
   },
   { value: 'manual' as const, label: 'Manual' },
 ];

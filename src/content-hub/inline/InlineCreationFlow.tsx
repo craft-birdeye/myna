@@ -336,7 +336,7 @@ function AdditionalContextSection({
             handleFiles(e.dataTransfer.files);
           }}
           className={cn(
-            'w-full rounded-lg border-2 border-dashed px-4 py-5 flex flex-col items-center gap-2 transition-colors',
+            'w-full rounded-sm border-2 border-dashed px-4 py-5 flex flex-col items-center gap-2 transition-colors',
             isDragOver
               ? 'border-primary/50 bg-primary/5'
               : 'border-border hover:border-primary/30 hover:bg-surface-hover',
@@ -361,7 +361,7 @@ function AdditionalContextSection({
             {attachedFiles.map(name => (
               <div
                 key={name}
-                className="flex items-center gap-2 px-2 py-2 rounded-lg bg-muted text-[12px]"
+                className="flex items-center gap-2 px-2 py-2 rounded-sm bg-muted text-[12px]"
               >
                 <FileText size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground shrink-0" />
                 <span className="flex-1 text-foreground truncate">{name}</span>
@@ -561,14 +561,14 @@ function InlineTemplateCard({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex flex-col rounded-xl border overflow-hidden text-left transition-all group',
+        'flex flex-col rounded-sm border overflow-hidden text-left transition-all group',
         selected
           ? 'border-primary ring-2 ring-primary/20'
           : 'border-border hover:border-primary/40',
       )}
     >
       <div className="w-full bg-surface-hover p-4 relative">
-        <div className="w-full bg-white rounded-lg overflow-hidden ring-1 ring-black/[0.06]" style={{ height: 96 }}>
+        <div className="w-full bg-white rounded-sm overflow-hidden ring-1 ring-black/[0.06]" style={{ height: 96 }}>
           <div className="h-[34px] w-full flex items-center gap-2 px-2.5" style={{ background: headerBg }}>
             <div className="size-4 rounded-full bg-white/30 flex-none" />
             <div className="flex flex-col gap-[3px] flex-1">
@@ -631,7 +631,7 @@ function StepTemplate({
         type="button"
         onClick={() => onChange({ ...data, templateId: '' })}
         className={cn(
-          'w-full h-10 rounded-xl border text-[13px] transition-all',
+          'w-full h-10 rounded-sm border text-[13px] transition-all',
           selected === ''
             ? 'border-primary bg-primary/[0.04] text-primary ring-1 ring-primary/20'
             : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground',
@@ -701,13 +701,13 @@ function ContentMixRow({
   const Logo = TypeDef?.Logo;
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 rounded-xl border border-border bg-background">
+    <div className="flex items-center justify-between px-4 py-2 rounded-sm border border-border bg-background">
       <div className="flex items-center gap-2">
         <div className="size-[34px] flex items-center justify-center flex-none">
           {Logo ? (
             <Logo size={22} />
           ) : (
-            <div className="size-[34px] rounded-lg bg-muted flex items-center justify-center">
+            <div className="size-[34px] rounded-sm bg-muted flex items-center justify-center">
               {Icon && <Icon size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-foreground/60" />}
             </div>
           )}
@@ -719,7 +719,7 @@ function ContentMixRow({
           type="button"
           onClick={onDecrement}
           disabled={item.count <= 0}
-          className="size-7 rounded-lg border border-border bg-background hover:bg-surface-hover flex items-center justify-center text-[15px] text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="size-7 rounded-sm border border-border bg-background hover:bg-surface-hover flex items-center justify-center text-[15px] text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           −
         </button>
@@ -728,7 +728,7 @@ function ContentMixRow({
           type="button"
           onClick={onIncrement}
           disabled={item.count >= 5}
-          className="size-7 rounded-lg border border-border bg-background hover:bg-surface-hover flex items-center justify-center text-[15px] text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="size-7 rounded-sm border border-border bg-background hover:bg-surface-hover flex items-center justify-center text-[15px] text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           +
         </button>
@@ -975,7 +975,7 @@ function IdeaCardSkeleton({ index = 0 }: { index?: number }) {
   const descW2 = ['60%', '70%', '55%', '65%', '50%'][index % 5];
   return (
     <div
-      className="px-4 py-2 rounded-xl border border-border bg-background animate-pulse"
+      className="px-4 py-2 rounded-sm border border-border bg-background animate-pulse"
       style={{ animationDelay: `${index * 100}ms` }}
     >
       <div className="space-y-2">
@@ -1250,7 +1250,7 @@ export function InlineCreationFlow({ mode, onComplete, onCancel, controlRef, onN
             !animating && 'opacity-100 translate-x-0',
           )}
         >
-          <div className="h-full overflow-y-auto rounded-lg border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
+          <div className="h-full overflow-y-auto rounded-sm border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
             <div className="w-1/2 min-w-[520px] max-w-[720px]">
               {renderStep()}
             </div>

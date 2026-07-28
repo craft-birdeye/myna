@@ -7,6 +7,7 @@
  */
 import React, { useState } from 'react';
 import { ArrowLeft, Sparkles, Send, RotateCcw, CheckCircle2, TriangleAlert, Plus, Minus } from 'lucide-react';
+import { AIIcon } from '@/assets/icons/AIIcon';
 import { Button } from '@/contenthub-ui/button';
 import { SegmentedToggle } from '@/contenthub-ui/segmented-toggle.v1';
 import { EmailPreviewPanel } from '../shared/EmailPreviewPanel';
@@ -381,7 +382,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
           <div className="flex-shrink-0 px-4 py-2 border-b border-border">
             <SegmentedToggle
               items={[
-                { value: 'ai' as Mode,     label: 'AI',     icon: <Sparkles size={11} strokeWidth={1.6} absoluteStrokeWidth /> },
+                { value: 'ai' as Mode,     label: 'AI',     icon: <AIIcon size={20} /> },
                 { value: 'manual' as Mode, label: 'Manual'  },
               ]}
               value={mode}

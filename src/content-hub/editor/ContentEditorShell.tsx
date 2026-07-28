@@ -21,6 +21,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
+import { AIIcon } from '@/assets/icons/AIIcon';
 import {
   ArrowLeft, ChevronDown, Sparkles, Edit2,
   FileText, Share2, Mail, MessageSquare, Monitor, Video, FolderPlus,
@@ -68,8 +69,7 @@ import { BlogPublishModal } from '../blog/BlogPublishModal';
 import { BlogMetaPanel } from '../blog/BlogMetaPanel';
 import { BlogInlineCreationFlow } from '../blog/BlogInlineCreationFlow';
 import type { BlogFlowData } from '../blog/BlogInlineCreationFlow';
-import { ProjectInlineCreationFlow } from '../project/ProjectInlineCreationFlow';
-import type { ProjectFlowData } from '../project/ProjectInlineCreationFlow';
+// ProjectInlineCreationFlow replaced by InlineCreationFlow mode="project"
 import { BlogGenerationProgress } from '../blog/BlogGenerationProgress';
 import { BlogSectionCanvas } from '../blog/BlogSectionCanvas';
 import { ProjectGenerationProgress } from '../ProjectGenerationProgress';
@@ -451,7 +451,7 @@ const LEFT_TAB_ITEMS = [
   {
     value: 'ai'     as const,
     label: 'AI',
-    icon:  <Sparkles size={11} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" />,
+    icon:  <AIIcon size={20} />,
   },
   { value: 'manual' as const, label: 'Manual' },
 ];
@@ -999,7 +999,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
         : DEFAULT_REC_BLOG_FLOW_DATA
       : null
   );
-  const [projectFlowData, setProjectFlowData] = useState<ProjectFlowData | null>(null);
+  // projectFlowData removed — project flow now uses flowData (InlineFlowData) via InlineCreationFlow
   const initialBlogEditorBlocks = useMemo(
     () => blogFlowData
       ? buildBlogEditorBlocks({
@@ -1222,12 +1222,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
     setSetupPhase('generating');
   }
 
-  function handleProjectFlowComplete(data: ProjectFlowData) {
-    setProjectFlowData(data);
-    const label = `${data.objective} · ${data.tone} · ${data.contentMix.length} content types`;
-    setGenerationInfo({ label, wizardData: null as unknown as import('../wizard/wizardTypes').WizardData });
-    setSetupPhase('generating');
-  }
+  // handleProjectFlowComplete removed — project flow now uses handleInlineFlowComplete
 
   const [blogGenerationExiting, setBlogGenerationExiting] = useState(false);
 
@@ -1853,7 +1848,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
               />
             </div>
           </aside>
-          <div className="flex-1 min-w-0 min-h-0 bg-background">
+          <div className="flex-1 min-w-0 min-h-0 bg-background rounded-[8px] overflow-hidden">
             {mode === 'faq' ? (
               <FAQInlineCreationFlow
                 onComplete={handleFAQFlowComplete}
@@ -1873,13 +1868,13 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
                 initialData={isEditingSettings && blogFlowData ? blogFlowData : undefined}
               />
             ) : mode === 'project' ? (
-              <ProjectInlineCreationFlow
-                onComplete={handleProjectFlowComplete}
+              <InlineCreationFlow
+                mode="project"
+                onComplete={handleInlineFlowComplete}
                 onCancel={isEditingSettings ? () => setSetupPhase('done') : onBack}
                 controlRef={flowNavRef}
                 onNavStateChange={setWizardNavState}
                 hideProgress
-                initialData={isEditingSettings && projectFlowData ? projectFlowData : undefined}
               />
             ) : (
               <InlineCreationFlow

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Sparkles, User, Image as ImageIcon, Type, List, Quote, MousePointerClick,
+  User, Image as ImageIcon, Type, List, Quote, MousePointerClick,
   LayoutGrid, Minus, MoveVertical, HelpCircle, Video, Code2, Star,
 } from 'lucide-react';
+import { AvatarIcon } from '@/assets/icons/AvatarIcon';
 import { cn } from '@/contenthub-ui/utils';
 import { CopilotPromptBox, ContextChipBadge } from '@/contenthub-ui/copilot-prompt-box';
 
@@ -11,9 +12,7 @@ import { CopilotPromptBox, ContextChipBadge } from '@/contenthub-ui/copilot-prom
 function CopilotAvatar() {
   return (
     <div className="relative shrink-0 size-[20px]">
-      <div className="absolute inset-0 rounded-full bg-primary/10 flex items-center justify-center">
-        <Sparkles size={10} className="text-primary" strokeWidth={1.6} absoluteStrokeWidth />
-      </div>
+      <AvatarIcon className="size-[20px]" />
     </div>
   );
 }
