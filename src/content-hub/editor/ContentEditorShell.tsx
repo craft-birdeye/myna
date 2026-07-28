@@ -23,7 +23,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { toast } from 'sonner';
 import { AIIcon } from '@/assets/icons/AIIcon';
 import {
-  ArrowLeft, ChevronDown, Sparkles, Edit2,
+  ArrowLeft, ChevronDown, ChevronLeft, Sparkles, Edit2,
   FileText, Share2, Mail, MessageSquare, Monitor, Video, FolderPlus,
   Plus, ChevronUp, Grid, List, Calendar, ZoomIn, ZoomOut,
   Undo2, Redo2, ArrowDown, ArrowRight, CheckCircle2, MoreVertical,
@@ -961,6 +961,8 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
 
   // ── Left panel tab state
   const [leftTab, setLeftTab] = useState<'ai' | 'manual'>('ai');
+  // ── Left panel collapsed state
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
 
   // ── Setup phase state (inline flow instead of modal)
   // 'setup'      → InlineCreationFlow fills the canvas, left pane is hidden
@@ -1978,37 +1980,65 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
         /* ── Block editor — wraps all 3 panels in a shared store context ── */
         <BlockEditorProvider initialBlocks={mode === 'blog' ? initialBlogEditorBlocks : []}>
           <div className="flex flex-1 min-h-0 gap-2 bg-[var(--color-canvas,#F7F8FA)] p-2">
-            {/* Left panel */}
-            <div className="flex-shrink-0 flex flex-col overflow-hidden rounded-xl border border-border/60 bg-background" style={{ width: 300 }}>
-              <div className="flex-none px-4 py-2 border-b border-border">
-                <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} />
-              </div>
-              <div className="flex-1 min-h-0 overflow-hidden">
-                {leftTab === 'ai' ? (
-                  <AiCopilot
-                    editorContext="editing"
-                    initialContentType={mode === 'blog' ? 'blog' : undefined}
-                    wizardSummary={generationInfo?.label}
-                    onRegen={() => {
-                      // Copilot already confirmed — skip the dialog, go straight to progress
-                      setIsRegenProgress(true);
-                      setIsScoreStale(false);
-                      flowNavRef.current?.generate();
-                    }}
-                    onSectionEditStart={section => setShimmerSection(section)}
-                    onSectionEditEnd={() => { setShimmerSection(null); setIsScoreStale(true); }}
-                    selectedBlock={selectedCanvasBlock}
-                    onClearSelectedBlock={() => setSelectedCanvasBlock(null)}
-                  />
-                ) : (
-                  <BlockLibraryPanel mode={mode as 'blog' | 'landing' | 'faq'} />
-                )}
+            {/* Left panel — collapsible (mirrors EditorScorePanel w-0 / w-[300px] pattern) */}
+            <div
+              className={cn(
+                'flex-none flex flex-col h-full transition-all duration-200 overflow-hidden',
+                leftPanelOpen ? 'w-[300px]' : 'w-0',
+              )}
+              aria-hidden={!leftPanelOpen}
+            >
+              <div className="w-[300px] flex flex-col flex-1 min-h-0 rounded-xl border border-border/60 bg-background overflow-hidden">
+                <div className="flex-none px-3 py-2 border-b border-border flex items-center gap-2">
+                  <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} className="flex-1 min-w-0" />
+                  <button
+                    type="button"
+                    aria-label="Collapse AI panel"
+                    onClick={() => setLeftPanelOpen(false)}
+                    className="flex size-6 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft size={13} strokeWidth={1.6} absoluteStrokeWidth />
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  {leftTab === 'ai' ? (
+                    <AiCopilot
+                      editorContext="editing"
+                      initialContentType={mode === 'blog' ? 'blog' : undefined}
+                      wizardSummary={generationInfo?.label}
+                      onRegen={() => {
+                        setIsRegenProgress(true);
+                        setIsScoreStale(false);
+                        flowNavRef.current?.generate();
+                      }}
+                      onSectionEditStart={section => setShimmerSection(section)}
+                      onSectionEditEnd={() => { setShimmerSection(null); setIsScoreStale(true); }}
+                      selectedBlock={selectedCanvasBlock}
+                      onClearSelectedBlock={() => setSelectedCanvasBlock(null)}
+                    />
+                  ) : (
+                    <BlockLibraryPanel mode={mode as 'blog' | 'landing' | 'faq'} />
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Center — block canvas with zoom toolbar */}
             <div className="flex flex-1 min-w-0 flex-col gap-2 overflow-hidden">
-              <CanvasEditorTopBar
+              {/* Toolbar row: AI FAB (when collapsed) + top bar */}
+              <div className="flex items-center gap-2">
+                {!leftPanelOpen && (
+                  <button
+                    type="button"
+                    aria-label="Open AI panel"
+                    onClick={() => setLeftPanelOpen(true)}
+                    className="flex-none flex size-[48px] items-center justify-center rounded-lg border border-border/60 bg-background shadow-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground hover:shadow-md"
+                  >
+                    <AIIcon size={18} />
+                  </button>
+                )}
+                <div className="flex-1 min-w-0">
+                  <CanvasEditorTopBar
                 score={mode === 'blog' ? blogScore : cards[0]?.score ?? 40}
                 scoreLabel="Content score"
                 hideScore={mode === 'blog'}
@@ -2024,6 +2054,8 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
                 onBlogMeta={mode === 'blog' ? () => { setBlogMetaOpen(v => !v); setCommentsOpen(false); setActivityOpen(false); setBlogScorePanelOpen(false); } : undefined}
                 blogMetaOpen={blogMetaOpen}
               />
+                </div>
+              </div>
               <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl">
                 {isRegenProgress ? (
                   <div className="min-h-0 flex-1 overflow-hidden rounded-xl h-full">
@@ -2106,40 +2138,65 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
       ) : (
         /* ── Card-based modes — social / email / video / project ── */
         <div className="flex flex-1 min-h-0 gap-2 bg-[var(--color-canvas,#F7F8FA)] p-2">
-          {/* Left panel */}
-          <div className="flex-shrink-0 flex flex-col overflow-hidden rounded-xl border border-border/60 bg-background" style={{ width: 300 }}>
-            <div className="flex-none px-4 py-2 border-b border-border">
-              <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} />
-            </div>
-            <div className="flex-1 min-h-0">
-              {leftTab === 'ai' ? (
-                <AiCopilot
-                  onStartGenerating={() => setIsGenerating(true)}
-                  onGenerationComplete={() => {
-                    const newCards = mode === 'project'
-                      ? generateProjectCards({})
-                      : [makeMockCard(mode as ContentItemType, 0)];
-                    setGenerateCount(newCards.length);
-                    setIsGenerating(false);
-                    setCards(newCards);
-                  }}
-                  initialContentType={mode === 'project' ? 'project' : mode as 'faq' | 'social' | 'email' | 'blog'}
-                  editorContext={cards.length > 0 ? 'editing' : 'setup'}
-                />
-              ) : (
-                <ManualPanel mode={mode} onAddCard={handleAddCard} />
-              )}
+          {/* Left panel — collapsible (mirrors EditorScorePanel w-0 / w-[300px] pattern) */}
+          <div
+            className={cn(
+              'flex-none flex flex-col h-full transition-all duration-200 overflow-hidden',
+              leftPanelOpen ? 'w-[300px]' : 'w-0',
+            )}
+            aria-hidden={!leftPanelOpen}
+          >
+            <div className="w-[300px] flex flex-col flex-1 min-h-0 rounded-xl border border-border/60 bg-background overflow-hidden">
+              <div className="flex-none px-3 py-2 border-b border-border flex items-center gap-2">
+                <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} className="flex-1 min-w-0" />
+                <button
+                  type="button"
+                  aria-label="Collapse AI panel"
+                  onClick={() => setLeftPanelOpen(false)}
+                  className="flex size-6 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors"
+                >
+                  <ChevronLeft size={13} strokeWidth={1.6} absoluteStrokeWidth />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0">
+                {leftTab === 'ai' ? (
+                  <AiCopilot
+                    onStartGenerating={() => setIsGenerating(true)}
+                    onGenerationComplete={() => {
+                      const newCards = mode === 'project'
+                        ? generateProjectCards({})
+                        : [makeMockCard(mode as ContentItemType, 0)];
+                      setGenerateCount(newCards.length);
+                      setIsGenerating(false);
+                      setCards(newCards);
+                    }}
+                    initialContentType={mode === 'project' ? 'project' : mode as 'faq' | 'social' | 'email' | 'blog'}
+                    editorContext={cards.length > 0 ? 'editing' : 'setup'}
+                  />
+                ) : (
+                  <ManualPanel mode={mode} onAddCard={handleAddCard} />
+                )}
+              </div>
             </div>
           </div>
 
           {/* ── Center canvas ── */}
           <div className="flex-1 min-w-0 flex flex-col gap-2 overflow-hidden">
-
-            {/* Toolbar — floating card style, outside scroll area */}
+            {/* Toolbar row: AI FAB (when collapsed) + card toolbar */}
             {!isGenerating && cards.length > 0 && (
-              <div className="flex h-[48px] flex-none items-center rounded-lg border border-border/60 bg-background px-2">
+              <div className="flex items-center gap-2">
+                {!leftPanelOpen && (
+                  <button
+                    type="button"
+                    aria-label="Open AI panel"
+                    onClick={() => setLeftPanelOpen(true)}
+                    className="flex-none flex size-[48px] items-center justify-center rounded-lg border border-border/60 bg-background shadow-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground hover:shadow-md"
+                  >
+                    <AIIcon size={18} />
+                  </button>
+                )}
+              <div className="flex flex-1 h-[48px] flex-none items-center rounded-lg border border-border/60 bg-background px-2">
 
-                  {/* Left spacer */}
                   <div className="flex-1" />
 
                   {/* Center: view switcher + layout direction switcher (project only) */}
@@ -2255,6 +2312,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
                     </button>
                   </div>
                 </div>
+              </div>
             )}
 
             {/* Scrollable canvas */}
