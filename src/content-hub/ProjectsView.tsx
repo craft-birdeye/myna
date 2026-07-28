@@ -114,11 +114,13 @@ const LIBRARY_COLUMNS: import('../components').Column<LibraryRow>[] = [
     width: 320,
     sortable: true,
     render: (_v, row) => (
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-8 rounded overflow-hidden shrink-0 flex items-center justify-center" style={{ background: TYPE_THUMB_BG[row.contentType] }}>
-          <TemplateThumbnail template={row.tmpl} />
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-[80px] h-[60px] rounded-lg flex-shrink-0 overflow-hidden border border-black/[0.07] bg-surface-hover p-[5px] flex">
+          <div className="w-full h-full rounded-[4px] overflow-hidden">
+            <TemplateThumbnail template={row.tmpl} />
+          </div>
         </div>
-        <span className="text-body text-text-primary group-hover/row:text-text-action truncate transition-colors">{row.name}</span>
+        <span className="truncate text-body text-text-primary group-hover/row:text-text-action transition-colors">{row.name}</span>
       </div>
     ),
   },
@@ -974,6 +976,7 @@ export const ProjectsView = ({
               <DataTable<LibraryRow>
                 columns={LIBRARY_COLUMNS}
                 data={libraryRows}
+                rowHeight={76}
                 rowActions={[{
                   iconElement: <Eye size={13} strokeWidth={1.6} absoluteStrokeWidth />,
                   label: 'Preview',
