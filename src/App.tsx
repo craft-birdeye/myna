@@ -12,6 +12,8 @@ import { ProjectsView } from './content-hub/ProjectsView'
 import { TemplateGallery } from './content-hub/TemplateGallery'
 import { CalendarView } from './content-hub/CalendarView'
 import { ContentEditorShell } from './content-hub/editor/ContentEditorShell'
+import { CreateBlogPage } from './content-hub/blog/CreateBlogPage'
+import type { BlogFlowData } from './content-hub/blog/BlogInlineCreationFlow'
 import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
 import { SalesPipelineScreen, buildLeadDetailProps, type LeadDetailArgs } from './screens/SalesPipelineScreen'
 import { ServiceRequestsScreen, buildServiceRequestDetailProps, type ServiceRequestDetailArgs } from './screens/ServiceRequestsScreen'
@@ -361,6 +363,9 @@ export function App() {
   const [contentHubView, setContentHubView] = useState<ContentHubSubView>('content-hub-projects')
   const [editorMode, setEditorMode] = useState<'faq' | 'blog' | 'project' | 'social' | 'email' | null>(null)
   const [contentHubL2Active, setContentHubL2Active] = useState<string>('Human actions/View all contents')
+  // Blog create page state — mirrors contenthub 2.0's createViewStartAtBlogCanvas pattern
+  const [createBlogPageOpen, setCreateBlogPageOpen] = useState(false)
+  const [createBlogFlowData, setCreateBlogFlowData] = useState<BlogFlowData | null>(null)
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')
@@ -556,8 +561,8 @@ export function App() {
                 />
               )}
 
-              {/* Content Hub L2 nav panel — hidden when in editor/creation flow */}
-              {railActive === 'content-hub' && editorMode === null && (
+              {/* Content Hub L2 nav panel — hidden when in editor or blog create page */}
+              {railActive === 'content-hub' && editorMode === null && !createBlogPageOpen && (
                 <ContentHubL2NavPanel
                   activeItem={contentHubL2Active}
                   onActiveItemChange={(key, view) => {
@@ -565,12 +570,15 @@ export function App() {
                     setContentHubView(view)
                   }}
                   onCreate={(mode) => {
-                    // Go directly to the full-page creation stepper (BlogInlineCreationFlow)
-                    const m: 'faq' | 'blog' | 'project' =
-                      mode === 'faq' ? 'faq' :
-                      mode === 'blog' || mode === 'blogEditor' ? 'blog' :
-                      mode === 'project' ? 'project' : 'blog'
-                    setEditorMode(m)
+                    if (mode === 'blog' || mode === 'blogEditor') {
+                      // Blog goes to standalone CreateBlogPage first (matches contenthub 2.0)
+                      setCreateBlogPageOpen(true)
+                    } else {
+                      // FAQ + project go directly to ContentEditorShell setup phase
+                      const m: 'faq' | 'project' =
+                        mode === 'faq' ? 'faq' : 'project'
+                      setEditorMode(m)
+                    }
                   }}
                 />
               )}
@@ -582,13 +590,27 @@ export function App() {
                 ) : railActive === 'social' ? (
                   <SocialView activeItem={socialL2Active} onActiveItemChange={setSocialL2Active} />
                 ) : railActive === 'content-hub' ? (
-                  editorMode !== null ? (
+                  // Blog create page (standalone step before ContentEditorShell — matches contenthub 2.0)
+                  createBlogPageOpen ? (
+                    <CreateBlogPage
+                      onCancel={() => setCreateBlogPageOpen(false)}
+                      onGenerate={(data) => {
+                        setCreateBlogFlowData(data)
+                        setCreateBlogPageOpen(false)
+                        setEditorMode('blog')
+                      }}
+                    />
+                  ) : editorMode !== null ? (
                     <ContentEditorShell
                       mode={editorMode}
                       onBack={() => {
                         setEditorMode(null)
+                        setCreateBlogFlowData(null)
                         setContentHubView('content-hub-projects')
                       }}
+                      // Blog created via CreateBlogPage skips setup and goes straight to canvas
+                      skipSetupPhase={editorMode === 'blog' && createBlogFlowData !== null}
+                      initialBlogFlowData={createBlogFlowData ?? undefined}
                     />
                   ) : contentHubView === 'content-hub-projects' || contentHubView === 'content-hub-home' || contentHubView === 'content-hub-assigned' || contentHubView === 'content-hub-approve' || contentHubView === 'content-hub-fix' ? (
                     <ProjectsView onNavigate={() => setContentHubView('content-hub-projects')} />
