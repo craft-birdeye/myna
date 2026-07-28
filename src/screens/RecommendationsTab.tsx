@@ -55,7 +55,7 @@ const COLUMNS: Column<Recommendation>[] = [
     label: 'Conversation is affected',
     width: 180,
     sortable: true,
-    render: (_, rec) => <span className="text-small text-text-tertiary">{rec.conversationCount}</span>,
+    render: (_, rec) => <span className="text-small text-text-secondary">{rec.conversationCount}</span>,
   },
 ]
 
