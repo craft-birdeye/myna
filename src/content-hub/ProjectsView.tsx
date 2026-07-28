@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  BookMarked, CalendarDays, Columns2, Copy, Eye, LayoutGrid, List, ListFilter, MoreVertical, Pencil, Search,
+  BookMarked, CalendarDays, ChevronRight, Columns2, Copy, Eye, LayoutGrid, List, ListFilter, MoreVertical, Pencil, Search,
   FileText, Share2, Mail, MessageSquare, Monitor, Megaphone, MessageCircle, X, Check,
 } from 'lucide-react';
 import { cn } from '@/contenthub-ui/utils';
@@ -220,6 +220,16 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+const TEMPLATE_DATES: Record<string, string> = {
+  'bl-1': 'Nov 03, 2025', 'bl-2': 'Nov 04, 2025', 'bl-3': 'Nov 05, 2025', 'bl-4': 'Nov 06, 2025',
+  'fq-1': 'Nov 03, 2025', 'fq-2': 'Nov 04, 2025', 'fq-3': 'Nov 05, 2025', 'fq-4': 'Nov 06, 2025',
+};
+
+const TEMPLATE_BRAND: Record<string, string> = {
+  'bl-1': 'Birdeye', 'bl-2': 'Aspen Dental', 'bl-3': 'Birdeye', 'bl-4': 'AutoNation',
+  'fq-1': 'Birdeye', 'fq-2': 'Aspen Dental', 'fq-3': 'Birdeye', 'fq-4': 'AutoNation',
+};
+
 function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | null; onClose: () => void; onUse: (t: TemplateItem) => void }) {
   if (!tmpl) return null;
   const isBlog = tmpl.type === 'blog';
@@ -228,6 +238,7 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
   const subScores = isBlog ? BLOG_SUBSCORES : FAQ_SUBSCORES;
   const aeoScore = isBlog ? 92 : 95;
   const slug = tmpl.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const [openScore, setOpenScore] = useState<string | null>(null);
 
   return createPortal(
     <div
@@ -258,7 +269,7 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
 
         {/* Body: two bordered cards */}
         <div className="flex gap-5 px-5 pb-5 pt-5 min-h-0" style={{ maxHeight: 'calc(90vh - 64px)' }}>
-          {/* Left card: AEO score panel */}
+          {/* Left card: AEO score panel + metadata */}
           <div className="w-[320px] shrink-0 border border-border rounded-lg overflow-y-auto bg-background">
             <div className="flex flex-col gap-4 px-5 py-5">
               {/* Big score */}
@@ -280,14 +291,46 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
               {/* Sub-scores */}
               <div className="flex flex-col divide-y divide-border">
                 {subScores.map(sub => (
-                  <div key={sub.name} className="flex items-center justify-between gap-2 py-2.5">
-                    <span className="text-[13px] text-foreground">{sub.name}</span>
-                    <div className="flex items-baseline gap-0.5 shrink-0">
-                      <span className="text-[14px] text-foreground">{sub.you}</span>
-                      <span className="text-[12px] text-muted-foreground">/100</span>
-                    </div>
+                  <div key={sub.name}>
+                    <button
+                      className="flex w-full items-center gap-1.5 py-2.5 text-left hover:bg-muted/40 transition-colors rounded"
+                      onClick={() => setOpenScore(openScore === sub.name ? null : sub.name)}
+                    >
+                      <ChevronRight
+                        size={14} strokeWidth={1.6} absoluteStrokeWidth
+                        className={cn('shrink-0 text-muted-foreground transition-transform', openScore === sub.name && 'rotate-90')}
+                      />
+                      <span className="flex-1 text-[13px] text-foreground">{sub.name}</span>
+                      <span className="text-[13px] text-foreground tabular-nums">{sub.you}</span>
+                    </button>
+                    {openScore === sub.name && (
+                      <div className="pb-2 pl-5 pr-1">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full" style={{ width: `${sub.you}%`, backgroundColor: '#1D9E75' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
+              </div>
+              {/* Metadata */}
+              <div className="flex flex-col gap-4 pt-1 border-t border-border">
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1">Topic</p>
+                  <p className="text-[13px] text-foreground leading-relaxed">{tmpl.description}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1">Brand identity</p>
+                  <p className="text-[13px] text-foreground">{TEMPLATE_BRAND[tmpl.id] ?? 'Birdeye'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1">Created by</p>
+                  <p className="text-[13px] text-foreground">{getTemplateCreator(tmpl.id)} on {TEMPLATE_DATES[tmpl.id] ?? 'Nov 05, 2025'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1">Content type</p>
+                  <p className="text-[13px] text-foreground">{tmpl.type === 'blog' ? 'Blog' : 'FAQ'}</p>
+                </div>
               </div>
             </div>
           </div>
