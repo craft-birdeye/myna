@@ -1,13 +1,9 @@
 import { type KeyboardEvent, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  BookMarked, CalendarDays, Columns2, Copy, LayoutGrid, List, ListFilter, MoreVertical, Pencil, Search,
-  FileText, Share2, Mail, MessageSquare, Monitor, Megaphone, MessageCircle, X,
-  TrendingUp, Eye, AlignLeft, Award, CheckCircle,
+  BookMarked, CalendarDays, Columns2, Copy, Eye, LayoutGrid, List, ListFilter, MoreVertical, Pencil, Search,
+  FileText, Share2, Mail, MessageSquare, Monitor, Megaphone, MessageCircle, X, Check,
 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-} from '@/contenthub-ui/dialog';
 import { cn } from '@/contenthub-ui/utils';
 import { Badge } from '@/contenthub-ui/badge';
 import { Input } from '@/contenthub-ui/input';
@@ -134,188 +130,271 @@ const LIBRARY_FILTER_FIELDS: FilterField[] = [
 
 // ── Template preview modal ────────────────────────────────────────────────────
 
-const SCORE_ITEMS = [
-  { label: 'Intent match',        score: 96, Icon: TrendingUp   },
-  { label: 'Search visibility',   score: 96, Icon: Eye          },
-  { label: 'Content depth',       score: 96, Icon: AlignLeft    },
-  { label: 'Brand alignment',     score: 96, Icon: Award        },
-  { label: 'Publishing readiness',score: 96, Icon: CheckCircle  },
+const BLOG_SUBSCORES = [
+  { name: 'Intent Match',         you: 89 },
+  { name: 'Search Visibility',    you: 94 },
+  { name: 'Content Depth',        you: 91 },
+  { name: 'Brand Alignment',      you: 88 },
+  { name: 'Publishing Readiness', you: 91 },
 ];
+
+const FAQ_SUBSCORES = [
+  { name: 'Intent Match',         you: 96 },
+  { name: 'Search Visibility',    you: 95 },
+  { name: 'Content Depth',        you: 94 },
+  { name: 'Brand Alignment',      you: 93 },
+  { name: 'Publishing Readiness', you: 92 },
+];
+
+const BLOG_SECTIONS: Record<string, { heroImage: string; sections: { heading?: string; body?: string; listItems?: string[] }[] }> = {
+  'bl-1': {
+    heroImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80',
+    sections: [
+      { body: "Choosing the right service provider can make or break your project. Whether you need plumbing, electrical, HVAC, or landscaping, this guide walks you through exactly how to evaluate your options and make a confident decision." },
+      { heading: 'Step 1 — Define your scope before searching', body: "Before reaching out to any provider, write down exactly what you need. A clear scope helps you get accurate quotes and prevents scope creep once work begins." },
+      { heading: 'Step 2 — Verify licences and insurance', body: "Always confirm that the provider holds the required licences for your state or region, and carries both general liability and workers' compensation insurance." },
+      { heading: 'What to check', listItems: ['Active trade licence', 'General liability insurance (min $1M)', "Workers' compensation cover", 'References from recent jobs'] },
+      { heading: 'Step 3 — Get at least three quotes', body: "Never accept the first quote. Getting three comparable quotes gives you market context and negotiating power — and often reveals wide variation in how providers scope the same job." },
+      { heading: 'Step 4 — Read reviews on multiple platforms', body: "Check Google, Yelp, and any industry-specific platforms relevant to the trade. Look for patterns across reviews, not just the overall star rating." },
+    ],
+  },
+  'bl-2': {
+    heroImage: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80',
+    sections: [
+      { body: "Finding reliable HVAC services in Austin has never been more important, with record-breaking summers pushing cooling systems to their limits. Here's everything local homeowners and businesses need to know." },
+      { heading: 'Why local expertise matters', body: "Austin's climate is unique — extreme summer heat, mild winters, and high humidity all affect how HVAC systems are sized and maintained. Local providers understand these conditions better than national chains." },
+      { heading: 'Top services offered in Austin', listItems: ['Central AC installation and replacement', 'Air duct cleaning and sealing', 'Ductless mini-split systems', 'Preventative maintenance plans', '24/7 emergency repair'] },
+      { heading: 'Seasonal maintenance tips', body: "Schedule a tune-up each spring before the summer heat peaks and again in autumn before cooler weather sets in. Regular filter changes every 30–60 days are one of the most cost-effective steps you can take." },
+    ],
+  },
+  'bl-3': {
+    heroImage: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=900&q=80',
+    sections: [
+      { body: "You don't need a big budget to make meaningful improvements to your home. These 10 changes will boost your comfort, curb appeal, and property value without breaking the bank." },
+      { heading: '1. Repaint interior walls', body: "A fresh coat of paint is the highest-ROI home improvement you can make. Neutral tones like warm greige or off-white make rooms feel larger and more modern." },
+      { heading: '2. Upgrade cabinet hardware', body: "Swapping out dated knobs and pulls in kitchens and bathrooms can transform the feel of a room for under $100 in materials." },
+      { heading: '3–10 quick wins', listItems: ['Install LED lighting throughout', 'Replace worn weather stripping on doors', 'Deep-clean and re-caulk bathroom tiles', 'Add smart thermostat for energy savings', 'Plant low-maintenance native shrubs at entry', 'Install a new letterbox and house numbers', 'Power-wash driveway and walkways', 'Replace old window screens'] },
+    ],
+  },
+  'bl-4': {
+    heroImage: 'https://images.unsplash.com/photo-1551836022-4c4c79ecde51?w=900&q=80',
+    sections: [
+      { body: "ABC Plumbing had a solid reputation built on word of mouth, but they were nearly invisible online. In just six months, a focused review strategy transformed their digital presence and drove a 340% increase in verified reviews." },
+      { heading: 'The challenge', body: "Despite 18 years of operation and hundreds of satisfied customers, ABC Plumbing had fewer than 40 Google reviews — making them appear less established than newer competitors." },
+      { heading: 'The approach', listItems: ['Automated SMS review requests sent within 2 hours of job completion', 'Staff trained to verbally mention reviews on-site', 'Negative feedback intercepted via internal survey before going public', 'Monthly performance tracking against local competitors'] },
+      { heading: 'The results after 6 months', body: "Review count grew from 38 to 167. Average star rating moved from 4.1 to 4.7. Website traffic from organic search increased by 62%." },
+    ],
+  },
+};
+
+const FAQ_ANSWERS: Record<string, string> = {
+  "What's included in the new product?": "Our new product includes full access to the core feature set, priority support, and a dedicated onboarding session at no extra cost.",
+  'When does early access open?': "Early access opens on the first Monday of next month. Sign up now to lock in your spot and receive a launch-day discount.",
+  'Is there a free trial available?': "Yes — we offer a 14-day free trial with no credit card required. You get full access to every feature from day one.",
+  'Can I upgrade my plan later?': "Absolutely. You can upgrade at any time directly from your account dashboard, and your billing will be prorated automatically.",
+  'What are your business hours?': "We are open Monday through Friday from 8 AM to 6 PM, and Saturday from 9 AM to 2 PM. Emergency support is available 24/7.",
+  'Is parking available on-site?': "Yes, free parking is available in our dedicated lot directly behind the building. Accessible spaces are located closest to the main entrance.",
+  'Do you offer same-day service?': "Same-day service is available for most requests submitted before noon. Contact us first thing in the morning to confirm availability.",
+  'How do I book an appointment?': "You can book online via our website, call us directly, or walk in during business hours. Online booking is available around the clock.",
+  'How much does the service cost?': "Pricing depends on the scope of work. We offer a free 15-minute consultation to assess your needs and provide an accurate, itemised quote.",
+  'Do you offer a money-back guarantee?': "Yes — we offer a 30-day satisfaction guarantee. If you are not satisfied for any reason, we will make it right or issue a full refund.",
+  'What happens after I sign up?': "You will receive a welcome email with next steps and be assigned a dedicated account manager within 24 hours of signing up.",
+  'Are there any hidden fees?': "None. All costs are clearly outlined upfront before you commit. The price you are quoted is the price you pay.",
+  'Who is the best provider near me?': "We serve your area and are consistently rated #1 by local customers on Google and Yelp. Check our reviews page to see what neighbours are saying.",
+  'How fast can I get a response?': "Our team typically responds within 1 business hour during operating hours. After-hours enquiries are actioned first thing the next morning.",
+  'What makes you different?': "We combine deep industry expertise with a personalised approach. Every client gets a tailored solution built around their specific needs — never a template.",
+  'Do you serve my area?': "We currently serve all major metro areas. Enter your zip code on our website to confirm coverage and see available service windows in your area.",
+};
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+    >
+      {copied
+        ? <Check size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" />
+        : <Copy size={13} strokeWidth={1.6} absoluteStrokeWidth />}
+    </button>
+  );
+}
 
 function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | null; onClose: () => void; onUse: (t: TemplateItem) => void }) {
   if (!tmpl) return null;
-  const thumb = TYPE_THUMB[tmpl.type];
-  const { Icon } = thumb;
   const isBlog = tmpl.type === 'blog';
-  const isSocial = tmpl.type === 'social';
-  const [openItem, setOpenItem] = useState<string | null>(null);
+  const blogData = BLOG_SECTIONS[tmpl.id];
+  const faqData = FAQ_DATA[tmpl.id];
+  const subScores = isBlog ? BLOG_SUBSCORES : FAQ_SUBSCORES;
+  const aeoScore = isBlog ? 92 : 95;
+  const slug = tmpl.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-  return (
-    <Dialog open={!!tmpl} onOpenChange={open => { if (!open) onClose(); }}>
-      <DialogContent className="w-[1000px] sm:max-w-[1000px] max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col [&>[data-slot=dialog-close]]:hidden">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto"
+      style={{ backgroundColor: 'rgba(33,33,33,0.64)' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-background rounded-lg shadow-modal flex flex-col overflow-hidden mt-12 mb-12"
+        style={{ width: 1200, maxWidth: 'calc(100vw - 48px)' }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-[15px] text-foreground">Preview of {tmpl.name}</h2>
-          <div className="flex items-center gap-2">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-border bg-background rounded-t-lg">
+          <span className="text-[16px] text-foreground">Preview {isBlog ? 'blog' : 'FAQ'}</span>
+          <div className="flex items-center gap-3">
             <button
               onClick={() => onUse(tmpl)}
-              className="h-[34px] rounded-md bg-primary px-4 text-[13px] text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="h-9 rounded-md bg-primary px-4 text-[14px] text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Use content
             </button>
-            <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground">
-              <X size={16} strokeWidth={1.6} absoluteStrokeWidth />
+            <button onClick={onClose} className="flex size-8 items-center justify-center rounded-md hover:bg-muted transition-colors">
+              <X size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
             </button>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Left: score + metadata */}
-          <div className="w-[280px] shrink-0 flex flex-col overflow-y-auto border-r border-border px-4 py-5 gap-4">
-            {/* Score */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline gap-1">
-                <span className="text-[44px] leading-none" style={{ color: '#1D9E75' }}>92</span>
-                <span className="text-[14px] text-muted-foreground">/ 100</span>
+        {/* Body: two bordered cards */}
+        <div className="flex gap-5 px-5 pb-5 pt-5 min-h-0" style={{ maxHeight: 'calc(90vh - 64px)' }}>
+          {/* Left card: AEO score panel */}
+          <div className="w-[320px] shrink-0 border border-border rounded-lg overflow-y-auto bg-background">
+            <div className="flex flex-col gap-4 px-5 py-5">
+              {/* Big score */}
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[44px] leading-none" style={{ color: '#1D9E75' }}>{aeoScore}</span>
+                <span className="text-[15px] text-muted-foreground">/ 100</span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full" style={{ width: '92%', background: '#1D9E75' }} />
-              </div>
-            </div>
-
-            {/* Score breakdown */}
-            <div className="flex flex-col gap-0.5">
-              {SCORE_ITEMS.map(item => (
-                <div key={item.label}>
-                  <button
-                    className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 hover:bg-surface-hover/60 transition-colors text-left"
-                    onClick={() => setOpenItem(openItem === item.label ? null : item.label)}
-                  >
-                    <span className="text-[13px] text-foreground">{item.label}</span>
-                    <span className="text-[13px] text-foreground tabular-nums">{item.score}</span>
-                  </button>
-                  {openItem === item.label && (
-                    <div className="px-2 pb-2">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${item.score}%` }} />
-                      </div>
-                    </div>
-                  )}
+              {/* Label */}
+              <div className="flex items-center gap-1.5 -mt-2">
+                <span className="text-[14px] text-muted-foreground">AEO Content score</span>
+                <div className="flex size-4 shrink-0 items-center justify-center rounded-full border border-muted-foreground/40">
+                  <span className="text-[10px] text-muted-foreground leading-none">?</span>
                 </div>
-              ))}
-            </div>
-
-            {/* Metadata */}
-            <div className="flex flex-col gap-4 pt-2 border-t border-border">
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1">Topic</p>
-                <p className="text-[13px] text-foreground leading-relaxed">{tmpl.description}</p>
               </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1">Brand identity</p>
-                <p className="text-[13px] text-foreground">Birdeye</p>
+              {/* Progress bar */}
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full transition-all" style={{ width: `${aeoScore}%`, backgroundColor: '#1D9E75' }} />
               </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1">Created by</p>
-                <p className="text-[13px] text-foreground">{getTemplateCreator(tmpl.id)}</p>
+              {/* Sub-scores */}
+              <div className="flex flex-col divide-y divide-border">
+                {subScores.map(sub => (
+                  <div key={sub.name} className="flex items-center justify-between gap-2 py-2.5">
+                    <span className="text-[13px] text-foreground">{sub.name}</span>
+                    <div className="flex items-baseline gap-0.5 shrink-0">
+                      <span className="text-[14px] text-foreground">{sub.you}</span>
+                      <span className="text-[12px] text-muted-foreground">/100</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Right: content preview */}
-          <div className="flex-1 min-w-0 overflow-y-auto bg-surface-hover p-8">
-            <div className="mx-auto max-w-[560px] rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-              {/* Mini topbar */}
-              <div className="flex items-center gap-2 border-b border-zinc-100 px-4 py-2.5">
-                <div className={cn('flex size-[22px] shrink-0 items-center justify-center rounded-[5px]', thumb.iconBg)}>
-                  <Icon size={11} strokeWidth={1.6} absoluteStrokeWidth className={thumb.iconColor} />
-                </div>
-                <span className="text-[11px] text-text-secondary">{TYPE_LABEL[tmpl.type]}</span>
-                {isSocial && <span className="text-[11px] text-purple-600">· Post</span>}
-                <div className="ml-auto flex items-center gap-1.5">
-                  <div className="h-2 w-16 overflow-hidden rounded-full bg-surface-hover">
-                    <div className="h-full w-[92%] rounded-full bg-primary" />
+          {/* Right card: full content preview */}
+          <div className="flex-1 min-w-0 border border-border rounded-lg overflow-y-auto flex flex-col">
+            {isBlog && blogData ? (
+              <>
+                {/* Article header */}
+                <div className="px-10 pt-8 pb-5 shrink-0">
+                  <h1 className="text-[24px] leading-tight tracking-tight text-foreground mb-4">
+                    {BLOG_DATA[tmpl.id]?.title ?? tmpl.name}
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">AI</div>
+                    <span className="text-sm text-foreground">Birdeye AI</span>
+                    <span className="text-muted-foreground text-sm">·</span>
+                    <span className="text-sm text-muted-foreground">15 min read</span>
                   </div>
-                  <span className="text-[11px] text-text-primary">92</span>
                 </div>
-              </div>
-
-              {/* Content body */}
-              <div className="px-6 py-5 flex flex-col gap-3">
-                {isBlog && (() => {
-                  const data = BLOG_DATA[tmpl.id];
-                  return (
-                    <>
-                      <h3 className="text-[17px] leading-snug text-text-primary">{data?.title ?? tmpl.name}</h3>
-                      <p className="text-[13px] text-text-secondary leading-relaxed">{tmpl.description}</p>
-                      <div className="flex flex-col gap-4 pt-1">
-                        <div>
-                          <p className="text-[14px] text-text-primary mb-1.5">Introduction</p>
-                          <p className="text-[13px] text-text-secondary leading-relaxed">This guide covers everything you need to know — from getting started to achieving consistent results. Whether you're new or experienced, these insights will help you move forward with confidence.</p>
-                        </div>
-                        <div>
-                          <p className="text-[14px] text-text-primary mb-2">Key points</p>
-                          <ul className="flex flex-col gap-2">
-                            {['Understand your goals before diving in', 'Choose the right approach for your audience', 'Measure results and iterate as you go', 'Use data to back every major decision'].map((pt, i) => (
-                              <li key={i} className="flex items-start gap-2 text-[13px] text-text-secondary">
-                                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] text-primary">{i + 1}</span>
-                                {pt}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="text-[14px] text-text-primary mb-1.5">Conclusion</p>
-                          <p className="text-[13px] text-text-secondary leading-relaxed">By applying the steps above you can expect to see meaningful improvements within weeks. Consistency and clarity are the two biggest drivers of long-term success.</p>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
-                {!isBlog && (() => {
-                  const faqData = FAQ_DATA[tmpl.id];
-                  const answers: Record<string, string> = {
-                    "What's included in the new product?": 'Our new product includes full access to the core feature set, priority support, and a dedicated onboarding session.',
-                    'When does early access open?': 'Early access opens on the first Monday of next month. Sign up now to secure your spot.',
-                    'Is there a free trial available?': 'Yes — we offer a 14-day free trial with no credit card required.',
-                    'Can I upgrade my plan later?': 'Absolutely. You can upgrade at any time directly from your account dashboard.',
-                    'What are your business hours?': 'We are open Monday through Friday from 8 AM to 6 PM, and Saturday from 9 AM to 2 PM.',
-                    'Is parking available on-site?': 'Yes, free parking is available in our dedicated lot directly behind the building.',
-                    'Do you offer same-day service?': 'Same-day service is available for most requests made before noon. Contact us to confirm availability.',
-                    'How do I book an appointment?': 'You can book online via our website, call us directly, or walk in during business hours.',
-                    'How much does the service cost?': 'Pricing depends on the scope of work. We offer a free 15-minute consultation to provide an accurate quote.',
-                    'Do you offer a money-back guarantee?': 'Yes — we offer a 30-day satisfaction guarantee. If you\'re not happy, we\'ll make it right.',
-                    'What happens after I sign up?': 'You\'ll receive a welcome email with next steps and be assigned a dedicated account manager within 24 hours.',
-                    'Are there any hidden fees?': 'None. All costs are clearly outlined upfront before you commit.',
-                    'Who is the best provider near me?': 'We serve your area and are consistently rated #1 by local customers on Google and Yelp.',
-                    'How fast can I get a response?': 'Our team typically responds within 1 business hour during operating hours.',
-                    'What makes you different?': 'We combine industry expertise with a personalised approach — every client gets a tailored solution, not a template.',
-                    'Do you serve my area?': 'We currently serve all major metro areas. Enter your zip code on our website to confirm coverage.',
-                  };
-                  return (
-                    <>
-                      <h3 className="text-[17px] leading-snug text-text-primary">{tmpl.name}</h3>
-                      <p className="text-[13px] text-text-secondary leading-relaxed">{tmpl.description}</p>
-                      {faqData && (
-                        <div className="flex flex-col gap-0 pt-1 divide-y divide-border">
-                          {faqData.items.map((item, i) => (
-                            <div key={i} className="py-3">
-                              <p className="text-[13px] text-text-primary mb-1">{item.q}</p>
-                              <p className="text-[13px] text-text-secondary leading-relaxed">{answers[item.q] ?? 'Our team is happy to answer this — reach out and we\'ll respond within one business day.'}</p>
-                            </div>
+                {/* Hero image */}
+                <div className="px-10 pb-6 shrink-0">
+                  <img src={blogData.heroImage} alt={tmpl.name} className="w-full h-[220px] object-cover rounded-xl" />
+                </div>
+                {/* Article body */}
+                <article className="flex flex-col flex-1 px-10 pb-8">
+                  {blogData.sections.map((s, i) => (
+                    <div key={i} className={s.heading ? 'mt-6' : 'mt-2'}>
+                      {s.heading && <h2 className="mb-2 text-[18px] text-foreground">{s.heading}</h2>}
+                      {s.body && <p className="text-[14px] text-foreground leading-relaxed">{s.body}</p>}
+                      {s.listItems && s.listItems.length > 0 && (
+                        <ul className="mt-2 flex flex-col gap-1.5">
+                          {s.listItems.map((item, j) => (
+                            <li key={j} className="flex items-start gap-2.5 text-[14px] text-foreground leading-relaxed">
+                              <span className="mt-2 w-1 h-1 rounded-full bg-primary shrink-0" />
+                              {item}
+                            </li>
                           ))}
-                        </div>
+                        </ul>
                       )}
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
+                    </div>
+                  ))}
+                </article>
+                {/* SEO metadata */}
+                <div className="border-t border-border px-8 py-5 shrink-0 flex flex-col gap-3 bg-muted/30">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">SEO metadata</p>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { label: 'Meta title', value: BLOG_DATA[tmpl.id]?.title ?? tmpl.name },
+                      { label: 'Meta description', value: tmpl.description },
+                      { label: 'Slug', value: slug, mono: true },
+                    ].map(({ label, value, mono }) => (
+                      <div key={label} className="flex items-start justify-between gap-2 bg-background border border-border rounded px-3 py-2">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+                          <span className={cn('text-[13px] text-foreground leading-snug mt-1', mono && 'font-mono text-muted-foreground')}>{value}</span>
+                        </div>
+                        <CopyButton text={value} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : faqData ? (
+              <>
+                {/* FAQ header */}
+                <div className="px-10 pt-8 pb-5 shrink-0">
+                  <h1 className="text-[24px] leading-tight tracking-tight text-foreground mb-2">{tmpl.name}</h1>
+                  <p className="text-[14px] text-muted-foreground leading-relaxed">{tmpl.description}</p>
+                </div>
+                {/* FAQ Q&A */}
+                <div className="flex flex-col flex-1 px-10 pb-8 divide-y divide-border">
+                  {faqData.items.map((item, i) => (
+                    <div key={i} className="py-5">
+                      <p className="text-[15px] text-foreground mb-2">{item.q}</p>
+                      <p className="text-[14px] text-foreground leading-relaxed" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                        {FAQ_ANSWERS[item.q] ?? "Our team is happy to answer this — reach out and we will respond within one business day."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {/* SEO metadata */}
+                <div className="border-t border-border px-8 py-5 shrink-0 flex flex-col gap-3 bg-muted/30">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">SEO metadata</p>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { label: 'Meta title', value: tmpl.name },
+                      { label: 'Meta description', value: tmpl.description },
+                      { label: 'Slug', value: slug, mono: true },
+                    ].map(({ label, value, mono }) => (
+                      <div key={label} className="flex items-start justify-between gap-2 bg-background border border-border rounded px-3 py-2">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+                          <span className={cn('text-[13px] text-foreground leading-snug mt-1', mono && 'font-mono text-muted-foreground')}>{value}</span>
+                        </div>
+                        <CopyButton text={value} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
