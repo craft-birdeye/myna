@@ -282,7 +282,7 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
             <div className="flex flex-col gap-4 px-5 py-5">
               {/* Big score */}
               <div className="flex items-baseline gap-1.5">
-                <span className="text-[44px] leading-none" style={{ color: '#1D9E75' }}>{aeoScore}</span>
+                <span className="text-[44px] leading-none" style={{ color: '#377e2c' }}>{aeoScore}</span>
                 <span className="text-[15px] text-muted-foreground">/ 100</span>
               </div>
               {/* Label */}
@@ -294,10 +294,10 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
               </div>
               {/* Progress bar */}
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full transition-all" style={{ width: `${aeoScore}%`, backgroundColor: '#1D9E75' }} />
+                <div className="h-full rounded-full transition-all" style={{ width: `${aeoScore}%`, backgroundColor: '#377e2c' }} />
               </div>
               {/* Sub-scores */}
-              <div className="flex flex-col divide-y divide-border">
+              <div className="flex flex-col">
                 {subScores.map(sub => (
                   <div key={sub.name}>
                     <button
@@ -309,16 +309,10 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
                         className={cn('shrink-0 text-muted-foreground transition-transform', openScore === sub.name && 'rotate-90')}
                       />
                       <span className="flex-1 text-[13px] text-foreground">{sub.name}</span>
-                      {sub.warnings > 0 && (
-                        <span className="flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px]" style={{ background: '#FEF3C7', color: '#D97706' }}>
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1L9 9H1L5 1Z" stroke="#D97706" strokeWidth="1.2" fill="none"/><rect x="4.5" y="4" width="1" height="2.5" rx="0.5" fill="#D97706"/><circle cx="5" cy="7.5" r="0.5" fill="#D97706"/></svg>
-                          {sub.warnings}
-                        </span>
-                      )}
-                      <span className="text-[13px] text-foreground tabular-nums ml-1">{sub.you}</span>
+                      <span className="text-[13px] text-foreground tabular-nums">{sub.you}</span>
                     </button>
                     {openScore === sub.name && (
-                      <div className="pb-3 pl-5 pr-1 flex flex-col gap-2">
+                      <div className="pb-3 pl-5 pr-1">
                         <p className="text-[12px] text-muted-foreground leading-relaxed">
                           {SUBSCORE_DESCRIPTIONS[sub.name]}
                         </p>
@@ -919,7 +913,7 @@ export const ProjectsView = ({
                     const brand = brands[seed % brands.length];
                     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
                     const date = `${months[seed % 12]} ${String((seed % 28) + 1).padStart(2,'0')}, 2025`;
-                    const scoreColor = score >= 90 ? '#1D9E75' : '#94a3b8';
+                    const scoreColor = score >= 90 ? '#377e2c' : '#94a3b8';
                     return (
                       <tr key={tmpl.id} className="group transition-colors hover:bg-surface-hover/40">
                         <td className="py-3 pr-6">

@@ -87,7 +87,7 @@ export function SearchAIBlogPreviewModal({ rec, open, onClose }: SearchAIBlogPre
             <div className="flex flex-col gap-4 px-5 py-5">
               {/* Big score */}
               <div className="flex items-baseline gap-1.5">
-                <span className="text-[44px] leading-none" style={{ color: '#1D9E75' }}>{AEO_SCORE}</span>
+                <span className="text-[44px] leading-none" style={{ color: '#377e2c' }}>{AEO_SCORE}</span>
                 <span className="text-[15px] text-muted-foreground">/ 100</span>
               </div>
               {/* Label */}
@@ -101,7 +101,7 @@ export function SearchAIBlogPreviewModal({ rec, open, onClose }: SearchAIBlogPre
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full transition-all"
-                  style={{ width: `${AEO_SCORE}%`, backgroundColor: '#1D9E75' }}
+                  style={{ width: `${AEO_SCORE}%`, backgroundColor: '#377e2c' }}
                 />
               </div>
               {/* Sub-scores */}
