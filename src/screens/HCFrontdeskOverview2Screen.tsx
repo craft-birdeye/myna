@@ -249,7 +249,7 @@ function HCCard(props: React.ComponentProps<typeof ChartCard>) {
 const DATE_RANGE_OPTIONS = ['Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months', 'Custom']
 
 const SUMMARY_STATS = [
-  { id: 'handled',        value: '700',    label: 'Interactions handled',  delta: '70%', trend: 'up' as const },
+  { id: 'handled',        value: '700',    label: 'Interactions involved',  delta: '70%', trend: 'up' as const },
   { id: 'resolved',       value: '560',    label: 'Interactions resolved' },
   { id: 'resolutionRate', value: '80%',    label: 'Resolution rate' },
   { id: 'hours',          value: '37 hrs', label: 'Staff hours saved' },
@@ -861,7 +861,7 @@ export function HCFrontdeskOverview2Screen() {
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
           title="Front desk overview 2"
-          subtitle="Call answering, resolution and cost savings across AI agents and human staff"
+          subtitle="Frontdesk agent outcomes of addressing patient inquiries, managing appointments, and achieving cost savings by AI agents"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector
