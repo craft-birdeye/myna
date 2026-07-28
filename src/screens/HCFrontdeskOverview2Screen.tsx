@@ -33,98 +33,105 @@ interface FunnelConversation {
   unread?: boolean
 }
 
-// Real totals behind each node (from FUNNEL_LINKS) — shown in the drawer header.
-// The lists below are a representative sample, not the full set of interactions.
-const NODE_TOTALS: Record<string, number> = {
-  'Call': 600,
-  'Text': 300,
-  'Email': 100,
-  'Myna involved': 700,
-  'Human involved': 280,
-  'Not answered': 20,
-  'Resolved': 840,
-  'Transferred': 140,
-  'Missed': 20,
-  'Answered': 460,
-  'Pending': 210,
-  'Bookings': 175,
-  'Rescheduled': 95,
-  'Cancellations': 40,
-}
 
 const CONVERSATIONS_BY_NODE: Record<string, FunnelConversation[]> = {
   'Call': [
     { id: 'ch-call-1', name: 'Priya Anand',                  message: 'Called in asking about same-day availability for a sick visit.',     location: 'North Clinic',    assignee: 'Front desk AI', date: '09:05 AM', unread: true },
     { id: 'ch-call-2', name: 'Robert Hail',                   message: 'Phoned to ask if walk-ins are accepted on weekends.',                location: 'South Clinic',    assignee: 'Front desk AI', date: '08:40 AM' },
     { id: 'ch-call-3', name: 'Sofia Kim',   verified: true,   message: 'Called about a billing question — routed to a human agent.',         location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'ch-call-4', name: 'Marcus Webb',                   message: 'Called to ask about parking near the North Clinic.',                 location: 'North Clinic',    assignee: 'Front desk AI', date: '09:20 AM' },
+    { id: 'ch-call-5', name: 'Renee Ortiz', verified: true,   message: 'Phoned to confirm insurance is still on file.',                       location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
+    { id: 'ch-call-6', name: 'Devon Blake',                    message: 'Called about rescheduling a missed appointment.',                    location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 7, 2025', unread: true },
   ],
   'Text': [
     { id: 'ch-text-1', name: 'Malik Johnson',                 message: 'Texted to confirm an appointment reminder.',                         location: 'North Clinic',    assignee: 'Front desk AI', date: '10:02 AM', unread: true },
     { id: 'ch-text-2', name: 'Diane Foster',                  message: 'Texted asking to move Friday visit up a day.',                       location: 'South Clinic',    assignee: 'Front desk AI', date: '09:20 AM' },
     { id: 'ch-text-3', name: 'Aaron Blake',                    message: 'Replied "Y" to confirm the upcoming appointment.',                   location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+    { id: 'ch-text-4', name: 'Priya Anand',                    message: 'Texted to ask if the clinic is open on Saturday.',                   location: 'North Clinic',    assignee: 'Front desk AI', date: '10:15 AM' },
+    { id: 'ch-text-5', name: 'Sofia Kim',   verified: true,   message: 'Texted a photo of her insurance card.',                               location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
+    { id: 'ch-text-6', name: 'Robert Hail',                    message: 'Texted to cancel his 3pm appointment.',                              location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 7, 2025', unread: true },
   ],
   'Email': [
     { id: 'ch-email-1', name: 'Helen Cho',                    message: 'Emailed requesting a copy of the visit summary.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: '11:00 AM', unread: true },
     { id: 'ch-email-2', name: 'Victor Reyes',                  message: 'Emailed about insurance documentation needed before the visit.',     location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'ch-email-3', name: 'Lauren Diaz',                   message: 'Emailed to reschedule due to a work conflict.',                      location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
+    { id: 'ch-email-4', name: 'Grace Liu',                     message: 'Emailed to request records be sent to a specialist.',                location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+    { id: 'ch-email-5', name: 'Tomás Rivera',                  message: 'Emailed asking about payment plan options.',                         location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 7, 2025', unread: true },
   ],
-  'Myna involved': [
-    { id: 'inv-myna-1', name: 'Grace Liu',                    message: 'AI confirmed appointment details and answered an insurance question.', location: 'North Clinic',    assignee: 'Front desk AI', date: '09:14 AM', unread: true },
+  'AI agents involved': [
+    { id: 'inv-myna-1', name: 'Grace Liu',                   message: 'AI confirmed appointment details and answered an insurance question.', location: 'North Clinic',    assignee: 'Front desk AI', date: '09:14 AM', unread: true },
     { id: 'inv-myna-2', name: 'Tomás Rivera',                  message: 'AI booked a new consult without any escalation.',                    location: 'South Clinic',    assignee: 'Front desk AI', date: '08:52 AM' },
     { id: 'inv-myna-3', name: 'Nina Patel',                    message: 'AI handled a reschedule request end-to-end.',                        location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'inv-myna-4', name: 'Walter Boone',                  message: 'AI confirmed prescription refill was sent to the pharmacy.',         location: 'North Clinic',    assignee: 'Front desk AI', date: '09:40 AM' },
+    { id: 'inv-myna-5', name: 'Camille Ortiz',                 message: 'AI answered a question about lab result turnaround time.',           location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'inv-myna-6', name: 'Derek Chow', verified: true,   message: 'AI rebooked a missed appointment for the following week.',           location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025', unread: true },
   ],
   'Human involved': [
     { id: 'inv-human-1', name: 'Walter Boone',                message: 'Escalated — complex billing dispute needs manager review.',           location: 'North Clinic',    assignee: 'Kelsy Hiltz',  date: '10:15 AM', unread: true },
     { id: 'inv-human-2', name: 'Camille Ortiz',                message: 'Escalated — patient requested to speak with the office manager.',    location: 'South Clinic',    assignee: 'Marcus Webb',  date: '09:41 AM' },
     { id: 'inv-human-3', name: 'Derek Chow',                   message: 'Escalated — clinical question routed to the on-call nurse.',         location: 'Downtown Clinic', assignee: 'Ana Reyes',    date: 'Jun 9, 2025' },
+    { id: 'inv-human-4', name: 'Isabel Marsh',                 message: 'Escalated — patient requested a same-day callback from the office manager.', location: 'North Clinic', assignee: 'Kelsy Hiltz', date: 'Jun 10, 2025' },
+    { id: 'inv-human-5', name: 'Julian Cross',                 message: 'Escalated — insurance dispute needs a human review.',                location: 'South Clinic',    assignee: 'Marcus Webb',  date: 'Jun 8, 2025', unread: true },
   ],
   'Not answered': [
     { id: 'na-1', name: 'Isabel Marsh',                       message: 'Call went unanswered — voicemail left, no callback yet.',            location: 'North Clinic',    date: '09:58 AM', unread: true },
     { id: 'na-2', name: 'Julian Cross',                        message: 'Call disconnected before front desk picked up.',                    location: 'South Clinic',    date: 'Jun 9, 2025' },
+    { id: 'na-3', name: 'Aditi Rao',                           message: 'Call dropped before it could be answered.',                          location: 'Downtown Clinic', date: 'Jun 7, 2025' },
   ],
   // Same underlying interactions as "Not answered" — this is where they land as a final outcome.
   'Missed': [
     { id: 'na-1', name: 'Isabel Marsh',                       message: 'Call went unanswered — voicemail left, no callback yet.',            location: 'North Clinic',    date: '09:58 AM', unread: true },
     { id: 'na-2', name: 'Julian Cross',                        message: 'Call disconnected before front desk picked up.',                    location: 'South Clinic',    date: 'Jun 9, 2025' },
+    { id: 'na-3', name: 'Aditi Rao',                           message: 'Call dropped before it could be answered.',                          location: 'Downtown Clinic', date: 'Jun 7, 2025' },
   ],
   'Resolved': [
     { id: 'res-1', name: 'Aditi Rao',                          message: 'Appointment confirmed and all questions answered on the same call.', location: 'North Clinic',    assignee: 'Front desk AI', date: '09:10 AM', unread: true },
     { id: 'res-2', name: 'Brandon Lee',                        message: 'Billing question resolved directly by a human agent.',              location: 'South Clinic',    assignee: 'Kelsy Hiltz',  date: '08:44 AM' },
     { id: 'res-3', name: 'Fatima Noor',                        message: 'Prescription refill confirmed, no further action needed.',           location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'res-4', name: 'Nathaniel Cole',                     message: 'Confirmed appointment details, no further action needed.',           location: 'North Clinic',    assignee: 'Front desk AI', date: '09:25 AM' },
+    { id: 'res-5', name: 'Paloma Ruiz',                        message: 'Insurance question answered on the same call.',                      location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'res-6', name: 'Elliot Gray', verified: true,       message: 'Prescription refill confirmed and resolved.',                        location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025', unread: true },
   ],
   'Transferred': [
     { id: 'trf-1', name: 'Nathaniel Cole',                     message: 'Transferred to the billing team for a disputed charge.',            location: 'North Clinic',    assignee: 'Marcus Webb',  date: '09:36 AM', unread: true },
     { id: 'trf-2', name: 'Paloma Ruiz',                        message: 'Transferred to clinical staff for a medication question.',           location: 'South Clinic',    assignee: 'Ana Reyes',    date: 'Jun 10, 2025' },
     { id: 'trf-3', name: 'Elliot Gray',                        message: 'Transferred to the scheduling supervisor for a multi-visit request.', location: 'Downtown Clinic', assignee: 'Kelsy Hiltz',  date: 'Jun 9, 2025' },
+    { id: 'trf-4', name: 'Grace Liu',                          message: 'Transferred to a specialist\'s office for a referral question.',     location: 'North Clinic',    assignee: 'Ana Reyes',    date: 'Jun 8, 2025' },
+    { id: 'trf-5', name: 'Tomás Rivera',                       message: 'Transferred to billing for a payment plan request.',                 location: 'South Clinic',    assignee: 'Marcus Webb',  date: 'Jun 7, 2025', unread: true },
   ],
   'Answered': [
     { id: 'ans1', name: 'Angela Martinez', verified: true, message: 'Called to confirm which insurance plans are accepted — confirmed Blue Cross in-network.', location: 'North Clinic',    assignee: 'Front desk AI', date: '09:12 AM', unread: true },
     { id: 'ans2', name: 'David Kim',                        message: 'Asked about post-op care instructions after knee surgery.',                          location: 'South Clinic',    assignee: 'Front desk AI', date: '08:47 AM', unread: true },
     { id: 'ans3', name: 'Renee Ortiz',    verified: true,   message: 'Confirmed pharmacy on file for prescription pickup.',                                 location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'ans4', name: 'Marcus Webb',                       message: 'Asked about clinic hours for the holiday weekend.',                                   location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+    { id: 'ans5', name: 'Walter Boone',                      message: 'Asked about accepted insurance plans for a new patient.',                            location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
   ],
   'Pending': [
     { id: 'pen1', name: 'Sandra Lee',                        message: 'Awaiting callback from Dr. Patel regarding lab results.',                            location: 'Downtown Clinic', assignee: 'Front desk AI', date: '10:20 AM', unread: true },
     { id: 'pen2', name: 'Thomas Reyes',                      message: 'Requested a callback about referral status — pending review.',                       location: 'South Clinic',    assignee: 'Front desk AI', date: '09:55 AM' },
     { id: 'pen3', name: 'Priya Chandran', verified: true,    message: 'Insurance pre-authorization request submitted, pending approval.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'pen4', name: 'Wesley Grant',                      message: 'Awaiting confirmation from specialist\'s office on availability.',                    location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025',  unread: true },
+    { id: 'pen5', name: 'Camille Ortiz',                     message: 'Awaiting confirmation on a referral to a specialist.',                               location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 8, 2025', unread: true },
   ],
   'Bookings': [
     { id: 'bkg1', name: 'Natalie Brooks',  verified: true,   message: 'Booked new patient consult for Jun 14 at 10am.',                                      location: 'North Clinic',    assignee: 'Front desk AI', date: '09:30 AM', unread: true },
     { id: 'bkg2', name: 'Carlos Jimenez',                    message: 'Scheduled annual physical for next Tuesday.',                                        location: 'South Clinic',    assignee: 'Front desk AI', date: '08:58 AM' },
     { id: 'bkg3', name: 'Ingrid Sorensen',                   message: 'Booked follow-up visit after recent ER discharge.',                                  location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'bkg4', name: 'Om Prakash',                         message: 'New patient intake appointment booked for Jun 16.',                                  location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025',  unread: true },
+    { id: 'bkg5', name: 'Derek Chow',                         message: 'Booked a follow-up visit after a recent procedure.',                                 location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 8, 2025' },
   ],
   'Rescheduled': [
     { id: 'res1', name: 'Bethany Coleman',                   message: 'Moved Thursday visit to next Monday due to travel.',                                 location: 'South Clinic',    assignee: 'Front desk AI', date: '11:05 AM', unread: true },
     { id: 'res2', name: 'Frank Delgado',                     message: 'Rescheduled physical therapy session to Friday afternoon.',                          location: 'North Clinic',    assignee: 'Front desk AI', date: '10:40 AM' },
     { id: 'res3', name: 'Yuki Tanaka',     verified: true,   message: 'Pushed dermatology follow-up back two weeks.',                                       location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'res4', name: 'Harold Simmons',                    message: 'Moved appointment earlier due to a schedule conflict.',                              location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+    { id: 'res5', name: 'Isabel Marsh',                      message: 'Rescheduled due to a transportation conflict.',                                       location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
   ],
   'Cancellations': [
     { id: 'can1', name: 'Gabriela Nunez',                    message: 'Cancelled Friday appointment — feeling better, no longer needed.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: '09:48 AM', unread: true },
     { id: 'can2', name: 'Trevor Adams',                      message: 'Cancelled follow-up — switched to a different provider.',                            location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'can3', name: 'Monica Silva',    verified: true,   message: 'Cancelled annual checkup — will rebook next quarter.',                                location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+    { id: 'can4', name: 'Julian Cross',                      message: 'Cancelled follow-up — resolved without needing the visit.',                          location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 8, 2025', unread: true },
   ],
 }
 
@@ -229,7 +236,7 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'custom-test',     label: 'Custom test',         options: opts('Test Group A', 'Test Group B', 'Cohort 1', 'Cohort 2', 'Cohort 3') },
   { id: 'location',              label: 'Location',                        options: opts('North Austin', 'South Austin', 'San Francisco', 'Phoenix, AZ', 'Denver, CO', 'Seattle, WA') },
   { id: 'call-status',           label: 'Call status',                     options: opts('Resolved', 'Transferred', 'Missed', 'Pending') },
-  { id: 'answered-by',           label: 'Answered by',                     options: opts('Myna AI', 'Human agent', 'Not answered') },
+  { id: 'answered-by',           label: 'Answered by',                     options: opts('AI agents', 'Human agent', 'Not answered') },
   { id: 'time-period',           label: 'Time period',                     options: opts('Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months') },
   { id: 'call-timing',           label: 'Call timing',                     options: opts('Office hours', 'After hours') },
 ]
@@ -242,20 +249,25 @@ function HCCard(props: React.ComponentProps<typeof ChartCard>) {
 const DATE_RANGE_OPTIONS = ['Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months', 'Custom']
 
 const SUMMARY_STATS = [
-  { id: 'handled',        value: '700',    label: 'Calls handled by Myna',  delta: '70%', trend: 'up' as const },
-  { id: 'resolved',       value: '560',    label: 'Calls resolved by Myna' },
+  { id: 'handled',        value: '700',    label: 'Interactions handled',  delta: '70%', trend: 'up' as const },
+  { id: 'resolved',       value: '560',    label: 'Interactions resolved' },
   { id: 'resolutionRate', value: '80%',    label: 'Resolution rate' },
   { id: 'hours',          value: '37 hrs', label: 'Staff hours saved' },
   { id: 'savings',        value: '$521',   label: 'Monthly savings',        delta: '36%', trend: 'up' as const },
 ]
 
 // Six-month trends, one per funnel column — vertical stacked bar charts.
+// The story: six months ago humans still handled the majority of interactions; AI agents
+// have steadily taken that volume over since, so "Human involved" drops sharply (480→280)
+// while "AI agents involved" climbs sharply (290→700) — the roles clearly flip over the
+// period. The monthly total still moves up and down rather than climbing in a straight
+// line; only "Not answered" wobbles a little, since it isn't part of the handoff story.
 const CHANNEL_TREND_DATA = [
-  { month: 'Feb', call: 420, text: 220, email: 110 },
-  { month: 'Mar', call: 460, text: 240, email: 100 },
-  { month: 'Apr', call: 500, text: 260, email: 95  },
-  { month: 'May', call: 540, text: 275, email: 90  },
-  { month: 'Jun', call: 570, text: 290, email: 95  },
+  { month: 'Feb', call: 492, text: 246, email: 82  },
+  { month: 'Mar', call: 534, text: 267, email: 89  },
+  { month: 'Apr', call: 510, text: 255, email: 85  },
+  { month: 'May', call: 558, text: 279, email: 93  },
+  { month: 'Jun', call: 528, text: 264, email: 88  },
   { month: 'Jul', call: 600, text: 300, email: 100 },
 ]
 const CHANNEL_TREND_SERIES = [
@@ -265,25 +277,27 @@ const CHANNEL_TREND_SERIES = [
 ]
 
 const INVOLVEMENT_TREND_DATA = [
-  { month: 'Feb', myna: 480, human: 240, notAnswered: 30 },
-  { month: 'Mar', myna: 530, human: 245, notAnswered: 25 },
-  { month: 'Apr', myna: 580, human: 250, notAnswered: 25 },
-  { month: 'May', myna: 630, human: 255, notAnswered: 20 },
-  { month: 'Jun', myna: 670, human: 265, notAnswered: 20 },
+  { month: 'Feb', myna: 290, human: 480, notAnswered: 50 },
+  { month: 'Mar', myna: 415, human: 430, notAnswered: 45 },
+  { month: 'Apr', myna: 405, human: 390, notAnswered: 55 },
+  { month: 'May', myna: 545, human: 350, notAnswered: 35 },
+  { month: 'Jun', myna: 530, human: 310, notAnswered: 40 },
   { month: 'Jul', myna: 700, human: 280, notAnswered: 20 },
 ]
 const INVOLVEMENT_TREND_SERIES = [
-  { key: 'myna',        label: 'Myna involved',  color: '#7c4dff' },
+  { key: 'myna',        label: 'AI agents involved',  color: '#7c4dff' },
   { key: 'human',       label: 'Human involved', color: '#4cae3d' },
   { key: 'notAnswered', label: 'Not answered',   color: '#de1b0c' },
 ]
 
+// Resolution rate (resolved ÷ (resolved + transferred)) improves steadily each month —
+// 80% in Feb up to 85.7% by Jul — even though raw volume still moves up and down.
 const OUTCOME_TREND_DATA = [
-  { month: 'Feb', resolved: 625, transferred: 95  },
-  { month: 'Mar', resolved: 670, transferred: 105 },
-  { month: 'Apr', resolved: 715, transferred: 115 },
-  { month: 'May', resolved: 760, transferred: 125 },
-  { month: 'Jun', resolved: 800, transferred: 135 },
+  { month: 'Feb', resolved: 616, transferred: 154 },
+  { month: 'Mar', resolved: 684, transferred: 161 },
+  { month: 'Apr', resolved: 652, transferred: 143 },
+  { month: 'May', resolved: 747, transferred: 148 },
+  { month: 'Jun', resolved: 706, transferred: 134 },
   { month: 'Jul', resolved: 840, transferred: 140 },
 ]
 const OUTCOME_TREND_SERIES = [
@@ -291,13 +305,13 @@ const OUTCOME_TREND_SERIES = [
   { key: 'transferred', label: 'Transferred', color: '#f59e0b' },
 ]
 
-// Office hours / after hours split of Myna-handled interactions only
+// Office hours / after hours split of AI agent-handled interactions only
 const TIMING_TREND_DATA = [
-  { month: 'Feb', office: 410, after: 70  },
-  { month: 'Mar', office: 455, after: 75  },
-  { month: 'Apr', office: 500, after: 80  },
-  { month: 'May', office: 540, after: 90  },
-  { month: 'Jun', office: 575, after: 95  },
+  { month: 'Feb', office: 249, after: 41  },
+  { month: 'Mar', office: 356, after: 59  },
+  { month: 'Apr', office: 347, after: 58  },
+  { month: 'May', office: 467, after: 78  },
+  { month: 'Jun', office: 454, after: 76  },
   { month: 'Jul', office: 600, after: 100 },
 ]
 const TIMING_TREND_SERIES = [
@@ -316,13 +330,7 @@ const FUNNEL_NODES: SankeyNode[] = [
   { name: 'Call 60%' },
   { name: 'Text 30%' },
   { name: 'Email 10%' },
-  {
-    name: 'Myna involved 70%',
-    breakdown: [
-      { label: 'Office hours', pct: '86%', value: 600 },
-      { label: 'After hours',  pct: '14%', value: 100 },
-    ],
-  },
+  { name: 'AI agents involved 70%' },
   { name: 'Human involved 28%' },
   { name: 'Not answered 2%' },
   { name: 'Resolved 84%' },
@@ -336,19 +344,19 @@ const FUNNEL_NODES: SankeyNode[] = [
 ]
 const FUNNEL_LINKS: SankeyLink[] = [
   // channel → involvement (real per-channel splits, not an even proportion of the channel total)
-  { source: 0, target: 3, value: 470 }, // Call    → Myna involved
+  { source: 0, target: 3, value: 470 }, // Call    → AI agents involved
   { source: 0, target: 4, value: 120 }, // Call    → Human involved
   { source: 0, target: 5, value: 10  }, // Call    → Not answered
-  { source: 1, target: 3, value: 192 }, // Text    → Myna involved
+  { source: 1, target: 3, value: 192 }, // Text    → AI agents involved
   { source: 1, target: 4, value: 100 }, // Text    → Human involved
   { source: 1, target: 5, value: 8   }, // Text    → Not answered
-  { source: 2, target: 3, value: 38  }, // Email   → Myna involved
+  { source: 2, target: 3, value: 38  }, // Email   → AI agents involved
   { source: 2, target: 4, value: 60  }, // Email   → Human involved
   { source: 2, target: 5, value: 2   }, // Email   → Not answered
   // involvement → outcome — human involvement resolves, but never "transfers" (it's already a human);
   // not-answered interactions land in Missed instead of dropping out of the diagram.
-  { source: 3, target: 6, value: 560 }, // Myna involved  → Resolved
-  { source: 3, target: 7, value: 140 }, // Myna involved  → Transferred
+  { source: 3, target: 6, value: 560 }, // AI agents involved  → Resolved
+  { source: 3, target: 7, value: 140 }, // AI agents involved  → Transferred
   { source: 4, target: 6, value: 280 }, // Human involved → Resolved
   { source: 5, target: 8, value: 20  }, // Not answered   → Missed
   // outcome → sub-outcome — Resolved spreads across all five; Transferred only into the first four
@@ -368,7 +376,7 @@ const FUNNEL_NODE_COLORS: Record<number, string> = {
   9: '#00bcd4', 10: '#f5a623', 11: '#e056c7', 12: '#8bc34a', 13: '#4cae3d',
 }
 
-// Office hours vs after hours, by intent — Myna-handled calls only (700 total)
+// Office hours vs after hours, by intent — AI agent-handled calls only (700 total)
 const INTENT_DATA = [
   { intent: 'General inquiry', office: 200, after: 10 },
   { intent: 'Scheduling',     office: 300, after: 30 },
@@ -486,6 +494,56 @@ const LOCATIONS = [
   { label: 'Uptown Clinic',   total: 130 },
 ]
 
+// City/state/region roll-up for each clinic — North & Uptown share Chicago/Illinois,
+// South & East share Texas (different cities), so city/state/region views genuinely
+// aggregate rows together rather than just relabeling them 1:1.
+const LOCATION_META: Record<string, { city: string; state: string; region: string }> = {
+  'North Clinic':    { city: 'Chicago',     state: 'Illinois',   region: 'Midwest' },
+  'Uptown Clinic':   { city: 'Chicago',     state: 'Illinois',   region: 'Midwest' },
+  'South Clinic':    { city: 'Austin',      state: 'Texas',      region: 'South' },
+  'East Clinic':     { city: 'Houston',     state: 'Texas',      region: 'South' },
+  'Downtown Clinic': { city: 'New York',    state: 'New York',   region: 'Northeast' },
+  'West Clinic':     { city: 'Los Angeles', state: 'California', region: 'West' },
+}
+
+const LEVEL_OPTIONS = ['By location', 'By city', 'By state', 'By region']
+const LEVEL_COLUMN_LABEL: Record<string, string> = {
+  'By location': 'Location',
+  'By city': 'City',
+  'By state': 'State',
+  'By region': 'Region',
+}
+const LEVEL_TITLE: Record<string, string> = {
+  'By location': 'Interactions by location',
+  'By city': 'Interactions by city',
+  'By state': 'Interactions by state',
+  'By region': 'Interactions by region',
+}
+
+function groupKeyOf(level: string, locationLabel: string): string {
+  if (level === 'By location') return locationLabel
+  const meta = LOCATION_META[locationLabel]
+  return level === 'By city' ? meta.city : level === 'By state' ? meta.state : meta.region
+}
+
+// Unique group labels for a level, ordered largest total first (same convention as LOCATIONS).
+function groupsForLevel(level: string): string[] {
+  const totals = new Map<string, number>()
+  for (const l of LOCATIONS) {
+    const key = groupKeyOf(level, l.label)
+    totals.set(key, (totals.get(key) ?? 0) + l.total)
+  }
+  return [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([label]) => label)
+}
+
+function membersOfGroup(level: string, group: string): string[] {
+  return LOCATIONS.filter((l) => groupKeyOf(level, l.label) === group).map((l) => l.label)
+}
+
+function sumField<T extends Record<string, number>>(breakdown: Record<string, T>, members: string[], field: keyof T): number {
+  return members.reduce((sum, m) => sum + (breakdown[m]?.[field] ?? 0), 0)
+}
+
 const LOCATION_CHANNEL_BREAKDOWN: Record<string, { call: number; text: number; email: number }> = {
   'North Clinic':    { call: 132, text: 66, email: 22 },
   'South Clinic':    { call: 114, text: 57, email: 19 },
@@ -502,16 +560,6 @@ const LOCATION_OUTCOME_BREAKDOWN: Record<string, { resolved: number; transferred
   'East Clinic':     { resolved: 120, transferred: 27, missed: 3 },
   'West Clinic':     { resolved: 126, transferred: 11, missed: 3 },
   'Uptown Clinic':   { resolved: 108, transferred: 19, missed: 3 },
-}
-
-// Resolved ÷ location total — shown as the last column across every breakdown view.
-const LOCATION_RESOLUTION_RATE: Record<string, number> = {
-  'North Clinic':    85,
-  'South Clinic':    82,
-  'Downtown Clinic': 88,
-  'East Clinic':     80,
-  'West Clinic':     90,
-  'Uptown Clinic':   83,
 }
 
 const LOCATION_SUBOUTCOME_BREAKDOWN: Record<string, {
@@ -638,24 +686,79 @@ const RESOLUTION_RATE_COLUMN: Column<LocationBreakdownRow> = {
   render: (v) => <ResolutionRateBar rate={v as number} />,
 }
 
+// Skeleton rows shown for a beat while the table reshapes around a new location-hierarchy level.
+function LocationTableSkeleton({ columnCount }: { columnCount: number }) {
+  return (
+    <div className="flex flex-col">
+      {Array.from({ length: 6 }).map((_, r) => (
+        <div key={r} className="flex items-center gap-lg border-b border-border px-[10px] last:border-0" style={{ height: 64 }}>
+          {Array.from({ length: columnCount }).map((_, c) => (
+            <div
+              key={c}
+              className="h-3 flex-1 animate-pulse rounded-sm bg-surface-selected"
+              style={{ animationDelay: `${(r * columnCount + c) * 25}ms` }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function InteractionsByDimensionCard() {
   const [dimension, setDimension] = useState('Outcomes')
+  const [level, setLevel] = useState('By location')
+  const [loading, setLoading] = useState(false)
+
+  // Simulate a fresh fetch whenever the location-hierarchy level changes.
+  useEffect(() => {
+    setLoading(true)
+    const t = setTimeout(() => setLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [level])
+
+  const rows = groupsForLevel(level).map((group) => {
+    const members = membersOfGroup(level, group)
+    const totalInteractions = members.reduce((sum, m) => sum + (LOCATIONS.find((l) => l.label === m)?.total ?? 0), 0)
+    const resolved = sumField(LOCATION_OUTCOME_BREAKDOWN, members, 'resolved')
+    const resolutionRate = Math.round((resolved / totalInteractions) * 100)
+    return { group, members, totalInteractions, resolved, resolutionRate }
+  })
 
   let columns: Column<LocationBreakdownRow>[]
   let data: LocationBreakdownRow[]
 
+  // Real total for the group — resolved + transferred + missed — shown right after
+  // the location column in every view, so it's always clear how big a group is before
+  // drilling into its channel/outcome/sub-outcome split.
+  const TOTAL_INTERACTIONS_COLUMN: Column<LocationBreakdownRow> = {
+    key: 'totalInteractions', label: 'Total interactions', width: 160, sortable: true,
+  }
+  const LOCATION_COLUMN: Column<LocationBreakdownRow> = {
+    key: 'location', label: LEVEL_COLUMN_LABEL[level], width: 180, sortable: true,
+  }
+
   if (dimension === 'Outcomes') {
     columns = [
-      { key: 'location',    label: 'Location',    width: 200, sortable: true },
+      LOCATION_COLUMN,
+      TOTAL_INTERACTIONS_COLUMN,
       { key: 'resolved',    label: 'Resolved',    width: 130, sortable: true },
       { key: 'transferred', label: 'Transferred', width: 130, sortable: true },
       { key: 'missed',      label: 'Missed',      width: 130, sortable: true },
       RESOLUTION_RATE_COLUMN,
     ]
-    data = LOCATIONS.map((l) => ({ location: l.label, ...LOCATION_OUTCOME_BREAKDOWN[l.label], resolutionRate: LOCATION_RESOLUTION_RATE[l.label] }))
+    data = rows.map((r) => ({
+      location: r.group,
+      totalInteractions: r.totalInteractions,
+      resolved: r.resolved,
+      transferred: sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'transferred'),
+      missed: sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'missed'),
+      resolutionRate: r.resolutionRate,
+    }))
   } else if (dimension === 'Sub-outcomes') {
     columns = [
-      { key: 'location',      label: 'Location',      width: 180, sortable: true },
+      LOCATION_COLUMN,
+      TOTAL_INTERACTIONS_COLUMN,
       { key: 'answered',      label: 'Answered',      width: 120, sortable: true },
       { key: 'pending',       label: 'Pending',       width: 120, sortable: true },
       { key: 'bookings',      label: 'Bookings',      width: 120, sortable: true },
@@ -664,29 +767,52 @@ function InteractionsByDimensionCard() {
       { key: 'transferred',   label: 'Transferred',   width: 120, sortable: true },
       RESOLUTION_RATE_COLUMN,
     ]
-    data = LOCATIONS.map((l) => ({ location: l.label, ...LOCATION_SUBOUTCOME_BREAKDOWN[l.label], resolutionRate: LOCATION_RESOLUTION_RATE[l.label] }))
+    data = rows.map((r) => ({
+      location: r.group,
+      totalInteractions: r.totalInteractions,
+      answered: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'answered'),
+      pending: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'pending'),
+      bookings: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'bookings'),
+      rescheduled: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'rescheduled'),
+      cancellations: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'cancellations'),
+      transferred: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'transferred'),
+      resolutionRate: r.resolutionRate,
+    }))
   } else {
     columns = [
-      { key: 'location', label: 'Location', width: 200, sortable: true },
-      { key: 'call',      label: 'Call',    width: 120, sortable: true },
-      { key: 'text',      label: 'Text',    width: 120, sortable: true },
-      { key: 'email',     label: 'Email',   width: 120, sortable: true },
+      LOCATION_COLUMN,
+      TOTAL_INTERACTIONS_COLUMN,
+      { key: 'call',  label: 'Call',  width: 120, sortable: true },
+      { key: 'text',  label: 'Text',  width: 120, sortable: true },
+      { key: 'email', label: 'Email', width: 120, sortable: true },
       RESOLUTION_RATE_COLUMN,
     ]
-    data = LOCATIONS.map((l) => ({ location: l.label, ...LOCATION_CHANNEL_BREAKDOWN[l.label], resolutionRate: LOCATION_RESOLUTION_RATE[l.label] }))
+    data = rows.map((r) => ({
+      location: r.group,
+      totalInteractions: r.totalInteractions,
+      call: sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'call'),
+      text: sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'text'),
+      email: sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'email'),
+      resolutionRate: r.resolutionRate,
+    }))
   }
 
   return (
     <HCCard
-      title="Interactions by location"
+      title={LEVEL_TITLE[level]}
       titleSuffix={
         <>
           <InlineHeadingDropdown value={dimension} options={DIMENSION_OPTIONS} onChange={setDimension} />
           <InfoTooltip text="Breaks down each location's interaction volume by channel, outcome, or sub-outcome — switch the view with the dropdown." />
         </>
       }
+      toolbar={<DateRangeSelector value={level} options={LEVEL_OPTIONS} onChange={setLevel} />}
     >
-      <DataTable columns={columns} data={data} rowHeight={64} />
+      {loading ? (
+        <LocationTableSkeleton columnCount={columns.length} />
+      ) : (
+        <DataTable columns={columns} data={data} rowHeight={64} stickyFirstColumn />
+      )}
     </HCCard>
   )
 }
@@ -695,9 +821,16 @@ export function HCFrontdeskOverview2Screen() {
   const [dateRange, setDateRange] = useState('Last 6 months')
   const [filterOpen, setFilterOpen] = useState(false)
   const [nodeDrawer, setNodeDrawer] = useState<string | null>(null)
+  const [listVisible, setListVisible] = useState(false)
   const [selectedConvo, setSelectedConvo] = useState<FunnelConversation | null>(null)
   const [detailVisible, setDetailVisible] = useState(false)
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    if (nodeDrawer !== null) {
+      requestAnimationFrame(() => setListVisible(true))
+    }
+  }, [nodeDrawer])
 
   useEffect(() => {
     if (selectedConvo) {
@@ -714,6 +847,12 @@ export function HCFrontdeskOverview2Screen() {
     setTimeout(() => setSelectedConvo(null), 300)
   }
 
+  function closeNodeDrawer() {
+    closeDetail()
+    setListVisible(false)
+    setTimeout(() => setNodeDrawer(null), 300)
+  }
+
   return (
     <div className="flex h-full flex-col">
       <TopNav initials="S" />
@@ -722,7 +861,7 @@ export function HCFrontdeskOverview2Screen() {
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
           title="Front desk overview 2"
-          subtitle="Call answering, resolution and cost savings across Myna AI and human staff"
+          subtitle="Call answering, resolution and cost savings across AI agents and human staff"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector
@@ -746,13 +885,17 @@ export function HCFrontdeskOverview2Screen() {
 
           <SummaryStats stats={SUMMARY_STATS} />
 
-          <HCCard title="Interactions funnel" tooltip="Traces interaction volume by channel (call, text, email), through Myna/human involvement, to the outcome and sub-outcome of each interaction. Hover Myna involved for the office hours / after hours split. Click any section to see the underlying conversations.">
+          <HCCard title="Interactions funnel" tooltip="Traces interaction volume by channel (call, text, email), through AI agent/human involvement, to the outcome and sub-outcome of each interaction. Click any section to see the underlying conversations.">
             <SankeyChart
               nodes={FUNNEL_NODES}
               links={FUNNEL_LINKS}
               height={440}
               nodeColors={FUNNEL_NODE_COLORS}
               terminalNodes={[8]}
+              // A hidden phantom node anchors "Missed" (terminalNodes) into the Sub-outcome
+              // column, adding one extra gap there — a smaller nodePadding keeps that column's
+              // scale close enough to the others that all four read as equally full.
+              nodePadding={4}
               columnHeaders={['Interactions by channel', 'Involvement', 'Outcome', 'Sub-outcome']}
               onNodeClick={(name) => { if (CONVERSATIONS_BY_NODE[name]) setNodeDrawer(name) }}
             />
@@ -769,7 +912,7 @@ export function HCFrontdeskOverview2Screen() {
               />
             </HCCard>
 
-            <HCCard title="Involvement trend" tooltip="Monthly breakdown of interactions by who was involved — Myna, a human agent, or not answered.">
+            <HCCard title="Involvement trend" tooltip="Monthly breakdown of interactions by who was involved — AI agents, a human agent, or not answered.">
               <StackedBarChart
                 data={INVOLVEMENT_TREND_DATA}
                 series={INVOLVEMENT_TREND_SERIES}
@@ -791,7 +934,7 @@ export function HCFrontdeskOverview2Screen() {
               />
             </HCCard>
 
-            <HCCard title="Interaction timing trend" tooltip="Monthly office hours vs. after hours split of Myna-handled interactions.">
+            <HCCard title="Interaction timing trend" tooltip="Monthly office hours vs. after hours split of AI agent-handled interactions.">
               <StackedBarChart
                 data={TIMING_TREND_DATA}
                 series={TIMING_TREND_SERIES}
@@ -802,7 +945,7 @@ export function HCFrontdeskOverview2Screen() {
             </HCCard>
           </div>
 
-          <HCCard title="Call intent breakdown by working hours" tooltip="Myna-handled calls by intent, comparing office hours volume to after-hours volume for each category.">
+          <HCCard title="Interaction intent breakdown by working hours" tooltip="AI agent-handled calls by intent, comparing office hours volume to after-hours volume for each category.">
             <StackedBarChart
               data={INTENT_DATA}
               series={INTENT_SERIES}
@@ -816,8 +959,8 @@ export function HCFrontdeskOverview2Screen() {
 
           <IntentTrendCard />
 
-          <HCCard title="Call intent breakdown by outcome" tooltip="Myna-handled calls by intent, with the office/after-hours split and resolution outcome for each category.">
-            <DataTable columns={INTENT_COLUMNS} data={INTENT_TABLE_DATA} />
+          <HCCard title="Interaction intent breakdown by outcome" tooltip="AI agent-handled calls by intent, with the office/after-hours split and resolution outcome for each category.">
+            <DataTable columns={INTENT_COLUMNS} data={INTENT_TABLE_DATA} stickyFirstColumn />
           </HCCard>
 
           <div className="grid grid-cols-2 gap-lg">
@@ -870,17 +1013,20 @@ export function HCFrontdeskOverview2Screen() {
       {/* List drawer */}
       {nodeDrawer !== null && (
         <>
-          <div className="fixed inset-0 z-[70] bg-black/20" onClick={() => { closeDetail(); setTimeout(() => setNodeDrawer(null), 300) }} />
-          <div className="fixed right-0 top-0 z-[80] flex h-full w-[650px] flex-col bg-surface shadow-modal">
+          <div
+            className={`fixed inset-0 z-[70] bg-black/20 transition-opacity duration-300 ease-in-out ${listVisible ? 'opacity-100' : 'opacity-0'}`}
+            onClick={closeNodeDrawer}
+          />
+          <div className={`fixed right-0 top-0 z-[80] flex h-full w-[650px] flex-col bg-surface shadow-modal transition-transform duration-300 ease-in-out ${listVisible ? 'translate-x-0' : 'translate-x-full'}`}>
             <div className="flex items-center justify-between px-2xl py-lg">
               <div className="flex items-center gap-sm">
-                <button type="button" onClick={() => setNodeDrawer(null)} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
+                <button type="button" onClick={closeNodeDrawer} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
                   <Icon name="arrow_back" size={18} />
                 </button>
                 <span className="text-h3 text-text-primary">{nodeDrawer}</span>
               </div>
               <span className="text-small text-text-tertiary">
-                {(NODE_TOTALS[nodeDrawer] ?? CONVERSATIONS_BY_NODE[nodeDrawer]?.length ?? 0).toLocaleString()} conversations
+                {(CONVERSATIONS_BY_NODE[nodeDrawer]?.length ?? 0).toLocaleString()} conversations
               </span>
             </div>
             <div className="flex-1 overflow-y-auto px-sm py-sm">

@@ -17,6 +17,7 @@ export function DataTable<T extends Record<string, unknown>>({
   scrollOnHover = false,
   rowClassName,
   rowHeight = 48,
+  stickyFirstColumn = false,
 }: DataTableProps<T>) {
   const [widths, setWidths] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
@@ -107,8 +108,15 @@ export function DataTable<T extends Record<string, unknown>>({
               const sorted = sort.key === key
               const resizable = col.resizable !== false
               const showDivider = i < columns.length - 1
+              const isSticky = stickyFirstColumn && i === 0
               return (
-                <th key={key} className="relative h-12 border-b border-border px-[10px] align-middle font-normal">
+                <th
+                  key={key}
+                  style={isSticky ? { left: 0 } : undefined}
+                  className={`relative h-12 border-b border-border bg-surface px-[10px] align-middle font-normal ${
+                    isSticky ? 'sticky z-[6] border-r border-border' : ''
+                  }`}
+                >
                   {col.headerRender ? (
                     col.headerRender({
                       sorted,
@@ -159,21 +167,22 @@ export function DataTable<T extends Record<string, unknown>>({
             <tr
               key={i}
               onClick={() => onRowClick?.(row)}
-              className={`group/row border-b border-border last:border-b-0 transition-colors hover:bg-surface-hover ${
+              className={`group/row border-b border-border bg-surface last:border-b-0 transition-colors hover:bg-surface-hover ${
                 onRowClick ? 'cursor-pointer' : ''
               } ${menu?.rowIndex === i ? 'bg-surface-hover' : ''} ${rowClassName ? rowClassName(row, i) : ''}`}
             >
               {columns.map((col, ci) => {
                 const isLast = ci === columns.length - 1
+                const isSticky = stickyFirstColumn && ci === 0
                 const content = col.render ? col.render(row[col.key], row) : String(row[col.key] ?? '')
                 const wrapTruncate = isLast && col.truncate !== false
                 return (
                   <td
                     key={String(col.key)}
-                    style={{ height: rowHeight }}
+                    style={{ height: rowHeight, ...(isSticky ? { left: 0 } : {}) }}
                   className={`px-[10px] align-middle text-body text-text-primary ${
                       isLast ? 'relative' : 'truncate'
-                    }`}
+                    } ${isSticky ? 'sticky z-[2] border-r border-border bg-inherit' : ''}`}
                   >
                     {wrapTruncate ? <span className="block truncate">{content}</span> : content}
 
