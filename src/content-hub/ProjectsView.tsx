@@ -20,7 +20,7 @@ import {
   RowActions,
   type ChannelId,
 } from './projectShared';
-import { TEMPLATES, type ContentType, type TemplateItem } from './TemplateGallery';
+import { TEMPLATES, type ContentType, type TemplateItem, TemplateThumbnail, TYPE_THUMB_BG } from './TemplateGallery';
 import { CalendarView as ContentHubCalendarView } from './CalendarView';
 import { DataTable, FilterPanel, CustomizeColumnsDrawer, Tabs, type Column as MYNAColumn, type ColumnOption, type FilterField, type SelectOption } from '../components';
 import type { Tab } from '../components';
@@ -176,11 +176,11 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
             {/* Score */}
             <div className="flex flex-col gap-2">
               <div className="flex items-baseline gap-1">
-                <span className="text-[44px] leading-none text-foreground">92</span>
+                <span className="text-[44px] leading-none" style={{ color: '#1D9E75' }}>92</span>
                 <span className="text-[14px] text-muted-foreground">/ 100</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-primary" style={{ width: '92%' }} />
+                <div className="h-full rounded-full" style={{ width: '92%', background: '#1D9E75' }} />
               </div>
             </div>
 
@@ -289,91 +289,61 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
   );
 }
 
-// ── Template card (matches "Suggested for you" style) ─────────────────────────
+// ── Template card ─────────────────────────────────────────────────────────────
 
 function TemplateCard({ tmpl, onUse, onPreview }: { tmpl: TemplateItem; onUse: (t: TemplateItem) => void; onPreview: (t: TemplateItem) => void }) {
-  const thumb = TYPE_THUMB[tmpl.type];
-  const { Icon } = thumb;
-  const isBlog = tmpl.type === 'blog';
-  const isSocial = tmpl.type === 'social';
-
   return (
     <div
       onKeyDown={(event) => handleCardKeyDown(event, () => onUse(tmpl))}
       role="button"
       tabIndex={0}
-      className="border border-border rounded-md bg-background hover:border-primary/30 transition-all cursor-pointer group flex flex-col overflow-hidden"
+      className="bg-white border border-border rounded-xl overflow-hidden cursor-pointer transition-all group hover:shadow-card hover:border-primary/30 flex flex-col"
     >
-      {/* Thumbnail preview area */}
-      <div className="relative h-[160px] overflow-hidden border-b border-border bg-surface-hover">
-        {/* Type chip on thumbnail */}
-        <div className="absolute top-2.5 left-2.5 z-10">
-          <Badge variant={TYPE_BADGE_VARIANT[tmpl.type]}>
-            {TYPE_LABEL[tmpl.type]}
-          </Badge>
-        </div>
-
-        <div className="absolute inset-0 p-6">
-          <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white">
-            {isBlog && (
-              <div className="relative h-[46px] shrink-0 overflow-hidden border-b border-zinc-100">
-                <div className="absolute inset-0 bg-gradient-to-b from-sky-200 to-green-100" />
-                <div className="absolute inset-x-0 bottom-0 h-4 bg-primary" />
-                <div className="absolute bottom-4 left-3 h-6 w-5 rounded-t-full bg-primary" />
-                <div className="absolute bottom-4 right-4 h-5 w-4 rounded-t-full bg-primary/70" />
-                <div className="absolute right-7 top-2 size-2 rounded-full bg-surface-hover" />
-              </div>
-            )}
-            <div className="flex flex-1 flex-col gap-1 overflow-hidden px-2 py-2">
-              <div className="flex gap-1">
-                <Badge variant={TYPE_BADGE_VARIANT[tmpl.type]} className="text-[5px] px-1 rounded-[2px]">
-                  {TYPE_LABEL[tmpl.type]}
-                </Badge>
-                {isSocial && <Badge variant="purple" className="text-[5px] px-1 rounded-[2px]">Post</Badge>}
-              </div>
-              <span className="text-[6px] leading-tight text-text-primary">{tmpl.name}</span>
-              <div className="mt-0.5 flex items-center gap-1">
-                <div className="size-2 rounded-full bg-border" />
-                <div className="h-[2px] w-7 rounded-full bg-border" />
-                <div className="h-[2px] w-4 rounded-full bg-surface-hover" />
-              </div>
-              <div className="mt-0.5 flex flex-col gap-0.5">
-                <div className="h-[2px] w-full rounded-full bg-border" />
-                <div className="h-[2px] w-10/12 rounded-full bg-border" />
-                <div className="h-[2px] w-7/12 rounded-full bg-surface-hover" />
-              </div>
-            </div>
+      {/* Thumbnail area */}
+      <div
+        className="relative overflow-hidden"
+        style={{ height: 178, background: TYPE_THUMB_BG[tmpl.type] }}
+      >
+        {/* Rich content thumbnail */}
+        <div className="absolute inset-0 p-3">
+          <div className="w-full h-full rounded-md overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.10)' }}>
+            <TemplateThumbnail template={tmpl} />
           </div>
         </div>
 
-        {/* Hover overlay — two buttons */}
-        <div className="absolute inset-0 bg-surface/0 group-hover:bg-surface/50 transition-all duration-200 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto">
+        {/* Type chip — top right, white outlined pill matching Figma */}
+        <div className="absolute top-2 right-2 z-10">
+          <span className="inline-flex items-center h-5 px-2 rounded text-[10px] text-text-primary bg-white/95 border border-border shadow-sm">
+            {TYPE_LABEL[tmpl.type]}
+          </span>
+        </div>
+
+        {/* Hover overlay — two CTAs */}
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20 pointer-events-none group-hover:pointer-events-auto"
+          style={{ background: 'rgba(0,0,0,0.42)' }}
+        >
           <button
             onClick={e => { e.stopPropagation(); onUse(tmpl); }}
-            className="w-[130px] h-[34px] rounded-md bg-primary px-2 text-[12px] text-primary-foreground shadow-card transition-colors hover:bg-primary/90"
+            className="h-8 rounded-md bg-primary text-white text-[12px] transition-colors hover:bg-primary/90"
+            style={{ width: 126 }}
           >
             Use content
           </button>
           <button
             onClick={e => { e.stopPropagation(); onPreview(tmpl); }}
-            className="w-[130px] h-[34px] rounded-md bg-white/95 px-2 text-[12px] text-foreground shadow-card transition-colors hover:bg-surface-hover"
+            className="h-8 rounded-md text-foreground text-[12px] transition-colors hover:bg-white/90"
+            style={{ width: 126, background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.5)' }}
           >
             Preview
           </button>
         </div>
       </div>
 
-      {/* Card body */}
-      <div className="flex flex-col gap-1 p-4">
-        <p className="text-[12px] text-foreground leading-snug line-clamp-2">{tmpl.name}</p>
-        {/* Score — between title and description */}
-        <div className="flex items-center gap-1.5 py-0.5">
-          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary" style={{ width: '92%' }} />
-          </div>
-          <span className="text-[11px] text-text-primary">92<span className="font-normal text-muted-foreground">/100</span></span>
-        </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">{tmpl.description}</p>
+      {/* Footer — name + author only */}
+      <div className="px-3 py-2.5">
+        <p className="text-[12px] text-foreground leading-snug truncate">{tmpl.name}</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">Created by Birdeye</p>
       </div>
     </div>
   );
@@ -751,7 +721,7 @@ export const ProjectsView = ({
                 No templates match your search.
               </div>
             ) : libViewMode === 'grid' ? (
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
                 {filteredTemplates.map(tmpl => (
                   <TemplateCard
                     key={tmpl.id}
@@ -762,53 +732,66 @@ export const ProjectsView = ({
                 ))}
               </div>
             ) : (
-              /* List view */
-              <div className="flex flex-col divide-y divide-border rounded-lg border border-border overflow-hidden">
-                {filteredTemplates.map(tmpl => {
-                  const thumb = TYPE_THUMB[tmpl.type];
-                  const { Icon } = thumb;
-                  return (
-                    <div key={tmpl.id} className="flex items-center gap-4 px-4 py-2 bg-background hover:bg-surface-hover/40 transition-colors group">
-                      {/* Icon */}
-                      <div className={cn('flex size-[34px] shrink-0 items-center justify-center rounded-lg', thumb.iconBg)}>
-                        <Icon size={16} strokeWidth={1.6} absoluteStrokeWidth className={thumb.iconColor} />
-                      </div>
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={TYPE_BADGE_VARIANT[tmpl.type]}>
-                            {TYPE_LABEL[tmpl.type]}
-                          </Badge>
-                        </div>
-                        <p className="text-[13px] text-foreground mt-0.5">{tmpl.name}</p>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-1 mt-0.5">{tmpl.description}</p>
-                      </div>
-                      {/* Score */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-primary" style={{ width: '92%' }} />
-                        </div>
-                        <span className="text-[12px] text-text-primary tabular-nums">92</span>
-                      </div>
-                      {/* Actions */}
-                      <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => onNavigate('content-hub-create')}
-                          className="h-7 rounded-md bg-primary px-2 text-[11px] text-primary-foreground hover:bg-primary/90 transition-colors"
-                        >
-                          Use content
-                        </button>
-                        <button
-                          onClick={() => setPreviewTemplate(tmpl)}
-                          className="h-7 rounded-md border border-border bg-background px-2 text-[11px] text-foreground hover:bg-surface-hover transition-colors"
-                        >
-                          Preview
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              /* Table view — matches Figma node 9234-77733 */
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border">
+                    {['Name', 'Content type', 'Content score', 'Brand identity', 'Last updated', 'Created by'].map(col => (
+                      <th key={col} className="py-2.5 pr-6 text-[11px] text-muted-foreground font-normal whitespace-nowrap">{col}</th>
+                    ))}
+                    <th className="w-14" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredTemplates.map(tmpl => {
+                    const seed = tmpl.id.split('').reduce((s, c) => (s * 31 + c.charCodeAt(0)) & 0xffff, 0);
+                    const score = [87,88,89,90,91,92,93,94,95,96][seed % 10];
+                    const brands = ['Aspen dental', 'Oakwood Services', 'Olive Garden'];
+                    const brand = brands[seed % brands.length];
+                    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const date = `${months[seed % 12]} ${String((seed % 28) + 1).padStart(2,'0')}, 2025`;
+                    const scoreColor = score >= 90 ? '#1D9E75' : '#94a3b8';
+                    return (
+                      <tr key={tmpl.id} className="group transition-colors hover:bg-surface-hover/40">
+                        <td className="py-3 pr-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-8 rounded overflow-hidden shrink-0 border border-border/60" style={{ background: TYPE_THUMB_BG[tmpl.type] }}>
+                              <TemplateThumbnail template={tmpl} />
+                            </div>
+                            <button className="text-[13px] text-primary hover:underline text-left" onClick={() => setPreviewTemplate(tmpl)}>
+                              {tmpl.name}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-6">
+                          <Badge variant={TYPE_BADGE_VARIANT[tmpl.type]}>{TYPE_LABEL[tmpl.type]}</Badge>
+                        </td>
+                        <td className="py-3 pr-6">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${score}%`, background: scoreColor }} />
+                            </div>
+                            <span className="text-[12px] text-foreground whitespace-nowrap">{score}/100</span>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-6"><span className="text-[12px] text-foreground">{brand}</span></td>
+                        <td className="py-3 pr-6"><span className="text-[12px] text-muted-foreground">{date}</span></td>
+                        <td className="py-3 pr-6"><span className="text-[12px] text-foreground">Birdeye</span></td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setPreviewTemplate(tmpl)} className="flex size-7 items-center justify-center rounded hover:bg-surface-hover transition-colors">
+                              <Eye size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
+                            </button>
+                            <button className="flex size-7 items-center justify-center rounded hover:bg-surface-hover transition-colors">
+                              <MoreVertical size={13} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
