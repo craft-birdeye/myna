@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
-import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
@@ -13,8 +12,8 @@ export function VoiceChatDrawer({
   open,
   messages,
   summary,
-  audioUrl,
-  durationSecs = 0,
+  feedbackPrefill,
+  onSubmitFeedback,
   mode = 'voice',
   title,
   onClose,
@@ -35,9 +34,10 @@ export function VoiceChatDrawer({
     if (value === 'up') setToastVisible(true)
   }
 
-  const handleShareFeedbackSubmit = () => {
+  const handleShareFeedbackSubmit = (details: string) => {
     if (shareFeedbackId === null) return
     setMessageFeedback((prev) => ({ ...prev, [shareFeedbackId]: 'down' }))
+    onSubmitFeedback?.(details, shareFeedbackId)
     setShareFeedbackId(null)
   }
 
@@ -56,14 +56,6 @@ export function VoiceChatDrawer({
           </div>
 
           <div className="pp-details__body">
-            {!isChat && (
-              <CallRecordingPlayer
-                audioUrl={audioUrl}
-                durationSecs={durationSecs}
-                active={open}
-              />
-            )}
-
             {/* Summary card */}
             {summary && (
               <div className="pp-summary-card">
@@ -115,6 +107,7 @@ export function VoiceChatDrawer({
         open={shareFeedbackId !== null}
         onClose={() => setShareFeedbackId(null)}
         onSubmit={handleShareFeedbackSubmit}
+        initialDetails={feedbackPrefill}
       />
       <Toast
         message="Thanks for the feedback!"

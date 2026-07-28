@@ -72,6 +72,8 @@ export function VoicemailMessage({
   audioUrl,
   messages = FRONT_DESK_VOICE_MESSAGES,
   contactName,
+  feedbackPrefill,
+  onSubmitFeedback,
 }: VoicemailMessageProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -205,8 +207,8 @@ export function VoicemailMessage({
           open={drawerOpen}
           messages={messages}
           summary={summary}
-          audioUrl={audioUrl}
-          durationSecs={durationSecs}
+          feedbackPrefill={feedbackPrefill}
+          onSubmitFeedback={onSubmitFeedback}
           title={contactName ? `Call with ${contactName}` : undefined}
           onClose={() => setDrawerOpen(false)}
         />

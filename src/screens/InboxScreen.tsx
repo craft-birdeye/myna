@@ -10,6 +10,13 @@ import {
   ANNETTE_BLACK_CHAT_EVENTS,
   ANNETTE_BLACK_CONVERSATION_ID,
 } from '../data/annetteBlackChatConversation'
+import {
+  COACHING_C1_CONVERSATION_ID,
+  COACHING_C2_CONVERSATION_ID,
+  COACHING_C3_CONVERSATION_ID,
+  COACHING_C4_CONVERSATION_ID,
+  COACHING_CALL_CONVERSATIONS,
+} from '../data/coachingCallConversations'
 import { AgentDetailScreen } from './AgentDetailScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
@@ -35,6 +42,40 @@ const CONVERSATIONS: Conversation[] = [
     location: 'Rock Dental Brands',
     assignee: 'Front desk agent - North region',
     date: '5:30 PM',
+    unread: true,
+  },
+  {
+    id: COACHING_C1_CONVERSATION_ID,
+    name: 'Casey Martin',
+    message: "hey can i move my son's appt from thursday to next week",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '3:15 PM',
+    unread: true,
+  },
+  {
+    id: COACHING_C2_CONVERSATION_ID,
+    name: 'Morgan Reyes',
+    message: "hi, hi, I just need to cancel tomorrow's appointment.",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '9:47 PM',
+  },
+  {
+    id: COACHING_C3_CONVERSATION_ID,
+    name: 'Taylor Brooks',
+    message: 'Hi, do you have any Saturday appointments? Weekdays are impossible for us.',
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '11:02 AM',
+  },
+  {
+    id: COACHING_C4_CONVERSATION_ID,
+    name: 'Renee Alvarado',
+    message: "I'm calling about my daughter's breathing test from last week. Can you just tell me the results?",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '4:08 PM',
     unread: true,
   },
   { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', assignee: 'Front desk agent - South region', date: '03:25 PM' },
@@ -708,12 +749,33 @@ export function InboxScreen({
       conversation: {
         name: selectedConvo.name,
         message: details,
-        channel: selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID ? 'Voice' : 'Chat',
+        channel: selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID || COACHING_CALL_CONVERSATIONS[selectedConvo.id] ? 'Voice' : 'Chat',
         date: selectedConvo.date,
         location: selectedConvo.location,
       },
       conversationId: selectedConvo.id,
       messageId: feedbackMessageId,
+    })
+  }
+
+  // Thumbs-down inside a voice-call transcript drawer (Dana Whitfield, the coaching examples,
+  // and the generic voicemail fallback) — records the same Human feedback recommendation as the
+  // regular chat-bubble flow above, tagged to whichever conversation is currently open.
+  const handleVoiceDrawerFeedback = (details: string, messageId: string) => {
+    showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    submitFeedback({
+      text: details,
+      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      conversation: {
+        name: selectedConvo.name,
+        message: details,
+        channel: 'Voice',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId,
     })
   }
 
@@ -738,9 +800,10 @@ export function InboxScreen({
   const currentTabSet = TABS_BY_NAV[activeNav] ?? DEFAULT_TAB_SET
   const isFrontDeskCall = selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID
   const isAnnetteChat = selectedConvo.id === ANNETTE_BLACK_CONVERSATION_ID
+  const coachingCall = COACHING_CALL_CONVERSATIONS[selectedConvo.id]
   const threadEvents: ChatEvent[] = isAnnetteChat
     ? ANNETTE_BLACK_CHAT_EVENTS
-    : isFrontDeskCall
+    : isFrontDeskCall || coachingCall
       ? []
       : CHAT_EVENTS
 
@@ -915,6 +978,26 @@ export function InboxScreen({
                     audioUrl={voicemailSample}
                     messages={FRONT_DESK_VOICE_MESSAGES}
                     contactName={selectedConvo.name}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
+                  />
+                </>
+              ) : coachingCall ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">{coachingCall.dateLabel}</span>
+                  </div>
+                  <VoicemailMessage
+                    variant="voice-chat"
+                    transcript=""
+                    summary={coachingCall.summary}
+                    duration={coachingCall.duration}
+                    durationSecs={coachingCall.durationSecs}
+                    time={selectedConvo.date}
+                    audioUrl={voicemailSample}
+                    messages={coachingCall.messages}
+                    contactName={selectedConvo.name}
+                    feedbackPrefill={coachingCall.feedbackGiven}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
                   />
                 </>
               ) : !isAnnetteChat ? (
@@ -931,11 +1014,12 @@ export function InboxScreen({
                     time="10:42 PM"
                     audioUrl={voicemailSample}
                     contactName={selectedConvo.name}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
                   />
                 </>
               ) : null}
 
-              {!isFrontDeskCall &&
+              {!isFrontDeskCall && !coachingCall &&
                 threadEvents.map((event) => {
                   if (event.kind === 'date') {
                     return <ChatSystemLabel key={event.id} text={event.label} />

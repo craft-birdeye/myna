@@ -816,7 +816,7 @@ function ThoughtsSection({
   )
 }
 
-/** A single collapsible "Thoughts"/"Searched X" note used by `IntroBlocksView`. Un-labeled
+/** A single collapsible "Thoughts"/"Searched X" note used by `IntroBlockItem`'s `thought` case. Un-labeled
  *  (default "Thoughts") notes render italic, matching the app's chain-of-thought convention;
  *  a custom label (e.g. "Searched procedures") reads as a plain finding instead. */
 function CollapsibleNote({
@@ -906,8 +906,9 @@ function CollapsibleSummaryLine({
   )
 }
 
-/** Renders one `IntroBlock` — shared by `IntroBlocksView` (the initial message) and
- *  `ScriptedTurnResponse` (a hand-authored refinement-turn reply). `autoExpanded` only
+/** Renders one `IntroBlock` — shared by `ResponseBlock`'s introBlocks path (the initial
+ *  message) and `ScriptedTurnResponse` (a hand-authored refinement-turn reply), both of which
+ *  reveal blocks one at a time. `autoExpanded` only
  *  affects "Thoughts"-style notes — see `CollapsibleNote`. `onOpenConversations` only
  *  applies to a `section` block with `showConversationsLink`. */
 function IntroBlockItem({
@@ -927,22 +928,18 @@ function IntroBlockItem({
     case 'section':
       return (
         <div className="flex flex-col gap-xs">
-          <p className="text-small text-text-secondary">{block.heading}</p>
-          <p className="text-body text-text-primary">
-            {block.text}
-            {block.showConversationsLink && onOpenConversations && (
-              <>
-                {' — '}
-                <button
-                  type="button"
-                  onClick={onOpenConversations}
-                  className="italic text-text-action underline-offset-2 hover:underline"
-                >
-                  View all conversations
-                </button>
-              </>
-            )}
-          </p>
+          <p className="text-body font-bold text-text-secondary">{block.heading}</p>
+          <p className="text-body text-text-primary">{block.text}</p>
+          {block.showConversationsLink && onOpenConversations && (
+            <button
+              type="button"
+              onClick={onOpenConversations}
+              className="mt-xs flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+            >
+              View all conversations
+              <Icon name="chevron_right" size={16} />
+            </button>
+          )}
         </div>
       )
     case 'list':
@@ -972,26 +969,6 @@ function IntroBlockItem({
     default:
       return null
   }
-}
-
-/** Renders a hand-authored `Recommendation.introBlocks` sequence in place of the generic
- *  thoughts + bodyText pairing. */
-function IntroBlocksView({
-  blocks,
-  autoExpanded,
-  onOpenConversations,
-}: {
-  blocks: IntroBlock[]
-  autoExpanded: boolean
-  onOpenConversations?: () => void
-}) {
-  return (
-    <div className="flex flex-col gap-lg">
-      {blocks.map((block, i) => (
-        <IntroBlockItem key={i} block={block} autoExpanded={autoExpanded} onOpenConversations={onOpenConversations} />
-      ))}
-    </div>
-  )
 }
 
 /** A right-aligned user chat bubble — shared by real typed refinement turns and synthetic
@@ -1241,6 +1218,8 @@ function ResponseBlock({
   manualUpdateTotal,
   pendingChangeTypes,
   introBlocks,
+  introApprovalPrompt,
+  onApprove,
 }: {
   thoughts: string
   toolCount: number
@@ -1249,6 +1228,10 @@ function ResponseBlock({
   /** Hand-authored replacement for the thoughts + bodyText + "See conversations" trio — see
    *  `Recommendation.introBlocks`. Only ever passed for the very first message. */
   introBlocks?: IntroBlock[]
+  /** Shows an Approve/Reject prompt once `introBlocks` finishes revealing — see
+   *  `Recommendation.introApprovalPrompt`. Only meaningful alongside `introBlocks`. */
+  introApprovalPrompt?: string
+  onApprove?: () => void
   changes: RecommendationChange[]
   procedureTitle: string
   diff: { original: string; revised: string } | null
@@ -1278,7 +1261,7 @@ function ResponseBlock({
   const outcomeIdx = afterDiffIdx
   const acceptIdx = outcomeIdx + (hasOutcomes ? 1 : 0)
   const totalSteps = introBlocks
-    ? 2 // 1 = intro content appears (still "thinking"), 2 = settled — collapses Thoughts
+    ? introBlocks.length + 1 // one step per block, revealed in order, then settle — collapses Thoughts
     : hasQuestion
       ? questionIdx + 1
       : showAcceptPrompt
@@ -1295,9 +1278,11 @@ function ResponseBlock({
     let cancelled = false
     let i = 0
     const scheduleNext = () => {
+      // introBlocks reveal one at a time at a steady conversational pace, matching
+      // ScriptedTurnResponse. The generic (non-introBlocks) path keeps its original cadence:
       // Thoughts' own checklist takes ~2s to finish revealing itself, so give it room before
       // the rest of the answer continues; steps after that land at a steady conversational pace.
-      const delay = i === 0 ? 350 : i === 1 ? 2100 : 750
+      const delay = introBlocks ? (i === 0 ? 400 : 700) : i === 0 ? 350 : i === 1 ? 2100 : 750
       setTimeout(() => {
         if (cancelled) return
         i++
@@ -1319,11 +1304,38 @@ function ResponseBlock({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-xl">
       {introBlocks ? (
-        revealStep > 0 && (
-          <div className="chat-reveal-in">
-            <IntroBlocksView blocks={introBlocks} autoExpanded={isRevealing} onOpenConversations={onOpenConversations} />
-          </div>
-        )
+        <>
+          {introBlocks.map((block, i) =>
+            revealStep > i ? (
+              <div key={i} className="chat-reveal-in">
+                <IntroBlockItem block={block} autoExpanded={isRevealing} onOpenConversations={onOpenConversations} />
+              </div>
+            ) : null,
+          )}
+          {introApprovalPrompt && revealStep > introBlocks.length && (
+            <div className="chat-reveal-in flex flex-col gap-md rounded-sm bg-surface">
+              <p className="text-body text-text-primary">{introApprovalPrompt}</p>
+              {recStatus === 'open' && (
+                <div className="flex items-center gap-sm">
+                  <button
+                    type="button"
+                    onClick={() => onReject(recId)}
+                    className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onApprove}
+                    className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                  >
+                    Approve
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       ) : (
         <>
           {revealStep > 0 && (
@@ -1365,7 +1377,7 @@ function ResponseBlock({
           ) : null,
         )}
 
-      {diff && revealStep > diffIdx && (
+      {!introBlocks && diff && revealStep > diffIdx && (
         <div className="chat-reveal-in flex flex-col gap-md">
           <div className="flex items-center gap-xs text-body text-text-primary">
             <Icon name="remove_circle" size={16} className="shrink-0 text-chip-danger-text" />
@@ -1416,7 +1428,7 @@ function ResponseBlock({
         </div>
       )}
 
-      {showAcceptPrompt && revealStep > acceptIdx && (
+      {!introBlocks && showAcceptPrompt && revealStep > acceptIdx && (
         <div className="chat-reveal-in flex items-center justify-between gap-md">
           {recStatus === 'open' ? (
             <>
@@ -1554,6 +1566,8 @@ function RecommendationChatView({
         conversationCount={rec.conversationCount}
         bodyText={rec.rationale}
         introBlocks={rec.introBlocks}
+        introApprovalPrompt={rec.introApprovalPrompt}
+        onApprove={onApproveScripted}
         changes={effectiveChanges}
         pendingChangeTypes={pendingChangeTypesAt(0)}
         procedureTitle={rec.procedureTitle}
@@ -1569,6 +1583,13 @@ function RecommendationChatView({
         manualUpdateIndex={0}
         manualUpdateTotal={totalManual}
       />
+
+      {recStatus === 'accepted' && rec.introApprovalPrompt && (
+        <>
+          <UserTurnBubble text="Approved" />
+          <SimpleAgentReply text={rec.approvedReply ?? 'This procedure has been added to the workflow.'} />
+        </>
+      )}
 
       {turns.map((turn, i) => {
         const isLastTurn = i === turns.length - 1
@@ -1764,19 +1785,19 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
           >
             <BackArrowIcon />
           </button>
-          <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
           {rec.source === 'feedback' ? (
             <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" />
           ) : (
             <Icon name="auto_awesome" size={16} className="shrink-0 text-ai-brand" />
           )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-sm">
+          <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
           <Chip
             label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
             variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
           />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-sm">
           <button
             type="button"
             aria-label="Reset to original"

@@ -90,6 +90,10 @@ export interface Recommendation {
    *  hand-authored sequence of thought/searched/text/list blocks. Only applies to the very
    *  first message — refinement turns are unaffected. */
   introBlocks?: IntroBlock[]
+  /** Shows an Approve/Reject prompt right after `introBlocks` finishes revealing — for a
+   *  recommendation that resolves entirely in its first message, with no `composerPrefill`/
+   *  `scriptedTurnResponse` second turn needed (e.g. a "direct fix" coaching recommendation). */
+  introApprovalPrompt?: string
   /** Text that pre-fills the Chat-view composer the first time it's focused, before the user
    *  has sent a refinement — lets a bespoke scripted flow demo without retyping the answer. */
   composerPrefill?: string
@@ -187,6 +191,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'thought', text: 'The gap is that Myna has no payment info, so let me first check whether any payment content already exists before I ask the user for anything.' },
       { kind: 'thought', label: 'Searched procedures', text: "Myna has procedures for booking, insurance collection, and cancellation — but nothing for payments or pricing. So the moment a caller mentions paying, there's nothing to fall back on and it transfers." },
       { kind: 'thought', text: "This is a content gap, not a logic change — how to pay and what a visit costs are fixed, non-private facts that are safe for Myna to say. But I don't have those details, and I shouldn't invent a payment link or a price. I need to get them from the user before I can build anything. I'll lay out exactly what's needed and stop here." },
+      { kind: 'text', text: "Here's what's happening: 12 recent calls asked about payments, and since Myna had no payment guidance to fall back on, every one was routed to a live agent." },
       { kind: 'section', heading: 'Issue', text: "Callers ask how to pay a bill, or what a visit will cost. Myna has no payment or pricing information, so it sends every one of these calls to a live agent — and outside business hours, when billing is closed, the call just ends with no help." },
       { kind: 'section', heading: 'Impact: Medium', text: 'In the last 24 hours, 12 calls about payments were routed to a live agent — 3 of them outside business hours. Agents spent an average of 3 minutes on each.', showConversationsLink: true },
       { kind: 'section', heading: 'Recommendation', text: "Give Myna a Payments & Cost procedure so it can answer these directly instead of transferring. To build it, I need a few details from you (or upload a billing/pricing doc and I'll pull them from it):" },
@@ -287,6 +292,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'thought', text: "Callers are asking whether their plan is accepted, and Myna can't answer. Let me check what the current insurance procedure actually covers." },
       { kind: 'thought', label: 'Searched procedures', text: "The insurance procedure collects plan name and member ID during booking and says the team verifies offline. Nothing anywhere lists which plans are accepted — so Myna can't answer the question callers ask first." },
       { kind: 'thought', text: "The accepted-plan list is a fixed business fact and safe to share. But I don't have it, and guessing a plan list would be a serious mistake — Myna could tell someone we take a plan we don't. I need the real list from the user before building anything." },
+      { kind: 'text', text: "Here's what's happening: 18 conversations in the last 7 days opened with an insurance question, and 11 of those callers hung up without booking rather than register just to find out if they're covered." },
       { kind: 'section', heading: 'Issue', text: "Customers call before booking to ask if the clinic takes their insurance, or what a visit costs without it. Myna only knows how to collect insurance details during booking — it can't say which plans are accepted. So it gives a vague answer, and new customers hang up rather than register just to find out if they're covered." },
       { kind: 'section', heading: 'Impact: High', text: '18 conversations in the last 7 days started with an insurance-acceptance question. 11 of them ended without a booking — these are new patients lost at the very first question.', showConversationsLink: true },
       { kind: 'section', heading: 'Recommendation', text: "Add accepted-insurance details to the agent. To build it, I need a few details from you (or upload an insurance acceptance doc and I'll pull them from it):" },
@@ -380,6 +386,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'thought', text: "These are the simplest possible questions — what to bring, how long, what time you close — and they're all being transferred. Let me check whether any visit-info content exists." },
       { kind: 'thought', label: 'Searched procedures', text: 'There\'s booking logic, but no visit information at all — no document list, no visit lengths, no hours. Myna even fails on "what time do you close today," the most basic fact about the business.' },
       { kind: 'thought', text: "Everything asked here is fixed and non-private. One small content block closes the whole group. I need the real values from the user — hours and visit lengths aren't things I should guess." },
+      { kind: 'text', text: "Here's what's happening: 21 conversations in the last 7 days asked basic visit questions — what to bring, how long it takes, when the clinic closes — and every one was routed to staff." },
       { kind: 'section', heading: 'Issue', text: "Customers with an appointment call to ask basic questions — what to bring, how long the visit takes, what time the clinic closes. Myna doesn't have any of this, so it transfers or gives a vague answer, for information that never changes." },
       { kind: 'section', heading: 'Impact: High', text: '21 conversations in the last 7 days asked about documents, visit length, or clinic hours — all routed to staff. Each took about 2 minutes of front-desk time to answer.', showConversationsLink: true },
       { kind: 'section', heading: 'Recommendation', text: 'Add visit information to the agent. To get started, please share:' },
@@ -480,6 +487,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'thought', text: 'Refills are one of the biggest transfer groups. Let me check whether any refill handling exists today.' },
       { kind: 'thought', label: 'Searched procedures', text: 'No refill procedure exists. Refill calls fall into the out-of-scope path and transfer every time — then staff write down the patient, the medicine, and the pharmacy by hand.' },
       { kind: 'thought', text: "The task is almost entirely detail collection — confirm the patient, capture the medicine, the pharmacy, and any note, and hand it to the clinician to approve. The only part that needs a human is the approval, which happens after the call anyway. One thing I won't skip: refills touch medicine, so there's a safety edge — a child out of a rescue inhaler and struggling right now is an emergency, not a refill. I'll propose the capture steps and ask for the two operational details I can't decide myself." },
+      { kind: 'text', text: "Here's what's happening: 26 refill requests came in over the last 7 days, and every one was routed to staff even though it's mostly just collecting a few details." },
       { kind: 'section', heading: 'Issue', text: "Customers call for refills — often an inhaler or a daily asthma medicine. Myna has no refill step, so every one of these calls goes to a person, even though it's mostly just collecting a few details." },
       { kind: 'section', heading: 'Impact: Medium', text: '26 refill conversations in the last 7 days were routed to staff. Each took about 4 minutes — mostly writing down the same details Myna could have captured in the call.', showConversationsLink: true },
       { kind: 'section', heading: 'Recommendation', text: 'Add a refill request step to the agent. Myna will confirm the patient, capture the medicine, the pharmacy, and any special note (like a travel supply), then log a task for the clinical team. To set it up, please confirm:' },
@@ -582,6 +590,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'thought', text: 'These calls sound urgent, but the actual question is a scheduling one — do you take same-day sick visits, and how do I get one. Let me check if any same-day policy exists.' },
       { kind: 'thought', label: 'Searched procedures', text: 'The booking procedure handles regular scheduling, but there\'s no same-day or sick-visit policy anywhere. Every "can we come in today?" call transfers.' },
       { kind: 'thought', text: 'Two things to keep separate here. The answerable part is policy — whether same-day exists and how to request it — and I need that from the user. The part Myna must never do is judge symptoms. "He has a fever" can go to a same-day booking, but for a lung clinic, "he\'s struggling to breathe" or "his lips look blue" is an emergency, and Myna should send that to 911 or the on-call line, not book it. I\'ll build that rule in as fixed, and ask only for the policy.' },
+      { kind: 'text', text: "Here's what's happening: 14 conversations in the last 7 days asked about a same-day sick visit, and all of them were routed to staff." },
       { kind: 'section', heading: 'Issue', text: 'Customers call the morning of, or when a child is suddenly sick, asking if they can come in today or if the clinic takes same-day sick visits. Myna has no procedure for this, so it transfers — and these calls spike in cold and flu season, exactly when the front desk is busiest.' },
       { kind: 'section', heading: 'Impact', text: "14 conversations in the last 7 days asked about a same-day sick visit — all routed to staff. Most came in before 10am, the front desk's busiest window.", showConversationsLink: true },
       { kind: 'section', heading: 'Recommendation', text: 'Add the same-day visit policy to the agent. To get started, please share:' },
@@ -681,6 +690,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'thought', text: "This one's delicate. Myna correctly refuses to read out results — that rule must stay. But callers usually aren't asking for the values; they're asking a status question: are they back, and when will someone tell me? Let me check what exists today." },
       { kind: 'thought', label: 'Searched procedures', text: "The guardrails block sharing medical results — correct — but there's nothing telling Myna what it can say: no timeline, no portal info, no follow-up option. So every results call ends in a refusal or a transfer." },
       { kind: 'thought', text: "There's a safe middle path: how results arrive, the usual timeline, portal help, and a follow-up note if it's overdue. None of that touches a result value. I need the portal link and the timeline from the user — those aren't things to guess — and I'll spell out the boundary so it's clearly safe." },
+      { kind: 'text', text: "Here's what's happening: 11 conversations in the last 7 days asked about test results, and each one ended in a transfer or a flat refusal." },
       { kind: 'section', heading: 'Issue', text: "Customers call about test results — did they come back, why haven't I heard, how do I see them. Myna is right not to read results out loud, but today it can't even say whether results are in or how they'll arrive. So a worried parent gets a transfer or a flat refusal." },
       { kind: 'section', heading: 'Impact', text: '11 conversations in the last 7 days asked about test results — every one was routed to staff or ended in a refusal. These calls had the lowest caller ratings of any group.', showConversationsLink: true },
       { kind: 'section', heading: 'Recommendation', text: 'Add results-status information to the agent — status and process only, never the actual results. To get started, please share:' },
@@ -1369,6 +1379,10 @@ const PRIORITY_ORDER: Record<Priority, number> = { High: 0, Medium: 1, Low: 2 }
 
 export function sortRecommendations(recs: Recommendation[]): Recommendation[] {
   return [...recs].sort((a, b) => {
+    // Human feedback always leads the table — it's a direct report on this agent, not a
+    // pattern the system found on its own, so it shouldn't wait behind AI-detected priority tiers.
+    const feedbackDiff = (a.source === 'feedback' ? 0 : 1) - (b.source === 'feedback' ? 0 : 1)
+    if (feedbackDiff !== 0) return feedbackDiff
     const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
     if (priorityDiff !== 0) return priorityDiff
     return b.conversationCount - a.conversationCount

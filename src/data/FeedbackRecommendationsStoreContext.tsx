@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { buildCoachingFeedbackRecommendation } from './coachingFeedbackRecommendations'
 import {
   classifyFeedbackType,
   similarIssuesSummary,
@@ -57,6 +58,29 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
   }, [feedbackRecommendations])
 
   const submitFeedback = ({ text, agentName, conversation, conversationId, messageId }: SubmitFeedbackInput) => {
+    // The four coaching-example transcripts (Inbox voice calls C1–C4) get a fully hand-scripted
+    // chat — same pattern as the AI-detected recommendations — instead of the generic
+    // heuristic-classified one below.
+    const coachingRecommendation = buildCoachingFeedbackRecommendation(conversationId, agentName, conversation, messageId)
+    if (coachingRecommendation) {
+      setFeedbackRecommendations((prev) => {
+        const existingIndex = prev.findIndex(
+          (rec) => rec.source === 'feedback' && rec.agentName === agentName && rec.feedbackKey === coachingRecommendation.feedbackKey,
+        )
+        if (existingIndex >= 0) {
+          // Always refresh to the current template — these are hand-scripted and versioned in
+          // code, so a resubmission (or a template update since the record was first created)
+          // should replace the stored copy rather than leave it frozen at whatever it looked
+          // like when it was first created.
+          const next = [...prev]
+          next[existingIndex] = coachingRecommendation
+          return next
+        }
+        return [...prev, coachingRecommendation]
+      })
+      return
+    }
+
     const gapType = classifyFeedbackType(text)
     const feedbackKey = text.trim().toLowerCase().replace(/\s+/g, ' ')
 

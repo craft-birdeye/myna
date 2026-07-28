@@ -3,13 +3,13 @@ import { createPortal } from 'react-dom'
 import { Icon } from '../Icon/Icon'
 import type { ShareFeedbackModalProps } from './ShareFeedbackModal.types'
 
-export function ShareFeedbackModal({ open, onClose, onSubmit }: ShareFeedbackModalProps) {
+export function ShareFeedbackModal({ open, onClose, onSubmit, initialDetails = '' }: ShareFeedbackModalProps) {
   const [details, setDetails] = useState('')
   const canSubmit = details.trim().length > 0
 
   useEffect(() => {
-    if (!open) setDetails('')
-  }, [open])
+    setDetails(open ? initialDetails : '')
+  }, [open, initialDetails])
 
   if (!open) return null
 
