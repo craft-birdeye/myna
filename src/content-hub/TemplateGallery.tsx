@@ -122,7 +122,7 @@ const SCORE_BREAKDOWN_LABELS = [
 
 // ── Blog thumbnail data ────────────────────────────────────────────────────────
 
-const BLOG_DATA: Record<string, {
+export const BLOG_DATA: Record<string, {
   tags: [string, string, string, string][];
   title: string;
   scene: 'city' | 'garden' | 'list' | 'chart';
@@ -236,7 +236,7 @@ function BlogThumbnail({ id }: { id: string }) {
 
 // ── FAQ thumbnail ──────────────────────────────────────────────────────────────
 
-const FAQ_DATA: Record<string, { section: string; items: { q: string }[] }> = {
+export const FAQ_DATA: Record<string, { section: string; items: { q: string }[] }> = {
   'faq-1': {
     section: 'Product launch',
     items: [

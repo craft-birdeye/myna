@@ -20,7 +20,7 @@ import {
   RowActions,
   type ChannelId,
 } from './projectShared';
-import { TEMPLATES, type ContentType, type TemplateItem, TemplateThumbnail, TYPE_THUMB_BG } from './TemplateGallery';
+import { TEMPLATES, type ContentType, type TemplateItem, TemplateThumbnail, TYPE_THUMB_BG, FAQ_DATA, BLOG_DATA } from './TemplateGallery';
 import { CalendarView as ContentHubCalendarView } from './CalendarView';
 import { DataTable, FilterPanel, CustomizeColumnsDrawer, Tabs, type Column as MYNAColumn, type ColumnOption, type FilterField, type SelectOption } from '../components';
 import type { Tab } from '../components';
@@ -152,7 +152,7 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
 
   return (
     <Dialog open={!!tmpl} onOpenChange={open => { if (!open) onClose(); }}>
-      <DialogContent className="w-[1000px] sm:max-w-[1000px] max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col">
+      <DialogContent className="w-[1000px] sm:max-w-[1000px] max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col [&>[data-slot=dialog-close]]:hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h2 className="text-[15px] text-foreground">Preview of {tmpl.name}</h2>
@@ -241,45 +241,75 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
                 </div>
               </div>
 
-              {/* Blog hero */}
-              {isBlog && (
-                <div className="relative h-[120px] overflow-hidden border-b border-zinc-100">
-                  <div className="absolute inset-0 bg-gradient-to-b from-sky-200 to-emerald-100" />
-                  <div className="absolute inset-x-0 bottom-0 h-10 bg-primary" />
-                  <div className="absolute bottom-10 left-8 h-16 w-12 rounded-t-full bg-primary" />
-                  <div className="absolute bottom-10 right-12 h-14 w-10 rounded-t-full bg-primary/70" />
-                  <div className="absolute right-20 top-6 size-5 rounded-full bg-surface-hover" />
-                </div>
-              )}
-
               {/* Content body */}
-              <div className="px-6 py-5 flex flex-col gap-2">
-                {isBlog && (
-                  <>
-                    <h3 className="text-[16px] leading-snug text-text-primary">{tmpl.name}</h3>
-                    <p className="text-[13px] text-text-secondary leading-relaxed">{tmpl.description}</p>
-                    <div className="my-2 rounded-lg border-l-4 border-emerald-500 bg-surface-hover px-4 py-2">
-                      <p className="text-[13px] italic text-text-secondary">"We've got to be courageous and really lean in… That's the only way you're going to innovate"</p>
-                      <p className="mt-1 text-[11px] text-text-secondary">– Alex Craddock</p>
-                    </div>
-                  </>
-                )}
-                {!isBlog && (
-                  <>
-                    <div className="flex gap-1.5">
-                      <Badge variant={TYPE_BADGE_VARIANT[tmpl.type]}>{TYPE_LABEL[tmpl.type]}</Badge>
-                      {isSocial && <Badge variant="purple">Post</Badge>}
-                    </div>
-                    <h3 className="text-[16px] leading-snug text-text-primary">{tmpl.name}</h3>
-                    <p className="text-[13px] text-text-secondary leading-relaxed">{tmpl.description}</p>
-                  </>
-                )}
-                {/* Filler lines */}
-                <div className="flex flex-col gap-2 pt-2">
-                  {tmpl.previewLines.map((w, i) => (
-                    <div key={i} className="h-[6px] rounded-full bg-surface-hover" style={{ width: `${w}%` }} />
-                  ))}
-                </div>
+              <div className="px-6 py-5 flex flex-col gap-3">
+                {isBlog && (() => {
+                  const data = BLOG_DATA[tmpl.id];
+                  return (
+                    <>
+                      <h3 className="text-[17px] leading-snug text-text-primary">{data?.title ?? tmpl.name}</h3>
+                      <p className="text-[13px] text-text-secondary leading-relaxed">{tmpl.description}</p>
+                      <div className="flex flex-col gap-4 pt-1">
+                        <div>
+                          <p className="text-[14px] text-text-primary mb-1.5">Introduction</p>
+                          <p className="text-[13px] text-text-secondary leading-relaxed">This guide covers everything you need to know — from getting started to achieving consistent results. Whether you're new or experienced, these insights will help you move forward with confidence.</p>
+                        </div>
+                        <div>
+                          <p className="text-[14px] text-text-primary mb-2">Key points</p>
+                          <ul className="flex flex-col gap-2">
+                            {['Understand your goals before diving in', 'Choose the right approach for your audience', 'Measure results and iterate as you go', 'Use data to back every major decision'].map((pt, i) => (
+                              <li key={i} className="flex items-start gap-2 text-[13px] text-text-secondary">
+                                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] text-primary">{i + 1}</span>
+                                {pt}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="text-[14px] text-text-primary mb-1.5">Conclusion</p>
+                          <p className="text-[13px] text-text-secondary leading-relaxed">By applying the steps above you can expect to see meaningful improvements within weeks. Consistency and clarity are the two biggest drivers of long-term success.</p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+                {!isBlog && (() => {
+                  const faqData = FAQ_DATA[tmpl.id];
+                  const answers: Record<string, string> = {
+                    "What's included in the new product?": 'Our new product includes full access to the core feature set, priority support, and a dedicated onboarding session.',
+                    'When does early access open?': 'Early access opens on the first Monday of next month. Sign up now to secure your spot.',
+                    'Is there a free trial available?': 'Yes — we offer a 14-day free trial with no credit card required.',
+                    'Can I upgrade my plan later?': 'Absolutely. You can upgrade at any time directly from your account dashboard.',
+                    'What are your business hours?': 'We are open Monday through Friday from 8 AM to 6 PM, and Saturday from 9 AM to 2 PM.',
+                    'Is parking available on-site?': 'Yes, free parking is available in our dedicated lot directly behind the building.',
+                    'Do you offer same-day service?': 'Same-day service is available for most requests made before noon. Contact us to confirm availability.',
+                    'How do I book an appointment?': 'You can book online via our website, call us directly, or walk in during business hours.',
+                    'How much does the service cost?': 'Pricing depends on the scope of work. We offer a free 15-minute consultation to provide an accurate quote.',
+                    'Do you offer a money-back guarantee?': 'Yes — we offer a 30-day satisfaction guarantee. If you\'re not happy, we\'ll make it right.',
+                    'What happens after I sign up?': 'You\'ll receive a welcome email with next steps and be assigned a dedicated account manager within 24 hours.',
+                    'Are there any hidden fees?': 'None. All costs are clearly outlined upfront before you commit.',
+                    'Who is the best provider near me?': 'We serve your area and are consistently rated #1 by local customers on Google and Yelp.',
+                    'How fast can I get a response?': 'Our team typically responds within 1 business hour during operating hours.',
+                    'What makes you different?': 'We combine industry expertise with a personalised approach — every client gets a tailored solution, not a template.',
+                    'Do you serve my area?': 'We currently serve all major metro areas. Enter your zip code on our website to confirm coverage.',
+                  };
+                  return (
+                    <>
+                      <h3 className="text-[17px] leading-snug text-text-primary">{tmpl.name}</h3>
+                      <p className="text-[13px] text-text-secondary leading-relaxed">{tmpl.description}</p>
+                      {faqData && (
+                        <div className="flex flex-col gap-0 pt-1 divide-y divide-border">
+                          {faqData.items.map((item, i) => (
+                            <div key={i} className="py-3">
+                              <p className="text-[13px] text-text-primary mb-1">{item.q}</p>
+                              <p className="text-[13px] text-text-secondary leading-relaxed">{answers[item.q] ?? 'Our team is happy to answer this — reach out and we\'ll respond within one business day.'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
