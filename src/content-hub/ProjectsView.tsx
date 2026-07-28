@@ -115,10 +115,10 @@ const LIBRARY_COLUMNS: import('../components').Column<LibraryRow>[] = [
     sortable: true,
     render: (_v, row) => (
       <div className="flex items-center gap-3">
-        <div className="w-12 h-8 rounded overflow-hidden shrink-0 border border-border/60" style={{ background: TYPE_THUMB_BG[row.contentType] }}>
+        <div className="w-12 h-8 rounded overflow-hidden shrink-0 flex items-center justify-center" style={{ background: TYPE_THUMB_BG[row.contentType] }}>
           <TemplateThumbnail template={row.tmpl} />
         </div>
-        <span className="text-body text-text-action truncate">{row.name}</span>
+        <span className="text-body text-text-primary group-hover/row:text-text-action truncate transition-colors">{row.name}</span>
       </div>
     ),
   },
@@ -128,27 +128,19 @@ const LIBRARY_COLUMNS: import('../components').Column<LibraryRow>[] = [
     width: 140,
     sortable: true,
     render: (_v, row) => (
-      row.contentType === 'faq'
-        ? <span className="text-body text-text-primary">FAQ</span>
-        : <span className="inline-flex items-center rounded-sm px-2 py-0.5 text-small" style={{ background: '#EDE9FE', color: '#5B21B6' }}>Blog</span>
+      <span className="text-body text-text-primary">{row.contentType === 'faq' ? 'FAQ' : 'Blog'}</span>
     ),
   },
   {
     key: 'score',
     label: 'Content score',
-    width: 180,
+    width: 160,
     sortable: true,
-    render: (_v, row) => {
-      const color = row.score >= 90 ? '#377e2c' : '#94a3b8';
-      return (
-        <div className="flex items-center gap-2">
-          <div className="w-16 h-1.5 bg-surface-selected rounded-full overflow-hidden">
-            <div className="h-full rounded-full" style={{ width: `${row.score}%`, background: color }} />
-          </div>
-          <span className="text-small text-text-primary tabular-nums whitespace-nowrap">{row.score}/100</span>
-        </div>
-      );
-    },
+    render: (_v, row) => (
+      <span className="text-body tabular-nums" style={{ color: row.score >= 90 ? '#377e2c' : 'var(--color-text-secondary)' }}>
+        {row.score}/100
+      </span>
+    ),
   },
   { key: 'brand',       label: 'Brand identity', width: 180, sortable: true },
   { key: 'lastUpdated', label: 'Last updated',   width: 160, sortable: true },
@@ -895,6 +887,11 @@ export const ProjectsView = ({
                   </button>
                 ))}
               </div>
+              {libViewMode === 'list' && (
+                <button type="button" aria-label="Customize columns" onClick={() => setColumnSheetOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                  <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                </button>
+              )}
               <button type="button" aria-label="Filters" onClick={() => setFilterPanelOpen(o => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                 <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
