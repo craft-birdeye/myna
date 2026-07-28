@@ -130,20 +130,28 @@ const LIBRARY_FILTER_FIELDS: FilterField[] = [
 
 // ── Template preview modal ────────────────────────────────────────────────────
 
+const SUBSCORE_DESCRIPTIONS: Record<string, string> = {
+  'Intent Match':         'Measures how closely the content aligns with the intent behind user search queries, ensuring the page answers what people are actually looking for.',
+  'Search Visibility':    'Evaluates how well the content is optimized to be surfaced by Google and AI search engines, covering keyword integration, query coverage, and internal linking.',
+  'Content Depth':        'Assesses whether the content covers the topic thoroughly enough to satisfy both readers and search algorithms, including breadth of subtopics and word count.',
+  'Brand Alignment':      'Checks that the tone, terminology, and messaging are consistent with your brand guidelines and voice across the entire piece.',
+  'Publishing Readiness': 'Verifies that all structural and technical requirements are met before publishing, such as metadata completeness, heading hierarchy, and image alt text.',
+};
+
 const BLOG_SUBSCORES = [
-  { name: 'Intent Match',         you: 89 },
-  { name: 'Search Visibility',    you: 94 },
-  { name: 'Content Depth',        you: 91 },
-  { name: 'Brand Alignment',      you: 88 },
-  { name: 'Publishing Readiness', you: 91 },
+  { name: 'Intent Match',         you: 89, warnings: 0 },
+  { name: 'Search Visibility',    you: 94, warnings: 2 },
+  { name: 'Content Depth',        you: 91, warnings: 1 },
+  { name: 'Brand Alignment',      you: 88, warnings: 0 },
+  { name: 'Publishing Readiness', you: 91, warnings: 0 },
 ];
 
 const FAQ_SUBSCORES = [
-  { name: 'Intent Match',         you: 96 },
-  { name: 'Search Visibility',    you: 95 },
-  { name: 'Content Depth',        you: 94 },
-  { name: 'Brand Alignment',      you: 93 },
-  { name: 'Publishing Readiness', you: 92 },
+  { name: 'Intent Match',         you: 96, warnings: 0 },
+  { name: 'Search Visibility',    you: 95, warnings: 1 },
+  { name: 'Content Depth',        you: 94, warnings: 0 },
+  { name: 'Brand Alignment',      you: 93, warnings: 0 },
+  { name: 'Publishing Readiness', you: 92, warnings: 0 },
 ];
 
 const BLOG_SECTIONS: Record<string, { heroImage: string; sections: { heading?: string; body?: string; listItems?: string[] }[] }> = {
@@ -301,13 +309,19 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
                         className={cn('shrink-0 text-muted-foreground transition-transform', openScore === sub.name && 'rotate-90')}
                       />
                       <span className="flex-1 text-[13px] text-foreground">{sub.name}</span>
-                      <span className="text-[13px] text-foreground tabular-nums">{sub.you}</span>
+                      {sub.warnings > 0 && (
+                        <span className="flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px]" style={{ background: '#FEF3C7', color: '#D97706' }}>
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1L9 9H1L5 1Z" stroke="#D97706" strokeWidth="1.2" fill="none"/><rect x="4.5" y="4" width="1" height="2.5" rx="0.5" fill="#D97706"/><circle cx="5" cy="7.5" r="0.5" fill="#D97706"/></svg>
+                          {sub.warnings}
+                        </span>
+                      )}
+                      <span className="text-[13px] text-foreground tabular-nums ml-1">{sub.you}</span>
                     </button>
                     {openScore === sub.name && (
-                      <div className="pb-2 pl-5 pr-1">
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full" style={{ width: `${sub.you}%`, backgroundColor: '#1D9E75' }} />
-                        </div>
+                      <div className="pb-3 pl-5 pr-1 flex flex-col gap-2">
+                        <p className="text-[12px] text-muted-foreground leading-relaxed">
+                          {SUBSCORE_DESCRIPTIONS[sub.name]}
+                        </p>
                       </div>
                     )}
                   </div>
