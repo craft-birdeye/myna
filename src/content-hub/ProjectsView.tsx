@@ -139,9 +139,7 @@ const LIBRARY_COLUMNS: import('../components').Column<LibraryRow>[] = [
     width: 160,
     sortable: true,
     render: (_v, row) => (
-      <span className="text-body tabular-nums" style={{ color: row.score >= 90 ? '#377e2c' : 'var(--color-text-secondary)' }}>
-        {row.score}/100
-      </span>
+      <span className="text-body text-text-primary tabular-nums">{row.score}/100</span>
     ),
   },
   { key: 'brand',       label: 'Brand identity', width: 180, sortable: true },
