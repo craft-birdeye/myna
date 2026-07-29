@@ -2,10 +2,13 @@ import { useRef, useState } from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { Icon, InfoCard, Link, TopNav } from '../components'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
+import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 interface CreateFrontdeskAgentScreenProps {
   onBack: () => void
   onUseTemplate?: (templateTitle: string) => void
+  /** Fired with the full draft when the setup wizard completes (preferred over onUseTemplate when both are wired). */
+  onComplete?: (draft: WizardAgentDraft) => void
 }
 
 const TEMPLATES = [
@@ -76,6 +79,7 @@ function AgentSetupIllustration() {
 export function CreateFrontdeskAgentScreen({
   onBack,
   onUseTemplate,
+  onComplete,
 }: CreateFrontdeskAgentScreenProps) {
   const libraryRef = useRef<HTMLDivElement>(null)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
@@ -89,7 +93,7 @@ export function CreateFrontdeskAgentScreen({
       <NewFrontdeskAgentSetupScreen
         onBack={() => setShowSetupWizard(false)}
         onCancel={onBack}
-        onComplete={(draft) => onUseTemplate?.(draft.agentName)}
+        onComplete={(draft) => (onComplete ? onComplete(draft) : onUseTemplate?.(draft.agentName))}
       />
     )
   }

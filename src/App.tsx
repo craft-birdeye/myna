@@ -36,6 +36,7 @@ import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
+import { CreateFrontdeskAgentScreen } from './screens/CreateFrontdeskAgentScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import iconMarketing from './assets/icon-marketing.svg'
 import iconAgents from './assets/icon-agents.svg'
@@ -316,6 +317,7 @@ export function App() {
   const [agentToastMessage, setAgentToastMessage] = useState('')
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
+  const [showFrontdeskCreateFlow, setShowFrontdeskCreateFlow] = useState(false)
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')
@@ -341,6 +343,15 @@ export function App() {
     setEditingAgentName(name)
     if (draft) {
       setAgentToastMessage(`${draft.agentName} created successfully`)
+      setAgentToastVisible(true)
+    }
+  }
+
+  function handleCreateAgent(productId: string, productLabel: string) {
+    if (productId === 'frontdesk') {
+      setShowFrontdeskCreateFlow(true)
+    } else {
+      setAgentToastMessage(`Agent creation for ${productLabel} coming soon`)
       setAgentToastVisible(true)
     }
   }
@@ -382,7 +393,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !showFrontdeskCreateFlow && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && (
         <SideNav
           title="Front desk"
           sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
@@ -401,7 +412,19 @@ export function App() {
         />
       )}
       <main className="flex flex-1 flex-col overflow-hidden">
-        {railActive === 'settings' ? (
+        {showFrontdeskCreateFlow ? (
+          <CreateFrontdeskAgentScreen
+            onBack={() => setShowFrontdeskCreateFlow(false)}
+            onComplete={(draft) => {
+              setShowFrontdeskCreateFlow(false)
+              handleEditAgent(draft.agentName, draft)
+            }}
+            onUseTemplate={(title) => {
+              setShowFrontdeskCreateFlow(false)
+              handleEditAgent(title)
+            }}
+          />
+        ) : railActive === 'settings' ? (
           settingsSubScreen?.startsWith('integration-') ? (
             <IntegrationDetailScreen
               integrationId={settingsSubScreen.replace('integration-', '')}
@@ -424,10 +447,13 @@ export function App() {
           />
         ) : railActive === 'agents' ? (
           <AgentDirectoryScreen
+            key={activeProduct}
+            product={activeProduct}
             onOpenAgent={(navId) => {
               setRailActive('frontdesk')
               setNavActive(navId)
             }}
+            onCreateAgent={handleCreateAgent}
           />
         ) : isEditingWorkflow ? (
           <>

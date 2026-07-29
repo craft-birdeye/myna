@@ -18,6 +18,8 @@ export type {
   BookTestAppointmentValues,
 } from './BookTestAppointmentModal/BookTestAppointmentModal.types'
 export { ContextModal } from './ContextModal/ContextModal'
+export { CreateAgentModal } from './CreateAgentModal/CreateAgentModal'
+export type { CreateAgentModalProps } from './CreateAgentModal/CreateAgentModal.types'
 export { CustomizeColumnsDrawer } from './CustomizeColumnsDrawer/CustomizeColumnsDrawer'
 export { EmptyHintField } from './EmptyHintField/EmptyHintField'
 export { DateChange } from './DateChange/DateChange'

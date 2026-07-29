@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Toast, type Metric } from '../components'
+import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, CreateAgentModal, Toast, type Metric } from '../components'
 import {
-  AGENT_DIRECTORY,
+  getAgentDirectory,
   PERSONA_GROUPS,
   type AgentDirectoryEntry,
   type AgentPersonaId,
@@ -208,8 +208,14 @@ function SortDropdown({
                   sortMode === 'persona' ? 'bg-surface-selected' : 'hover:bg-surface-hover'
                 }`}
               >
-                <span className="min-w-0 flex-1 truncate text-body text-text-primary">Sort by persona</span>
-                {sortMode === 'persona' && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-body text-text-primary">Sort by persona</span>
+                  {sortMode === 'persona' && personaFilter && (
+                    <span className="block truncate text-small text-text-tertiary">
+                      {PERSONA_GROUPS.find((g) => g.id === personaFilter)?.label}
+                    </span>
+                  )}
+                </span>
                 <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
               </button>
 
@@ -396,13 +402,15 @@ function AgentCard({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onClick={clickable ? onOpen : undefined}
-      className={`relative flex flex-col rounded-md border border-border bg-surface p-xl transition-colors ${
+      className={`group relative flex flex-col rounded-md border border-border bg-surface p-xl transition-colors ${
         draggable ? 'cursor-grab active:cursor-grabbing' : clickable ? 'cursor-pointer hover:border-border-selected hover:bg-surface-hover' : ''
       }`}
     >
       {draggable && (
-        <div className="pointer-events-none absolute inset-x-0 top-sm flex justify-center text-text-tertiary">
-          <Icon name="drag_indicator" size={20} className="rotate-90" />
+        <div className="absolute inset-x-0 top-sm flex justify-center opacity-0 transition-opacity group-hover:opacity-100">
+          <Tooltip content="Drag and drop to rearrange this agent" variant="detail">
+            <Icon name="drag_indicator" size={20} className="rotate-90 text-text-tertiary" />
+          </Tooltip>
         </div>
       )}
 
@@ -453,7 +461,16 @@ function AgentCard({
 }
 
 // ── Screen ──────────────────────────────────────────────────────────────
-export function AgentDirectoryScreen({ onOpenAgent }: { onOpenAgent?: (navId: string) => void } = {}) {
+export function AgentDirectoryScreen({
+  product = 'healthcare',
+  onOpenAgent,
+  onCreateAgent,
+}: {
+  product?: string
+  onOpenAgent?: (navId: string) => void
+  onCreateAgent?: (productId: string, productLabel: string) => void
+} = {}) {
+  const AGENT_DIRECTORY = getAgentDirectory(product)
   const [statusFilter, setStatusFilter] = useState('All agents')
   const [dateRange, setDateRange] = useState('Last week')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
@@ -461,6 +478,7 @@ export function AgentDirectoryScreen({ onOpenAgent }: { onOpenAgent?: (navId: st
   const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
   const [toastMessage, setToastMessage] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
   const dragIdRef = useRef<string | null>(null)
 
   function showToast(message: string) {
@@ -540,7 +558,7 @@ export function AgentDirectoryScreen({ onOpenAgent }: { onOpenAgent?: (navId: st
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
               <button
                 type="button"
-                onClick={() => showToast('Agent creation flow coming soon')}
+                onClick={() => setCreateModalOpen(true)}
                 className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
               >
                 Create agent
@@ -599,6 +617,19 @@ export function AgentDirectoryScreen({ onOpenAgent }: { onOpenAgent?: (navId: st
       </div>
 
       <Toast message={toastMessage} visible={toastVisible} onClose={() => setToastVisible(false)} />
+
+      <CreateAgentModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onProceed={(productId, productLabel) => {
+          setCreateModalOpen(false)
+          if (onCreateAgent) {
+            onCreateAgent(productId, productLabel)
+          } else {
+            showToast(`Agent creation for ${productLabel} coming soon`)
+          }
+        }}
+      />
     </div>
   )
 }
