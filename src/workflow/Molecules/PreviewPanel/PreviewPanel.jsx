@@ -394,7 +394,7 @@ function OutboundPreviewPanel({ onClose, testAppointment, onPreviewActiveChange,
 export default function PreviewPanel({
   onClose,
   onPreviewActiveChange,
-  onSessionEnded,
+  onSessionEnded = () => {},
   showClose = true,
   showViewDetails = true,
   showViewLogs = true,

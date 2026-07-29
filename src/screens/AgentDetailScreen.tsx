@@ -2435,7 +2435,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                               </button>
                               <button
                                 type="button"
-                                onClick={handleStartTestAgent}
+                                onClick={() => handleStartTestAgent()}
                                 className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                               >
                                 Test agent
@@ -2470,7 +2470,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={handleStartTestAgent}
+                                      onClick={() => handleStartTestAgent()}
                                       className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                     >
                                       Test agent
@@ -2697,7 +2697,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                   </button>
                   <button
                     type="button"
-                    onClick={handleStartTestAgent}
+                    onClick={() => handleStartTestAgent()}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Test agent
