@@ -58,7 +58,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     thoughts: 'The feedback is about tone, and it\'s complete on its own — let me check what the tone rules say today.',
     rationale: 'A team member flagged a webchat conversation as too stiff and formal while reviewing it in the Inbox.',
     introBlocks: [
-      { kind: 'thought', text: "The feedback is about tone, and it's complete on its own — I don't need any business facts to act on it. Let me read the reported chat and check what the tone rules say today." },
       {
         kind: 'collapsible',
         label: 'Read the reported conversation',
@@ -79,6 +78,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
           ] },
         ],
       },
+      { kind: 'thought', text: "The feedback is about tone, and it's complete on its own — I don't need any business facts to act on it. Let me read the reported chat and check what the tone rules say today." },
       { kind: 'thought', label: 'Searched procedures', text: 'The Tone & Style section already bans over-formal fillers like "duly noted" — but it was written for voice. There\'s no separate guidance for chat and text, so the agent carries phone-style formality into a channel where people write "can i move my son\'s appt."' },
       { kind: 'thought', text: "Clear direct fix: add channel-specific tone rules — chat and text get short, plain, casual; voice stays as configured. I'll make the change, then test with the exact message from the reported chat." },
       {
@@ -93,6 +93,18 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         ],
       },
       { kind: 'thought', text: "Testing with the customer's real opening message." },
+      {
+        kind: 'collapsible',
+        label: 'Current agent response',
+        meta: 'Before this update',
+        defaultExpanded: true,
+        children: [
+          { kind: 'transcript', lines: [
+            { speaker: 'Test — customer', text: "hey can i move my son's appt from thursday to next week" },
+            { speaker: 'Myna', text: "Certainly. I have noted your request. Kindly provide the patient's first and last name so that I may proceed with the rescheduling process." },
+          ] },
+        ],
+      },
       {
         kind: 'collapsible',
         label: 'Testing agent response',
@@ -130,7 +142,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     thoughts: 'The feedback asks to shorten the greeting — let me check what parts of it are actually required before changing anything.',
     rationale: 'A team member flagged an after-hours call as too long — callers kept talking over the greeting and had to repeat themselves.',
     introBlocks: [
-      { kind: 'thought', text: 'The feedback asks to shorten the greeting. Before touching anything I need to check what\'s required in it — greetings often carry compliance lines that must stay.' },
       {
         kind: 'collapsible',
         label: 'Read the reported conversation',
@@ -150,6 +161,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
           ] },
         ],
       },
+      { kind: 'thought', text: 'The feedback asks to shorten the greeting. Before touching anything I need to check what\'s required in it — greetings often carry compliance lines that must stay.' },
       { kind: 'thought', label: 'Searched procedures', text: 'The greeting procedure marks two parts as mandatory: the emergency instruction ("If this is an emergency, please hang up and dial nine one one") and the recording notice. The on-call doctor\'s number and the message-taking offer are content choices, not requirements.' },
       { kind: 'thought', text: "So I can't cut the emergency line or the recording notice — those stay word-for-word. But I can stop reading a ten-digit number to every caller up front. The on-call number moves to a follow-up: mentioned briefly, offered in full only when the caller wants the doctor. That should roughly halve the greeting." },
       {
@@ -164,6 +176,17 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         ],
       },
       { kind: 'thought', text: 'Testing the new greeting length and that both required lines are intact.' },
+      {
+        kind: 'collapsible',
+        label: 'Current agent response',
+        meta: 'Before this update',
+        defaultExpanded: true,
+        children: [
+          { kind: 'transcript', lines: [
+            { speaker: 'Test — current greeting', text: 'If this is an emergency, please hang up and dial nine one one. The office is currently closed. If you need to speak with the doctor on call, please hang up and dial three zero five… nine six seven… two six one five, and your call will be returned promptly. Please note that this call may be recorded for quality and training purposes. My name is Myna, your virtual assistant. I can help you with your appointments or take a message and have the practice—' },
+          ] },
+        ],
+      },
       {
         kind: 'collapsible',
         label: 'Testing agent response',
@@ -202,7 +225,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     thoughts: "The user says Saturday hours exist. The agent clearly doesn't know them — let me confirm what the procedures say before asking for anything.",
     rationale: 'A team member flagged a text conversation where the agent said it had no weekend availability, even though the practice is open Saturday mornings.',
     introBlocks: [
-      { kind: 'thought', text: "The user says Saturday hours exist. The agent clearly doesn't know them — let me confirm what the procedures say before asking for anything." },
       {
         kind: 'collapsible',
         label: 'Read the reported conversation',
@@ -223,6 +245,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
           ] },
         ],
       },
+      { kind: 'thought', text: "The user says Saturday hours exist. The agent clearly doesn't know them — let me confirm what the procedures say before asking for anything." },
       { kind: 'thought', label: 'Searched procedures', text: "The hours in the agent's setup list Monday to Friday only. Nothing anywhere mentions Saturday. The agent answered exactly what it was given — the configuration is what's wrong, not the behavior." },
       { kind: 'thought', text: "I believe the user, but I can't write \"Saturday hours\" into a procedure without the actual hours — and Saturday scheduling often differs from weekdays. I need two facts before I build: the exact Saturday hours, and whether all providers or only some see patients on Saturdays." },
       { kind: 'divider', text: 'User replies' },
@@ -241,6 +264,18 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         ],
       },
       { kind: 'thought', text: 'Testing with the exact question from the reported thread.' },
+      {
+        kind: 'collapsible',
+        label: 'Current agent response',
+        meta: 'Before this update',
+        defaultExpanded: true,
+        children: [
+          { kind: 'transcript', lines: [
+            { speaker: 'Test — customer', text: 'Hi, do you have any Saturday appointments? Weekdays are impossible for us.' },
+            { speaker: 'Myna', text: "I'm sorry, I don't have information about weekend availability. Let me have someone from our team follow up with you." },
+          ] },
+        ],
+      },
       {
         kind: 'collapsible',
         label: 'Testing agent response',
@@ -278,7 +313,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     thoughts: "The feedback asks me to have the agent read out medical results — that's a fixed rule I can't change. But the user is right that the call went badly.",
     rationale: 'A team member flagged a call where a parent asking about her daughter\'s test results was refused twice with no explanation and no next step.',
     introBlocks: [
-      { kind: 'thought', text: "The feedback asks me to have the agent read out medical results. That's a fixed rule I can't change — results and any medical detail never go out over a call or chat, regardless of who's asking. But the user is right that the conversation went badly. The real failure isn't the refusal; it's that the refusal came with nothing — no explanation, no timeline, no next step." },
       {
         kind: 'collapsible',
         label: 'Read the reported conversation',
@@ -299,6 +333,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
           ] },
         ],
       },
+      { kind: 'thought', text: "The feedback asks me to have the agent read out medical results. That's a fixed rule I can't change — results and any medical detail never go out over a call or chat, regardless of who's asking. But the user is right that the conversation went badly. The real failure isn't the refusal; it's that the refusal came with nothing — no explanation, no timeline, no next step." },
       { kind: 'thought', label: 'Searched procedures', text: 'The guardrail blocking results is working as intended. What\'s missing is everything around it: no timeline to give, no portal to point to, no follow-up option. The agent has nothing helpful it\'s allowed to say, so the caller hears only "no."' },
       { kind: 'text', text: "I can't make the agent read out results — that's a fixed privacy rule, and it protects your patients and your practice, so it stays even with identity verified. But you're right that this call went badly, and the part I can fix is real: right now the agent refuses and offers nothing. Here's what I'd change — when someone asks about results, the agent explains they come through the patient portal within your usual timeline, offers the portal link, and if it's been longer than expected, leaves a note for your team to follow up that day. To build it, I need your patient portal link and the usual results timeline." },
       { kind: 'divider', text: 'User replies' },
@@ -319,6 +354,18 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         ],
       },
       { kind: 'thought', text: 'Testing with the exact request from the reported call — the answer must be helpful and must not include any medical content.' },
+      {
+        kind: 'collapsible',
+        label: 'Current agent response',
+        meta: 'Before this update',
+        defaultExpanded: true,
+        children: [
+          { kind: 'transcript', lines: [
+            { speaker: 'Test — caller', text: "Can you just tell me my daughter's breathing test results?" },
+            { speaker: 'Myna', text: "I'm not able to share medical results." },
+          ] },
+        ],
+      },
       {
         kind: 'collapsible',
         label: 'Testing agent response',

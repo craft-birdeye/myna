@@ -1,3 +1,4 @@
+import { Chip } from '../Chip/Chip'
 import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
 import type { ProcedureSidePanelProps } from './ProcedureSidePanel.types'
@@ -59,9 +60,25 @@ export function ProcedureSidePanel({ open, title, whenToUse, steps, exitCriteria
                     {i + 1}. {step.title}
                   </p>
                   <ul className="flex flex-col gap-xs pl-lg">
-                    {step.bullets.map((bullet, j) => (
-                      <li key={j} className="list-disc text-body text-text-secondary marker:text-text-tertiary">
-                        {renderBulletText(bullet)}
+                    {step.bullets.map((bullet, j) => {
+                      const added = step.addedBullets?.includes(bullet)
+                      return (
+                        <li
+                          key={j}
+                          className={`list-disc text-body marker:text-text-tertiary ${
+                            added ? 'text-accent-positive' : 'text-text-secondary'
+                          }`}
+                        >
+                          <span className="inline-flex flex-wrap items-center gap-xs">
+                            {renderBulletText(bullet)}
+                            {added && <Chip label="Added" variant="success" />}
+                          </span>
+                        </li>
+                      )
+                    })}
+                    {step.removedBullets?.map((bullet, j) => (
+                      <li key={`removed-${j}`} className="list-disc text-body text-chip-danger-text marker:text-text-tertiary">
+                        <span className="line-through">{renderBulletText(bullet)}</span>
                       </li>
                     ))}
                   </ul>

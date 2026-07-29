@@ -15,6 +15,9 @@ export interface BlockProps {
   collapsible?: boolean
   /** Initial expanded state. Ignored (always expanded) when `collapsible` is false. */
   defaultExpanded?: boolean
+  /** Omits the left color bar — e.g. when the body already reads as its own contained unit (a
+   *  bordered transcript snapshot) and the bar would just run alongside empty space. */
+  hideBar?: boolean
   children?: ReactNode
   className?: string
 }

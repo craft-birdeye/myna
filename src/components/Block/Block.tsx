@@ -19,6 +19,7 @@ export function Block({
   variant = 'neutral',
   collapsible = false,
   defaultExpanded = true,
+  hideBar = false,
   children,
   className = '',
 }: BlockProps) {
@@ -48,7 +49,7 @@ export function Block({
         ))}
       {showBody && children && (
         <div className="flex gap-md">
-          <div className={`w-1 shrink-0 rounded-full ${BAR_VARIANT[variant]}`} />
+          {!hideBar && <div className={`w-0.5 shrink-0 rounded-full ${BAR_VARIANT[variant]}`} />}
           <div className="flex min-w-0 flex-1 flex-col gap-sm py-[2px]">{children}</div>
         </div>
       )}
