@@ -424,6 +424,8 @@ export function App() {
           />
         ) : railActive === 'agents' ? (
           <AgentDirectoryScreen
+            key={activeProduct}
+            product={activeProduct}
             onOpenAgent={(navId) => {
               setRailActive('frontdesk')
               setNavActive(navId)

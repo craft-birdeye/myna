@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Toast, type Metric } from '../components'
 import {
-  AGENT_DIRECTORY,
+  getAgentDirectory,
   PERSONA_GROUPS,
   type AgentDirectoryEntry,
   type AgentPersonaId,
@@ -208,8 +208,14 @@ function SortDropdown({
                   sortMode === 'persona' ? 'bg-surface-selected' : 'hover:bg-surface-hover'
                 }`}
               >
-                <span className="min-w-0 flex-1 truncate text-body text-text-primary">Sort by persona</span>
-                {sortMode === 'persona' && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-body text-text-primary">Sort by persona</span>
+                  {sortMode === 'persona' && personaFilter && (
+                    <span className="block truncate text-small text-text-tertiary">
+                      {PERSONA_GROUPS.find((g) => g.id === personaFilter)?.label}
+                    </span>
+                  )}
+                </span>
                 <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
               </button>
 
@@ -335,8 +341,10 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
                 isCustomActive ? 'bg-surface-selected' : 'hover:bg-surface-hover'
               }`}
             >
-              <span className="min-w-0 flex-1 truncate text-body text-text-primary">Custom</span>
-              {isCustomActive && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-body text-text-primary">Custom</span>
+                {isCustomActive && <span className="block truncate text-small text-text-tertiary">{value}</span>}
+              </span>
               <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
             </button>
           </div>
@@ -396,13 +404,15 @@ function AgentCard({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onClick={clickable ? onOpen : undefined}
-      className={`relative flex flex-col rounded-md border border-border bg-surface p-xl transition-colors ${
+      className={`group relative flex flex-col rounded-md border border-border bg-surface p-xl transition-colors ${
         draggable ? 'cursor-grab active:cursor-grabbing' : clickable ? 'cursor-pointer hover:border-border-selected hover:bg-surface-hover' : ''
       }`}
     >
       {draggable && (
-        <div className="pointer-events-none absolute inset-x-0 top-sm flex justify-center text-text-tertiary">
-          <Icon name="drag_indicator" size={20} className="rotate-90" />
+        <div className="absolute inset-x-0 top-sm flex justify-center opacity-0 transition-opacity group-hover:opacity-100">
+          <Tooltip content="Drag and drop to rearrange this agent" variant="detail">
+            <Icon name="drag_indicator" size={20} className="rotate-90 text-text-tertiary" />
+          </Tooltip>
         </div>
       )}
 
@@ -453,7 +463,14 @@ function AgentCard({
 }
 
 // ── Screen ──────────────────────────────────────────────────────────────
-export function AgentDirectoryScreen({ onOpenAgent }: { onOpenAgent?: (navId: string) => void } = {}) {
+export function AgentDirectoryScreen({
+  product = 'healthcare',
+  onOpenAgent,
+}: {
+  product?: string
+  onOpenAgent?: (navId: string) => void
+} = {}) {
+  const AGENT_DIRECTORY = getAgentDirectory(product)
   const [statusFilter, setStatusFilter] = useState('All agents')
   const [dateRange, setDateRange] = useState('Last week')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
