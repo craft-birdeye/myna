@@ -85,7 +85,7 @@ function BlogMetaPanelContent({ onClose }: { onClose: () => void }) {
           <Input
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="text-[13px]"
+            className="h-[34px] rounded-md border border-border-selected bg-surface text-[13px] focus-visible:border-primary focus-visible:ring-primary/10"
           />
         </div>
 
@@ -95,7 +95,7 @@ function BlogMetaPanelContent({ onClose }: { onClose: () => void }) {
           <Input
             value={author}
             onChange={e => setAuthor(e.target.value)}
-            className="text-[13px]"
+            className="h-[34px] rounded-md border border-border-selected bg-surface text-[13px] focus-visible:border-primary focus-visible:ring-primary/10"
           />
         </div>
 
@@ -106,7 +106,7 @@ function BlogMetaPanelContent({ onClose }: { onClose: () => void }) {
             value={summary}
             onChange={e => setSummary(e.target.value)}
             rows={4}
-            className="text-[13px] resize-none"
+            className="rounded-md border border-border-selected bg-surface text-[13px] resize-none focus-visible:border-primary focus-visible:ring-primary/10"
           />
         </div>
 
@@ -116,7 +116,7 @@ function BlogMetaPanelContent({ onClose }: { onClose: () => void }) {
           <Input
             value={urlSlug}
             onChange={e => setUrlSlug(e.target.value)}
-            className="text-[13px] font-mono"
+            className="h-[34px] rounded-md border border-border-selected bg-surface text-[13px] font-mono focus-visible:border-primary focus-visible:ring-primary/10"
           />
         </div>
 
@@ -137,8 +137,10 @@ function BlogMetaPanelContent({ onClose }: { onClose: () => void }) {
               type="button"
               onClick={() => setLocationOpen(v => !v)}
               className={cn(
-                'flex w-full items-center justify-between rounded-md border border-input bg-background px-2 py-2 text-[13px] text-foreground transition-colors hover:bg-surface-hover',
-                locationOpen && 'border-ring ring-1 ring-ring',
+                'flex h-[34px] w-full items-center justify-between rounded-md border bg-surface px-md text-[13px] text-text-primary transition-colors hover:bg-surface-l2',
+                locationOpen
+                  ? 'border-primary ring-[3px] ring-primary/10'
+                  : 'border-border-selected',
               )}
             >
               <span className="truncate">{selectedLocation}</span>
