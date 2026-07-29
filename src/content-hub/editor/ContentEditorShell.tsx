@@ -1995,7 +1995,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
                     type="button"
                     aria-label="Collapse AI panel"
                     onClick={() => setLeftPanelOpen(false)}
-                    className="flex size-6 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors"
+                    className="ml-auto flex size-6 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors"
                   >
                     <ChevronLeft size={13} strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
@@ -2153,7 +2153,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
                   type="button"
                   aria-label="Collapse AI panel"
                   onClick={() => setLeftPanelOpen(false)}
-                  className="flex size-6 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors"
+                  className="ml-auto flex size-6 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors"
                 >
                   <ChevronLeft size={13} strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
