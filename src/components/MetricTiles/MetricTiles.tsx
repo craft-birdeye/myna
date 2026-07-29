@@ -10,7 +10,7 @@ export function MetricTiles({ metrics }: MetricTilesProps) {
           className="flex flex-1 flex-col items-start rounded-md border border-border px-xl pb-xl pt-lg transition-colors hover:bg-surface-hover"
         >
           <div className="flex items-baseline gap-sm">
-            <span className="text-display text-text-primary">{metric.value}</span>
+            <span className={`text-display ${metric.valueColorClassName ?? 'text-text-primary'}`}>{metric.value}</span>
             {metric.delta && (
               <span className={`text-small ${
                 (metric.positiveDown ? metric.trend === 'up' : metric.trend === 'down')
