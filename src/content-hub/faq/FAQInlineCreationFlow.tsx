@@ -231,7 +231,7 @@ function Step1BrandKit({ contentName, brandKit, locations, customAgent, onChange
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body text-text-primary transition-colors hover:bg-surface-l2"
+                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-[13px] text-text-primary transition-colors hover:bg-surface-l2"
               >
                 <span className="truncate">{selectedAgent?.label ?? 'Choose an agent...'}</span>
                 <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
@@ -245,7 +245,7 @@ function Step1BrandKit({ contentName, brandKit, locations, customAgent, onChange
                     type="button"
                     onClick={() => onAgentChange(agent.id)}
                     className={cn(
-                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-body text-left transition-colors',
+                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-[13px] text-left transition-colors',
                       customAgent === agent.id
                         ? 'bg-surface-selected text-text-primary'
                         : 'text-text-primary hover:bg-surface-hover',
@@ -261,7 +261,7 @@ function Step1BrandKit({ contentName, brandKit, locations, customAgent, onChange
                 <div className="my-1 h-px bg-border" />
                 <button
                   type="button"
-                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-body text-primary transition-colors hover:bg-surface-hover"
+                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-[13px] text-primary transition-colors hover:bg-surface-hover"
                 >
                   <span>Manage FAQ agents</span>
                   <ArrowUpRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0" />
@@ -296,7 +296,7 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body text-text-primary transition-colors hover:bg-surface-l2"
+          className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-[13px] text-text-primary transition-colors hover:bg-surface-l2"
         >
           <span className="min-w-0 truncate">{displayLabel}</span>
           <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
@@ -310,7 +310,7 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
               type="button"
               onClick={() => onChange(agent.id)}
               className={cn(
-                'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-body text-left transition-colors',
+                'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-[13px] text-left transition-colors',
                 value === agent.id
                   ? 'bg-surface-selected text-text-primary'
                   : 'text-text-primary hover:bg-surface-hover',
@@ -323,7 +323,7 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
           <div className="my-1 h-px bg-border" />
           <button
             type="button"
-            className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-body text-primary transition-colors hover:bg-surface-hover"
+            className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-[13px] text-primary transition-colors hover:bg-surface-hover"
           >
             <span>Manage FAQ agents</span>
             <ArrowUpRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0" />

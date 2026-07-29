@@ -315,7 +315,7 @@ function Step1BrandKit({ contentName, brandKit, locations, agentId, onChange, on
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body text-text-primary transition-colors hover:bg-surface-l2"
+                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-[13px] text-text-primary transition-colors hover:bg-surface-l2"
               >
                 <span className="truncate">{selectedAgent?.label ?? 'Choose an agent...'}</span>
                 <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
@@ -329,7 +329,7 @@ function Step1BrandKit({ contentName, brandKit, locations, agentId, onChange, on
                     type="button"
                     onClick={() => onAgentChange(agent.id)}
                     className={cn(
-                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-body text-left transition-colors',
+                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-[13px] text-left transition-colors',
                       agentId === agent.id
                         ? 'bg-surface-selected text-text-primary'
                         : 'text-text-primary hover:bg-surface-hover',
@@ -345,7 +345,7 @@ function Step1BrandKit({ contentName, brandKit, locations, agentId, onChange, on
                 <div className="my-1 h-px bg-border" />
                 <button
                   type="button"
-                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-body text-primary transition-colors hover:bg-surface-hover"
+                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-[13px] text-primary transition-colors hover:bg-surface-hover"
                 >
                   <span>Manage blog agents</span>
                   <ArrowUpRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0" />
@@ -734,7 +734,7 @@ function Step2Setup({
                   type="button"
                   onClick={handleAddUrl}
                   disabled={!refUrlInput.trim() || refUrls.length >= 5}
-                  className="h-[34px] px-md rounded-md border border-border-selected bg-surface text-body text-text-primary hover:bg-surface-l2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  className="h-[34px] px-md rounded-md border border-border-selected bg-surface text-[13px] text-text-primary hover:bg-surface-l2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 >
                   Add
                 </button>

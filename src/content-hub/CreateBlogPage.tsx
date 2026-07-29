@@ -706,7 +706,7 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body text-text-primary transition-colors hover:bg-surface-l2"
+                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-[13px] text-text-primary transition-colors hover:bg-surface-l2"
               >
                 <span className="truncate">{BLOG_AGENTS.find(a => a.id === agentId)?.label ?? 'Choose an agent...'}</span>
                 <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
@@ -720,7 +720,7 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
                     type="button"
                     onClick={() => setAgentId(agent.id)}
                     className={cn(
-                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-body text-left transition-colors',
+                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-[13px] text-left transition-colors',
                       agentId === agent.id
                         ? 'bg-surface-selected text-text-primary'
                         : 'text-text-primary hover:bg-surface-hover',
@@ -733,7 +733,7 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
                 <div className="my-1 h-px bg-border" />
                 <button
                   type="button"
-                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-body text-primary transition-colors hover:bg-surface-hover"
+                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-[13px] text-primary transition-colors hover:bg-surface-hover"
                 >
                   <span>Manage blog agents</span>
                   <ArrowUpRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0" />
