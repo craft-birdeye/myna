@@ -322,11 +322,15 @@ function MediaTile({
           <span className="text-[9px] text-white">Video</span>
         </div>
       )}
-      {selected && (
-        <div className="absolute top-1.5 right-1.5 size-5 rounded-full bg-primary flex items-center justify-center shadow">
-          <Check size={11} strokeWidth={2} className="text-white" />
-        </div>
-      )}
+      {/* Squarish checkbox — top-left, always visible on hover, filled when selected */}
+      <div className={cn(
+        'absolute top-1.5 left-1.5 size-[18px] rounded-[3px] border flex items-center justify-center transition-colors',
+        selected
+          ? 'bg-primary border-primary'
+          : 'bg-black/20 border-white/60',
+      )}>
+        {selected && <Check size={11} strokeWidth={2} className="text-white" />}
+      </div>
     </button>
   );
 }
@@ -377,7 +381,7 @@ function MediaLibraryTab({
         </div>
 
         {/* 4-column image grid */}
-        <div className="grid grid-cols-4 gap-sm">
+        <div className="grid grid-cols-5 gap-sm">
           {openFolder.items.map(item => (
             <MediaTile
               key={item.id}
@@ -475,7 +479,7 @@ function MediaLibraryTab({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-sm">
+          <div className="grid grid-cols-5 gap-sm">
             {LOOSE_ASSETS.map(asset => (
               <MediaTile
                 key={asset.id}
