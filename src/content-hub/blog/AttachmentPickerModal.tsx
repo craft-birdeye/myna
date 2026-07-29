@@ -12,7 +12,7 @@
  */
 
 import React, { useRef, useState, useCallback } from 'react';
-import { X, Upload, ChevronLeft, Check, Play, Film } from 'lucide-react';
+import { X, Upload, ChevronLeft, Check, Play, Film, LayoutGrid, List } from 'lucide-react';
 import { Tabs } from '../../components';
 import { cn } from '@/contenthub-ui/utils';
 
@@ -174,22 +174,27 @@ function ExtBadge({ ext, size = 32 }: { ext: string; size?: number }) {
 function AeroCheckbox({
   checked,
   onChange,
+  indeterminate = false,
 }: {
   checked: boolean;
   onChange: () => void;
+  indeterminate?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onChange}
       className={cn(
-        'flex-shrink-0 size-[18px] rounded border transition-colors flex items-center justify-center',
-        checked
+        'flex-shrink-0 size-[18px] rounded-[3px] border transition-colors flex items-center justify-center',
+        checked || indeterminate
           ? 'bg-primary border-primary'
           : 'bg-surface border-border hover:border-primary/60',
       )}
     >
       {checked && <Check size={11} strokeWidth={2} className="text-white" />}
+      {!checked && indeterminate && (
+        <div className="w-[8px] h-[2px] rounded-full bg-white" />
+      )}
     </button>
   );
 }
@@ -200,13 +205,17 @@ function FolderCard({
   folder,
   selectedCount,
   onClick,
+  onToggleAll,
 }: {
   folder: FolderDef;
   selectedCount: number;
   onClick: () => void;
+  onToggleAll: () => void;
 }) {
   const previews = folder.items.slice(0, 4);
   const extra = folder.items.length - 4;
+  const allSelected = selectedCount === folder.items.length;
+  const someSelected = selectedCount > 0 && !allSelected;
 
   return (
     <button
@@ -217,7 +226,12 @@ function FolderCard({
     >
       {/* Card thumbnail */}
       <div
-        className="relative overflow-hidden rounded-[8px] border border-[#e5e9f0] group-hover:border-primary/40 transition-colors"
+        className={cn(
+          'relative overflow-hidden rounded-[8px] border transition-colors',
+          selectedCount > 0
+            ? 'border-primary/50'
+            : 'border-[#e5e9f0] group-hover:border-primary/40',
+        )}
         style={{ width: 216, height: 216, background: '#f2f4f7' }}
       >
         <div className="grid grid-cols-2 gap-sm absolute inset-[10px]">
@@ -250,6 +264,19 @@ function FolderCard({
           ))}
         </div>
 
+        {/* Checkbox — top-left overlay */}
+        <div
+          className="absolute top-2 left-2"
+          onClick={e => { e.stopPropagation(); onToggleAll(); }}
+        >
+          <AeroCheckbox
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={onToggleAll}
+          />
+        </div>
+
+        {/* Count badge — top-right */}
         {selectedCount > 0 && (
           <div className="absolute top-2 right-2 bg-primary text-white text-[11px] rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
             {selectedCount}
@@ -314,6 +341,15 @@ function MediaLibraryTab({
   onToggle: (id: string) => void;
 }) {
   const [openFolder, setOpenFolder] = useState<FolderDef | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
+  function toggleFolderAll(folder: FolderDef) {
+    const allSelected = folder.items.every(i => selected.has(i.id));
+    folder.items.forEach(item => {
+      const isSelected = selected.has(item.id);
+      if (allSelected ? isSelected : !isSelected) onToggle(item.id);
+    });
+  }
 
   if (openFolder) {
     const folderSelected = openFolder.items.filter(i => selected.has(i.id));
@@ -384,6 +420,7 @@ function MediaLibraryTab({
               folder={folder}
               selectedCount={folder.items.filter(i => selected.has(i.id)).length}
               onClick={() => setOpenFolder(folder)}
+              onToggleAll={() => toggleFolderAll(folder)}
             />
           ))}
         </div>
@@ -391,20 +428,64 @@ function MediaLibraryTab({
 
       {/* All other assets */}
       <div className="flex flex-col gap-sm">
-        <p className="text-small text-text-primary">All other assets</p>
-        <div className="flex flex-col">
-          {LOOSE_ASSETS.map(asset => (
-            <AssetRow
-              key={asset.id}
-              id={asset.id}
-              name={asset.name}
-              thumb={asset.thumbUrl}
-              isVideo={asset.kind === 'video'}
-              checked={selected.has(asset.id)}
-              onToggle={() => onToggle(asset.id)}
-            />
-          ))}
+        {/* Section header with view toggle */}
+        <div className="flex items-center justify-between">
+          <p className="text-small text-text-primary">All other assets</p>
+          {/* View switcher — MYNA shared-chrome pattern */}
+          <div className="flex h-[30px] items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'flex size-[22px] items-center justify-center rounded-sm transition-colors',
+                viewMode === 'grid'
+                  ? 'bg-surface-selected text-text-primary'
+                  : 'text-text-icon hover:bg-surface-hover',
+              )}
+            >
+              <LayoutGrid size={14} strokeWidth={1.6} absoluteStrokeWidth />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'flex size-[22px] items-center justify-center rounded-sm transition-colors',
+                viewMode === 'list'
+                  ? 'bg-surface-selected text-text-primary'
+                  : 'text-text-icon hover:bg-surface-hover',
+              )}
+            >
+              <List size={14} strokeWidth={1.6} absoluteStrokeWidth />
+            </button>
+          </div>
         </div>
+
+        {viewMode === 'list' ? (
+          <div className="flex flex-col">
+            {LOOSE_ASSETS.map(asset => (
+              <AssetRow
+                key={asset.id}
+                id={asset.id}
+                name={asset.name}
+                thumb={asset.thumbUrl}
+                isVideo={asset.kind === 'video'}
+                checked={selected.has(asset.id)}
+                onToggle={() => onToggle(asset.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-sm">
+            {LOOSE_ASSETS.map(asset => (
+              <MediaTile
+                key={asset.id}
+                item={{ id: asset.id, name: asset.name, kind: asset.kind, thumbUrl: asset.thumbUrl }}
+                selected={selected.has(asset.id)}
+                onToggle={() => onToggle(asset.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
