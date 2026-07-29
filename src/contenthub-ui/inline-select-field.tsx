@@ -2,7 +2,7 @@
 
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 
 import { cn } from "./utils";
 import {
@@ -86,7 +86,9 @@ export function InlineSelectField({
               className={cn(
                 FLOATING_PANEL_SURFACE_CLASSNAME,
                 FLOATING_PANEL_LIST_PADDING_CLASSNAME,
-                "fixed z-[110] flex max-h-[min(240px,calc(100vh-24px))] flex-col gap-1 overflow-y-auto outline-none",
+                "fixed z-[110] flex max-h-[min(240px,calc(100vh-24px))] flex-col gap-xs overflow-y-auto outline-none",
+                // Override surface defaults to match Front Desk canonical dropdown
+                "rounded-sm border border-border bg-surface",
               )}
               style={{
                 top: menuBox.top,
@@ -108,15 +110,18 @@ export function InlineSelectField({
                       setOpen(false);
                     }}
                     className={cn(
-                      "w-full shrink-0 rounded-sm px-sm text-left transition-colors duration-150",
+                      "flex w-full shrink-0 items-center justify-between rounded-sm px-md text-left transition-colors duration-150",
                       optionText,
                       selected
-                        ? "bg-surface-selected text-primary"
+                        ? "bg-surface-selected text-text-primary"
                         : "text-text-primary hover:bg-surface-hover",
                     )}
                     style={{ fontWeight: 400 }}
                   >
-                    {opt}
+                    <span className="min-w-0 truncate">{opt}</span>
+                    {selected && (
+                      <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />
+                    )}
                   </button>
                 );
               })}
@@ -141,7 +146,10 @@ export function InlineSelectField({
           type="button"
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            "flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-text-primary transition-colors hover:bg-surface-l2",
+            "flex h-[34px] w-full items-center justify-between rounded-md border bg-surface px-md text-text-primary transition-colors",
+            open
+              ? "border-primary ring-[3px] ring-primary/10"
+              : "border-border-selected hover:bg-surface-l2",
             triggerText,
           )}
           style={{ fontWeight: 400 }}
