@@ -520,35 +520,34 @@ function Step2Setup({
                     </button>
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-[480px] p-0">
-                    <div className="px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+                    <div className="px-4 pt-3 pb-1 text-[11px] text-muted-foreground">
                       Search AI recommendations
                     </div>
-                    <div className="flex max-h-[360px] flex-col overflow-y-auto py-1">
+                    <div className="flex max-h-[360px] flex-col overflow-y-auto pb-1">
                       {MOCK_RECOMMENDATIONS.map((rec) => (
-                        <div key={rec.id} className="group/rec relative">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onChange({ topic: `Write a blog post based on this Search AI recommendation: "${rec.title}". Focus on making it locally relevant, authoritative, and optimised for AI search assistants.` });
-                              setRecommendationsOpen(false);
-                            }}
-                            className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted"
-                          >
-                            <span className="text-[13px] text-foreground leading-snug pr-3">{rec.title}</span>
+                        <button
+                          key={rec.id}
+                          type="button"
+                          onClick={() => {
+                            onChange({ topic: `Write a blog post based on this Search AI recommendation: "${rec.title}". Focus on making it locally relevant, authoritative, and optimised for AI search assistants.` });
+                            setRecommendationsOpen(false);
+                          }}
+                          className="flex w-full flex-col gap-[3px] px-4 py-2.5 text-left transition-colors hover:bg-muted"
+                        >
+                          <span className="text-[13px] text-foreground leading-snug">{rec.title}</span>
+                          <div className="flex items-center gap-1.5">
                             <span className={cn(
-                              'shrink-0 rounded-full px-2 py-0.5 text-[11px]',
-                              rec.impact === 'High' ? 'bg-red-50 text-red-500'
-                                : rec.impact === 'Medium' ? 'bg-amber-50 text-amber-600'
-                                  : 'bg-muted text-muted-foreground',
+                              'text-[11px]',
+                              rec.impact === 'High' ? 'text-red-500'
+                                : rec.impact === 'Medium' ? 'text-amber-600'
+                                  : 'text-muted-foreground',
                             )}>
-                              {rec.impact}
+                              {rec.impact} impact
                             </span>
-                          </button>
-                          <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-[240px] rounded-sm border border-border bg-background p-3 shadow-lg opacity-0 transition-opacity group-hover/rec:opacity-100">
-                            <p className="text-[12px] text-foreground mb-1">{rec.impact} impact</p>
-                            <p className="text-[12px] leading-relaxed text-muted-foreground">{rec.description}</p>
+                            <span className="text-[11px] text-muted-foreground/50">·</span>
+                            <span className="text-[11px] text-muted-foreground">AEO {rec.aeoScore}</span>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </PopoverContent>

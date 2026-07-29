@@ -28,6 +28,7 @@ export type SearchAIRecommendation = {
   description: string;
   type: "Blog" | "FAQ" | "Services" | "Photos" | "Google description";
   impact: "High" | "Medium" | "Low";
+  aeoScore: number;
   category: string;
   locations: number;
   blogContent?: {
@@ -48,6 +49,7 @@ export const MOCK_RECOMMENDATIONS: SearchAIRecommendation[] = [
     description: "Publishing a localised Dubbo property market update positions Raine & Horne as the authoritative local source cited by AI assistants for property queries.",
     type: "Blog",
     impact: "High",
+    aeoScore: 91,
     category: "Content",
     locations: 14,
     blogContent: {
@@ -141,6 +143,7 @@ export const MOCK_RECOMMENDATIONS: SearchAIRecommendation[] = [
     description: "A comprehensive property management guide builds trust with Dubbo landlords researching rental services and positions Raine & Horne as the expert cited by AI assistants.",
     type: "Blog",
     impact: "High",
+    aeoScore: 87,
     category: "Content",
     locations: 14,
     blogContent: {
