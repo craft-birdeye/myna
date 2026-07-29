@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowLeft, ArrowUpRight, Check, Info, Sparkles, Loader2, Upload, X, FileText, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
-import { Tooltip } from '@/components/Tooltip/Tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/contenthub-ui/tooltip';
 import { cn } from '@/contenthub-ui/utils';
 import { Button } from '@/contenthub-ui/button';
 import { Switch } from '@/contenthub-ui/switch';
@@ -426,13 +426,19 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
                               <span className="inline-flex items-center rounded-full border border-border bg-surface-selected px-2 py-px text-[11px] text-text-primary">
                                 AEO {rec.aeoScore}
                               </span>
-                              <Tooltip
-                                content={`${rec.impact} impact — ${rec.description}`}
-                                variant="detail"
-                              >
-                                <span className="flex items-center text-muted-foreground/60 hover:text-muted-foreground transition-colors">
-                                  <Info size={12} strokeWidth={1.6} absoluteStrokeWidth />
-                                </span>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className="flex items-center text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <Info size={12} strokeWidth={1.6} absoluteStrokeWidth />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="max-w-[240px] space-y-1 text-left">
+                                  <p className="text-[11px] opacity-70">{rec.impact} impact</p>
+                                  <p className="text-xs leading-relaxed">{rec.description}</p>
+                                </TooltipContent>
                               </Tooltip>
                             </div>
                           </button>
