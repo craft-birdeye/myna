@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { VoiceChatDrawer } from '../../../components/VoiceChatDrawer/VoiceChatDrawer';
+import { Tooltip } from '../../../components/Tooltip/Tooltip';
 import voicemailSample from '../../../assets/voicemail_sample.mp3';
 import {
   PREVIEW_DEMO_SCRIPT as DEMO_SCRIPT,
@@ -393,12 +394,14 @@ function OutboundPreviewPanel({ onClose, testAppointment, onPreviewActiveChange,
 export default function PreviewPanel({
   onClose,
   onPreviewActiveChange,
+  onSessionEnded,
   showClose = true,
   showViewDetails = true,
   showViewLogs = true,
   agentName = '',
   testAppointment = null,
   onEditAppointment = null,
+  scriptedTranscript = /** @type {{ role: string, text: string }[] | null} */ (null),
 }) {
   const [panelView, setPanelView]   = useState('preview'); // preview | logs | details
   const [phase, setPhase]         = useState('idle');   // idle | dialing | active | ended
@@ -416,6 +419,20 @@ export default function PreviewPanel({
   const speakerRef    = useRef(speakerOff);
   const modeRef       = useRef(mode);
   const bottomRef     = useRef(null);
+  const scriptLoadedRef = useRef(false);
+  const onSessionEndedRef = useRef(onSessionEnded);
+  useEffect(() => { onSessionEndedRef.current = onSessionEnded; }, [onSessionEnded]);
+
+  // When a scripted transcript is supplied, clicking into the chat box loads the
+  // whole simulated test conversation at once (no real run).
+  const loadScriptedTranscript = useCallback(() => {
+    if (!scriptedTranscript || scriptLoadedRef.current || phase !== 'idle') return;
+    scriptLoadedRef.current = true;
+    setMode('chat');
+    modeRef.current = 'chat';
+    setPhase('active');
+    setMessages(scriptedTranscript.map((m) => ({ id: uid(), role: m.role, text: m.text })));
+  }, [scriptedTranscript, phase]);
 
   useEffect(() => { speakerRef.current = speakerOff; }, [speakerOff]);
   useEffect(() => { modeRef.current = mode; }, [mode]);
@@ -562,6 +579,7 @@ export default function PreviewPanel({
     setChatInput('');
     setPhase('ended');
     setMessages(prev => [...prev, { id: uid(), role: 'system', text: endedLabel }]);
+    onSessionEndedRef.current?.();
   }, []);
 
   /* Hang up voice call */
@@ -577,6 +595,7 @@ export default function PreviewPanel({
   /* Reset fully to idle */
   const handleReset = useCallback(() => {
     demoScriptRef.current = false;
+    scriptLoadedRef.current = false;
     window.speechSynthesis?.cancel();
     clearInterval(streamRef.current);
     setPhase('idle');
@@ -603,7 +622,7 @@ export default function PreviewPanel({
     onClose?.();
   }, [handleReset, onClose]);
 
-  const showChatFooter = !showLogs && (phase === 'idle' || mode === 'chat');
+  const showChatFooter = !showLogs && phase !== 'ended' && (phase === 'idle' || mode === 'chat');
   const chatInputActive = phase === 'active' && mode === 'chat';
   const chatInputDisabled = phase === 'ended' || agentTalking;
 
@@ -758,13 +777,17 @@ export default function PreviewPanel({
       {/* Footer — web chat input */}
       {showChatFooter && (
         <div className="preview-panel__footer">
-          <div className={`preview-panel__input-wrap${chatInputActive ? ' preview-panel__input-wrap--active' : ''}`}>
+          <div
+            className={`preview-panel__input-wrap${chatInputActive ? ' preview-panel__input-wrap--active' : ''}`}
+            onClick={loadScriptedTranscript}
+          >
             <textarea
               className="preview-panel__input"
               placeholder={phase === 'idle' ? 'Send a message to start a chat' : 'Enter'}
               rows={3}
               value={chatInput}
               disabled={chatInputDisabled}
+              onFocus={loadScriptedTranscript}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -775,14 +798,16 @@ export default function PreviewPanel({
             />
             <div className="preview-panel__input-actions">
               {chatInputActive && (
-                <button
-                  className="preview-panel__stop-btn"
-                  type="button"
-                  onClick={handleStopChat}
-                  aria-label="Stop chat"
-                >
-                  <span className="material-symbols-outlined">stop_circle</span>
-                </button>
+                <Tooltip content="End conversation" variant="brief">
+                  <button
+                    className="preview-panel__stop-btn"
+                    type="button"
+                    onClick={handleStopChat}
+                    aria-label="End conversation"
+                  >
+                    <span className="material-symbols-outlined">stop_circle</span>
+                  </button>
+                </Tooltip>
               )}
               <button
                 className={`preview-panel__send-btn${chatInput.trim() && !chatInputDisabled ? ' preview-panel__send-btn--active' : ''}`}

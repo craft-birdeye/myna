@@ -34,6 +34,7 @@ interface AgentInstanceScreenProps {
   onEditAgent?: (agentName: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
+  initialTab?: string
 }
 
 interface LocationRow {
@@ -312,8 +313,9 @@ export function AgentInstanceScreen({
   onEditAgent,
   onNavigateToInbox,
   product,
+  initialTab = 'outcomes',
 }: AgentInstanceScreenProps) {
-  const [activeTab, setActiveTab] = useState('outcomes')
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)

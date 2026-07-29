@@ -31,6 +31,39 @@
   background-color: rgba(0,0,0,0.25);
 }
 
+/* Light grey vertical scrollbar for composer textareas */
+.scrollbar-light {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+.scrollbar-light::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-light::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-light::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+/* Animated gradient "AI" sparkle — loading indicator while the agent responds */
+.sparkle-loader {
+  display: inline-flex;
+  line-height: 0;
+}
+.sparkle-loader svg {
+  filter: drop-shadow(0 0 2px rgba(104, 52, 183, 0.35));
+}
+.sparkle-loader.is-spinning {
+  animation: sparkle-loader-spin 1.8s ease-in-out infinite;
+}
+@keyframes sparkle-loader-spin {
+  0%   { transform: rotate(0deg) scale(0.82); opacity: 0.75; }
+  50%  { transform: rotate(180deg) scale(1.08); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0.82); opacity: 0.75; }
+}
+
 @layer components {
   .ai-summary-panel {
     @apply rounded-sm border px-lg py-md;

@@ -16,4 +16,6 @@ export interface ComposerAttachPopoverProps {
   tools?: AttachItem[]
   /** Override the built-in procedure list */
   procedures?: AttachItem[]
+  /** When set, plus-button click runs this instead of opening the attach popover */
+  onAddClick?: () => void
 }

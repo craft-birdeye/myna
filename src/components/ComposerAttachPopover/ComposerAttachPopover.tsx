@@ -53,6 +53,7 @@ export function ComposerAttachPopover({
   disabled = false,
   tools = DEFAULT_TOOLS,
   procedures = DEFAULT_PROCEDURES,
+  onAddClick,
 }: ComposerAttachPopoverProps) {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabId>('all')
@@ -92,9 +93,15 @@ export function ComposerAttachPopover({
       <button
         type="button"
         aria-label="Add"
-        aria-expanded={open}
+        aria-expanded={onAddClick ? undefined : open}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (onAddClick) {
+            onAddClick()
+            return
+          }
+          setOpen((o) => !o)
+        }}
         className={`hover:text-text-primary ${open ? 'text-text-primary' : ''} disabled:cursor-not-allowed disabled:opacity-40`}
       >
         <Icon name="add" size={20} />
