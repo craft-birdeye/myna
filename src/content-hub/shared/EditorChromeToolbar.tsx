@@ -449,9 +449,9 @@ export function EditorChromeToolbar({
           aria-label="Magic Write"
           onMouseDown={event => event.preventDefault()}
           onClick={() => { setOpenMenu(openMenu === 'ai' ? null : 'ai'); setToneOpen(false); }}
-          className="flex size-[34px] items-center justify-center rounded-md bg-primary/10 transition-colors hover:bg-primary/15"
+          className="flex size-[34px] items-center justify-center rounded-md transition-colors hover:bg-surface-hover"
         >
-          <Sparkles size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" />
+          <Sparkles size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-[#9970D7]" />
         </button>
         {openMenu === 'ai' && (
           <div className="absolute left-0 top-10 z-50 w-[232px] rounded-md border border-border bg-background p-1 shadow-dropdown">
@@ -468,10 +468,10 @@ export function EditorChromeToolbar({
                 onClick={() => setToneOpen(v => !v)}
                 className={cn(
                   'flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] transition-colors',
-                  toneOpen ? 'bg-primary/8 text-primary' : 'text-foreground hover:bg-surface-hover',
+                  toneOpen ? 'bg-[#9970D7]/8 text-[#9970D7]' : 'text-foreground hover:bg-surface-hover',
                 )}
               >
-                <Mic size={15} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />
+                <Mic size={15} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-[#9970D7]" />
                 <span className="flex-1">Change tone</span>
                 <ChevronRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-muted-foreground" />
               </button>
@@ -510,37 +510,12 @@ export function EditorChromeToolbar({
                   }}
                   className="flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
                 >
-                  <Icon size={15} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />
+                  <Icon size={15} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-[#9970D7]" />
                   <span>{action.label}</span>
                 </button>
               );
             })}
 
-            <div className="my-1 h-px bg-border" />
-
-            {/* IMPROVE section — original AI actions */}
-            <p className="px-2 pb-1 pt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-              Improve
-            </p>
-            {improveActions.map(action => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={action.id}
-                  type="button"
-                  onMouseDown={event => event.preventDefault()}
-                  onClick={() => {
-                    applyAiAction(action.id as AiActionId);
-                    setOpenMenu(null);
-                    setToneOpen(false);
-                  }}
-                  className="flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
-                >
-                  <Icon size={15} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />
-                  <span>{action.label}</span>
-                </button>
-              );
-            })}
           </div>
         )}
       </div>
