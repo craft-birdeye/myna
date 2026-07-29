@@ -1990,7 +1990,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
             >
               <div className="w-[300px] flex flex-col flex-1 min-h-0 rounded-xl border border-border/60 bg-background overflow-hidden">
                 <div className="flex-none px-3 py-2 border-b border-border flex items-center gap-2">
-                  <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} className="flex-1 min-w-0" />
+                  <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} />
                   <button
                     type="button"
                     aria-label="Collapse AI panel"
@@ -2148,7 +2148,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
           >
             <div className="w-[300px] flex flex-col flex-1 min-h-0 rounded-xl border border-border/60 bg-background overflow-hidden">
               <div className="flex-none px-3 py-2 border-b border-border flex items-center gap-2">
-                <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} className="flex-1 min-w-0" />
+                <SegmentedToggle ariaLabel="Create mode" items={LEFT_TAB_ITEMS} value={leftTab} onChange={setLeftTab} />
                 <button
                   type="button"
                   aria-label="Collapse AI panel"
