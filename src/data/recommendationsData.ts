@@ -1,5 +1,7 @@
 // Shared data + helpers for the agent Recommendation tab (table) and its full-page detail screen.
 
+import type { BlockVariant } from '../components/Block/Block.types'
+
 export type GapType = 'procedure' | 'knowledge' | 'action'
 export type Priority = 'High' | 'Medium' | 'Low'
 
@@ -56,9 +58,32 @@ export type IntroBlock =
   | { kind: 'text'; text: string }
   | { kind: 'list'; items: { label: string; text: string }[] }
   | { kind: 'divider'; text: string }
-  | { kind: 'collapsible'; label: string; meta?: string; defaultExpanded?: boolean; children: IntroBlock[] }
+  | {
+      kind: 'collapsible'
+      label: string
+      meta?: string
+      defaultExpanded?: boolean
+      children: IntroBlock[]
+      /** Only meaningful on the "Read the reported conversation" block: a short excerpt of the
+       *  flagged exchange (shown inline in the "Reported conversation" block) and the feedback
+       *  text a team member gave when flagging it. The full transcript (in `children`) is only
+       *  shown via the "View Transcript" side panel, not inline. */
+      reportedExcerpt?: { speaker: string; text: string }[]
+      feedback?: string
+    }
   | { kind: 'transcript'; lines: { speaker: string; text: string }[] }
-  | { kind: 'section'; heading: string; text: string; showConversationsLink?: boolean }
+  | {
+      kind: 'section'
+      heading: string
+      text: string
+      showConversationsLink?: boolean
+      /** Rendered as a bullet list inside the same bar-quoted block as `text` — e.g. the list
+       *  of details needed under an "Action needed" section, so the whole ask reads as one
+       *  block instead of a floating list underneath it. */
+      items?: { label: string; text: string }[]
+      /** Bar color for this block — see `Block`. Defaults to 'neutral' (plain gray bar). */
+      variant?: BlockVariant
+    }
 
 /** A hand-authored reply to the first Chat-view refinement turn — replaces the generic
  *  "I've updated the recommendation..." response, and ends in a custom approve/reject prompt
@@ -74,12 +99,17 @@ export interface Recommendation {
   title: string
   procedureTitle: string
   summary: string
+  /** Seed value only — the Recommendations table always recomputes the displayed Impact chip
+   *  from `conversationCount` relative to the busiest recommendation currently shown (see
+   *  `computeImpact`), rather than trusting this hand-authored value. */
   priority: Priority
   timeAgo: string
   conversationCount: number
   isNew: boolean
   whenToUse: string
   originalWhenToUse?: string
+  /** Shown in the procedure side panel's "When to exit this procedure?" section. */
+  exitCriteria?: string
   steps: ProcedureStep[]
   originalSteps?: ProcedureStep[]
   tools: { label: string; icon: string }[]
@@ -142,25 +172,26 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'procedure',
     title: 'Add payment procedure',
     procedureTitle: 'Payment processing procedure',
-    summary: '12 customers asked about payments with no agent guidance available.',
+    summary: '12 conversations impacted • No payment guidance available',
     priority: 'High',
     timeAgo: '2h ago',
     conversationCount: 12,
     isNew: true,
     whenToUse: 'When a customer asks about making a payment for services, parts, or outstanding balances — by phone, online, or in person.',
+    exitCriteria: 'The payment is confirmed and logged, or the customer is handed off to billing for a failed payment — whichever comes first.',
     steps: [
       {
         title: 'Acknowledge and identify payment type',
         bullets: [
           '"I\'d be happy to help you take care of that." Ask what the payment is for: a service invoice, a parts order, or an outstanding balance.',
-          "Look up the customer's account using their name or phone number via DMS Integration.",
+          "Look up the customer's account using their name or phone number via {{DMS Integration}}.",
           'Confirm the exact amount due and read it back to the customer before proceeding.',
         ],
       },
       {
         title: 'Route to the right payment channel',
         bullets: [
-          'Phone — collect card details securely over the call and process through DMS Integration. Never ask the customer to say their full card number out loud if a secure entry line is available.',
+          'Phone — collect card details securely over the call and process through {{DMS Integration}}. Never ask the customer to say their full card number out loud if a secure entry line is available.',
           'Online — direct the customer to payments.dealership.com and confirm they have the invoice number from their receipt.',
           'In person — confirm the service desk location and current business hours before ending the call.',
         ],
@@ -168,15 +199,15 @@ export const RECOMMENDATIONS: Recommendation[] = [
       {
         title: 'Process and confirm',
         bullets: [
-          'Submit the payment through DMS Integration and wait for confirmation before telling the customer it succeeded.',
+          'Submit the payment through {{DMS Integration}} and wait for confirmation before telling the customer it succeeded.',
           'If the payment fails, offer to retry with a different card or escalate to billing — do not end the call on a failure with no next step.',
-          'Send a payment confirmation via email or text using Send Confirmation once the transaction clears.',
+          'Send a payment confirmation via email or text using {{Send Confirmation}} once the transaction clears.',
         ],
       },
       {
         title: 'Close and log',
         bullets: [
-          "Update the customer's record in the DMS with the payment details and channel used.",
+          "Update the customer's record in the {{DMS Integration}} with the payment details and channel used.",
           'Ask if there is anything else the customer needs before ending the conversation.',
         ],
       },
@@ -194,8 +225,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'text', text: "Here's what's happening: 12 recent calls asked about payments, and since Myna had no payment guidance to fall back on, every one was routed to a live agent." },
       { kind: 'section', heading: 'Issue', text: "Callers ask how to pay a bill, or what a visit will cost. Myna has no payment or pricing information, so it sends every one of these calls to a live agent — and outside business hours, when billing is closed, the call just ends with no help." },
       { kind: 'section', heading: 'Impact: Medium', text: 'In the last 24 hours, 12 calls about payments were routed to a live agent — 3 of them outside business hours. Agents spent an average of 3 minutes on each.', showConversationsLink: true },
-      { kind: 'section', heading: 'Recommendation', text: "Give Myna a Payments & Cost procedure so it can answer these directly instead of transferring. To build it, I need a few details from you (or upload a billing/pricing doc and I'll pull them from it):" },
-      { kind: 'list', items: [
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: "Give Myna a Payments & Cost procedure so it can answer these directly instead of transferring. To build it, I need a few details from you (or upload a billing/pricing doc and I'll pull them from it):", items: [
         { label: 'How to pay', text: 'online link, phone number for billing, in person?' },
         { label: 'Billing hours', text: 'e.g., Mon–Fri, 9am–5pm' },
         { label: 'Payment plans', text: 'do you offer them, and how does someone set one up?' },
@@ -233,7 +263,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
           ],
         },
       ],
-      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please approve to continue, or reject to discard these changes.",
+      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please accept to continue, or reject to discard these changes.",
     },
     approvedReply: 'The Payments & Cost procedure has been added to the workflow and saved to your procedure library.',
     outcomes: [
@@ -263,12 +293,13 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'knowledge',
     title: 'Add insurance verification procedure',
     procedureTitle: 'Accepted insurance & self-pay procedure',
-    summary: '18 conversations started with an insurance question — 11 ended without booking.',
+    summary: "18 conversations impacted • Agent couldn't confirm coverage",
     priority: 'High',
     timeAgo: '1h ago',
     conversationCount: 18,
     isNew: true,
     whenToUse: 'When a caller asks whether a specific insurance plan is accepted, or what a visit costs without insurance.',
+    exitCriteria: 'The caller has a clear coverage answer and either moves into booking or ends the call — whichever they choose.',
     steps: [
       {
         title: 'Confirm accepted plans',
@@ -295,8 +326,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'text', text: "Here's what's happening: 18 conversations in the last 7 days opened with an insurance question, and 11 of those callers hung up without booking rather than register just to find out if they're covered." },
       { kind: 'section', heading: 'Issue', text: "Customers call before booking to ask if the clinic takes their insurance, or what a visit costs without it. Myna only knows how to collect insurance details during booking — it can't say which plans are accepted. So it gives a vague answer, and new customers hang up rather than register just to find out if they're covered." },
       { kind: 'section', heading: 'Impact: High', text: '18 conversations in the last 7 days started with an insurance-acceptance question. 11 of them ended without a booking — these are new patients lost at the very first question.', showConversationsLink: true },
-      { kind: 'section', heading: 'Recommendation', text: "Add accepted-insurance details to the agent. To build it, I need a few details from you (or upload an insurance acceptance doc and I'll pull them from it):" },
-      { kind: 'list', items: [
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: "Add accepted-insurance details to the agent. To build it, I need a few details from you (or upload an insurance acceptance doc and I'll pull them from it):", items: [
         { label: 'Medicaid plans accepted', text: 'e.g., Sunshine Health, Simply, Molina' },
         { label: 'Commercial plans accepted', text: 'e.g., Aetna, Cigna, Florida Blue' },
         { label: 'Self-pay price, standard visit', text: 'for callers with no insurance' },
@@ -333,7 +363,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
           ],
         },
       ],
-      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please approve to continue, or reject to discard these changes.",
+      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please accept to continue, or reject to discard these changes.",
     },
     approvedReply: 'The Accepted Insurance & Self-Pay procedure has been added to the workflow and saved to your procedure library.',
     outcomes: [
@@ -360,12 +390,13 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'knowledge',
     title: 'Add visit information procedure',
     procedureTitle: 'Visit information procedure',
-    summary: '21 conversations asked about documents, visit length, or hours — all routed to staff.',
+    summary: '21 conversations impacted • Routed to staff for basic info',
     priority: 'Medium',
     timeAgo: '3h ago',
     conversationCount: 21,
     isNew: true,
     whenToUse: 'When a caller with an appointment asks what to bring, how long the visit takes, or clinic hours.',
+    exitCriteria: "The caller's questions about the visit are answered and they have nothing further to ask.",
     steps: [
       {
         title: 'Share what to bring',
@@ -389,8 +420,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'text', text: "Here's what's happening: 21 conversations in the last 7 days asked basic visit questions — what to bring, how long it takes, when the clinic closes — and every one was routed to staff." },
       { kind: 'section', heading: 'Issue', text: "Customers with an appointment call to ask basic questions — what to bring, how long the visit takes, what time the clinic closes. Myna doesn't have any of this, so it transfers or gives a vague answer, for information that never changes." },
       { kind: 'section', heading: 'Impact: High', text: '21 conversations in the last 7 days asked about documents, visit length, or clinic hours — all routed to staff. Each took about 2 minutes of front-desk time to answer.', showConversationsLink: true },
-      { kind: 'section', heading: 'Recommendation', text: 'Add visit information to the agent. To get started, please share:' },
-      { kind: 'list', items: [
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: 'Add visit information to the agent. To get started, please share:', items: [
         { label: 'What to bring to a first visit', text: 'e.g., photo ID, insurance card, referral if the plan needs one, list of current medicines, past records' },
         { label: 'Visit length by type', text: 'e.g., first visit 45–60 min; breathing test adds 20–30 min' },
         { label: 'Clinic hours', text: 'your standard hours' },
@@ -428,7 +458,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
           ],
         },
       ],
-      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please approve to continue, or reject to discard these changes.",
+      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please accept to continue, or reject to discard these changes.",
     },
     approvedReply: 'The Visit Info procedure has been added to the workflow and saved to your procedure library.',
     outcomes: [
@@ -457,12 +487,13 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'action',
     title: 'Add prescription refill procedure',
     procedureTitle: 'Prescription refill procedure',
-    summary: '26 refill conversations were routed to staff in the last 7 days.',
+    summary: '26 conversations impacted • Refill requests routed to staff',
     priority: 'Medium',
     timeAgo: '4h ago',
     conversationCount: 26,
     isNew: true,
     whenToUse: 'When a caller asks for a prescription refill, such as a daily inhaler or asthma medicine.',
+    exitCriteria: 'The refill task is logged for the clinical team, or the caller was escalated because of a safety concern.',
     steps: [
       {
         title: 'Capture refill details',
@@ -476,7 +507,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         bullets: [
           'Tell the caller refills are usually sent within 1–2 business days.',
           'Log a task for the clinical team queue to review and approve the refill.',
-          'Safety rule: if a child is out of a rescue inhaler and struggling to breathe right now, send the caller to 911 or the on-call line instead of taking a refill.',
+          'Safety rule: if a child is out of a rescue inhaler and struggling to breathe right now, use {{Trigger Escalation}} to send the caller to 911 or the on-call line instead of taking a refill.',
         ],
       },
     ],
@@ -490,8 +521,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'text', text: "Here's what's happening: 26 refill requests came in over the last 7 days, and every one was routed to staff even though it's mostly just collecting a few details." },
       { kind: 'section', heading: 'Issue', text: "Customers call for refills — often an inhaler or a daily asthma medicine. Myna has no refill step, so every one of these calls goes to a person, even though it's mostly just collecting a few details." },
       { kind: 'section', heading: 'Impact: Medium', text: '26 refill conversations in the last 7 days were routed to staff. Each took about 4 minutes — mostly writing down the same details Myna could have captured in the call.', showConversationsLink: true },
-      { kind: 'section', heading: 'Recommendation', text: 'Add a refill request step to the agent. Myna will confirm the patient, capture the medicine, the pharmacy, and any special note (like a travel supply), then log a task for the clinical team. To set it up, please confirm:' },
-      { kind: 'list', items: [
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: 'Add a refill request step to the agent. Myna will confirm the patient, capture the medicine, the pharmacy, and any special note (like a travel supply), then log a task for the clinical team. To set it up, please confirm:', items: [
         { label: 'Turnaround time to tell callers', text: 'e.g., refills are usually sent within 1–2 business days' },
         { label: 'Where refill tasks should go', text: 'which team or queue' },
         { label: 'The safety rule', text: 'if a child is out of a rescue inhaler and struggling to breathe now, Myna sends them to 911 / the on-call line instead of taking a refill' },
@@ -527,7 +557,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
           ],
         },
       ],
-      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please approve to continue, or reject to discard these changes.",
+      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please accept to continue, or reject to discard these changes.",
     },
     approvedReply: 'The Refill Request procedure has been added to the workflow and saved to your procedure library.',
     outcomes: [
@@ -560,12 +590,13 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'procedure',
     title: 'Add same-day sick visit procedure',
     procedureTitle: 'Sick-visit same-day procedure',
-    summary: '14 conversations asked about a same-day sick visit — all routed to staff.',
+    summary: '14 conversations impacted • Same-day visit routed to staff',
     priority: 'Medium',
     timeAgo: '5h ago',
     conversationCount: 14,
     isNew: true,
     whenToUse: 'When a caller asks if their child can be seen today for a sudden illness.',
+    exitCriteria: 'The caller has either booked a same-day slot, been told none are left, or was escalated for an emergency.',
     steps: [
       {
         title: 'Check for emergencies first',
@@ -577,7 +608,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       {
         title: 'Offer a same-day slot',
         bullets: [
-          'If no emergency, confirm same-day sick visits are available and any cutoff time (e.g. call before 11am).',
+          'If no emergency, use {{Check Business Hours}} to confirm same-day sick visits are available and any cutoff time (e.g. call before 11am).',
           'Check for an opening and offer to book it.',
           'If the child has an existing appointment and is sick beforehand, keep the appointment unless the clinic calls to reschedule.',
         ],
@@ -593,8 +624,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'text', text: "Here's what's happening: 14 conversations in the last 7 days asked about a same-day sick visit, and all of them were routed to staff." },
       { kind: 'section', heading: 'Issue', text: 'Customers call the morning of, or when a child is suddenly sick, asking if they can come in today or if the clinic takes same-day sick visits. Myna has no procedure for this, so it transfers — and these calls spike in cold and flu season, exactly when the front desk is busiest.' },
       { kind: 'section', heading: 'Impact', text: "14 conversations in the last 7 days asked about a same-day sick visit — all routed to staff. Most came in before 10am, the front desk's busiest window.", showConversationsLink: true },
-      { kind: 'section', heading: 'Recommendation', text: 'Add the same-day visit policy to the agent. To get started, please share:' },
-      { kind: 'list', items: [
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: 'Add the same-day visit policy to the agent. To get started, please share:', items: [
         { label: 'Same-day sick visits', text: 'offered? Any cutoff time, e.g., call before 11am?' },
         { label: 'Child sick before an existing appointment', text: 'keep it, or reschedule? The emergency rule stays fixed: if a caller describes trouble breathing, blue lips, or an unresponsive child, Myna sends them to 911 or the on-call line — it never books that as a routine visit.' },
       ] },
@@ -629,7 +659,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
           ],
         },
       ],
-      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please approve to continue, or reject to discard these changes.",
+      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please accept to continue, or reject to discard these changes.",
     },
     approvedReply: 'The Sick-Visit / Same-Day procedure has been added to the workflow and saved to your procedure library.',
     outcomes: [
@@ -660,12 +690,13 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'knowledge',
     title: 'Add results status procedure',
     procedureTitle: 'Results status procedure',
-    summary: '11 conversations asked about test results — all routed to staff or ended in a refusal.',
+    summary: '11 conversations impacted • Routed to staff or refused',
     priority: 'Medium',
     timeAgo: '6h ago',
     conversationCount: 11,
     isNew: true,
     whenToUse: 'When a caller asks whether test results have come back, or how to check them.',
+    exitCriteria: 'The caller has a timeline and next step, and no medical detail was read out.',
     steps: [
       {
         title: 'Share status and process only',
@@ -678,7 +709,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       {
         title: 'Offer a follow-up',
         bullets: [
-          'If it has been longer than the usual timeline, offer to leave a note for the team to follow up.',
+          'If it has been longer than the usual timeline, use {{Trigger Escalation}} to leave a note for the team to follow up.',
           "Point callers who can't log in to the portal to the front desk for help.",
         ],
       },
@@ -693,8 +724,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { kind: 'text', text: "Here's what's happening: 11 conversations in the last 7 days asked about test results, and each one ended in a transfer or a flat refusal." },
       { kind: 'section', heading: 'Issue', text: "Customers call about test results — did they come back, why haven't I heard, how do I see them. Myna is right not to read results out loud, but today it can't even say whether results are in or how they'll arrive. So a worried parent gets a transfer or a flat refusal." },
       { kind: 'section', heading: 'Impact', text: '11 conversations in the last 7 days asked about test results — every one was routed to staff or ended in a refusal. These calls had the lowest caller ratings of any group.', showConversationsLink: true },
-      { kind: 'section', heading: 'Recommendation', text: 'Add results-status information to the agent — status and process only, never the actual results. To get started, please share:' },
-      { kind: 'list', items: [
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: 'Add results-status information to the agent — status and process only, never the actual results. To get started, please share:', items: [
         { label: 'How results are shared', text: 'e.g., the patient portal link, or a call from the team' },
         { label: 'Usual timeline', text: 'e.g., 3–5 business days after the test' },
         { label: 'Portal help', text: "who to contact if a caller can't log in" },
@@ -731,7 +761,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
           ],
         },
       ],
-      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please approve to continue, or reject to discard these changes.",
+      approvalPrompt: "Would you like to proceed with adding this procedure to the agent's workflow? Please accept to continue, or reject to discard these changes.",
     },
     approvedReply: 'The Results Status procedure has been added to the workflow and saved to your procedure library.',
     outcomes: [
@@ -760,12 +790,13 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'procedure',
     title: 'Update appointment rescheduling procedure',
     procedureTitle: 'Appointment rescheduling procedure',
-    summary: 'Same-day reschedule and waitlist paths are missing from the current procedure.',
+    summary: '8 conversations impacted • Same-day reschedule and waitlist paths missing',
     priority: 'Low',
     timeAgo: '5h ago',
     conversationCount: 8,
     isNew: false,
     whenToUse: 'When a customer requests to reschedule an existing appointment, including same-day changes and waitlist additions.',
+    exitCriteria: 'The customer has a confirmed new appointment time, or has been added to the waitlist and told how they\'ll be notified.',
     steps: [
       {
         title: 'Look up the existing appointment',
@@ -778,15 +809,15 @@ export const RECOMMENDATIONS: Recommendation[] = [
         title: 'Check availability for the new time',
         bullets: [
           'Search for open slots on the requested date across all service bays.',
-          'For same-day requests: check technician availability in real time — do not assume same-day is unavailable.',
+          'For same-day requests: check technician availability in real time via {{Schedule Appointment}} — do not assume same-day is unavailable.',
           'If no slots are open, offer to add the customer to the waitlist and explain how waitlist notifications work.',
         ],
       },
       {
         title: 'Confirm the reschedule',
         bullets: [
-          'Book the new slot using Schedule Appointment and cancel the old one in the same step.',
-          'Send an updated confirmation to the customer via Send Confirmation immediately.',
+          'Book the new slot using {{Schedule Appointment}} and cancel the old one in the same step.',
+          'Send an updated confirmation to the customer via {{Send Confirmation}} immediately.',
           'If the technician assignment changes as a result, notify the service advisor before ending the call.',
         ],
       },
@@ -822,16 +853,56 @@ export const RECOMMENDATIONS: Recommendation[] = [
       'Updated the Appointment rescheduling procedure to support same-day changes and a waitlist fallback.',
       'Once accepted, the updated procedure will replace the existing version in this workflow and your procedure library.',
     ],
-    manualUpdates: [
-      { icon: 'checklist', title: 'Confirm waitlist notification channel', description: 'Choose whether waitlisted customers are notified by text, email, or both.' },
-      { icon: 'schedule', title: 'Set same-day cutoff time', description: 'Define the latest time a same-day reschedule request can be accepted.' },
-    ],
     tools: [
       { label: 'Schedule Appointment', icon: 'calendar_today' },
       { label: 'Send Confirmation', icon: 'send' },
     ],
     thoughts: "I clustered 8 recent conversations where customers asked to reschedule the same day and the agent said it wasn't possible. Let me review the current rescheduling procedure for gaps.",
     rationale: "8 conversations were flagged because customers requesting same-day reschedules were told it wasn't possible, causing escalations.",
+    introBlocks: [
+      { kind: 'thought', text: "I clustered 8 recent conversations where customers asked to reschedule the same day and the agent said it wasn't possible. Let me review the current rescheduling procedure for gaps." },
+      { kind: 'thought', label: 'Searched procedures', text: "The rescheduling procedure looks up the appointment and checks availability, but nothing accounts for same-day requests — Myna treats every same-day ask as automatically unavailable instead of actually checking, and there's no waitlist fallback when a slot really isn't open." },
+      { kind: 'thought', text: "Checking real-time same-day availability is a fixed behavior change I can make on my own. But a waitlist needs two operational calls I can't make: which notification channel to use, and where the same-day cutoff falls. I'll lay those out and wait for the answer." },
+      { kind: 'text', text: "Here's what's happening: 8 recent conversations asked to reschedule for the same day, and every one was told it wasn't possible — without Myna actually checking." },
+      { kind: 'section', heading: 'Issue', text: 'Customers ask to reschedule an appointment for the same day, and Myna tells them it isn\'t possible without checking real technician availability. When no slot is open, there\'s also no waitlist fallback — the call just ends.' },
+      { kind: 'section', heading: 'Impact: Low', text: '8 conversations in the last 7 days asked to reschedule for the same day and were told no slot existed, without a real check — 3 of them escalated when the customer pushed back.', showConversationsLink: true },
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: "Update the rescheduling procedure so same-day requests get a real availability check, with a waitlist fallback when nothing's open. To finish this, I need two details from you:", items: [
+        { label: 'Waitlist notification channel', text: 'text, email, or both, when a waitlisted slot opens up' },
+        { label: 'Same-day cutoff time', text: 'the latest time a same-day reschedule request can be accepted, e.g. by 2pm' },
+      ] },
+    ],
+    composerPrefill: "Text is fine for waitlist notifications — email's optional. Same-day requests should be accepted up until 2pm.",
+    scriptedTurnResponse: {
+      introBlocks: [
+        { kind: 'thought', text: 'Now I have both. I\'ll update the procedure so same-day checks technician availability in real time up to the 2pm cutoff, and anyone who can\'t get a same-day slot goes on a waitlist notified by text.' },
+        {
+          kind: 'collapsible',
+          label: 'Procedure updated: Appointment Rescheduling',
+          meta: '+2 additions, 1 change',
+          children: [
+            { kind: 'list', items: [
+              { label: 'Same-day check', text: 'real-time technician availability, accepted up to 2pm' },
+              { label: 'Waitlist fallback', text: 'added when no same-day slot is open, notified by text' },
+            ] },
+          ],
+        },
+        { kind: 'thought', text: 'Testing with the exact same-day scenario from the reported conversations.' },
+        {
+          kind: 'collapsible',
+          label: 'Testing agent response',
+          meta: '19.6s',
+          defaultExpanded: true,
+          children: [
+            { kind: 'transcript', lines: [
+              { speaker: 'Test — caller', text: 'Hi, I have an appointment for Thursday but my car is making a strange noise. Can I move it to today?' },
+              { speaker: 'Myna', text: "Let me check today's availability for you — one moment... I have a 2:15 PM slot open today. I'll move your Thursday appointment there and text you a confirmation. If nothing had been open, I'd have added you to our waitlist and texted you the moment a same-day slot freed up." },
+            ] },
+          ],
+        },
+      ],
+      approvalPrompt: "Would you like to proceed with updating this procedure in the agent's workflow? Please accept to continue, or reject to discard these changes.",
+    },
+    approvedReply: 'The updated Appointment Rescheduling procedure has been saved to your procedure library.',
     changeType: 'Existing procedure updated with a same-day path and waitlist fallback.',
     conversations: [
       { name: 'Linda Nakamura',  message: 'I need to move my appointment to today, is that possible?', channel: 'Voice', date: 'Jun 9', location: 'Palo Alto' },
@@ -847,23 +918,19 @@ export const RECOMMENDATIONS: Recommendation[] = [
         { role: 'agent' as const, text: "I've got a 2:15 PM slot available today. I've moved your Thursday appointment and flagged the noise concern so your technician is ready. You'll receive a confirmation text shortly — is there anything else you need?", time: '09:06 AM' },
       ],
     },
-    diff: {
-      location: 'Step 2 — Check availability',
-      before: 'Search for available slots on the requested date.',
-      after: 'Search for available slots. For same-day, check technician availability in real time. If no slots, offer to add the customer to the waitlist.',
-    },
   },
   {
     id: 'r3',
     gapType: 'procedure',
     title: 'Update emergency escalation procedure',
     procedureTitle: 'Emergency escalation procedure',
-    summary: 'Safety-critical calls are taking 3+ minutes to reach a human agent.',
+    summary: '5 conversations impacted • Escalation taking 3+ minutes',
     priority: 'Low',
     timeAgo: '3h ago',
     conversationCount: 5,
     isNew: false,
     whenToUse: 'When a customer reports a safety concern, breakdown, or any urgent issue requiring immediate human attention.',
+    exitCriteria: 'The customer has been connected to a live advisor, or — if the transfer fails — a callback number was taken and an escalation ticket was filed.',
     steps: [
       {
         title: 'Detect urgency immediately',
@@ -875,8 +942,8 @@ export const RECOMMENDATIONS: Recommendation[] = [
       {
         title: 'Transfer within 30 seconds',
         bullets: [
-          'Connect directly to the on-call service advisor using Voice Call.',
-          'If the on-call advisor is unavailable, escalate to the service manager immediately via Trigger Escalation — never leave the customer on hold while retrying the same person.',
+          'Connect directly to the on-call service advisor using {{Voice Call}}.',
+          'If the on-call advisor is unavailable, escalate to the service manager immediately via {{Trigger Escalation}} — never leave the customer on hold while retrying the same person.',
           "Relay the customer's name, callback number, and a one-line summary of the concern to whoever picks up, before transferring the call.",
         ],
       },
@@ -902,16 +969,56 @@ export const RECOMMENDATIONS: Recommendation[] = [
       'Updated the Emergency escalation procedure to detect urgency signals and cut the transfer target from 2 minutes to 30 seconds.',
       'Once accepted, the updated procedure will replace the existing version in this workflow and your procedure library.',
     ],
-    manualUpdates: [
-      { icon: 'call', title: 'Confirm on-call advisor routing', description: 'Verify the phone number or queue that urgent transfers should ring first.' },
-      { icon: 'priority_high', title: 'Review urgency keyword list', description: 'Add or remove trigger phrases specific to your dealership.' },
-    ],
     tools: [
       { label: 'Voice Call', icon: 'call' },
       { label: 'Trigger Escalation', icon: 'priority_high' },
     ],
     thoughts: 'I flagged 5 recent conversations involving safety concerns where the transfer to a human took too long. Let me review the current escalation procedure for delays.',
     rationale: '5 safety-concern conversations were handled through standard intake, causing 3+ minute delays before a human responded.',
+    introBlocks: [
+      { kind: 'thought', text: 'I flagged 5 recent conversations involving safety concerns where the transfer to a human took too long. Let me review the current escalation procedure for delays.' },
+      { kind: 'thought', label: 'Searched procedures', text: "The escalation procedure only kicks in once standard intake is done — VIN, appointment history, account lookup — before it ever checks for urgency. That's exactly why safety calls were taking 3+ minutes to reach a person." },
+      { kind: 'thought', text: "Detecting urgency keywords and skipping straight to transfer is a fixed behavior change I can make on my own — no judgment call needed there. But I can't invent where the transfer should actually ring, or which phrases count as urgent for this dealership specifically. I need those two facts from you." },
+      { kind: 'text', text: 'Here\'s what\'s happening: 5 safety-concern calls in the last 7 days went through standard intake first, taking 3+ minutes to reach a person.' },
+      { kind: 'section', heading: 'Issue', text: 'Customers reporting a safety concern — brakes failing, smoke, an accident — still go through standard intake (VIN, appointment history, account lookup) before Myna transfers them. That adds 3 or more minutes before a human ever picks up.' },
+      { kind: 'section', heading: 'Impact: Low', text: '5 safety-concern conversations in the last 7 days took 3+ minutes to reach a person — every one of them a customer describing an active vehicle safety issue.', showConversationsLink: true },
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: 'Update the escalation procedure so urgency is detected immediately and skips straight to transfer. To finish this, I need two details from you:', items: [
+        { label: 'On-call advisor routing', text: 'the phone number or queue urgent transfers should ring first' },
+        { label: 'Urgency keyword list', text: 'any phrases specific to your dealership to add or remove, beyond the standard set ("not safe", "smoke", "brakes failed", "accident", "urgent")' },
+      ] },
+    ],
+    composerPrefill: "Route urgent transfers to the on-call service advisor's direct line first. The standard keyword list looks right — no dealership-specific additions needed.",
+    scriptedTurnResponse: {
+      introBlocks: [
+        { kind: 'thought', text: "I'll update the procedure so urgency keywords are checked first, skip straight to transfer, ring the on-call advisor's direct line, and escalate to the service manager if they don't pick up — cutting the target from 2 minutes to 30 seconds." },
+        {
+          kind: 'collapsible',
+          label: 'Procedure updated: Emergency Escalation',
+          meta: '+1 addition, 1 change',
+          children: [
+            { kind: 'list', items: [
+              { label: 'Urgency detection', text: 'checked in the first sentence, skips standard intake' },
+              { label: 'Transfer target', text: "cut from 2 minutes to 30 seconds, on-call advisor's direct line first" },
+            ] },
+          ],
+        },
+        { kind: 'thought', text: 'Testing with the exact scenario from the reported calls — a brakes concern in the opening line.' },
+        {
+          kind: 'collapsible',
+          label: 'Testing agent response',
+          meta: '15.2s',
+          defaultExpanded: true,
+          children: [
+            { kind: 'transcript', lines: [
+              { speaker: 'Test — caller', text: "My brakes feel really wrong — there's a grinding noise and the pedal feels soft. I need help now." },
+              { speaker: 'Myna', text: "I'm flagging this as a safety concern right now and escalating to our on-call service advisor. Please pull over if you're driving. They will call you back within 30 seconds — your name and situation have been passed on." },
+            ] },
+          ],
+        },
+      ],
+      approvalPrompt: "Would you like to proceed with updating this procedure in the agent's workflow? Please accept to continue, or reject to discard these changes.",
+    },
+    approvedReply: 'The updated Emergency Escalation procedure has been saved to your procedure library.',
     changeType: 'Escalation procedure updated — urgency detection added, transfer target reduced from 2 min to 30 sec.',
     conversations: [
       { name: 'Derek Huang',    message: 'My brakes feel wrong, I need help immediately.',   channel: 'Voice', date: 'Jun 8', location: 'Sunnyvale' },
@@ -925,28 +1032,24 @@ export const RECOMMENDATIONS: Recommendation[] = [
         { role: 'agent' as const, text: "I'm flagging this as a safety concern right now and escalating to our on-call service advisor. Please pull over if you're driving. They will call you back within 30 seconds — your name and situation have been passed on.", time: '08:55 AM' },
       ],
     },
-    diff: {
-      location: 'Transfer time target',
-      before: 'Escalate to a live agent within 2 minutes.',
-      after: 'Detect urgency signals at the start. Transfer within 30 seconds. Skip standard intake when urgency keywords are present.',
-    },
   },
   {
     id: 'r4',
     gapType: 'knowledge',
     title: 'Update business hours',
     procedureTitle: 'Business hours',
-    summary: 'Agent is saying "I don\'t have that information" for 19 business hours questions.',
+    summary: "19 conversations impacted • Agent couldn't answer the hours question",
     priority: 'Low',
     timeAgo: '1h ago',
     conversationCount: 19,
     isNew: false,
     whenToUse: 'When a customer asks about operating hours, weekend availability, or holiday schedules.',
+    exitCriteria: 'The caller has an accurate hours answer for the day, weekend, or holiday they asked about.',
     steps: [
       {
         title: 'Provide accurate hours',
         bullets: [
-          'Retrieve current hours, weekend hours, and upcoming holiday closures from the knowledge base.',
+          'Retrieve current hours, weekend hours, and upcoming holiday closures via {{Check Business Hours}}.',
           'Confirm same-day hours if the customer asks',
           'Offer to schedule an appointment if the customer wants to come in',
         ],
@@ -965,20 +1068,55 @@ export const RECOMMENDATIONS: Recommendation[] = [
       'Updated the Business hours procedure to include weekend hours, holiday closures, and same-day lookups.',
       'Once accepted, the updated procedure will replace the existing version in this workflow and your procedure library.',
     ],
-    manualUpdates: [
-      {
-        icon: 'calendar_today',
-        title: 'Upload holiday closure calendar',
-        description: 'Provide the list of upcoming holiday closures so the agent can reference them.',
-        relatedType: 'knowledge',
-      },
-      { icon: 'schedule', title: 'Confirm weekend hours', description: 'Verify Saturday and Sunday hours are current for every location.' },
-    ],
     tools: [
       { label: 'Check Business Hours', icon: 'schedule' },
     ],
     thoughts: 'I clustered 19 recent conversations where customers asked about business hours and the agent had no answer. Let me check the knowledge base for what\'s missing.',
     rationale: '19 conversations ended with the agent unable to answer — the business hours record is missing or outdated.',
+    introBlocks: [
+      { kind: 'thought', text: 'I clustered 19 recent conversations where customers asked about business hours and the agent had no answer. Let me check the knowledge base for what\'s missing.' },
+      { kind: 'thought', label: 'Searched procedures', text: 'The knowledge base only has weekday hours on file — nothing for Saturday, Sunday, or holidays. So the moment anyone asks about a weekend or a holiday, Myna has nothing to check and gives a vague non-answer.' },
+      { kind: 'thought', text: "Hours and closures are fixed, non-private business facts — completely safe for Myna to state directly. But I can't invent your actual weekend hours or which holidays you close for. I need those two things from you before I can update anything." },
+      { kind: 'text', text: "Here's what's happening: 19 conversations in the last 7 days asked about hours — mostly weekends and holidays — and the agent had no answer for any of them." },
+      { kind: 'section', heading: 'Issue', text: 'Customers ask about weekend hours, today\'s closing time, or whether the clinic is open on a holiday. The knowledge base only has weekday hours on file, so Myna gives a vague answer or none at all.' },
+      { kind: 'section', heading: 'Impact: Low', text: '19 conversations in the last 7 days asked about hours the agent couldn\'t confirm — most were weekend or holiday questions.', showConversationsLink: true },
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: "Update the business hours knowledge with weekend and holiday coverage. To finish this, I need two things from you (or upload your hours/holiday doc and I'll pull them from it):", items: [
+        { label: 'Weekend hours', text: 'Saturday and Sunday hours for every location' },
+        { label: 'Upcoming holiday closures', text: 'the list of dates the clinic is closed' },
+      ] },
+    ],
+    composerPrefill: "We're open Saturday 8 AM to 5 PM and Sunday 10 AM to 3 PM, parts & accessories both days. Closed for Memorial Day, July 4th, Labor Day, Thanksgiving, and Christmas.",
+    scriptedTurnResponse: {
+      introBlocks: [
+        { kind: 'thought', text: "Now I have both. I'll add the weekend hours and the holiday closure list to the knowledge base, and set Myna to check same-day hours automatically before answering." },
+        {
+          kind: 'collapsible',
+          label: 'Procedure updated: Business Hours',
+          meta: '+2 additions',
+          children: [
+            { kind: 'list', items: [
+              { label: 'Weekend hours', text: 'Sat 8–5, Sun 10–3, parts & accessories both days' },
+              { label: 'Holiday closures', text: 'Memorial Day, July 4th, Labor Day, Thanksgiving, Christmas' },
+            ] },
+          ],
+        },
+        { kind: 'thought', text: 'Testing with the exact weekend question from the reported conversations.' },
+        {
+          kind: 'collapsible',
+          label: 'Testing agent response',
+          meta: '13.4s',
+          defaultExpanded: true,
+          children: [
+            { kind: 'transcript', lines: [
+              { speaker: 'Test — caller', text: 'Hi, are you open on Saturdays? I work during the week and can only come in on weekends.' },
+              { speaker: 'Myna', text: "We're open Saturday 8 AM to 5 PM and Sunday 10 AM to 3 PM. Parts & accessories are available both days. Would you like to book a weekend slot?" },
+            ] },
+          ],
+        },
+      ],
+      approvalPrompt: "Would you like to proceed with updating this procedure in the agent's workflow? Please accept to continue, or reject to discard these changes.",
+    },
+    approvedReply: 'The updated Business Hours knowledge has been saved to your procedure library.',
     changeType: 'Business hours, weekend availability, and holiday closures added to the knowledge base.',
     conversations: [
       { name: 'Susan Park',      message: 'Are you open on Saturdays?',                         channel: 'Chat',  date: 'Jun 9', location: 'San Jose' },
@@ -1001,7 +1139,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'action',
     title: 'Add VIN lookup service intake procedure',
     procedureTitle: 'VIN lookup service intake',
-    summary: 'Service advisors are manually re-entering vehicle data after every call.',
+    summary: '7 conversations impacted • Manual re-entry of vehicle data',
     priority: 'Low',
     timeAgo: '6h ago',
     conversationCount: 7,
@@ -1047,12 +1185,13 @@ export const RECOMMENDATIONS: Recommendation[] = [
     gapType: 'procedure',
     title: 'Improve after-hours call handling',
     procedureTitle: 'After-hours call handling',
-    summary: '9 after-hours callers got no information on when they\'d hear back.',
+    summary: '9 conversations impacted • No callback timing given',
     priority: 'Low',
     timeAgo: '30m ago',
     conversationCount: 9,
     isNew: true,
     whenToUse: 'When a customer calls outside business hours and reaches the after-hours voice flow.',
+    exitCriteria: 'The caller has a callback window (or was pointed to the emergency line), and a flagged callback task has been logged for the front desk queue.',
     steps: [
       {
         title: 'Greet and take a message',
@@ -1071,8 +1210,8 @@ export const RECOMMENDATIONS: Recommendation[] = [
       {
         title: 'Log and close',
         bullets: [
-          'Automatically create a callback task assigned to the front desk queue via Trigger Escalation, flagged as after-hours priority.',
-          'Send a text confirmation via Send Confirmation summarizing what was logged and when to expect a callback.',
+          'Automatically create a callback task assigned to the front desk queue via {{Trigger Escalation}}, flagged as after-hours priority.',
+          'Send a text confirmation via {{Send Confirmation}} summarizing what was logged and when to expect a callback.',
         ],
       },
     ],
@@ -1082,6 +1221,52 @@ export const RECOMMENDATIONS: Recommendation[] = [
     ],
     thoughts: 'I clustered 9 recent after-hours conversations where customers got no information on callback timing. Let me review the knowledge base, call script, and follow-up actions for gaps.',
     rationale: "9 after-hours calls ended with the agent unable to say when the customer would hear back, and no callback task was created for the team the next morning. This spans three separate gaps in the same call flow — knowledge, procedure, and action — so we've generated one combined recommendation:",
+    introBlocks: [
+      { kind: 'thought', text: 'I clustered 9 recent after-hours conversations where customers got no information on callback timing. Let me review the knowledge base, call script, and follow-up actions for gaps.' },
+      { kind: 'thought', label: 'Searched procedures', text: "The after-hours script takes a message and ends the call — it never states a callback window, doesn't mention the emergency line, and no task gets created afterward. That's three separate gaps in the same flow: no callback policy on file, a script that doesn't set expectations, and no automatic follow-up task." },
+      { kind: 'thought', text: "The script fix and the automatic callback task are just fixed logic — I can build both without asking anyone. But I can't invent your actual callback policy; I need the real turnaround window from you before Myna can promise it to a customer." },
+      { kind: 'text', text: 'Here\'s what\'s happening: 9 after-hours calls in the last 7 days ended with no callback timing given, and no task was created for the team to follow up the next morning.' },
+      { kind: 'section', heading: 'Issue', text: "Customers who call after hours get a message taken, but Myna can't say when they'll hear back, doesn't mention the emergency line for urgent issues, and no callback task is created — so messages can sit unseen until the customer calls again." },
+      { kind: 'section', heading: 'Impact: Low', text: '9 after-hours conversations in the last 7 days ended with no callback timing and no task logged for the team.', showConversationsLink: true },
+      { kind: 'section', heading: 'Action needed', variant: 'danger', text: "Update after-hours call handling end to end — add the callback policy to Myna's knowledge, update the script to set expectations, and automatically log a callback task each time. To finish this, I need:", items: [
+        { label: 'Callback policy', text: 'how soon after-hours messages are returned (e.g. within 2 business hours), and where the after-hours emergency line routes to' },
+      ] },
+    ],
+    composerPrefill: 'After-hours messages get returned within 2 business hours. Urgent-sounding calls should be pointed to the after-hours emergency line instead of just a message.',
+    scriptedTurnResponse: {
+      introBlocks: [
+        { kind: 'thought', text: 'Now I have the policy. I\'ll add it to the knowledge base, update the script to state the callback window and mention the emergency line for urgent calls, and automatically log a callback task to the front desk queue, flagged after-hours priority, on every call.' },
+        {
+          kind: 'collapsible',
+          label: 'Procedure updated: After-Hours Call Handling',
+          meta: '+3 additions',
+          children: [
+            { kind: 'list', items: [
+              { label: 'Callback policy', text: 'returned within 2 business hours' },
+              { label: 'Script', text: 'states the callback window, mentions the emergency line for urgent calls' },
+              { label: 'Callback task', text: 'auto-logged to the front desk queue, flagged after-hours priority' },
+            ] },
+          ],
+        },
+        { kind: 'thought', text: "Testing with the exact scenario from the reported calls — a customer asking when they'll actually hear back." },
+        {
+          kind: 'collapsible',
+          label: 'Testing agent response',
+          meta: '17.1s',
+          defaultExpanded: true,
+          children: [
+            { kind: 'transcript', lines: [
+              { speaker: 'Test — caller', text: "It's 9pm, will anyone call me back tonight or tomorrow?" },
+              { speaker: 'Myna', text: "Thanks for calling — we're closed right now, but I can take a message and make sure the team follows up. What's this regarding?" },
+              { speaker: 'Test — caller', text: 'My check engine light came on. I just want to know when someone will actually call me back.' },
+              { speaker: 'Myna', text: "Got it — I've logged your callback request. Per our after-hours policy, you'll hear back within 2 business hours. If this feels urgent in the meantime, you can reach our after-hours emergency line." },
+            ] },
+          ],
+        },
+      ],
+      approvalPrompt: "Would you like to proceed with updating this procedure in the agent's workflow? Please accept to continue, or reject to discard these changes.",
+    },
+    approvedReply: 'The updated After-Hours Call Handling procedure has been saved to your procedure library.',
     outcomes: [
       "Adds the after-hours callback policy to the agent's knowledge so it can set accurate expectations.",
       'Updates the after-hours call script to confirm callback details before ending the call.',
@@ -1102,78 +1287,6 @@ export const RECOMMENDATIONS: Recommendation[] = [
       { name: 'Marcus Bell',      message: 'I left a message after closing — when should I expect a callback?', channel: 'Voice', date: 'Jun 9', location: 'Palo Alto' },
       { name: 'Sofia Ramirez',    message: 'Does anyone actually check the after-hours voicemail?', channel: 'Voice', date: 'Jun 9', location: 'San Jose' },
       { name: 'Derek Wong',       message: 'No one told me when to expect a call back, so I just called again.', channel: 'Voice', date: 'Jun 8', location: 'Sunnyvale' },
-    ],
-    manualUpdates: [
-      {
-        icon: 'upload_file',
-        title: 'Upload callback policy',
-        description: "The agent has no callback policy on file, so we can't confirm the promised callback window is accurate — upload the document so we can add it to its knowledge.",
-        relatedType: 'knowledge',
-      },
-    ],
-    changes: [
-      {
-        type: 'knowledge',
-        description: "The agent doesn't have the after-hours callback policy, so it can't tell customers when to expect a response — it just takes a message and hopes for the best.",
-        proposedSteps: [
-          {
-            title: 'Share callback policy',
-            bullets: [
-              'State that after-hours messages are returned within 2 business hours',
-              'Mention the after-hours emergency line for urgent issues',
-            ],
-          },
-        ],
-      },
-      {
-        type: 'procedure',
-        description: 'The after-hours script skips setting expectations and ends the call without confirming the best way to reach the customer back.',
-        currentSteps: [
-          {
-            title: 'Take a message',
-            bullets: [
-              "Ask for the customer's name and reason for calling.",
-              'End the call.',
-            ],
-          },
-        ],
-        proposedSteps: [
-          {
-            title: 'Greet and take a message',
-            bullets: [
-              '"Thanks for calling — we\'re closed right now, but I can take a message and make sure the team follows up." Ask for the reason for calling.',
-              "Ask for the customer's name and confirm the best callback number.",
-            ],
-          },
-          {
-            title: 'Set expectations',
-            bullets: [
-              'Explain when they will hear back using the after-hours callback policy (within 2 business hours).',
-              'If the concern sounds urgent, mention the after-hours emergency line instead of just taking a message.',
-            ],
-          },
-          {
-            title: 'Log and close',
-            bullets: [
-              'Automatically create a callback task assigned to the front desk queue via Trigger Escalation, flagged as after-hours priority.',
-              'Send a text confirmation via Send Confirmation summarizing what was logged and when to expect a callback.',
-            ],
-          },
-        ],
-      },
-      {
-        type: 'action',
-        description: "Even when a message is taken correctly, no task is created for the team — so after-hours messages can sit unseen until a customer calls again.",
-        proposedSteps: [
-          {
-            title: 'Log callback task',
-            bullets: [
-              'Automatically create a callback task assigned to the front desk queue',
-              'Flag the task as after-hours priority so it surfaces first the next morning',
-            ],
-          },
-        ],
-      },
     ],
   },
 ]
@@ -1373,6 +1486,19 @@ export const PRIORITY_VARIANT: Record<Priority, 'danger' | 'warning' | 'neutral'
   Low: 'neutral',
 }
 
+/** Impact tier is driven purely by how many conversations a recommendation affects, relative to
+ *  the busiest recommendation currently in view — never hand-picked. Splits the 0..max range
+ *  into three equal bands: the busiest third of the range is High, the middle third Medium, and
+ *  the rest Low. `maxConversationCount` should be the max `conversationCount` across whatever
+ *  set of recommendations is currently being displayed (e.g. one agent's table). */
+export function computeImpact(conversationCount: number, maxConversationCount: number): Priority {
+  if (maxConversationCount <= 0) return 'Low'
+  const ratio = conversationCount / maxConversationCount
+  if (ratio >= 2 / 3) return 'High'
+  if (ratio >= 1 / 3) return 'Medium'
+  return 'Low'
+}
+
 export type RecStatus = 'open' | 'accepted' | 'rejected'
 
 const PRIORITY_ORDER: Record<Priority, number> = { High: 0, Medium: 1, Low: 2 }
@@ -1482,9 +1608,19 @@ export function titleFromFeedback(text: string, gapType: GapType): string {
   return title.length > 90 ? `${title.slice(0, 87)}...` : title
 }
 
+/** Standardized recommendation subtext — "{N} conversation(s) impacted • {Reason}" — used by
+ *  every recommendation's table subtitle so the format stays consistent across AI-detected and
+ *  human-feedback rows alike. `reason` is capitalized automatically, so callers can pass it in
+ *  lowercase. */
+export function impactSummary(conversationCount: number, reason: string): string {
+  const noun = conversationCount === 1 ? 'conversation' : 'conversations'
+  const capitalizedReason = reason.charAt(0).toUpperCase() + reason.slice(1)
+  return `${conversationCount} ${noun} impacted • ${capitalizedReason}`
+}
+
 /** For now this always frames a feedback recommendation as raised by several people — a
  *  placeholder for a real "similar reports" count, tuned so a fresh single-conversation report
- *  reads as "4 other similar issues raised by 9 users". */
+ *  reads as "4 conversations impacted • Reported via inbox feedback". */
 export function similarIssuesSummary(count: number): string {
-  return `${count + 3} other similar issues raised by ${count + 8} users`
+  return impactSummary(count + 3, 'reported via inbox feedback')
 }

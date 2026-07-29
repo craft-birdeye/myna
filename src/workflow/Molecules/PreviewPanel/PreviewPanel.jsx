@@ -399,6 +399,10 @@ export default function PreviewPanel({
   agentName = '',
   testAppointment = null,
   onEditAppointment = null,
+  // Lets a caller (e.g. a recommendation's "Test live" button) seed the simulated call/chat with
+  // its own scenario instead of the generic dental demo script, so the live test stays on-topic.
+  greeting = GREETING,
+  demoScript = DEMO_SCRIPT,
 }) {
   const [panelView, setPanelView]   = useState('preview'); // preview | logs | details
   const [phase, setPhase]         = useState('idle');   // idle | dialing | active | ended
@@ -522,9 +526,9 @@ export default function PreviewPanel({
       setPhase('active');
       setDialStatus('');
       setMessages([{ id: uid(), role: 'system', text: 'Call started' }]);
-      agentSay(GREETING, () => playDemoScript(DEMO_SCRIPT));
+      agentSay(greeting, () => playDemoScript(demoScript));
     }, 2800);
-  }, [agentSay, playDemoScript]);
+  }, [agentSay, playDemoScript, greeting, demoScript]);
 
   /* Start web chat from first sent message */
   const handleSendMessage = useCallback(() => {
@@ -541,7 +545,7 @@ export default function PreviewPanel({
         { id: uid(), role: 'user', text },
       ]);
       setChatInput('');
-      agentSay(GREETING, () => playDemoScript(DEMO_SCRIPT));
+      agentSay(greeting, () => playDemoScript(demoScript));
       return;
     }
 
@@ -549,7 +553,7 @@ export default function PreviewPanel({
       setMessages(prev => [...prev, { id: uid(), role: 'user', text }]);
       setChatInput('');
     }
-  }, [chatInput, agentTalking, phase, mode, agentSay, playDemoScript]);
+  }, [chatInput, agentTalking, phase, mode, agentSay, playDemoScript, greeting, demoScript]);
 
   const stopSession = useCallback((endedLabel) => {
     demoScriptRef.current = false;

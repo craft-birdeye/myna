@@ -79,6 +79,13 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
   Draft:   'neutral',
 }
 
+// Default row order for the instance table — active agents first, drafts last.
+const STATUS_ORDER: Record<string, number> = {
+  Running: 0,
+  Paused: 1,
+  Draft: 2,
+}
+
 interface RegionRow {
   region: string
   status: string
@@ -369,7 +376,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedInstance, setSelectedInstance] = useState<string | null>(null)
+  const [selectedInstance, setSelectedInstance] = useState<{ name: string; status: string } | null>(null)
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
 
@@ -474,7 +481,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
     statusUpdated: r.statusUpdated,
     conversationsAssigned: r.conversationsAssigned,
     conversationsManaged: r.conversationsManaged,
-  }))
+  })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
 
   const isReminder        = agentName === 'Reminder agent'
   const isFrontdesk       = agentName === 'Front desk agent'
@@ -647,7 +654,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
   if (selectedInstance) {
     return (
       <AgentInstanceScreen
-        instanceName={selectedInstance}
+        instanceName={selectedInstance.name}
+        status={selectedInstance.status}
         onBack={() => setSelectedInstance(null)}
         onEditAgent={onEditAgent}
         onOpenIntegrationSettings={onOpenIntegrationSettings}
@@ -733,7 +741,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
                   columns={columns}
                   data={visibleData}
                   scrollOnHover
-                  onRowClick={(row) => setSelectedInstance(row.name)}
+                  onRowClick={(row) => setSelectedInstance({ name: row.name, status: row.status })}
                   rowMenuItems={[
                     { label: 'Edit', onClick: (row) => onEditAgent?.(row.name) },
                     {
@@ -742,7 +750,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
                       visible: (row) => row.status === 'Running',
                     },
                     { label: 'Duplicate', onClick: () => {} },
-                    { label: 'View details', onClick: (row) => setSelectedInstance(row.name) },
+                    { label: 'View details', onClick: (row) => setSelectedInstance({ name: row.name, status: row.status }) },
                     { label: 'Reports', onClick: () => {} },
                     { label: 'Delete', onClick: () => {}, variant: 'danger' },
                   ]}

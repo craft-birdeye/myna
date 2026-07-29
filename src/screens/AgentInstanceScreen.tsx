@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Chip,
   DataTable,
+  EmptyState,
   Icon,
   MetricTiles,
   Tabs,
@@ -339,11 +340,14 @@ export function AgentInstanceScreen({
   const isRecommendationTab = activeTab === 'recommendation'
   const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
   const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
+  // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
+  const isDraftInstance = instanceStatus === 'Draft'
   const showHealthcareLogs =
-    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
+    activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
-    activeTab === 'logs' && product === 'dental' && Boolean(dentalOutboundLogRows)
+    activeTab === 'logs' && !isDraftInstance && product === 'dental' && Boolean(dentalOutboundLogRows)
+  const showEmptyDraftLogs = activeTab === 'logs' && isDraftInstance
 
   if (selectedRun) {
     return (
@@ -459,7 +463,7 @@ export function AgentInstanceScreen({
       {/* Tabs */}
       <div className="flex shrink-0 items-center justify-between px-2xl">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-        {isRecommendationTab && hasFeedbackForAgent && (
+        {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && (
           <button
             type="button"
             onClick={clearAllFeedback}
@@ -479,7 +483,7 @@ export function AgentInstanceScreen({
         />
       ) : isRecommendationTab ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} />
+          <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} isDraft={isDraftInstance} />
         </div>
       ) : (
         <div className="flex-1 overflow-auto">
@@ -492,6 +496,13 @@ export function AgentInstanceScreen({
                 <DataTable columns={COLUMNS} data={locations} scrollOnHover />
               </div>
             </>
+          ) : showEmptyDraftLogs ? (
+            <div className="flex h-full items-center justify-center px-lg py-lg">
+              <EmptyState
+                title="No logs yet"
+                description="This agent is still in draft and hasn't handled any conversations yet, so there's nothing to log."
+              />
+            </div>
           ) : showHealthcareLogs ? (
             <AgentLogsTab
               agentName={agentName}

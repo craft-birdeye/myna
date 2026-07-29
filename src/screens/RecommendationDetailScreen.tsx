@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { ChatBubble, ChatSystemLabel, Chip, Icon } from '../components'
+import { Block, ChatBubble, ChatSystemLabel, Chip, Icon, ProcedureSidePanel, TranscriptSidePanel } from '../components'
 import {
   CONV_THREADS,
   GAP_ICON,
@@ -662,7 +662,11 @@ function CopilotFooter({
   return (
     <div className="shrink-0 bg-surface px-2xl py-md">
       <div className="mx-auto flex w-full max-w-[900px] flex-col gap-sm">
-        <div className="flex flex-col gap-sm rounded-md border border-border-selected bg-surface px-lg pb-sm pt-md focus-within:border-border-strong">
+        <div
+          className={`flex flex-col gap-sm rounded-md border bg-surface px-lg pb-sm pt-md transition-colors focus-within:border-ai-brand ${
+            prefill ? 'border-ai-brand' : 'border-border-selected'
+          }`}
+        >
           {attached && (
             <div className="flex w-fit items-center gap-xs rounded-sm border border-border bg-surface-subtle px-sm py-xs">
               <Icon name="picture_as_pdf" size={16} className="shrink-0 text-chip-danger-text" />
@@ -816,9 +820,7 @@ function ThoughtsSection({
   )
 }
 
-/** A single collapsible "Thoughts"/"Searched X" note used by `IntroBlockItem`'s `thought` case. Un-labeled
- *  (default "Thoughts") notes render italic, matching the app's chain-of-thought convention;
- *  a custom label (e.g. "Searched procedures") reads as a plain finding instead. */
+/** A single collapsible "Thoughts"/"Searched X" note used by `IntroBlockItem`'s `thought` case. */
 function CollapsibleNote({
   label = 'Thoughts',
   text,
@@ -831,24 +833,23 @@ function CollapsibleNote({
   autoExpanded: boolean
 }) {
   const [expanded, setExpanded] = useState(autoExpanded)
-  const isThought = label === 'Thoughts'
 
   useEffect(() => {
     setExpanded(autoExpanded)
   }, [autoExpanded])
 
   return (
-    <div className="flex flex-col gap-md">
+    <div className="flex flex-col gap-sm">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-fit items-center gap-[2px] text-body text-text-secondary"
+        className="flex w-fit items-center gap-[2px] text-small text-text-secondary"
       >
         <Icon name="bolt" size={16} weight={300} className="text-text-icon" />
         {label}
         <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
       </button>
-      {expanded && <p className={`text-body text-text-secondary ${isThought ? 'italic' : ''}`}>{text}</p>}
+      {expanded && <p className="pl-[18px] text-small text-text-secondary">{text}</p>}
     </div>
   )
 }
@@ -906,6 +907,10 @@ function CollapsibleSummaryLine({
   )
 }
 
+/** One turn of a "Testing agent response" transcript, converted to the shape the live preview
+ *  panel's demo script expects — see `onTestLive`. */
+type TestScriptTurn = { role: 'user' | 'agent'; text: string }
+
 /** Renders one `IntroBlock` — shared by `ResponseBlock`'s introBlocks path (the initial
  *  message) and `ScriptedTurnResponse` (a hand-authored refinement-turn reply), both of which
  *  reveal blocks one at a time. `autoExpanded` only
@@ -915,10 +920,22 @@ function IntroBlockItem({
   block,
   autoExpanded,
   onOpenConversations,
+  onTestLive,
+  onViewProcedure,
+  onViewTranscript,
 }: {
   block: IntroBlock
   autoExpanded: boolean
   onOpenConversations?: () => void
+  /** Wires the "Test live" button on a "Testing agent response" block to the live preview
+   *  panel, seeded with that same test's transcript so the live call/chat stays on-topic. */
+  onTestLive?: (script: TestScriptTurn[]) => void
+  /** Wires the "Procedure" button on a "Procedure updated/created" block to the procedure
+   *  side panel. */
+  onViewProcedure?: () => void
+  /** Wires the "View Transcript" button on a "Reported conversation" block to the transcript
+   *  side panel, seeded with that block's full transcript. */
+  onViewTranscript?: (lines: { speaker: string; text: string }[]) => void
 }) {
   switch (block.kind) {
     case 'thought':
@@ -927,14 +944,24 @@ function IntroBlockItem({
       return <p className="text-body text-text-primary">{block.text}</p>
     case 'section':
       return (
-        <div className="flex flex-col gap-xs">
-          <p className="text-body font-bold text-text-secondary">{block.heading}</p>
-          <p className="text-body text-text-primary">{block.text}</p>
+        <div className="flex flex-col gap-sm">
+          <Block heading={block.heading} variant={block.variant}>
+            <p className="text-body text-text-primary">{block.text}</p>
+            {block.items && (
+              <ul className="flex flex-col gap-xs pl-md">
+                {block.items.map((item, j) => (
+                  <li key={j} className="list-disc text-body text-text-primary marker:text-text-tertiary">
+                    {item.label} — {item.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Block>
           {block.showConversationsLink && onOpenConversations && (
             <button
               type="button"
               onClick={onOpenConversations}
-              className="mt-xs flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+              className="flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
             >
               View all conversations
               <Icon name="chevron_right" size={16} />
@@ -955,6 +982,90 @@ function IntroBlockItem({
     case 'divider':
       return <p className="text-small text-text-tertiary">— {block.text} —</p>
     case 'collapsible':
+      if (block.label === 'Read the reported conversation' && block.reportedExcerpt && block.feedback) {
+        const transcript = block.children.find((c): c is Extract<IntroBlock, { kind: 'transcript' }> => c.kind === 'transcript')
+        return (
+          <div className="flex flex-col gap-sm">
+            <Block heading="Reported conversation" meta={block.meta} variant="neutral">
+              <TranscriptBlock lines={block.reportedExcerpt} />
+              <div className="mt-sm flex flex-col gap-xs">
+                <p className="text-small text-text-tertiary">Feedback</p>
+                <p className="text-body text-text-primary">{block.feedback}</p>
+              </div>
+            </Block>
+            {onViewTranscript && transcript && (
+              <button
+                type="button"
+                onClick={() => onViewTranscript(transcript.lines)}
+                className="flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+              >
+                <Icon name="description" size={16} />
+                View Transcript
+              </button>
+            )}
+          </div>
+        )
+      }
+      if (block.label === 'Testing agent response') {
+        const transcript = block.children.find((c): c is Extract<IntroBlock, { kind: 'transcript' }> => c.kind === 'transcript')
+        const script: TestScriptTurn[] =
+          transcript?.lines.map((line) => ({
+            role: line.speaker.toLowerCase().startsWith('myna') ? 'agent' : 'user',
+            text: line.text,
+          })) ?? []
+        return (
+          <div className="flex flex-col gap-sm">
+            <Block
+              heading={block.label}
+              meta={block.meta}
+              variant="info"
+              collapsible
+              defaultExpanded={block.defaultExpanded}
+            >
+              {block.children.map((child, i) => (
+                <IntroBlockItem key={i} block={child} autoExpanded={autoExpanded} />
+              ))}
+            </Block>
+            {onTestLive && (
+              <button
+                type="button"
+                onClick={() => onTestLive(script)}
+                className="flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+              >
+                <Icon name="play_arrow" size={16} />
+                Test live
+              </button>
+            )}
+          </div>
+        )
+      }
+      if (block.label.startsWith('Procedure updated:') || block.label.startsWith('Procedure created:')) {
+        return (
+          <div className="flex flex-col gap-sm">
+            <Block
+              heading={block.label}
+              meta={block.meta}
+              variant="success"
+              collapsible
+              defaultExpanded={block.defaultExpanded}
+            >
+              {block.children.map((child, i) => (
+                <IntroBlockItem key={i} block={child} autoExpanded={autoExpanded} />
+              ))}
+            </Block>
+            {onViewProcedure && (
+              <button
+                type="button"
+                onClick={onViewProcedure}
+                className="flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+              >
+                <Icon name="menu_book" size={16} />
+                View Procedure
+              </button>
+            )}
+          </div>
+        )
+      }
       return (
         <CollapsibleSummaryLine
           label={block.label}
@@ -1001,11 +1112,20 @@ function ScriptedTurnResponse({
   recStatus,
   onApprove,
   onReject,
+  onTestLive,
+  onViewProcedure,
+  onViewTranscript,
 }: {
   response: ScriptedTurnResponse
   recStatus: RecStatus
   onApprove: () => void
   onReject: () => void
+  /** Wires the "Test live" button on a "Testing agent response" block to the live preview panel. */
+  onTestLive?: (script: TestScriptTurn[]) => void
+  /** Wires the "Procedure" button on a "Procedure updated/created" block to the procedure side panel. */
+  onViewProcedure?: () => void
+  /** Wires the "View Transcript" button on a "Reported conversation" block to the transcript side panel. */
+  onViewTranscript?: (lines: { speaker: string; text: string }[]) => void
 }) {
   const totalSteps = response.introBlocks.length + 1
   const [revealStep, setRevealStep] = useState(0)
@@ -1041,7 +1161,7 @@ function ScriptedTurnResponse({
         {response.introBlocks.map((block, i) =>
           revealStep > i ? (
             <div key={i} className="chat-reveal-in">
-              <IntroBlockItem block={block} autoExpanded={isRevealing} />
+              <IntroBlockItem block={block} autoExpanded={isRevealing} onTestLive={onTestLive} onViewProcedure={onViewProcedure} onViewTranscript={onViewTranscript} />
             </div>
           ) : null,
         )}
@@ -1063,7 +1183,7 @@ function ScriptedTurnResponse({
                   onClick={onApprove}
                   className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                 >
-                  Approve
+                  Accept
                 </button>
               </div>
             )}
@@ -1220,6 +1340,9 @@ function ResponseBlock({
   introBlocks,
   introApprovalPrompt,
   onApprove,
+  onTestLive,
+  onViewProcedure,
+  onViewTranscript,
 }: {
   thoughts: string
   toolCount: number
@@ -1232,6 +1355,12 @@ function ResponseBlock({
    *  `Recommendation.introApprovalPrompt`. Only meaningful alongside `introBlocks`. */
   introApprovalPrompt?: string
   onApprove?: () => void
+  /** Wires the "Test live" button on a "Testing agent response" block to the live preview panel. */
+  onTestLive?: (script: TestScriptTurn[]) => void
+  /** Wires the "Procedure" button on a "Procedure updated/created" block to the procedure side panel. */
+  onViewProcedure?: () => void
+  /** Wires the "View Transcript" button on a "Reported conversation" block to the transcript side panel. */
+  onViewTranscript?: (lines: { speaker: string; text: string }[]) => void
   changes: RecommendationChange[]
   procedureTitle: string
   diff: { original: string; revised: string } | null
@@ -1308,7 +1437,7 @@ function ResponseBlock({
           {introBlocks.map((block, i) =>
             revealStep > i ? (
               <div key={i} className="chat-reveal-in">
-                <IntroBlockItem block={block} autoExpanded={isRevealing} onOpenConversations={onOpenConversations} />
+                <IntroBlockItem block={block} autoExpanded={isRevealing} onOpenConversations={onOpenConversations} onTestLive={onTestLive} onViewProcedure={onViewProcedure} onViewTranscript={onViewTranscript} />
               </div>
             ) : null,
           )}
@@ -1329,7 +1458,7 @@ function ResponseBlock({
                     onClick={onApprove}
                     className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                   >
-                    Approve
+                    Accept
                   </button>
                 </div>
               )}
@@ -1514,6 +1643,9 @@ function RecommendationChatView({
   onOpenConversations,
   onApproveScripted,
   onRejectScripted,
+  onTestLive,
+  onViewProcedure,
+  onViewTranscript,
 }: {
   rec: Recommendation
   recStatus: RecStatus
@@ -1525,6 +1657,12 @@ function RecommendationChatView({
   onOpenConversations: () => void
   onApproveScripted: () => void
   onRejectScripted: () => void
+  /** Wires the "Test live" button on a "Testing agent response" block to the live preview panel. */
+  onTestLive: (script: TestScriptTurn[]) => void
+  /** Wires the "Procedure" button on a "Procedure updated/created" block to the procedure side panel. */
+  onViewProcedure: () => void
+  /** Wires the "View Transcript" button on a "Reported conversation" block to the transcript side panel. */
+  onViewTranscript: (lines: { speaker: string; text: string }[]) => void
 }) {
   const diff = getMessageDiffPreview(rec)
   const initialThoughts =
@@ -1568,6 +1706,9 @@ function RecommendationChatView({
         introBlocks={rec.introBlocks}
         introApprovalPrompt={rec.introApprovalPrompt}
         onApprove={onApproveScripted}
+        onTestLive={onTestLive}
+        onViewProcedure={onViewProcedure}
+        onViewTranscript={onViewTranscript}
         changes={effectiveChanges}
         pendingChangeTypes={pendingChangeTypesAt(0)}
         procedureTitle={rec.procedureTitle}
@@ -1586,7 +1727,7 @@ function RecommendationChatView({
 
       {recStatus === 'accepted' && rec.introApprovalPrompt && (
         <>
-          <UserTurnBubble text="Approved" />
+          <UserTurnBubble text="Accepted" />
           <SimpleAgentReply text={rec.approvedReply ?? 'This procedure has been added to the workflow.'} />
         </>
       )}
@@ -1621,10 +1762,13 @@ function RecommendationChatView({
                   recStatus={recStatus}
                   onApprove={onApproveScripted}
                   onReject={onRejectScripted}
+                  onTestLive={onTestLive}
+                  onViewProcedure={onViewProcedure}
+                  onViewTranscript={onViewTranscript}
                 />
                 {recStatus === 'accepted' && (
                   <>
-                    <UserTurnBubble text="Approved" />
+                    <UserTurnBubble text="Accepted" />
                     <SimpleAgentReply text={rec.approvedReply ?? 'This procedure has been added to the workflow.'} />
                   </>
                 )}
@@ -1686,6 +1830,12 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
   const [convsOpen, setConvsOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+  // Seeds the live preview panel with the clicked "Test live" block's own scenario, so the
+  // simulated call/chat stays on-topic instead of playing the generic dental demo script.
+  const [previewScript, setPreviewScript] = useState<TestScriptTurn[] | null>(null)
+  const [procedurePanelOpen, setProcedurePanelOpen] = useState(false)
+  const [transcriptPanelOpen, setTranscriptPanelOpen] = useState(false)
+  const [transcriptLines, setTranscriptLines] = useState<{ speaker: string; text: string }[]>([])
   const [toast, setToast] = useState<ToastData | null>(null)
   const [isThinking, setIsThinking] = useState(false)
   // Chat view's back-and-forth is intentionally ephemeral — in-memory only, reset on refresh (or
@@ -1793,7 +1943,7 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
           <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
           <Chip
             label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-            variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'neutral'}
+            variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
           />
         </div>
 
@@ -1824,6 +1974,15 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
             onOpenConversations={() => setConvsOpen(true)}
             onApproveScripted={handleApproveScripted}
             onRejectScripted={() => handleReject(rec.id)}
+            onTestLive={(script) => {
+              setPreviewScript(script)
+              setPreviewOpen(true)
+            }}
+            onViewProcedure={() => setProcedurePanelOpen(true)}
+            onViewTranscript={(lines) => {
+              setTranscriptLines(lines)
+              setTranscriptPanelOpen(true)
+            }}
           />
         </div>
 
@@ -1833,6 +1992,7 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
               onClose={() => setPreviewOpen(false)}
               onPreviewActiveChange={() => {}}
               agentName={rec.title}
+              demoScript={previewScript ?? undefined}
             />
           </div>
         )}
@@ -1845,6 +2005,21 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
       />
 
       <ConversationsDrawer rec={rec} open={convsOpen} onClose={() => setConvsOpen(false)} />
+
+      <ProcedureSidePanel
+        open={procedurePanelOpen}
+        title={rec.procedureTitle}
+        whenToUse={rec.whenToUse}
+        steps={rec.steps}
+        exitCriteria={rec.exitCriteria}
+        onClose={() => setProcedurePanelOpen(false)}
+      />
+
+      <TranscriptSidePanel
+        open={transcriptPanelOpen}
+        lines={transcriptLines}
+        onClose={() => setTranscriptPanelOpen(false)}
+      />
 
       {confirmOpen && (
         <ConfirmAddProcedureModal

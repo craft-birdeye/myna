@@ -10,7 +10,7 @@ import {
   COACHING_C3_CONVERSATION_ID,
   COACHING_C4_CONVERSATION_ID,
 } from './coachingCallConversations'
-import type { ConversationItem, Recommendation } from './recommendationsData'
+import { impactSummary, type ConversationItem, type Recommendation } from './recommendationsData'
 
 // `Recommendation` carries a `[key: string]: unknown` index signature (for other loosely-typed
 // call sites), which makes `Omit<Recommendation, ...>` collapse to `{ [x: string]: unknown }` —
@@ -26,6 +26,7 @@ type CoachingTemplate = Pick<
   | 'conversationCount'
   | 'isNew'
   | 'whenToUse'
+  | 'exitCriteria'
   | 'steps'
   | 'tools'
   | 'thoughts'
@@ -36,18 +37,19 @@ type CoachingTemplate = Pick<
   | 'changeType'
 >
 
-const APPROVAL_PROMPT = 'Do you approve of these changes? Approve to submit them for review, or reject to discard them.'
+const APPROVAL_PROMPT = 'Do you accept these changes? Accept to submit them for review, or reject to discard them.'
 
 const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
   [COACHING_C1_CONVERSATION_ID]: {
     gapType: 'procedure',
     title: 'Make the tone more casual',
     procedureTitle: 'Tone & Style procedure',
-    summary: 'Reported via Inbox: chat replies read too stiff and formal for the channel.',
+    summary: impactSummary(1, 'chat replies read too stiff and formal'),
     priority: 'Medium',
     conversationCount: 1,
     isNew: false,
     whenToUse: 'Whenever Myna replies on chat or text — match the short, casual register customers use there. Voice keeps its existing tone.',
+    exitCriteria: 'N/A — this is a standing tone rule, not a step-by-step task with an end point.',
     steps: [
       { title: 'Chat & text tone', bullets: ['Short sentences, plain words, match the customer\'s casual register — no "duly noted," "kindly provide," or "so that I may proceed."'] },
       { title: 'Voice tone (unchanged)', bullets: ['Voice-channel tone stays exactly as configured today.'] },
@@ -62,6 +64,11 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         label: 'Read the reported conversation',
         meta: 'Previously',
         defaultExpanded: true,
+        reportedExcerpt: [
+          { speaker: 'Myna', text: 'Thank you. Your request has been duly noted. Kindly hold while I retrieve the relevant appointment details.' },
+          { speaker: 'Customer', text: 'ok this is a lot of words lol' },
+        ],
+        feedback: 'This reply is way too stiff and formal for chat — reads like a form letter, not a conversation.',
         children: [
           { kind: 'transcript', lines: [
             { speaker: 'Customer', text: "hey can i move my son's appt from thursday to next week" },
@@ -109,11 +116,12 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     gapType: 'procedure',
     title: 'Shorten the after-hours greeting',
     procedureTitle: 'After-Hours Greeting procedure',
-    summary: 'Reported via Inbox: the after-hours greeting is too long and gets talked over.',
+    summary: impactSummary(1, 'after-hours greeting too long'),
     priority: 'Medium',
     conversationCount: 1,
     isNew: false,
     whenToUse: 'Every after-hours call, before Myna takes the reason for calling.',
+    exitCriteria: "The greeting has finished and Myna moves on to the caller's actual reason for calling.",
     steps: [
       { title: 'Required lines (unchanged)', bullets: ['Always state the emergency instruction ("If this is an emergency, please hang up and dial nine one one") and the recording notice, word-for-word.'] },
       { title: 'Shortened greeting', bullets: ["Don't read the on-call doctor's number to every caller up front — mention it's available and give the full number only when the caller asks for the doctor."] },
@@ -128,6 +136,11 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         label: 'Read the reported conversation',
         meta: 'Previously',
         defaultExpanded: true,
+        reportedExcerpt: [
+          { speaker: 'Myna', text: 'If this is an emergency, please hang up and dial nine one one. The office is currently closed. If you need to speak with the doctor on call, please hang up and dial three zero five… nine six seven… two six one five, and your call will be returned promptly. Please note that this call may be recorded for quality and training purposes. My name is Myna, your virtual assistant. I can help you with your appointments or take a message and have the practice—' },
+          { speaker: 'Caller (talking over)', text: "—hi, hi, I just need to cancel tomorrow's appointment." },
+        ],
+        feedback: 'The after-hours greeting is way too long — callers keep talking over it and having to repeat themselves.',
         children: [
           { kind: 'transcript', lines: [
             { speaker: 'Myna', text: 'If this is an emergency, please hang up and dial nine one one. The office is currently closed. If you need to speak with the doctor on call, please hang up and dial three zero five… nine six seven… two six one five, and your call will be returned promptly. Please note that this call may be recorded for quality and training purposes. My name is Myna, your virtual assistant. I can help you with your appointments or take a message and have the practice—' },
@@ -175,13 +188,14 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     gapType: 'knowledge',
     title: 'Add Saturday booking hours',
     procedureTitle: 'Visit Info & Booking Hours procedure',
-    summary: "Reported via Inbox: agent didn't know the practice is open Saturdays.",
+    summary: impactSummary(1, "agent didn't know about Saturday hours"),
     priority: 'Medium',
     conversationCount: 1,
     isNew: false,
     whenToUse: 'When a caller asks about appointment availability, including weekend requests.',
+    exitCriteria: 'The caller has an accurate answer about Saturday availability, booked or not.',
     steps: [
-      { title: 'Saturday hours', bullets: ['Open Saturdays, 9am–1pm.'] },
+      { title: 'Saturday hours', bullets: ['Use {{Check Business Hours}} to confirm the clinic is open Saturdays, 9am–1pm.'] },
       { title: 'Saturday provider', bullets: ['Only Dr. Alvarez sees patients on Saturdays — never offer a Saturday slot with another provider.'] },
     ],
     tools: [{ label: 'Check Business Hours', icon: 'schedule' }],
@@ -194,6 +208,11 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         label: 'Read the reported conversation',
         meta: 'Previously',
         defaultExpanded: true,
+        reportedExcerpt: [
+          { speaker: 'Myna', text: "I'm sorry, I don't have information about weekend availability. Let me have someone from our team follow up with you." },
+          { speaker: 'Customer', text: 'ok' },
+        ],
+        feedback: 'We ARE open Saturday mornings — the agent told this customer we have zero weekend availability.',
         children: [
           { kind: 'transcript', lines: [
             { speaker: 'Customer', text: 'Hi, do you have any Saturday appointments? Weekdays are impossible for us.' },
@@ -245,14 +264,15 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     gapType: 'knowledge',
     title: 'Add a helpful results-status reply',
     procedureTitle: 'Results Status procedure',
-    summary: 'Reported via Inbox: a parent was refused with no explanation when asking about results.',
+    summary: impactSummary(1, 'refused with no explanation'),
     priority: 'Medium',
     conversationCount: 1,
     isNew: true,
     whenToUse: 'When a caller asks about test results, on any channel.',
+    exitCriteria: 'The caller has a timeline and, if overdue, a follow-up note has been filed — no medical detail was shared.',
     steps: [
       { title: 'Share status and process only', bullets: ['Never read out results, values, or medical detail — explain that results come through the patient portal within the usual timeline.'] },
-      { title: 'Offer a follow-up', bullets: ["If it's been longer than the usual timeline, leave a note for the team to follow up that day."] },
+      { title: 'Offer a follow-up', bullets: ["If it's been longer than the usual timeline, use {{Trigger Escalation}} to leave a note for the team to follow up that day."] },
     ],
     tools: [{ label: 'Trigger Escalation', icon: 'priority_high' }],
     thoughts: "The feedback asks me to have the agent read out medical results — that's a fixed rule I can't change. But the user is right that the call went badly.",
@@ -264,6 +284,11 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         label: 'Read the reported conversation',
         meta: 'Previously',
         defaultExpanded: true,
+        reportedExcerpt: [
+          { speaker: 'Myna', text: "I understand, but I can't provide results information. Let me connect you with someone." },
+          { speaker: 'Caller', text: 'Unbelievable.' },
+        ],
+        feedback: 'The agent just kept refusing with zero explanation or next step — not okay for a call like this.',
         children: [
           { kind: 'transcript', lines: [
             { speaker: 'Caller', text: "I'm calling about my daughter's breathing test from last week. Can you just tell me the results?" },
