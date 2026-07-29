@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, Check, Sparkles, Loader2, Upload, X, FileText, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, Info, Sparkles, Loader2, Upload, X, FileText, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
+import { Tooltip } from '@/components/Tooltip/Tooltip';
 import { cn } from '@/contenthub-ui/utils';
 import { Button } from '@/contenthub-ui/button';
 import { Switch } from '@/contenthub-ui/switch';
@@ -422,16 +423,17 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
                           >
                             <span className="text-[13px] text-foreground leading-snug">{rec.title}</span>
                             <div className="flex items-center gap-1.5">
-                              <span className={cn(
-                                'text-[11px]',
-                                rec.impact === 'High' ? 'text-red-500'
-                                  : rec.impact === 'Medium' ? 'text-amber-600'
-                                    : 'text-muted-foreground',
-                              )}>
-                                {rec.impact} impact
+                              <span className="inline-flex items-center rounded-full border border-border bg-surface-selected px-2 py-px text-[11px] text-text-primary">
+                                AEO {rec.aeoScore}
                               </span>
-                              <span className="text-[11px] text-muted-foreground/50">·</span>
-                              <span className="text-[11px] text-muted-foreground">AEO {rec.aeoScore}</span>
+                              <Tooltip
+                                content={`${rec.impact} impact — ${rec.description}`}
+                                variant="detail"
+                              >
+                                <span className="flex items-center text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+                                  <Info size={12} strokeWidth={1.6} absoluteStrokeWidth />
+                                </span>
+                              </Tooltip>
                             </div>
                           </button>
                         ))}
