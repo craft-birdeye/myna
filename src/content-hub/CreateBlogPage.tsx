@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, ArrowUpRight, Sparkles, Loader2, Upload, X, FileText, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, Sparkles, Loader2, Upload, X, FileText, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import { cn } from '@/contenthub-ui/utils';
 import { Button } from '@/contenthub-ui/button';
 import { Switch } from '@/contenthub-ui/switch';
@@ -706,10 +706,10 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-lg border border-[#e5e9f0] bg-white px-3 py-2 text-[13px] text-[#212121] transition-colors hover:border-[#c0c6d4] dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
+                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body text-text-primary transition-colors hover:bg-surface-l2"
               >
                 <span className="truncate">{BLOG_AGENTS.find(a => a.id === agentId)?.label ?? 'Choose an agent...'}</span>
-                <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-[#888] dark:text-[#6b7280]" />
+                <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-1">
@@ -720,19 +720,20 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
                     type="button"
                     onClick={() => setAgentId(agent.id)}
                     className={cn(
-                      'flex w-full items-center rounded-md px-3 py-2 text-[13px] text-left transition-colors',
+                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-body text-left transition-colors',
                       agentId === agent.id
-                        ? 'bg-[#e8effe] text-[#1976D2] dark:bg-[#1e2d5e] dark:text-[#6b9bff]'
-                        : 'text-foreground hover:bg-muted',
+                        ? 'bg-surface-selected text-text-primary'
+                        : 'text-text-primary hover:bg-surface-hover',
                     )}
                   >
-                    {agent.label}{i === 0 && <span className="ml-1.5 text-[11px] text-muted-foreground">(Default)</span>}
+                    <span className="truncate">{agent.label}{i === 0 && <span className="ml-1.5 text-[11px] text-text-secondary">(Default)</span>}</span>
+                    {agentId === agent.id && <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />}
                   </button>
                 ))}
                 <div className="my-1 h-px bg-border" />
                 <button
                   type="button"
-                  className="flex h-8 w-full items-center gap-1.5 rounded-md px-3 text-[13px] text-primary transition-colors hover:bg-muted"
+                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-body text-primary transition-colors hover:bg-surface-hover"
                 >
                   <span>Manage blog agents</span>
                   <ArrowUpRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0" />

@@ -126,7 +126,7 @@ export function FAQQuickSetupDrawer({ open, onClose, onContinue }: FAQQuickSetup
                 Brand identity <span className="text-destructive ml-0.5">*</span>
               </label>
               <Select value={brandKit} onValueChange={setBrandKit}>
-                <SelectTrigger className="h-10 rounded-[8px] border-border bg-white text-[15px] text-foreground dark:border-[#333a47] dark:bg-[#262b35]">
+                <SelectTrigger className="h-[34px] rounded-md border-border-selected bg-surface text-body text-text-primary">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

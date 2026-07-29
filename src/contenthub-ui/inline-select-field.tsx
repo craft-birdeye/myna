@@ -135,7 +135,7 @@ export function InlineSelectField({
     <div className={cn("w-full", className)} ref={rootRef}>
       {label ? (
         <label
-          className="mb-2 block text-[12px] tracking-[-0.24px] text-[#888] dark:text-[#6b7280]"
+          className="mb-2 block text-[12px] tracking-[-0.24px] text-text-secondary"
           style={{ fontWeight: 400 }}
         >
           {label}

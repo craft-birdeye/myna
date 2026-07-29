@@ -231,10 +231,10 @@ function Step1BrandKit({ contentName, brandKit, locations, customAgent, onChange
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-sm border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
+                className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body text-text-primary transition-colors hover:bg-surface-l2"
               >
                 <span className="truncate">{selectedAgent?.label ?? 'Choose an agent...'}</span>
-                <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-[#888] dark:text-[#6b7280]" />
+                <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-1">
@@ -245,19 +245,23 @@ function Step1BrandKit({ contentName, brandKit, locations, customAgent, onChange
                     type="button"
                     onClick={() => onAgentChange(agent.id)}
                     className={cn(
-                      'flex w-full items-center rounded-md px-2 py-2 text-[13px] text-left transition-colors',
+                      'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-body text-left transition-colors',
                       customAgent === agent.id
-                        ? 'bg-[#e8effe] text-primary dark:bg-[#1e2d5e] dark:text-[#6b9bff]'
-                        : 'text-foreground hover:bg-surface-hover',
+                        ? 'bg-surface-selected text-text-primary'
+                        : 'text-text-primary hover:bg-surface-hover',
                     )}
                   >
-                    {agent.label}{i === 0 && <span className="ml-1.5 text-[11px] text-muted-foreground">(Default)</span>}
+                    <span className="flex min-w-0 items-center gap-xs truncate">
+                      {agent.label}
+                      {i === 0 && <span className="text-[11px] text-muted-foreground">(Default)</span>}
+                    </span>
+                    {customAgent === agent.id && <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />}
                   </button>
                 ))}
                 <div className="my-1 h-px bg-border" />
                 <button
                   type="button"
-                  className="flex h-[34px] w-full items-center gap-1.5 rounded-md px-2 text-[13px] text-primary transition-colors hover:bg-surface-hover"
+                  className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-body text-primary transition-colors hover:bg-surface-hover"
                 >
                   <span>Manage FAQ agents</span>
                   <ArrowUpRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0" />
@@ -292,10 +296,10 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center justify-between rounded-sm border border-border bg-white px-2 py-2 text-[13px] text-text-primary transition-colors hover:border-border dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]"
+          className="flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body text-text-primary transition-colors hover:bg-surface-l2"
         >
-          <span className="truncate">{displayLabel}</span>
-          <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-[#888] dark:text-[#6b7280]" />
+          <span className="min-w-0 truncate">{displayLabel}</span>
+          <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-1">
@@ -306,19 +310,20 @@ function AgentSelect({ value, onChange }: { value: string; onChange: (v: string)
               type="button"
               onClick={() => onChange(agent.id)}
               className={cn(
-                'flex w-full items-center rounded-md px-2 py-2 text-[13px] text-left transition-colors',
+                'flex h-[34px] w-full items-center justify-between rounded-sm px-md text-body text-left transition-colors',
                 value === agent.id
-                  ? 'bg-[#e8effe] text-primary dark:bg-[#1e2d5e] dark:text-[#6b9bff]'
-                  : 'text-foreground hover:bg-surface-hover',
+                  ? 'bg-surface-selected text-text-primary'
+                  : 'text-text-primary hover:bg-surface-hover',
               )}
             >
-              {agent.label}
+              <span className="min-w-0 truncate">{agent.label}</span>
+              {value === agent.id && <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />}
             </button>
           ))}
           <div className="my-1 h-px bg-border" />
           <button
             type="button"
-            className="flex h-[34px] w-full items-center gap-1.5 rounded-md px-2 text-[13px] text-primary transition-colors hover:bg-surface-hover"
+            className="flex h-[34px] w-full items-center gap-xs rounded-sm px-md text-body text-primary transition-colors hover:bg-surface-hover"
           >
             <span>Manage FAQ agents</span>
             <ArrowUpRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0" />
