@@ -48,6 +48,7 @@ export interface BlogFlowData {
   sourceUrl?: string;
   topic: string;
   keywords: string[];
+  targetAudience?: string;
   intent: string;
   objective: string;
   funnelStage: string;
@@ -405,6 +406,7 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
 interface Step2Props {
   topic: string;
   keywords: string[];
+  targetAudience: string;
   intent: string;
   objective: string;
   funnelStage: string;
@@ -419,14 +421,14 @@ interface Step2Props {
   internalLinks: boolean;
   refUrls: string[];
   onChange: (patch: Partial<Pick<BlogFlowData,
-    | 'topic' | 'keywords' | 'intent' | 'objective' | 'funnelStage' | 'length'
+    | 'topic' | 'keywords' | 'targetAudience' | 'intent' | 'objective' | 'funnelStage' | 'length'
     | 'createMode' | 'sourceUrl' | 'brief'
     | 'includeImages' | 'includeCTAs' | 'includeFAQ' | 'internalLinks' | 'refUrls'
   >> & { attachedFileMeta?: AttachedFile[] }) => void;
 }
 
 function Step2Setup({
-  topic, keywords, intent, objective, funnelStage, length,
+  topic, keywords, targetAudience, intent, objective, funnelStage, length,
   createMode, sourceUrl,
   brief, attachedFileMeta, includeImages, includeCTAs, includeFAQ, internalLinks, refUrls,
   onChange,
@@ -637,7 +639,19 @@ function Step2Setup({
               />
             </div>
 
-            {/* 2. Length */}
+            {/* 2. Target audience */}
+            <div className="space-y-1.5">
+              <ContentFlowInfoLabel tooltip="Describe the primary reader — e.g. first-home buyers, landlords, healthcare administrators.">
+                Target audience
+              </ContentFlowInfoLabel>
+              <ContentFlowTextInput
+                value={targetAudience}
+                onChange={e => onChange({ targetAudience: e.target.value })}
+                placeholder="e.g. First-home buyers in regional NSW"
+              />
+            </div>
+
+            {/* 3. Length */}
             <div className="space-y-1.5">
               <label className="text-[13px] text-foreground">Length</label>
               <ContentFlowSelect value={length} options={LENGTH_OPTIONS} onChange={val => onChange({ length: val })} />
@@ -699,15 +713,6 @@ function Step2Setup({
               )}
             </div>
 
-            {/* 5. Include in blog toggles */}
-            <div className="flex flex-col gap-3">
-              <label className="text-[13px] text-foreground">Include in blog</label>
-              <ToggleRow label="Images" checked={includeImages} onChange={v => onChange({ includeImages: v })} />
-              <ToggleRow label="CTAs" checked={includeCTAs} onChange={v => onChange({ includeCTAs: v })} />
-              <ToggleRow label="FAQ section" checked={includeFAQ} onChange={v => onChange({ includeFAQ: v })} />
-              <ToggleRow label="Internal links" checked={internalLinks} onChange={v => onChange({ internalLinks: v })} />
-            </div>
-
             {/* 6. Intent */}
             <div className="space-y-1.5">
               <label className="text-[13px] text-foreground">Intent</label>
@@ -765,6 +770,15 @@ function Step2Setup({
               {refUrls.length >= 5 && (
                 <p className="text-[11px] text-muted-foreground">Maximum 5 URLs added</p>
               )}
+            </div>
+
+            {/* 10. Include in blog */}
+            <div className="flex flex-col gap-3">
+              <label className="text-[13px] text-foreground">Include in blog</label>
+              <ToggleRow label="Images" checked={includeImages} onChange={v => onChange({ includeImages: v })} />
+              <ToggleRow label="CTAs" checked={includeCTAs} onChange={v => onChange({ includeCTAs: v })} />
+              <ToggleRow label="FAQ section" checked={includeFAQ} onChange={v => onChange({ includeFAQ: v })} />
+              <ToggleRow label="Internal links" checked={internalLinks} onChange={v => onChange({ internalLinks: v })} />
             </div>
 
           </div>
