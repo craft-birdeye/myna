@@ -341,8 +341,10 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
                 isCustomActive ? 'bg-surface-selected' : 'hover:bg-surface-hover'
               }`}
             >
-              <span className="min-w-0 flex-1 truncate text-body text-text-primary">Custom</span>
-              {isCustomActive && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-body text-text-primary">Custom</span>
+                {isCustomActive && <span className="block truncate text-small text-text-tertiary">{value}</span>}
+              </span>
               <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
             </button>
           </div>
