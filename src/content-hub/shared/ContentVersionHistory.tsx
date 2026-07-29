@@ -54,7 +54,7 @@ const VERSIONS: Version[] = [
     date: 'Dec 10, 2025 10:11 AM',
     author: 'James Wilson',
     initials: 'JW',
-    avatarColor: 'bg-primary',
+    avatarColor: 'bg-[#1c2b3a] text-white',
     isCurrent: true,
   },
   {
@@ -62,7 +62,7 @@ const VERSIONS: Version[] = [
     date: 'Dec 04, 2025 11:24 AM',
     author: 'Sarah Mitchell',
     initials: 'SM',
-    avatarColor: 'bg-primary',
+    avatarColor: 'bg-[#bbf7d0] text-[#14532d]',
     isCurrent: false,
   },
   {
@@ -70,7 +70,7 @@ const VERSIONS: Version[] = [
     date: 'Nov 28, 2025 04:12 PM',
     author: 'David Parker',
     initials: 'DP',
-    avatarColor: 'bg-primary',
+    avatarColor: 'bg-[#e0d7ff] text-[#4c1d95]',
     isCurrent: false,
   },
   {
@@ -78,7 +78,7 @@ const VERSIONS: Version[] = [
     date: 'Nov 28, 2025 11:24 AM',
     author: 'Emily Johnson',
     initials: 'EJ',
-    avatarColor: 'bg-primary',
+    avatarColor: 'bg-[#fef3c7] text-[#78350f]',
     isCurrent: false,
   },
 ];
@@ -285,7 +285,7 @@ function FAQReadOnlyPreview({ versionId }: { versionId: VersionId }) {
             key={qi}
             className={cn(
               'group relative rounded-lg',
-              item.answerChanged && 'bg-surface-hover/35',
+              item.answerChanged && 'bg-yellow-50/60',
             )}
           >
             <div className="flex items-start gap-4 px-4 py-4">
@@ -298,7 +298,7 @@ function FAQReadOnlyPreview({ versionId }: { versionId: VersionId }) {
                 </p>
                 <p className={cn(
                   'text-[16px] leading-[1.55] text-foreground/90',
-                  item.answerChanged && 'bg-surface-hover rounded-[3px] px-1',
+                  item.answerChanged && 'bg-yellow-100 rounded-[3px] px-1',
                 )}>
                   {item.answer}
                 </p>
@@ -314,8 +314,8 @@ function FAQReadOnlyPreview({ versionId }: { versionId: VersionId }) {
 // ── Read-only blog preview ─────────────────────────────────────────────────────
 // Derives per-element amber highlights from the version's BLOG_CONTENT changed flags.
 
-const BLOG_HL   = 'bg-surface-hover rounded-[3px] px-1';
-const BLOG_RING = 'ring-2 ring-amber-300';
+const BLOG_HL   = 'bg-yellow-100 rounded-[3px] px-1';
+const BLOG_RING = 'ring-2 ring-yellow-300';
 
 function BlogReadOnlyPreview({ versionId }: { versionId: VersionId }) {
   const blocks       = BLOG_CONTENT[versionId];
@@ -388,7 +388,7 @@ function BlogReadOnlyPreview({ versionId }: { versionId: VersionId }) {
 
       {/* Bullets */}
       {bulletsBlock?.items && (
-        <ul className={cn('flex flex-col gap-1 pl-5', bulletsChanged && 'bg-surface-hover rounded-lg px-4 py-2')}>
+        <ul className={cn('flex flex-col gap-1 pl-5', bulletsChanged && 'bg-yellow-50 rounded-lg px-4 py-2')}>
           {bulletsBlock.items.map((item, i) => (
             <li key={i} className="text-[13px] text-foreground list-disc">{item}</li>
           ))}
@@ -544,18 +544,18 @@ export function ContentVersionHistory({ contentType, onClose }: ContentVersionHi
                   onClick={() => setSelectedVersionId(version.id)}
                   className={cn(
                     'w-full text-left px-4 py-4 flex flex-col gap-2 transition-colors',
-                    isSelected ? 'bg-primary/5' : 'hover:bg-surface-hover',
+                    isSelected ? 'bg-yellow-50' : 'hover:bg-surface-hover',
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[12px] text-foreground">{version.date}</span>
                     {isSelected && (
-                      <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-primary shrink-0" />
+                      <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-yellow-500 shrink-0" />
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className={cn(
-                      'flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] text-white',
+                      'flex size-6 shrink-0 items-center justify-center rounded-full text-[10px]',
                       version.avatarColor,
                     )}>
                       {version.initials}
