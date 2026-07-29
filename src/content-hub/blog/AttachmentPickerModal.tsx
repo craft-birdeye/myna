@@ -381,7 +381,7 @@ function MediaLibraryTab({
         </div>
 
         {/* 4-column image grid */}
-        <div className="grid grid-cols-5 gap-sm">
+        <div className="grid grid-cols-6 gap-[12px]">
           {openFolder.items.map(item => (
             <MediaTile
               key={item.id}
@@ -479,7 +479,7 @@ function MediaLibraryTab({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-5 gap-sm">
+          <div className="grid grid-cols-6 gap-[12px]">
             {LOOSE_ASSETS.map(asset => (
               <MediaTile
                 key={asset.id}
