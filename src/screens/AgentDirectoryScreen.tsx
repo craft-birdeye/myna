@@ -1,0 +1,604 @@
+import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Toast, type Metric } from '../components'
+import {
+  AGENT_DIRECTORY,
+  PERSONA_GROUPS,
+  type AgentDirectoryEntry,
+  type AgentPersonaId,
+} from '../data/agentDirectoryData'
+
+type SortMode = 'runs' | 'persona' | 'custom'
+
+const STATUS_OPTIONS = ['All agents', 'Running', 'Paused', 'Needs attention']
+const DATE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
+
+// 16,230 → { display: '16.2K', exact: '16,230' }. Already-compact values ("1.9K", "434") pass through untouched.
+function formatK(raw: string): { display: string; exact?: string } {
+  const numeric = parseFloat(raw.replace(/,/g, ''))
+  if (!isNaN(numeric) && numeric >= 1000) {
+    const k = parseFloat((numeric / 1000).toFixed(1))
+    return { display: `${k}K`, exact: numeric.toLocaleString() }
+  }
+  return { display: raw }
+}
+
+// Keeps a dropdown panel mounted through its fade/scale-out before removing it, so
+// closing eases out instead of snapping away. `entered` drives the ease-in/ease-out classes.
+function useOpenTransition(open: boolean, duration = 150) {
+  const [mounted, setMounted] = useState(open)
+  const [entered, setEntered] = useState(open)
+
+  useEffect(() => {
+    let raf1: number
+    let raf2: number
+    let timer: ReturnType<typeof setTimeout>
+    if (open) {
+      setMounted(true)
+      // Double rAF guarantees a paint of the "hidden" state before flipping to
+      // "entered" — a single rAF can land in the same frame and skip the transition.
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setEntered(true))
+      })
+    } else {
+      setEntered(false)
+      timer = setTimeout(() => setMounted(false), duration)
+    }
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+      clearTimeout(timer)
+    }
+  }, [open, duration])
+
+  return { mounted, entered }
+}
+
+const DROPDOWN_TRANSITION = 'transition-all duration-150 ease-out'
+const DROPDOWN_HIDDEN = 'opacity-0 scale-95 -translate-y-1'
+const DROPDOWN_SHOWN = 'opacity-100 scale-100 translate-y-0'
+
+// ── Shared anchored dropdown (status + date filters) ──────────────────────
+// Same trigger + outside-click-to-close structure as DateRangeSelector, with
+// the reference dropdown's selected-row treatment: gray background + check icon.
+function TopBarDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string
+  options: string[]
+  onChange: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const { mounted, entered } = useOpenTransition(open)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+      >
+        {value}
+        <Icon name="expand_more" size={18} className="text-text-icon" />
+      </button>
+
+      {mounted && (
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div
+            className={`absolute right-0 top-full z-[110] mt-xs min-w-[200px] origin-top-right rounded-sm border border-border bg-surface p-md shadow-dropdown ${DROPDOWN_TRANSITION} ${
+              entered ? DROPDOWN_SHOWN : DROPDOWN_HIDDEN
+            }`}
+          >
+            {options.map((opt) => {
+              const isSel = opt === value
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                    isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt}</span>
+                  {isSel && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Sort dropdown — runs / persona (with flyout) / custom order ───────────
+function SortDropdown({
+  sortMode,
+  personaFilter,
+  onSortModeChange,
+  onPersonaFilterChange,
+}: {
+  sortMode: SortMode
+  personaFilter: AgentPersonaId | null
+  onSortModeChange: (mode: SortMode) => void
+  onPersonaFilterChange: (persona: AgentPersonaId | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [personaOpen, setPersonaOpen] = useState(false)
+  const { mounted, entered } = useOpenTransition(open)
+  const { mounted: personaMounted, entered: personaEntered } = useOpenTransition(personaOpen)
+  const closeTimer = useRef<number | null>(null)
+
+  function cancelClose() {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current)
+      closeTimer.current = null
+    }
+  }
+
+  function scheduleClose() {
+    closeTimer.current = window.setTimeout(() => setPersonaOpen(false), 150)
+  }
+
+  function closeAll() {
+    setOpen(false)
+    setPersonaOpen(false)
+  }
+
+  const label =
+    sortMode === 'custom'
+      ? 'Sort by custom order'
+      : sortMode === 'persona'
+        ? personaFilter
+          ? `Sort by ${PERSONA_GROUPS.find((g) => g.id === personaFilter)?.label.toLowerCase()}`
+          : 'Sort by persona'
+        : 'Sort by runs'
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((o) => !o)
+          setPersonaOpen(false)
+        }}
+        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+      >
+        {label}
+        <Icon name="expand_more" size={18} className="text-text-icon" />
+      </button>
+
+      {mounted && (
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={closeAll} />
+          <div
+            className={`absolute right-0 top-full z-[110] mt-xs min-w-[220px] origin-top-right rounded-sm border border-border bg-surface p-md shadow-dropdown ${DROPDOWN_TRANSITION} ${
+              entered ? DROPDOWN_SHOWN : DROPDOWN_HIDDEN
+            }`}
+          >
+            <button
+              type="button"
+              onMouseEnter={() => setPersonaOpen(false)}
+              onClick={() => {
+                onSortModeChange('runs')
+                closeAll()
+              }}
+              className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                sortMode === 'runs' ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+              }`}
+            >
+              <span className="min-w-0 flex-1 truncate text-body text-text-primary">Sort by runs</span>
+              {sortMode === 'runs' && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+            </button>
+
+            <div className="relative" onMouseEnter={() => { cancelClose(); setPersonaOpen(true) }} onMouseLeave={scheduleClose}>
+              <button
+                type="button"
+                onClick={() => {
+                  onSortModeChange('persona')
+                  closeAll()
+                }}
+                className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                  sortMode === 'persona' ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                }`}
+              >
+                <span className="min-w-0 flex-1 truncate text-body text-text-primary">Sort by persona</span>
+                {sortMode === 'persona' && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
+              </button>
+
+              {personaMounted && (
+                <div
+                  onMouseEnter={cancelClose}
+                  onMouseLeave={scheduleClose}
+                  className={`absolute right-full top-0 z-[120] mr-xs w-[260px] origin-top-right rounded-sm border border-border bg-surface p-md shadow-dropdown ${DROPDOWN_TRANSITION} ${
+                    personaEntered ? DROPDOWN_SHOWN : DROPDOWN_HIDDEN
+                  }`}
+                >
+                  {PERSONA_GROUPS.map((group) => {
+                    const isSel = sortMode === 'persona' && personaFilter === group.id
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => {
+                          onSortModeChange('persona')
+                          onPersonaFilterChange(group.id)
+                          closeAll()
+                        }}
+                        className={`flex w-full flex-col items-start gap-xs rounded-sm px-md py-sm text-left ${
+                          isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                        }`}
+                      >
+                        <span className="text-body text-text-primary">{group.label}</span>
+                        <span className="text-small text-text-tertiary">{group.categories.join(', ')}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onMouseEnter={() => setPersonaOpen(false)}
+              onClick={() => {
+                onSortModeChange('custom')
+                closeAll()
+              }}
+              className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                sortMode === 'custom' ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+              }`}
+            >
+              <span className="min-w-0 flex-1 truncate text-body text-text-primary">Sort by custom order</span>
+              {sortMode === 'custom' && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Date range dropdown — presets + a "Custom" row that opens the shared calendar picker ──
+function DateRangeDropdown({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarAnchor, setCalendarAnchor] = useState<{ top: number; left: number } | null>(null)
+  const { mounted, entered } = useOpenTransition(open)
+  const customRowRef = useRef<HTMLButtonElement>(null)
+  const isCustomActive = !DATE_OPTIONS.includes(value)
+
+  function openCalendar() {
+    if (!customRowRef.current) return
+    const rect = customRowRef.current.getBoundingClientRect()
+    setCalendarAnchor({ top: rect.bottom + 4, left: rect.left })
+    setCalendarOpen(true)
+  }
+
+  function closeAll() {
+    setOpen(false)
+    setCalendarOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+      >
+        {value}
+        <Icon name="expand_more" size={18} className="text-text-icon" />
+      </button>
+
+      {mounted && (
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={closeAll} />
+          <div
+            className={`absolute right-0 top-full z-[110] mt-xs min-w-[200px] origin-top-right rounded-sm border border-border bg-surface p-md shadow-dropdown ${DROPDOWN_TRANSITION} ${
+              entered ? DROPDOWN_SHOWN : DROPDOWN_HIDDEN
+            }`}
+          >
+            {DATE_OPTIONS.map((opt) => {
+              const isSel = opt === value
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onMouseEnter={() => setCalendarOpen(false)}
+                  onClick={() => {
+                    onChange(opt)
+                    closeAll()
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                    isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt}</span>
+                  {isSel && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                </button>
+              )
+            })}
+
+            <button
+              ref={customRowRef}
+              type="button"
+              onClick={openCalendar}
+              className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                isCustomActive ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+              }`}
+            >
+              <span className="min-w-0 flex-1 truncate text-body text-text-primary">Custom</span>
+              {isCustomActive && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+              <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
+            </button>
+          </div>
+        </>
+      )}
+
+      <DatePickerModal
+        open={calendarOpen}
+        anchor={calendarAnchor}
+        onClose={() => setCalendarOpen(false)}
+        onApply={(label) => {
+          onChange(label)
+          closeAll()
+        }}
+      />
+    </div>
+  )
+}
+
+// ── One metric cell — truncated value/label with a hover tooltip showing the full text ──
+function MetricCell({ value, label, exact }: { value: string; label: string; exact?: string }) {
+  return (
+    <Tooltip content={exact ? `${exact} ${label}` : label} variant="detail" className="w-full min-w-0">
+      <div className="min-w-0 w-full">
+        <div className="truncate text-h3 text-text-primary">{value}</div>
+        <div className="truncate text-small text-text-tertiary">{label}</div>
+      </div>
+    </Tooltip>
+  )
+}
+
+// ── Grid card ───────────────────────────────────────────────────────────
+function AgentCard({
+  agent,
+  draggable,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onOpen,
+  onAlertAction,
+}: {
+  agent: AgentDirectoryEntry
+  draggable: boolean
+  onDragStart: () => void
+  onDragOver: (e: DragEvent<HTMLDivElement>) => void
+  onDrop: (e: DragEvent<HTMLDivElement>) => void
+  onOpen?: () => void
+  onAlertAction: () => void
+}) {
+  const clickable = !draggable && !!onOpen
+  const outcome = formatK(agent.outcome.value)
+
+  return (
+    <div
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onClick={clickable ? onOpen : undefined}
+      className={`relative flex flex-col rounded-md border border-border bg-surface p-xl transition-colors ${
+        draggable ? 'cursor-grab active:cursor-grabbing' : clickable ? 'cursor-pointer hover:border-border-selected hover:bg-surface-hover' : ''
+      }`}
+    >
+      {draggable && (
+        <div className="pointer-events-none absolute inset-x-0 top-sm flex justify-center text-text-tertiary">
+          <Icon name="drag_indicator" size={20} className="rotate-90" />
+        </div>
+      )}
+
+      <div className="mb-xs flex items-center justify-between gap-sm">
+        <span className="truncate text-small text-text-tertiary">{agent.category}</span>
+        {agent.running > 0 ? (
+          <span className="shrink-0 rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
+            {agent.running} running
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">
+            Paused
+          </span>
+        )}
+      </div>
+
+      <h3 className="mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h3>
+      <p className="mb-lg line-clamp-2 text-small text-text-tertiary">{agent.description}</p>
+
+      <div className="mb-lg grid grid-cols-3 gap-md">
+        <MetricCell value={outcome.display} label={agent.outcome.label} exact={outcome.exact} />
+        <MetricCell value={agent.timeSaved} label="Time saved" />
+        <MetricCell value={agent.costSaved} label="Cost saved" />
+      </div>
+
+      {agent.alert ? (
+        <div className="mt-auto flex items-center gap-sm rounded-sm bg-chip-danger-bg px-md py-sm">
+          <Icon name="error" size={18} className="shrink-0 text-chip-danger-text" />
+          <span className="min-w-0 flex-1 truncate text-small text-chip-danger-text">{agent.alert.message}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onAlertAction()
+            }}
+            className="shrink-0 text-small text-text-action hover:underline"
+          >
+            {agent.alert.actionLabel}
+          </button>
+        </div>
+      ) : (
+        <div className="mt-auto rounded-sm bg-surface-l2 px-md py-sm text-small text-text-secondary">
+          {agent.tasksOngoing} tasks ongoing
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Screen ──────────────────────────────────────────────────────────────
+export function AgentDirectoryScreen({ onOpenAgent }: { onOpenAgent?: (navId: string) => void } = {}) {
+  const [statusFilter, setStatusFilter] = useState('All agents')
+  const [dateRange, setDateRange] = useState('Last week')
+  const [sortMode, setSortMode] = useState<SortMode>('runs')
+  const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
+  const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastVisible, setToastVisible] = useState(false)
+  const dragIdRef = useRef<string | null>(null)
+
+  function showToast(message: string) {
+    setToastMessage(message)
+    setToastVisible(true)
+  }
+
+  const statusFiltered = AGENT_DIRECTORY.filter((a) => {
+    if (statusFilter === 'Running') return a.running > 0
+    if (statusFilter === 'Paused') return a.running === 0
+    if (statusFilter === 'Needs attention') return !!a.alert
+    return true
+  })
+
+  const personaFiltered =
+    sortMode === 'persona' && personaFilter
+      ? statusFiltered.filter((a) => a.persona === personaFilter)
+      : statusFiltered
+
+  // "Sort by runs" and "Sort by custom order" share the same base sequence
+  // (customOrder, seeded from AGENT_DIRECTORY's order) until the user actually
+  // drags cards around in custom mode — so the default view is identical either way.
+  const visibleAgents = [...personaFiltered].sort((a, b) => {
+    if (sortMode === 'persona') {
+      const pa = PERSONA_GROUPS.findIndex((p) => p.id === a.persona)
+      const pb = PERSONA_GROUPS.findIndex((p) => p.id === b.persona)
+      return pa - pb || a.name.localeCompare(b.name)
+    }
+    return customOrder.indexOf(a.id) - customOrder.indexOf(b.id)
+  })
+
+  const runningCount = AGENT_DIRECTORY.filter((a) => a.running > 0).length
+  const attentionCount = AGENT_DIRECTORY.filter((a) => a.alert).length
+  const totalTimeSavedHrs = AGENT_DIRECTORY.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const totalCostSavedK = AGENT_DIRECTORY.reduce(
+    (sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')),
+    0,
+  )
+
+  const SUMMARY_METRICS: Metric[] = [
+    { id: 'running', value: String(runningCount), label: 'Running agents' },
+    { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved', delta: '16%', trend: 'up' },
+    { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved', delta: '14%', trend: 'up' },
+    {
+      id: 'attention',
+      value: String(attentionCount),
+      label: 'Needs attention',
+      valueColorClassName: 'text-chip-danger-text',
+    },
+  ]
+
+  function handleReorder(targetId: string) {
+    const draggedId = dragIdRef.current
+    if (!draggedId || draggedId === targetId) return
+    setCustomOrder((prev) => {
+      const next = [...prev]
+      const from = next.indexOf(draggedId)
+      const to = next.indexOf(targetId)
+      if (from === -1 || to === -1) return prev
+      next.splice(from, 1)
+      next.splice(to, 0, draggedId)
+      return next
+    })
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <TopNav title="Agents" initials="S" />
+
+      <div className="flex-1 overflow-auto bg-surface">
+        <ReportHeader
+          title="Agents overview"
+          subtitle="Manage and monitor AI agents across your business."
+          rightSlot={
+            <div className="flex shrink-0 items-center gap-sm">
+              <TopBarDropdown value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} />
+              <DateRangeDropdown value={dateRange} onChange={setDateRange} />
+              <button
+                type="button"
+                onClick={() => showToast('Agent creation flow coming soon')}
+                className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              >
+                Create agent
+              </button>
+            </div>
+          }
+        />
+
+        <div className="flex flex-col gap-3xl px-2xl pb-2xl pt-sm">
+          <MetricTiles metrics={SUMMARY_METRICS} />
+
+          <div className="flex flex-col gap-lg">
+            <div className="flex items-center justify-between gap-lg">
+              <h2 className="text-h3 text-text-primary">Agent directory</h2>
+
+              <SortDropdown
+                sortMode={sortMode}
+                personaFilter={personaFilter}
+                onSortModeChange={(m) => {
+                  setSortMode(m)
+                  if (m !== 'persona') setPersonaFilter(null)
+                }}
+                onPersonaFilterChange={setPersonaFilter}
+              />
+            </div>
+
+            {visibleAgents.length === 0 ? (
+              <div className="flex h-48 items-center justify-center text-body text-text-tertiary">
+                No agents match this persona yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-lg">
+                {visibleAgents.map((agent) => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    draggable={sortMode === 'custom'}
+                    onDragStart={() => {
+                      dragIdRef.current = agent.id
+                    }}
+                    onDragOver={(e) => {
+                      if (sortMode === 'custom') e.preventDefault()
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      handleReorder(agent.id)
+                    }}
+                    onOpen={agent.navId ? () => onOpenAgent?.(agent.navId!) : undefined}
+                    onAlertAction={() => showToast(`${agent.alert!.actionLabel} — ${agent.name}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Toast message={toastMessage} visible={toastVisible} onClose={() => setToastVisible(false)} />
+    </div>
+  )
+}
