@@ -431,7 +431,6 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({
               ]}
               value={mode}
               onChange={setMode}
-              className="w-full"
             />
           </div>
           <div className="flex-grow overflow-hidden">
