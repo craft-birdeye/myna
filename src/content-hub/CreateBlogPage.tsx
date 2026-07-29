@@ -423,8 +423,8 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
                           >
                             <span className="text-[13px] text-foreground leading-snug">{rec.title}</span>
                             <div className="flex items-center gap-1.5">
-                              <span className="inline-flex items-center rounded-full border border-border bg-surface-selected px-2 py-px text-[11px] text-text-primary">
-                                AEO {rec.aeoScore}
+                              <span className="text-[11px] text-text-secondary">
+                                AEO score : {rec.aeoScore}/100
                               </span>
                               <Tooltip>
                                 <TooltipTrigger asChild>
