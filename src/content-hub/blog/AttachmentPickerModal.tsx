@@ -779,7 +779,7 @@ export function AttachmentPickerModal({
       {/* Modal */}
       <div
         className="relative z-10 flex flex-col bg-surface rounded-[4px] shadow-modal overflow-hidden"
-        style={{ width: 'min(1200px, 95vw)', maxHeight: '88vh' }}
+        style={{ width: 'min(1200px, 95vw)', height: '88vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
