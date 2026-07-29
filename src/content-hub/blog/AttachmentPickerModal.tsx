@@ -327,7 +327,7 @@ function MediaTile({
         'absolute top-1.5 left-1.5 size-[18px] rounded-[3px] border flex items-center justify-center transition-colors',
         selected
           ? 'bg-primary border-primary'
-          : 'bg-black/20 border-white/60',
+          : 'bg-surface border-border',
       )}>
         {selected && <Check size={11} strokeWidth={2} className="text-white" />}
       </div>
