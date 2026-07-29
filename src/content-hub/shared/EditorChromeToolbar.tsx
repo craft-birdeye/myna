@@ -286,7 +286,7 @@ function MenuControl({
         <ChevronDown size={13} strokeWidth={1.6} absoluteStrokeWidth className="absolute right-1.5 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute left-0 top-10 z-50 min-w-full rounded-lg border border-border bg-background p-1 shadow-dropdown">
+        <div className="absolute left-0 top-10 z-50 min-w-full rounded-md border border-border bg-background p-1 shadow-dropdown">
           {options.map(option => (
             <button
               key={option}
@@ -341,7 +341,7 @@ function ColorControl({
         </span>
       </button>
       {open && (
-        <div className="absolute left-0 top-10 z-50 w-[264px] rounded-xl border border-border bg-background p-2 shadow-dropdown">
+        <div className="absolute left-0 top-10 z-50 w-[264px] rounded-md border border-border bg-background p-2 shadow-dropdown">
           <div className="grid grid-cols-8 gap-2">
             {COLOR_SWATCH_ROWS.flat().map(color => (
               <button
@@ -392,7 +392,7 @@ function AiActionControl({
         <Sparkles size={17} strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && (
-        <div className="absolute left-0 top-10 z-50 w-[216px] rounded-xl border border-border bg-background p-1 shadow-dropdown">
+        <div className="absolute left-0 top-10 z-50 w-[216px] rounded-md border border-border bg-background p-1 shadow-dropdown">
           {AI_ACTIONS.map(action => {
             const Icon = action.icon;
             return (
@@ -404,7 +404,7 @@ function AiActionControl({
                   applyAiAction(action.id);
                   onOpenChange(false);
                 }}
-                className="flex h-[34px] w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
+                className="flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
               >
                 <Icon size={15} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
                 <span>{action.label}</span>
@@ -451,16 +451,10 @@ export function EditorChromeToolbar({
           onClick={() => { setOpenMenu(openMenu === 'ai' ? null : 'ai'); setToneOpen(false); }}
           className="flex size-[34px] items-center justify-center rounded-md bg-primary/10 transition-colors hover:bg-primary/15"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6.51931 10.0887H4.57118L4.24883 11.0207H3.2187L4.97763 6.12236H6.11988L7.8788 11.0207H6.84167L6.51931 10.0887ZM6.25302 9.30384L5.54525 7.25761L4.83747 9.30384H6.25302Z" fill="#6834B7"/>
-            <path d="M9.51733 6.12937V11.0207H8.53626V6.12937H9.51733Z" fill="#6834B7"/>
-            <path d="M9.32388 3.12083H1.8628C0.834006 3.12083 0 3.95484 0 4.98364V12.4349C0 13.4637 0.834007 14.2977 1.86281 14.2977H11.1768C12.2056 14.2977 13.0396 13.4637 13.0396 12.4349V6.85539C12.8579 6.94499 12.673 6.97287 12.523 6.97287C12.3815 6.97287 12.241 6.94766 12.1082 6.89686V12.4349C12.1082 12.9493 11.6912 13.3663 11.1768 13.3663H1.86281C1.34841 13.3663 0.931402 12.9493 0.931402 12.4349V4.98364C0.931402 4.46924 1.3484 4.05224 1.8628 4.05224H9.26645C9.21567 3.91308 9.1962 3.77401 9.1962 3.64919C9.1962 3.47286 9.23581 3.28997 9.32388 3.12083Z" fill="#6834B7"/>
-            <path d="M14.3135 1.88781C14.2909 1.87008 14.2773 1.84761 14.2727 1.8204C14.2684 1.79607 14.2737 1.77277 14.2886 1.75049C14.3932 1.57115 14.4698 1.42736 14.5185 1.31913C14.5688 1.21216 14.5876 1.11705 14.5749 1.0338C14.5651 0.950203 14.5229 0.858108 14.4483 0.757518C14.3736 0.656928 14.2655 0.526047 14.1238 0.364876C14.0815 0.315913 14.0782 0.268806 14.1138 0.223556C14.1316 0.200931 14.1535 0.188046 14.1794 0.184901C14.2054 0.181756 14.2301 0.186801 14.2535 0.200035C14.4371 0.307876 14.5853 0.38785 14.6981 0.439957C14.8122 0.490449 14.911 0.510628 14.9946 0.500495C15.081 0.490012 15.1717 0.447579 15.2668 0.373195C15.363 0.297195 15.4865 0.185008 15.6371 0.0366344C15.683 -0.00839756 15.7301 -0.0119137 15.7784 0.026086C15.8267 0.0640857 15.8329 0.110843 15.797 0.166358C15.6908 0.344433 15.6125 0.486954 15.5622 0.593921C15.5136 0.702155 15.4956 0.797897 15.5083 0.881147C15.5226 0.965664 15.567 1.05822 15.6417 1.15881C15.7176 1.25778 15.8255 1.38722 15.9656 1.54712C16.0079 1.59609 16.0112 1.64319 15.9756 1.68844C15.94 1.7337 15.8902 1.739 15.8262 1.70437C15.6417 1.60102 15.4932 1.52474 15.3807 1.47552C15.2683 1.42629 15.1695 1.40611 15.0843 1.41498C15.0007 1.42511 14.9115 1.46737 14.8164 1.54175C14.723 1.6174 14.6023 1.7278 14.4542 1.87294C14.4087 1.92086 14.3617 1.92581 14.3135 1.88781Z" fill="#6834B7"/>
-            <path d="M12.5714 6.04144C12.5135 6.04144 12.4639 6.02275 12.4225 5.98537C12.3853 5.95214 12.3646 5.90854 12.3604 5.85454C12.3025 5.43922 12.2446 5.11526 12.1867 4.88268C12.1329 4.6501 12.0439 4.47566 11.9198 4.35937C11.7998 4.23892 11.6178 4.14548 11.3737 4.07902C11.1296 4.01257 10.7945 3.93989 10.3684 3.86098C10.2401 3.83606 10.176 3.76545 10.176 3.64916C10.176 3.59102 10.1946 3.54325 10.2318 3.50587C10.2691 3.4685 10.3146 3.44565 10.3684 3.43735C10.7945 3.3792 11.1296 3.32105 11.3737 3.26291C11.6178 3.20061 11.7998 3.10924 11.9198 2.98879C12.0439 2.8642 12.135 2.68353 12.1929 2.44679C12.2508 2.20591 12.3066 1.87364 12.3604 1.45001C12.377 1.32126 12.4473 1.25689 12.5714 1.25689C12.6955 1.25689 12.7638 1.32334 12.7762 1.45624C12.83 1.87157 12.8838 2.19552 12.9376 2.4281C12.9955 2.66069 13.0865 2.83512 13.2106 2.95142C13.3389 3.06771 13.525 3.15908 13.7691 3.22553C14.0132 3.28783 14.3463 3.35843 14.7683 3.43735C14.8965 3.46227 14.9607 3.53287 14.9607 3.64916C14.9607 3.76545 14.8883 3.83606 14.7434 3.86098C14.3215 3.92743 13.9905 3.99181 13.7505 4.0541C13.5106 4.1164 13.3285 4.20778 13.2044 4.32822C13.0844 4.44866 12.9955 4.62725 12.9376 4.86399C12.8838 5.10073 12.83 5.42676 12.7762 5.84208C12.7638 5.97499 12.6955 6.04144 12.5714 6.04144Z" fill="#6834B7"/>
-          </svg>
+          <Sparkles size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-primary" />
         </button>
         {openMenu === 'ai' && (
-          <div className="absolute left-0 top-10 z-50 w-[232px] rounded-xl border border-border bg-background p-1 shadow-dropdown">
+          <div className="absolute left-0 top-10 z-50 w-[232px] rounded-md border border-border bg-background p-1 shadow-dropdown">
             {/* MODIFY section */}
             <p className="px-2 pb-1 pt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
               Modify
@@ -473,7 +467,7 @@ export function EditorChromeToolbar({
                 onMouseDown={event => event.preventDefault()}
                 onClick={() => setToneOpen(v => !v)}
                 className={cn(
-                  'flex h-[34px] w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] transition-colors',
+                  'flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] transition-colors',
                   toneOpen ? 'bg-primary/8 text-primary' : 'text-foreground hover:bg-surface-hover',
                 )}
               >
@@ -482,7 +476,7 @@ export function EditorChromeToolbar({
                 <ChevronRight size={13} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-muted-foreground" />
               </button>
               {toneOpen && (
-                <div className="absolute left-full top-0 z-50 ml-1 w-[148px] rounded-xl border border-border bg-background p-1 shadow-dropdown">
+                <div className="absolute left-full top-0 z-50 ml-1 w-[148px] rounded-md border border-border bg-background p-1 shadow-dropdown">
                   {TONE_OPTIONS.map(tone => (
                     <button
                       key={tone}
@@ -492,7 +486,7 @@ export function EditorChromeToolbar({
                         setToneOpen(false);
                         setOpenMenu(null);
                       }}
-                      className="flex h-[34px] w-full items-center rounded-lg px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
+                      className="flex h-[34px] w-full items-center rounded-md px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
                     >
                       {tone}
                     </button>
@@ -514,7 +508,7 @@ export function EditorChromeToolbar({
                     setOpenMenu(null);
                     setToneOpen(false);
                   }}
-                  className="flex h-[34px] w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
+                  className="flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
                 >
                   <Icon size={15} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />
                   <span>{action.label}</span>
@@ -540,7 +534,7 @@ export function EditorChromeToolbar({
                     setOpenMenu(null);
                     setToneOpen(false);
                   }}
-                  className="flex h-[34px] w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
+                  className="flex h-[34px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] text-foreground transition-colors hover:bg-surface-hover"
                 >
                   <Icon size={15} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-primary" />
                   <span>{action.label}</span>
@@ -592,11 +586,11 @@ export function EditorChromeToolbar({
           setFontFamily(value);
           formatSelection('fontName', value);
         }}
-        className="w-[130px] rounded-lg border border-border"
+        className="w-[130px] rounded-md border border-border"
       />
 
       {/* 7. Font size stepper */}
-      <div className="flex items-center rounded-lg border border-border">
+      <div className="flex items-center rounded-md border border-border">
         <button
           type="button"
           title="Decrease font size"
@@ -607,7 +601,7 @@ export function EditorChromeToolbar({
             setFontSizeNum(next);
             formatSelection('fontSize', String(next));
           }}
-          className="flex h-7 w-7 items-center justify-center rounded-l-lg text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-l-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <Minus size={13} strokeWidth={1.6} absoluteStrokeWidth />
         </button>
@@ -624,7 +618,7 @@ export function EditorChromeToolbar({
             setFontSizeNum(next);
             formatSelection('fontSize', String(next));
           }}
-          className="flex h-7 w-7 items-center justify-center rounded-r-lg text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-r-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <Plus size={13} strokeWidth={1.6} absoluteStrokeWidth />
         </button>
@@ -656,7 +650,7 @@ export function EditorChromeToolbar({
           </span>
         </button>
         {openMenu === 'color' && (
-          <div className="absolute left-0 top-10 z-50 w-[264px] rounded-xl border border-border bg-background p-2 shadow-dropdown">
+          <div className="absolute left-0 top-10 z-50 w-[264px] rounded-md border border-border bg-background p-2 shadow-dropdown">
             <div className="grid grid-cols-8 gap-2">
               {COLOR_SWATCH_ROWS.flat().map(color => (
                 <button
@@ -785,7 +779,7 @@ export function EditorChromeToolbar({
 
   if (inlineMode) {
     return (
-      <div className="relative flex h-[48px] w-full flex-none items-center gap-1 rounded-lg border border-border/60 bg-background px-4">
+      <div className="relative flex h-[48px] w-full flex-none items-center gap-1 rounded-md border border-border/60 bg-background px-4">
         {richTextVisible ? richTextContent : nonRichContent}
       </div>
     );
@@ -796,7 +790,7 @@ export function EditorChromeToolbar({
       className="fixed z-50 -translate-x-1/2"
       style={{ top: position.top, left: position.left }}
     >
-      <div className="flex h-[48px] items-center gap-1 rounded-lg border border-border/60 bg-background px-4">
+      <div className="flex h-[48px] items-center gap-1 rounded-md border border-border/60 bg-background px-4">
         {richTextVisible ? richTextContent : nonRichContent}
       </div>
     </div>
