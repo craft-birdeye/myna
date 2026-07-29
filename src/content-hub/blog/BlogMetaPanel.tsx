@@ -1,5 +1,5 @@
-import { X, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { X } from 'lucide-react';
+import { useState, useRef } from 'react';
 import { cn } from '@/contenthub-ui/utils';
 import { Input } from '@/contenthub-ui/input';
 import { Textarea } from '@/contenthub-ui/textarea';
@@ -13,13 +13,7 @@ export interface BlogMetaPanelProps {
 
 // ── Mock seed data ─────────────────────────────────────────────────────────────
 
-const LOCATION_OPTIONS = [
-  '1001 - Mountain view, CA',
-  '1002 - San Jose, CA',
-  '1003 - Palo Alto, CA',
-  '1004 - Sunnyvale, CA',
-  '1005 - Santa Clara, CA',
-];
+const INITIAL_KEYWORDS = ['Christmas', 'Newyear', 'Lushgreen', 'Landscaping', 'Gardening'];
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -59,8 +53,19 @@ function BlogMetaPanelContent({ onClose }: { onClose: () => void }) {
     'Dental implants are the gold standard for replacing missing teeth — a permanent, natural-looking solution that preserves jaw bone and restores full function.',
   );
   const [urlSlug, setUrlSlug] = useState('are-dental-implants-right-for-you');
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState(LOCATION_OPTIONS[0]);
+  const [keywords, setKeywords] = useState<string[]>(INITIAL_KEYWORDS);
+  const [kwInput, setKwInput] = useState('');
+  const kwInputRef = useRef<HTMLInputElement>(null);
+
+  function addKeyword(raw: string) {
+    const kw = raw.trim();
+    if (kw && !keywords.includes(kw)) setKeywords(prev => [...prev, kw]);
+    setKwInput('');
+  }
+
+  function removeKeyword(kw: string) {
+    setKeywords(prev => prev.filter(k => k !== kw));
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -129,41 +134,45 @@ function BlogMetaPanelContent({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        {/* Keywords / Location */}
+        {/* Keywords */}
         <div>
           <FieldLabel>Keywords</FieldLabel>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setLocationOpen(v => !v)}
-              className={cn(
-                'flex h-[34px] w-full items-center justify-between rounded-md border bg-surface px-md text-[13px] text-text-primary transition-colors hover:bg-surface-l2',
-                locationOpen
-                  ? 'border-primary ring-[3px] ring-primary/10'
-                  : 'border-border-selected',
-              )}
-            >
-              <span className="truncate">{selectedLocation}</span>
-              <ChevronDown size={13} strokeWidth={1.6} absoluteStrokeWidth className={cn('shrink-0 text-muted-foreground transition-transform', locationOpen && 'rotate-180')} />
-            </button>
-            {locationOpen && (
-              <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-background shadow-card overflow-hidden">
-                {LOCATION_OPTIONS.map(loc => (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() => { setSelectedLocation(loc); setLocationOpen(false); }}
-                    className={cn(
-                      'flex w-full items-center px-2 py-2 text-[13px] text-left transition-colors hover:bg-surface-hover',
-                      loc === selectedLocation && 'text-primary',
-                    )}
-                  >
-                    {loc}
-                  </button>
-                ))}
-              </div>
-            )}
+          {/* Tag chips */}
+          <div
+            className="flex flex-wrap gap-2 rounded-md border border-border-selected bg-surface p-2 cursor-text min-h-[38px]"
+            onClick={() => kwInputRef.current?.focus()}
+          >
+            {keywords.map(kw => (
+              <span
+                key={kw}
+                className="inline-flex items-center gap-1.5 rounded-md bg-surface-selected px-2 py-1 text-[12px] text-text-primary"
+              >
+                {kw}
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); removeKeyword(kw); }}
+                  className="text-text-icon hover:text-text-primary transition-colors"
+                >
+                  <X size={11} strokeWidth={1.6} absoluteStrokeWidth />
+                </button>
+              </span>
+            ))}
+            <input
+              ref={kwInputRef}
+              value={kwInput}
+              onChange={e => setKwInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKeyword(kwInput); }
+                if (e.key === 'Backspace' && kwInput === '' && keywords.length > 0) {
+                  setKeywords(prev => prev.slice(0, -1));
+                }
+              }}
+              onBlur={() => { if (kwInput.trim()) addKeyword(kwInput); }}
+              placeholder={keywords.length === 0 ? 'Add keywords…' : ''}
+              className="min-w-[80px] flex-1 bg-transparent text-[12px] text-text-primary placeholder:text-text-icon outline-none"
+            />
           </div>
+          <p className="mt-1 text-[11px] text-text-icon">Press Enter or comma to add</p>
         </div>
       </div>
     </div>
