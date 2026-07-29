@@ -24,9 +24,9 @@ export interface ContentFlowStep {
 
 export const CONTENT_FLOW_STEP_TITLE_CLASS = 'text-[16px] leading-6 text-foreground';
 export const CONTENT_FLOW_FIELD_CLASS =
-  'h-10 rounded-[8px] border-border bg-white px-4 text-[15px] md:text-[15px] font-normal text-text-primary placeholder:text-text-secondary transition-[color,box-shadow,border-color] hover:border-border focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/10 dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:placeholder:text-[#4d5568] dark:hover:border-[#4d5568]';
+  'h-[34px] rounded-md border-border-selected bg-surface px-md text-body font-normal text-text-primary placeholder:text-text-secondary transition-[color,box-shadow,border-color] hover:border-border focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/10';
 export const CONTENT_FLOW_TEXTAREA_CLASS =
-  'min-h-28 rounded-[8px] border-border bg-white px-4 py-2 text-[15px] md:text-[15px] font-normal leading-6 text-text-primary placeholder:text-text-secondary transition-[color,box-shadow,border-color] hover:border-border focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/10 dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:placeholder:text-[#4d5568] dark:hover:border-[#4d5568]';
+  'min-h-28 rounded-md border-border-selected bg-surface px-md py-sm text-body font-normal leading-6 text-text-primary placeholder:text-text-secondary transition-[color,box-shadow,border-color] hover:border-border focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/10';
 
 export function ContentFlowTextInput({
   className,
@@ -183,7 +183,7 @@ export function ContentFlowChoiceCard({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        'flex w-full items-start gap-4 rounded-[8px] border bg-background px-4 py-4 text-left transition-colors',
+        'flex w-full items-start gap-4 rounded-md border bg-surface px-md py-md text-left transition-colors',
         selected
           ? 'border-primary bg-primary/[0.04] ring-1 ring-primary/20'
           : 'border-border hover:border-primary/30 hover:bg-surface-hover',
@@ -243,7 +243,7 @@ export function ContentFlowRadioCard({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        'flex w-full items-start gap-2 rounded-[8px] border bg-background px-4 py-4 text-left transition-colors',
+        'flex w-full items-start gap-2 rounded-md border bg-surface px-md py-md text-left transition-colors',
         selected
           ? 'border-primary bg-primary/[0.03]'
           : 'border-border hover:border-primary/40 hover:bg-background',
@@ -281,7 +281,7 @@ export function ContentFlowCountStepper({
   ariaLabel: string;
 }) {
   return (
-    <div className="inline-flex h-[34px] items-center rounded-[8px] border border-border bg-background">
+    <div className="inline-flex h-[34px] items-center rounded-md border border-border-selected bg-surface">
       <button
         type="button"
         aria-label={`Decrease ${ariaLabel}`}
@@ -363,7 +363,7 @@ export function ContentFlowMultiSelect({
           role="button"
           tabIndex={0}
           className={cn(
-            'flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-[8px] border border-border bg-background px-4 py-2 text-left transition-[color,box-shadow]',
+            'flex min-h-[34px] w-full cursor-pointer items-center gap-2 rounded-md border border-border-selected bg-surface px-md py-sm text-left transition-[color,box-shadow]',
             'focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15',
           )}
         >
@@ -404,7 +404,7 @@ export function ContentFlowMultiSelect({
               <span className="py-1 text-[13px] text-muted-foreground">{placeholder}</span>
             )}
           </span>
-          <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-[#888] dark:text-[#6b7280]" />
+          <ChevronDown size={20} strokeWidth={1.6} absoluteStrokeWidth className="size-5 shrink-0 text-text-icon" />
         </div>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-2">
@@ -499,7 +499,7 @@ export function ContentFlowKeywordTagInput({
     <div ref={containerRef} className="relative">
       <div
         className={cn(
-          'flex min-h-[42px] w-full flex-wrap items-center gap-1.5 rounded-[8px] border border-border bg-background px-2 py-2 cursor-text transition-[box-shadow,border-color]',
+          'flex min-h-[34px] w-full flex-wrap items-center gap-1.5 rounded-md border border-border-selected bg-surface px-sm py-sm cursor-text transition-[box-shadow,border-color]',
           open && 'border-primary/50 ring-2 ring-primary/15',
         )}
         onClick={() => { inputRef.current?.focus(); setOpen(true); }}
@@ -532,7 +532,7 @@ export function ContentFlowKeywordTagInput({
       </div>
 
       {open && filteredSuggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-[8px] border border-border bg-background shadow-card overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full rounded-sm border border-border bg-surface shadow-dropdown overflow-hidden">
           <div className="max-h-[200px] overflow-y-auto p-1 flex flex-col gap-2">
             {filteredSuggestions.map(s => (
               <button
@@ -662,7 +662,7 @@ export function ContentFlowLocationFlatList({
       )}
 
       {/* Search — standalone bordered input */}
-      <div className="flex items-center gap-2 rounded-[8px] border border-border bg-white px-2 dark:border-[#333a47] dark:bg-[#262b35]">
+      <div className="flex items-center gap-2 rounded-md border border-border-selected bg-surface px-sm">
         <Search size={14} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-muted-foreground" />
         <input
           type="text"
@@ -765,14 +765,13 @@ export function ContentFlowLocationMultiSelect({
         <button
           type="button"
           className={cn(
-            'flex h-10 w-full items-center justify-between rounded-[8px] border border-border bg-white px-4 text-[15px] transition-[color,box-shadow,border-color]',
-            'hover:border-border focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/10 focus-visible:outline-none',
-            'dark:border-[#333a47] dark:bg-[#262b35]',
-            values.length > 0 ? 'text-text-primary dark:text-[#e4e4e4]' : 'text-text-secondary dark:text-[#4d5568]',
+            'flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-body transition-[color,box-shadow,border-color]',
+            'hover:bg-surface-l2 focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/10 focus-visible:outline-none',
+            values.length > 0 ? 'text-text-primary' : 'text-text-secondary',
           )}
         >
           <span className="truncate">{triggerLabel}</span>
-          <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-[#888] dark:text-[#6b7280]" />
+          <ChevronDown size={16} strokeWidth={1.6} absoluteStrokeWidth className="shrink-0 text-text-icon" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-1">

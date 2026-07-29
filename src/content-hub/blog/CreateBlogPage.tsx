@@ -112,7 +112,7 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
         </aside>
 
         {/* Blog inline creation flow */}
-        <div className="flex-1 min-w-0 min-h-0 bg-background rounded-[8px] overflow-hidden">
+        <div className="flex-1 min-w-0 min-h-0 bg-surface rounded-md overflow-hidden">
           <BlogInlineCreationFlow
             onComplete={onGenerate}
             onCancel={onCancel}

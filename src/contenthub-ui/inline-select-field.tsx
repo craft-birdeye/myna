@@ -108,11 +108,11 @@ export function InlineSelectField({
                       setOpen(false);
                     }}
                     className={cn(
-                      "w-full shrink-0 rounded-lg px-3 text-left transition-colors duration-150",
+                      "w-full shrink-0 rounded-sm px-sm text-left transition-colors duration-150",
                       optionText,
                       selected
-                        ? "bg-[#e8effe] text-[#2552ED] dark:bg-[#1e2d5e] dark:text-[#6b9bff]"
-                        : "text-[#212121] hover:bg-[#f3f4f6] dark:text-[#e4e4e4] dark:hover:bg-white/[0.06]",
+                        ? "bg-surface-selected text-primary"
+                        : "text-text-primary hover:bg-surface-hover",
                     )}
                     style={{ fontWeight: 400 }}
                   >
@@ -141,8 +141,7 @@ export function InlineSelectField({
           type="button"
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            "flex w-full items-center justify-between rounded-lg border border-[#e5e9f0] bg-white px-3 py-2 text-[#212121] transition-colors hover:border-[#c0c6d4] dark:border-[#333a47] dark:bg-[#262b35] dark:text-[#e4e4e4] dark:hover:border-[#4d5568]",
-            isMd && "hover:bg-[#f5f5f5] dark:hover:bg-[#2e3340]",
+            "flex h-[34px] w-full items-center justify-between rounded-md border border-border-selected bg-surface px-md text-text-primary transition-colors hover:bg-surface-l2",
             triggerText,
           )}
           style={{ fontWeight: 400 }}
@@ -151,13 +150,12 @@ export function InlineSelectField({
         >
           <span className="min-w-0 truncate text-left">{value}</span>
           <ChevronDown
-            size={20}
+            size={16}
             strokeWidth={1.6}
             absoluteStrokeWidth
             className={cn(
-              "size-5 shrink-0 text-[#888] transition-transform dark:text-[#6b7280]",
+              "shrink-0 text-text-icon transition-transform",
               open && "rotate-180",
-              isMd && "text-[#888]",
             )}
           />
         </button>

@@ -179,7 +179,7 @@ function StepIndicator({ current }: { current: number }) {
 
 function ToggleRow({ label, sub, checked, onChange }: { label: string; sub?: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div className="flex items-center gap-3 p-4 border border-border rounded-lg bg-background">
+    <div className="flex items-center gap-3 p-md border border-border rounded-md bg-surface">
       <button
         type="button"
         role="switch"
@@ -311,7 +311,7 @@ function Step2Source({ brief, refUrls, attachedFiles, sources, onChange }: Step2
       </div>
 
       {/* Auto-suggest banner */}
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center gap-3">
+      <div className="bg-primary/5 border border-primary/20 rounded-md p-md flex items-center gap-3">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="text-primary shrink-0">
           <path d="M7.5 1L9.18 5.26L13.5 5.63L10.5 8.14L11.45 12.5L7.5 10.27L3.55 12.5L4.5 8.14L1.5 5.63L5.82 5.26L7.5 1Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
         </svg>
@@ -322,7 +322,7 @@ function Step2Source({ brief, refUrls, attachedFiles, sources, onChange }: Step2
         <button
           type="button"
           onClick={handleAutoFill}
-          className="h-8 px-3 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors shrink-0"
+          className="h-8 px-sm rounded-md border border-border-selected bg-surface text-body text-text-primary hover:bg-surface-l2 transition-colors shrink-0"
         >
           Use this
         </button>
@@ -354,7 +354,7 @@ function Step2Source({ brief, refUrls, attachedFiles, sources, onChange }: Step2
             type="button"
             onClick={addUrl}
             disabled={!urlInput.trim() || refUrls.length >= 5}
-            className="h-10 px-4 rounded-lg border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 flex items-center gap-1.5"
+            className="h-[34px] px-md rounded-md border border-border-selected bg-surface text-body text-text-primary hover:bg-surface-l2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 flex items-center gap-xs"
           >
             <Plus size={14} strokeWidth={1.6} absoluteStrokeWidth />
             Add
@@ -363,7 +363,7 @@ function Step2Source({ brief, refUrls, attachedFiles, sources, onChange }: Step2
         {refUrls.length > 0 && (
           <div className="flex flex-col gap-1">
             {refUrls.map((url, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-[12px]">
+              <div key={i} className="flex items-center gap-2 px-sm py-xs rounded-md bg-muted text-small">
                 <span className="flex-1 text-foreground truncate">{url}</span>
                 <button type="button" onClick={() => removeUrl(i)} className="text-muted-foreground hover:text-foreground shrink-0">
                   <X size={12} strokeWidth={1.6} absoluteStrokeWidth />
@@ -380,7 +380,7 @@ function Step2Source({ brief, refUrls, attachedFiles, sources, onChange }: Step2
         <button
           type="button"
           onClick={handleMockBrowse}
-          className="w-full rounded-lg border-2 border-dashed border-border px-4 py-6 flex flex-col items-center gap-2 transition-colors hover:border-primary/30 hover:bg-muted/30"
+          className="w-full rounded-md border-2 border-dashed border-border px-md py-lg flex flex-col items-center gap-2 transition-colors hover:border-primary/30 hover:bg-muted/30"
         >
           <Upload size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-muted-foreground" />
           <span className="text-[13px] text-foreground">Drop files or click to browse</span>
@@ -389,7 +389,7 @@ function Step2Source({ brief, refUrls, attachedFiles, sources, onChange }: Step2
         {attachedFiles.length > 0 && (
           <div className="flex flex-col gap-1">
             {attachedFiles.map(name => (
-              <div key={name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-[12px]">
+              <div key={name} className="flex items-center gap-2 px-sm py-xs rounded-md bg-muted text-small">
                 <span className="flex-1 text-foreground truncate">{name}</span>
                 <button type="button" onClick={() => onChange({ attachedFiles: attachedFiles.filter(f => f !== name) })} className="text-muted-foreground hover:text-foreground">
                   <X size={12} strokeWidth={1.6} absoluteStrokeWidth />
@@ -467,7 +467,7 @@ function Step3Tune({ objective, audience, tone, contentMix, approvalFlow, onChan
                 type="button"
                 onClick={() => onChange({ objective: obj.id })}
                 className={cn(
-                  'relative flex items-center gap-3 text-left bg-background rounded-lg px-4 py-3 transition-all',
+                  'relative flex items-center gap-3 text-left bg-surface rounded-md px-md py-sm transition-all',
                   selected ? 'border-2 border-primary' : 'border border-border hover:border-primary/40',
                 )}
               >
@@ -517,7 +517,7 @@ function Step3Tune({ objective, audience, tone, contentMix, approvalFlow, onChan
       <div className="flex flex-col gap-3">
         <label className="text-[13px] text-foreground">Content mix</label>
         {contentMix.map(item => (
-          <div key={item.type} className="flex items-center gap-3 p-3 border border-border rounded-lg bg-background">
+          <div key={item.type} className="flex items-center gap-3 p-sm border border-border rounded-md bg-surface">
             <span className="flex-1 text-[13px] text-foreground">{item.type}</span>
             <div className="flex items-center gap-2">
               <button
@@ -675,7 +675,7 @@ export function ProjectInlineCreationFlow({
       )}
 
       <div className="flex-1 min-h-0 overflow-hidden py-4 pl-4 pr-6">
-        <div className="h-full overflow-y-auto rounded-lg border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
+        <div className="h-full overflow-y-auto rounded-md border border-border bg-surface px-[30px] pb-[30px] pt-[30px]">
           <div className="w-1/2 min-w-[520px] max-w-[720px]">
 
             {step === 0 && (

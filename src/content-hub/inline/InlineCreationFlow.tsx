@@ -631,7 +631,7 @@ function StepTemplate({
         type="button"
         onClick={() => onChange({ ...data, templateId: '' })}
         className={cn(
-          'w-full h-10 rounded-sm border text-[13px] transition-all',
+          'w-full h-[34px] rounded-md border text-body transition-all',
           selected === ''
             ? 'border-primary bg-primary/[0.04] text-primary ring-1 ring-primary/20'
             : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground',

@@ -730,7 +730,7 @@ function Step2Setup({
                   type="button"
                   onClick={handleAddUrl}
                   disabled={!refUrlInput.trim() || refUrls.length >= 5}
-                  className="h-10 px-4 rounded-sm border border-border bg-background text-[13px] text-foreground hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  className="h-[34px] px-md rounded-md border border-border-selected bg-surface text-body text-text-primary hover:bg-surface-l2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                 >
                   Add
                 </button>

@@ -397,7 +397,7 @@ function Step3ContentBrief({ value, onChange }: Step3Props) {
       </div>
 
       {generating ? (
-        <div className="px-4 py-2 rounded-[8px] border border-border bg-background animate-pulse">
+        <div className="px-md py-sm rounded-md border border-border bg-surface animate-pulse">
           <div className="space-y-2">
             <div className="h-2.5 rounded-full bg-muted w-[90%]" />
             <div className="h-2.5 rounded-full bg-muted w-full" />
