@@ -29,6 +29,8 @@ interface AgentDetailScreenProps {
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
+  /** Bubbled up from `AgentInstanceScreen` — see its own doc comment. */
+  onRecommendationDetailActiveChange?: (active: boolean) => void
 }
 
 interface AgentInstance {
@@ -369,7 +371,7 @@ function CreateAgentEmptyState({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSettings, onAgentSetupActiveChange, onNavigateToInbox, product }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSettings, onAgentSetupActiveChange, onNavigateToInbox, product, onRecommendationDetailActiveChange }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -661,6 +663,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
         onOpenIntegrationSettings={onOpenIntegrationSettings}
         onNavigateToInbox={onNavigateToInbox}
         product={product}
+        onRecommendationDetailActiveChange={onRecommendationDetailActiveChange}
       />
     )
   }

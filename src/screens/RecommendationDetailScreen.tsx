@@ -1095,34 +1095,35 @@ function IntroBlockItem({
       if (block.label === 'Read the reported conversation' && block.reportedExcerpt && block.feedback) {
         const transcript = block.children.find((c): c is Extract<IntroBlock, { kind: 'transcript' }> => c.kind === 'transcript')
         return (
-          <div className="flex flex-col gap-sm">
-            <Block heading="Reported conversation" meta={block.meta} variant="neutral" hideBar>
-              <div className="flex flex-col gap-md rounded-md border border-border bg-surface-hover/40 p-lg">
-                {block.reportedExcerpt.map((line, i) => {
-                  const isAgent = line.speaker.toLowerCase().includes('myna')
-                  return (
-                    <ChatBubble key={i} sender={isAgent ? 'business' : 'user'} text={line.text} showFeedback={isAgent} feedback={isAgent ? 'down' : undefined}>
-                      <span className="text-small text-text-tertiary">{line.speaker}</span>
-                    </ChatBubble>
-                  )
-                })}
-              </div>
-              <div className="mt-sm flex flex-col gap-xs">
-                <p className="text-small text-text-tertiary">Feedback</p>
+          <Block heading="Reported conversation" variant="neutral" hideBar>
+            <div className="flex flex-col gap-md rounded-md border border-border bg-surface-hover/40 p-lg">
+              {block.reportedExcerpt.map((line, i) => {
+                const isAgent = line.speaker.toLowerCase().includes('myna')
+                return (
+                  <ChatBubble key={i} sender={isAgent ? 'business' : 'user'} text={line.text}>
+                    <span className="text-small text-text-tertiary">{line.speaker}</span>
+                  </ChatBubble>
+                )
+              })}
+              <div className="flex flex-col gap-xs">
+                <div className="flex items-center gap-xs">
+                  <Icon name="thumb_down" size={16} className="text-chip-danger-text" />
+                  <p className="text-body text-text-secondary">Feedback</p>
+                </div>
                 <p className="text-body text-text-primary">{block.feedback}</p>
               </div>
-            </Block>
-            {onViewTranscript && transcript && (
-              <button
-                type="button"
-                onClick={() => onViewTranscript(transcript.lines)}
-                className="flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-              >
-                <Icon name="description" size={16} />
-                View Transcript
-              </button>
-            )}
-          </div>
+              {onViewTranscript && transcript && (
+                <button
+                  type="button"
+                  onClick={() => onViewTranscript(transcript.lines)}
+                  className="flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                >
+                  <Icon name="description" size={16} />
+                  View Transcript
+                </button>
+              )}
+            </div>
+          </Block>
         )
       }
       if (block.label === 'Current agent response') {
@@ -1844,7 +1845,7 @@ function RecommendationChatView({
     new Set(manualUpdates.slice(resolvedCount).map((m) => m.relatedType).filter((t): t is GapType => Boolean(t)))
 
   return (
-    <div className="mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
+    <div className="recommendation-chat-body mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
       <style>{`
         @keyframes chat-reveal-in {
           from { opacity: 0; transform: translateY(6px); }
@@ -1855,6 +1856,9 @@ function RecommendationChatView({
           0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
           40% { transform: translateY(-5px); opacity: 1; }
         }
+        /* The recommendation chat reads better with a taller line height than the shared
+         *  text-body token's default 20px — scoped here so it doesn't affect the rest of the app. */
+        .recommendation-chat-body .text-body { line-height: 30px; }
       `}</style>
 
       <ResponseBlock

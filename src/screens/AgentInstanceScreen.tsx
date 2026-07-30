@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Chip,
   DataTable,
@@ -33,6 +33,10 @@ interface AgentInstanceScreenProps {
   onOpenIntegrationSettings?: (integrationId: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
+  /** Fires whenever a single recommendation's detail screen becomes the active view (or stops
+   *  being it) — lets the app-level layout hide the secondary sidebar so that screen can go
+   *  full-bleed. */
+  onRecommendationDetailActiveChange?: (active: boolean) => void
 }
 
 interface LocationRow {
@@ -312,12 +316,18 @@ export function AgentInstanceScreen({
   onOpenIntegrationSettings,
   onNavigateToInbox,
   product,
+  onRecommendationDetailActiveChange,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState('outcomes')
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
+
+  useEffect(() => {
+    onRecommendationDetailActiveChange?.(selectedRecommendationId !== null)
+    return () => onRecommendationDetailActiveChange?.(false)
+  }, [selectedRecommendationId, onRecommendationDetailActiveChange])
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -368,7 +378,7 @@ export function AgentInstanceScreen({
   if (selectedRecommendationId) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav initials="S" />
+        <TopNav title="Front desk" initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
           <RecommendationDetailScreen
             recommendationId={selectedRecommendationId}

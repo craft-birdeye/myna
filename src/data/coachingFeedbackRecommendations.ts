@@ -65,7 +65,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         defaultExpanded: true,
         reportedExcerpt: [
           { speaker: 'Myna', text: 'Thank you. Your request has been duly noted. Kindly hold while I retrieve the relevant appointment details.' },
-          { speaker: 'Customer', text: 'ok this is a lot of words lol' },
         ],
         feedback: 'This reply is way too stiff and formal for chat — reads like a form letter, not a conversation.',
         children: [
@@ -149,7 +148,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         defaultExpanded: true,
         reportedExcerpt: [
           { speaker: 'Myna', text: 'If this is an emergency, please hang up and dial nine one one. The office is currently closed. If you need to speak with the doctor on call, please hang up and dial three zero five… nine six seven… two six one five, and your call will be returned promptly. Please note that this call may be recorded for quality and training purposes. My name is Myna, your virtual assistant. I can help you with your appointments or take a message and have the practice—' },
-          { speaker: 'Caller (talking over)', text: "—hi, hi, I just need to cancel tomorrow's appointment." },
         ],
         feedback: 'The after-hours greeting is way too long — callers keep talking over it and having to repeat themselves.',
         children: [
@@ -232,7 +230,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         defaultExpanded: true,
         reportedExcerpt: [
           { speaker: 'Myna', text: "I'm sorry, I don't have information about weekend availability. Let me have someone from our team follow up with you." },
-          { speaker: 'Customer', text: 'ok' },
         ],
         feedback: 'We ARE open Saturday mornings — the agent told this customer we have zero weekend availability.',
         children: [
@@ -320,7 +317,6 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         defaultExpanded: true,
         reportedExcerpt: [
           { speaker: 'Myna', text: "I understand, but I can't provide results information. Let me connect you with someone." },
-          { speaker: 'Caller', text: 'Unbelievable.' },
         ],
         feedback: 'The agent just kept refusing with zero explanation or next step — not okay for a call like this.',
         children: [
