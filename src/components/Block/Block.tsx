@@ -33,7 +33,7 @@ export function Block({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex w-fit items-center gap-xs text-body font-semibold text-text-secondary"
+            className="flex w-fit items-center gap-xs text-body font-medium text-text-secondary"
           >
             <span>
               {heading}
@@ -42,7 +42,7 @@ export function Block({
             <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
           </button>
         ) : (
-          <p className="text-body font-semibold text-text-secondary">
+          <p className="text-body font-medium text-text-secondary">
             {heading}
             {meta && <span className="font-normal text-text-tertiary"> · {meta}</span>}
           </p>

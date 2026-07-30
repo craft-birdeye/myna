@@ -183,7 +183,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         defaultExpanded: true,
         children: [
           { kind: 'transcript', lines: [
-            { speaker: 'Test — current greeting', text: 'If this is an emergency, please hang up and dial nine one one. The office is currently closed. If you need to speak with the doctor on call, please hang up and dial three zero five… nine six seven… two six one five, and your call will be returned promptly. Please note that this call may be recorded for quality and training purposes. My name is Myna, your virtual assistant. I can help you with your appointments or take a message and have the practice—' },
+            { speaker: 'Myna', text: 'If this is an emergency, please hang up and dial nine one one. The office is currently closed. If you need to speak with the doctor on call, please hang up and dial three zero five… nine six seven… two six one five, and your call will be returned promptly. Please note that this call may be recorded for quality and training purposes. My name is Myna, your virtual assistant. I can help you with your appointments or take a message and have the practice—' },
           ] },
         ],
       },
@@ -194,7 +194,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
         defaultExpanded: true,
         children: [
           { kind: 'transcript', lines: [
-            { speaker: 'Test — new greeting', text: 'If this is an emergency, please hang up and dial nine one one. This call may be recorded for quality and training purposes. My name is Myna — the office is currently closed, but I can help with appointments, take a message, or connect you with the doctor on call. How can I help you today?' },
+            { speaker: 'Myna', text: 'If this is an emergency, please hang up and dial nine one one. This call may be recorded for quality and training purposes. My name is Myna — the office is currently closed, but I can help with appointments, take a message, or connect you with the doctor on call. How can I help you today?' },
             { speaker: 'Caller', text: "I need to cancel tomorrow's appointment." },
             { speaker: 'Myna', text: "Sure — may I have the patient's first and last name?" },
           ] },
