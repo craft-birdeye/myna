@@ -1,4 +1,3 @@
-import { Chip } from '../Chip/Chip'
 import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
 import type { ProcedureSidePanelProps } from './ProcedureSidePanel.types'
@@ -66,18 +65,15 @@ export function ProcedureSidePanel({ open, title, whenToUse, steps, exitCriteria
                         <li
                           key={j}
                           className={`list-disc text-body marker:text-text-tertiary ${
-                            added ? 'text-accent-positive' : 'text-text-secondary'
+                            added ? 'text-green-700' : 'text-text-secondary'
                           }`}
                         >
-                          <span className="inline-flex flex-wrap items-center gap-xs">
-                            {renderBulletText(bullet)}
-                            {added && <Chip label="Added" variant="success" />}
-                          </span>
+                          {renderBulletText(bullet)}
                         </li>
                       )
                     })}
                     {step.removedBullets?.map((bullet, j) => (
-                      <li key={`removed-${j}`} className="list-disc text-body text-chip-danger-text marker:text-text-tertiary">
+                      <li key={`removed-${j}`} className="list-disc text-body text-red-700 marker:text-text-tertiary">
                         <span className="line-through">{renderBulletText(bullet)}</span>
                       </li>
                     ))}

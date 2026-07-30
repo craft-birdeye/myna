@@ -356,6 +356,7 @@ export function AgentInstanceScreen({
         <div className="min-h-0 flex-1 overflow-hidden">
           <RunDetailView
             row={selectedRun}
+            instanceName={instanceName}
             onBack={() => setSelectedRun(null)}
             onViewConversation={() => onNavigateToInbox?.(FRONT_DESK_INBOX_CONVERSATION_ID)}
           />

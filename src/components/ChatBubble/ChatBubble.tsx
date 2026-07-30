@@ -76,6 +76,7 @@ export function ChatBubble({
   feedback = null,
   onFeedbackChange,
   leadingIcon,
+  footer,
 }: ChatBubbleProps) {
   const isBusiness = sender === 'business'
 
@@ -108,6 +109,7 @@ export function ChatBubble({
       ) : (
         children
       )}
+      {footer}
     </div>
   )
 }

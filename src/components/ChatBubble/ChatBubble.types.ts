@@ -23,4 +23,8 @@ export interface ChatBubbleProps {
   showFeedback?: boolean
   feedback?: MessageFeedbackValue
   onFeedbackChange?: (value: MessageFeedbackValue) => void
+  /** Extra content rendered on its own row below the meta/feedback row (e.g. a tool-call badge)
+   *  — kept separate from `children` so it doesn't get squeezed onto the same line as the
+   *  thumbs up/down and meta caption. */
+  footer?: ReactNode
 }

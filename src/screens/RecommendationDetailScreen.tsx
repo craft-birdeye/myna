@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { Block, ChatBubble, ChatSystemLabel, Chip, Icon, ProcedureSidePanel, TranscriptSidePanel } from '../components'
@@ -818,6 +818,105 @@ function ThoughtsSection({
   )
 }
 
+/** Reveals `text` word by word at a fast, steady cadence — the ChatGPT-style "streaming"
+ *  look for a block's prose, layered on top of the parent's block-by-block reveal (which decides
+ *  *when* this component mounts; this only controls what happens once it has). */
+function StreamingText({
+  text,
+  className = '',
+  skipAnimation = false,
+  onDone,
+}: {
+  text: string
+  className?: string
+  /** Renders the full text immediately, no typing animation — e.g. a "Thoughts" note that's
+   *  already played its animation once and is just being re-expanded after a collapse. */
+  skipAnimation?: boolean
+  onDone?: () => void
+}) {
+  const words = useMemo(() => text.split(' '), [text])
+  const [count, setCount] = useState(skipAnimation ? words.length : 0)
+
+  useEffect(() => {
+    if (skipAnimation) {
+      setCount(words.length)
+      return
+    }
+    setCount(0)
+    if (words.length === 0) return
+    const id = setInterval(() => {
+      setCount((c) => {
+        const next = c + 1
+        if (next >= words.length) {
+          clearInterval(id)
+          onDone?.()
+          return words.length
+        }
+        return next
+      })
+    }, 18)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [words, skipAnimation])
+
+  return <p className={className}>{words.slice(0, count).join(' ')}</p>
+}
+
+/** The round sparkle avatar shown next to each agent "message" — every revealed block except a
+ *  `thought` one (which renders flush, unindented, as if it's the agent thinking silently). */
+function AgentAvatar() {
+  return (
+    <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
+      <Icon name="auto_awesome" size={14} className="text-ai-brand" />
+    </span>
+  )
+}
+
+/** Pairs one block of agent content with its own avatar — used for the first of a run of
+ *  consecutive non-`thought` blocks, so the chat reads as a sequence of distinct agent
+ *  "messages" rather than one long reply hanging off a single avatar. */
+function AgentRow({ className = '', children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div className={`flex items-start gap-md ${className}`}>
+      <AgentAvatar />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  )
+}
+
+/** A non-`thought` block that directly follows another non-`thought` block — same message as
+ *  the one before it, so it skips repeating the avatar but still lines up under the same
+ *  content column (avatar width + gap) instead of sitting flush like a `thought` would. */
+function AgentContinuation({ className = '', children }: { className?: string; children: React.ReactNode }) {
+  return <div className={`pl-9 ${className}`}>{children}</div>
+}
+
+/** Rough time (ms) a block takes to finish appearing — mainly however long its own
+ *  `StreamingText` needs to type out, so the next block never starts revealing until this one
+ *  visibly finishes (prevents two blocks from streaming their text at once). */
+function estimateBlockRevealMs(block: IntroBlock): number {
+  const WORD_MS = 18
+  const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length
+  switch (block.kind) {
+    case 'thought':
+      return wordCount(block.text) * WORD_MS + 300
+    case 'text':
+      return wordCount(block.text) * WORD_MS + 250
+    case 'section':
+      return wordCount(block.text) * WORD_MS + 250 + (block.items?.length ?? 0) * 80
+    case 'list':
+      return block.items.length * 120 + 200
+    case 'divider':
+      return 250
+    case 'transcript':
+      return block.lines.length * 200 + 200
+    case 'collapsible':
+      return 500
+    default:
+      return 400
+  }
+}
+
 /** A single collapsible "Thoughts"/"Searched X" note used by `IntroBlockItem`'s `thought` case. */
 function CollapsibleNote({
   label = 'Thoughts',
@@ -831,6 +930,9 @@ function CollapsibleNote({
   autoExpanded: boolean
 }) {
   const [expanded, setExpanded] = useState(autoExpanded)
+  // Only types out once — collapsing and re-expanding the same note just shows the finished
+  // text immediately instead of replaying the animation.
+  const hasPlayedRef = useRef(false)
 
   useEffect(() => {
     setExpanded(autoExpanded)
@@ -841,13 +943,31 @@ function CollapsibleNote({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-fit items-center gap-[2px] text-small text-text-secondary"
+        className="flex w-fit items-center gap-md text-body text-text-secondary"
       >
-        <Icon name="bolt" size={16} weight={300} className="text-text-icon" />
-        {label}
-        <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
+        <span className="flex size-6 shrink-0 items-center justify-center">
+          <Icon name="bolt" size={18} weight={300} className="text-text-icon" />
+        </span>
+        <span className="flex items-center gap-[2px]">
+          {label}
+          <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
+        </span>
       </button>
-      {expanded && <p className="pl-[18px] text-small text-text-secondary">{text}</p>}
+      {expanded && (
+        <div className="flex gap-md">
+          <div className="flex w-6 shrink-0 justify-center">
+            <div className="w-px shrink-0 rounded-full bg-border" />
+          </div>
+          <StreamingText
+            text={text}
+            className="text-body text-text-tertiary"
+            skipAnimation={hasPlayedRef.current}
+            onDone={() => {
+              hasPlayedRef.current = true
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -931,12 +1051,12 @@ function IntroBlockItem({
     case 'thought':
       return <CollapsibleNote label={block.label} text={block.text} autoExpanded={autoExpanded} />
     case 'text':
-      return <p className="text-body text-text-primary">{block.text}</p>
+      return <StreamingText text={block.text} className="text-body text-text-primary" />
     case 'section':
       return (
         <div className="flex flex-col gap-sm">
           <Block heading={block.heading} variant={block.variant}>
-            <p className="text-body text-text-primary">{block.text}</p>
+            <StreamingText text={block.text} className="text-body text-text-primary" />
             {block.items && (
               <ul className="flex flex-col gap-xs pl-md">
                 {block.items.map((item, j) => (
@@ -1125,12 +1245,16 @@ function ScriptedTurnResponse({
     let cancelled = false
     let i = 0
     const scheduleNext = () => {
+      // Wait for however long the block just revealed (i-1) takes to finish streaming its own
+      // text, so the next block never starts appearing mid-type — one block at a time, not
+      // several typing at once.
+      const delay = i === 0 ? 250 : estimateBlockRevealMs(response.introBlocks[i - 1])
       setTimeout(() => {
         if (cancelled) return
         i++
         setRevealStep(i)
         if (i < totalSteps) scheduleNext()
-      }, i === 0 ? 400 : 700)
+      }, delay)
     }
     scheduleNext()
     return () => {
@@ -1140,49 +1264,69 @@ function ScriptedTurnResponse({
   }, [])
 
   return (
-    <div className="flex items-start gap-md">
-      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
-        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-lg">
-        {response.introBlocks.map((block, i) =>
-          revealStep > i ? (
+    <div className="flex flex-col gap-lg">
+      {response.introBlocks.map((block, i) => {
+        if (revealStep <= i) return null
+        const prevKind = i > 0 ? response.introBlocks[i - 1].kind : null
+        const item = <IntroBlockItem block={block} autoExpanded={isRevealing} onViewProcedure={onViewProcedure} onViewTranscript={onViewTranscript} />
+        if (block.kind === 'thought') {
+          return (
             <div key={i} className="chat-reveal-in">
-              <IntroBlockItem block={block} autoExpanded={isRevealing} onViewProcedure={onViewProcedure} onViewTranscript={onViewTranscript} />
+              {item}
             </div>
-          ) : null,
-        )}
+          )
+        }
+        if (i === 0 || prevKind === 'thought') {
+          return (
+            <AgentRow key={i} className="chat-reveal-in">
+              {item}
+            </AgentRow>
+          )
+        }
+        return (
+          <AgentContinuation key={i} className="chat-reveal-in">
+            {item}
+          </AgentContinuation>
+        )
+      })}
 
-        {revealStep > response.introBlocks.length && (
-          <div className="chat-reveal-in flex flex-col gap-md rounded-sm bg-surface">
-            <p className="text-body text-text-primary">{response.approvalPrompt}</p>
-            {recStatus === 'open' && (
-              <div className="flex items-center gap-sm">
-                <button
-                  type="button"
-                  onClick={onReject}
-                  className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                >
-                  Reject
-                </button>
-                <button
-                  type="button"
-                  onClick={onApprove}
-                  className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                >
-                  Accept
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+      {revealStep > response.introBlocks.length && (() => {
+        const lastKind = response.introBlocks[response.introBlocks.length - 1]?.kind
+        const PromptWrap = lastKind && lastKind !== 'thought' ? AgentContinuation : AgentRow
+        return (
+          <PromptWrap className="chat-reveal-in">
+            <div className="flex flex-col gap-md rounded-sm bg-surface">
+              <p className="text-body text-text-primary">{response.approvalPrompt}</p>
+              {recStatus === 'open' && (
+                <div className="flex items-center gap-sm">
+                  <button
+                    type="button"
+                    onClick={onReject}
+                    className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onApprove}
+                    className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                  >
+                    Accept
+                  </button>
+                </div>
+              )}
+            </div>
+          </PromptWrap>
+        )
+      })()}
 
-        {revealStep < totalSteps && (
+      {revealStep < totalSteps && (
+        <AgentRow>
           <div className="flex items-center px-md py-sm">
             <TypingDots />
           </div>
-        )}
-      </div>
+        </AgentRow>
+      )}
     </div>
   )
 }
@@ -1395,7 +1539,15 @@ function ResponseBlock({
       // ScriptedTurnResponse. The generic (non-introBlocks) path keeps its original cadence:
       // Thoughts' own checklist takes ~2s to finish revealing itself, so give it room before
       // the rest of the answer continues; steps after that land at a steady conversational pace.
-      const delay = introBlocks ? (i === 0 ? 400 : 700) : i === 0 ? 350 : i === 1 ? 2100 : 750
+      const delay = introBlocks
+        ? i === 0
+          ? 250
+          : estimateBlockRevealMs(introBlocks[i - 1])
+        : i === 0
+          ? 350
+          : i === 1
+            ? 2100
+            : 750
       setTimeout(() => {
         if (cancelled) return
         i++
@@ -1410,87 +1562,114 @@ function ResponseBlock({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  if (introBlocks) {
+    return (
+      <div className="flex flex-col gap-lg">
+        {introBlocks.map((block, i) => {
+          if (revealStep <= i) return null
+          const prevKind = i > 0 ? introBlocks[i - 1].kind : null
+          const item = <IntroBlockItem block={block} autoExpanded={isRevealing} onOpenConversations={onOpenConversations} onViewProcedure={onViewProcedure} onViewTranscript={onViewTranscript} />
+          if (block.kind === 'thought') {
+            return (
+              <div key={i} className="chat-reveal-in">
+                {item}
+              </div>
+            )
+          }
+          if (i === 0 || prevKind === 'thought') {
+            return (
+              <AgentRow key={i} className="chat-reveal-in">
+                {item}
+              </AgentRow>
+            )
+          }
+          return (
+            <AgentContinuation key={i} className="chat-reveal-in">
+              {item}
+            </AgentContinuation>
+          )
+        })}
+        {introApprovalPrompt && revealStep > introBlocks.length && (() => {
+          const lastKind = introBlocks[introBlocks.length - 1]?.kind
+          const PromptWrap = lastKind && lastKind !== 'thought' ? AgentContinuation : AgentRow
+          return (
+            <PromptWrap className="chat-reveal-in">
+              <div className="flex flex-col gap-md rounded-sm bg-surface">
+                <p className="text-body text-text-primary">{introApprovalPrompt}</p>
+                {recStatus === 'open' && (
+                  <div className="flex items-center gap-sm">
+                    <button
+                      type="button"
+                      onClick={() => onReject(recId)}
+                      className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onApprove}
+                      className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                    >
+                      Accept
+                    </button>
+                  </div>
+                )}
+              </div>
+            </PromptWrap>
+          )
+        })()}
+        {revealStep < totalSteps && (
+          <AgentRow>
+            <div className="flex items-center px-md py-sm">
+              <TypingDots />
+            </div>
+          </AgentRow>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-start gap-md">
-      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
-        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
-      </span>
+      <AgentAvatar />
       <div className="flex min-w-0 flex-1 flex-col gap-xl">
-      {introBlocks ? (
-        <>
-          {introBlocks.map((block, i) =>
-            revealStep > i ? (
-              <div key={i} className="chat-reveal-in">
-                <IntroBlockItem block={block} autoExpanded={isRevealing} onOpenConversations={onOpenConversations} onViewProcedure={onViewProcedure} onViewTranscript={onViewTranscript} />
-              </div>
-            ) : null,
-          )}
-          {introApprovalPrompt && revealStep > introBlocks.length && (
-            <div className="chat-reveal-in flex flex-col gap-md rounded-sm bg-surface">
-              <p className="text-body text-text-primary">{introApprovalPrompt}</p>
-              {recStatus === 'open' && (
-                <div className="flex items-center gap-sm">
-                  <button
-                    type="button"
-                    onClick={() => onReject(recId)}
-                    className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onApprove}
-                    className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                  >
-                    Accept
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          {revealStep > 0 && (
-            <div className="chat-reveal-in">
-              <ThoughtsSection
-                thoughts={thoughts}
-                toolCount={toolCount}
-                conversationCount={conversationCount}
-                autoExpanded={isRevealing}
-              />
-            </div>
-          )}
-
-          {revealStep > 0 && onOpenConversations && (
-            <button
-              type="button"
-              onClick={onOpenConversations}
-              className="chat-reveal-in flex w-fit items-center gap-xs text-small text-text-action"
-            >
-              <Icon name="chat_bubble_outline" size={13} />
-              See conversations
-            </button>
-          )}
-
-          {revealStep > 1 && <p className="chat-reveal-in text-body text-text-primary">{bodyText}</p>}
-        </>
+      {revealStep > 0 && (
+        <div className="chat-reveal-in">
+          <ThoughtsSection
+            thoughts={thoughts}
+            toolCount={toolCount}
+            conversationCount={conversationCount}
+            autoExpanded={isRevealing}
+          />
+        </div>
       )}
 
-      {!introBlocks &&
-        changes.map((change, i) =>
-          revealStep > changeStartIdx + i ? (
-            <div key={change.type} className="chat-reveal-in">
-              <ChangeSummaryCard
-                change={change}
-                procedureTitle={procedureTitle}
-                pending={pendingChangeTypes?.has(change.type)}
-              />
-            </div>
-          ) : null,
-        )}
+      {revealStep > 0 && onOpenConversations && (
+        <button
+          type="button"
+          onClick={onOpenConversations}
+          className="chat-reveal-in flex w-fit items-center gap-xs text-small text-text-action"
+        >
+          <Icon name="chat_bubble_outline" size={13} />
+          See conversations
+        </button>
+      )}
 
-      {!introBlocks && diff && revealStep > diffIdx && (
+      {revealStep > 1 && <p className="chat-reveal-in text-body text-text-primary">{bodyText}</p>}
+
+      {changes.map((change, i) =>
+        revealStep > changeStartIdx + i ? (
+          <div key={change.type} className="chat-reveal-in">
+            <ChangeSummaryCard
+              change={change}
+              procedureTitle={procedureTitle}
+              pending={pendingChangeTypes?.has(change.type)}
+            />
+          </div>
+        ) : null,
+      )}
+
+      {diff && revealStep > diffIdx && (
         <div className="chat-reveal-in flex flex-col gap-md">
           <div className="flex items-center gap-xs text-body text-text-primary">
             <Icon name="remove_circle" size={16} className="shrink-0 text-chip-danger-text" />
@@ -1541,7 +1720,7 @@ function ResponseBlock({
         </div>
       )}
 
-      {!introBlocks && showAcceptPrompt && revealStep > acceptIdx && (
+      {showAcceptPrompt && revealStep > acceptIdx && (
         <div className="chat-reveal-in flex items-center justify-between gap-md">
           {recStatus === 'open' ? (
             <>

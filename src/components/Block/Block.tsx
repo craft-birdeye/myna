@@ -33,7 +33,7 @@ export function Block({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex w-fit items-center gap-xs text-body font-bold text-text-secondary"
+            className="flex w-fit items-center gap-xs text-body font-semibold text-text-secondary"
           >
             <span>
               {heading}
@@ -42,14 +42,14 @@ export function Block({
             <Icon name={expanded ? 'expand_less' : 'expand_more'} size={16} className="text-text-icon" />
           </button>
         ) : (
-          <p className="text-body font-bold text-text-secondary">
+          <p className="text-body font-semibold text-text-secondary">
             {heading}
             {meta && <span className="font-normal text-text-tertiary"> · {meta}</span>}
           </p>
         ))}
       {showBody && children && (
         <div className="flex gap-md">
-          {!hideBar && <div className={`w-0.5 shrink-0 rounded-full ${BAR_VARIANT[variant]}`} />}
+          {!hideBar && <div className={`w-px shrink-0 rounded-full ${BAR_VARIANT[variant]}`} />}
           <div className="flex min-w-0 flex-1 flex-col gap-sm py-[2px]">{children}</div>
         </div>
       )}
