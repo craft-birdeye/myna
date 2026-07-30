@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, AlertCircle, Video } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import React, { useState } from 'react';
 import { cn } from '@/contenthub-ui/utils';
 import { Button } from '@/contenthub-ui/button';
@@ -228,32 +228,32 @@ const FAQ_CONTENT: Record<VersionId, FAQVersionSection[]> = {
 
 const BLOG_CONTENT: Record<VersionId, BlogVersionBlock[]> = {
   v4: [
-    { type: 'hero-title', text: 'The Complete Guide to Building Exceptional Customer Experiences' },
-    { type: 'hero-subtitle', text: 'Proven strategies that leading brands use to turn every interaction into a loyalty-building moment' },
-    { type: 'heading', text: 'Why customer experience is the ultimate differentiator' },
-    { type: 'paragraph', text: 'In today\'s hyper-competitive landscape, the quality of your customer experience is the single greatest differentiator available to any business. Customers who feel genuinely valued don\'t just return — they become advocates.' },
-    { type: 'heading', text: 'Five strategies that consistently work' },
-    { type: 'bullets', items: ['Respond to every review within 24 hours', 'Personalise onboarding for each customer segment', 'Build a feedback loop that feeds directly into product', 'Empower front-line staff to resolve issues on the spot'] },
+    { type: 'hero-title', text: 'Are Dental Implants Right for You? A Complete Guide' },
+    { type: 'hero-subtitle', text: 'Everything you need to know about implants, candidacy, costs, and what to expect from the procedure' },
+    { type: 'heading', text: 'Why dental implants are the gold standard for tooth replacement' },
+    { type: 'paragraph', text: 'Dental implants are titanium posts surgically placed into the jawbone to act as artificial tooth roots. Once integrated, they support a crown, bridge, or denture — giving you a permanent, natural-looking solution that preserves bone and restores full chewing function.' },
+    { type: 'heading', text: 'Am I a good candidate for implants?' },
+    { type: 'bullets', items: ['Healthy gums with no active periodontal disease', 'Sufficient bone density to support the implant', 'Non-smoker or willing to quit during healing', 'Committed to good oral hygiene and follow-up care'] },
   ],
   v3: [
-    { type: 'hero-title', text: 'The Complete Guide to Building Exceptional Customer Experiences' },
-    { type: 'hero-subtitle', text: 'How leading brands create loyalty-building interactions', changed: true },
-    { type: 'heading', text: 'Why customer experience matters', changed: true },
-    { type: 'paragraph', text: 'Customer experience has become increasingly important for businesses. Customers who feel valued are more likely to return and recommend your brand.', changed: true },
-    { type: 'heading', text: 'Key strategies for success', changed: true },
-    { type: 'bullets', items: ['Respond to reviews promptly', 'Personalise the customer journey', 'Build a feedback loop', 'Empower your team'], changed: true },
+    { type: 'hero-title', text: 'Are Dental Implants Right for You? A Complete Guide' },
+    { type: 'hero-subtitle', text: 'What patients need to know before choosing dental implants over other options', changed: true },
+    { type: 'heading', text: 'What makes dental implants different from other options', changed: true },
+    { type: 'paragraph', text: 'Unlike dentures or bridges, dental implants fuse with the jawbone through a process called osseointegration. This makes them the most stable and long-lasting tooth replacement option available today.', changed: true },
+    { type: 'heading', text: 'Who is a good candidate?' },
+    { type: 'bullets', items: ['Good overall and oral health', 'Adequate bone density in the jaw', 'No active gum disease', 'Realistic expectations about healing time'], changed: true },
   ],
   v2: [
-    { type: 'hero-title', text: 'Building Better Customer Experiences', changed: true },
-    { type: 'hero-subtitle', text: 'A practical guide for growing businesses', changed: true },
-    { type: 'heading', text: 'Why customer experience matters' },
-    { type: 'paragraph', text: 'Great customer experiences drive repeat business and referrals. Here are some tips to get started.', changed: true },
-    { type: 'bullets', items: ['Reply to reviews', 'Personalise communications', 'Listen to feedback'], changed: true },
+    { type: 'hero-title', text: 'Dental Implants: What You Should Know', changed: true },
+    { type: 'hero-subtitle', text: 'A guide to dental implants for patients considering tooth replacement', changed: true },
+    { type: 'heading', text: 'What are dental implants?' },
+    { type: 'paragraph', text: 'Dental implants replace missing teeth with a permanent solution. They look and feel like natural teeth and can last a lifetime with proper care.', changed: true },
+    { type: 'bullets', items: ['Permanent tooth replacement', 'Looks and feels natural', 'Preserves jawbone'], changed: true },
   ],
   v1: [
-    { type: 'hero-title', text: 'How to Improve Customer Experience', changed: true },
-    { type: 'paragraph', text: 'Customer experience is important for every business. This post covers the basics.', changed: true },
-    { type: 'bullets', items: ['Be responsive', 'Be friendly', 'Follow up'], changed: true },
+    { type: 'hero-title', text: 'Are Dental Implants Right for You?', changed: true },
+    { type: 'paragraph', text: 'Dental implants are a popular option for replacing missing teeth. Talk to your dentist to find out if they are right for you.', changed: true },
+    { type: 'bullets', items: ['Long-lasting', 'Natural look', 'Requires surgery'], changed: true },
   ],
 };
 
@@ -318,124 +318,136 @@ const BLOG_HL   = 'bg-yellow-100 rounded-[3px] px-1';
 const BLOG_RING = 'ring-2 ring-yellow-300';
 
 function BlogReadOnlyPreview({ versionId }: { versionId: VersionId }) {
-  const blocks       = BLOG_CONTENT[versionId];
-  const titleBlock   = blocks.find(b => b.type === 'hero-title');
-  const subtitleBlock= blocks.find(b => b.type === 'hero-subtitle');
-  const headingBlocks= blocks.filter(b => b.type === 'heading');
-  const paraBlocks   = blocks.filter(b => b.type === 'paragraph');
-  const bulletsBlock = blocks.find(b => b.type === 'bullets');
+  const blocks        = BLOG_CONTENT[versionId];
+  const titleBlock    = blocks.find(b => b.type === 'hero-title');
+  const subtitleBlock = blocks.find(b => b.type === 'hero-subtitle');
+  const headingBlocks = blocks.filter(b => b.type === 'heading');
+  const paraBlocks    = blocks.filter(b => b.type === 'paragraph');
+  const bulletsBlock  = blocks.find(b => b.type === 'bullets');
 
   const titleChanged    = titleBlock?.changed    ?? false;
   const subtitleChanged = subtitleBlock?.changed ?? false;
   const heading1Changed = headingBlocks[0]?.changed ?? false;
+  const heading2Changed = headingBlocks[1]?.changed ?? false;
   const para1Changed    = paraBlocks[0]?.changed    ?? false;
   const bulletsChanged  = bulletsBlock?.changed  ?? false;
-  // image / video / stats not tracked per-version — highlight only on v1 (initial draft)
   const mediaChanged    = versionId === 'v1';
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col gap-4">
+    <div className="max-w-2xl mx-auto flex flex-col gap-0">
 
-      {/* Hero card */}
-      <div className={cn(
-        'overflow-hidden rounded-xl border border-border bg-gradient-to-br from-emerald-50 via-white to-blue-50',
-        mediaChanged && BLOG_RING,
-      )}>
-        <div className="flex min-h-[180px] items-center justify-between gap-4 px-4 py-5">
-          <div className="max-w-[58%] space-y-2">
-            <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
-              Local SEO guide
-            </span>
-            <h2 className={cn('text-[20px] leading-tight text-foreground', titleChanged && BLOG_HL)}>
-              {titleBlock?.text ?? 'The Complete Guide to Building Exceptional Customer Experiences'}
-            </h2>
-            <p className={cn('text-[12px] leading-relaxed text-muted-foreground', subtitleChanged && BLOG_HL)}>
-              {subtitleBlock?.text ?? 'Proven strategies that leading brands use to turn every interaction into a loyalty-building moment'}
+      {/* Hero image */}
+      <div className={cn('overflow-hidden rounded-t-xl', mediaChanged && BLOG_RING)}>
+        <img
+          src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=900&q=80"
+          alt="Dental implants hero"
+          className="w-full h-[220px] object-cover"
+        />
+      </div>
+
+      {/* Article shell */}
+      <div className="rounded-b-xl border border-t-0 border-border bg-background px-8 pt-6 pb-10 flex flex-col gap-5">
+
+        {/* Tags + meta */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary">Dental implants</span>
+          <span className="inline-flex rounded-full bg-surface-hover px-2.5 py-1 text-[11px] text-muted-foreground">Patient education</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">5 min read · Dec 10, 2025</span>
+        </div>
+
+        {/* Title */}
+        <h1 className={cn('text-[22px] leading-snug text-foreground', titleChanged && BLOG_HL)}>
+          {titleBlock?.text ?? 'Are Dental Implants Right for You? A Complete Guide'}
+        </h1>
+
+        {/* Subtitle */}
+        <p className={cn('text-[14px] leading-relaxed text-muted-foreground -mt-2', subtitleChanged && BLOG_HL)}>
+          {subtitleBlock?.text ?? 'Everything you need to know about implants, candidacy, costs, and what to expect from the procedure'}
+        </p>
+
+        {/* Author row */}
+        <div className="flex items-center gap-2 border-y border-border py-3">
+          <img
+            src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=64&h=64&fit=crop&q=80"
+            alt="Dr. Sarah Chen"
+            className="size-8 rounded-full object-cover"
+          />
+          <div>
+            <p className="text-[12px] text-foreground">Dr. Sarah Chen, DDS</p>
+            <p className="text-[11px] text-muted-foreground">Smile Dental Group · San Jose, CA</p>
+          </div>
+        </div>
+
+        {/* Section heading 1 */}
+        <h2 className={cn('text-[16px] text-foreground', heading1Changed && BLOG_HL)}>
+          {headingBlocks[0]?.text ?? 'Why dental implants are the gold standard for tooth replacement'}
+        </h2>
+
+        {/* Body paragraph */}
+        <p className={cn('text-[13px] text-foreground leading-relaxed', para1Changed && BLOG_HL)}>
+          {paraBlocks[0]?.text ?? 'Dental implants are titanium posts surgically placed into the jawbone to act as artificial tooth roots. Once integrated, they support a crown, bridge, or denture — giving you a permanent, natural-looking solution that preserves bone and restores full chewing function.'}
+        </p>
+
+        {/* Callout box */}
+        <div className="rounded-xl bg-primary/5 border border-primary/15 px-4 py-3">
+          <p className="text-[13px] text-foreground leading-relaxed">
+            <span className="text-primary">Did you know?</span> Dental implants have a 95–98% success rate over 10 years and are the only tooth-replacement option that stimulates natural bone growth.
+          </p>
+        </div>
+
+        {/* Section heading 2 */}
+        <h2 className={cn('text-[16px] text-foreground', heading2Changed && BLOG_HL)}>
+          {headingBlocks[1]?.text ?? 'Am I a good candidate for implants?'}
+        </h2>
+
+        {/* Candidate checklist */}
+        {bulletsBlock?.items && (
+          <ul className={cn('flex flex-col gap-2', bulletsChanged && 'bg-yellow-50 rounded-xl px-4 py-3 border border-yellow-200')}>
+            {bulletsBlock.items.map((item, i) => (
+              <li key={i} className="flex items-start gap-2 text-[13px] text-foreground">
+                <span className="mt-0.5 size-4 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px]">✓</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[['95–98%', 'long-term success rate'], ['30 min', 'typical placement time'], ['15–25 yrs', 'average lifespan']].map(([val, lbl]) => (
+            <div key={lbl} className="rounded-xl border border-border bg-muted/30 p-3 text-center">
+              <p className="text-[18px] text-primary">{val}</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{lbl}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Inline image */}
+        <div className={cn('overflow-hidden rounded-xl', mediaChanged && BLOG_RING)}>
+          <img
+            src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=900&q=80"
+            alt="Dental consultation"
+            className="w-full h-[160px] object-cover"
+          />
+          <p className="bg-muted/50 px-3 py-1.5 text-[11px] text-muted-foreground">
+            A consultation with your dentist is the first step to determining implant candidacy.
+          </p>
+        </div>
+
+        {/* CTA */}
+        <div className="rounded-xl bg-primary px-5 py-4 text-primary-foreground flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[14px]">Ready to explore dental implants?</p>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-primary-foreground/75">
+              Book a free consultation with our implant specialists today.
             </p>
           </div>
-          <div className={cn(
-            'flex h-[132px] flex-1 items-center justify-center rounded-xl bg-white/75 shadow-sm ring-1 ring-black/[0.05]',
-            mediaChanged && BLOG_RING,
-          )}>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="h-12 w-16 rounded-lg bg-primary/10" />
-              <div className="h-12 w-16 rounded-lg bg-primary/10" />
-              <div className="h-12 w-16 rounded-lg bg-surface-hover" />
-              <div className="h-12 w-16 rounded-lg bg-primary/10" />
-            </div>
+          <div className="shrink-0 rounded-lg bg-white/15 px-3 py-1.5 text-[12px] text-white">
+            Book now
           </div>
         </div>
+
       </div>
-
-      {/* Article heading */}
-      <h2 className={cn('text-[18px] text-foreground leading-snug', heading1Changed && BLOG_HL)}>
-        {headingBlocks[0]?.text ?? 'Why customer experience is the ultimate differentiator'}
-      </h2>
-      <p className="text-[12px] text-muted-foreground">~167 words · ~1 min read</p>
-
-      {/* Body paragraph */}
-      <p className={cn('text-[13px] text-foreground leading-relaxed', para1Changed && BLOG_HL)}>
-        {paraBlocks[0]?.text ?? "In today's hyper-competitive landscape, the quality of your customer experience is the single greatest differentiator available to any business. Customers who feel genuinely valued don't just return — they become advocates."}
-      </p>
-
-      {/* Section heading 2 */}
-      <h3 className="text-[15px] text-foreground">The AI Advantage</h3>
-      <p className="text-[13px] text-foreground leading-relaxed">
-        AI-powered response tools help local businesses respond faster and more consistently — without
-        sacrificing personalisation. Rather than copy-paste replies, modern AI can personalise each
-        response based on the reviewer's specific feedback and match your brand voice.
-      </p>
-
-      {/* Bullets */}
-      {bulletsBlock?.items && (
-        <ul className={cn('flex flex-col gap-1 pl-5', bulletsChanged && 'bg-yellow-50 rounded-lg px-4 py-2')}>
-          {bulletsBlock.items.map((item, i) => (
-            <li key={i} className="text-[13px] text-foreground list-disc">{item}</li>
-          ))}
-        </ul>
-      )}
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-3 gap-2">
-        {[['23%', 'more review volume'], ['4.6x', 'faster response time'], ['89%', 'trust public replies']].map(([val, lbl]) => (
-          <div key={lbl} className="rounded-lg border border-border bg-muted/30 p-2">
-            <p className="text-[18px] text-foreground">{val}</p>
-            <p className="text-[11px] leading-snug text-muted-foreground">{lbl}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Checklist */}
-      <div className="rounded-xl border border-border bg-background p-4">
-        <h3 className="text-[15px] text-foreground">Implementation checklist</h3>
-        <ul className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-foreground">
-          <li>Train reply guidance on your best historical responses and brand guardrails.</li>
-          <li>Route low-score or sensitive reviews to a human reviewer before publishing.</li>
-          <li>Measure response time, review velocity, and customer sentiment by location.</li>
-        </ul>
-      </div>
-
-      {/* Video embed */}
-      <div className={cn('overflow-hidden rounded-xl border border-border bg-surface', mediaChanged && BLOG_RING)}>
-        <div className="flex h-[180px] items-center justify-center bg-gradient-to-br from-zinc-900 to-emerald-950">
-          <div className="flex size-14 items-center justify-center rounded-full bg-white/15 text-white">
-            <Video size={22} strokeWidth={1.6} absoluteStrokeWidth />
-          </div>
-        </div>
-        <div className="px-4 py-2">
-          <p className="text-[12px] text-white">Video embed: responding to a difficult review</p>
-          <p className="mt-0.5 text-[11px] text-text-secondary">2:18 · Customer experience training clip</p>
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div className="rounded-xl bg-primary px-4 py-4 text-primary-foreground">
-        <p className="text-[15px]">Ready to respond faster?</p>
-        <p className="mt-1 text-[12px] leading-relaxed text-primary-foreground/80">
-          Start with your top three review scenarios and build an approval workflow your team trusts.
-        </p>
-      </div>
-
     </div>
   );
 }
@@ -544,13 +556,13 @@ export function ContentVersionHistory({ contentType, onClose }: ContentVersionHi
                   onClick={() => setSelectedVersionId(version.id)}
                   className={cn(
                     'w-full text-left px-4 py-4 flex flex-col gap-2 transition-colors',
-                    isSelected ? 'bg-yellow-50' : 'hover:bg-surface-hover',
+                    isSelected ? 'bg-primary/5' : 'hover:bg-surface-hover',
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[12px] text-foreground">{version.date}</span>
                     {isSelected && (
-                      <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-yellow-500 shrink-0" />
+                      <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-primary shrink-0" />
                     )}
                   </div>
                   <div className="flex items-center gap-2">
