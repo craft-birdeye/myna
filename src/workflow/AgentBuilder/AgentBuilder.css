@@ -103,6 +103,12 @@
   flex-direction: column;
 }
 
+.agent-builder__ai-assist {
+  flex-shrink: 0;
+  height: 100%;
+  z-index: 5;
+}
+
 /* ─── Build mode wrapper ─── */
 .agent-builder-wrapper {
   display: flex;

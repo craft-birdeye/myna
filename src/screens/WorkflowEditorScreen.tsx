@@ -54,6 +54,8 @@ interface WorkflowEditorScreenProps {
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
+  aiAssistOpen?: boolean
+  onAiAssistOpenChange?: (open: boolean) => void
 }
 
 export function WorkflowEditorScreen({
@@ -62,6 +64,8 @@ export function WorkflowEditorScreen({
   product = 'automotive',
   agentStatus = 'Running',
   wizardDraft = null,
+  aiAssistOpen,
+  onAiAssistOpenChange,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -184,6 +188,8 @@ export function WorkflowEditorScreen({
           initialStatus={resolvedStatus}
           publishDisabled={publishDisabled}
           defaultOpenSection="Tasks"
+          aiAssistOpen={aiAssistOpen}
+          onAiAssistOpenChange={onAiAssistOpenChange}
         />
       </Suspense>
     </div>

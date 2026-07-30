@@ -10,6 +10,7 @@ import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomToo
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
+import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -678,6 +679,8 @@ export default function AgentBuilder({
   defaultOpenSection = 'Tasks',
   initialZoom = 1,
   runDisabled = false,
+  aiAssistOpen: aiAssistOpenProp,
+  onAiAssistOpenChange,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -720,6 +723,13 @@ export default function AgentBuilder({
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
+  // AI assist panel is controlled by the parent when it needs to render the
+  // panel itself (e.g. spanning the full app height, above this editor's own
+  // header) — falls back to internal state otherwise.
+  const aiAssistControlled = onAiAssistOpenChange != null;
+  const aiAssistOpen = aiAssistControlled ? aiAssistOpenProp : aiAssistOpenInternal;
+  const setAiAssistOpen = aiAssistControlled ? onAiAssistOpenChange : setAiAssistOpenInternal;
   const [lhsForceOpenSection, setLhsForceOpenSection] = useState(null);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
@@ -745,6 +755,16 @@ export default function AgentBuilder({
   useEffect(() => {
     setLiveProcedures(procedures);
   }, [procedures]);
+
+  /* ─── Close AI assist when another right-side panel (node details / preview) opens ─── */
+  useEffect(() => {
+    if (drawerOpen || previewOpen) setAiAssistOpen(false);
+  }, [drawerOpen, previewOpen]);
+
+  /* ─── Collapse the LHS drawer whenever AI assist opens (toolbar click, or externally controlled) ─── */
+  useEffect(() => {
+    if (aiAssistOpen) setLhsCollapsed(true);
+  }, [aiAssistOpen]);
 
   /* ─── View-only: keep canvas state in sync when workflow props change ─── */
   useEffect(() => {
@@ -2169,6 +2189,12 @@ export default function AgentBuilder({
               initialZoom={initialZoom}
               runDisabled={runDisabled}
               onEdit={viewOnly ? onEdit : undefined}
+              onAiAssist={viewOnly ? undefined : () => {
+                setDrawerOpen(false);
+                setPreviewOpen(false);
+                setAiAssistOpen(true);
+              }}
+              aiAssistActive={aiAssistOpen}
               onRun={() => {
                 if (isReminderAgent) {
                   setBookTestModalOpen(true);
@@ -2179,6 +2205,12 @@ export default function AgentBuilder({
               }}
             />
           </div>
+
+          {!aiAssistControlled && aiAssistOpen && (
+            <div className="agent-builder__ai-assist">
+              <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
+            </div>
+          )}
 
           {drawerOpen && (
             <div key={selectedNodeId} className="agent-builder__rhs">

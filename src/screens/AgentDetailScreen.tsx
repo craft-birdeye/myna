@@ -29,10 +29,18 @@ import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
+import { WorkflowEditorScreen } from './WorkflowEditorScreen'
+import { AiAssistPanel } from '../components/AiAssistPanel/AiAssistPanel'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
-import sendArrowIcon from '../assets/icon-send-arrow.svg'
+import { SendIcon } from '../assets/SendIcon'
+import {
+  CheckIcon,
+  ContentCopyIcon,
+  ThumbDownIcon,
+  ThumbUpIcon,
+} from '../assets/MessageActionIcons'
 
 interface AgentDetailScreenProps {
   agentName: string
@@ -229,6 +237,33 @@ const HEALTHCARE_FRONTDESK_CREATE_CARDS = [
     id: 'patient-scheduling',
     title: 'Patient scheduling',
     description: 'Finds returning patient records, confirms coverage, and books or reschedules visits',
+  },
+]
+
+const REMINDER_CREATE_CARDS = [
+  {
+    id: 'appointment-confirmation-reminder',
+    title: 'Appointment confirmation reminder',
+    description:
+      'Sends a multi-step reminder sequence at 72h, 24h, and 2h before the appointment. Adapts tone and channel based on patient history and no-show risk.',
+  },
+  {
+    id: 'no-show-risk-intervention',
+    title: 'No-show risk intervention agent',
+    description:
+      'Identifies patients flagged as high-risk by the AI scoring model and triggers a personalized outreach campaign – including a live AI call for patients with 3+ prior no-shows. Escalates to staff when needed.',
+  },
+  {
+    id: 'pre-visit-preparation-reminder',
+    title: 'Pre-visit preparation reminder',
+    description:
+      'Reminds patients of pre-visit requirements — fasting, medication holds, forms, and insurance documents. Checks completion status via patient portal and sends a targeted follow-up only for outstanding items.',
+  },
+  {
+    id: 'chronic-care-medication-reminder',
+    title: 'Chronic care & medication reminder',
+    description:
+      "Sends recurring reminders for chronic condition follow-ups, lab reorders, and prescription refills. Detects gaps in care by querying the patient's care plan and nudges patients who have fallen out of schedule.",
   },
 ]
 
@@ -548,19 +583,20 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
     window.setTimeout(() => setCopied(false), 1500)
   }
 
-  const btn = 'flex size-8 items-center justify-center rounded-md transition-colors'
+  const btn =
+    'flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary'
 
   return (
-    <div className={`agent-build-fade mt-sm flex items-center gap-xs text-text-icon ${className ?? ''}`}>
+    <div className={`agent-build-fade mt-sm flex items-center gap-xs ${className ?? ''}`}>
       <Tooltip content="Good response" variant="brief">
         <button
           type="button"
           aria-label="Good response"
           aria-pressed={feedback === 'up'}
           onClick={() => setFeedback((prev) => (prev === 'up' ? null : 'up'))}
-          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-primary' : 'hover:bg-surface-hover hover:text-text-primary'}`}
+          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-primary' : ''}`}
         >
-          <Icon name="thumb_up" size={18} fill={feedback === 'up'} />
+          <ThumbUpIcon size={20} />
         </button>
       </Tooltip>
       <Tooltip content="Bad response" variant="brief">
@@ -569,9 +605,9 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           aria-label="Bad response"
           aria-pressed={feedback === 'down'}
           onClick={() => setFeedback((prev) => (prev === 'down' ? null : 'down'))}
-          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-primary' : 'hover:bg-surface-hover hover:text-text-primary'}`}
+          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-primary' : ''}`}
         >
-          <Icon name="thumb_down" size={18} fill={feedback === 'down'} />
+          <ThumbDownIcon size={20} />
         </button>
       </Tooltip>
       <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief">
@@ -579,9 +615,9 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           type="button"
           aria-label={copied ? 'Copied' : 'Copy'}
           onClick={handleCopy}
-          className={`${btn} hover:bg-surface-hover hover:text-text-primary`}
+          className={btn}
         >
-          <Icon name={copied ? 'check' : 'content_copy'} size={18} />
+          {copied ? <CheckIcon size={20} /> : <ContentCopyIcon size={20} />}
         </button>
       </Tooltip>
     </div>
@@ -591,6 +627,168 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
 // Seeded create-agent prompt from the Front desk demo script (John).
 const JOHN_CREATE_PROMPT =
   "I want a front desk agent for our clinic. It should answer inbound calls, book and reschedule appointments, answer basic insurance questions, and hand off anything about billing disputes to a human. I've got a bunch of our real call recordings if that helps."
+
+const REMINDER_CREATE_PROMPT =
+  "Every time an appointment gets booked, I want patients to automatically get reminded — email and text. Start about a month out, then again a week before. If they still haven't confirmed two days before the appointment, have the agent actually call them. If they don't pick up, send a text. And nobody should get calls at weird hours"
+
+// Reminder ghostwriter: reasoning shown after the first send.
+const REMINDER_CREATE_THOUGHTS_TEXT = `This is an event-triggered, time-paced, multi-channel outbound reminder agent — not a conversational front-desk agent. The workflow is the product: appointment booked → paced reminders → confirmation check → escalate to a call if needed.
+
+Journey I heard:
+• Trigger: Appointment booked
+• ~4 weeks before: Email + text reminder
+• ~1 week before: Email + text reminder
+• At 2 days before: Check if confirmed
+• If not confirmed: Place a voice call
+• If call not picked up: Fall back to text
+• Quiet hours: Applied as a default
+
+The deep part is the call. I need clear paths for answered / rejected / missed / voicemail, and a defined no-answer fallback (they already said: send a text).
+
+Edge cases worth flagging: appointments booked less than ~5 days out (skip early touches), stop conditions on confirm / cancel / reschedule, and retry policy if the call fails.
+
+Priority questions before I draft:
+• Cadence — confirm 4 weeks / 1 week / 2 days
+• Call behavior — outcomes and quiet hours
+• No-answer handling — text fallback (already stated)`
+
+const REMINDER_CREATE_INTRO_PARAGRAPHS = [
+  "Got it — an agent that runs a reminder journey for every booked appointment. Here's the timeline I heard:",
+  'Appointment booked → email and text reminder (4 weeks before) → email and text reminder (1 week before) → wait until 2 days before → Has the patient confirmed? → Yes — done, leave them alone → No — call the patient → if no answer → follow-up text.',
+  'Did I get the timing right? You said "about a month" — I set 4 weeks, happy to adjust.',
+]
+
+// Pre-filled into the composer when the user clicks after the reminder timing question.
+const REMINDER_TIMING_REPLY = 'Make the first one 3 weeks, not a month. Rest is right.'
+
+const REMINDER_AFTER_TIMING_THOUGHTS_TEXT = `Cadence resolved: 3 weeks → 1 week → check at 2 days.
+
+Appointments booked less than 3 weeks out should skip straight to the applicable step — nobody gets a stale reminder or none at all.
+
+I'll propose a Reminder call starting procedure next. Open question: when a patient wants to reschedule mid-call — hand off to Front desk (Lakeside already has one live), offer new times inline, or take a message for staff to call back.`
+
+const REMINDER_CADENCE_REPLY_PARAGRAPHS = [
+  "Updated — 3 weeks, then 1 week, then the 2-day check. One thing I'll handle automatically: if an appointment is booked less than 3 weeks out, the agent skips ahead to whichever step still applies — nobody gets a stale reminder or none at all. Now, the call — this is the part worth getting right. When a patient answers, this stops being a notification and becomes a live conversation. Here's the starting procedure I plan to give the call:",
+]
+
+const REMINDER_CALL_PROCEDURE_NAME = 'Reminder call'
+const REMINDER_CALL_PROCEDURE_LABEL = 'Reminder call'
+const REMINDER_CALL_PROCEDURE_NOTE =
+  'Verifies identity, delivers the reminder, and handles confirm, reschedule, or cancel.'
+
+const REMINDER_CALL_PROCEDURE: Procedure = {
+  id: 'hc-reminder-call',
+  name: REMINDER_CALL_PROCEDURE_NAME,
+  category: 'Healthcare Frontdesk',
+  queue: 'Inbound',
+  channels: ['Voice'],
+  description: 'Outbound reminder call that confirms the upcoming appointment and handles reschedule, cancel, or handoff.',
+  lastEdited: 'Jul 30',
+  whenToUse: 'When the agent places a reminder call for an upcoming appointment.',
+  steps: [
+    {
+      title: 'Greet the patient by name, identify as Lakeside Medical Group calling about their upcoming appointment.',
+      bullets: [],
+    },
+    {
+      title: 'State the appointment (day, time, provider) and ask if they can make it.',
+      bullets: [],
+    },
+    {
+      title: 'Confirms → mark it confirmed, thank them, end the call.',
+      bullets: [],
+    },
+    {
+      title: "Can't make it / wants to cancel → offer to cancel or reschedule.",
+      bullets: [],
+    },
+    {
+      title: 'Asks anything else or asks for a human → hand off.',
+      bullets: [],
+    },
+  ],
+  tools: [],
+  context: [
+    { kind: 'context', label: 'Provider_first_name' },
+    { kind: 'context', label: 'Business_ID' },
+    { kind: 'file', label: 'Products_list.PDF' },
+    { kind: 'link', label: 'www.aspendental.com' },
+  ],
+}
+
+const REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS = [
+  'The question: when a patient wants to reschedule mid-call, what should happen?',
+  '• Hand the call to your Front desk agent',
+  '• This agent offers new times itself',
+  '• Take a message for your staff to call back',
+]
+
+const REMINDER_RESCHEDULE_PILLS = [
+  'hand off the call to front desk agent',
+  'Send a message to your staff to call back',
+] as const
+
+const REMINDER_AFTER_HANDOFF_THOUGHTS_TEXT = `Rescheduling → handoff to the Front desk agent.
+
+Three arms left. Proposing defaults rather than asking open-ended questions: Rejected (patient declines the call) and missed (rings out) → wait 2 hours → one follow-up text with a confirm link. Voicemail → leave a short message with the callback number, then also send the text. And a retry policy: one call maximum — a reminder agent that calls twice starts to feel like a collections agent.`
+
+const REMINDER_HANDOFF_REPLY_PARAGRAPHS = [
+  'Done — reschedules get a handoff to your Front desk agent.',
+  "For the calls that don't connect, here's what I suggest:",
+  '• Call declined or missed → wait 2 hours → send one follow-up text with a confirm link.',
+  '• Voicemail → leave a short message with your callback number, and send the same text.',
+  "• One call maximum — no repeat calling. It's a reminder, not a chase.",
+  'Sound right?',
+]
+
+const REMINDER_CONNECT_PILLS = ['Yes, correct', 'No, make changes'] as const
+
+// Pre-filled into the composer after the no-connect defaults question.
+const REMINDER_EMAIL_REPLY =
+  "Yes. Oh — and here's the reminder email we send manually today. Keep the same tone."
+
+const REMINDER_EMAIL_FILE: AttachItem = {
+  id: 'lakeside-reminder-email',
+  kind: 'file',
+  label: 'lakeside-reminder-email.docx',
+}
+
+const REMINDER_AFTER_EMAIL_THOUGHTS_TEXT = `A single small document — Extracting: warm, first-name tone; short paragraphs; includes the parking-instructions link and the "reply CONFIRM" convention. I'll reuse that voice and structure for both scheduled reminder messages, and keep their existing CONFIRM keyword as the confirmation mechanism for text.
+
+Everything is now resolved or defaultable. Tool check against the catalog: email + text reminders ✓ (reminder tool), voice calling ✓, handoff to the Front desk agent ✓ (it's live). No missing integrations. Defaults to flag at review: calling window 9am–7pm patient-local (from "no weird hours"), caller ID = clinic main line, stop conditions, booked-inside-window skip rule, English only. Time to build — this one is fast, no need to tell her to leave.`
+
+const REMINDER_READY_TO_BUILD_THOUGHTS_TEXT = `Everything is now resolved or defaultable. Tool check against the catalog: email + text reminders ✓ (reminder tool), voice calling ✓, handoff to the Front desk agent ✓ (it's live). No missing integrations. Defaults to flag at review: calling window 9am–7pm patient-local (from "no weird hours"), caller ID = clinic main line, stop conditions, booked-inside-window skip rule, English only. Time to build — this one is fast, no need to tell her to leave.`
+
+const REMINDER_BUILD_REPLY_WITH_EMAIL =
+  "Read it — warm and personal, and I noticed you use \"reply CONFIRM\" and include the parking instructions link. I'll keep both in the new messages. Building your agent now — this'll take under a minute."
+
+const REMINDER_BUILD_REPLY_DEFAULT =
+  "Defaults look good. Building your agent now — this'll take under a minute."
+
+const REMINDER_POST_DRAFT_REPLY =
+  'Now that I have created the new reminder agent for email and text, what would you like me to do?'
+
+const REMINDER_POST_DRAFT_PILLS = ['Make changes', 'Save agent', 'View workflow'] as const
+
+const REMINDER_BUILD_STATUS_LABELS = [
+  'Building agent…',
+  'Creating email and text templates…',
+  "Setting up the call's starting procedure…",
+  'Wiring the call outcome paths…',
+  'Running final checks…',
+]
+
+const REMINDER_DESIGN_STEPS = [
+  { id: 'templates', label: 'Creating email and text templates' },
+  { id: 'procedure', label: "Setting up the call's starting procedure" },
+  { id: 'outcomes', label: 'Wiring the call outcome paths' },
+  { id: 'final', label: 'Final checks' },
+] as const
+
+const REMINDER_BUILD_CARD = {
+  title: 'New reminder agent - Email and Text',
+  description: 'Sends email and text reminders, then calls patients who haven\'t confirmed.',
+}
 
 // Pre-filled into the composer when John clicks the box after the draft review.
 const FINAL_REVIEW_PROMPT =
@@ -771,21 +969,24 @@ function CreateAgentThinkingPanel({
   onComplete,
   text = CREATE_AGENT_THOUGHTS_TEXT,
   label = 'Thoughts',
+  fast = false,
 }: {
   open: boolean
   onToggle: () => void
   onComplete?: () => void
   text?: string
   label?: string
+  /** Faster typewriter — used by the Reminder create flow. */
+  fast?: boolean
 }) {
   const completedRef = useRef(false)
   const { typed, done } = useTypewriter(text, {
-    charsPerTick: 2,
-    intervalMs: 28,
+    charsPerTick: fast ? 8 : 2,
+    intervalMs: fast ? 12 : 28,
     onDone: () => {
       if (completedRef.current) return
       completedRef.current = true
-      window.setTimeout(() => onComplete?.(), 600)
+      window.setTimeout(() => onComplete?.(), fast ? 200 : 600)
     },
   })
 
@@ -810,7 +1011,7 @@ function CreateAgentThinkingPanel({
       </button>
       <div
         className={`overflow-hidden transition-[max-height,opacity,margin] duration-200 ${
-          open ? 'mt-sm max-h-[1100px] opacity-100' : 'mt-0 max-h-0 opacity-0'
+          open ? 'mt-sm max-h-[2400px] opacity-100' : 'mt-0 max-h-0 opacity-0'
         }`}
         aria-hidden={!open}
       >
@@ -880,25 +1081,31 @@ function TypedParagraphs({
   paragraphs,
   className,
   onDone,
+  fast = false,
 }: {
   paragraphs: ReactNode[]
   className?: string
   onDone?: () => void
+  /** Faster typewriter — used by the Reminder create flow. */
+  fast?: boolean
 }) {
   const [visible, setVisible] = useState(0)
   const texts = paragraphs.map((p) => (typeof p === 'string' ? p : ''))
   const current = texts[visible] ?? ''
-  const { typed, done } = useTypewriter(current, { charsPerTick: 2, intervalMs: 28 })
+  const { typed, done } = useTypewriter(current, {
+    charsPerTick: fast ? 8 : 2,
+    intervalMs: fast ? 12 : 28,
+  })
 
   useEffect(() => {
     if (!done) return
     if (visible < paragraphs.length - 1) {
-      const t = window.setTimeout(() => setVisible((v) => v + 1), 400)
+      const t = window.setTimeout(() => setVisible((v) => v + 1), fast ? 120 : 400)
       return () => window.clearTimeout(t)
     }
     onDone?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done, visible])
+  }, [done, visible, fast])
 
   return (
     <>
@@ -1044,6 +1251,592 @@ function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
         />
       </div>
     </div>
+  )
+}
+
+function ReminderCreateIntroReply({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <TypedParagraphs
+          fast
+          paragraphs={REMINDER_CREATE_INTRO_PARAGRAPHS}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ReminderCadenceFollowUp({
+  openProcedureName,
+  onOpenProcedure,
+  onComplete,
+}: {
+  openProcedureName: string | null
+  onOpenProcedure: (name: string) => void
+  onComplete?: () => void
+}) {
+  const [stage, setStage] = useState<'intro' | 'question' | 'done'>('intro')
+
+  useEffect(() => {
+    if (stage !== 'done') return
+    onComplete?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage])
+
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={stage !== 'done'} />
+      </span>
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <TypedParagraphs
+          fast
+          paragraphs={REMINDER_CADENCE_REPLY_PARAGRAPHS}
+          onDone={() => setStage('question')}
+        />
+
+        {(stage === 'question' || stage === 'done') && (
+          <button
+            type="button"
+            onClick={() => onOpenProcedure(REMINDER_CALL_PROCEDURE_NAME)}
+            aria-pressed={openProcedureName === REMINDER_CALL_PROCEDURE_NAME}
+            className={`agent-build-fade flex items-start gap-sm rounded-md border border-border px-md py-md text-left hover:bg-surface-hover ${
+              openProcedureName === REMINDER_CALL_PROCEDURE_NAME ? 'bg-surface-hover' : 'bg-surface'
+            }`}
+          >
+            <span className="flex h-6 shrink-0 items-center">
+              <Icon name="menu_book" size={18} className="text-text-icon" />
+            </span>
+            <span className="min-w-0 flex-1 text-body leading-6">
+              <span className="text-text-primary">{REMINDER_CALL_PROCEDURE_LABEL}</span>
+              <span className="text-text-secondary"> — {REMINDER_CALL_PROCEDURE_NOTE}</span>
+            </span>
+            <span className="flex h-6 shrink-0 items-center">
+              <Icon name="chevron_right" size={18} className="text-text-icon" />
+            </span>
+          </button>
+        )}
+
+        {(stage === 'question' || stage === 'done') && (
+          <TypedParagraphs
+            fast
+            paragraphs={REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS}
+            onDone={() => setStage('done')}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ReminderHandoffFollowUp({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <TypedParagraphs
+          fast
+          paragraphs={REMINDER_HANDOFF_REPLY_PARAGRAPHS}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ReminderBuildReply({
+  hasEmailAttachment,
+  onComplete,
+}: {
+  hasEmailAttachment: boolean
+  onComplete?: () => void
+}) {
+  const [done, setDone] = useState(false)
+  const text = hasEmailAttachment ? REMINDER_BUILD_REPLY_WITH_EMAIL : REMINDER_BUILD_REPLY_DEFAULT
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <TypedParagraphs
+          fast
+          paragraphs={[text]}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ReminderPostDraftFollowUp({
+  answer,
+  onAnswer,
+  onComplete,
+}: {
+  answer: string
+  onAnswer: (label: string) => void
+  onComplete?: () => void
+}) {
+  const [done, setDone] = useState(false)
+
+  return (
+    <>
+      <div className="agent-build-fade mt-3xl flex gap-sm">
+        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+          <SparkleLoader size={14} spinning={!done} />
+        </span>
+        <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+          <TypedParagraphs
+            fast
+            paragraphs={[REMINDER_POST_DRAFT_REPLY]}
+            onDone={() => {
+              setDone(true)
+              onComplete?.()
+            }}
+          />
+        </div>
+      </div>
+      {done && (
+        <MessageActions className="ml-3xl" copyText={REMINDER_POST_DRAFT_REPLY} />
+      )}
+      {done && !answer && (
+        <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
+          {REMINDER_POST_DRAFT_PILLS.map((label) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onAnswer(label)}
+              className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {answer && <UserBubble>{answer}</UserBubble>}
+    </>
+  )
+}
+
+/** Agent response while the reminder draft is being built — checklist + status card.
+ *  Mirrors Front desk `BuildingProgressPanel` so the designing steps are visible above the card. */
+function ReminderBuildingCard({
+  onDone,
+  persisted = false,
+  onViewWorkflow,
+}: {
+  onDone?: () => void
+  persisted?: boolean
+  onViewWorkflow?: () => void
+}) {
+  const [step, setStep] = useState(persisted ? REMINDER_DESIGN_STEPS.length : 0)
+  const completedRef = useRef(false)
+  const done = persisted || step >= REMINDER_DESIGN_STEPS.length
+  const displayStep = persisted ? REMINDER_DESIGN_STEPS.length : step
+  const statusIndex = Math.min(displayStep, REMINDER_BUILD_STATUS_LABELS.length - 1)
+
+  useEffect(() => {
+    if (persisted) return
+    if (done) {
+      if (!completedRef.current) {
+        completedRef.current = true
+        const t = window.setTimeout(() => onDone?.(), 600)
+        return () => window.clearTimeout(t)
+      }
+      return
+    }
+    const t = window.setTimeout(() => setStep((s) => s + 1), 1100)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, done, persisted])
+
+  return (
+    <div className="agent-build-fade mt-3xl flex flex-col gap-md">
+      {/* Agent response — designing checklist (same pattern as BuildingProgressPanel) */}
+      <p className="text-body leading-6">
+        <span className="font-medium text-text-primary">Designing the reminder journey</span>
+      </p>
+
+      <div className="flex flex-col gap-sm">
+        {REMINDER_DESIGN_STEPS.map((s, i) => {
+          const isDone = i < displayStep || done
+          const isActive = !done && i === displayStep
+          return (
+            <span key={s.id} className="inline-flex items-center gap-xs text-body">
+              {isDone ? (
+                <Icon name="check_circle" size={18} className="shrink-0 text-accent-positive" />
+              ) : isActive ? (
+                <Icon name="hourglass_top" size={18} className="animate-pulse shrink-0 text-chip-warning-text" />
+              ) : (
+                <Icon name="radio_button_unchecked" size={18} className="shrink-0 text-text-tertiary" />
+              )}
+              <span className={isDone || isActive ? 'text-text-primary' : 'text-text-tertiary'}>{s.label}</span>
+            </span>
+          )
+        })}
+      </div>
+
+      {/* Status card — agent being assembled */}
+      <div className="rounded-md border border-border bg-surface px-md py-md">
+        <div className="flex items-start gap-sm">
+          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
+          <div className="min-w-0 flex-1">
+            <p className="text-body text-text-primary">{REMINDER_BUILD_CARD.title}</p>
+            <p className="mt-xs text-small text-text-secondary">{REMINDER_BUILD_CARD.description}</p>
+          </div>
+        </div>
+        {!done ? (
+          <div key={statusIndex} className="agent-build-fade mt-md flex items-center gap-sm text-body text-text-primary">
+            <span>{REMINDER_BUILD_STATUS_LABELS[statusIndex] ?? 'Building agent…'}</span>
+            <span className="inline-flex items-center gap-px" aria-hidden>
+              {[0, 1, 2].map((dot) => (
+                <span
+                  key={dot}
+                  className="animate-pulse size-1 rounded-full bg-text-secondary"
+                  style={{ animationDelay: `${dot * 0.15}s` }}
+                />
+              ))}
+            </span>
+          </div>
+        ) : (
+          <div className="agent-build-fade mt-md flex items-center gap-sm text-body">
+            <span className="text-text-secondary">Draft ready</span>
+            <button
+              type="button"
+              onClick={onViewWorkflow}
+              className="text-text-action hover:underline"
+            >
+              View workflow
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ReminderDraftReviewCard({
+  openProcedureName,
+  onOpenProcedure,
+}: {
+  openProcedureName: string | null
+  onOpenProcedure: (name: string) => void
+}) {
+  const reminderCallPressed = openProcedureName === REMINDER_CALL_PROCEDURE_NAME
+
+  return (
+    <div className="agent-build-fade mt-md flex w-full flex-col gap-lg">
+      <div className="flex items-center gap-sm">
+        {/* Bold title mirrors Front desk DraftReviewCard — explicit design ask overriding §6.6. */}
+        <span className="font-medium text-body text-text-primary">Reminder agent</span>
+        <span className="inline-flex h-6 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+          Draft
+        </span>
+      </div>
+
+      <DraftReviewSection label="What it does">
+        <p className="text-body leading-6 text-text-primary">
+          Runs a reminder journey for every booked appointment — email and text at 3 weeks and 1 week out, then a
+          confirmation check at 2 days with a phone call for anyone unconfirmed.
+        </p>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="The journey — tap any step to open it, or open the full workflow view">
+        <ol className="flex list-decimal flex-col gap-sm pl-lg text-body leading-6 text-text-primary">
+          <li>
+            <span className="text-text-primary">Starts when an appointment is booked</span>
+            <span className="text-text-secondary">
+              {' '}
+              — any location (you can filter by location, provider, or appointment type later)
+            </span>
+          </li>
+          <li>
+            <span className="text-text-primary">3 weeks before</span>
+            <span className="text-text-secondary"> → </span>
+            <Icon name="mail" size={16} className="inline-block align-text-bottom text-text-icon" />
+            <span className="text-text-secondary"> email + </span>
+            <Icon name="sms" size={16} className="inline-block align-text-bottom text-text-icon" />
+            <span className="text-text-secondary">
+              {' '}
+              text — written from your template, reply-CONFIRM + parking link kept
+            </span>
+          </li>
+          <li>
+            <span className="text-text-primary">1 week before</span>
+            <span className="text-text-secondary"> → </span>
+            <Icon name="mail" size={16} className="inline-block align-text-bottom text-text-icon" />
+            <span className="text-text-secondary"> email + </span>
+            <Icon name="sms" size={16} className="inline-block align-text-bottom text-text-icon" />
+            <span className="text-text-secondary"> text</span>
+          </li>
+          <li>
+            <span className="text-text-primary">Wait</span>
+            <span className="text-text-secondary"> until 2 days before</span>
+          </li>
+          <li>
+            <span className="text-text-primary">Confirmed?</span>
+            <span className="text-text-secondary"> → Yes: journey ends. No: </span>
+            <Icon name="call" size={16} className="inline-block align-text-bottom text-text-icon" />
+            <span className="text-text-secondary"> call the patient (within calling window)</span>
+          </li>
+          <li>
+            <span className="text-text-primary">Call outcomes:</span>
+            <ul className="mt-sm flex list-none flex-col gap-sm pl-0">
+              <li className="flex items-start gap-sm">
+                <Icon name="check_circle" size={18} className="mt-px shrink-0 text-accent-positive" />
+                <span>
+                  <span className="text-text-primary">Answered</span>
+                  <span className="text-text-secondary"> → runs the </span>
+                  <button
+                    type="button"
+                    aria-pressed={reminderCallPressed}
+                    onClick={() => onOpenProcedure(REMINDER_CALL_PROCEDURE_NAME)}
+                    className={`inline-flex items-center gap-xs rounded-sm px-xs text-left hover:bg-surface-hover ${
+                      reminderCallPressed ? 'bg-surface-hover' : ''
+                    }`}
+                  >
+                    <Icon name="menu_book" size={16} className="text-text-icon" />
+                    <span className="text-text-primary">Reminder call</span>
+                  </button>
+                  <span className="text-text-secondary">
+                    {' '}
+                    starting procedure (tap to read — confirm / cancel / reschedule → warm handoff to your Front
+                    desk agent / human handoff on request; never discusses clinical questions)
+                  </span>
+                </span>
+              </li>
+              <li className="flex items-start gap-sm">
+                <Icon name="block" size={18} className="mt-px shrink-0 text-text-icon" />
+                <span>
+                  <span className="text-text-primary">Declined</span>
+                  <span className="text-text-secondary"> → wait 2 hours → one follow-up text</span>
+                </span>
+              </li>
+              <li className="flex items-start gap-sm">
+                <Icon name="phone_missed" size={18} className="mt-px shrink-0 text-text-icon" />
+                <span>
+                  <span className="text-text-primary">Missed</span>
+                  <span className="text-text-secondary"> → wait 2 hours → one follow-up text</span>
+                </span>
+              </li>
+              <li className="flex items-start gap-sm">
+                <Icon name="voicemail" size={18} className="mt-px shrink-0 text-text-icon" />
+                <span>
+                  <span className="text-text-primary">Voicemail</span>
+                  <span className="text-text-secondary">
+                    {' '}
+                    → short message with callback number + the same text
+                  </span>
+                </span>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <span className="text-text-primary">At any point:</span>
+            <span className="text-text-secondary">
+              {' '}
+              a confirmation, cancellation, or reschedule stops the journey. A reschedule restarts it against the
+              new date.
+            </span>
+          </li>
+        </ol>
+      </DraftReviewSection>
+
+      <DraftReviewSection label="Tools it uses">
+        <div className="flex flex-col gap-xs">
+          {['Email & text reminders', 'Voice calling', 'Front desk agent handoff'].map((tool) => (
+            <div key={tool} className="flex w-full items-center gap-sm rounded-md px-sm py-sm">
+              <Icon name="build" size={18} className="shrink-0 text-text-icon" />
+              <span className="inline-flex min-w-0 items-center gap-xs text-body text-text-primary">
+                {tool}
+                <Icon name="check_circle" size={16} className="shrink-0 text-accent-positive" />
+              </span>
+            </div>
+          ))}
+        </div>
+      </DraftReviewSection>
+    </div>
+  )
+}
+
+/** Full beat after the user picks a mid-call reschedule option. Owns its own
+ *  Thoughts → reply → pills sequence so it always runs when mounted. */
+function ReminderAfterRescheduleBeat({
+  connectAnswer,
+  connectAttachments,
+  openProcedureName,
+  onConnectAnswer,
+  onOpenProcedure,
+  onHandoffReplyDone,
+  onEmailThoughtsDone,
+  onBuildDone,
+  onViewWorkflow,
+  onSaveAgent,
+  onMakeChanges,
+  onSuppressAutoScroll,
+}: {
+  connectAnswer: string
+  connectAttachments: AttachItem[]
+  openProcedureName: string | null
+  onConnectAnswer: (answer: string) => void
+  onOpenProcedure: (name: string) => void
+  onHandoffReplyDone: () => void
+  onEmailThoughtsDone: () => void
+  onBuildDone?: () => void
+  onViewWorkflow?: () => void
+  onSaveAgent?: () => void
+  onMakeChanges?: () => void
+  onSuppressAutoScroll: () => void
+}) {
+  const [thoughtsOpen, setThoughtsOpen] = useState(true)
+  const [replyReady, setReplyReady] = useState(false)
+  const [replyDone, setReplyDone] = useState(false)
+  const [emailThoughtsOpen, setEmailThoughtsOpen] = useState(true)
+  const [emailThoughtsDone, setEmailThoughtsDone] = useState(false)
+  const [buildReplyDone, setBuildReplyDone] = useState(false)
+  const [buildDone, setBuildDone] = useState(false)
+  const [postDraftAnswer, setPostDraftAnswer] = useState('')
+  const continues = Boolean(connectAnswer) && !connectAnswer.startsWith('No')
+  const hasEmailAttachment = connectAttachments.length > 0
+  const handoffDoneRef = useRef(false)
+  const emailDoneRef = useRef(false)
+
+  const handlePostDraftAnswer = (label: string) => {
+    setPostDraftAnswer(label)
+    if (label === 'View workflow') onViewWorkflow?.()
+    else if (label === 'Save agent') onSaveAgent?.()
+    else if (label === 'Make changes') onMakeChanges?.()
+  }
+
+  return (
+    <>
+      <CreateAgentThinkingPanel
+        open={thoughtsOpen}
+        onToggle={() => {
+          onSuppressAutoScroll()
+          setThoughtsOpen((prev) => !prev)
+        }}
+        onComplete={() => {
+          setThoughtsOpen(false)
+          setReplyReady(true)
+        }}
+        text={REMINDER_AFTER_HANDOFF_THOUGHTS_TEXT}
+        fast
+      />
+      {replyReady && (
+        <ReminderHandoffFollowUp
+          onComplete={() => {
+            setReplyDone(true)
+            if (!handoffDoneRef.current) {
+              handoffDoneRef.current = true
+              onHandoffReplyDone()
+            }
+          }}
+        />
+      )}
+      {replyDone && (
+        <MessageActions
+          className="ml-3xl"
+          copyText={REMINDER_HANDOFF_REPLY_PARAGRAPHS.join('\n\n')}
+        />
+      )}
+      {replyDone && !connectAnswer && (
+        <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
+          {REMINDER_CONNECT_PILLS.map((label) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onConnectAnswer(label)}
+              className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {connectAnswer && <UserBubble>{connectAnswer}</UserBubble>}
+      {connectAttachments.length > 0 && <UserDocsMessage files={connectAttachments} />}
+      {continues && (
+        <CreateAgentThinkingPanel
+          open={emailThoughtsOpen}
+          onToggle={() => {
+            onSuppressAutoScroll()
+            setEmailThoughtsOpen((prev) => !prev)
+          }}
+          onComplete={() => {
+            setEmailThoughtsOpen(false)
+            setEmailThoughtsDone(true)
+            if (!emailDoneRef.current) {
+              emailDoneRef.current = true
+              onEmailThoughtsDone()
+            }
+          }}
+          text={
+            hasEmailAttachment
+              ? REMINDER_AFTER_EMAIL_THOUGHTS_TEXT
+              : REMINDER_READY_TO_BUILD_THOUGHTS_TEXT
+          }
+          fast
+        />
+      )}
+      {continues && emailThoughtsDone && (
+        <>
+          <ReminderBuildReply
+            hasEmailAttachment={hasEmailAttachment}
+            onComplete={() => setBuildReplyDone(true)}
+          />
+          {buildReplyDone && (
+            <>
+              <MessageActions
+                className="ml-3xl"
+                copyText={
+                  hasEmailAttachment ? REMINDER_BUILD_REPLY_WITH_EMAIL : REMINDER_BUILD_REPLY_DEFAULT
+                }
+              />
+              <ReminderBuildingCard
+                persisted={buildDone}
+                onDone={() => {
+                  setBuildDone(true)
+                  onBuildDone?.()
+                }}
+                onViewWorkflow={onViewWorkflow}
+              />
+              {buildDone && (
+                <>
+                  <ReminderDraftReviewCard
+                    openProcedureName={openProcedureName}
+                    onOpenProcedure={onOpenProcedure}
+                  />
+                  <ReminderPostDraftFollowUp
+                    answer={postDraftAnswer}
+                    onAnswer={handlePostDraftAnswer}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </>
   )
 }
 
@@ -1603,8 +2396,11 @@ function ProcedurePreviewPanel({
   procedure: Procedure
   onClose: () => void
 }) {
+  const isReminderCall = procedure.name === REMINDER_CALL_PROCEDURE_NAME
   const visibleContext = procedure.context.slice(0, 4)
-  const moreContext = Math.max(0, procedure.context.length - visibleContext.length)
+  const moreContext = isReminderCall
+    ? 25
+    : Math.max(0, procedure.context.length - visibleContext.length)
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-surface">
@@ -1666,13 +2462,15 @@ function ProcedurePreviewPanel({
                 <p className="text-body text-text-primary">
                   {stepIndex + 1}. {step.title}
                 </p>
-                <ul className="flex list-disc flex-col gap-sm pl-lg">
-                  {step.bullets.map((bullet, bulletIndex) => (
-                    <li key={bulletIndex} className="marker:text-text-secondary">
-                      <ProcedureStepTokens tokens={bullet.tokens} />
-                    </li>
-                  ))}
-                </ul>
+                {step.bullets.length > 0 && (
+                  <ul className="flex list-disc flex-col gap-sm pl-lg">
+                    {step.bullets.map((bullet, bulletIndex) => (
+                      <li key={bulletIndex} className="marker:text-text-secondary">
+                        <ProcedureStepTokens tokens={bullet.tokens} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>
@@ -1690,11 +2488,28 @@ function HealthcareFrontdeskCreateAgentScreen({
   onCreateFromScratch,
   onSelectFromLibrary,
   onCreateAgent,
+  onViewWorkflow,
+  onBack,
+  onSubmittedChange,
+  pageTitle,
+  libraryCards,
+  initialPrompt,
+  fromScratchLabel = 'Setup manually',
+  variant = 'frontdesk',
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
   onCreateAgent?: (options?: { publish?: boolean }) => void
+  onViewWorkflow?: () => void
+  onBack?: () => void
+  onSubmittedChange?: (submitted: boolean) => void
+  pageTitle?: string
+  libraryCards?: { id: string; title: string; description: string }[]
+  initialPrompt?: string
+  fromScratchLabel?: string
+  variant?: 'frontdesk' | 'reminder'
 }) {
+  const isReminderFlow = variant === 'reminder'
   const [prompt, setPrompt] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [phase, setPhase] = useState<CreatePhase>('ask-docs')
@@ -1712,6 +2527,16 @@ function HealthcareFrontdeskCreateAgentScreen({
   const [thinkingOpen, setThinkingOpen] = useState(true)
   const [introReplyReady, setIntroReplyReady] = useState(false)
   const [introReplyDone, setIntroReplyDone] = useState(false)
+  const [timingAnswer, setTimingAnswer] = useState('')
+  const [timingThoughtsOpen, setTimingThoughtsOpen] = useState(true)
+  const [timingFollowReady, setTimingFollowReady] = useState(false)
+  const [timingFollowDone, setTimingFollowDone] = useState(false)
+  const [rescheduleAnswer, setRescheduleAnswer] = useState('')
+  const [handoffFollowDone, setHandoffFollowDone] = useState(false)
+  const [connectAnswer, setConnectAnswer] = useState('')
+  const [connectAttachments, setConnectAttachments] = useState<AttachItem[]>([])
+  const [emailThoughtsDone, setEmailThoughtsDone] = useState(false)
+  const [reminderBuildDone, setReminderBuildDone] = useState(false)
   const [docsThoughtsOpen, setDocsThoughtsOpen] = useState(true)
   const [docsReplyReady, setDocsReplyReady] = useState(false)
   const [docsReplyDone, setDocsReplyDone] = useState(false)
@@ -1754,6 +2579,8 @@ function HealthcareFrontdeskCreateAgentScreen({
   // never moves the page.
   const suppressAutoScrollRef = useRef(false)
   const reviewPromptFilledRef = useRef(false)
+  const timingPromptFilledRef = useRef(false)
+  const emailPromptFilledRef = useRef(false)
   const suppressAutoScrollBriefly = () => {
     suppressAutoScrollRef.current = true
     window.setTimeout(() => {
@@ -1764,7 +2591,15 @@ function HealthcareFrontdeskCreateAgentScreen({
   const building = loaderIndex !== null
   const stepThinking = stepThinkingPhase !== null
   const previewLocksComposer = previewOpen && !previewSessionEnded
-  const composerLocked = building || stepThinking || previewLocksComposer
+  const connectAnswerContinues = Boolean(connectAnswer) && !connectAnswer.startsWith('No')
+  const reminderGenerating =
+    isReminderFlow &&
+    (introThinking ||
+      !introReplyDone ||
+      (Boolean(timingAnswer) && !timingFollowDone) ||
+      (Boolean(rescheduleAnswer) && !handoffFollowDone) ||
+      (connectAnswerContinues && !reminderBuildDone))
+  const composerLocked = building || stepThinking || previewLocksComposer || reminderGenerating
   const composerPlaceholder = previewLocksComposer
     ? previewActive
       ? 'Test in progress...'
@@ -1806,6 +2641,7 @@ function HealthcareFrontdeskCreateAgentScreen({
 
   const resetCreateFlow = () => {
     setSubmitted(false)
+    onSubmittedChange?.(false)
     setPhase('ask-docs')
     setPrompt('')
     setDocsAnswer('')
@@ -1823,6 +2659,18 @@ function HealthcareFrontdeskCreateAgentScreen({
     setThinkingOpen(true)
     setIntroReplyReady(false)
     setIntroReplyDone(false)
+    setTimingAnswer('')
+    setTimingThoughtsOpen(true)
+    setTimingFollowReady(false)
+    setTimingFollowDone(false)
+    setRescheduleAnswer('')
+    setHandoffFollowDone(false)
+    setConnectAnswer('')
+    setConnectAttachments([])
+    setEmailThoughtsDone(false)
+    setReminderBuildDone(false)
+    timingPromptFilledRef.current = false
+    emailPromptFilledRef.current = false
     setDocsThoughtsOpen(true)
     setDocsReplyReady(false)
     setDocsReplyDone(false)
@@ -1907,6 +2755,7 @@ function HealthcareFrontdeskCreateAgentScreen({
     if (!introThinking) return
     setIntroStatusIndex(0)
     let i = 0
+    const rotateMs = isReminderFlow ? 550 : 1300
     const rotate = window.setInterval(() => {
       i += 1
       if (i >= INTRO_STATUS_LABELS.length) {
@@ -1915,9 +2764,9 @@ function HealthcareFrontdeskCreateAgentScreen({
       } else {
         setIntroStatusIndex(i)
       }
-    }, 1300)
+    }, rotateMs)
     return () => window.clearInterval(rotate)
-  }, [introThinking])
+  }, [introThinking, isReminderFlow])
 
 
   useEffect(() => {
@@ -1997,11 +2846,21 @@ function HealthcareFrontdeskCreateAgentScreen({
     jobsAnswer,
     showTestFollowUp,
     testAgentAnswers,
+    timingAnswer,
+    timingFollowReady,
+    timingFollowDone,
+    rescheduleAnswer,
+    handoffFollowDone,
+    connectAnswer,
+    connectAttachments,
+    emailThoughtsDone,
+    reminderBuildDone,
   ])
 
   const handleSend = () => {
     if (!prompt.trim()) return
     setSubmitted(true)
+    onSubmittedChange?.(true)
     setPhase('ask-docs')
     setIntroThinking(true)
   }
@@ -2073,6 +2932,15 @@ function HealthcareFrontdeskCreateAgentScreen({
   }
 
   const handlePaperclipAttach = () => {
+    // Reminder create flow: plus button attaches the lakeside reminder email sample.
+    if (isReminderFlow && handoffFollowDone && !connectAnswer) {
+      setAttachments((prev) =>
+        prev.some((a) => a.label === REMINDER_EMAIL_FILE.label)
+          ? prev
+          : [...prev, REMINDER_EMAIL_FILE],
+      )
+      return
+    }
     // During the docs step, the paperclip stands in for John adding his files.
     const items: AttachItem[] =
       phase === 'ask-docs'
@@ -2092,12 +2960,29 @@ function HealthcareFrontdeskCreateAgentScreen({
   }
 
   const canSendFollowUp =
-    phase === 'ask-docs'
+    isReminderFlow && handoffFollowDone && !connectAnswer
       ? Boolean(followUp.trim() || attachments.length > 0)
-      : Boolean(followUp.trim())
+      : phase === 'ask-docs'
+        ? Boolean(followUp.trim() || attachments.length > 0)
+        : Boolean(followUp.trim())
 
   const handleFollowUpSend = () => {
-    if (!canSendFollowUp || building || introThinking || stepThinking || previewLocksComposer) return
+    if (!canSendFollowUp || building || introThinking || stepThinking || previewLocksComposer || reminderGenerating) return
+    // Reminder create flow: capture scripted replies as chat bubbles, then continue.
+    if (isReminderFlow) {
+      if (introReplyDone && !timingAnswer && followUp.trim()) {
+        setTimingAnswer(followUp.trim())
+        setFollowUp('')
+        return
+      }
+      if (handoffFollowDone && !connectAnswer && (followUp.trim() || attachments.length > 0)) {
+        setConnectAnswer(followUp.trim() || 'Yes, correct')
+        setConnectAttachments([...attachments])
+        setAttachments([])
+        setFollowUp('')
+      }
+      return
+    }
     // After the draft review, further messages are just logged to the thread.
     if (reviewThoughtsDone) {
       if (followUp.trim()) setReviewFollowUpAnswer(followUp.trim())
@@ -2156,6 +3041,19 @@ function HealthcareFrontdeskCreateAgentScreen({
         )}
 
         <div className="flex w-full min-w-0 max-w-[720px] flex-col">
+        {pageTitle && (
+          <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              aria-label="Back"
+            >
+              <Icon name="arrow_back" size={20} />
+            </button>
+            <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
+          </div>
+        )}
         <div className="flex justify-end">
           <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">{prompt.trim()}</span>
         </div>
@@ -2177,33 +3075,126 @@ function HealthcareFrontdeskCreateAgentScreen({
                 setThinkingOpen(false)
                 setIntroReplyReady(true)
               }}
+              text={isReminderFlow ? REMINDER_CREATE_THOUGHTS_TEXT : CREATE_AGENT_THOUGHTS_TEXT}
+              fast={isReminderFlow}
             />
 
             {introReplyReady && (
-              <>
-                <CreateAgentIntroReply onComplete={() => setIntroReplyDone(true)} />
-                {introReplyDone && <MessageActions copyText={CREATE_AGENT_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />}
-                {phase === 'ask-docs' && introReplyDone && (
-                  <div className="agent-build-fade ml-3xl mt-sm">
-                    <button
-                      type="button"
-                      onClick={() => submitDocs('No documents added', false)}
-                      className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                    >
-                      Skip for now
-                    </button>
-                  </div>
-                )}
-              </>
+              isReminderFlow ? (
+                <>
+                  <ReminderCreateIntroReply onComplete={() => setIntroReplyDone(true)} />
+                  {introReplyDone && (
+                    <MessageActions
+                      copyText={REMINDER_CREATE_INTRO_PARAGRAPHS.join('\n\n')}
+                      className="ml-3xl"
+                    />
+                  )}
+                  {introReplyDone && !timingAnswer && (
+                    <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
+                      <button
+                        type="button"
+                        onClick={() => setTimingAnswer('Yes correct')}
+                        className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                      >
+                        Yes correct
+                      </button>
+                    </div>
+                  )}
+                  {timingAnswer && <UserBubble>{timingAnswer}</UserBubble>}
+                  {timingAnswer && (
+                    <>
+                      <CreateAgentThinkingPanel
+                        open={timingThoughtsOpen}
+                        onToggle={() => {
+                          suppressAutoScrollBriefly()
+                          setTimingThoughtsOpen((prev) => !prev)
+                        }}
+                        onComplete={() => {
+                          setTimingThoughtsOpen(false)
+                          setTimingFollowReady(true)
+                        }}
+                        text={REMINDER_AFTER_TIMING_THOUGHTS_TEXT}
+                        fast
+                      />
+                      {timingFollowReady && (
+                        <ReminderCadenceFollowUp
+                          openProcedureName={openProcedureName}
+                          onOpenProcedure={setOpenProcedureName}
+                          onComplete={() => setTimingFollowDone(true)}
+                        />
+                      )}
+                      {timingFollowDone && (
+                        <MessageActions
+                          className="ml-3xl"
+                          copyText={[
+                            ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
+                            ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS.map((line) =>
+                              line.replace(/^•\s*/, ''),
+                            ),
+                          ].join('\n\n')}
+                        />
+                      )}
+                      {timingFollowDone && !rescheduleAnswer && (
+                        <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
+                          {REMINDER_RESCHEDULE_PILLS.map((label) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => setRescheduleAnswer(label)}
+                              className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {rescheduleAnswer && <UserBubble>{rescheduleAnswer}</UserBubble>}
+                      {rescheduleAnswer && (
+                        <ReminderAfterRescheduleBeat
+                          key={rescheduleAnswer}
+                          connectAnswer={connectAnswer}
+                          connectAttachments={connectAttachments}
+                          openProcedureName={openProcedureName}
+                          onConnectAnswer={setConnectAnswer}
+                          onOpenProcedure={setOpenProcedureName}
+                          onHandoffReplyDone={() => setHandoffFollowDone(true)}
+                          onEmailThoughtsDone={() => setEmailThoughtsDone(true)}
+                          onBuildDone={() => setReminderBuildDone(true)}
+                          onViewWorkflow={onViewWorkflow}
+                          onSaveAgent={() => onCreateAgent?.()}
+                          onMakeChanges={resetCreateFlow}
+                          onSuppressAutoScroll={suppressAutoScrollBriefly}
+                        />
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <CreateAgentIntroReply onComplete={() => setIntroReplyDone(true)} />
+                  {introReplyDone && <MessageActions copyText={CREATE_AGENT_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />}
+                  {phase === 'ask-docs' && introReplyDone && (
+                    <div className="agent-build-fade ml-3xl mt-sm">
+                      <button
+                        type="button"
+                        onClick={() => submitDocs('No documents added', false)}
+                        className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                      >
+                        Skip for now
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
             )}
 
-            {docsAttachments.length > 0 ? (
+            {!isReminderFlow && (docsAttachments.length > 0 ? (
               <UserDocsMessage files={docsAttachments} />
             ) : (
               docsAnswer && <UserBubble>{docsAnswer}</UserBubble>
-            )}
+            ))}
 
-            {stepThinkingPhase === 'ask-jobs' && (
+            {!isReminderFlow && stepThinkingPhase === 'ask-jobs' && (
               <AgentBuildLoaderRow
                 label={(STEP_THINKING_LABELS['ask-jobs'] ?? [])[stepThinkingIndex] ?? 'Analyzing your documents'}
                 animKey={`ask-jobs-${stepThinkingIndex}`}
@@ -2211,7 +3202,7 @@ function HealthcareFrontdeskCreateAgentScreen({
               />
             )}
 
-            {showStep('ask-jobs') && (
+            {!isReminderFlow && showStep('ask-jobs') && (
               <>
                 {docsProvided && (
                   <>
@@ -2600,7 +3591,7 @@ function HealthcareFrontdeskCreateAgentScreen({
               </>
             )}
 
-            {showStep('ask-confirm-create') && (phase === 'ask-confirm-create' || confirmCreateAnswer) && (
+            {!isReminderFlow && showStep('ask-confirm-create') && (phase === 'ask-confirm-create' || confirmCreateAnswer) && (
               <>
                 <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
@@ -2636,7 +3627,7 @@ function HealthcareFrontdeskCreateAgentScreen({
               </>
             )}
 
-            {stepThinking && stepThinkingPhase && stepThinkingPhase !== 'ask-jobs' && (
+            {!isReminderFlow && stepThinking && stepThinkingPhase && stepThinkingPhase !== 'ask-jobs' && (
               <AgentBuildLoaderRow
                 label={(STEP_THINKING_LABELS[stepThinkingPhase] ?? [])[stepThinkingIndex] ?? 'Thinking'}
                 animKey={`${stepThinkingPhase}-${stepThinkingIndex}`}
@@ -2644,7 +3635,7 @@ function HealthcareFrontdeskCreateAgentScreen({
               />
             )}
 
-            {phase === 'summary' && (
+            {!isReminderFlow && phase === 'summary' && (
               <div className="agent-build-fade mt-2xl flex flex-col gap-md">
                 {selectedProcedures.length > 0 && (
                   <div className="flex flex-col gap-sm">
@@ -2710,11 +3701,11 @@ function HealthcareFrontdeskCreateAgentScreen({
               </div>
             )}
 
-            {testAgentAnswers.map((answer, i) => (
+            {!isReminderFlow && testAgentAnswers.map((answer, i) => (
               <UserBubble key={`${answer}-${i}`}>{answer}</UserBubble>
             ))}
 
-            {showTestFollowUp && (
+            {!isReminderFlow && showTestFollowUp && (
               <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
                 <div className="flex gap-sm">
                   <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
@@ -2782,11 +3773,45 @@ function HealthcareFrontdeskCreateAgentScreen({
             <textarea
               value={followUp}
               onFocus={() => {
+                // Reminder create flow: after the agent asks about timing, click
+                // the composer to pre-fill the scripted reply, then Enter to send.
+                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                  timingPromptFilledRef.current = true
+                  setFollowUp(REMINDER_TIMING_REPLY)
+                  return
+                }
+                // After no-connect defaults: pre-fill the email tone reply.
+                if (
+                  isReminderFlow &&
+                  handoffFollowDone &&
+                  !connectAnswer &&
+                  !followUp.trim()
+                ) {
+                  emailPromptFilledRef.current = true
+                  setFollowUp(REMINDER_EMAIL_REPLY)
+                  return
+                }
                 // Once the draft review is done, clicking into the box pre-fills
                 // John's next message so the demo can continue in one click.
                 if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
                   reviewPromptFilledRef.current = true
                   setFollowUp(FINAL_REVIEW_PROMPT)
+                }
+              }}
+              onClick={() => {
+                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                  timingPromptFilledRef.current = true
+                  setFollowUp(REMINDER_TIMING_REPLY)
+                  return
+                }
+                if (
+                  isReminderFlow &&
+                  handoffFollowDone &&
+                  !connectAnswer &&
+                  !followUp.trim()
+                ) {
+                  emailPromptFilledRef.current = true
+                  setFollowUp(REMINDER_EMAIL_REPLY)
                 }
               }}
               onChange={(e) => setFollowUp(e.target.value)}
@@ -2823,11 +3848,11 @@ function HealthcareFrontdeskCreateAgentScreen({
                 disabled={!canSendFollowUp || composerLocked}
                 className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
                   canSendFollowUp && !composerLocked
-                    ? 'hover:bg-surface-hover'
-                    : 'cursor-not-allowed opacity-40'
+                    ? 'text-ai-brand hover:bg-surface-hover'
+                    : 'cursor-not-allowed text-text-tertiary opacity-40'
                 }`}
               >
-                <img src={sendArrowIcon} alt="" className="size-6" />
+                <SendIcon size={24} />
               </button>
             </div>
           </div>
@@ -2853,7 +3878,10 @@ function HealthcareFrontdeskCreateAgentScreen({
               </div>
             ) : (
               (() => {
-                const procedure = HC_PROCEDURES.find((p) => p.name === openProcedureName)
+                const procedure =
+                  openProcedureName === REMINDER_CALL_PROCEDURE_NAME
+                    ? REMINDER_CALL_PROCEDURE
+                    : HC_PROCEDURES.find((p) => p.name === openProcedureName)
                 if (!procedure) return null
                 return (
                   <div className="h-[calc(100vh-168px)]">
@@ -2869,7 +3897,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   }
 
   return (
-    <div className="flex w-full max-w-[1000px] flex-col items-center gap-2xl self-start py-lg mt-3xl">
+    <div className={`flex w-full flex-col items-center gap-2xl self-start py-lg mt-3xl ${(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4 ? 'max-w-[1280px]' : 'max-w-[1000px]'}`}>
       <div className="flex flex-col items-center gap-sm text-center">
         <p className="text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary">
           Build your <span className="ai-gradient-text">agent</span>
@@ -2883,7 +3911,13 @@ function HealthcareFrontdeskCreateAgentScreen({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onFocus={() => {
-              if (!prompt.trim()) setPrompt(JOHN_CREATE_PROMPT)
+              if (!prompt.trim()) setPrompt(initialPrompt ?? JOHN_CREATE_PROMPT)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
             }}
             rows={3}
             placeholder="Describe the agent you want to build..."
@@ -2905,9 +3939,9 @@ function HealthcareFrontdeskCreateAgentScreen({
               type="button"
               aria-label="Send"
               onClick={handleSend}
-              className="flex size-9 items-center justify-center rounded-sm transition-colors hover:bg-surface-hover"
+              className="flex size-9 items-center justify-center rounded-sm text-ai-brand transition-colors hover:bg-surface-hover"
             >
-              <img src={sendArrowIcon} alt="" className="size-6" />
+              <SendIcon size={24} />
             </button>
           </div>
         </div>
@@ -2919,7 +3953,7 @@ function HealthcareFrontdeskCreateAgentScreen({
           onClick={onCreateFromScratch}
           className="text-body text-text-action hover:underline"
         >
-          Setup manually
+          {fromScratchLabel}
         </button>
         <span className="text-text-primary">{' or select from '}</span>
         <button type="button" className="text-body text-text-action hover:underline">
@@ -2927,26 +3961,28 @@ function HealthcareFrontdeskCreateAgentScreen({
         </button>
       </p>
 
-      <div className="grid w-full grid-cols-3 gap-md">
-        {HEALTHCARE_FRONTDESK_CREATE_CARDS.map((tpl) => (
-          <div
-            key={tpl.id}
-            role="button"
-            tabIndex={0}
-            aria-label={`Use agent: ${tpl.title}`}
-            onClick={() => onSelectFromLibrary(tpl.id)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
-            className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
-          >
-            <h3 className="line-clamp-2 shrink-0 text-body text-text-primary">{tpl.title}</h3>
-            <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
-            <div className={INFO_CARD_LAYOUT.ctaWrap}>
-              <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
-                Use agent
-              </span>
+      <div className="@container w-full">
+        <div className={`grid w-full gap-md ${(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4 ? 'grid-cols-1 min-[500px]:grid-cols-4' : 'grid-cols-3'}`}>
+          {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
+            <div
+              key={tpl.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Use agent: ${tpl.title}`}
+              onClick={() => onSelectFromLibrary(tpl.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
+              className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
+            >
+              <h3 className="line-clamp-2 shrink-0 text-body text-text-primary">{tpl.title}</h3>
+              <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
+              <div className={INFO_CARD_LAYOUT.ctaWrap}>
+                <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
+                  Use agent
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -2961,23 +3997,49 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedInstance, setSelectedInstance] = useState<string | null>(null)
   const [instanceInitialTab, setInstanceInitialTab] = useState('outcomes')
-  const [showCreateFlow, setShowCreateFlow] = useState(true)
+  const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
+  /** Reminder create → View workflow: split canvas + Copilot. */
+  const [createWorkflowSplit, setCreateWorkflowSplit] = useState(false)
+  const [createCopilotOpen, setCreateCopilotOpen] = useState(false)
+  const [createCopilotSlideIn, setCreateCopilotSlideIn] = useState(false)
+  /** After prompt send — chat header aligns to content; landing keeps page-left header. */
+  const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
   const openCreateFlow = () => {
     setCreateFlowKey((k) => k + 1)
     setShowSetupWizard(false)
+    setCreateWorkflowSplit(false)
+    setCreateCopilotOpen(false)
+    setCreateCopilotSlideIn(false)
+    setCreateFlowSubmitted(false)
     setShowCreateFlow(true)
+  }
+
+  const openCreateWorkflowSplit = () => {
+    setCreateWorkflowSplit(true)
+    setCreateCopilotOpen(true)
+    setCreateCopilotSlideIn(false)
+    // Next frame so width transitions from 0 → 400px
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setCreateCopilotSlideIn(true))
+    })
+  }
+
+  const closeCreateWorkflowSplit = () => {
+    setCreateCopilotSlideIn(false)
+    setCreateCopilotOpen(false)
+    setCreateWorkflowSplit(false)
   }
 
   const handleCreateAgentSuccess = (options?: { publish?: boolean }) => {
     setShowCreateFlow(false)
     setShowSetupWizard(false)
     setInstanceInitialTab('workflow')
-    setSelectedInstance('Front desk agent - North region')
+    setSelectedInstance(`${agentName} - North region`)
     setToastMessage(
       options?.publish ? 'Agent created and published successfully' : 'Agent created successfully',
     )
@@ -3097,10 +4159,10 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
 
   useEffect(() => {
-    const isAgentSetupActive = isFrontdesk && (showCreateFlow || showSetupWizard)
+    const isAgentSetupActive = (isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)
     onAgentSetupActiveChange?.(isAgentSetupActive)
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, showCreateFlow, showSetupWizard, onAgentSetupActiveChange])
+  }, [isFrontdesk, isReminder, showCreateFlow, showSetupWizard, onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     { key: 'name', label: 'Agent name', width: 230, sortable: true, locked: true },
     {
@@ -3225,33 +4287,45 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }
 
 
-  if (showCreateFlow && isFrontdesk) {
+  if (showCreateFlow && (isFrontdesk || isReminder)) {
     const isHealthcareFrontdesk = product === 'healthcare'
-    return (
-      <div className="flex h-full flex-col">
-        <TopNav title="Front desk" initials="S" />
+    const createTitle = isFrontdesk ? 'New front desk agent' : 'New reminder agent'
+
+    const createChat = (
+      <div className={`flex h-full flex-col ${createWorkflowSplit && isReminder ? 'hidden' : ''}`}>
+        <TopNav initials="S" />
         <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Header */}
-          <div className="flex h-16 items-center justify-between bg-surface px-2xl">
-            <div className="flex items-center gap-sm">
-              <button
-                type="button"
-                onClick={() => setShowCreateFlow(false)}
-                className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                aria-label="Back"
-              >
-                <Icon name="arrow_back" size={20} />
-              </button>
-              <h1 className="text-h3 text-text-primary">New front desk agent</h1>
+          {/* Landing: page-left header. Chat: title lives inside the 720px column. */}
+          {!createFlowSubmitted && (
+            <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
+              <div className="flex items-center gap-sm">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateFlow(false)}
+                  className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                  aria-label="Back"
+                >
+                  <Icon name="arrow_back" size={20} />
+                </button>
+                <h1 className="text-h3 text-text-primary">{createTitle}</h1>
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex flex-1 items-start justify-center overflow-auto px-lg pb-lg pt-0">
-            {isHealthcareFrontdesk ? (
+            {isHealthcareFrontdesk || isReminder ? (
               <HealthcareFrontdeskCreateAgentScreen
                 key={createFlowKey}
+                pageTitle={createTitle}
+                onBack={() => setShowCreateFlow(false)}
+                onSubmittedChange={setCreateFlowSubmitted}
                 onCreateFromScratch={() => setShowSetupWizard(true)}
                 onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
                 onCreateAgent={handleCreateAgentSuccess}
+                onViewWorkflow={isReminder ? openCreateWorkflowSplit : undefined}
+                libraryCards={isReminder ? REMINDER_CREATE_CARDS : undefined}
+                initialPrompt={isReminder ? REMINDER_CREATE_PROMPT : undefined}
+                fromScratchLabel={isReminder ? 'Create from scratch' : 'Setup manually'}
+                variant={isReminder ? 'reminder' : 'frontdesk'}
               />
             ) : (
               <CreateAgentEmptyState
@@ -3264,6 +4338,54 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
         </div>
       </div>
     )
+
+    // View workflow — Reminder: edit-mode canvas left, Copilot slides in on the right
+    if (createWorkflowSplit && isReminder) {
+      return (
+        <>
+          {createChat}
+          <div className="flex h-full w-full overflow-hidden bg-surface">
+            <div className="agent-build-fade flex min-w-0 flex-1 flex-col overflow-hidden">
+              <WorkflowEditorScreen
+                agentName="Reminder agent - North region"
+                agentStatus="Draft"
+                product={product ?? 'healthcare'}
+                onClose={closeCreateWorkflowSplit}
+                aiAssistOpen={createCopilotOpen}
+                onAiAssistOpenChange={(open) => {
+                  setCreateCopilotOpen(open)
+                  if (open) {
+                    setCreateCopilotSlideIn(false)
+                    window.requestAnimationFrame(() => {
+                      window.requestAnimationFrame(() => setCreateCopilotSlideIn(true))
+                    })
+                  } else {
+                    setCreateCopilotSlideIn(false)
+                  }
+                }}
+              />
+            </div>
+            <div
+              className="h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+              style={{ width: createCopilotOpen && createCopilotSlideIn ? 400 : 0 }}
+              aria-hidden={!createCopilotOpen}
+            >
+              <div className="h-full w-[400px]">
+                <AiAssistPanel
+                  onClose={() => {
+                    setCreateCopilotSlideIn(false)
+                    window.setTimeout(() => setCreateCopilotOpen(false), 300)
+                  }}
+                  onExpand={closeCreateWorkflowSplit}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )
+    }
+
+    return createChat
   }
 
   if (selectedInstance) {
@@ -3292,7 +4414,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
   return (
     <div className="flex h-full flex-col">
-      <TopNav title={isFrontdesk ? 'Front desk' : undefined} initials="S" />
+      <TopNav initials="S" />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-auto">
@@ -3305,7 +4427,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 <>
                   <button
                     type="button"
-                    onClick={() => isFrontdesk ? openCreateFlow() : onEditAgent?.('')}
+                    onClick={() => (isFrontdesk || isReminder) ? openCreateFlow() : onEditAgent?.('')}
                     className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                   >
                     Create agent
