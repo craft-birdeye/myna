@@ -695,7 +695,7 @@ function CopilotFooter({
             disabled={isThinking}
             rows={1}
             placeholder="Message your agent…"
-            className="max-h-[240px] min-h-6 w-full resize-none overflow-y-auto bg-transparent p-0 leading-6 text-body text-text-primary outline-none placeholder:text-text-tertiary"
+            className="max-h-[240px] min-h-12 w-full resize-none overflow-y-auto bg-transparent p-0 text-body !leading-[24px] text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-md text-text-icon">
