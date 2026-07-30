@@ -75,15 +75,16 @@ export function CopilotPromptBox({
         placeholder={placeholder}
       />
       <PromptInputActions>
-        <div className="flex items-center gap-[4px]">
+        <div className="flex items-center gap-0">
           <PromptInputAction
             tooltip="Attach file"
             onClick={onAttach}
             disabled={disabled}
+            className="p-1"
           >
             <AttachFileIcon className="size-6" />
           </PromptInputAction>
-          <PromptInputAction tooltip="Edit note" disabled={disabled}>
+          <PromptInputAction tooltip="Edit note" disabled={disabled} className="p-1">
             <EditNoteIcon className="size-6" />
           </PromptInputAction>
         </div>
