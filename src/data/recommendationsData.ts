@@ -152,6 +152,9 @@ export interface Recommendation {
   /** Id of the specific message that was marked thumbs-down — the real transcript preview
    *  highlights this one with a thumbs-down icon. Only set for `source: 'feedback'` rows. */
   sourceMessageId?: string
+  /** Name of the person who flagged the message — shown in the Recommendation tab's Type
+   *  column in place of "Human feedback". Only set for `source: 'feedback'` rows. */
+  reportedBy?: string
   /**
    * When a recommendation spans more than one gap type (procedure + knowledge + action all at
    * once), this lists each piece separately for the detail screen. Omitted = single-type
@@ -268,7 +271,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '18.4s',
           defaultExpanded: true,
           children: [
@@ -379,7 +382,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '21.7s',
           defaultExpanded: true,
           children: [
@@ -485,7 +488,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '16.9s',
           defaultExpanded: true,
           children: [
@@ -595,7 +598,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '24.1s',
           defaultExpanded: true,
           children: [
@@ -708,7 +711,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '22.8s',
           defaultExpanded: true,
           children: [
@@ -821,7 +824,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '19.6s',
           defaultExpanded: true,
           children: [
@@ -1011,7 +1014,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '19.6s',
           defaultExpanded: true,
           children: [
@@ -1178,7 +1181,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '15.2s',
           defaultExpanded: true,
           children: [
@@ -1304,7 +1307,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '13.4s',
           defaultExpanded: true,
           children: [
@@ -1513,7 +1516,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '17.1s',
           defaultExpanded: true,
           children: [
@@ -1655,7 +1658,7 @@ export const RECOMMENDATIONS: Recommendation[] = [
         },
         {
           kind: 'collapsible',
-          label: 'Testing agent response',
+          label: 'Revised agent response',
           meta: '19.6s',
           defaultExpanded: true,
           children: [
@@ -1917,6 +1920,46 @@ export function computeImpact(conversationCount: number, maxConversationCount: n
 export type RecStatus = 'open' | 'accepted' | 'rejected'
 
 const PRIORITY_ORDER: Record<Priority, number> = { High: 0, Medium: 1, Low: 2 }
+
+const FEEDBACK_REPORTER_NAMES = ['Anil', 'Robert', 'Dylan', 'Jobin', 'Maria', 'Chen', 'Fatima', 'Alex']
+
+/** Deterministically picks a name for the Recommendation tab's Type column — stable across
+ *  reloads/re-renders (unlike `Math.random()`) since it's derived from a fixed seed, but varies
+ *  across recommendations so it reads as "a real person reported this," not one fixed name. */
+export function pickReporterName(seed: string): string {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  return FEEDBACK_REPORTER_NAMES[hash % FEEDBACK_REPORTER_NAMES.length]
+}
+
+/** Formats a `Recommendation.timeAgo` value (e.g. "15m ago", "4h ago", "Just now") for the
+ *  Recommendation tab's Date column: minutes/hours ago under 24h, "Yesterday" for the next day,
+ *  and an absolute date ("March 15, 2026") beyond that. */
+export function formatRecommendationDate(timeAgo: string): string {
+  if (timeAgo === 'Just now') return timeAgo
+
+  const minutesMatch = timeAgo.match(/^(\d+)m ago$/)
+  const hoursMatch = timeAgo.match(/^(\d+)h ago$/)
+  const daysMatch = timeAgo.match(/^(\d+)d ago$/)
+
+  let minutesElapsed: number
+  if (minutesMatch) minutesElapsed = Number(minutesMatch[1])
+  else if (hoursMatch) minutesElapsed = Number(hoursMatch[1]) * 60
+  else if (daysMatch) minutesElapsed = Number(daysMatch[1]) * 1440
+  else return timeAgo // already an absolute date or some other format — pass through untouched
+
+  if (minutesElapsed < 1) return 'Just now'
+  if (minutesElapsed < 60) return `${minutesElapsed} minute${minutesElapsed === 1 ? '' : 's'} ago`
+
+  const hoursElapsed = Math.floor(minutesElapsed / 60)
+  if (hoursElapsed < 24) return `${hoursElapsed} hour${hoursElapsed === 1 ? '' : 's'} ago`
+
+  const daysElapsed = Math.floor(minutesElapsed / 1440)
+  if (daysElapsed === 1) return 'Yesterday'
+
+  const date = new Date(Date.now() - minutesElapsed * 60_000)
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
 
 export function sortRecommendations(recs: Recommendation[]): Recommendation[] {
   return [...recs].sort((a, b) => {

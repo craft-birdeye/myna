@@ -27,6 +27,7 @@ type CoachingTemplate = Pick<
   | 'isNew'
   | 'whenToUse'
   | 'exitCriteria'
+  | 'reportedBy'
   | 'steps'
   | 'tools'
   | 'thoughts'
@@ -50,6 +51,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     isNew: false,
     whenToUse: 'Whenever Myna replies on chat or text — match the short, casual register customers use there. Voice keeps its existing tone.',
     exitCriteria: 'N/A — this is a standing tone rule, not a step-by-step task with an end point.',
+    reportedBy: 'Anil',
     steps: [
       { title: 'Chat & text tone', bullets: ['Short sentences, plain words, match the customer\'s casual register — no "duly noted," "kindly provide," or "so that I may proceed."'] },
       { title: 'Voice tone (unchanged)', bullets: ['Voice-channel tone stays exactly as configured today.'] },
@@ -106,7 +108,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
       },
       {
         kind: 'collapsible',
-        label: 'Testing agent response',
+        label: 'Revised agent response',
         meta: '14.2s · Now',
         defaultExpanded: true,
         children: [
@@ -133,6 +135,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     isNew: false,
     whenToUse: 'Every after-hours call, before Myna takes the reason for calling.',
     exitCriteria: "The greeting has finished and Myna moves on to the caller's actual reason for calling.",
+    reportedBy: 'Robert',
     steps: [
       { title: 'Required lines (unchanged)', bullets: ['Always state the emergency instruction ("If this is an emergency, please hang up and dial nine one one") and the recording notice, word-for-word.'] },
       { title: 'Shortened greeting', bullets: ["Don't read the on-call doctor's number to every caller up front — mention it's available and give the full number only when the caller asks for the doctor."] },
@@ -187,7 +190,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
       },
       {
         kind: 'collapsible',
-        label: 'Testing agent response',
+        label: 'Revised agent response',
         meta: '17.8s · Now',
         defaultExpanded: true,
         children: [
@@ -215,6 +218,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     isNew: false,
     whenToUse: 'When a caller asks about appointment availability, including weekend requests.',
     exitCriteria: 'The caller has an accurate answer about Saturday availability, booked or not.',
+    reportedBy: 'Dylan',
     steps: [
       { title: 'Saturday hours', bullets: ['Use {{Check Business Hours}} to confirm the clinic is open Saturdays, 9am–1pm.'] },
       { title: 'Saturday provider', bullets: ['Only Dr. Alvarez sees patients on Saturdays — never offer a Saturday slot with another provider.'] },
@@ -275,7 +279,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
       },
       {
         kind: 'collapsible',
-        label: 'Testing agent response',
+        label: 'Revised agent response',
         meta: '15.6s · Now',
         defaultExpanded: true,
         children: [
@@ -302,6 +306,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
     isNew: true,
     whenToUse: 'When a caller asks about test results, on any channel.',
     exitCriteria: 'The caller has a timeline and, if overdue, a follow-up note has been filed — no medical detail was shared.',
+    reportedBy: 'Jobin',
     steps: [
       { title: 'Share status and process only', bullets: ['Never read out results, values, or medical detail — explain that results come through the patient portal within the usual timeline.'] },
       { title: 'Offer a follow-up', bullets: ["If it's been longer than the usual timeline, use {{Trigger Escalation}} to leave a note for the team to follow up that day."] },
@@ -364,7 +369,7 @@ const COACHING_TEMPLATES: Record<string, CoachingTemplate> = {
       },
       {
         kind: 'collapsible',
-        label: 'Testing agent response',
+        label: 'Revised agent response',
         meta: '19.1s · Now',
         defaultExpanded: true,
         children: [

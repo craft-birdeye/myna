@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { AiAgentIcon } from '../assets/AiAgentIcon'
+import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { Block, ChatBubble, ChatSystemLabel, Chip, Icon, ProcedureSidePanel, TranscriptSidePanel } from '../components'
 import {
@@ -30,6 +32,10 @@ import { useRecommendationOverridesStore } from '../data/RecommendationOverrides
 interface RecommendationDetailScreenProps {
   recommendationId: string
   onBack: () => void
+  /** When set, this detail page opens straight into a "what's the feedback about this message?"
+   *  prompt (pre-filled) instead of requiring a separate "Track your feedback" click first. */
+  autoOpenFeedbackPrefill?: string | null
+  onAutoOpenFeedbackConsumed?: () => void
 }
 
 // ── Confirm accept modal ──────────────────────────────────────────────────────
@@ -865,11 +871,7 @@ function StreamingText({
 /** The round sparkle avatar shown next to each agent "message" — every revealed block except a
  *  `thought` one (which renders flush, unindented, as if it's the agent thinking silently). */
 function AgentAvatar() {
-  return (
-    <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
-      <Icon name="auto_awesome" size={14} className="text-ai-brand" />
-    </span>
-  )
+  return <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
 }
 
 /** Pairs one block of agent content with its own avatar — used for the first of a run of
@@ -889,6 +891,49 @@ function AgentRow({ className = '', children }: { className?: string; children: 
  *  content column (avatar width + gap) instead of sitting flush like a `thought` would. */
 function AgentContinuation({ className = '', children }: { className?: string; children: React.ReactNode }) {
   return <div className={`pl-9 ${className}`}>{children}</div>
+}
+
+/** Shown instead of the normal reveal when a recommendation is opened via a "Coach agent"
+ *  direct-navigate link (see `RecommendationDetailScreenProps.autoOpenFeedbackPrefill`) — leads
+ *  with just the flagged excerpt (no feedback quote yet), asks what the feedback is about, and
+ *  hands off to the exact same composer used for refinements. Once answered, the caller clears
+ *  the prefill and the screen falls back to the normal, unmodified reveal — "the feedback quote"
+ *  appears there exactly as it always does, this view never fabricates one. */
+function PendingFeedbackAsk({
+  transcriptLines,
+  prefill,
+  onAnswered,
+}: {
+  transcriptLines: { speaker: string; text: string }[]
+  prefill: string
+  onAnswered: () => void
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2xl">
+        <div className="mx-auto flex w-full max-w-[900px] flex-col gap-lg py-xl">
+          <AgentRow>
+            <Block heading="Reported conversation" variant="neutral" hideBar>
+              <div className="flex flex-col gap-md rounded-md border border-border bg-surface-hover/40 p-lg">
+                {transcriptLines.map((line, i) => {
+                  const isAgent = line.speaker.toLowerCase().includes('myna')
+                  return (
+                    <ChatBubble key={i} sender={isAgent ? 'business' : 'user'} text={line.text}>
+                      <span className="text-small text-text-tertiary">{line.speaker}</span>
+                    </ChatBubble>
+                  )
+                })}
+              </div>
+            </Block>
+          </AgentRow>
+          <AgentContinuation>
+            <p className="text-body text-text-primary">What is your feedback on this?</p>
+          </AgentContinuation>
+        </div>
+      </div>
+      <CopilotFooter isThinking={false} onSubmit={onAnswered} prefill={prefill} />
+    </div>
+  )
 }
 
 /** Rough time (ms) a block takes to finish appearing — mainly however long its own
@@ -1135,7 +1180,7 @@ function IntroBlockItem({
           </Block>
         )
       }
-      if (block.label === 'Testing agent response') {
+      if (block.label === 'Revised agent response') {
         return (
           <Block
             heading={block.label}
@@ -1208,9 +1253,7 @@ function UserTurnBubble({ text, children }: { text: string; children?: React.Rea
 function SimpleAgentReply({ text }: { text: string }) {
   return (
     <div className="flex items-start gap-md">
-      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
-        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
-      </span>
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <p className="min-w-0 flex-1 text-body text-text-primary">{text}</p>
     </div>
   )
@@ -1778,9 +1821,7 @@ function RefinementThinking() {
 
   return (
     <div className="flex items-start gap-md">
-      <span className="mt-[2px] flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ede9fe]">
-        <Icon name="auto_awesome" size={14} className="text-ai-brand" />
-      </span>
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex min-w-0 flex-1 flex-col gap-xs">
         {items.map((item, i) =>
           visibleCount >= i + 1 ? (
@@ -1966,11 +2007,26 @@ function RecommendationChatView({
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
-export function RecommendationDetailScreen({ recommendationId, onBack }: RecommendationDetailScreenProps) {
+export function RecommendationDetailScreen({
+  recommendationId,
+  onBack,
+  autoOpenFeedbackPrefill,
+  onAutoOpenFeedbackConsumed,
+}: RecommendationDetailScreenProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
   const { overrides, submitRefinement, setRecommendationStatus, resetOverrides } = useRecommendationOverridesStore()
   const rec =
     [...RECOMMENDATIONS, ...feedbackRecommendations].find((r) => r.id === recommendationId) ?? RECOMMENDATIONS[0]
+
+  // The "Read the reported conversation" block is always first when present — its full transcript
+  // (the actual recorded chat, not just the short flagged excerpt) is what `PendingFeedbackAsk`
+  // shows while asking for feedback, before the feedback quote itself (which only ever appears
+  // via the normal reveal) exists.
+  const firstIntroBlock = rec.introBlocks?.[0]
+  const pendingTranscriptLines =
+    firstIntroBlock?.kind === 'collapsible'
+      ? firstIntroBlock.children.find((c): c is Extract<IntroBlock, { kind: 'transcript' }> => c.kind === 'transcript')?.lines ?? null
+      : null
 
   // Multi-type recommendations carry `changes` directly; single-type ones fall back to their
   // legacy top-level fields so older data keeps working without a migration.
@@ -2096,7 +2152,7 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
           {rec.source === 'feedback' ? (
             <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" />
           ) : (
-            <Icon name="auto_awesome" size={16} className="shrink-0 text-ai-brand" />
+            <AiAgentIcon size={16} className="shrink-0" />
           )}
           <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
           <Chip
@@ -2119,33 +2175,43 @@ export function RecommendationDetailScreen({ recommendationId, onBack }: Recomme
       </div>
 
       {/* Body */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div ref={chatScrollRef} className="min-w-0 flex-1 overflow-y-auto px-2xl">
-          <RecommendationChatView
-            rec={rec}
-            recStatus={recStatus}
-            onReject={handleReject}
-            onRequestAccept={() => setConfirmOpen(true)}
-            effectiveChanges={effectiveChanges}
-            turns={chatTurns}
-            isThinking={isThinking}
-            onOpenConversations={() => setConvsOpen(true)}
-            onApproveScripted={handleApproveScripted}
-            onRejectScripted={() => handleReject(rec.id)}
-            onViewProcedure={() => setProcedurePanelOpen(true)}
-            onViewTranscript={(lines) => {
-              setTranscriptLines(lines)
-              setTranscriptPanelOpen(true)
-            }}
-          />
-        </div>
-      </div>
+      {autoOpenFeedbackPrefill != null && pendingTranscriptLines ? (
+        <PendingFeedbackAsk
+          transcriptLines={pendingTranscriptLines}
+          prefill={autoOpenFeedbackPrefill}
+          onAnswered={() => onAutoOpenFeedbackConsumed?.()}
+        />
+      ) : (
+        <>
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <div ref={chatScrollRef} className="min-w-0 flex-1 overflow-y-auto px-2xl">
+              <RecommendationChatView
+                rec={rec}
+                recStatus={recStatus}
+                onReject={handleReject}
+                onRequestAccept={() => setConfirmOpen(true)}
+                effectiveChanges={effectiveChanges}
+                turns={chatTurns}
+                isThinking={isThinking}
+                onOpenConversations={() => setConvsOpen(true)}
+                onApproveScripted={handleApproveScripted}
+                onRejectScripted={() => handleReject(rec.id)}
+                onViewProcedure={() => setProcedurePanelOpen(true)}
+                onViewTranscript={(lines) => {
+                  setTranscriptLines(lines)
+                  setTranscriptPanelOpen(true)
+                }}
+              />
+            </div>
+          </div>
 
-      <CopilotFooter
-        isThinking={isThinking}
-        onSubmit={handleSubmitRefinement}
-        prefill={chatTurns.length === 0 ? rec.composerPrefill : undefined}
-      />
+          <CopilotFooter
+            isThinking={isThinking}
+            onSubmit={handleSubmitRefinement}
+            prefill={chatTurns.length === 0 ? rec.composerPrefill : undefined}
+          />
+        </>
+      )}
 
       <ConversationsDrawer rec={rec} open={convsOpen} onClose={() => setConvsOpen(false)} />
 

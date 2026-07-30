@@ -37,6 +37,13 @@ interface AgentInstanceScreenProps {
    *  being it) — lets the app-level layout hide the secondary sidebar so that screen can go
    *  full-bleed. */
   onRecommendationDetailActiveChange?: (active: boolean) => void
+  /** Set when the host app should jump straight to a specific recommendation (e.g. from a
+   *  "Track your feedback" link in the Inbox) instead of the default Outcomes tab. */
+  initialRecommendationId?: string | null
+  onInitialRecommendationConsumed?: () => void
+  /** When set alongside `initialRecommendationId`, the recommendation detail page immediately
+   *  asks for the feedback itself (see the Taylor Brooks "Coach agent" direct-navigate flow). */
+  initialFeedbackPrefill?: string | null
 }
 
 interface LocationRow {
@@ -317,17 +324,31 @@ export function AgentInstanceScreen({
   onNavigateToInbox,
   product,
   onRecommendationDetailActiveChange,
+  initialRecommendationId,
+  onInitialRecommendationConsumed,
+  initialFeedbackPrefill,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState('outcomes')
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
+  const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
 
   useEffect(() => {
     onRecommendationDetailActiveChange?.(selectedRecommendationId !== null)
     return () => onRecommendationDetailActiveChange?.(false)
   }, [selectedRecommendationId, onRecommendationDetailActiveChange])
+
+  useEffect(() => {
+    if (!initialRecommendationId) return
+    setActiveTab('recommendation')
+    setSelectedRecommendationId(initialRecommendationId)
+    setPendingFeedbackPrefill(initialFeedbackPrefill ?? null)
+    onInitialRecommendationConsumed?.()
+    // Only react to focus-id changes; consume callback is intentionally unstable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRecommendationId])
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -383,6 +404,8 @@ export function AgentInstanceScreen({
           <RecommendationDetailScreen
             recommendationId={selectedRecommendationId}
             onBack={() => setSelectedRecommendationId(null)}
+            autoOpenFeedbackPrefill={pendingFeedbackPrefill}
+            onAutoOpenFeedbackConsumed={() => setPendingFeedbackPrefill(null)}
           />
         </div>
       </div>

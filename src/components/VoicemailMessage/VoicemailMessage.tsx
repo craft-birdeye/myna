@@ -74,6 +74,8 @@ export function VoicemailMessage({
   contactName,
   feedbackPrefill,
   onSubmitFeedback,
+  onTrackFeedback,
+  onCoachAgentDirect,
 }: VoicemailMessageProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -209,6 +211,8 @@ export function VoicemailMessage({
           summary={summary}
           feedbackPrefill={feedbackPrefill}
           onSubmitFeedback={onSubmitFeedback}
+          onTrackFeedback={onTrackFeedback}
+          onCoachAgentDirect={onCoachAgentDirect}
           title={contactName ? `Call with ${contactName}` : undefined}
           onClose={() => setDrawerOpen(false)}
         />

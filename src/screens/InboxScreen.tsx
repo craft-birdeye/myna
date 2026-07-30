@@ -696,9 +696,15 @@ function InboxSideNav({ activeId, onSelect }: { activeId: string; onSelect: (id:
 export function InboxScreen({
   initialConversationId,
   onInitialConversationConsumed,
+  onNavigateToRecommendation,
 }: {
   initialConversationId?: string | null
   onInitialConversationConsumed?: () => void
+  /** Called when a "Track your feedback" link is clicked in a voice-call transcript drawer —
+   *  the host app navigates to that recommendation's detail page for the given agent instance.
+   *  `feedbackPrefill`, when set, tells the destination detail page to immediately ask for the
+   *  feedback itself (see the Taylor Brooks "Coach agent" direct-navigate flow below). */
+  onNavigateToRecommendation?: (instanceName: string, recommendationId: string, feedbackPrefill?: string) => void
 } = {}) {
   const [activeNav, setActiveNav] = useState('view-all-interactions')
   const [selectedConvo, setSelectedConvo] = useState(() => {
@@ -764,7 +770,7 @@ export function InboxScreen({
   const handleVoiceDrawerFeedback = (details: string, messageId: string) => {
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
 
-    submitFeedback({
+    return submitFeedback({
       text: details,
       agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
       conversation: {
@@ -777,6 +783,32 @@ export function InboxScreen({
       conversationId: selectedConvo.id,
       messageId,
     })
+  }
+
+  const handleTrackFeedback = (recommendationId: string) => {
+    onNavigateToRecommendation?.(selectedConvo.assignee ?? 'Front desk agent - North region', recommendationId)
+  }
+
+  // Taylor Brooks (coaching-c3, Saturday hours): "Coach agent" skips the in-drawer Share-feedback
+  // modal and jumps straight to the recommendation detail page, which asks for the feedback
+  // itself as soon as it opens — one motion instead of submit-then-separately-click-Track.
+  const handleCoachAgentDirect = (messageId: string) => {
+    const feedbackPrefill = coachingCall?.feedbackGiven ?? ''
+    const agentName = selectedConvo.assignee ?? 'Front desk agent - North region'
+    const recId = submitFeedback({
+      text: feedbackPrefill,
+      agentName,
+      conversation: {
+        name: selectedConvo.name,
+        message: feedbackPrefill,
+        channel: 'Voice',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId,
+    })
+    onNavigateToRecommendation?.(agentName, recId, feedbackPrefill)
   }
 
   const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
@@ -979,6 +1011,7 @@ export function InboxScreen({
                     messages={FRONT_DESK_VOICE_MESSAGES}
                     contactName={selectedConvo.name}
                     onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
                   />
                 </>
               ) : coachingCall ? (
@@ -998,6 +1031,8 @@ export function InboxScreen({
                     contactName={selectedConvo.name}
                     feedbackPrefill={coachingCall.feedbackGiven}
                     onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
+                    onCoachAgentDirect={selectedConvo.id === COACHING_C3_CONVERSATION_ID ? handleCoachAgentDirect : undefined}
                   />
                 </>
               ) : !isAnnetteChat ? (
@@ -1015,6 +1050,7 @@ export function InboxScreen({
                     audioUrl={voicemailSample}
                     contactName={selectedConvo.name}
                     onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
                   />
                 </>
               ) : null}

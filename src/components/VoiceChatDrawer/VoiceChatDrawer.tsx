@@ -3,9 +3,7 @@ import { createPortal } from 'react-dom'
 
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
-import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
-import { Toast } from '../Toast/Toast'
 import type { VoiceChatDrawerProps } from './VoiceChatDrawer.types'
 
 export function VoiceChatDrawer({
@@ -14,30 +12,24 @@ export function VoiceChatDrawer({
   summary,
   feedbackPrefill,
   onSubmitFeedback,
+  onTrackFeedback,
+  onCoachAgentDirect,
   mode = 'voice',
   title,
   onClose,
 }: VoiceChatDrawerProps) {
   const isChat = mode === 'chat'
   const [summaryOpen, setSummaryOpen] = useState(true)
-  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
+  // Once a message's feedback is submitted, its "Coach agent" link becomes a "Track your
+  // feedback" link pointing at the recommendation the feedback landed on.
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
   const [shareFeedbackId, setShareFeedbackId] = useState<string | null>(null)
-  const [toastVisible, setToastVisible] = useState(false)
   const headerTitle = title ?? (isChat ? 'Chat with Myna' : 'Call with Myna')
-
-  const handleFeedbackChange = (id: string, value: MessageFeedbackValue) => {
-    if (value === 'down') {
-      setShareFeedbackId(id)
-      return
-    }
-    setMessageFeedback((prev) => ({ ...prev, [id]: value }))
-    if (value === 'up') setToastVisible(true)
-  }
 
   const handleShareFeedbackSubmit = (details: string) => {
     if (shareFeedbackId === null) return
-    setMessageFeedback((prev) => ({ ...prev, [shareFeedbackId]: 'down' }))
-    onSubmitFeedback?.(details, shareFeedbackId)
+    const recId = onSubmitFeedback?.(details, shareFeedbackId)
+    if (recId) setRecIdByMessage((prev) => ({ ...prev, [shareFeedbackId]: recId }))
     setShareFeedbackId(null)
   }
 
@@ -83,15 +75,29 @@ export function VoiceChatDrawer({
                   return <ChatSystemLabel key={m.id} text={m.text} />
                 }
                 if (m.role === 'agent') {
+                  const recId = recIdByMessage[String(m.id)]
                   return (
-                    <ChatBubble
-                      key={m.id}
-                      sender="business"
-                      text={m.text}
-                      showFeedback
-                      feedback={messageFeedback[String(m.id)] ?? null}
-                      onFeedbackChange={(value) => handleFeedbackChange(String(m.id), value)}
-                    />
+                    <ChatBubble key={m.id} sender="business" text={m.text}>
+                      {recId ? (
+                        <button
+                          type="button"
+                          onClick={() => onTrackFeedback?.(recId)}
+                          className="text-small text-text-action hover:underline"
+                        >
+                          Track your feedback
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
+                          }
+                          className="text-small text-text-tertiary hover:text-text-secondary"
+                        >
+                          Coach agent
+                        </button>
+                      )}
+                    </ChatBubble>
                   )
                 }
                 return (
@@ -108,11 +114,6 @@ export function VoiceChatDrawer({
         onClose={() => setShareFeedbackId(null)}
         onSubmit={handleShareFeedbackSubmit}
         initialDetails={feedbackPrefill}
-      />
-      <Toast
-        message="Thanks for the feedback!"
-        visible={toastVisible}
-        onClose={() => setToastVisible(false)}
       />
     </div>,
     document.body,

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { buildCoachingFeedbackRecommendation } from './coachingFeedbackRecommendations'
 import {
   classifyFeedbackType,
+  pickReporterName,
   similarIssuesSummary,
   titleFromFeedback,
   type ConversationItem,
@@ -24,7 +25,9 @@ interface SubmitFeedbackInput {
 
 interface FeedbackRecommendationsStore {
   feedbackRecommendations: Recommendation[]
-  submitFeedback: (input: SubmitFeedbackInput) => void
+  /** Returns the id of the recommendation the feedback landed on (created, or an existing one it
+   *  was merged into), so a caller can immediately link to it (e.g. "Track your feedback"). */
+  submitFeedback: (input: SubmitFeedbackInput) => string
   /** Wipes every Human-feedback recommendation across every agent — a clean-slate control for
    *  clearing out test/demo feedback before a fresh walkthrough. */
   clearAllFeedback: () => void
@@ -57,7 +60,7 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
     }
   }, [feedbackRecommendations])
 
-  const submitFeedback = ({ text, agentName, conversation, conversationId, messageId }: SubmitFeedbackInput) => {
+  const submitFeedback = ({ text, agentName, conversation, conversationId, messageId }: SubmitFeedbackInput): string => {
     // The four coaching-example transcripts (Inbox voice calls C1–C4) get a fully hand-scripted
     // chat — same pattern as the AI-detected recommendations — instead of the generic
     // heuristic-classified one below.
@@ -78,11 +81,17 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
         }
         return [...prev, coachingRecommendation]
       })
-      return
+      return coachingRecommendation.id
     }
 
     const gapType = classifyFeedbackType(text)
     const feedbackKey = text.trim().toLowerCase().replace(/\s+/g, ' ')
+    // Computed up front (outside the state updater) so we can hand the id straight back to the
+    // caller — reused as-is if this feedback already has an open record, else freshly minted.
+    const existing = feedbackRecommendations.find(
+      (rec) => rec.source === 'feedback' && rec.agentName === agentName && rec.feedbackKey === feedbackKey,
+    )
+    const resultId = existing?.id ?? `feedback-${Date.now()}`
 
     setFeedbackRecommendations((prev) => {
       const existingIndex = prev.findIndex(
@@ -111,7 +120,7 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
       // document, then review" gate used for AI-detected knowledge recommendations.
       const needsSourceDocument = gapType === 'knowledge'
       const newRecommendation: Recommendation = {
-        id: `feedback-${Date.now()}`,
+        id: resultId,
         gapType,
         title,
         procedureTitle: title,
@@ -131,6 +140,7 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
         feedbackKey,
         sourceConversationId: conversationId,
         sourceMessageId: messageId,
+        reportedBy: pickReporterName(feedbackKey),
         manualUpdates: needsSourceDocument
           ? [
               {
@@ -145,6 +155,7 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
       }
       return [...prev, newRecommendation]
     })
+    return resultId
   }
 
   const clearAllFeedback = () => {

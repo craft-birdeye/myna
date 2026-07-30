@@ -270,6 +270,12 @@ const AGENT_NAMES: Record<string, string> = {
   'treatment-plan-agent': 'Treatment plan agent',
 }
 
+// Reverse of AGENT_NAMES — used to resolve a Recommendation's `agentName` (a full instance
+// name like "Front desk agent - North region") back to the navActive id that opens it.
+const AGENT_NAV_ID_BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(AGENT_NAMES).map(([id, name]) => [name, id]),
+)
+
 // ─── "View details" deep links ─────────────────────────────────────────────
 // Detail views open in a new browser tab. Since this prototype has no URL
 // router, the clicked row's args are JSON-encoded into the URL so the fresh
@@ -318,6 +324,7 @@ export function App() {
   const [agentToastMessage, setAgentToastMessage] = useState('')
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
+  const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')
@@ -425,6 +432,14 @@ export function App() {
           <InboxScreen
             initialConversationId={inboxFocusId}
             onInitialConversationConsumed={() => setInboxFocusId(null)}
+            onNavigateToRecommendation={(instanceName, recommendationId, feedbackPrefill) => {
+              const baseName = instanceName.replace(/ - .+$/, '')
+              const navId = AGENT_NAV_ID_BY_NAME[baseName]
+              if (!navId) return
+              setRecommendationFocus({ instanceName, recommendationId, feedbackPrefill })
+              setNavActive(navId)
+              setRailActive('frontdesk')
+            }}
           />
         ) : isEditingWorkflow ? (
           <>
@@ -591,6 +606,8 @@ export function App() {
               setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
               setRailActive('inbox')
             }}
+            initialRecommendationFocus={recommendationFocus}
+            onInitialRecommendationFocusConsumed={() => setRecommendationFocus(null)}
             product={activeProduct}
           />
         ) : appointmentDetail ? (

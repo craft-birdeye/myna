@@ -31,6 +31,10 @@ interface AgentDetailScreenProps {
   product?: string
   /** Bubbled up from `AgentInstanceScreen` — see its own doc comment. */
   onRecommendationDetailActiveChange?: (active: boolean) => void
+  /** Set by the host app when a "Track your feedback" link (Inbox) should open a specific
+   *  recommendation inside a specific agent instance. */
+  initialRecommendationFocus?: { instanceName: string; recommendationId: string; feedbackPrefill?: string } | null
+  onInitialRecommendationFocusConsumed?: () => void
 }
 
 interface AgentInstance {
@@ -371,7 +375,7 @@ function CreateAgentEmptyState({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSettings, onAgentSetupActiveChange, onNavigateToInbox, product, onRecommendationDetailActiveChange }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSettings, onAgentSetupActiveChange, onNavigateToInbox, product, onRecommendationDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -484,6 +488,15 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
     conversationsAssigned: r.conversationsAssigned,
     conversationsManaged: r.conversationsManaged,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
+
+  useEffect(() => {
+    if (!initialRecommendationFocus) return
+    const match = data.find((d) => d.name === initialRecommendationFocus.instanceName)
+    if (match) setSelectedInstance({ name: match.name, status: match.status })
+    // Only react to focus-id changes; `data` is derived fresh each render and would otherwise
+    // retrigger this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRecommendationFocus])
 
   const isReminder        = agentName === 'Reminder agent'
   const isFrontdesk       = agentName === 'Front desk agent'
@@ -664,6 +677,13 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
         onNavigateToInbox={onNavigateToInbox}
         product={product}
         onRecommendationDetailActiveChange={onRecommendationDetailActiveChange}
+        initialRecommendationId={
+          initialRecommendationFocus?.instanceName === selectedInstance.name ? initialRecommendationFocus.recommendationId : null
+        }
+        initialFeedbackPrefill={
+          initialRecommendationFocus?.instanceName === selectedInstance.name ? initialRecommendationFocus.feedbackPrefill ?? null : null
+        }
+        onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
       />
     )
   }

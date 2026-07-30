@@ -1,5 +1,6 @@
 import { Chip, DataTable, EmptyState, Icon, type Column } from '../components'
-import { computeImpact, PRIORITY_VARIANT, RECOMMENDATIONS, sortRecommendations, type Recommendation } from '../data/recommendationsData'
+import { AiAgentIcon } from '../assets/AiAgentIcon'
+import { computeImpact, formatRecommendationDate, RECOMMENDATIONS, sortRecommendations, type Recommendation } from '../data/recommendationsData'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 import { useRecommendationOverridesStore } from '../data/RecommendationOverridesStoreContext'
 
@@ -26,42 +27,44 @@ const COLUMNS: Column<Recommendation>[] = [
   },
   {
     key: 'gapType',
-    label: 'Type',
+    label: 'From',
     width: 200,
+    sortable: true,
     render: (_, rec) => (
       <span className="inline-flex items-center gap-xs text-small text-text-secondary">
         {rec.source === 'feedback' ? (
           <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" />
         ) : (
-          <Icon name="auto_awesome" size={16} className="shrink-0 text-ai-brand" />
+          <AiAgentIcon size={16} className="shrink-0" />
         )}
-        {rec.source === 'feedback' ? 'Human feedback' : 'AI recommended'}
+        {rec.source === 'feedback' ? (rec.reportedBy ?? 'Human feedback') : 'Myna'}
       </span>
     ),
   },
   {
-    key: 'priority',
-    label: 'Impact',
-    width: 130,
-    render: (_, rec) => <Chip label={rec.priority} variant={PRIORITY_VARIANT[rec.priority]} />,
+    key: 'timeAgo',
+    label: 'Date',
+    width: 140,
+    render: (_, rec) => <span className="text-small text-text-secondary">{formatRecommendationDate(rec.timeAgo)}</span>,
+  },
+  {
+    key: 'conversationCount',
+    label: 'Conversations affected',
+    width: 180,
+    sortable: true,
+    render: (_, rec) => <span className="text-small text-text-secondary">{rec.conversationCount}</span>,
   },
   {
     key: 'status',
     label: 'Status',
     width: 120,
+    sortable: true,
     render: (_, rec) => (
       <Chip
         label={rec.status === 'accepted' ? 'Accepted' : rec.status === 'rejected' ? 'Rejected' : 'Open'}
         variant={rec.status === 'accepted' ? 'success' : rec.status === 'rejected' ? 'danger' : 'info'}
       />
     ),
-  },
-  {
-    key: 'conversationCount',
-    label: 'Conversation is affected',
-    width: 180,
-    sortable: true,
-    render: (_, rec) => <span className="text-small text-text-secondary">{rec.conversationCount}</span>,
   },
 ]
 

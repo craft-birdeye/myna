@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 export type BlockVariant = 'neutral' | 'danger' | 'warning' | 'success' | 'info'
 
 export interface BlockProps {
-  /** Small caption above the bar (e.g. "Issue", "Action needed", "Testing agent response"). */
+  /** Small caption above the bar (e.g. "Issue", "Action needed", "Revised agent response"). */
   heading?: string
   /** Trailing muted text next to the heading (e.g. "18.4s", "+3 additions, 1 change"). */
   meta?: string
