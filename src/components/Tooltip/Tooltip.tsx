@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { TooltipProps } from './Tooltip.types'
 
 const VARIANT_MAX_WIDTH = {
@@ -76,20 +77,23 @@ export function Tooltip({
       onMouseLeave={scheduleHide}
     >
       {children}
-      {visible && pos && (
-        <span
-          ref={panelRef}
-          role="tooltip"
-          className={`fixed z-[120] w-max ${VARIANT_MAX_WIDTH[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white shadow-tooltip ${
-            interactive ? 'pointer-events-auto' : 'pointer-events-none'
-          }`}
-          style={{ left: pos.x, top: pos.y, transform: 'translateX(-50%)' }}
-          onMouseEnter={interactive ? clearHideTimer : undefined}
-          onMouseLeave={interactive ? scheduleHide : undefined}
-        >
-          {content}
-        </span>
-      )}
+      {visible &&
+        pos &&
+        createPortal(
+          <span
+            ref={panelRef}
+            role="tooltip"
+            className={`fixed z-[120] w-max ${VARIANT_MAX_WIDTH[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white shadow-tooltip ${
+              interactive ? 'pointer-events-auto' : 'pointer-events-none'
+            }`}
+            style={{ left: pos.x, top: pos.y, transform: 'translateX(-50%)' }}
+            onMouseEnter={interactive ? clearHideTimer : undefined}
+            onMouseLeave={interactive ? scheduleHide : undefined}
+          >
+            {content}
+          </span>,
+          document.body,
+        )}
     </span>
   )
 }
