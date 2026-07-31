@@ -129,6 +129,7 @@ function Composer({ onSend, placeholder = 'Ask your Copilot…' }: { onSend: (te
  */
 export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, onOpenRecommendation }: CopilotPanelProps) {
   const { listThreads, getThread, upsertThread, appendMessages } = useCopilotThreadsStore()
+  const [view, setView] = useState<'home' | 'history'>('home')
   const [openThreadId, setOpenThreadId] = useState<string | null>(null)
   const [expandedInternal, setExpandedInternal] = useState(false)
   const [replying, setReplying] = useState(false)
@@ -194,6 +195,15 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
             <Icon name="arrow_back" size={18} className="shrink-0 text-text-icon" />
             <span className="truncate">{openThread.title}</span>
           </button>
+        ) : view === 'history' ? (
+          <button
+            type="button"
+            onClick={() => setView('home')}
+            className="flex min-w-0 items-center gap-xs rounded-sm px-sm py-xs text-body text-text-primary hover:bg-surface-hover"
+          >
+            <Icon name="arrow_back" size={18} className="shrink-0 text-text-icon" />
+            <span className="truncate">Conversations</span>
+          </button>
         ) : (
           <span className="flex items-center gap-sm text-body text-text-primary">
             <BirdAiStar size={20} />
@@ -201,6 +211,19 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
           </span>
         )}
         <div className="flex shrink-0 items-center gap-xs">
+          {view !== 'history' && (
+            <button
+              type="button"
+              aria-label="Conversation history"
+              onClick={() => {
+                setOpenThreadId(null)
+                setView('history')
+              }}
+              className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            >
+              <Icon name="history" size={18} />
+            </button>
+          )}
           <button
             type="button"
             aria-label={expanded ? 'Collapse' : 'Expand'}
@@ -231,9 +254,29 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
           )}
           <Composer onSend={handleSend} placeholder="Reply to your Copilot…" />
         </>
+      ) : view === 'history' ? (
+        /* History — this agent's past Copilot conversations, opened from the header icon */
+        <div className="flex min-h-0 flex-1 flex-col gap-xs overflow-y-auto px-lg pb-lg">
+          {threads.map((thread) => (
+            <button
+              key={thread.id}
+              type="button"
+              onClick={() => handleOpenThread(thread)}
+              className="flex items-center gap-sm rounded-sm px-sm py-sm text-left hover:bg-surface-hover"
+            >
+              <Icon
+                name={ORIGIN_ICON[thread.origin]}
+                size={18}
+                className={`shrink-0 ${thread.origin === 'coaching' ? 'text-chip-danger-text' : 'text-text-icon'}`}
+              />
+              <span className="min-w-0 flex-1 truncate text-body text-text-primary">{thread.title}</span>
+              <span className="shrink-0 text-small text-text-tertiary">{thread.timeLabel}</span>
+            </button>
+          ))}
+        </div>
       ) : (
         <>
-          {/* Home — greeting + per-agent history + suggestions */}
+          {/* Home — clean welcome; history lives behind the header icon */}
           <div className="shrink-0 px-lg pb-md">
             <h2 className="m-0 text-display text-text-primary">
               Hi {userName},
@@ -242,41 +285,25 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
             </h2>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-lg overflow-y-auto px-lg pb-md">
-            <div className="flex flex-col gap-xs">
-              <p className="m-0 pb-xs text-small text-text-tertiary">Recent conversations</p>
-              {threads.map((thread) => (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-lg px-2xl">
+            <BirdAiStar size={72} />
+            <p className="m-0 max-w-[240px] text-center text-body text-text-tertiary">
+              Ask about this agent, refine its procedures, or coach it with feedback
+            </p>
+          </div>
+
+          <div className="shrink-0 px-lg pb-md">
+            <div className="flex flex-wrap gap-sm">
+              {SUGGESTIONS.map((s) => (
                 <button
-                  key={thread.id}
+                  key={s}
                   type="button"
-                  onClick={() => handleOpenThread(thread)}
-                  className="flex items-center gap-sm rounded-sm px-sm py-sm text-left hover:bg-surface-hover"
+                  onClick={() => handleSend(s)}
+                  className="rounded-full border border-border bg-surface px-md py-xs text-small text-text-secondary hover:bg-surface-hover"
                 >
-                  <Icon
-                    name={ORIGIN_ICON[thread.origin]}
-                    size={18}
-                    className={`shrink-0 ${thread.origin === 'coaching' ? 'text-chip-danger-text' : 'text-text-icon'}`}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{thread.title}</span>
-                  <span className="shrink-0 text-small text-text-tertiary">{thread.timeLabel}</span>
+                  {s}
                 </button>
               ))}
-            </div>
-
-            <div className="flex flex-col gap-xs">
-              <p className="m-0 pb-xs text-small text-text-tertiary">Suggestions</p>
-              <div className="flex flex-wrap gap-sm">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => handleSend(s)}
-                    className="rounded-full border border-border bg-surface px-md py-xs text-small text-text-secondary hover:bg-surface-hover"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
