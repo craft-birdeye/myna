@@ -6,7 +6,7 @@ export default function RHSPanelHeader({
   title = 'Title',
   onPreview,
   onClose,
-  onBack,
+  onBack = undefined,
   showActions = true,
   showMoreMenu = false,
 }) {

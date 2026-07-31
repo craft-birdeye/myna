@@ -50,25 +50,39 @@ const HC_FRONTDESK_START = {
 
 interface WorkflowEditorScreenProps {
   agentName: string
+  /** Shown in the builder header and start node; workflow lookup still uses `agentName`. */
+  displayName?: string
   onClose: () => void
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
   aiAssistOpen?: boolean
   onAiAssistOpenChange?: (open: boolean) => void
+  hideLhs?: boolean
+  createAiPanelOpen?: boolean
+  previewProcedureId?: string | null
+  previewProcedureDetail?: Record<string, unknown> | null
+  onPreviewProcedureIdChange?: (id: string | null) => void
 }
 
 export function WorkflowEditorScreen({
   agentName,
+  displayName,
   onClose,
   product = 'automotive',
   agentStatus = 'Running',
   wizardDraft = null,
   aiAssistOpen,
   onAiAssistOpenChange,
+  hideLhs = false,
+  createAiPanelOpen = false,
+  previewProcedureId = null,
+  previewProcedureDetail = null,
+  onPreviewProcedureIdChange,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
+  const shownName = displayName ?? agentName
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'
@@ -111,7 +125,7 @@ export function WorkflowEditorScreen({
     const patched: Record<string, unknown> = {}
     for (const [key, val] of Object.entries(details)) {
       if (key === '__start__') {
-        patched[key] = { ...(val as Record<string, unknown>), agentName }
+        patched[key] = { ...(val as Record<string, unknown>), agentName: shownName }
       } else if (val && typeof val === 'object' && 'selectedAgent' in (val as Record<string, unknown>)) {
         const v = val as Record<string, unknown>
         if (typeof v.selectedAgent === 'string' && v.selectedAgent.startsWith('frontdesk-')) {
@@ -171,9 +185,9 @@ export function WorkflowEditorScreen({
     <div className="flex flex-col h-full w-full overflow-hidden">
       <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>}>
         <AgentBuilder
-          key={`${agentName}::${product}::${wizardDraft ? 'wizard' : 'default'}`}
-          pageTitle={agentName}
-          appTitle={agentName}
+          key={`${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}`}
+          pageTitle={shownName}
+          appTitle={shownName}
           onClose={onClose}
           product={product}
           activeNavId={activeNavId}
@@ -190,6 +204,11 @@ export function WorkflowEditorScreen({
           defaultOpenSection="Tasks"
           aiAssistOpen={aiAssistOpen}
           onAiAssistOpenChange={onAiAssistOpenChange}
+          hideLhs={hideLhs}
+          createAiPanelOpen={createAiPanelOpen}
+          previewProcedureId={previewProcedureId}
+          previewProcedureDetail={previewProcedureDetail}
+          onPreviewProcedureIdChange={onPreviewProcedureIdChange}
         />
       </Suspense>
     </div>

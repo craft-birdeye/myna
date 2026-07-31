@@ -25,14 +25,17 @@ const EMPTY_WORKFLOW = {
 
 interface WorkflowViewerTabProps {
   instanceName: string
+  /** Overrides the start-node / page title (e.g. newly created draft name). */
+  displayName?: string
   onEdit: () => void
   product?: string
 }
 
-export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowViewerTabProps) {
+export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }: WorkflowViewerTabProps) {
   const { procedures } = useProcedureStore()
   // instanceName is e.g. "Frontdesk agent - North region"; extract the agent name prefix
   const agentName = instanceName.replace(/ - .+$/, '')
+  const shownName = displayName ?? instanceName
   const isHCProduct = product === 'healthcare' || product === 'dental'
 
   const filteredProcedures = procedures.filter((p) =>
@@ -42,10 +45,22 @@ export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowVie
     product === 'healthcare' ? HEALTHCARE_AGENT_WORKFLOWS :
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
-  const workflow =
+  const baseWorkflow =
     product === 'healthcare' && instanceName === 'Reminder agent - North region'
       ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
       : workflowMap[agentName] ?? EMPTY_WORKFLOW
+
+  // Patch the start-node label so newly created drafts show their draft name on the canvas.
+  const workflow = {
+    nodes: baseWorkflow.nodes,
+    nodeDetails: {
+      ...baseWorkflow.nodeDetails,
+      '__start__': {
+        ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
+        agentName: shownName,
+      },
+    },
+  }
 
   return (
     <div className="relative flex-1 overflow-hidden" style={{ height: '100%' }}>
@@ -70,9 +85,9 @@ export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowVie
           </div>
         }>
           <AgentBuilder
-            key={`${agentName}::${product ?? 'automotive'}`}
-            pageTitle={instanceName}
-            appTitle={instanceName}
+            key={`${agentName}::${shownName}::${product ?? 'automotive'}`}
+            pageTitle={shownName}
+            appTitle={shownName}
             viewOnly={true}
             onEdit={onEdit}
             product={product ?? 'automotive'}

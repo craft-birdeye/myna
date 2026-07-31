@@ -681,6 +681,13 @@ export default function AgentBuilder({
   runDisabled = false,
   aiAssistOpen: aiAssistOpenProp,
   onAiAssistOpenChange,
+  hideLhs = false,
+  createAiPanelOpen = false,
+  /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
+  previewProcedureId = null,
+  /** Optional full RHS detail payload — used when the procedure isn't in the live library. */
+  previewProcedureDetail = null,
+  onPreviewProcedureIdChange,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -706,6 +713,24 @@ export default function AgentBuilder({
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
+  const externalPreviewRef = useRef(null);
+
+  /* Sync external Create-with-AI procedure clicks into the canvas RHS. */
+  useEffect(() => {
+    if (previewProcedureId) {
+      externalPreviewRef.current = previewProcedureId;
+      setLhsPreviewProcedureId(previewProcedureId);
+      setSelectedNodeId(null);
+      setActiveProcedureId(null);
+      setDrawerOpen(true);
+      return;
+    }
+    if (externalPreviewRef.current) {
+      externalPreviewRef.current = null;
+      setLhsPreviewProcedureId(null);
+      setDrawerOpen(false);
+    }
+  }, [previewProcedureId]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [bookTestModalOpen, setBookTestModalOpen] = useState(false);
   const [testAppointment, setTestAppointment] = useState(null);
@@ -760,11 +785,6 @@ export default function AgentBuilder({
   useEffect(() => {
     if (drawerOpen || previewOpen) setAiAssistOpen(false);
   }, [drawerOpen, previewOpen]);
-
-  /* ─── Collapse the LHS drawer whenever AI assist opens (toolbar click, or externally controlled) ─── */
-  useEffect(() => {
-    if (aiAssistOpen) setLhsCollapsed(true);
-  }, [aiAssistOpen]);
 
   /* ─── View-only: keep canvas state in sync when workflow props change ─── */
   useEffect(() => {
@@ -1683,7 +1703,19 @@ export default function AgentBuilder({
 
   const renderRHSPanel = () => {
     if (lhsPreviewProcedureId) {
-      const mergedProc = getProcedureDetailContent(lhsPreviewProcedureId, {}, product);
+      const closeLhsPreview = () => {
+        const wasExternal = externalPreviewRef.current === lhsPreviewProcedureId;
+        externalPreviewRef.current = null;
+        setLhsPreviewProcedureId(null);
+        setDrawerOpen(false);
+        if (wasExternal) onPreviewProcedureIdChange?.(null);
+      };
+      const mergedProc =
+        previewProcedureDetail &&
+        (previewProcedureDetail.id === lhsPreviewProcedureId ||
+          previewProcedureDetail.name === lhsPreviewProcedureId)
+          ? previewProcedureDetail
+          : getProcedureDetailContent(lhsPreviewProcedureId, {}, product);
       return (
         <RHS
           key={`lhs-preview-${lhsPreviewProcedureId}`}
@@ -1691,14 +1723,14 @@ export default function AgentBuilder({
           title={mergedProc.name}
           viewOnly={viewOnly}
           product={product}
-          onBack={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
+          onBack={closeLhsPreview}
           bodyProps={{
             initialValues: mergedProc,
             onFieldChange: () => {},
             onOpenToolDrawer: () => setToolPickerOpen(true),
           }}
-          onClose={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
-          onSave={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
+          onClose={closeLhsPreview}
+          onSave={closeLhsPreview}
         />
       );
     }
@@ -2129,7 +2161,10 @@ export default function AgentBuilder({
       </div>
 
       {/* ─── Builder body ─── */}
-      <div className="agent-builder-wrapper" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}>
+      <div
+        className="agent-builder-wrapper"
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
+      >
         {viewOnly && (
           <div className="ab-view-banner">
             <span className="material-symbols-outlined">visibility</span>
@@ -2144,27 +2179,30 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
-            <LHSDrawer
-              defaultTab="Create manually"
-              defaultOpenSection={defaultOpenSection}
-              forceOpenSection={lhsForceOpenSection}
-              onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
-              viewOnly={viewOnly}
-              product={product}
-              agentName={agentName}
-              procedures={procedures}
-              onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
-              onProcedureClick={viewOnly ? undefined : (procedureId) => {
-                setLhsPreviewProcedureId(procedureId);
-                setSelectedNodeId(null);
-                setActiveProcedureId(null);
-                setDrawerOpen(true);
-              }}
-            />
-          </div>
+          {!hideLhs && (
+            <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
+              <LHSDrawer
+                defaultTab="Create manually"
+                showTabs={!viewOnly}
+                defaultOpenSection={defaultOpenSection}
+                forceOpenSection={lhsForceOpenSection}
+                onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
+                viewOnly={viewOnly}
+                product={product}
+                agentName={agentName}
+                procedures={procedures}
+                onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
+                onProcedureClick={viewOnly ? undefined : (procedureId) => {
+                  setLhsPreviewProcedureId(procedureId);
+                  setSelectedNodeId(null);
+                  setActiveProcedureId(null);
+                  setDrawerOpen(true);
+                }}
+              />
+            </div>
+          )}
 
-          {lhsCollapsed && (
+          {!hideLhs && lhsCollapsed && (
             <button
               className="ab-lhs-expand-pill"
               onClick={() => setLhsCollapsed(false)}
@@ -2189,12 +2227,6 @@ export default function AgentBuilder({
               initialZoom={initialZoom}
               runDisabled={runDisabled}
               onEdit={viewOnly ? onEdit : undefined}
-              onAiAssist={viewOnly ? undefined : () => {
-                setDrawerOpen(false);
-                setPreviewOpen(false);
-                setAiAssistOpen(true);
-              }}
-              aiAssistActive={aiAssistOpen}
               onRun={() => {
                 if (isReminderAgent) {
                   setBookTestModalOpen(true);
@@ -2213,8 +2245,8 @@ export default function AgentBuilder({
           )}
 
           {drawerOpen && (
-            <div key={selectedNodeId} className="agent-builder__rhs">
-              <RHSErrorBoundary key={selectedNodeId}>
+            <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
+              <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
               </RHSErrorBoundary>
             </div>

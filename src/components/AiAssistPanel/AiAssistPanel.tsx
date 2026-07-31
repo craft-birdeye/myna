@@ -24,12 +24,10 @@ function BirdAiStar({ size = 72 }: { size?: number }) {
   )
 }
 
-export function AiAssistPanel({ userName = 'John', onClose, onExpand }: AiAssistPanelProps) {
+export function AiAssistPanel({ userName = 'John', onClose }: AiAssistPanelProps) {
   const [draft, setDraft] = useState('')
-  const [expandedInternal, setExpandedInternal] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const canSend = draft.trim().length > 0
-  const expanded = onExpand ? false : expandedInternal
-  const handleExpandClick = onExpand ?? (() => setExpandedInternal((e) => !e))
 
   return (
     <aside
@@ -42,7 +40,7 @@ export function AiAssistPanel({ userName = 'John', onClose, onExpand }: AiAssist
         <button
           type="button"
           aria-label={expanded ? 'Collapse' : 'Expand'}
-          onClick={handleExpandClick}
+          onClick={() => setExpanded((e) => !e)}
           className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
         >
           <Icon name={expanded ? 'close_fullscreen' : 'open_in_full'} size={18} />

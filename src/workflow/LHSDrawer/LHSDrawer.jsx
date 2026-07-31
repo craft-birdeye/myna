@@ -564,6 +564,7 @@ export default function LHSDrawer({
   procedures = null,
   onProcedureClick = null,
   onCollapse = null,
+  showTabs = false,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
 
@@ -787,7 +788,7 @@ export default function LHSDrawer({
 
   return (
     <div className="lhs-drawer" ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
-      <div className="lhs-drawer__tabs">
+      <div className={`lhs-drawer__tabs${showTabs ? ' lhs-drawer__tabs--visible' : ''}`}>
         {TABS.map((tab) => (
           <button
             key={tab}

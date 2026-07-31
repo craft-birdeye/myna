@@ -1,3 +1,5 @@
+export { ChatHistoryPanel } from './ChatHistoryPanel/ChatHistoryPanel'
+export type { ChatHistoryItem, ChatHistoryPanelProps } from './ChatHistoryPanel/ChatHistoryPanel.types'
 export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
 export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'

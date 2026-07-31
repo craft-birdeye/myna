@@ -18,9 +18,9 @@
 /* ─── Root panel ─── */
 .lhs-drawer {
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
-  border: none;
+  border-radius: 12px;
+  box-shadow: 0px 2px 12px rgba(33, 33, 33, 0.06);
+  border: 1px solid #e5e9f0;
   width: 360px;
   height: 100%;
   display: flex;
@@ -41,6 +41,10 @@
   width: 100%;
   gap: 8px;
   background: #fff;
+}
+
+.lhs-drawer__tabs--visible {
+  display: flex;
 }
 
 .lhs-drawer__tab {
@@ -93,7 +97,6 @@
 }
 
 /* ─── Tab content area ─── */
-.lhs-drawer__body,
 .lhs-drawer__ai-body {
   padding-top: 16px;
 }
@@ -108,7 +111,9 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
-  padding-right: 2px;
+  padding-top: 8px;
+  padding-right: 8px;
+  padding-left: 8px;
   scrollbar-width: 4px;
   scrollbar-color: #ccd5e4 transparent;
 }

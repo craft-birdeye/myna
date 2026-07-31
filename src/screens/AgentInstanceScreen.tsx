@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  AiAssistPanel,
   Chip,
   CoachAgentPanel,
   DataTable,
@@ -30,6 +29,8 @@ import { REMINDER_INBOX_CONVERSATION_ID } from '../data/reminderInboxConversatio
 
 interface AgentInstanceScreenProps {
   instanceName: string
+  /** Overrides the header / start-node label (e.g. newly created draft name). */
+  displayName?: string
   status?: string
   onBack: () => void
   onEditAgent?: (agentName: string) => void
@@ -309,6 +310,7 @@ const TAGGING_ROUTING_COLUMNS: Column<LocationRow>[] = [
 
 export function AgentInstanceScreen({
   instanceName,
+  displayName,
   status = 'Running',
   onBack,
   onEditAgent,
@@ -322,10 +324,10 @@ export function AgentInstanceScreen({
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
   const [coachOpen, setCoachOpen] = useState(false)
-  const [aiAssistOpen, setAiAssistOpen] = useState(false)
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
+  const shownName = displayName ?? instanceName
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
   const COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
@@ -343,8 +345,6 @@ export function AgentInstanceScreen({
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
-  // Front desk + Reminder agents get an "AI assist" copilot button next to Actions.
-  const isAiAssistAgent = agentName === 'Front desk agent' || agentName === 'Reminder agent'
   const showHealthcareLogs =
     activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
@@ -404,7 +404,7 @@ export function AgentInstanceScreen({
               >
                 <BackArrowIcon />
               </button>
-              <h1 className="text-h3 text-text-primary">{instanceName}</h1>
+              <h1 className="text-h3 text-text-primary">{shownName}</h1>
               <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
             </div>
             <div className="flex items-center gap-sm">
@@ -420,21 +420,6 @@ export function AgentInstanceScreen({
                     }`}
                   >
                     <Icon name="auto_awesome" size={20} />
-                  </button>
-                </Tooltip>
-              )}
-              {isAiAssistAgent && !isRecommendationTab && (
-                <Tooltip content="AI assist" variant="brief">
-                  <button
-                    type="button"
-                    aria-label="AI assist"
-                    aria-pressed={aiAssistOpen}
-                    onClick={() => setAiAssistOpen((open) => !open)}
-                    className={`flex size-9 items-center justify-center rounded-sm border border-border-selected hover:bg-surface-l2 ${
-                      aiAssistOpen ? 'bg-surface-selected' : 'bg-surface'
-                    }`}
-                  >
-                    <Icon name="auto_awesome" size={20} fill className="text-ai-brand" />
                   </button>
                 </Tooltip>
               )}
@@ -509,7 +494,6 @@ export function AgentInstanceScreen({
               onChange={(tabId) => {
                 setActiveTab(tabId)
                 if (tabId !== 'recommendation') setCoachOpen(false)
-                if (tabId === 'recommendation') setAiAssistOpen(false)
               }}
             />
           </div>
@@ -518,6 +502,7 @@ export function AgentInstanceScreen({
           {isWorkflowTab ? (
             <WorkflowViewerTab
               instanceName={instanceName}
+              displayName={shownName}
               onEdit={() => onEditAgent?.(instanceName)}
               product={product}
             />
@@ -579,10 +564,6 @@ export function AgentInstanceScreen({
             agentName={instanceName}
             onClose={() => setCoachOpen(false)}
           />
-        )}
-
-        {aiAssistOpen && isAiAssistAgent && !isRecommendationTab && (
-          <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
         )}
       </div>
     </div>
