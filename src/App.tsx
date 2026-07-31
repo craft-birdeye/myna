@@ -40,6 +40,8 @@ import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import logoSrc from './assets/birdeye-logo.svg'
+import iconMarketing from './assets/icon-marketing.svg'
+import iconAgents from './assets/icon-agents.svg'
 
 function EmptyResourceScreen({ label }: { label: string }) {
   return (
@@ -57,12 +59,44 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'locations', label: 'Locations', icon: 'near_me' },
-      { id: 'reviews', label: 'Reviews AI', icon: 'star' },
+      { id: 'agents', label: 'Agents', icon: iconAgents, kind: 'image', badge: 'New' },
+    ],
+  },
+  {
+    id: 'marketing',
+    header: 'Marketing',
+    items: [
+      { id: 'search', label: 'Search AI', icon: 'lightbulb' },
       { id: 'listings', label: 'Listings AI', icon: 'place' },
+      { id: 'reviews', label: 'Reviews AI', icon: 'star' },
       { id: 'social', label: 'Social AI', icon: 'workspaces' },
+      { id: 'referral', label: 'Referral', icon: 'featured_seasonal_and_gifts' },
+      { id: 'marketing-automation', label: 'Marketing Automation AI', icon: iconMarketing, kind: 'image' },
+    ],
+  },
+  {
+    id: 'operations',
+    header: 'Operations',
+    items: [
+      { id: 'inbox', label: 'Inbox', icon: 'sms' },
+      { id: 'frontdesk', label: 'Front desk', icon: 'desktop_windows' },
+    ],
+  },
+  {
+    id: 'cx',
+    header: 'Customer experience',
+    items: [
+      { id: 'surveys', label: 'Surveys AI', icon: 'assignment_turned_in' },
+      { id: 'ticketing', label: 'Ticketing', icon: 'shapes' },
+      { id: 'insights', label: 'Insights AI', icon: 'emoji_objects' },
+    ],
+  },
+  {
+    id: 'footer',
+    items: [
       { id: 'reports', label: 'Reports', icon: 'pie_chart' },
-      { id: 'scan-listings', label: 'Scan listings', icon: 'screen_search_desktop', external: true },
+      { id: 'patients', label: 'Patients', icon: 'group' },
+      { id: 'settings', label: 'Settings', icon: 'settings' },
     ],
   },
 ]
@@ -311,9 +345,9 @@ function openDetailInNewTab(view: string, args: unknown) {
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('reviews')
+  const [railActive, setRailActive] = useState('frontdesk')
   const [navActive, setNavActive] = useState(
-    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'reviews-all',
+    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'manage-appointments',
   )
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
