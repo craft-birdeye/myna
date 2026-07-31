@@ -248,7 +248,7 @@ function filterTaskSubItemsMap(subItemsMap, agentName = '') {
 }
 
 const READONLY_TRIGGER_SUBMENUS = new Set(['Contact-trigger', 'Appointment-trigger']);
-const READONLY_TASK_SUBMENUS = new Set(['Conversation', 'Contact', 'Appointment']);
+const READONLY_TASK_SUBMENUS = new Set(['Conversation', 'Contact', 'Appointment', 'Review-task', 'Referral-task', 'Survey-task', 'Ticketing-task', 'General-task']);
 const DISABLED_TASK_SUB_ITEMS = new Set(['In call text']);
 const PROCEDURE_COLLAPSE_LIMIT = 7;
 
@@ -267,6 +267,72 @@ export const HEALTHCARE_TASK_CARDS = [
   { label: 'Contact', icon: 'person', action: 'chevron', subKey: 'Contact' },
   { label: 'External apps', icon: 'grid_view', action: 'chevron', subKey: 'External apps-task' },
 ];
+
+/* ─── Reviews AI (reseller) task palette ─── */
+export const REVIEWS_TASK_CARDS = [
+  { label: 'Custom',        icon: 'dashboard_customize',  action: 'drag' },
+  { label: 'Review',        icon: 'grade',                action: 'chevron', subKey: 'Review-task',    count: 7 },
+  { label: 'Contact',       icon: 'group',                action: 'chevron', subKey: 'Contact',        count: 4 },
+  { label: 'Referral',      icon: 'featured_seasonal_and_gifts', action: 'chevron', subKey: 'Referral-task', count: 2 },
+  { label: 'Survey',        icon: 'assignment_turned_in', action: 'chevron', subKey: 'Survey-task',    count: 2 },
+  { label: 'Ticketing',     icon: 'shapes',               action: 'chevron', subKey: 'Ticketing-task', count: 2 },
+  { label: 'External apps', icon: 'dashboard_customize',  action: 'chevron', subKey: 'External apps-task', count: 5 },
+  { label: 'General',       icon: 'widgets',              action: 'chevron', subKey: 'General-task',   count: 3 },
+];
+
+export const REVIEWS_TASK_SUB_ITEMS = {
+  'Review-task': {
+    title: 'Review',
+    items: [
+      { label: 'Assign tags',         description: 'Add tags to a review' },
+      { label: 'Classify tags',       description: 'Manage review tags and their descriptions' },
+      { label: 'Response generation', description: 'Assemble the final message from the drafted strategy' },
+      { label: 'Review analysis',     description: "Detects what the reviewer is talking about, maps it to the business' vocabulary, score severity, identifies staff mentioned and competitors" },
+      { label: 'Triage review',       description: 'The system evaluates each review to determine if a response is needed, filtering out spam and policy violations' },
+      { label: 'Generate review summary', description: 'Summarize review themes across a time period' },
+      { label: 'Flag spam review',    description: 'Report a suspected spam review to the source site' },
+    ],
+  },
+  'Referral-task': {
+    title: 'Referral',
+    items: [
+      { label: 'Send referral invite',  description: 'Invite a happy reviewer to refer friends and family' },
+      { label: 'Track referral status', description: 'Check and update the status of an existing referral' },
+    ],
+  },
+  'Survey-task': {
+    title: 'Survey',
+    items: [
+      { label: 'Send survey',              description: 'Send a survey to the customer after an interaction' },
+      { label: 'Analyze survey responses', description: 'Extract sentiment and themes from survey answers' },
+    ],
+  },
+  'Ticketing-task': {
+    title: 'Ticketing',
+    items: [
+      { label: 'Create ticket',        description: 'Open a ticket from a review or conversation' },
+      { label: 'Update ticket status', description: 'Move a ticket through its workflow stages' },
+    ],
+  },
+  'General-task': {
+    title: 'General',
+    items: [
+      { label: 'Send an email alert', description: 'Send an internal email alert to selected recipients' },
+      { label: 'Update custom field', description: 'Write a value to a custom field on the record' },
+      { label: 'Wait for event',      description: 'Pause until a specific event occurs' },
+    ],
+  },
+  // Reviews-mode Contact override (4 tasks, matching the card count badge)
+  Contact: {
+    title: 'Contact tasks',
+    items: [
+      { label: 'Update contact property',   description: 'Change a property on the contact record' },
+      { label: 'Add contact to list',       description: 'Add the contact to a static or smart list' },
+      { label: 'Remove contact from list',  description: 'Remove the contact from a list' },
+      { label: 'Merge duplicate contacts',  description: 'Merge records that belong to the same person' },
+    ],
+  },
+};
 
 // Default export for backward compat (automotive)
 export const TASK_CARDS = AUTOMOTIVE_TASK_CARDS;
@@ -442,8 +508,11 @@ export function getAddStepControlCards() {
 }
 
 /* ─── Trigger + task sub-items (mutable state; procedures are derived dynamically) ─── */
-function buildInitialSubItems(isHC) {
+function buildInitialSubItems(isHC, isReviews = false) {
   const taskSubItems = isHC ? HEALTHCARE_TASK_SUB_ITEMS : AUTOMOTIVE_TASK_SUB_ITEMS;
+  if (isReviews) {
+    return { ...TRIGGER_SUB_ITEMS, ...taskSubItems, ...REVIEWS_TASK_SUB_ITEMS };
+  }
   return { ...TRIGGER_SUB_ITEMS, ...taskSubItems };
 }
 
@@ -462,6 +531,7 @@ export function CardRow({
   procedureId,
   dragLabel,
   disabled = false,
+  count,
 }) {
   const handleDragStart = (e) => {
     e.dataTransfer.setData('application/reactflow-type', nodeType);
@@ -494,6 +564,9 @@ export function CardRow({
         </span>
       )}
       <span className="lhs-drawer__card-label">{label}</span>
+      {count != null && (
+        <span className="lhs-drawer__card-count">{count}</span>
+      )}
       {action === 'drag' ? (
         <span className="lhs-drawer__card-action">
           <span className="material-symbols-outlined">drag_indicator</span>
@@ -564,11 +637,12 @@ export default function LHSDrawer({
   onCollapse = null,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
+  const isReviews = String(agentName).replace(/ - .+$/, '').startsWith('Review response agent');
 
   const activeTriggerCards = isHC ? HEALTHCARE_TRIGGER_CARDS : AUTOMOTIVE_TRIGGER_CARDS;
   const activeTriggerGroup = isHC ? HEALTHCARE_TRIGGER_GROUP : null;
   const activeTriggerStandaloneCards = isHC ? HEALTHCARE_TRIGGER_STANDALONE_CARDS : [];
-  const activeTaskCards = isHC ? HEALTHCARE_TASK_CARDS : AUTOMOTIVE_TASK_CARDS;
+  const activeTaskCards = isReviews ? REVIEWS_TASK_CARDS : isHC ? HEALTHCARE_TASK_CARDS : AUTOMOTIVE_TASK_CARDS;
 
   // Derive procedure cards + sub-items from the live library when the prop is provided;
   // fall back to the static hardcoded lists for backward-compat.
@@ -593,7 +667,7 @@ export default function LHSDrawer({
   const [expandedCard, setExpandedCard] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
   const [dropdownTop, setDropdownTop] = useState(0);
-  const [subItems, setSubItems] = useState(() => buildInitialSubItems(isHC));
+  const [subItems, setSubItems] = useState(() => buildInitialSubItems(isHC, isReviews));
   const panelRef = useRef(null);
   const cardRefs = useRef({});
   const closeDropdownTimerRef = useRef(null);
@@ -664,6 +738,7 @@ export default function LHSDrawer({
           procedureId={card.procedureId}
           dragLabel={card.dragLabel}
           disabled={card.disabled}
+          count={card.count}
         />
       </div>
     );

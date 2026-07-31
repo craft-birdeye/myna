@@ -18,6 +18,22 @@ const DEFAULT_LOCATIONS = [
 
 const VISIBLE_COUNT = 4;
 
+/* Reseller mode — businesses under the reseller account (used when the
+   workflow's __start__ details carry a `businesses` array instead of
+   `locations`). */
+const ALL_BUSINESSES = [
+  { id: 'B-101', name: 'Bright Smile Dental Studio' },
+  { id: 'B-102', name: 'Lakeside Auto Group' },
+  { id: 'B-103', name: 'Sunrise Family Medicine' },
+  { id: 'B-104', name: 'Metro Property Partners' },
+  { id: 'B-105', name: 'Golden Gate Fitness' },
+  { id: 'B-106', name: 'Harborview Restaurants' },
+  { id: 'B-107', name: 'Cedar Lane Veterinary' },
+  { id: 'B-108', name: 'Summit Legal Services' },
+  { id: 'B-109', name: 'Bluebird Home Services' },
+  { id: 'B-110', name: 'Pinecrest Hospitality' },
+];
+
 export default function AgentDetailsBody({ values: externalValues, onChange, viewOnly = false }) {
   const [internalValues, setInternalValues] = useState({
     agentName: '',
@@ -30,17 +46,22 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
 
   const values = externalValues ?? internalValues;
 
+  /* Business mode — the agent is scoped to reseller businesses, not locations */
+  const isBusinessMode = Array.isArray(values.businesses);
+  const entityField = isBusinessMode ? 'businesses' : 'locations';
+  const entityLabel = isBusinessMode ? 'Businesses' : 'Locations';
+
   /* Normalise locations — stored as strings OR as { id, name } objects */
   const normaliseLocations = (raw) =>
     (raw || []).map((l) =>
       typeof l === 'string' ? { id: l, name: l } : l
     );
 
-  const rawLocations = values.locations && values.locations.length > 0
-    ? values.locations
-    : DEFAULT_LOCATIONS;
+  const rawEntities = values[entityField] && values[entityField].length > 0
+    ? values[entityField]
+    : (isBusinessMode ? [] : DEFAULT_LOCATIONS);
 
-  const locations = normaliseLocations(rawLocations);
+  const locations = normaliseLocations(rawEntities);
 
   const handleRemoveChip = (id) => {
     updateLocations(locations.filter((l) => l.id !== id));
@@ -53,9 +74,9 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
 
   const updateLocations = (updated) => {
     if (onChange) {
-      onChange('locations', updated);
+      onChange(entityField, updated);
     } else {
-      setInternalValues((v) => ({ ...v, locations: updated }));
+      setInternalValues((v) => ({ ...v, [entityField]: updated }));
     }
   };
 
@@ -68,9 +89,17 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
   if (showLocations) {
     return (
       <LocationsDrawer
-        selectedIds={(values.locations || []).map((l) => l.id)}
+        selectedIds={normaliseLocations(values[entityField]).map((l) => l.id)}
         onBack={() => setShowLocations(false)}
         onSave={handleLocationsSave}
+        {...(isBusinessMode ? {
+          title: 'Businesses',
+          entities: ALL_BUSINESSES,
+          description: 'Choose the businesses this agent will work for. Select by',
+          selectByOptions: [{ label: 'Business', value: 'business' }],
+          entityNoun: 'business',
+          entityNounPlural: 'businesses',
+        } : {})}
       />
     );
   }
@@ -114,14 +143,14 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
       {/* ─── Locations ─── */}
       <div className={styles.locationsField}>
         <div className={styles.locationsLabel}>
-          <span className={styles.locationsLabelText}>Locations</span>
+          <span className={styles.locationsLabelText}>{entityLabel}</span>
           <span className={styles.locationsRequired}>*</span>
           {!viewOnly && (
             <button
               className={styles.locationsEditBtn}
               type="button"
               onClick={() => setShowLocations(true)}
-              title="Edit locations"
+              title={`Edit ${entityLabel.toLowerCase()}`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
                 edit

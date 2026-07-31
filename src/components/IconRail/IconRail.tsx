@@ -38,6 +38,14 @@ function NavTab({
           {item.badge}
         </span>
       )}
+
+      {item.external && (
+        <Icon
+          name="open_in_new"
+          size={16}
+          className="shrink-0 text-text-icon opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        />
+      )}
     </button>
   )
 }

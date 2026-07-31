@@ -13,6 +13,9 @@ export default function LHSEntityGroup({
   disabledItems = null,
 }) {
   const disabledSet = disabledItems instanceof Set ? disabledItems : new Set(disabledItems ?? []);
+  /* Items are strings OR { label, description } objects */
+  const labelOf = (item) => (typeof item === 'string' ? item : item?.label ?? '');
+  const descriptionOf = (item) => (typeof item === 'string' ? null : item?.description ?? null);
   const canEdit = !viewOnly && !readOnly && !!onItemsChange;
   const [editingIdx, setEditingIdx] = useState(null);
   const [editDraft, setEditDraft] = useState('');
@@ -23,13 +26,13 @@ export default function LHSEntityGroup({
   const handleDragStart = (e, item) => {
     e.dataTransfer.setData('application/reactflow-type', nodeType);
     e.dataTransfer.setData('application/reactflow-label', parentLabel);
-    e.dataTransfer.setData('application/reactflow-description', item);
+    e.dataTransfer.setData('application/reactflow-description', labelOf(item));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
   const startEdit = (idx) => {
     setEditingIdx(idx);
-    setEditDraft(items[idx]);
+    setEditDraft(labelOf(items[idx]));
   };
 
   const commitEdit = (idx) => {
@@ -69,7 +72,7 @@ export default function LHSEntityGroup({
 
       <div className="lhs-entity-group__items">
         {items.map((item, idx) => {
-          const isDisabled = disabledSet.has(item);
+          const isDisabled = disabledSet.has(labelOf(item));
           return (
           <div
             key={idx}
@@ -91,7 +94,12 @@ export default function LHSEntityGroup({
                 }}
               />
             ) : (
-              <span className="lhs-entity-group__item-label">{item}</span>
+              <span className="lhs-entity-group__item-body">
+                <span className="lhs-entity-group__item-label">{labelOf(item)}</span>
+                {descriptionOf(item) && (
+                  <span className="lhs-entity-group__item-description">{descriptionOf(item)}</span>
+                )}
+              </span>
             )}
 
             {!viewOnly && (

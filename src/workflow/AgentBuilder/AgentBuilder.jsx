@@ -12,6 +12,8 @@ import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
+import ResponseHandlerToolDrawer from '../Organisms/Drawers/ResponseHandlerToolDrawer/ResponseHandlerToolDrawer';
+import AssignTagsToolDrawer from '../Organisms/Drawers/AssignTagsToolDrawer/AssignTagsToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
 import QueryConfigDrawer from '../Organisms/Drawers/QueryConfigDrawer/QueryConfigDrawer';
 import AssignContactStatusDrawer from '../Organisms/Drawers/AssignContactStatusDrawer/AssignContactStatusDrawer';
@@ -140,6 +142,7 @@ function makeNodeDetails(type, label) {
 }
 
 const TASK_DROP_DEFAULTS = {
+  'Assign tags': { description: 'Add tags to a review', selectedTools: ['assign-tags'] },
   'Initiate voice call': { description: 'Call the customer' },
   'In-call SMS': { description: 'Send a text message to the caller during the active call', selectedTools: ['in-call-sms'] },
   'Send response': { selectedTools: ['send-response'] },
@@ -622,6 +625,7 @@ export default function AgentBuilder({
   procedures = null,
   onAddProcedure,
   publishDisabled = false,
+  publishLabel = 'Publish',
   defaultOpenSection = 'Tasks',
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
@@ -657,6 +661,8 @@ export default function AgentBuilder({
   const [viewingToolValues, setViewingToolValues] = useState({}); // saved field values for filled state
   const [reminderToolOpen, setReminderToolOpen] = useState(false);
   const [voiceCallToolOpen, setVoiceCallToolOpen] = useState(false);
+  const [responseHandlerToolOpen, setResponseHandlerToolOpen] = useState(false);
+  const [assignTagsToolOpen, setAssignTagsToolOpen] = useState(false);
   const [transferToolOpen, setTransferToolOpen] = useState(false);
   const [queryConfigOpen, setQueryConfigOpen] = useState(false);
   const [assignContactStatusToolOpen, setAssignContactStatusToolOpen] = useState(false);
@@ -1182,13 +1188,18 @@ export default function AgentBuilder({
   }, [selectedNodeId]);
 
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
+  const startBusinesses = nodeDetails[START_NODE_ID]?.businesses;
+  const isBusinessScoped = Array.isArray(startBusinesses);
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
-  const locationCount = startLocations.length;
+  const startEntities = isBusinessScoped ? startBusinesses : startLocations;
+  const entityNoun = isBusinessScoped ? 'business' : 'location';
+  const entityNounPlural = isBusinessScoped ? 'businesses' : 'locations';
+  const locationCount = startEntities.length;
   const startSubtitle = locationCount === 0
-    ? 'Add locations'
+    ? `Add ${entityNounPlural}`
     : locationCount === 1
-      ? '1 location'
-      : `${locationCount} locations`;
+      ? `1 ${entityNoun}`
+      : `${locationCount} ${entityNounPlural}`;
   const startData = {
     title: startAgentName,
     subtitle: startSubtitle,
@@ -1889,6 +1900,8 @@ export default function AgentBuilder({
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
           onOpenTool: (toolId) => {
+            if (toolId === 'publish-response') { setResponseHandlerToolOpen(true); return; }
+            if (toolId === 'assign-tags') { setAssignTagsToolOpen(true); return; }
             if (toolId === 'reminder-tool') { setReminderToolOpen(true); return; }
             if (toolId === 'get-unscheduled-treatment-plans') { setQueryConfigOpen(true); return; }
             if (toolId === 'assign-contact-status') { setAssignContactStatusToolOpen(true); return; }
@@ -1926,7 +1939,7 @@ export default function AgentBuilder({
       </button>
 <Button
         theme="primary"
-        label={isTemplateMode ? 'Save template' : 'Publish'}
+        label={isTemplateMode ? 'Save template' : publishLabel}
         onClick={isTemplateMode ? handleSaveTemplate : handlePublish}
         disabled={!isTemplateMode && publishDisabled}
       />
@@ -2114,6 +2127,8 @@ export default function AgentBuilder({
 
       {/* ─── Voice call tool drawer ─── */}
       <VoiceCallToolDrawer isOpen={voiceCallToolOpen} onClose={() => setVoiceCallToolOpen(false)} initialValues={currentDetails} product={product} />
+      <ResponseHandlerToolDrawer isOpen={responseHandlerToolOpen} onClose={() => setResponseHandlerToolOpen(false)} initialValues={currentDetails} onFieldChange={activeFieldChange} />
+      <AssignTagsToolDrawer isOpen={assignTagsToolOpen} onClose={() => setAssignTagsToolOpen(false)} />
 
       {/* ─── Transfer tool drawer ─── */}
       <TransferToolDrawer isOpen={transferToolOpen} onClose={() => setTransferToolOpen(false)} />

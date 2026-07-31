@@ -9,6 +9,47 @@ import chronoLogo from '../../assets/logo-chrono.svg';
 const _agents = new Map();
 
 const _SEED_TOOLS = [
+  // ── Reviews AI tools ─────────────────────────────────────────────────────
+  {
+    id: 'assign-tags',
+    name: 'Assign tags',
+    icon: 'sell',
+    description: 'Adds the selected tags to the review. Tag lists are managed per business.',
+    category: 'Reviews',
+    modules: ['Reviews'],
+    products: ['automotive', 'healthcare', 'dental'],
+    inputs: [{ name: 'tags', type: 'array', description: 'Tags to add to the review' }],
+    outputs: [{ name: 'status', type: 'string', description: 'Tag assignment status' }],
+  },
+  {
+    id: 'send-email-alert',
+    name: 'Send an email alert',
+    icon: 'mail',
+    description: 'Sends an internal email alert to selected recipients with review details and the reason it needs attention.',
+    category: 'Reviews',
+    modules: ['Reviews'],
+    products: ['automotive', 'healthcare', 'dental'],
+    inputs: [
+      { name: 'recipients', type: 'array', description: 'Users to alert' },
+      { name: 'emailSubject', type: 'string', description: 'Alert subject line' },
+      { name: 'emailBody', type: 'string', description: 'Alert body with review details' },
+    ],
+    outputs: [{ name: 'status', type: 'string', description: 'Delivery status' }],
+  },
+  {
+    id: 'publish-response',
+    name: 'Response handler',
+    icon: 'send',
+    description: 'Publishes the generated reply directly to the review site if integrated; otherwise shows it as a suggestion along with the review.',
+    category: 'Reviews',
+    modules: ['Reviews'],
+    products: ['automotive', 'healthcare', 'dental'],
+    inputs: [
+      { name: 'responseText', type: 'string', description: 'Reply text to publish' },
+      { name: 'delay', type: 'string', description: 'Minutes to wait before publishing' },
+    ],
+    outputs: [{ name: 'status', type: 'string', description: 'Publish status' }],
+  },
   // ── Automotive dealership tools ─────────────────────────────────────────
   {
     id: 'dms-integration',

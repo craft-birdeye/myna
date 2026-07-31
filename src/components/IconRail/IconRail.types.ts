@@ -6,6 +6,8 @@ export interface RailNavItem {
   kind?: 'symbol' | 'image'
   /** Optional badge text (e.g. "New"). */
   badge?: string
+  /** Shows a trailing "open in new" glyph (e.g. Scan listings). */
+  external?: boolean
 }
 
 export interface RailGroup {
