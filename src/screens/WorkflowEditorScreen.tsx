@@ -48,6 +48,29 @@ const HC_FRONTDESK_START = {
   ],
 }
 
+// Review response agent __start__ — inlined (like HC_FRONTDESK_START above) to
+// avoid module-cache staleness from agentWorkflows.ts. Reseller scope: the agent
+// is configured across businesses, not locations.
+const REVIEW_RESPONSE_START = {
+  agentName: 'Review response agent replying autonomously',
+  goals: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
+  outcomes:
+    '1. Increase review coverage by responding to more reviews across platforms effortlessly\n' +
+    '2. Boost response rates with faster, personalized replies that build trust and satisfaction\n' +
+    '3. Spam and policy-violating reviews are filtered out and flagged for manual reporting\n' +
+    '4. Replies match the review language, stay on brand, and are kept under 60 words',
+  businesses: [
+    { id: 'B-101', name: 'Bright Smile Dental Studio' },
+    { id: 'B-102', name: 'Lakeside Auto Group' },
+    { id: 'B-103', name: 'Sunrise Family Medicine' },
+    { id: 'B-104', name: 'Metro Property Partners' },
+    { id: 'B-105', name: 'Golden Gate Fitness' },
+    { id: 'B-106', name: 'Harborview Restaurants' },
+    { id: 'B-107', name: 'Cedar Lane Veterinary' },
+    { id: 'B-108', name: 'Summit Legal Services' },
+  ],
+}
+
 interface WorkflowEditorScreenProps {
   agentName: string
   onClose: () => void
@@ -140,8 +163,18 @@ export function WorkflowEditorScreen({
     })
   }
 
+  const isReviewResponse = agentBaseName.startsWith('Review response agent')
+
   const workflow = wizardDraft
     ? buildWizardAgentWorkflow(wizardDraft)
+    : isReviewResponse
+      ? {
+          nodes: baseWorkflow.nodes,
+          nodeDetails: {
+            ...baseWorkflow.nodeDetails,
+            '__start__': { ...REVIEW_RESPONSE_START, agentName },
+          },
+        }
     : isHC && agentBaseName === 'Front desk agent'
       ? {
           nodes: baseWorkflow.nodes,
@@ -187,6 +220,7 @@ export function WorkflowEditorScreen({
           onAddProcedure={addProcedure}
           initialStatus={resolvedStatus}
           publishDisabled={publishDisabled}
+          publishLabel={agentBaseName.startsWith('Review response agent') ? 'Save' : 'Publish'}
           defaultOpenSection="Tasks"
           aiAssistOpen={aiAssistOpen}
           onAiAssistOpenChange={onAiAssistOpenChange}

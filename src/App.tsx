@@ -29,6 +29,7 @@ import { AgentDetailScreen } from './screens/AgentDetailScreen'
 import { WorkflowEditorScreen } from './screens/WorkflowEditorScreen'
 import { ProceduresScreen } from './screens/ProceduresScreen'
 import { ReviewWaitlistScreen, buildWaitlistDetailProps, type WaitlistDetailArgs } from './screens/ReviewWaitlistScreen'
+import { AllReviewsScreen } from './screens/AllReviewsScreen'
 // PhoneNumberScreen (Phone number 1 — Abhishek's version) is commented out from the UI.
 // Do not delete. Restore by uncommenting the import and its route below.
 // import { PhoneNumberScreen } from './screens/PhoneNumberScreen'
@@ -39,8 +40,6 @@ import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import logoSrc from './assets/birdeye-logo.svg'
-import iconMarketing from './assets/icon-marketing.svg'
-import iconAgents from './assets/icon-agents.svg'
 
 function EmptyResourceScreen({ label }: { label: string }) {
   return (
@@ -58,44 +57,46 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'agents', label: 'Agents', icon: iconAgents, kind: 'image', badge: 'New' },
-    ],
-  },
-  {
-    id: 'marketing',
-    header: 'Marketing',
-    items: [
-      { id: 'search', label: 'Search AI', icon: 'lightbulb' },
-      { id: 'listings', label: 'Listings AI', icon: 'place' },
+      { id: 'resellers', label: 'Resellers', icon: 'hub' },
+      { id: 'businesses', label: 'Businesses', icon: 'work' },
+      { id: 'locations', label: 'Locations', icon: 'near_me' },
       { id: 'reviews', label: 'Reviews AI', icon: 'star' },
+      { id: 'listings', label: 'Listings AI', icon: 'place' },
       { id: 'social', label: 'Social AI', icon: 'workspaces' },
-      { id: 'referral', label: 'Referral', icon: 'featured_seasonal_and_gifts' },
-      { id: 'marketing-automation', label: 'Marketing Automation AI', icon: iconMarketing, kind: 'image' },
-    ],
-  },
-  {
-    id: 'operations',
-    header: 'Operations',
-    items: [
-      { id: 'inbox', label: 'Inbox', icon: 'sms' },
-      { id: 'frontdesk', label: 'Front desk', icon: 'desktop_windows' },
-    ],
-  },
-  {
-    id: 'cx',
-    header: 'Customer experience',
-    items: [
-      { id: 'surveys', label: 'Surveys AI', icon: 'assignment_turned_in' },
-      { id: 'ticketing', label: 'Ticketing', icon: 'shapes' },
-      { id: 'insights', label: 'Insights AI', icon: 'emoji_objects' },
-    ],
-  },
-  {
-    id: 'footer',
-    items: [
       { id: 'reports', label: 'Reports', icon: 'pie_chart' },
-      { id: 'patients', label: 'Patients', icon: 'group' },
-      { id: 'settings', label: 'Settings', icon: 'settings' },
+      { id: 'scan-listings', label: 'Scan listings', icon: 'screen_search_desktop', external: true },
+    ],
+  },
+]
+
+const REVIEWS_NAV_SECTIONS: NavSection[] = [
+  {
+    id: 'reviews-actions',
+    label: 'Actions',
+    defaultExpanded: true,
+    items: [
+      { id: 'reviews-all',          label: 'All reviews'         },
+      { id: 'reviews-respond',      label: 'Respond to reviews', count: '2.4K' },
+      { id: 'reviews-scheduled',    label: 'Scheduled replies'   },
+      { id: 'reviews-approve',      label: 'Approve replies'     },
+      { id: 'reviews-fix-rejected', label: 'Fix rejected replies' },
+      { id: 'reviews-fix-failed',   label: 'Fix failed replies'  },
+    ],
+  },
+  {
+    id: 'reviews-saved-filters',
+    label: 'Saved filters',
+    items: [],
+  },
+  { id: 'reviews-archived', label: 'Archived', standalone: true },
+  { id: 'reviews-reports',  label: 'Reports',  standalone: true, external: true },
+  {
+    id: 'reviews-agents',
+    label: 'Agents',
+    defaultExpanded: true,
+    items: [
+      { id: 'review-response-agents',   label: 'Review response agents'   },
+      { id: 'review-generation-agents', label: 'Review generation agents' },
     ],
   },
 ]
@@ -261,6 +262,7 @@ const PRODUCT_BRAND: Record<string, string> = {
 }
 
 const AGENT_NAMES: Record<string, string> = {
+  'review-response-agents': 'Review response agents',
   'frontdesk-agent':      'Front desk agent',
   'reminder-agent':       'Reminder agent',
   'outreach-agent':       'Outreach agent',
@@ -311,9 +313,9 @@ function openDetailInNewTab(view: string, args: unknown) {
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('frontdesk')
+  const [railActive, setRailActive] = useState('reviews')
   const [navActive, setNavActive] = useState(
-    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
+    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'reviews-all',
   )
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
@@ -388,12 +390,22 @@ export function App() {
         onSelect={(id) => {
           setRailActive(id)
           if (id === 'frontdesk') setNavActive('manage-appointments')
+          if (id === 'reviews') setNavActive('reviews-all')
         }}
         products={PRODUCTS}
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
       {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingRecommendationDetail && railActive !== 'settings' && railActive !== 'inbox' && (
+        railActive === 'reviews' ? (
+        <SideNav
+          title="Reviews AI"
+          sections={REVIEWS_NAV_SECTIONS}
+          activeId={navActive}
+          onSelect={setNavActive}
+          multiExpand
+        />
+        ) : (
         <SideNav
           title="Front desk"
           sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
@@ -410,6 +422,7 @@ export function App() {
             }
           }}
         />
+        )
       )}
       <main className="flex flex-1 flex-col overflow-hidden">
         {railActive === 'settings' ? (
@@ -472,6 +485,8 @@ export function App() {
               />
             )}
           </div>
+        ) : navActive === 'reviews-all' ? (
+          <AllReviewsScreen />
         ) : navActive === 'review-waitlist' && waitlistDetail ? (
           <>
             <TopNav title="Contacts" initials="S" />

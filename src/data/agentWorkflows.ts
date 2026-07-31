@@ -1091,7 +1091,193 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
   'tr-11': { taskName: 'Assign conversation status', description: 'Mark the conversation as needing follow-up since no reply was received.', selectedTools: ['assign-conversation-status'] },
 }
 
+// ─── Review response agent — replying autonomously ──────────────────────────
+// Workflow: Review received trigger → Triage review (AI) → Branch (spam → internal
+// alert | not spam → Review analysis (AI) → Response generation (AI) → Publish)
+
+const REVIEW_FILTER_OPTIONS = {
+  field: [
+    { value: 'review_source', label: 'Review source' },
+    { value: 'review_rating', label: 'Review rating' },
+    { value: 'review_comment', label: 'Review comment' },
+    { value: 'location', label: 'Location' },
+  ],
+  operator: [
+    { value: 'equals',     label: 'Equals' },
+    { value: 'not_equals', label: 'Does not equal' },
+    { value: 'contains',   label: 'Contains' },
+    { value: 'is_set',     label: 'Is set' },
+  ],
+  value: [
+    { value: 'google',   label: 'Google' },
+    { value: 'facebook', label: 'Facebook' },
+    { value: 'yelp',     label: 'Yelp' },
+    { value: 'all',      label: 'All sources' },
+  ],
+}
+
+const SPAM_BRANCH_OPTIONS = {
+  field: [
+    { value: 'isSpam',     label: 'isSpam' },
+    { value: 'spamReason', label: 'spamReason' },
+  ],
+  operator: [
+    { value: 'equals',     label: 'Is equal to' },
+    { value: 'not_equals', label: 'Is not equal to' },
+  ],
+  value: [
+    { value: 'true',  label: 'True' },
+    { value: 'false', label: 'False' },
+  ],
+}
+
+const REVIEW_RESPONSE_AUTONOMOUS_NODES = [
+  { id: 'rra-1', flowType: 'trigger', data: { title: 'New review is received or updated', subtype: 'Review received', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Enter description' } },
+  { id: 'rra-2', flowType: 'task',    data: { title: 'Triage review',       subtype: 'Custom', hasToggle: true, toggleEnabled: true, hasAiIcon: true,  titlePlaceholder: 'Enter task name',   descriptionPlaceholder: 'Enter description' } },
+  { id: 'rra-3', flowType: 'branch',  data: { title: 'Based on condition',  subtype: 'Branch', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Review is spam or not?' } },
+]
+
+const REVIEW_RESPONSE_AUTONOMOUS_NODE_DETAILS: Record<string, any> = {
+  '__start__': {
+    agentName: 'Review response agent replying autonomously',
+    goals: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
+    outcomes:
+      '1. Increase review coverage by responding to more reviews across platforms effortlessly\n' +
+      '2. Boost response rates with faster, personalized replies that build trust and satisfaction\n' +
+      '3. Spam and policy-violating reviews are filtered out and flagged for manual reporting\n' +
+      '4. Replies match the review language, stay on brand, and are kept under 60 words',
+    // Reseller scope — this agent is configured across the reseller's businesses,
+    // not per-location (AgentDetailsBody switches to business mode on this key).
+    businesses: [
+      { id: 'B-101', name: 'Bright Smile Dental Studio' },
+      { id: 'B-102', name: 'Lakeside Auto Group' },
+      { id: 'B-103', name: 'Sunrise Family Medicine' },
+      { id: 'B-104', name: 'Metro Property Partners' },
+      { id: 'B-105', name: 'Golden Gate Fitness' },
+      { id: 'B-106', name: 'Harborview Restaurants' },
+      { id: 'B-107', name: 'Cedar Lane Veterinary' },
+      { id: 'B-108', name: 'Summit Legal Services' },
+    ],
+  },
+  'rra-1': {
+    triggerName: 'New review is received or updated',
+    description: 'Agent triggers when there is a new review or an existing review is updated across all sources and locations.',
+    conditions: [
+      { id: 1, fieldValue: 'review_source', operatorValue: 'equals', valueValue: 'all' },
+    ],
+    conditionOptions: REVIEW_FILTER_OPTIONS,
+  },
+  'rra-2': {
+    taskName: 'Triage review',
+    description: 'The system evaluates each review to determine if a response is needed, filtering out spam, irrelevant content, or policy violations corresponding to the review site.',
+    llmModel: 'Standard',
+    systemPrompt: 'You are the first line triaging agent. Analyze the incoming review if its a genuine customer review or irrelevant spam.',
+    userPrompt:
+      '1. Execute the spam checks below only if {{Review_comment}} is non-null and non-empty. If it is null, empty, or whitespace-only, classify it as Not Spam.\n\n' +
+      '2. Verify if the review comment {{Review_comment}} violates any content terms of {{Review_source}}. If so, treat it as spam.\n\n' +
+      '3. Consider the following signals also to identify spam:\n' +
+      '- Business-unrelated self-promotion\n' +
+      '- Content unrelated to the business that distracts from the profile’s purpose\n' +
+      '- Unrelated contact information (phone numbers or email addresses)\n' +
+      '- Promotion of Ponzi schemes or cryptocurrency\n' +
+      '- Lack of evidence of a real customer experience\n' +
+      '- No relevance to the business, its products, or services\n' +
+      '- Promotional, nonsensical, abusive, or automated content\n' +
+      '- Generic, repetitive, or off-topic language like mentions of test, demo or dummy reviews\n\n' +
+      'Output: isSpam (boolean), spamReason (string, only if isSpam is true).',
+  },
+  'rra-3': {
+    basedOn: 'conditions',
+    branches: [
+      { id: 'rra-3-path-1', name: 'Review is spam' },
+      { id: 'rra-3-path-2', name: 'Review is not spam', isFallback: true },
+    ],
+  },
+  'rra-3-path-1': {
+    branchName: 'Review is spam',
+    description: 'The triage task classified the review as spam or a policy violation.',
+    conditions: [
+      { id: 1, fieldValue: 'isSpam', operatorValue: 'equals', valueValue: 'true' },
+    ],
+    conditionOptions: SPAM_BRANCH_OPTIONS,
+    parentId: 'rra-3',
+    isBranchPath: true,
+    nodes: [
+      { id: 'rra-4', flowType: 'task', data: { title: 'Internal alert to staff', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Send an email alert' } },
+    ],
+  },
+  'rra-3-path-2': {
+    branchName: 'Review is not spam',
+    description: 'The review is genuine and eligible for an automated response.',
+    conditions: [
+      { id: 1, fieldValue: 'isSpam', operatorValue: 'equals', valueValue: 'false' },
+    ],
+    conditionOptions: SPAM_BRANCH_OPTIONS,
+    parentId: 'rra-3',
+    isBranchPath: true,
+    isFallback: true,
+    nodes: [
+      { id: 'rra-5', flowType: 'task', data: { title: 'Review analysis',     subtype: 'Custom',      hasToggle: true, toggleEnabled: true, hasAiIcon: true,  titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Enter description' } },
+      { id: 'rra-6', flowType: 'task', data: { title: 'Response generation', subtype: 'Custom',      hasToggle: true, toggleEnabled: true, hasAiIcon: true,  titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Enter description' } },
+      { id: 'rra-7', flowType: 'task', data: { title: 'Publish responses',   subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Publish responses' } },
+    ],
+  },
+  'rra-4': {
+    taskName: 'Internal alert to staff',
+    description: 'Alerts specific users when a review has been marked as SPAM and user has to take an action to flag it on the review site.',
+    selectedTools: ['send-email-alert'],
+  },
+  'rra-5': {
+    taskName: 'Review analysis',
+    description: "Detects what the reviewer is talking about, maps it to the business' vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.",
+    llmModel: 'Standard',
+    systemPrompt: 'You are a review intelligence extractor. Your job is to analyse a customer review and extract details. Be precise and do not hallucinate.',
+    userPrompt:
+      'Analyse the following review:\nReview Text: {{Review_comment}}\nStar Rating: {{Review_rating}}\n\n' +
+      'Perform all of the following tasks. For EVERY field in the output, populate only the final extracted value.\n\n' +
+      '1. Language detection — identify the review language code (e.g., en, es, fr).\n' +
+      '2. Topic extraction & offering mapping — identify every distinct topic explicitly mentioned, with topic-level sentiment (positive, negative, neutral).\n' +
+      '3. Review sentiment — Positive | Negative | Neutral.\n' +
+      '4. Staff / employee detection — extract exact staff references with sentiment; null if none.\n' +
+      '5. Competitor detection — only explicit competitor mentions; never infer from relative adjectives alone.\n' +
+      '6. Severity assessment — CRITICAL (legal/safety/discrimination) | HIGH (churn signals) | MEDIUM (service failure) | LOW (minor). Star rating alone does not determine severity.\n' +
+      '7. Contact channel recommendation — phone + email for negative MEDIUM/HIGH, email only for negative LOW, phone immediately for CRITICAL, none for positive/neutral.\n\n' +
+      'Output: reviewLanguage, reviewTopics[], staffMention[], competitorMentions[], reviewSeverity, contactRecommendation, reviewSentiment.',
+  },
+  'rra-6': {
+    taskName: 'Response generation',
+    description: 'Assemble the final message from the drafted strategy.',
+    llmModel: 'Standard',
+    systemPrompt: 'You are a marketing manager with expertise in generating responses to customer reviews.',
+    userPrompt:
+      'Write responses to {{Review_comment}} with rating {{Review_rating}}.\n\nApply all relevant rules below:\n\n' +
+      '1 — Review comment missing: write 1–2 genuine sentences based on the rating alone; do not invent details.\n' +
+      '2 — Topic response: address the primary topic first, then negative, positive, neutral. Be thankful for positives, empathetic for negatives. Use a stronger accountability tone when severity is HIGH/CRITICAL.\n' +
+      '3 — Staff: share appreciation for positive staff mentions; never name employees on negative mentions — acknowledge generally and note the team is informed.\n' +
+      '4 — Competitors: never name the competitor; reinforce your strength on the compared aspect.\n' +
+      '5 — SEO: only for positive or mixed sentiment, naturally weave one business keyword phrase.\n' +
+      '6 — Closing: if a contact channel is recommended, invite an offline conversation using the business phone and/or email, framed as wanting to help.\n\n' +
+      'Finalize by translating to match {{Review_language}} and keep the response strictly under 60 words.',
+  },
+  'rra-7': {
+    taskName: 'Publish responses',
+    description: 'Responses will directly be published to site if integrated. If not possible they will show as suggestions along with the review.',
+    selectedTools: ['publish-response'],
+    responseText: '{{Review Response}}',
+    responseHandling: 'post_directly',
+    responseDelay: '15m',
+  },
+}
+
+// Register in the automotive map too (declared above) so the template opens
+// regardless of the active product.
+AUTOMOTIVE_AGENT_WORKFLOWS['Review response agent replying autonomously'] = {
+  nodes: REVIEW_RESPONSE_AUTONOMOUS_NODES,
+  nodeDetails: REVIEW_RESPONSE_AUTONOMOUS_NODE_DETAILS,
+}
+
 export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
+  'Review response agent replying autonomously': { nodes: REVIEW_RESPONSE_AUTONOMOUS_NODES, nodeDetails: REVIEW_RESPONSE_AUTONOMOUS_NODE_DETAILS },
   'Front desk agent': { nodes: FRONTDESK_NODES,             nodeDetails: FRONTDESK_HC_NODE_DETAILS          },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,              nodeDetails: OUTREACH_NODE_DETAILS              },

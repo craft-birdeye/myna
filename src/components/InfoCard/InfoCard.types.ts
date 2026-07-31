@@ -16,12 +16,12 @@ export interface InfoCardListItemProps {
   first?: boolean
 }
 
-/** Library card layout — 16px padding, fixed 156px height. On hover: description clips to 2 lines to reveal the CTA without growing the card. */
+/** Library card layout — 16px padding, min 156px height. The CTA space is always reserved at the bottom and fades in on hover, so the full description stays visible (no truncation on hover). */
 export const INFO_CARD_LAYOUT = {
-  root: 'group flex h-[156px] flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover',
+  root: 'group flex min-h-[156px] flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover',
   title: 'line-clamp-2 shrink-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary',
-  description: 'mt-sm line-clamp-3 group-hover:line-clamp-2 shrink-0 text-body text-text-secondary',
-  ctaWrap: 'mt-auto shrink-0 pt-sm',
+  description: 'mt-sm line-clamp-3 shrink-0 text-body text-text-secondary',
+  ctaWrap: 'mt-auto shrink-0 pt-md',
   cta: 'flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white opacity-0 transition-opacity hover:bg-primary-hover group-hover:opacity-100',
 } as const
 

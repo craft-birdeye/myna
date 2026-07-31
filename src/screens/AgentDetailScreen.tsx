@@ -283,6 +283,28 @@ const REMINDER_CREATE_CARDS = [
 
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
+  'Review response agents': [
+    {
+      id: 'review-response-autonomous',
+      title: 'Review response agent replying autonomously',
+      description: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically',
+    },
+    {
+      id: 'review-response-dashboard',
+      title: 'Review response agent suggesting replies in dashboard',
+      description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting',
+    },
+    {
+      id: 'review-response-human-approval',
+      title: 'Review response agent replying after human approval',
+      description: 'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting',
+    },
+    {
+      id: 'review-response-templates',
+      title: 'Review response agent replying using templates',
+      description: 'Uses pre-defined templates and responds to reviews automatically',
+    },
+  ],
   'Front desk agent': [
     {
       id: 'frontdesk-routing-triage',
@@ -4077,6 +4099,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }
 
   const METRICS_BY_AGENT: Record<string, Metric[]> = {
+    'Review response agents': [
+      { id: 'reviewsResponded', value: '0',  label: 'Reviews responded', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+      { id: 'responseRate',     value: '0%', label: 'Response rate',     info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+      { id: 'timeSaved',        value: '0s', label: 'Time saved',        info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+    ],
     'Front desk agent': [
       { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
       { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
@@ -4143,7 +4170,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
 
   const regions = REGIONS_BY_AGENT[agentName] ?? DEFAULT_REGIONS
-  const data: AgentInstance[] = regions.map((r) => ({
+  const data: AgentInstance[] = agentName === 'Review response agents' ? [] : regions.map((r) => ({
     name: `${agentName} - ${r.region}`,
     status: r.status,
     channels: r.channels,
@@ -4196,6 +4223,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isRevenue         = agentName === 'Revenue agent'
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
+  const isReviewResponse  = agentName === 'Review response agents'
 
   useEffect(() => {
     const isAgentSetupActive = (isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)
@@ -4211,8 +4239,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       sortable: true,
       render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
     },
-    ...(isTaggingRouting ? [] : [{ key: 'channels' as keyof AgentInstance, label: 'Channels', width: 140, sortable: true }]),
-    ...(isReminder ? [
+    ...((isTaggingRouting || isReviewResponse) ? [] : [{ key: 'channels' as keyof AgentInstance, label: 'Channels', width: 140, sortable: true }]),
+    ...(isReviewResponse ? [
+      { key: 'interactions' as keyof AgentInstance, label: 'Reviews responded', width: 150, sortable: true },
+      { key: 'fcr' as keyof AgentInstance,          label: 'Reviews responded rate', width: 180, sortable: true },
+      { key: 'timeSaved' as keyof AgentInstance,    label: 'Time saved', width: 110, sortable: true },
+    ] : isReminder ? [
       { key: 'bookings' as keyof AgentInstance, label: 'Total bookings', width: 110, sortable: true },
       { key: 'confirmed' as keyof AgentInstance, label: 'Appointments confirmed', width: 145, sortable: true },
       { key: 'confirmRate' as keyof AgentInstance, label: 'Confirmation rate', width: 135, sortable: true },
@@ -4270,9 +4302,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   // Front desk, Pre-visit, Waitlist, and Reminder each report exactly 4 metrics, so all 4
   // are shown by default. Agents with more metrics (Recall, Revenue, Treatment plan, etc.)
   // still default to the first two, with the rest available via Customize columns.
-  const metricKeys = COLUMN_DEFS.slice(isTaggingRouting ? 2 : 3, -1).map((c) => String(c.key))
-  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting
-  const DEFAULT_VISIBLE = ['name', 'status', ...(isTaggingRouting ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
+  const metricKeys = COLUMN_DEFS.slice((isTaggingRouting || isReviewResponse) ? 2 : 3, -1).map((c) => String(c.key))
+  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse
+  const DEFAULT_VISIBLE = ['name', 'status', ...((isTaggingRouting || isReviewResponse) ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
 

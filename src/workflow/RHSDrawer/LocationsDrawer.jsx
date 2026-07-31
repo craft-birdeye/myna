@@ -33,18 +33,28 @@ const SELECT_BY_OPTIONS = [
 
 const DEFAULT_SELECTED = ['1001', '1002', '1004', '1011', '1014', '1017'];
 
-export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBack, onSave }) {
+export default function LocationsDrawer({
+  selectedIds: initialSelectedIds,
+  onBack,
+  onSave,
+  title = 'Locations',
+  entities = ALL_LOCATIONS,
+  description = 'Choose the locations this agent will work for. Select by',
+  selectByOptions = SELECT_BY_OPTIONS,
+  entityNoun = 'location',
+  entityNounPlural = `${entityNoun}s`,
+}) {
   const [selectedIds, setSelectedIds] = useState(initialSelectedIds || DEFAULT_SELECTED);
   const [search, setSearch] = useState('');
-  const [selectBy, setSelectBy] = useState('location');
+  const [selectBy, setSelectBy] = useState(selectByOptions[0]?.value ?? 'location');
 
   const filteredLocations = useMemo(() => {
-    if (!search.trim()) return ALL_LOCATIONS;
+    if (!search.trim()) return entities;
     const q = search.toLowerCase();
-    return ALL_LOCATIONS.filter(
+    return entities.filter(
       (loc) => loc.id.includes(q) || loc.name.toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [search, entities]);
 
   const selectedCount = selectedIds.length;
   const allSelected = filteredLocations.length > 0 && filteredLocations.every((loc) => selectedIds.includes(loc.id));
@@ -63,7 +73,7 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
     }
   };
 
-  const handleSave = () => onSave?.(ALL_LOCATIONS.filter((loc) => selectedIds.includes(loc.id)));
+  const handleSave = () => onSave?.(entities.filter((loc) => selectedIds.includes(loc.id)));
 
   return (
     <div className="loc-overlay">
@@ -77,7 +87,7 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
                 <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
               </svg>
             </button>
-            <span className="loc-title">Locations</span>
+            <span className="loc-title">{title}</span>
           </div>
           <Button theme="primary" label="Save" onClick={handleSave} />
         </div>
@@ -88,14 +98,14 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
 
             {/* Description + select by */}
             <div className="loc-description">
-              <span>Choose the locations this agent will work for. Select by</span>
+              <span>{description}</span>
               <div className="loc-select-wrapper">
                 <select
                   className="loc-select-by"
                   value={selectBy}
                   onChange={(e) => setSelectBy(e.target.value)}
                 >
-                  {SELECT_BY_OPTIONS.map((opt) => (
+                  {selectByOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
@@ -110,7 +120,7 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
               <input
                 className="loc-search-input"
                 type="text"
-                placeholder="Search location"
+                placeholder={`Search ${entityNoun}`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -122,7 +132,7 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
               <div className="loc-row" onClick={toggleAll}>
                 <Checkbox checked={allSelected} indeterminate={someSelected} />
                 <span className="loc-row__label">Select all</span>
-                <span className="loc-row__count">{selectedCount} locations selected</span>
+                <span className="loc-row__count">{selectedCount} {entityNounPlural} selected</span>
               </div>
 
               {filteredLocations.map((loc) => (
