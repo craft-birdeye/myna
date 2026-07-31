@@ -48,6 +48,12 @@ interface AgentDetailScreenProps {
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
+  /** Bubbled up from `AgentInstanceScreen` — see its own doc comment. */
+  onRecommendationDetailActiveChange?: (active: boolean) => void
+  /** Set by the host app when a "Track your feedback" link (Inbox) should open a specific
+   *  recommendation inside a specific agent instance. */
+  initialRecommendationFocus?: { instanceName: string; recommendationId: string; feedbackPrefill?: string } | null
+  onInitialRecommendationFocusConsumed?: () => void
 }
 
 interface AgentInstance {
@@ -96,6 +102,13 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
   Running: 'success',
   Paused:  'warning',
   Draft:   'neutral',
+}
+
+// Default row order for the instance table — active agents first, drafts last.
+const STATUS_ORDER: Record<string, number> = {
+  Running: 0,
+  Paused: 1,
+  Draft: 2,
 }
 
 interface RegionRow {
@@ -3988,14 +4001,14 @@ function HealthcareFrontdeskCreateAgentScreen({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product, onRecommendationDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedInstance, setSelectedInstance] = useState<string | null>(null)
+  const [selectedInstance, setSelectedInstance] = useState<{ name: string; status: string } | null>(null)
   const [instanceInitialTab, setInstanceInitialTab] = useState('outcomes')
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
@@ -4039,7 +4052,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setShowCreateFlow(false)
     setShowSetupWizard(false)
     setInstanceInitialTab('workflow')
-    setSelectedInstance(`${agentName} - North region`)
+    setSelectedInstance({ name: `${agentName} - North region`, status: 'Running' })
     setToastMessage(
       options?.publish ? 'Agent created and published successfully' : 'Agent created successfully',
     )
@@ -4147,7 +4160,16 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     statusUpdated: r.statusUpdated,
     conversationsAssigned: r.conversationsAssigned,
     conversationsManaged: r.conversationsManaged,
-  }))
+  })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
+
+  useEffect(() => {
+    if (!initialRecommendationFocus) return
+    const match = data.find((d) => d.name === initialRecommendationFocus.instanceName)
+    if (match) setSelectedInstance({ name: match.name, status: match.status })
+    // Only react to focus-id changes; `data` is derived fresh each render and would otherwise
+    // retrigger this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRecommendationFocus])
 
   const isReminder        = agentName === 'Reminder agent'
   const isFrontdesk       = agentName === 'Front desk agent'
@@ -4392,8 +4414,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     return (
       <>
         <AgentInstanceScreen
-          key={`${selectedInstance}-${instanceInitialTab}`}
-          instanceName={selectedInstance}
+          key={`${selectedInstance.name}-${instanceInitialTab}`}
+          instanceName={selectedInstance.name}
+          status={selectedInstance.status}
           initialTab={instanceInitialTab}
           onBack={() => {
             setSelectedInstance(null)
@@ -4402,6 +4425,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
           product={product}
+          onRecommendationDetailActiveChange={onRecommendationDetailActiveChange}
+          initialRecommendationId={
+            initialRecommendationFocus?.instanceName === selectedInstance.name ? initialRecommendationFocus.recommendationId : null
+          }
+          initialFeedbackPrefill={
+            initialRecommendationFocus?.instanceName === selectedInstance.name ? initialRecommendationFocus.feedbackPrefill ?? null : null
+          }
+          onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
         />
         <Toast
           message={toastMessage}
@@ -4490,7 +4521,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   scrollOnHover
                   onRowClick={(row) => {
                     setInstanceInitialTab('outcomes')
-                    setSelectedInstance(row.name)
+                    setSelectedInstance({ name: row.name, status: row.status })
                   }}
                   rowMenuItems={[
                     { label: 'Edit', onClick: (row) => onEditAgent?.(row.name) },
@@ -4502,7 +4533,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     { label: 'Duplicate', onClick: () => {} },
                     { label: 'View details', onClick: (row) => {
                       setInstanceInitialTab('outcomes')
-                      setSelectedInstance(row.name)
+                      setSelectedInstance({ name: row.name, status: row.status })
                     } },
                     { label: 'Reports', onClick: () => {} },
                     { label: 'Delete', onClick: () => {}, variant: 'danger' },

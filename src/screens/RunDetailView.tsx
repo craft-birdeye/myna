@@ -304,7 +304,7 @@ export function RunDetailView({ row, instanceName, onBack, onViewConversation, o
           {agentName === 'Reminder agent' ? (
             <RunDetailsPanel onViewConversation={onViewConversation} />
           ) : (
-            <LogDetailsPanel row={row} onViewConversation={onViewConversation} />
+            <LogDetailsPanel row={row} agentName={instanceName} onViewConversation={onViewConversation} />
           )}
         </div>
       </div>

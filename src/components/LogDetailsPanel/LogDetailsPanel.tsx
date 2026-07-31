@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
+import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
+import type { Channel } from '../../data/recommendationsData'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
+import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
+import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
+import { Toast } from '../Toast/Toast'
 import { Tooltip } from '../Tooltip/Tooltip'
 import type {
   LogDetailsPanelProps,
@@ -12,6 +17,15 @@ import type {
   LogToolProperty,
   LogTranscriptEntry,
 } from './LogDetailsPanel.types'
+
+/** Loosely matches the demo data's varied channel labels ("Voice call", "Web chat", ...) to the
+ *  strict `Channel` union `submitFeedback` expects. */
+function normalizeChannel(channel: string): Channel {
+  const lower = channel.toLowerCase()
+  if (lower.includes('voice') || lower.includes('call')) return 'Voice'
+  if (lower.includes('chat')) return 'Chat'
+  return 'Text'
+}
 
 const DEFAULT_SUMMARY =
   "The caller reported a bad headache she suspected was a migraine. The agent traced it to a back tooth with mild swelling, then routed her to booking, which scheduled her with Dr. Patel for Thursday at 2 PM."
@@ -549,9 +563,19 @@ function MetaField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
+function TranscriptEntry({
+  entry,
+  feedback,
+  onFeedbackChange,
+}: {
+  entry: LogTranscriptEntry
+  /** Only meaningful for `role: 'agent'` entries — the other roles never show thumbs. */
+  feedback?: MessageFeedbackValue
+  onFeedbackChange?: (value: MessageFeedbackValue) => void
+}) {
   const [llmOpen, setLlmOpen] = useState(false)
   const [ttsOpen, setTtsOpen] = useState(false)
+
 
   if (entry.role === 'system') {
     return (
@@ -586,6 +610,9 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
       text={entry.text}
       gap="gap-sm"
       bubbleClassName="max-w-[85%] px-lg py-md"
+      showFeedback
+      feedback={feedback}
+      onFeedbackChange={onFeedbackChange}
     >
       <AgentMetaLine
         entry={entry}
@@ -625,6 +652,7 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
 
 export function LogDetailsPanel({
   row,
+  agentName = 'Front desk agent - North region',
   callerNumber = '(032) 902 9023',
   sidNumber = 'CA45 T78 932',
   languageDetected = 'English',
@@ -642,6 +670,59 @@ export function LogDetailsPanel({
 
   const [summaryOpen, setSummaryOpen] = useState(true)
   const [transcriptOpen, setTranscriptOpen] = useState(true)
+
+  // Same thumbs up/down → "share feedback" flow as the Inbox transcript view — thumbs-up
+  // commits immediately, thumbs-down opens the modal and only commits on submit.
+  const { submitFeedback } = useFeedbackRecommendationsStore()
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
+  const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  const showFeedbackToast = (message: string) => {
+    setToastMessage(message)
+    setToastVisible(true)
+  }
+
+  const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
+    if (value === 'down') {
+      setShareFeedbackMessageId(messageId)
+      return
+    }
+    setMessageFeedback((prev) => ({ ...prev, [messageId]: value }))
+    if (value === 'up') showFeedbackToast('Thanks for the feedback!')
+  }
+
+  const handleShareFeedbackClose = () => {
+    setShareFeedbackMessageId(null)
+  }
+
+  const handleShareFeedbackSubmit = (details: string) => {
+    if (!shareFeedbackMessageId) return
+    const feedbackMessageId = shareFeedbackMessageId
+    setMessageFeedback((prev) => ({ ...prev, [feedbackMessageId]: 'down' }))
+    setShareFeedbackMessageId(null)
+    showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    submitFeedback({
+      text: details,
+      agentName,
+      conversation: {
+        name: row.contact,
+        message: details,
+        channel: normalizeChannel(row.channel),
+        date: row.timestamp,
+        location: '',
+      },
+      conversationId: row.timestamp,
+      messageId: feedbackMessageId,
+    })
+  }
+
+  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
+    if (shareFeedbackMessageId === messageId) return 'down'
+    return messageFeedback[messageId] ?? null
+  }
 
   return (
     <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
@@ -714,13 +795,27 @@ export function LogDetailsPanel({
               />
               <div className="flex flex-col gap-3xl">
                 {transcript.map((entry) => (
-                  <TranscriptEntry key={entry.id} entry={entry} />
+                  <TranscriptEntry
+                    key={entry.id}
+                    entry={entry}
+                    feedback={entry.role === 'agent' ? feedbackForMessage(entry.id) : undefined}
+                    onFeedbackChange={
+                      entry.role === 'agent' ? (value) => handleFeedbackChange(entry.id, value) : undefined
+                    }
+                  />
                 ))}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      <ShareFeedbackModal
+        open={shareFeedbackMessageId !== null}
+        onClose={handleShareFeedbackClose}
+        onSubmit={handleShareFeedbackSubmit}
+      />
+      <Toast message={toastMessage} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
   )
 }

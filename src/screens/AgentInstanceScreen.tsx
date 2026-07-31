@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AiAssistPanel,
   Chip,
-  CoachAgentPanel,
   DataTable,
   EmptyState,
   Icon,
@@ -22,11 +21,12 @@ import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { WorkflowViewerTab } from './WorkflowViewerTab'
 import { RecommendationsTab } from './RecommendationsTab'
-import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
+import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { ANNETTE_BLACK_CONVERSATION_ID } from '../data/annetteBlackChatConversation'
 import { REMINDER_INBOX_CONVERSATION_ID } from '../data/reminderInboxConversation'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -36,6 +36,17 @@ interface AgentInstanceScreenProps {
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
   initialTab?: string
+  /** Fires whenever a single recommendation's detail screen becomes the active view (or stops
+   *  being it) — lets the app-level layout hide the secondary sidebar so that screen can go
+   *  full-bleed. */
+  onRecommendationDetailActiveChange?: (active: boolean) => void
+  /** Set when the host app should jump straight to a specific recommendation (e.g. from a
+   *  "Track your feedback" link in the Inbox) instead of the default Outcomes tab. */
+  initialRecommendationId?: string | null
+  onInitialRecommendationConsumed?: () => void
+  /** When set alongside `initialRecommendationId`, the recommendation detail page immediately
+   *  asks for the feedback itself (see the Taylor Brooks "Coach agent" direct-navigate flow). */
+  initialFeedbackPrefill?: string | null
 }
 
 interface LocationRow {
@@ -315,14 +326,33 @@ export function AgentInstanceScreen({
   onNavigateToInbox,
   product,
   initialTab = 'outcomes',
+  onRecommendationDetailActiveChange,
+  initialRecommendationId,
+  onInitialRecommendationConsumed,
+  initialFeedbackPrefill,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
-  const [coachOpen, setCoachOpen] = useState(false)
   const [aiAssistOpen, setAiAssistOpen] = useState(false)
+  const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
+
+  useEffect(() => {
+    onRecommendationDetailActiveChange?.(selectedRecommendationId !== null)
+    return () => onRecommendationDetailActiveChange?.(false)
+  }, [selectedRecommendationId, onRecommendationDetailActiveChange])
+
+  useEffect(() => {
+    if (!initialRecommendationId) return
+    setActiveTab('recommendation')
+    setSelectedRecommendationId(initialRecommendationId)
+    setPendingFeedbackPrefill(initialFeedbackPrefill ?? null)
+    onInitialRecommendationConsumed?.()
+    // Only react to focus-id changes; consume callback is intentionally unstable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRecommendationId])
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -345,11 +375,16 @@ export function AgentInstanceScreen({
   const isRecommendationTab = activeTab === 'recommendation'
   // Front desk + Reminder agents get an "AI assist" copilot button next to Actions.
   const isAiAssistAgent = agentName === 'Front desk agent' || agentName === 'Reminder agent'
+  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
+  const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
+  // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
+  const isDraftInstance = instanceStatus === 'Draft'
   const showHealthcareLogs =
-    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
+    activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
-    activeTab === 'logs' && product === 'dental' && Boolean(dentalOutboundLogRows)
+    activeTab === 'logs' && !isDraftInstance && product === 'dental' && Boolean(dentalOutboundLogRows)
+  const showEmptyDraftLogs = activeTab === 'logs' && isDraftInstance
 
   if (selectedRun) {
     return (
@@ -375,12 +410,13 @@ export function AgentInstanceScreen({
   if (selectedRecommendationId) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav initials="S" />
+        <TopNav title="Front desk" initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
-          <FrontdeskRecommendationsTab
-            instanceName={instanceName}
-            selectedId={selectedRecommendationId}
-            onSelect={setSelectedRecommendationId}
+          <RecommendationDetailScreen
+            recommendationId={selectedRecommendationId}
+            onBack={() => setSelectedRecommendationId(null)}
+            autoOpenFeedbackPrefill={pendingFeedbackPrefill}
+            onAutoOpenFeedbackConsumed={() => setPendingFeedbackPrefill(null)}
           />
         </div>
       </div>
@@ -408,21 +444,6 @@ export function AgentInstanceScreen({
               <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
             </div>
             <div className="flex items-center gap-sm">
-              {isRecommendationTab && (
-                <Tooltip content="Coach agent" variant="brief">
-                  <button
-                    type="button"
-                    aria-label="Coach agent"
-                    aria-pressed={coachOpen}
-                    onClick={() => setCoachOpen((open) => !open)}
-                    className={`flex size-9 items-center justify-center rounded-sm border border-border-selected text-text-icon hover:bg-surface-l2 ${
-                      coachOpen ? 'bg-surface-selected' : 'bg-surface'
-                    }`}
-                  >
-                    <Icon name="auto_awesome" size={20} />
-                  </button>
-                </Tooltip>
-              )}
               {isAiAssistAgent && !isRecommendationTab && (
                 <Tooltip content="AI assist" variant="brief">
                   <button
@@ -502,16 +523,24 @@ export function AgentInstanceScreen({
           </div>
 
           {/* Tabs */}
-          <div className="shrink-0 px-2xl">
+          <div className="flex shrink-0 items-center justify-between px-2xl">
             <Tabs
               tabs={tabs}
               activeTab={activeTab}
               onChange={(tabId) => {
                 setActiveTab(tabId)
-                if (tabId !== 'recommendation') setCoachOpen(false)
                 if (tabId === 'recommendation') setAiAssistOpen(false)
               }}
             />
+            {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && (
+              <button
+                type="button"
+                onClick={clearAllFeedback}
+                className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+              >
+                Clear human feedback
+              </button>
+            )}
           </div>
 
           {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -522,24 +551,8 @@ export function AgentInstanceScreen({
               product={product}
             />
           ) : isRecommendationTab ? (
-            <div className="flex min-h-0 flex-1 overflow-hidden">
-              {agentName === 'Front desk agent' ? (
-                <FrontdeskRecommendationsTab
-                  instanceName={instanceName}
-                  selectedId={null}
-                  onSelect={setSelectedRecommendationId}
-                  onAnalyzeWithAi={() => setCoachOpen(true)}
-                />
-              ) : agentName === 'Reminder agent' ? (
-                <div className="flex flex-1 items-center justify-center">
-                  <EmptyState
-                    title="No recommendations yet"
-                    description="Recommendations will appear here once there's enough activity to analyze."
-                  />
-                </div>
-              ) : (
-                <RecommendationsTab />
-              )}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} isDraft={isDraftInstance} />
             </div>
           ) : (
             <div className="flex-1 overflow-auto">
@@ -552,6 +565,13 @@ export function AgentInstanceScreen({
                     <DataTable columns={COLUMNS} data={locations} scrollOnHover />
                   </div>
                 </>
+              ) : showEmptyDraftLogs ? (
+                <div className="flex h-full items-center justify-center px-lg py-lg">
+                  <EmptyState
+                    title="No logs yet"
+                    description="This agent is still in draft and hasn't handled any conversations yet, so there's nothing to log."
+                  />
+                </div>
               ) : showHealthcareLogs ? (
                 <AgentLogsTab
                   agentName={agentName}
@@ -573,13 +593,6 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
-
-        {coachOpen && isRecommendationTab && (
-          <CoachAgentPanel
-            agentName={instanceName}
-            onClose={() => setCoachOpen(false)}
-          />
-        )}
 
         {aiAssistOpen && isAiAssistAgent && !isRecommendationTab && (
           <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
