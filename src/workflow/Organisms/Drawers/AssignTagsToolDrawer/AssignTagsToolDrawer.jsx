@@ -1,7 +1,7 @@
 import React from 'react';
 import './AssignTagsToolDrawer.css';
 
-/* Sample business-level tag library shown (read-only) at reseller scope */
+/* Sample tag library (managed in Settings) shown read-only in the drawer */
 const SAMPLE_TAGS = [
   'Already Addressed',
   'Ashley',
@@ -69,7 +69,7 @@ export default function AssignTagsToolDrawer({ isOpen, onClose }) {
 
           <div className="atd__locked-note">
             <span className="material-symbols-outlined atd__locked-icon">lock</span>
-            <span>Tags can only be configured at the business level — each business maintains its own tag library. Log in to the individual business account to choose the tags this agent should apply.</span>
+            <span>Tags come from your tag library in Settings — manage the list there, then choose the tags this agent should apply.</span>
           </div>
 
           {/* Tag list preview — read-only */}

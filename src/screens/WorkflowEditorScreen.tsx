@@ -49,8 +49,8 @@ const HC_FRONTDESK_START = {
 }
 
 // Review response agent __start__ — inlined (like HC_FRONTDESK_START above) to
-// avoid module-cache staleness from agentWorkflows.ts. Reseller scope: the agent
-// is configured across businesses, not locations.
+// avoid module-cache staleness from agentWorkflows.ts. Scoped to locations via
+// the standard agent-level location selector.
 const REVIEW_RESPONSE_START = {
   agentName: 'Review response agent replying autonomously',
   goals: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
@@ -59,16 +59,7 @@ const REVIEW_RESPONSE_START = {
     '2. Boost response rates with faster, personalized replies that build trust and satisfaction\n' +
     '3. Spam and policy-violating reviews are filtered out and flagged for manual reporting\n' +
     '4. Replies match the review language, stay on brand, and are kept under 60 words',
-  businesses: [
-    { id: 'B-101', name: 'Bright Smile Dental Studio' },
-    { id: 'B-102', name: 'Lakeside Auto Group' },
-    { id: 'B-103', name: 'Sunrise Family Medicine' },
-    { id: 'B-104', name: 'Metro Property Partners' },
-    { id: 'B-105', name: 'Golden Gate Fitness' },
-    { id: 'B-106', name: 'Harborview Restaurants' },
-    { id: 'B-107', name: 'Cedar Lane Veterinary' },
-    { id: 'B-108', name: 'Summit Legal Services' },
-  ],
+  locations: ['1001 - Mountain View, CA', '1002 - Seattle, WA', '1004 - Chicago, IL', '1006 - Las Vegas, NV'],
 }
 
 interface WorkflowEditorScreenProps {

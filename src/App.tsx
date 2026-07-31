@@ -57,8 +57,6 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'resellers', label: 'Resellers', icon: 'hub' },
-      { id: 'businesses', label: 'Businesses', icon: 'work' },
       { id: 'locations', label: 'Locations', icon: 'near_me' },
       { id: 'reviews', label: 'Reviews AI', icon: 'star' },
       { id: 'listings', label: 'Listings AI', icon: 'place' },

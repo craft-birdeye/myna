@@ -14,7 +14,7 @@ const _SEED_TOOLS = [
     id: 'assign-tags',
     name: 'Assign tags',
     icon: 'sell',
-    description: 'Adds the selected tags to the review. Tag lists are managed per business.',
+    description: 'Adds the selected tags to the review. Tag lists are managed in Settings.',
     category: 'Reviews',
     modules: ['Reviews'],
     products: ['automotive', 'healthcare', 'dental'],

@@ -1146,18 +1146,7 @@ const REVIEW_RESPONSE_AUTONOMOUS_NODE_DETAILS: Record<string, any> = {
       '2. Boost response rates with faster, personalized replies that build trust and satisfaction\n' +
       '3. Spam and policy-violating reviews are filtered out and flagged for manual reporting\n' +
       '4. Replies match the review language, stay on brand, and are kept under 60 words',
-    // Reseller scope — this agent is configured across the reseller's businesses,
-    // not per-location (AgentDetailsBody switches to business mode on this key).
-    businesses: [
-      { id: 'B-101', name: 'Bright Smile Dental Studio' },
-      { id: 'B-102', name: 'Lakeside Auto Group' },
-      { id: 'B-103', name: 'Sunrise Family Medicine' },
-      { id: 'B-104', name: 'Metro Property Partners' },
-      { id: 'B-105', name: 'Golden Gate Fitness' },
-      { id: 'B-106', name: 'Harborview Restaurants' },
-      { id: 'B-107', name: 'Cedar Lane Veterinary' },
-      { id: 'B-108', name: 'Summit Legal Services' },
-    ],
+    locations: ['1001 - Mountain View, CA', '1002 - Seattle, WA', '1004 - Chicago, IL', '1006 - Las Vegas, NV'],
   },
   'rra-1': {
     triggerName: 'New review is received or updated',

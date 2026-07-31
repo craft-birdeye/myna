@@ -149,7 +149,7 @@ export default function ResponseHandlerToolDrawer({ isOpen, onClose, initialValu
                 </button>
                 <div className="rhtd__locked-note">
                   <span className="material-symbols-outlined rhtd__locked-icon">lock</span>
-                  <span>This field can only be configured at the business level. Log in to the individual business account to set its approval workflow.</span>
+                  <span>Approval workflows are managed in Settings. Configure one there to route replies for approval before they post.</span>
                 </div>
               </div>
             </div>
