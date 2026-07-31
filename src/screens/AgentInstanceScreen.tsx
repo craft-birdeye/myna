@@ -23,6 +23,7 @@ import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
+import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -372,6 +373,7 @@ export function AgentInstanceScreen({
   const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
   // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
   const isDraftInstance = instanceStatus === 'Draft'
+  const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[instanceName] ?? 0
   const showHealthcareLogs =
     activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
@@ -434,6 +436,12 @@ export function AgentInstanceScreen({
           <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
         </div>
         <div className="flex items-center gap-sm">
+          {isWorkflowTab && issueCount > 0 && (
+            <span className="flex items-center gap-xs text-small text-text-secondary">
+              <Icon name="error" size={14} className="text-chip-danger-text" />
+              {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
+            </span>
+          )}
 <div className="relative">
             <button
               type="button"

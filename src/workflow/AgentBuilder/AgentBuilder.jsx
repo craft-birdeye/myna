@@ -622,6 +622,7 @@ export default function AgentBuilder({
   procedures = null,
   onAddProcedure,
   publishDisabled = false,
+  issueCount = 0,
   defaultOpenSection = 'Tasks',
   defaultLhsCollapsed = false,
 }) {
@@ -1915,6 +1916,12 @@ export default function AgentBuilder({
     </div>
   ) : (
     <div className="ab-header-actions">
+      {issueCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555', fontSize: 13 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, lineHeight: 1, color: '#de1b0c' }}>error</span>
+          Resolve issues ({issueCount})
+        </div>
+      )}
       {/* Cloud save icon — matches Figma 41-43635 */}
       <button
         type="button"
@@ -1929,7 +1936,7 @@ export default function AgentBuilder({
         theme="primary"
         label={isTemplateMode ? 'Save template' : 'Publish'}
         onClick={isTemplateMode ? handleSaveTemplate : handlePublish}
-        disabled={!isTemplateMode && publishDisabled}
+        disabled={!isTemplateMode && (publishDisabled || issueCount > 0)}
       />
     </div>
   );

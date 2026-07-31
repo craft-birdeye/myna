@@ -6,6 +6,7 @@ import {
 } from '../data/agentWorkflows'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
+import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -152,7 +153,8 @@ export function WorkflowEditorScreen({
         }
 
   const resolvedStatus = wizardDraft ? 'Draft' : agentStatus
-  const publishDisabled = false
+  const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0
+  const publishDisabled = issueCount > 0
 
   const AGENT_NAV_MAP: Record<string, string> = {
     'Front desk agent': 'frontdesk',
@@ -183,6 +185,7 @@ export function WorkflowEditorScreen({
           onAddProcedure={addProcedure}
           initialStatus={resolvedStatus}
           publishDisabled={publishDisabled}
+          issueCount={issueCount}
           defaultOpenSection="Tasks"
           defaultLhsCollapsed={!wizardDraft}
         />

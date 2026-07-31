@@ -20,6 +20,7 @@ import {
 } from '../components'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
+import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 interface AgentDetailScreenProps {
@@ -71,7 +72,9 @@ interface AgentInstance {
   statusUpdated?: string
   conversationsAssigned?: string
   conversationsManaged?: string
-  [key: string]: string | undefined
+  /** Open issues for this instance — shown next to the status chip and gating Publish in the editor. */
+  issues?: number
+  [key: string]: string | number | undefined
 }
 
 const TABS: Tab[] = [
@@ -97,6 +100,8 @@ interface RegionRow {
   status: string
   channels: string
   locations: string
+  /** Open issues for this region's workflow — shown next to the status chip and gating Publish in the editor. */
+  issues?: number
   interactions?: string
   fcr?: string
   aht?: string
@@ -130,9 +135,9 @@ interface RegionRow {
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
   'Front desk agent': [
-    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358' },
+    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'] },
     { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'] },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140' },
   ],
   'Reminder agent': [
@@ -487,6 +492,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
     statusUpdated: r.statusUpdated,
     conversationsAssigned: r.conversationsAssigned,
     conversationsManaged: r.conversationsManaged,
+    issues: r.issues,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
 
   useEffect(() => {
@@ -517,9 +523,19 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
     {
       key: 'status',
       label: 'Status',
-      width: 110,
+      width: 170,
       sortable: true,
-      render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+      render: (v, row) => (
+        <div className="flex items-center gap-sm">
+          <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />
+          {row.issues ? (
+            <span className="flex items-center gap-xs text-small text-text-secondary">
+              <Icon name="error" size={14} className="text-chip-danger-text" />
+              {row.issues} {row.issues === 1 ? 'issue' : 'issues'}
+            </span>
+          ) : null}
+        </div>
+      ),
     },
     ...(isTaggingRouting ? [] : [{ key: 'channels' as keyof AgentInstance, label: 'Channels', width: 140, sortable: true }]),
     ...(isReminder ? [
