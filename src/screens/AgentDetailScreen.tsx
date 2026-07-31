@@ -2939,9 +2939,27 @@ function HealthcareFrontdeskCreateAgentScreen({
     return () => window.cancelAnimationFrame(raf1)
   }, [panelVisible])
 
+  // The right-side panel only ever shows one thing at a time (a procedure, the
+  // workflow preview, or the test-call preview) — opening one must close
+  // whichever of the other two might already be open, so clicking a different
+  // reference while the panel is open replaces its content instead of
+  // fighting with what's already showing.
+  const openProcedure = (name: string) => {
+    setShowWorkflowPreview(false)
+    if (previewOpen) handlePreviewClose()
+    setOpenProcedureName(name)
+  }
+
+  const openWorkflowPreview = () => {
+    setOpenProcedureName(null)
+    if (previewOpen) handlePreviewClose()
+    setShowWorkflowPreview(true)
+  }
+
   const handleStartTestAgent = (label = 'Test agent') => {
     setTestAgentAnswers((prev) => [...prev, label])
     setOpenProcedureName(null)
+    setShowWorkflowPreview(false)
     setShowTestFollowUp(false)
     setPreviewSessionEnded(false)
     hadPreviewSessionRef.current = false
@@ -3446,7 +3464,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                       {timingFollowReady && (
                         <ReminderCadenceFollowUp
                           openProcedureName={openProcedureName}
-                          onOpenProcedure={setOpenProcedureName}
+                          onOpenProcedure={openProcedure}
                           onComplete={() => setTimingFollowDone(true)}
                         />
                       )}
@@ -3483,7 +3501,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                           connectAttachments={connectAttachments}
                           openProcedureName={openProcedureName}
                           onConnectAnswer={setConnectAnswer}
-                          onOpenProcedure={setOpenProcedureName}
+                          onOpenProcedure={openProcedure}
                           onHandoffReplyDone={() => setHandoffFollowDone(true)}
                           onEmailThoughtsDone={() => setEmailThoughtsDone(true)}
                           onBuildDone={() => setReminderBuildDone(true)}
@@ -3646,7 +3664,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                               </p>
                               <button
                                 type="button"
-                                onClick={() => setOpenProcedureName(REFILL_PROCEDURE_NAME)}
+                                onClick={() => openProcedure(REFILL_PROCEDURE_NAME)}
                                 aria-pressed={openProcedureName === REFILL_PROCEDURE_NAME}
                                 className={`flex items-start gap-sm rounded-md border border-border px-md py-md text-left hover:bg-surface-hover ${
                                   openProcedureName === REFILL_PROCEDURE_NAME ? 'bg-surface-hover' : 'bg-surface'
@@ -3736,7 +3754,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                         <DraftReviewCard
                           refillAdded={refillAnswer.startsWith('Add procedure')}
                           openProcedureName={openProcedureName}
-                          onOpenProcedure={setOpenProcedureName}
+                          onOpenProcedure={openProcedure}
                           agentName={agentName}
                           selectedLocationIds={selectedLocationIds}
                           selectedChannels={selectedChannels}
@@ -3790,7 +3808,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setShowWorkflowPreview(true)}
+                                onClick={openWorkflowPreview}
                                 className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                               >
                                 View workflow
@@ -4025,7 +4043,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                       <button
                         key={name}
                         type="button"
-                        onClick={() => setOpenProcedureName(name)}
+                        onClick={() => openProcedure(name)}
                         className="flex w-full items-center gap-md rounded-xl border border-primary bg-surface px-lg py-md text-left hover:bg-surface-hover"
                       >
                         <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-hover">
@@ -4040,7 +4058,7 @@ function HealthcareFrontdeskCreateAgentScreen({
 
                 <button
                   type="button"
-                  onClick={() => setShowWorkflowPreview(true)}
+                  onClick={openWorkflowPreview}
                   className="flex w-full items-center gap-md rounded-xl border border-border bg-surface px-lg py-md text-left hover:bg-surface-hover"
                 >
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-hover">
