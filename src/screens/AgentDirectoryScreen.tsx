@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Toast, type Metric } from '../components'
+import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, type Metric } from '../components'
 import {
   getAgentDirectory,
   PERSONA_GROUPS,
@@ -20,6 +20,23 @@ function formatK(raw: string): { display: string; exact?: string } {
     return { display: `${k}K`, exact: numeric.toLocaleString() }
   }
   return { display: raw }
+}
+
+// Real copy for each agent's primary metric — lifted verbatim from that same
+// metric's info tooltip on the agent's own detail page (AgentDetailScreen's
+// METRICS_BY_AGENT), so the directory card and the detail page agree. Agents
+// without a matching detail-page metric (the shared Reviews/Social agents,
+// and Tagging & routing whose directory metric has no 1:1 detail column)
+// fall back to their own description instead of inventing new copy.
+const AGENT_PRIMARY_METRIC_TOOLTIP: Record<string, string> = {
+  'Front desk agent': 'Conversations closed without requiring human escalation.',
+  'Reminder agent': 'Number of upcoming appointments confirmed by the patient via automated reminder outreach, reducing the likelihood of a no-show.',
+  'Waitlist agent': 'Number of open or cancelled slots successfully filled via waitlist outreach.',
+  'Pre-visit agent': 'Number of patient intake forms fully completed following agent outreach.',
+  'Recall agent': 'Distinct patients who received at least one successfully delivered agent touch in the period. Base population = patients flagged recall-due (hygiene, dormant, or unscheduled treatment).',
+  'Revenue agent': 'Distinct A/R accounts that received ≥1 delivered agent touch about a balance. Base = balance ≥ threshold and aging ≥ threshold days, excluded (active plan / in collections / disputed).',
+  'Treatment plan agent': 'Distinct treatment plans that received ≥1 delivered agent touch. Base = presented, unscheduled plans aged ≥ T+3 days, not opted out / suppressed.',
+  'Outreach agent': 'Total leads the agent reached out to via call or message in the selected period.',
 }
 
 // Keeps a dropdown panel mounted through its fade/scale-out before removing it, so
@@ -156,7 +173,7 @@ function SortDropdown({
       ? 'Sort by custom order'
       : sortMode === 'persona'
         ? personaFilter
-          ? `Sort by ${PERSONA_GROUPS.find((g) => g.id === personaFilter)?.label.toLowerCase()}`
+          ? `Sort by ${PERSONA_GROUPS.find((g) => g.id === personaFilter)?.label.toLowerCase()} persona`
           : 'Sort by persona'
         : 'Sort by runs'
 
@@ -364,14 +381,19 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
   )
 }
 
-// ── One metric cell — truncated value/label with a hover tooltip showing the full text ──
-function MetricCell({ value, label, exact }: { value: string; label: string; exact?: string }) {
+// ── One metric cell — plain by default; pass `tooltip` only for the card's
+// primary metric (the rest — Time saved, Cost saved — don't need a hover tooltip) ──
+function MetricCell({ value, label, tooltip }: { value: string; label: string; tooltip?: string }) {
+  const content = (
+    <div className="min-w-0 w-full">
+      <div className="truncate text-h3 text-text-primary">{value}</div>
+      <div className="truncate text-small text-text-tertiary">{label}</div>
+    </div>
+  )
+  if (!tooltip) return content
   return (
-    <Tooltip content={exact ? `${exact} ${label}` : label} variant="detail" className="w-full min-w-0">
-      <div className="min-w-0 w-full">
-        <div className="truncate text-h3 text-text-primary">{value}</div>
-        <div className="truncate text-small text-text-tertiary">{label}</div>
-      </div>
+    <Tooltip content={tooltip} variant="detail" className="w-full min-w-0">
+      {content}
     </Tooltip>
   )
 }
@@ -384,7 +406,6 @@ function AgentCard({
   onDragOver,
   onDrop,
   onOpen,
-  onAlertAction,
 }: {
   agent: AgentDirectoryEntry
   draggable: boolean
@@ -392,7 +413,6 @@ function AgentCard({
   onDragOver: (e: DragEvent<HTMLDivElement>) => void
   onDrop: (e: DragEvent<HTMLDivElement>) => void
   onOpen?: () => void
-  onAlertAction: () => void
 }) {
   const clickable = !draggable && !!onOpen
   const outcome = formatK(agent.outcome.value)
@@ -418,46 +438,37 @@ function AgentCard({
 
       <div className="mb-xs flex items-center justify-between gap-sm">
         <span className="truncate text-small text-text-tertiary">{agent.category}</span>
-        {agent.running > 0 ? (
-          <span className="shrink-0 rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
-            {agent.running} running
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">
-            Paused
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-xs">
+          {agent.alert && (
+            <span className="flex items-center gap-xs text-small text-text-secondary">
+              <Icon name="error" size={14} className="text-chip-danger-text" />
+              {parseInt(agent.alert.message, 10)} {parseInt(agent.alert.message, 10) === 1 ? 'issue' : 'issues'}
+            </span>
+          )}
+          {agent.running > 0 ? (
+            <span className="rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
+              {agent.running} running
+            </span>
+          ) : (
+            <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">
+              Paused
+            </span>
+          )}
+        </div>
       </div>
 
       <h3 className="mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h3>
       <p className="mb-lg line-clamp-2 text-small text-text-tertiary">{agent.description}</p>
 
-      <div className="mb-lg grid grid-cols-3 gap-md">
-        <MetricCell value={outcome.display} label={agent.outcome.label} exact={outcome.exact} />
+      <div className="grid grid-cols-3 gap-md">
+        <MetricCell
+          value={outcome.display}
+          label={agent.outcome.label}
+          tooltip={AGENT_PRIMARY_METRIC_TOOLTIP[agent.name] ?? agent.description}
+        />
         <MetricCell value={agent.timeSaved} label="Time saved" />
         <MetricCell value={agent.costSaved} label="Cost saved" />
       </div>
-
-      {agent.alert ? (
-        <div className="mt-auto flex items-center gap-sm rounded-sm bg-chip-danger-bg px-md py-sm">
-          <Icon name="error" size={18} className="shrink-0 text-chip-danger-text" />
-          <span className="min-w-0 flex-1 truncate text-small text-chip-danger-text">{agent.alert.message}</span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onAlertAction()
-            }}
-            className="shrink-0 text-small text-text-action hover:underline"
-          >
-            {agent.alert.actionLabel}
-          </button>
-        </div>
-      ) : (
-        <div className="mt-auto rounded-sm bg-surface-l2 px-md py-sm text-small text-text-secondary">
-          {agent.tasksOngoing} tasks ongoing
-        </div>
-      )}
     </div>
   )
 }
@@ -471,19 +482,12 @@ export function AgentDirectoryScreen({
   onOpenAgent?: (navId: string) => void
 } = {}) {
   const AGENT_DIRECTORY = getAgentDirectory(product)
-  const [statusFilter, setStatusFilter] = useState('All agents')
+  const [statusFilter, setStatusFilter] = useState('Running')
   const [dateRange, setDateRange] = useState('Last week')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
   const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
-  const [toastMessage, setToastMessage] = useState('')
-  const [toastVisible, setToastVisible] = useState(false)
   const dragIdRef = useRef<string | null>(null)
-
-  function showToast(message: string) {
-    setToastMessage(message)
-    setToastVisible(true)
-  }
 
   const statusFiltered = AGENT_DIRECTORY.filter((a) => {
     if (statusFilter === 'Running') return a.running > 0
@@ -492,16 +496,18 @@ export function AgentDirectoryScreen({
     return true
   })
 
-  const personaFiltered =
-    sortMode === 'persona' && personaFilter
-      ? statusFiltered.filter((a) => a.persona === personaFilter)
-      : statusFiltered
-
   // "Sort by runs" and "Sort by custom order" share the same base sequence
   // (customOrder, seeded from AGENT_DIRECTORY's order) until the user actually
   // drags cards around in custom mode — so the default view is identical either way.
-  const visibleAgents = [...personaFiltered].sort((a, b) => {
+  // "Sort by persona" is a SORT, not a filter — picking e.g. Marketing brings
+  // marketing agents to the top; every other persona still shows up below it.
+  const visibleAgents = [...statusFiltered].sort((a, b) => {
     if (sortMode === 'persona') {
+      if (personaFilter) {
+        const aMatch = a.persona === personaFilter ? 0 : 1
+        const bMatch = b.persona === personaFilter ? 0 : 1
+        if (aMatch !== bMatch) return aMatch - bMatch
+      }
       const pa = PERSONA_GROUPS.findIndex((p) => p.id === a.persona)
       const pb = PERSONA_GROUPS.findIndex((p) => p.id === b.persona)
       return pa - pb || a.name.localeCompare(b.name)
@@ -557,7 +563,6 @@ export function AgentDirectoryScreen({
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
               <button
                 type="button"
-                onClick={() => showToast('Agent creation flow coming soon')}
                 className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
               >
                 Create agent
@@ -606,7 +611,6 @@ export function AgentDirectoryScreen({
                       handleReorder(agent.id)
                     }}
                     onOpen={agent.navId ? () => onOpenAgent?.(agent.navId!) : undefined}
-                    onAlertAction={() => showToast(`${agent.alert!.actionLabel} — ${agent.name}`)}
                   />
                 ))}
               </div>
@@ -614,8 +618,6 @@ export function AgentDirectoryScreen({
           </div>
         </div>
       </div>
-
-      <Toast message={toastMessage} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
   )
 }

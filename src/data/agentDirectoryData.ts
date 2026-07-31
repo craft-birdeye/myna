@@ -26,8 +26,8 @@ export interface PersonaGroup {
 
 // Mirrors the real product groupings in the L1 icon rail (App.tsx RAIL_GROUPS).
 export const PERSONA_GROUPS: PersonaGroup[] = [
-  { id: 'marketing', label: 'Marketing persona', categories: ['Search AI', 'Listings AI', 'Reviews AI', 'Social AI', 'Referral', 'Marketing Automation AI'] },
-  { id: 'operations', label: 'Operations persona', categories: ['Inbox', 'Front desk'] },
+  { id: 'marketing', label: 'Marketing', categories: ['Search AI', 'Listings AI', 'Reviews AI', 'Social AI', 'Referral', 'Marketing Automation AI'] },
+  { id: 'operations', label: 'Operations', categories: ['Inbox', 'Front desk'] },
   { id: 'cx', label: 'Customer experience', categories: ['Surveys AI', 'Ticketing', 'Insights AI'] },
 ]
 
@@ -44,7 +44,6 @@ const REVIEW_RESPONSE: AgentDirectoryEntry = {
   timeSaved: '51h',
   costSaved: '$3.6K',
   tasksOngoing: 6,
-  alert: { message: '3 issues identified', actionLabel: 'Show details' },
 }
 
 const REVIEW_GENERATION: AgentDirectoryEntry = {
@@ -97,7 +96,7 @@ const TAGGING_ROUTING: AgentDirectoryEntry = {
   timeSaved: '97h',
   costSaved: '$6.8K',
   tasksOngoing: 12,
-  alert: { message: 'No queue matched for 5 messages', actionLabel: 'Fix it' },
+  alert: { message: '2 issues identified', actionLabel: 'Fix it' },
 }
 
 // Common agents, in display order (index 0 and 1 get interleaved with each
@@ -248,5 +247,14 @@ export function getAgentDirectory(product: string): AgentDirectoryEntry[] {
   const last = rest.pop()
   const [, , ...remainingCommon] = COMMON_AGENTS
 
-  return [first, REVIEW_RESPONSE, ...rest, REVIEW_GENERATION, ...(last ? [last] : []), ...remainingCommon]
+  // Front desk agent's North + South region issues (see AgentDetailScreen's
+  // REGIONS_BY_AGENT) only apply in Healthcare — Dental/Automotive share the
+  // same FRONT_DESK object, so this is a shallow copy, not a mutation, to
+  // avoid leaking the alert into their directories too.
+  const firstWithAlert =
+    product === 'healthcare' && first.id === 'front-desk'
+      ? { ...first, alert: { message: '3 issues identified', actionLabel: 'Show details' } }
+      : first
+
+  return [firstWithAlert, REVIEW_RESPONSE, ...rest, REVIEW_GENERATION, ...(last ? [last] : []), ...remainingCommon]
 }
