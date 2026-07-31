@@ -150,7 +150,7 @@ export default function CanvasNodeHeader({
         {hasAddButton && (
           <Button type="link" customIcon={<AddIcon />} onClick={onAddClick} noHover aria-label="Add" />
         )}
-        {!viewOnly && (
+        {!viewOnly && (!isTrigger || onReplace) && (
           <div className="cnh__more-wrapper" ref={menuRef}>
             <Button type="link" customIcon={<MoreIcon />} onClick={handleMoreClick} noHover aria-label="More options" />
             {menuOpen && (

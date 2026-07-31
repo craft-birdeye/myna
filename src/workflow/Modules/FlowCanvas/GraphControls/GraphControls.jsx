@@ -14,6 +14,8 @@ export default function GraphControls({
   onFitView,
   viewOnly = false,
   runDisabled = false,
+  onAiAssist = null,
+  aiAssistOpen = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -116,6 +118,40 @@ export default function GraphControls({
           <span className="material-symbols-outlined">play_arrow</span>
         </button>
       </GraphControlTooltip>
+
+      {onAiAssist && !aiAssistOpen && (
+        <GraphControlTooltip text="AI assist">
+          <button
+            className="graph-controls__run graph-controls__ai-assist"
+            onClick={onAiAssist}
+            type="button"
+            aria-label="AI assist"
+          >
+            <span className="graph-controls__ai-assist-avatar" aria-hidden>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <defs>
+                  <linearGradient
+                    id="graph-ai-assist-grad"
+                    x1="3"
+                    y1="3"
+                    x2="21"
+                    y2="21"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0%" stopColor="#9b6cf0" />
+                    <stop offset="55%" stopColor="#6834b7" />
+                    <stop offset="100%" stopColor="#3b82f6" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M12 2 Q12 12 22 12 Q12 12 12 22 Q12 12 2 12 Q12 12 12 2 Z"
+                  fill="url(#graph-ai-assist-grad)"
+                />
+              </svg>
+            </span>
+          </button>
+        </GraphControlTooltip>
+      )}
     </div>
   );
 }

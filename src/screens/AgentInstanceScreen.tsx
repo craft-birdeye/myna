@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  AiAssistPanel,
   Chip,
   CoachAgentPanel,
   DataTable,
@@ -324,6 +325,12 @@ export function AgentInstanceScreen({
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
   const [coachOpen, setCoachOpen] = useState(false)
+  const [aiAssistOpen, setAiAssistOpen] = useState(false)
+  const [selectedCanvasNode, setSelectedCanvasNode] = useState<{
+    id: string
+    label: string
+    flowType: string
+  } | null>(null)
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -494,6 +501,10 @@ export function AgentInstanceScreen({
               onChange={(tabId) => {
                 setActiveTab(tabId)
                 if (tabId !== 'recommendation') setCoachOpen(false)
+                if (tabId !== 'workflow') {
+                  setAiAssistOpen(false)
+                  setSelectedCanvasNode(null)
+                }
               }}
             />
           </div>
@@ -505,6 +516,12 @@ export function AgentInstanceScreen({
               displayName={shownName}
               onEdit={() => onEditAgent?.(instanceName)}
               product={product}
+              aiAssistOpen={aiAssistOpen}
+              onAiAssistOpenChange={(open) => {
+                setAiAssistOpen(open)
+                if (!open) setSelectedCanvasNode(null)
+              }}
+              onSelectedCanvasNodeChange={setSelectedCanvasNode}
             />
           ) : isRecommendationTab ? (
             <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -563,6 +580,19 @@ export function AgentInstanceScreen({
           <CoachAgentPanel
             agentName={instanceName}
             onClose={() => setCoachOpen(false)}
+          />
+        )}
+
+        {aiAssistOpen && isWorkflowTab && (
+          <AiAssistPanel
+            agentName={agentName}
+            mode="analyze"
+            onClose={() => {
+              setAiAssistOpen(false)
+              setSelectedCanvasNode(null)
+            }}
+            selectedCanvasNode={selectedCanvasNode}
+            onClearSelectedCanvasNode={() => setSelectedCanvasNode(null)}
           />
         )}
       </div>

@@ -128,7 +128,6 @@ function AgentWorkflowRunCanvas({
         .run-wf-bg { background-color: #f8f9fb; background-image: radial-gradient(circle, #c8cdd8 1px, transparent 1px); background-size: 28px 28px; }
         /* Canvas itself stays clear of the overlaid 600px details panel */
         .run-wf-viewer { height: 100%; width: calc(100% - 600px); }
-        .run-wf-viewer .agent-builder__lhs    { display: none !important; }
         .run-wf-viewer .faq-ab-header         { display: none !important; }
         .run-wf-viewer .ab-view-banner        { display: none !important; }
         .run-wf-viewer .faq-ab-embedded       { height: 100% !important; }
@@ -153,7 +152,6 @@ function AgentWorkflowRunCanvas({
           initialNodes={workflow.nodes}
           initialNodeDetails={workflow.nodeDetails}
           procedures={filteredProcedures}
-          defaultOpenSection="Tasks"
           initialZoom={0.85}
           onEdit={onEditWorkflow}
           runDisabled

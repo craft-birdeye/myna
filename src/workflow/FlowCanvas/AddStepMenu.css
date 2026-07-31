@@ -15,8 +15,8 @@
   min-height: 320px;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(33, 33, 33, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(33, 33, 33, 0.16);
   font-family: 'Roboto', sans-serif;
   color: #212121;
   overflow: hidden;
@@ -38,7 +38,7 @@
   width: 240px;
   flex-shrink: 0;
   padding: 12px;
-  gap: 12px;
+  gap: 8px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -66,13 +66,15 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
-  background: #fff;
+  border-radius: 8px;
+  background: #fafafa;
   flex-shrink: 0;
+  transition: border-color 150ms ease, background-color 150ms ease;
 }
 
 .add-step-menu__search:focus-within {
   border-color: #1976d2;
+  background: #fff;
 }
 
 .add-step-menu__search-icon {
@@ -115,7 +117,7 @@
   line-height: 16px;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: #9e9e9e;
+  color: #757575;
 }
 
 .add-step-menu__section-list {
@@ -134,7 +136,7 @@
   max-height: 36px;
   padding: 0 8px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   text-align: left;
@@ -146,6 +148,16 @@
 .add-step-menu__nav-row:hover,
 .add-step-menu__nav-row--active {
   background: #f4f6f7;
+}
+
+.add-step-menu__nav-row--active {
+  background: #eaf2fd;
+  color: #1976d2;
+}
+
+.add-step-menu__nav-row--active .add-step-menu__nav-icon,
+.add-step-menu__nav-row--active .add-step-menu__nav-chevron {
+  color: #1976d2;
 }
 
 .add-step-menu__nav-icon {
@@ -197,6 +209,7 @@
   cursor: pointer;
   text-align: left;
   font-family: 'Roboto', sans-serif;
+  border-radius: 8px;
 }
 
 .add-step-menu__detail-row:hover {

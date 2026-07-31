@@ -8,6 +8,24 @@
   }
 }
 
+/* Agent reply feedback stays quiet until its response/action row is hovered. */
+.agent-response-actions {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.agent-build-fade:hover + .agent-response-actions,
+.agent-response-actions:hover,
+.agent-response-actions:focus-within,
+.agent-response-actions.is-active {
+  opacity: 1;
+}
+
+/* The action row already supplies the standard 32px message gap. */
+.agent-response-actions + .user-bubble {
+  margin-top: 0;
+}
+
 /* Horizontal scrollbar hidden by default, visible on hover */
 .scroll-on-hover {
   scrollbar-width: thin;
@@ -140,6 +158,45 @@
 @keyframes ghost-shadow-pulse {
   0%, 100% { transform: scaleX(1); opacity: 0.35; }
   50% { transform: scaleX(0.65); opacity: 0.16; }
+}
+
+/* ─── Create-agent "View workflow" two-pane slide ───
+   Conversation (right) docks to a fixed 384px panel while the workflow canvas
+   (left) opens up to fill. Both panes animate flex-grow + flex-basis (kept in
+   px so the values interpolate — %↔px snaps, which is what made it look off). */
+.cwf-pane {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  transition:
+    flex-grow 340ms cubic-bezier(0.4, 0, 0.2, 1),
+    flex-basis 340ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 220ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cwf-pane { transition: none; }
+}
+
+/* Canvas (left): collapsed by default, grows to fill when open. */
+.cwf-canvas            { flex: 0 1 0px; opacity: 0; pointer-events: none; }
+.cwf-canvas.is-open    { flex: 1 1 0px; opacity: 1; pointer-events: auto; }
+
+/* Conversation (right): full-width → docked 384px → collapsed (copilot hidden). */
+.cwf-chat              { flex: 1 1 0px;   opacity: 1; }
+.cwf-chat.is-dock      { flex: 0 1 384px; opacity: 1; }
+.cwf-chat.is-collapsed { flex: 0 1 0px;   opacity: 0; pointer-events: none; }
+
+/* Docked AI assist only: conversation copy matches thoughts (13px / 20px).
+   Scoped under the scroll body so the panel chrome (header) stays text-body. */
+.cwf-chat.is-dock > .scrollbar-subtle .text-body {
+  font-size: 13px;
+  line-height: 1.25rem;
+  letter-spacing: -0.26px;
+}
+.cwf-chat.is-dock > .scrollbar-subtle .leading-6,
+.cwf-chat.is-dock > .scrollbar-subtle .leading-\[1\.5\] {
+  line-height: 1.25rem;
 }
 
 html,

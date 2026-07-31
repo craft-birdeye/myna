@@ -29,9 +29,20 @@ interface WorkflowViewerTabProps {
   displayName?: string
   onEdit: () => void
   product?: string
+  aiAssistOpen?: boolean
+  onAiAssistOpenChange?: (open: boolean) => void
+  onSelectedCanvasNodeChange?: (node: { id: string; label: string; flowType: string } | null) => void
 }
 
-export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }: WorkflowViewerTabProps) {
+export function WorkflowViewerTab({
+  instanceName,
+  displayName,
+  onEdit,
+  product,
+  aiAssistOpen,
+  onAiAssistOpenChange,
+  onSelectedCanvasNodeChange,
+}: WorkflowViewerTabProps) {
   const { procedures } = useProcedureStore()
   // instanceName is e.g. "Frontdesk agent - North region"; extract the agent name prefix
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -66,7 +77,6 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
     <div className="relative flex-1 overflow-hidden" style={{ height: '100%' }}>
       {/* Scoped CSS overrides */}
       <style>{`
-        .wf-viewer .agent-builder__lhs    { display: none !important; }
         .wf-viewer .faq-ab-header         { display: none !important; }
         .wf-viewer .ab-view-banner        { display: none !important; }
         .wf-viewer .faq-ab-embedded       { height: 100% !important; }
@@ -98,7 +108,9 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
             initialNodes={workflow.nodes}
             initialNodeDetails={workflow.nodeDetails}
             procedures={filteredProcedures}
-            defaultOpenSection="Tasks"
+            aiAssistOpen={aiAssistOpen}
+            onAiAssistOpenChange={onAiAssistOpenChange}
+            onSelectedCanvasNodeChange={onSelectedCanvasNodeChange}
           />
         </Suspense>
       </div>

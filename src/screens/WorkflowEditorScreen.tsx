@@ -6,7 +6,6 @@ import {
 } from '../data/agentWorkflows'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { getLastSavedCreateChat, createChatVariantForAgent } from '../data/createAgentChatStore'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -59,13 +58,12 @@ interface WorkflowEditorScreenProps {
   wizardDraft?: WizardAgentDraft | null
   aiAssistOpen?: boolean
   onAiAssistOpenChange?: (open: boolean) => void
-  hideLhs?: boolean
   createAiPanelOpen?: boolean
+  onCreateAiPanelOpenChange?: (open: boolean) => void
   previewProcedureId?: string | null
   previewProcedureDetail?: Record<string, unknown> | null
   onPreviewProcedureIdChange?: (id: string | null) => void
-  /** Saved co-pilot transcript shown in the Create with AI tab after Save agent. */
-  aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
+  onSelectedCanvasNodeChange?: (node: { id: string; label: string; flowType: string } | null) => void
 }
 
 export function WorkflowEditorScreen({
@@ -77,19 +75,16 @@ export function WorkflowEditorScreen({
   wizardDraft = null,
   aiAssistOpen,
   onAiAssistOpenChange,
-  hideLhs = false,
   createAiPanelOpen = false,
+  onCreateAiPanelOpenChange,
   previewProcedureId = null,
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
-  aiTranscript = null,
+  onSelectedCanvasNodeChange,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
   const shownName = displayName ?? agentName
-  const createChatVariant =
-    createChatVariantForAgent(shownName) ?? createChatVariantForAgent(agentName)
-  const resolvedAiTranscript = aiTranscript ?? getLastSavedCreateChat(createChatVariant)
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'
@@ -208,15 +203,14 @@ export function WorkflowEditorScreen({
           onAddProcedure={addProcedure}
           initialStatus={resolvedStatus}
           publishDisabled={publishDisabled}
-          defaultOpenSection="Tasks"
           aiAssistOpen={aiAssistOpen}
           onAiAssistOpenChange={onAiAssistOpenChange}
-          hideLhs={hideLhs}
           createAiPanelOpen={createAiPanelOpen}
+          onCreateAiPanelOpenChange={onCreateAiPanelOpenChange}
           previewProcedureId={previewProcedureId}
           previewProcedureDetail={previewProcedureDetail}
           onPreviewProcedureIdChange={onPreviewProcedureIdChange}
-          aiTranscript={resolvedAiTranscript}
+          onSelectedCanvasNodeChange={onSelectedCanvasNodeChange}
         />
       </Suspense>
     </div>

@@ -30,9 +30,14 @@
 .flow-canvas__toolbar-anchor {
   position: absolute;
   top: 8px;
+  right: 8px;
+  z-index: 4;
+}
+
+.flow-canvas__toolbar-anchor--viewer {
+  right: auto;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 4;
 }
 
 /* ─── Node centering wrapper ─── */

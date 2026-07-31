@@ -2012,7 +2012,7 @@ export function NewFrontdeskAgentSetupScreen({
 
   return (
     <div className="flex h-full flex-col">
-      <TopNav initials="S" />
+      <TopNav title="Front desk" initials="S" />
 
       <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
         <div className="flex items-center gap-sm">

@@ -414,12 +414,15 @@ function FlowCanvasInner({
   agentName = '',
   initialZoom = 1,
   runDisabled = false,
+  onAiAssist,
+  aiAssistOpen = false,
 }) {
   const { zoomTo, fitView, setCenter, setViewport, getViewport, getNodes } = useReactFlow();
   const [zoom, setZoom] = useState(Math.round(initialZoom * 100));
   const [isDraggingFromLHS, setIsDraggingFromLHS] = useState(false);
   const canvasRef = useRef(null);
   const initialPositioned = useRef(false);
+  const canvasTopOffset = viewOnly ? 84 : 8;
 
   const onDropNodeRef = useRef(onDropNode);
   useEffect(() => { onDropNodeRef.current = onDropNode; }, [onDropNode]);
@@ -482,12 +485,12 @@ function FlowCanvasInner({
     setViewport(
       {
         x: width / 2 - startNode.position.x * initialZoom,
-        y: 84 - startNode.position.y * initialZoom,
+        y: canvasTopOffset - startNode.position.y * initialZoom,
         zoom: initialZoom,
       },
       { duration: 0 },
     );
-  }, [nodes, setViewport, initialZoom]);
+  }, [nodes, setViewport, initialZoom, canvasTopOffset]);
 
   // Run once on initial load
   useEffect(() => {
@@ -661,7 +664,11 @@ function FlowCanvasInner({
       onDragOver={viewOnly ? undefined : handleDragOver}
       onDrop={viewOnly ? undefined : handleDrop}
     >
-      <div className="flow-canvas__toolbar-anchor">
+      <div
+        className={`flow-canvas__toolbar-anchor${
+          viewOnly ? ' flow-canvas__toolbar-anchor--viewer' : ''
+        }`}
+      >
         <GraphControls
           orientation={orientation}
           onOrientationChange={onOrientationChange}
@@ -672,6 +679,8 @@ function FlowCanvasInner({
           onFitView={() => { positionToStart(); }}
           viewOnly={viewOnly}
           runDisabled={runDisabled}
+          onAiAssist={onAiAssist}
+          aiAssistOpen={aiAssistOpen}
         />
       </div>
 
@@ -683,7 +692,7 @@ function FlowCanvasInner({
         defaultEdgeOptions={defaultEdgeOptions}
         onNodeClick={handleNodeClick}
         onViewportChange={handleViewportChange}
-        defaultViewport={{ x: 0, y: 84, zoom: initialZoom }}
+        defaultViewport={{ x: 0, y: canvasTopOffset, zoom: initialZoom }}
         nodeOrigin={[0.5, 0]}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={false}

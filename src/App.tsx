@@ -3,6 +3,7 @@ import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversati
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { AgentDetailScreen, HealthcareFrontdeskCreateAgentScreen } from './screens/AgentDetailScreen'
 import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
 import { SalesPipelineScreen, buildLeadDetailProps, type LeadDetailArgs } from './screens/SalesPipelineScreen'
 import { ServiceRequestsScreen, buildServiceRequestDetailProps, type ServiceRequestDetailArgs } from './screens/ServiceRequestsScreen'
@@ -22,7 +23,6 @@ import { HCWaitlistFilledScreen } from './screens/HCWaitlistFilledScreen'
 import { HCIntakesCompletedScreen } from './screens/HCIntakesCompletedScreen'
 import { DentalRevenueScreen } from './screens/DentalRevenueScreen'
 import { ManageTreatmentPlansScreen } from './screens/ManageTreatmentPlansScreen'
-import { AgentDetailScreen } from './screens/AgentDetailScreen'
 import { WorkflowEditorScreen } from './screens/WorkflowEditorScreen'
 import { ProceduresScreen } from './screens/ProceduresScreen'
 import { ReviewWaitlistScreen, buildWaitlistDetailProps, type WaitlistDetailArgs } from './screens/ReviewWaitlistScreen'
@@ -309,6 +309,12 @@ export function App() {
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
   const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
+  const [workflowAiAssistExpanded, setWorkflowAiAssistExpanded] = useState(false)
+  const [workflowSelectedCanvasNode, setWorkflowSelectedCanvasNode] = useState<{
+    id: string
+    label: string
+    flowType: string
+  } | null>(null)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
@@ -420,32 +426,55 @@ export function App() {
             onInitialConversationConsumed={() => setInboxFocusId(null)}
           />
         ) : isEditingWorkflow ? (
-          <div className="flex h-full w-full overflow-hidden">
-            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-              <TopNav title="Front desk" initials="S" />
-              <div className="flex-1 overflow-hidden">
-                <WorkflowEditorScreen
-                  agentName={editingAgentName}
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <TopNav title="Front desk" initials="S" />
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              {!workflowAiAssistExpanded && (
+                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                  <WorkflowEditorScreen
+                    agentName={editingAgentName}
+                    onClose={() => {
+                      setEditingAgentName(null)
+                      setWizardAgentDraft(null)
+                      setWorkflowAiAssistOpen(false)
+                      setWorkflowAiAssistExpanded(false)
+                      setWorkflowSelectedCanvasNode(null)
+                    }}
+                    product={activeProduct}
+                    wizardDraft={wizardAgentDraft}
+                    agentStatus={
+                      editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
+                        ? 'Draft'
+                        : undefined
+                    }
+                    aiAssistOpen={workflowAiAssistOpen}
+                    onAiAssistOpenChange={(open) => {
+                      setWorkflowAiAssistOpen(open)
+                      if (!open) {
+                        setWorkflowAiAssistExpanded(false)
+                        setWorkflowSelectedCanvasNode(null)
+                      }
+                    }}
+                    onSelectedCanvasNodeChange={setWorkflowSelectedCanvasNode}
+                  />
+                </div>
+              )}
+              {workflowAiAssistOpen && (
+                <AiAssistPanel
+                  agentName={editingAgentName ?? undefined}
+                  expanded={workflowAiAssistExpanded}
+                  onExpand={() => setWorkflowAiAssistExpanded((open) => !open)}
                   onClose={() => {
-                    setEditingAgentName(null)
-                    setWizardAgentDraft(null)
                     setWorkflowAiAssistOpen(false)
+                    setWorkflowAiAssistExpanded(false)
+                    setWorkflowSelectedCanvasNode(null)
                   }}
-                  product={activeProduct}
-                  wizardDraft={wizardAgentDraft}
-                  agentStatus={
-                    editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                      ? 'Draft'
-                      : undefined
-                  }
-                  aiAssistOpen={workflowAiAssistOpen}
-                  onAiAssistOpenChange={setWorkflowAiAssistOpen}
+                  selectedCanvasNode={workflowSelectedCanvasNode}
+                  onClearSelectedCanvasNode={() => setWorkflowSelectedCanvasNode(null)}
+                  CreateConversation={HealthcareFrontdeskCreateAgentScreen}
                 />
-              </div>
+              )}
             </div>
-            {workflowAiAssistOpen && (
-              <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
-            )}
           </div>
         ) : navActive === 'review-waitlist' && waitlistDetail ? (
           <>

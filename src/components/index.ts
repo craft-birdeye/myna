@@ -3,7 +3,7 @@ export type { ChatHistoryItem, ChatHistoryPanelProps } from './ChatHistoryPanel/
 export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
 export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
-export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
+export type { AiAssistPanelProps, AiAssistHistoryItem, AiAssistCreateConversationProps } from './AiAssistPanel/AiAssistPanel.types'
 export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
 export type {
   RunConversationEntry,

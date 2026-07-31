@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import LHSDrawer, { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK } from '../LHSDrawer/LHSDrawer';
+import { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK } from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
 import RHS from '../Organisms/Panels/RHS/RHS';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
@@ -676,20 +676,19 @@ export default function AgentBuilder({
   procedures = null,
   onAddProcedure,
   publishDisabled = false,
-  defaultOpenSection = 'Tasks',
   initialZoom = 1,
   runDisabled = false,
   aiAssistOpen: aiAssistOpenProp,
   onAiAssistOpenChange,
-  hideLhs = false,
   createAiPanelOpen = false,
+  onCreateAiPanelOpenChange = null,
   /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
   previewProcedureId = null,
   /** Optional full RHS detail payload — used when the procedure isn't in the live library. */
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
-  /** Saved co-pilot transcript for the Create with AI tab. */
-  aiTranscript = null,
+  /** Notifies parent when a canvas node is selected (for AI assist context chips). */
+  onSelectedCanvasNodeChange = null,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -749,7 +748,6 @@ export default function AgentBuilder({
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [lhsCollapsed, setLhsCollapsed] = useState(false);
   const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
   // AI assist panel is controlled by the parent when it needs to render the
   // panel itself (e.g. spanning the full app height, above this editor's own
@@ -757,7 +755,6 @@ export default function AgentBuilder({
   const aiAssistControlled = onAiAssistOpenChange != null;
   const aiAssistOpen = aiAssistControlled ? aiAssistOpenProp : aiAssistOpenInternal;
   const setAiAssistOpen = aiAssistControlled ? onAiAssistOpenChange : setAiAssistOpenInternal;
-  const [lhsForceOpenSection, setLhsForceOpenSection] = useState(null);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];
@@ -1217,11 +1214,6 @@ export default function AgentBuilder({
     });
   }, []);
 
-  const handleReplaceTrigger = useCallback(() => {
-    setLhsCollapsed(false);
-    setLhsForceOpenSection('Trigger');
-  }, []);
-
   const handleAddBranchPath = useCallback((branchNodeId) => {
     const newPathId = `${branchNodeId}-path-${Date.now()}`;
     setNodeDetails((prev) => {
@@ -1336,9 +1328,7 @@ export default function AgentBuilder({
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
     };
-    if (n.type === 'trigger') {
-      extra.onReplace = () => handleReplaceTrigger();
-    } else {
+    if (n.type !== 'trigger') {
       extra.onDelete = () => handleDeleteNode(n.id);
       extra.onCopy = () => handleCopyNode(n.id);
     }
@@ -1414,6 +1404,30 @@ export default function AgentBuilder({
     branchChildNodes.find((n) => n.id === selectedNodeId) ||
     branchPathNodes.find((n) => n.id === selectedNodeId);
 
+  /* Keep the parent AI assist composer in sync with the selected canvas node. */
+  useEffect(() => {
+    if (!onSelectedCanvasNodeChange) return;
+    if (!selectedNodeId || !selectedNode) {
+      onSelectedCanvasNodeChange(null);
+      return;
+    }
+    const details = nodeDetails[selectedNodeId] || {};
+    const label =
+      details.taskName
+      || details.triggerName
+      || details.name
+      || details.branchName
+      || details.nodeName
+      || details.agentName
+      || selectedNode.data?.title
+      || 'Node';
+    onSelectedCanvasNodeChange({
+      id: selectedNodeId,
+      label,
+      flowType: selectedNode.flowType || selectedNode.type || 'task',
+    });
+  }, [selectedNodeId, selectedNode, nodeDetails, onSelectedCanvasNodeChange]);
+
   const handleNodesReorder = useCallback((newIdOrder) => {
     setNodeList((prev) => {
       const byId = Object.fromEntries(prev.map((n) => [n.id, n]));
@@ -1482,7 +1496,6 @@ export default function AgentBuilder({
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(null);
-      setLhsForceOpenSection(null);
       return;
     }
 
@@ -2181,38 +2194,12 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          {!hideLhs && (
-            <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
-              <LHSDrawer
-                defaultTab="Create manually"
-                showTabs={!viewOnly}
-                defaultOpenSection={defaultOpenSection}
-                forceOpenSection={lhsForceOpenSection}
-                onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
-                viewOnly={viewOnly}
-                product={product}
-                agentName={agentName}
-                procedures={procedures}
-                aiTranscript={aiTranscript}
-                onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
-                onProcedureClick={viewOnly ? undefined : (procedureId) => {
-                  setLhsPreviewProcedureId(procedureId);
-                  setSelectedNodeId(null);
-                  setActiveProcedureId(null);
-                  setDrawerOpen(true);
-                }}
-              />
+          {drawerOpen && (
+            <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
+              <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
+                {renderRHSPanel()}
+              </RHSErrorBoundary>
             </div>
-          )}
-
-          {!hideLhs && lhsCollapsed && (
-            <button
-              className="ab-lhs-expand-pill"
-              onClick={() => setLhsCollapsed(false)}
-            >
-              <span className="material-symbols-outlined">left_panel_open</span>
-              <span className="ab-lhs-expand-pill__label">Editor</span>
-            </button>
           )}
 
           <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
@@ -2229,6 +2216,16 @@ export default function AgentBuilder({
               agentName={agentName}
               initialZoom={initialZoom}
               runDisabled={runDisabled}
+              onAiAssist={
+                onCreateAiPanelOpenChange
+                  ? () => onCreateAiPanelOpenChange(!createAiPanelOpen)
+                  : () => setAiAssistOpen(!aiAssistOpen)
+              }
+              aiAssistOpen={
+                onCreateAiPanelOpenChange
+                  ? Boolean(createAiPanelOpen)
+                  : Boolean(aiAssistOpen)
+              }
               onEdit={viewOnly ? onEdit : undefined}
               onRun={() => {
                 if (isReminderAgent) {
@@ -2243,15 +2240,30 @@ export default function AgentBuilder({
 
           {!aiAssistControlled && aiAssistOpen && (
             <div className="agent-builder__ai-assist">
-              <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
-            </div>
-          )}
-
-          {drawerOpen && (
-            <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
-              <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
-                {renderRHSPanel()}
-              </RHSErrorBoundary>
+              <AiAssistPanel
+                agentName={agentName}
+                onClose={() => setAiAssistOpen(false)}
+                selectedCanvasNode={
+                  selectedNodeId && selectedNode
+                    ? {
+                        id: selectedNodeId,
+                        label:
+                          (nodeDetails[selectedNodeId]?.taskName
+                            || nodeDetails[selectedNodeId]?.triggerName
+                            || nodeDetails[selectedNodeId]?.name
+                            || nodeDetails[selectedNodeId]?.branchName
+                            || nodeDetails[selectedNodeId]?.agentName
+                            || selectedNode.data?.title
+                            || 'Node'),
+                        flowType: selectedNode.flowType || selectedNode.type || 'task',
+                      }
+                    : null
+                }
+                onClearSelectedCanvasNode={() => {
+                  setSelectedNodeId(null);
+                  setDrawerOpen(false);
+                }}
+              />
             </div>
           )}
 

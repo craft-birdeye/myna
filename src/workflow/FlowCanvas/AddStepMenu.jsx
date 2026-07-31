@@ -162,7 +162,10 @@ export default function AddStepMenu({
   const menuHeight = 360;
   const top = Math.max(
     12,
-    Math.min(anchorRect.top + anchorRect.height / 2 - 24, window.innerHeight - menuHeight - 12),
+    Math.min(
+      anchorRect.top + anchorRect.height / 2 - menuHeight / 2,
+      window.innerHeight - menuHeight - 12,
+    ),
   );
   // Keep left edge fixed so Branch / Delay (and the search field) don't jump when
   // the right pane opens after selecting a chevron category.

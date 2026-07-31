@@ -163,7 +163,7 @@
 }
 
 .graph-controls__ai-assist {
-  color: #6834b7;
+  color: inherit;
 }
 
 .graph-controls__ai-assist:hover {
@@ -174,8 +174,15 @@
   background: #e5e9f0;
 }
 
-.graph-controls__ai-assist-icon {
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
+.graph-controls__ai-assist-avatar {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #f9f7fd;
+  flex-shrink: 0;
 }
 
 .graph-control-tooltip {
@@ -205,8 +212,7 @@
   font-family: 'Roboto', sans-serif;
 }
 
-.graph-control-tooltip:hover .graph-control-tooltip__label,
-.graph-control-tooltip:focus-within .graph-control-tooltip__label {
+.graph-control-tooltip:hover .graph-control-tooltip__label {
   opacity: 1;
   visibility: visible;
 }

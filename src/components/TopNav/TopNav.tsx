@@ -26,7 +26,7 @@ export function TopNav({ title, avatarUrl, initials = 'S', onAdd, onHelp, onMenu
   return (
     <header className="flex h-14 items-center gap-xs border-b border-border bg-surface px-2xl">
       {title && (
-        <span className="flex-1 font-normal text-text-primary" style={{ fontSize: 18, fontFamily: 'Roboto, sans-serif' }}>{title}</span>
+        <span className="flex-1 text-h3 text-text-primary">{title}</span>
       )}
       {!title && <span className="flex-1" />}
       <IconButton label="Create new" onClick={onAdd}>
