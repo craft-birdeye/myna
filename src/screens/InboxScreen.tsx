@@ -24,6 +24,7 @@ import {
 import { AgentDetailScreen } from './AgentDetailScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
+import { copilotMessage, useCopilotThreadsStore } from '../data/CopilotThreadsStoreContext'
 
 interface Conversation {
   id: string
@@ -737,10 +738,28 @@ export function InboxScreen({
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const { submitFeedback } = useFeedbackRecommendationsStore()
+  const { upsertThread } = useCopilotThreadsStore()
 
   const showFeedbackToast = (message: string) => {
     setToastMessage(message)
     setToastVisible(true)
+  }
+
+  // Coaching feedback is a Copilot conversation too — record it against the agent instance so
+  // it shows up in that agent's Copilot history alongside create-flow and recommendation threads.
+  const recordCoachingThread = (recommendationId: string, agentName: string, feedbackText: string) => {
+    const title = feedbackText.length > 48 ? `${feedbackText.slice(0, 48)}…` : feedbackText
+    upsertThread({
+      agentName,
+      origin: 'coaching',
+      title: `Coaching: ${title}`,
+      recommendationId,
+      dedupeKey: `rec::${recommendationId}`,
+      messages: [
+        copilotMessage('user', feedbackText),
+        copilotMessage('copilot', "Thanks — I've logged this as a recommendation. Open it from the Recommendation tab to review the change and approve it."),
+      ],
+    })
   }
 
   const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
@@ -763,9 +782,10 @@ export function InboxScreen({
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
 
-    submitFeedback({
+    const agentName = selectedConvo.assignee ?? 'Front desk agent - North region'
+    const recId = submitFeedback({
       text: details,
-      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      agentName,
       conversation: {
         name: selectedConvo.name,
         message: details,
@@ -776,6 +796,7 @@ export function InboxScreen({
       conversationId: selectedConvo.id,
       messageId: feedbackMessageId,
     })
+    recordCoachingThread(recId, agentName, details)
   }
 
   // Thumbs-down inside a voice-call transcript drawer (Dana Whitfield, the coaching examples,
@@ -784,9 +805,10 @@ export function InboxScreen({
   const handleVoiceDrawerFeedback = (details: string, messageId: string) => {
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
 
-    return submitFeedback({
+    const agentName = selectedConvo.assignee ?? 'Front desk agent - North region'
+    const recId = submitFeedback({
       text: details,
-      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      agentName,
       conversation: {
         name: selectedConvo.name,
         message: details,
@@ -797,6 +819,8 @@ export function InboxScreen({
       conversationId: selectedConvo.id,
       messageId,
     })
+    recordCoachingThread(recId, agentName, details)
+    return recId
   }
 
   const handleTrackFeedback = (recommendationId: string) => {
@@ -822,6 +846,7 @@ export function InboxScreen({
       conversationId: selectedConvo.id,
       messageId,
     })
+    recordCoachingThread(recId, agentName, feedbackPrefill)
     onNavigateToRecommendation?.(agentName, recId, feedbackPrefill)
   }
 

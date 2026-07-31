@@ -1,7 +1,5 @@
-export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
-export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
-export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
-export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
+export { CopilotPanel } from './CopilotPanel/CopilotPanel'
+export type { CopilotPanelProps } from './CopilotPanel/CopilotPanel.types'
 export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
 export type {
   RunConversationEntry,

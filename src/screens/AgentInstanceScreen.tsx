@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-  AiAssistPanel,
   Chip,
+  CopilotPanel,
   DataTable,
   EmptyState,
   Icon,
@@ -27,6 +27,8 @@ import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { ANNETTE_BLACK_CONVERSATION_ID } from '../data/annetteBlackChatConversation'
 import { REMINDER_INBOX_CONVERSATION_ID } from '../data/reminderInboxConversation'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
+import { useCopilotThreadsStore } from '../data/CopilotThreadsStoreContext'
+import { RECOMMENDATIONS } from '../data/recommendationsData'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -344,6 +346,26 @@ export function AgentInstanceScreen({
     return () => onRecommendationDetailActiveChange?.(false)
   }, [selectedRecommendationId, onRecommendationDetailActiveChange])
 
+  // Every recommendation visit becomes (or refreshes) a Copilot history thread, so the
+  // docked Copilot panel can list and reopen it later — one copilot, shared memory.
+  const { upsertThread } = useCopilotThreadsStore()
+  useEffect(() => {
+    if (!selectedRecommendationId) return
+    const rec =
+      RECOMMENDATIONS.find((r) => r.id === selectedRecommendationId) ??
+      feedbackRecommendations.find((r) => r.id === selectedRecommendationId)
+    if (!rec) return
+    upsertThread({
+      agentName: instanceName,
+      origin: rec.source === 'feedback' ? 'coaching' : 'recommendation',
+      title: rec.title,
+      recommendationId: rec.id,
+      dedupeKey: `rec::${rec.id}`,
+    })
+    // Record once per visit — store setters are intentionally unstable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRecommendationId])
+
   useEffect(() => {
     if (!initialRecommendationId) return
     setActiveTab('recommendation')
@@ -445,10 +467,10 @@ export function AgentInstanceScreen({
             </div>
             <div className="flex items-center gap-sm">
               {isAiAssistAgent && !isRecommendationTab && (
-                <Tooltip content="AI assist" variant="brief">
+                <Tooltip content="Copilot" variant="brief">
                   <button
                     type="button"
-                    aria-label="AI assist"
+                    aria-label="Copilot"
                     aria-pressed={aiAssistOpen}
                     onClick={() => setAiAssistOpen((open) => !open)}
                     className={`flex size-9 items-center justify-center rounded-sm border border-border-selected hover:bg-surface-l2 ${
@@ -595,7 +617,14 @@ export function AgentInstanceScreen({
         </div>
 
         {aiAssistOpen && isAiAssistAgent && !isRecommendationTab && (
-          <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
+          <CopilotPanel
+            agentName={instanceName}
+            onClose={() => setAiAssistOpen(false)}
+            onOpenRecommendation={(recommendationId) => {
+              setActiveTab('recommendation')
+              setSelectedRecommendationId(recommendationId)
+            }}
+          />
         )}
       </div>
     </div>

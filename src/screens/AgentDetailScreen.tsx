@@ -30,7 +30,8 @@ import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
-import { AiAssistPanel } from '../components/AiAssistPanel/AiAssistPanel'
+import { CopilotPanel } from '../components/CopilotPanel/CopilotPanel'
+import { copilotMessage, useCopilotThreadsStore } from '../data/CopilotThreadsStoreContext'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
@@ -4010,6 +4011,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedInstance, setSelectedInstance] = useState<{ name: string; status: string } | null>(null)
   const [instanceInitialTab, setInstanceInitialTab] = useState('outcomes')
+  const { upsertThread } = useCopilotThreadsStore()
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
@@ -4052,7 +4054,22 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setShowCreateFlow(false)
     setShowSetupWizard(false)
     setInstanceInitialTab('workflow')
-    setSelectedInstance({ name: `${agentName} - North region`, status: 'Running' })
+    const instanceName = `${agentName} - North region`
+    setSelectedInstance({ name: instanceName, status: 'Running' })
+    // The creation conversation becomes the instance's first Copilot thread — a condensed
+    // transcript of the scripted create flow, so the copilot "remembers" building this agent.
+    upsertThread({
+      agentName: instanceName,
+      origin: 'create',
+      title: 'Created this agent',
+      dedupeKey: `create::${instanceName}`,
+      messages: [
+        copilotMessage('user', `Set up a ${agentName.toLowerCase()} for my practice.`),
+        copilotMessage('copilot', 'I put together the jobs, procedures and connections we discussed, and built the workflow for you to review.'),
+        copilotMessage('system', options?.publish ? 'Agent created and published' : 'Agent created'),
+        copilotMessage('copilot', 'You can keep refining here anytime — ask me to tighten a procedure, change the greeting, or take on a new job.'),
+      ],
+    })
     setToastMessage(
       options?.publish ? 'Agent created and published successfully' : 'Agent created successfully',
     )
@@ -4393,7 +4410,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               aria-hidden={!createCopilotOpen}
             >
               <div className="h-full w-[400px]">
-                <AiAssistPanel
+                <CopilotPanel
+                  agentName={`${agentName} - North region`}
                   onClose={() => {
                     setCreateCopilotSlideIn(false)
                     window.setTimeout(() => setCreateCopilotOpen(false), 300)

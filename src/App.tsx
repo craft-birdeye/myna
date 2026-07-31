@@ -3,8 +3,9 @@ import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversati
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
+import { CopilotThreadsStoreProvider } from './data/CopilotThreadsStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
-import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { CopilotPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
 import { SalesPipelineScreen, buildLeadDetailProps, type LeadDetailArgs } from './screens/SalesPipelineScreen'
 import { ServiceRequestsScreen, buildServiceRequestDetailProps, type ServiceRequestDetailArgs } from './screens/ServiceRequestsScreen'
@@ -377,6 +378,7 @@ export function App() {
     <ProcedureStoreProvider>
     <FeedbackRecommendationsStoreProvider>
     <RecommendationOverridesStoreProvider>
+    <CopilotThreadsStoreProvider>
     <div className="flex h-screen w-screen overflow-hidden bg-surface text-text-primary">
       <IconRail
         logoSrc={logoSrc}
@@ -464,7 +466,10 @@ export function App() {
               </div>
             </div>
             {workflowAiAssistOpen && (
-              <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
+              <CopilotPanel
+                agentName={editingAgentName ?? 'this agent'}
+                onClose={() => setWorkflowAiAssistOpen(false)}
+              />
             )}
           </div>
         ) : navActive === 'review-waitlist' && waitlistDetail ? (
@@ -643,6 +648,7 @@ export function App() {
         onClose={() => setAgentToastVisible(false)}
       />
     </div>
+    </CopilotThreadsStoreProvider>
     </RecommendationOverridesStoreProvider>
     </FeedbackRecommendationsStoreProvider>
     </ProcedureStoreProvider>

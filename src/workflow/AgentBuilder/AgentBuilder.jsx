@@ -10,7 +10,7 @@ import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomToo
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
-import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
+import { CopilotPanel } from '../../components/CopilotPanel/CopilotPanel';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -2208,7 +2208,7 @@ export default function AgentBuilder({
 
           {!aiAssistControlled && aiAssistOpen && (
             <div className="agent-builder__ai-assist">
-              <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
+              <CopilotPanel agentName={agentName || 'this agent'} onClose={() => setAiAssistOpen(false)} />
             </div>
           )}
 
