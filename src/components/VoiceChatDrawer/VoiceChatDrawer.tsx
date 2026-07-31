@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
+import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import type { VoiceChatDrawerProps } from './VoiceChatDrawer.types'
@@ -92,8 +93,9 @@ export function VoiceChatDrawer({
                           onClick={() =>
                             onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
                           }
-                          className="text-small text-text-tertiary hover:text-text-secondary"
+                          className="flex items-center gap-xs text-small text-text-action hover:underline"
                         >
+                          <TrainAgentIcon size={20} color="currentColor" />
                           Coach agent
                         </button>
                       )}
