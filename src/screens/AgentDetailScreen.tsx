@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  ChatHistorySideNav,
   Chip,
   ComposerAttachPopover,
   CustomizeColumnsDrawer,
@@ -11,12 +12,14 @@ import {
   InfoCard,
   InfoCardListItem,
   InfoTooltip,
+  LanguageFlag,
   MetricTiles,
   RefChip,
   Tabs,
   Toast,
   Tooltip,
   TopNav,
+  WorkflowPreviewPanel,
   type AttachItem,
   type ChipVariant,
   type Column,
@@ -31,9 +34,11 @@ import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 import { AiAssistPanel } from '../components/AiAssistPanel/AiAssistPanel'
-import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
+import type { WizardAgentDraft, WizardChannelId } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
+import { WIZARD_LOCATIONS } from '../data/wizardLocations'
+import { AGENT_LANGUAGES, getAgentLanguage } from '../data/agentLanguages'
 import { SendIcon } from '../assets/SendIcon'
 import {
   CheckIcon,
@@ -265,6 +270,18 @@ const REMINDER_CREATE_CARDS = [
     description:
       "Sends recurring reminders for chronic condition follow-ups, lab reorders, and prescription refills. Detects gaps in care by querying the patient's care plan and nudges patients who have fallen out of schedule.",
   },
+]
+
+const FRONTDESK_CREATE_CHAT_HISTORY = [
+  { id: 'chat-insurance-triage', label: 'Insurance verification and triage bot' },
+  { id: 'chat-after-hours', label: 'After-hours patient triage assistant' },
+  { id: 'chat-reschedule', label: 'Reschedule and cancellation handling' },
+]
+
+const REMINDER_CREATE_CHAT_HISTORY = [
+  { id: 'chat-no-show', label: 'No-show risk intervention agent' },
+  { id: 'chat-pre-visit', label: 'Pre-visit preparation reminder' },
+  { id: 'chat-medication', label: 'Chronic care & medication reminder' },
 ]
 
 // ── Per-agent library cards ──────────────────────────────────────────────────
@@ -2065,14 +2082,225 @@ function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
 // ── Draft review card ("Your draft is ready — here's everything I built") ──
 const DRAFT_TOOLS = ['Appointment scheduler', 'Patient records (EHR)', 'Insurance verification', 'Human handoff']
 
-const DRAFT_SETTINGS: { setting: string; value: string; confirmed: boolean; source: string }[] = [
-  { setting: 'Channels', value: 'Voice + Text', confirmed: true, source: 'From your response' },
-  { setting: 'Greeting', value: '"Thanks for calling [Clinic] — how can I help you today?"', confirmed: false, source: 'default' },
-  { setting: 'Consent', value: 'Standard call-recording consent notice', confirmed: false, source: 'default' },
-  { setting: 'Voice', value: 'Warm, female (US) · standard speed', confirmed: false, source: 'default' },
-  { setting: 'Language', value: 'English (primary)', confirmed: false, source: 'default' },
-  { setting: 'Locations', value: 'All 3 clinic locations', confirmed: false, source: 'default' },
+// ── Chat "final details" turn: name / locations / channels / language ───────
+const CHANNEL_LABELS: Record<WizardChannelId, string> = {
+  voice: 'Voice',
+  webchat: 'Web chat',
+  text: 'Text',
+  email: 'Email',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+}
+
+const CHANNEL_OPTIONS: { id: WizardChannelId; label: string; icon: string }[] = [
+  { id: 'voice', label: 'Voice', icon: 'call' },
+  { id: 'webchat', label: 'Web chat', icon: 'chat' },
+  { id: 'text', label: 'Text', icon: 'sms' },
+  { id: 'email', label: 'Email', icon: 'mail' },
 ]
+
+/** Suggested agent-name chips. "Ava" is always included since it's the persona
+ * name already hardcoded into the scripted test-call transcript. */
+function deriveNameSuggestions(_promptText: string): string[] {
+  return ['Front desk agent', 'Clinic assistant', 'Ava']
+}
+
+/** Reads the channels implied by the user's own description, so the default
+ * chip selection reflects what they actually said rather than assuming everything. */
+function deriveDefaultChannels(promptText: string): WizardChannelId[] {
+  const text = promptText.toLowerCase()
+  const channels: WizardChannelId[] = []
+  if (/\bcalls?\b|\bphone\b/.test(text)) channels.push('voice')
+  if (/\bweb ?chat\b|\bchat\b/.test(text)) channels.push('webchat')
+  if (/\btexts?\b|\bsms\b/.test(text)) channels.push('text')
+  if (/\bemails?\b/.test(text)) channels.push('email')
+  return channels.length > 0 ? channels : ['voice']
+}
+
+function formatLocationsSummary(selectedLocationIds: string[]): string {
+  if (selectedLocationIds.length === WIZARD_LOCATIONS.length) return `All ${WIZARD_LOCATIONS.length} locations`
+  const names = selectedLocationIds
+    .map((id) => WIZARD_LOCATIONS.find((l) => l.id === id)?.name)
+    .filter((name): name is string => Boolean(name))
+  if (names.length === 0) return 'No locations selected'
+  if (names.length <= 2) return names.join(' + ')
+  return `${names[0]} + ${names.length - 1} more`
+}
+
+function formatChannelsSummary(selectedChannels: WizardChannelId[]): string {
+  if (selectedChannels.length === 0) return 'No channels selected'
+  return selectedChannels.map((id) => CHANNEL_LABELS[id]).join(' + ')
+}
+
+/** Replaces the old static DRAFT_SETTINGS table with what was actually decided. */
+function buildSettingsRows(
+  agentName: string,
+  selectedLocationIds: string[],
+  selectedChannels: WizardChannelId[],
+  language: string,
+): { setting: string; value: string; confirmed: boolean; source: string }[] {
+  const rows = [
+    { setting: 'Name', value: agentName, confirmed: true, source: 'From your response' },
+    { setting: 'Channels', value: formatChannelsSummary(selectedChannels), confirmed: true, source: 'From your response' },
+    { setting: 'Locations', value: formatLocationsSummary(selectedLocationIds), confirmed: true, source: 'From your response' },
+  ]
+  if (language !== 'en') {
+    rows.push({ setting: 'Language', value: getAgentLanguage(language).label, confirmed: true, source: 'From your response' })
+  }
+  return rows
+}
+
+/** Shared quick-pick chip — name suggestions, locations, channels, and the
+ * inline summary-edit rows all reuse this one component. */
+function ChatPickChip({
+  label,
+  selected,
+  onClick,
+  icon,
+}: {
+  label: string
+  selected: boolean
+  onClick: () => void
+  icon?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`flex h-9 items-center gap-xs rounded-md border px-lg text-body transition-colors ${
+        selected
+          ? 'border-primary bg-surface-selected text-text-primary'
+          : 'border-border bg-surface text-text-primary hover:bg-surface-hover'
+      }`}
+    >
+      {selected && <Icon name="check" size={14} className="text-primary" />}
+      {icon && <Icon name={icon} size={16} className="text-text-icon" />}
+      {label}
+    </button>
+  )
+}
+
+const LANGUAGE_PICKER_IDS = ['en', 'es', 'fr', 'zh']
+
+/** "Final details" turn — locations, channels, and an optional language change,
+ * shown right after the user confirms they want the agent built. Shared by both
+ * the docs and no-docs branches so the question is only authored once. */
+function AskBasicsTurn({
+  selectedLocationIds,
+  onToggleLocation,
+  onSelectAllLocations,
+  selectedChannels,
+  onToggleChannel,
+  language,
+  onSelectLanguage,
+  showLanguagePicker,
+  onToggleLanguagePicker,
+  onContinue,
+}: {
+  selectedLocationIds: string[]
+  onToggleLocation: (id: string) => void
+  onSelectAllLocations: () => void
+  selectedChannels: WizardChannelId[]
+  onToggleChannel: (id: WizardChannelId) => void
+  language: string
+  onSelectLanguage: (id: string) => void
+  showLanguagePicker: boolean
+  onToggleLanguagePicker: () => void
+  onContinue: () => void
+}) {
+  const allLocationsSelected = selectedLocationIds.length === WIZARD_LOCATIONS.length
+  const canContinue = selectedChannels.length > 0
+
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={false} />
+      </span>
+      <div className="flex flex-1 flex-col gap-md">
+        <p className="text-body leading-6 text-text-primary">
+          Great — just two quick things before I start building:
+        </p>
+
+        <div className="flex flex-col gap-sm">
+          <p className="text-small text-text-tertiary">Locations</p>
+          <div className="flex flex-wrap gap-sm">
+            <ChatPickChip label="All locations" selected={allLocationsSelected} onClick={onSelectAllLocations} />
+            {WIZARD_LOCATIONS.map((loc) => (
+              <ChatPickChip
+                key={loc.id}
+                label={loc.name}
+                selected={selectedLocationIds.includes(loc.id)}
+                onClick={() => onToggleLocation(loc.id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-sm">
+          <p className="text-small text-text-tertiary">Channels</p>
+          <div className="flex flex-wrap gap-sm">
+            {CHANNEL_OPTIONS.map((ch) => (
+              <ChatPickChip
+                key={ch.id}
+                label={ch.label}
+                icon={ch.icon}
+                selected={selectedChannels.includes(ch.id)}
+                onClick={() => onToggleChannel(ch.id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {!showLanguagePicker ? (
+          <p className="text-body text-text-secondary">
+            Language: {getAgentLanguage(language).label}{' '}
+            <button type="button" onClick={onToggleLanguagePicker} className="text-text-action hover:underline">
+              change
+            </button>
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-sm">
+            {AGENT_LANGUAGES.filter((l) => LANGUAGE_PICKER_IDS.includes(l.id)).map((lang) => (
+              <button
+                key={lang.id}
+                type="button"
+                aria-pressed={language === lang.id}
+                onClick={() => onSelectLanguage(lang.id)}
+                className={`flex h-9 items-center gap-xs rounded-md border px-lg text-body transition-colors ${
+                  language === lang.id
+                    ? 'border-primary bg-surface-selected text-text-primary'
+                    : 'border-border bg-surface text-text-primary hover:bg-surface-hover'
+                }`}
+              >
+                <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
+                {lang.label}
+              </button>
+            ))}
+            <button type="button" onClick={onToggleLanguagePicker} className="text-body text-text-action hover:underline">
+              Done
+            </button>
+          </div>
+        )}
+
+        <div>
+          <button
+            type="button"
+            onClick={onContinue}
+            disabled={!canContinue}
+            className={`flex h-9 items-center rounded-md border px-lg text-body transition-colors ${
+              canContinue
+                ? 'border-border bg-surface text-text-primary hover:bg-surface-hover'
+                : 'cursor-not-allowed border-border bg-surface text-text-tertiary'
+            }`}
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function DraftReviewSection({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -2087,10 +2315,18 @@ function DraftReviewCard({
   refillAdded,
   openProcedureName,
   onOpenProcedure,
+  agentName,
+  selectedLocationIds,
+  selectedChannels,
+  language,
 }: {
   refillAdded: boolean
   openProcedureName: string | null
   onOpenProcedure: (name: string) => void
+  agentName: string
+  selectedLocationIds: string[]
+  selectedChannels: WizardChannelId[]
+  language: string
 }) {
   const procedures: { label: string; note: ReactNode; open: string }[] = [
     {
@@ -2193,7 +2429,7 @@ function DraftReviewCard({
 
       <DraftReviewSection label="Settings">
         <div className="flex flex-col gap-sm">
-          {DRAFT_SETTINGS.map((row) => (
+          {buildSettingsRows(agentName, selectedLocationIds, selectedChannels, language).map((row) => (
             <div key={row.setting} className="flex flex-col">
               <span className="text-small leading-tight text-text-tertiary">{row.setting}</span>
               <div className="flex flex-wrap items-center gap-sm">
@@ -2289,6 +2525,8 @@ function BuildingProgressPanel({
   const displayStep = persisted ? BUILD_STEPS.length : step
   const minutesRemaining = Math.max(1, BUILD_STEPS.length - displayStep)
 
+  const progressPct = Math.round((displayStep / BUILD_STEPS.length) * 100)
+
   return (
     <div className={`agent-build-fade flex flex-col gap-md ${continuation ? 'mt-md' : 'mt-3xl'}`}>
       <p className="text-body leading-6">
@@ -2297,34 +2535,52 @@ function BuildingProgressPanel({
         <span className="text-text-secondary"> · you can leave — I'll notify you when it's ready</span>
       </p>
 
-      <div className="flex flex-col gap-sm">
+      <div className="h-1 w-full max-w-[280px] overflow-hidden rounded-full bg-surface-selected">
+        <div
+          className="h-full rounded-full bg-accent-positive transition-[width] duration-700 ease-out"
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+
+      <div className="flex flex-col">
         {BUILD_STEPS.map((s, i) => {
           const isDone = i < displayStep
           const isActive = i === displayStep && !done
+          const isLast = i === BUILD_STEPS.length - 1
           return (
-            <span key={s.id} className="inline-flex items-center gap-xs text-body">
-              {isDone ? (
-                <Icon name="check_circle" size={18} className="shrink-0 text-accent-positive" />
-              ) : isActive ? (
-                <Icon name="hourglass_top" size={18} className="animate-pulse shrink-0 text-chip-warning-text" />
-              ) : (
-                <Icon name="radio_button_unchecked" size={18} className="shrink-0 text-text-tertiary" />
+            <div key={s.id} className={`relative flex gap-sm ${isLast ? '' : 'pb-sm'}`}>
+              {!isLast && (
+                <span
+                  aria-hidden
+                  className={`absolute bottom-0 left-[9px] top-[22px] w-px transition-colors duration-500 ${
+                    isDone ? 'bg-accent-positive' : 'bg-border'
+                  }`}
+                />
               )}
-              <span className={isDone || isActive ? 'text-text-primary' : 'text-text-tertiary'}>{s.label}</span>
-            </span>
+              {isDone ? (
+                <Icon key="check" name="check_circle" size={18} className="step-check-pop relative z-10 shrink-0 text-accent-positive" />
+              ) : isActive ? (
+                <Icon key="active" name="hourglass_top" size={18} className="step-hourglass-swing relative z-10 shrink-0 text-chip-warning-text" />
+              ) : (
+                <Icon key="pending" name="radio_button_unchecked" size={18} className="relative z-10 shrink-0 text-text-tertiary" />
+              )}
+              <span className={`text-body transition-colors duration-300 ${isDone || isActive ? 'text-text-primary' : 'text-text-tertiary'}`}>
+                {s.label}
+              </span>
+            </div>
           )
         })}
       </div>
 
       {!done && (
-        <div className="flex items-center gap-xs text-small text-text-secondary">
+        <div key={activity} className="agent-build-fade flex items-center gap-xs text-small text-text-secondary">
           <Icon name="progress_activity" size={14} className="animate-spin text-text-icon" />
           <span>{BUILD_ACTIVITY_MESSAGES[activity]}</span>
         </div>
       )}
 
       {!persisted && (
-        <p className="text-small italic text-text-tertiary">
+        <p key={done ? 'wrap' : minutesRemaining} className="agent-build-fade text-small italic text-text-tertiary">
           {done ? 'Wrapping up…' : `~ ${minutesRemaining} minutes remaining`}
         </p>
       )}
@@ -2365,6 +2621,11 @@ const STEP_THINKING_LABELS: Partial<Record<CreatePhase, string[]>> = {
     'Analyzing your selections',
     'Synthesizing information',
   ],
+  'summary': [
+    'Setting locations',
+    'Configuring channels',
+    'Finalizing agent setup',
+  ],
 }
 
 function phaseAtLeast(current: CreatePhase, target: CreatePhase) {
@@ -2391,9 +2652,13 @@ function ProcedureStepTokens({ tokens }: { tokens: Token[] }) {
 
 function ProcedurePreviewPanel({
   procedure,
+  expanded,
+  onExpand,
   onClose,
 }: {
   procedure: Procedure
+  expanded?: boolean
+  onExpand?: () => void
   onClose: () => void
 }) {
   const isReminderCall = procedure.name === REMINDER_CALL_PROCEDURE_NAME
@@ -2403,27 +2668,39 @@ function ProcedurePreviewPanel({
     : Math.max(0, procedure.context.length - visibleContext.length)
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-surface">
+    <div className="flex h-full w-full flex-col overflow-hidden border-l border-border bg-surface">
       <div className="flex shrink-0 items-center justify-between gap-sm bg-surface px-lg py-[18px]">
         <div className="flex min-w-0 items-center gap-sm">
           <button
             type="button"
             aria-label="Back"
             onClick={onClose}
-            className="shrink-0 text-text-icon hover:text-text-primary"
+            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
-            <Icon name="arrow_back" size={18} />
+            <Icon name="arrow_back" size={20} />
           </button>
           <h3 className="truncate text-body text-text-primary">{procedure.name}</h3>
         </div>
-        <button
-          type="button"
-          aria-label="Close procedure"
-          onClick={onClose}
-          className="shrink-0 text-text-icon hover:text-text-primary"
-        >
-          <Icon name="close" size={18} />
-        </button>
+        <div className="flex items-center gap-xs">
+          {onExpand && (
+            <button
+              type="button"
+              aria-label={expanded ? 'Collapse' : 'Expand'}
+              onClick={onExpand}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <Icon name={expanded ? 'close_fullscreen' : 'open_in_full'} size={20} />
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Close procedure"
+            onClick={onClose}
+            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            <Icon name="close" size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-2xl py-lg">
@@ -2491,6 +2768,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   onViewWorkflow,
   onBack,
   onSubmittedChange,
+  onAgentNameChange,
   pageTitle,
   libraryCards,
   initialPrompt,
@@ -2503,6 +2781,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   onViewWorkflow?: () => void
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
+  onAgentNameChange?: (name: string) => void
   pageTitle?: string
   libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
@@ -2560,7 +2839,14 @@ function HealthcareFrontdeskCreateAgentScreen({
   const [stepThinkingPhase, setStepThinkingPhase] = useState<CreatePhase | null>(null)
   const [stepThinkingIndex, setStepThinkingIndex] = useState(0)
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([])
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(WIZARD_LOCATIONS.map((l) => l.id))
+  const [selectedChannels, setSelectedChannels] = useState<WizardChannelId[]>([])
+  const [language, setLanguage] = useState('en')
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false)
+  const [basicsConfirmed, setBasicsConfirmed] = useState(false)
+  const [editingSummarySection, setEditingSummarySection] = useState<'name' | 'locations' | 'channels' | null>(null)
   const [openProcedureName, setOpenProcedureName] = useState<string | null>(null)
+  const [showWorkflowPreview, setShowWorkflowPreview] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewActive, setPreviewActive] = useState(false)
   const [previewSessionEnded, setPreviewSessionEnded] = useState(false)
@@ -2626,6 +2912,32 @@ function HealthcareFrontdeskCreateAgentScreen({
     setPreviewActive(false)
     setPreviewSessionEnded(false)
   }
+
+  // Right-side procedure/test preview panel: animate its width in from 0 → 480
+  // Surface the live agent name up to the parent so the chat-history sidebar can
+  // show/rename the current conversation as soon as the user picks a name.
+  useEffect(() => {
+    onAgentNameChange?.(agentName)
+  }, [agentName, onAgentNameChange])
+
+  // (rather than popping in at full width) so the chat column reflows smoothly
+  // alongside it. Same double-rAF technique as the reminder Copilot slide-in.
+  const panelVisible = Boolean(openProcedureName || previewOpen || showWorkflowPreview)
+  const [panelSlideIn, setPanelSlideIn] = useState(false)
+  const [panelExpanded, setPanelExpanded] = useState(false)
+  const panelWidth = panelExpanded ? 800 : 480
+  useEffect(() => {
+    if (!panelVisible) {
+      setPanelSlideIn(false)
+      setPanelExpanded(false)
+      return
+    }
+    setPanelSlideIn(false)
+    const raf1 = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setPanelSlideIn(true))
+    })
+    return () => window.cancelAnimationFrame(raf1)
+  }, [panelVisible])
 
   const handleStartTestAgent = (label = 'Test agent') => {
     setTestAgentAnswers((prev) => [...prev, label])
@@ -2694,6 +3006,7 @@ function HealthcareFrontdeskCreateAgentScreen({
     reviewPromptFilledRef.current = false
     setStepThinkingPhase(null)
     setOpenProcedureName(null)
+    setShowWorkflowPreview(false)
     setPreviewOpen(false)
     setPreviewActive(false)
     setPreviewSessionEnded(false)
@@ -2702,6 +3015,12 @@ function HealthcareFrontdeskCreateAgentScreen({
     hadPreviewSessionRef.current = false
     previewActiveRef.current = false
     setFollowUp('')
+    setSelectedLocationIds(WIZARD_LOCATIONS.map((l) => l.id))
+    setSelectedChannels([])
+    setLanguage('en')
+    setShowLanguagePicker(false)
+    setBasicsConfirmed(false)
+    setEditingSummarySection(null)
   }
 
   // Advance to the next question behind a short "analyzing / building /
@@ -2843,6 +3162,9 @@ function HealthcareFrontdeskCreateAgentScreen({
     agentName,
     docsAnswer,
     confirmCreateAnswer,
+    basicsConfirmed,
+    showLanguagePicker,
+    editingSummarySection,
     jobsAnswer,
     showTestFollowUp,
     testAgentAnswers,
@@ -2863,11 +3185,7 @@ function HealthcareFrontdeskCreateAgentScreen({
     onSubmittedChange?.(true)
     setPhase('ask-docs')
     setIntroThinking(true)
-  }
-
-  const startBuilding = () => {
-    setPhase('summary')
-    setLoaderIndex(null)
+    setSelectedChannels(deriveDefaultChannels(prompt))
   }
 
   const submitDocs = (answer: string, provided: boolean, items: AttachItem[] = []) => {
@@ -2891,7 +3209,26 @@ function HealthcareFrontdeskCreateAgentScreen({
         ? unique
         : RECOMMENDED_PROCEDURES.slice(0, 4).map((p) => p.name),
     )
-    startBuilding()
+  }
+
+  // Shared by both the docs and no-docs branches: confirms the locations/
+  // channels/language turn, then (no-docs only) advances straight to the
+  // summary reveal. The docs branch already runs its own build sequence.
+  const confirmBasics = () => {
+    setBasicsConfirmed(true)
+    if (!docsProvided) {
+      advanceWithThinking('summary')
+    }
+  }
+
+  const toggleLocation = (id: string) => {
+    setSelectedLocationIds((prev) => (prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]))
+  }
+
+  const selectAllLocations = () => setSelectedLocationIds(WIZARD_LOCATIONS.map((l) => l.id))
+
+  const toggleChannel = (id: WizardChannelId) => {
+    setSelectedChannels((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
   }
 
   // Docs path: after the background build finishes, persist steps then show post-build thinking.
@@ -2989,6 +3326,11 @@ function HealthcareFrontdeskCreateAgentScreen({
       setFollowUp('')
       return
     }
+    if (phase === 'ask-docs' && !agentName) {
+      if (followUp.trim()) setAgentName(followUp.trim())
+      setFollowUp('')
+      return
+    }
     if (phase === 'ask-docs') {
       const items = [...attachments]
       const provided = items.length > 0 || Boolean(followUp.trim())
@@ -3000,9 +3342,7 @@ function HealthcareFrontdeskCreateAgentScreen({
       if (followUp.trim()) {
         setJobsAnswerPills([])
         setJobsAnswer(followUp.trim())
-        setAgentName((prev) => prev || 'Front desk agent')
-        setSelectedProcedures(RECOMMENDED_PROCEDURES.slice(0, 4).map((p) => p.name))
-        startBuilding()
+        confirmCreateAgent(followUp.trim())
       }
     } else if (phase === 'ask-confirm-create') {
       confirmCreateAgent(followUp.trim() || 'Yes, go ahead')
@@ -3016,30 +3356,17 @@ function HealthcareFrontdeskCreateAgentScreen({
     return (
       <div
         ref={threadRef}
-        className="relative flex min-h-full w-full max-w-[1600px] flex-1 justify-center gap-xl self-start pb-lg pr-sm"
+        className="relative flex min-h-full w-full flex-1 self-start"
       >
-        <style>{`
-          .agent-build-fade { animation: agent-build-fade-in 0.25s ease-out; }
-          @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
-          @keyframes sparkle-twinkle {
-            0%, 100% { transform: scale(0.85) rotate(-8deg); opacity: 0.6; }
-            50%      { transform: scale(1.15) rotate(8deg); opacity: 1; }
-          }
-          .sparkle-twinkle { animation: sparkle-twinkle 1.1s ease-in-out infinite; }
-          @keyframes thoughts-caret {
-            0%, 49% { opacity: 1; }
-            50%, 100% { opacity: 0; }
-          }
-          .thoughts-caret { animation: thoughts-caret 0.9s step-end infinite; }
-        `}</style>
-
-        {/* Spacer mirrors the right panel's width so the chat stays centered on
-            wide screens, but collapses first (shrink-[999]) on narrow ones so the
-            chat keeps its width and the panel stays pinned to the right edge. */}
-        {(openProcedureName || previewOpen) && (
-          <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
-        )}
-
+        {/* Reading column centers the 720px-wide chat column on its own. The
+            side panel is `fixed` (pinned to the viewport, immune to this
+            column's own scrolling), so it takes no flex space — this column
+            reserves room for it via an animated padding-right instead, kept in
+            lockstep with the panel's own width transition. */}
+        <div
+          className="flex min-w-0 flex-1 justify-center overflow-visible pb-lg transition-[padding-right] duration-300 ease-out"
+          style={{ paddingRight: panelVisible && panelSlideIn ? panelWidth : 0 }}
+        >
         <div className="flex w-full min-w-0 max-w-[720px] flex-col">
         {pageTitle && (
           <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
@@ -3173,7 +3500,20 @@ function HealthcareFrontdeskCreateAgentScreen({
                 <>
                   <CreateAgentIntroReply onComplete={() => setIntroReplyDone(true)} />
                   {introReplyDone && <MessageActions copyText={CREATE_AGENT_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />}
-                  {phase === 'ask-docs' && introReplyDone && (
+                  {phase === 'ask-docs' && introReplyDone && !agentName && (
+                    <div className="agent-build-fade ml-3xl mt-md flex flex-col gap-sm">
+                      <p className="text-body leading-6 text-text-primary">First, what should I call this agent?</p>
+                      <div className="flex flex-wrap gap-sm">
+                        {deriveNameSuggestions(prompt).map((name) => (
+                          <ChatPickChip key={name} label={name} selected={false} onClick={() => setAgentName(name)} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {phase === 'ask-docs' && introReplyDone && agentName && (
+                    <UserBubble>{agentName}</UserBubble>
+                  )}
+                  {phase === 'ask-docs' && introReplyDone && agentName && (
                     <div className="agent-build-fade ml-3xl mt-sm">
                       <button
                         type="button"
@@ -3368,7 +3708,20 @@ function HealthcareFrontdeskCreateAgentScreen({
 
                     {(refillAnswer.startsWith('Skip') || createAgentAnswer.startsWith('Yes')) && (
                       <>
-                        {!draftBuildReady ? (
+                        {!basicsConfirmed ? (
+                          <AskBasicsTurn
+                            selectedLocationIds={selectedLocationIds}
+                            onToggleLocation={toggleLocation}
+                            onSelectAllLocations={selectAllLocations}
+                            selectedChannels={selectedChannels}
+                            onToggleChannel={toggleChannel}
+                            language={language}
+                            onSelectLanguage={setLanguage}
+                            showLanguagePicker={showLanguagePicker}
+                            onToggleLanguagePicker={() => setShowLanguagePicker((v) => !v)}
+                            onContinue={confirmBasics}
+                          />
+                        ) : !draftBuildReady ? (
                           <FastDraftBuildLoader onDone={() => setDraftBuildReady(true)} />
                         ) : (
                           <>
@@ -3384,6 +3737,10 @@ function HealthcareFrontdeskCreateAgentScreen({
                           refillAdded={refillAnswer.startsWith('Add procedure')}
                           openProcedureName={openProcedureName}
                           onOpenProcedure={setOpenProcedureName}
+                          agentName={agentName}
+                          selectedLocationIds={selectedLocationIds}
+                          selectedChannels={selectedChannels}
+                          language={language}
                         />
                         <CreateAgentThinkingPanel
                           open={reviewThoughtsOpen}
@@ -3430,6 +3787,13 @@ function HealthcareFrontdeskCreateAgentScreen({
                                 className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                               >
                                 Test agent
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowWorkflowPreview(true)}
+                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                              >
+                                View workflow
                               </button>
                             </div>
                             {reviewFollowUpAnswer && (
@@ -3627,6 +3991,21 @@ function HealthcareFrontdeskCreateAgentScreen({
               </>
             )}
 
+            {!isReminderFlow && confirmCreateAnswer && !basicsConfirmed && (
+              <AskBasicsTurn
+                selectedLocationIds={selectedLocationIds}
+                onToggleLocation={toggleLocation}
+                onSelectAllLocations={selectAllLocations}
+                selectedChannels={selectedChannels}
+                onToggleChannel={toggleChannel}
+                language={language}
+                onSelectLanguage={setLanguage}
+                showLanguagePicker={showLanguagePicker}
+                onToggleLanguagePicker={() => setShowLanguagePicker((v) => !v)}
+                onContinue={confirmBasics}
+              />
+            )}
+
             {!isReminderFlow && stepThinking && stepThinkingPhase && stepThinkingPhase !== 'ask-jobs' && (
               <AgentBuildLoaderRow
                 label={(STEP_THINKING_LABELS[stepThinkingPhase] ?? [])[stepThinkingIndex] ?? 'Thinking'}
@@ -3635,7 +4014,7 @@ function HealthcareFrontdeskCreateAgentScreen({
               />
             )}
 
-            {!isReminderFlow && phase === 'summary' && (
+            {!isReminderFlow && showStep('summary') && (
               <div className="agent-build-fade mt-2xl flex flex-col gap-md">
                 {selectedProcedures.length > 0 && (
                   <div className="flex flex-col gap-sm">
@@ -3659,13 +4038,100 @@ function HealthcareFrontdeskCreateAgentScreen({
                   </div>
                 )}
 
+                <button
+                  type="button"
+                  onClick={() => setShowWorkflowPreview(true)}
+                  className="flex w-full items-center gap-md rounded-xl border border-border bg-surface px-lg py-md text-left hover:bg-surface-hover"
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-hover">
+                    <Icon name="account_tree" size={20} className="text-text-icon" />
+                  </span>
+                  <span className="flex-1 text-body text-text-primary">View workflow</span>
+                  <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
+                </button>
+
                 <p className="text-body leading-6 text-text-secondary">
                   {agentName} is ready to go. I've set up the basics based on what you described.
                 </p>
 
+                <div className="flex flex-col gap-sm">
+                  {buildSettingsRows(agentName, selectedLocationIds, selectedChannels, language).map((row) => {
+                    const section = row.setting === 'Name' ? 'name' : row.setting === 'Locations' ? 'locations' : row.setting === 'Channels' ? 'channels' : null
+                    return (
+                      <div key={row.setting} className="flex flex-col">
+                        <span className="text-small leading-tight text-text-tertiary">{row.setting}</span>
+                        <div className="flex flex-wrap items-center gap-sm">
+                          <span className="text-body leading-6 text-text-primary">{row.value}</span>
+                          {section && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingSummarySection(section)}
+                              className="text-small text-text-action hover:underline"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {editingSummarySection && (
+                  <div className="flex flex-col gap-sm rounded-md border border-border bg-surface-l2 p-md">
+                    {editingSummarySection === 'name' && (
+                      <div className="flex flex-wrap gap-sm">
+                        {deriveNameSuggestions(prompt).map((name) => (
+                          <ChatPickChip key={name} label={name} selected={agentName === name} onClick={() => setAgentName(name)} />
+                        ))}
+                      </div>
+                    )}
+                    {editingSummarySection === 'locations' && (
+                      <div className="flex flex-wrap gap-sm">
+                        <ChatPickChip
+                          label="All locations"
+                          selected={selectedLocationIds.length === WIZARD_LOCATIONS.length}
+                          onClick={selectAllLocations}
+                        />
+                        {WIZARD_LOCATIONS.map((loc) => (
+                          <ChatPickChip
+                            key={loc.id}
+                            label={loc.name}
+                            selected={selectedLocationIds.includes(loc.id)}
+                            onClick={() => toggleLocation(loc.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {editingSummarySection === 'channels' && (
+                      <div className="flex flex-wrap gap-sm">
+                        {CHANNEL_OPTIONS.map((ch) => (
+                          <ChatPickChip
+                            key={ch.id}
+                            label={ch.label}
+                            icon={ch.icon}
+                            selected={selectedChannels.includes(ch.id)}
+                            onClick={() => toggleChannel(ch.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setEditingSummarySection(null)}
+                      className="self-start text-body text-text-action hover:underline"
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
+
                 <p className="mt-md text-body leading-6 text-text-primary">Here's how I'm going to work for you:</p>
                 <ul className="flex list-disc flex-col gap-xs pl-lg text-body leading-6 text-text-secondary">
-                  <li>I'll respond to inbound calls, texts, and web chats from patients</li>
+                  {selectedChannels.includes('voice') && <li>I'll answer inbound calls from patients</li>}
+                  {selectedChannels.includes('webchat') && <li>I'll respond to web chat conversations</li>}
+                  {selectedChannels.includes('text') && <li>I'll respond to text messages</li>}
+                  {selectedChannels.includes('email') && <li>I'll respond to emails</li>}
                   <li>I can look up answers from your knowledge base and FAQs</li>
                   <li>I can check availability, book, confirm, and reschedule appointments</li>
                   <li>I'll escalate urgent symptoms straight to your front desk team</li>
@@ -3755,14 +4221,14 @@ function HealthcareFrontdeskCreateAgentScreen({
                 type="button"
                 aria-label="Scroll to latest"
                 onClick={() => threadRef.current?.parentElement?.scrollTo({ top: threadRef.current.parentElement.scrollHeight, behavior: 'smooth' })}
-                className="flex size-7 items-center justify-center rounded-full border border-border bg-surface text-text-icon hover:bg-surface-hover"
+                className="agent-build-fade flex size-7 items-center justify-center rounded-full border border-border bg-surface text-text-icon transition-all hover:scale-105 hover:bg-surface-hover active:scale-95"
               >
                 <Icon name="expand_more" size={18} />
               </button>
             </div>
           )}
 
-          <div className="flex flex-col gap-md rounded-xl border border-border bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
+          <div className="flex flex-col gap-md rounded-xl border border-border bg-surface px-lg py-md shadow-card transition-colors focus-within:border-ai-brand">
             {attachments.length > 0 && (
               <div className="flex flex-wrap items-center gap-sm">
                 {attachments.map((item) => (
@@ -3836,7 +4302,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                   />
                 </Tooltip>
                 <Tooltip content="Dictate" variant="brief">
-                  <button type="button" aria-label="Dictate" className="hover:text-text-primary" disabled={composerLocked}>
+                  <button type="button" aria-label="Dictate" className="transition-colors hover:text-text-primary" disabled={composerLocked}>
                     <Icon name="mic" size={18} />
                   </button>
                 </Tooltip>
@@ -3846,9 +4312,9 @@ function HealthcareFrontdeskCreateAgentScreen({
                 aria-label="Send"
                 onClick={handleFollowUpSend}
                 disabled={!canSendFollowUp || composerLocked}
-                className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
+                className={`flex size-9 items-center justify-center rounded-sm transition-all duration-150 ${
                   canSendFollowUp && !composerLocked
-                    ? 'text-ai-brand hover:bg-surface-hover'
+                    ? 'text-ai-brand hover:scale-105 hover:bg-surface-hover active:scale-90'
                     : 'cursor-not-allowed text-text-tertiary opacity-40'
                 }`}
               >
@@ -3858,12 +4324,31 @@ function HealthcareFrontdeskCreateAgentScreen({
           </div>
         </div>
         </div>
+        </div>
 
-        {(openProcedureName || previewOpen) && (
-          <div className="sticky top-0 -bottom-lg hidden w-[480px] shrink-0 self-start pb-lg lg:block">
-            {previewOpen ? (
-              <div className="h-[calc(100vh-168px)]">
-                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full">
+        {panelVisible && (
+          <div
+            className="fixed right-0 top-14 bottom-0 z-30 hidden shrink-0 overflow-hidden transition-[width] duration-300 ease-out lg:block"
+            style={{ width: panelSlideIn ? panelWidth : 0 }}
+          >
+            <div
+              key={showWorkflowPreview ? 'workflow' : (openProcedureName ?? previewKey)}
+              className="panel-slide-in h-full"
+              style={{ width: panelWidth }}
+            >
+            {showWorkflowPreview ? (
+              <div className="h-full">
+                <WorkflowPreviewPanel
+                  agentName="Front desk agent"
+                  product="healthcare"
+                  expanded={panelExpanded}
+                  onExpand={() => setPanelExpanded((v) => !v)}
+                  onClose={() => setShowWorkflowPreview(false)}
+                />
+              </div>
+            ) : previewOpen ? (
+              <div className="h-full">
+                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full [&_.preview-panel]:!rounded-none [&_.preview-panel]:!border-0 [&_.preview-panel]:!border-l [&_.preview-panel]:!border-border [&_.preview-panel]:!shadow-none">
                   <PreviewPanel
                     key={previewKey}
                     onClose={handlePreviewClose}
@@ -3884,12 +4369,18 @@ function HealthcareFrontdeskCreateAgentScreen({
                     : HC_PROCEDURES.find((p) => p.name === openProcedureName)
                 if (!procedure) return null
                 return (
-                  <div className="h-[calc(100vh-168px)]">
-                    <ProcedurePreviewPanel procedure={procedure} onClose={() => setOpenProcedureName(null)} />
+                  <div className="h-full">
+                    <ProcedurePreviewPanel
+                      procedure={procedure}
+                      expanded={panelExpanded}
+                      onExpand={() => setPanelExpanded((v) => !v)}
+                      onClose={() => setOpenProcedureName(null)}
+                    />
                   </div>
                 )
               })()
             )}
+            </div>
           </div>
         )}
       </div>
@@ -3929,7 +4420,7 @@ function HealthcareFrontdeskCreateAgentScreen({
                 <button
                   type="button"
                   aria-label="Add files"
-                  className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
+                  className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-all hover:bg-surface-hover hover:text-text-primary active:scale-90"
                 >
                   <Icon name="add" size={18} />
                 </button>
@@ -3939,7 +4430,7 @@ function HealthcareFrontdeskCreateAgentScreen({
               type="button"
               aria-label="Send"
               onClick={handleSend}
-              className="flex size-9 items-center justify-center rounded-sm text-ai-brand transition-colors hover:bg-surface-hover"
+              className="flex size-9 items-center justify-center rounded-sm text-ai-brand transition-all duration-150 hover:scale-105 hover:bg-surface-hover active:scale-90"
             >
               <SendIcon size={24} />
             </button>
@@ -3963,7 +4454,7 @@ function HealthcareFrontdeskCreateAgentScreen({
 
       <div className="@container w-full">
         <div className={`grid w-full gap-md ${(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4 ? 'grid-cols-1 min-[500px]:grid-cols-4' : 'grid-cols-3'}`}>
-          {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
+          {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl, index) => (
             <div
               key={tpl.id}
               role="button"
@@ -3971,7 +4462,8 @@ function HealthcareFrontdeskCreateAgentScreen({
               aria-label={`Use agent: ${tpl.title}`}
               onClick={() => onSelectFromLibrary(tpl.id)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
-              className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
+              style={{ animationDelay: `${index * 60}ms` }}
+              className={`${INFO_CARD_LAYOUT.root} agent-build-fade cursor-pointer transition-transform active:scale-[0.98]`}
             >
               <h3 className="line-clamp-2 shrink-0 text-body text-text-primary">{tpl.title}</h3>
               <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
@@ -4008,6 +4500,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [historyChatId, setHistoryChatId] = useState<string | null>(null)
+  const [liveChatName, setLiveChatName] = useState('')
 
   const openCreateFlow = () => {
     setCreateFlowKey((k) => k + 1)
@@ -4016,6 +4510,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setCreateCopilotOpen(false)
     setCreateCopilotSlideIn(false)
     setCreateFlowSubmitted(false)
+    setHistoryChatId(null)
+    setLiveChatName('')
     setShowCreateFlow(true)
   }
 
@@ -4290,50 +4786,72 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   if (showCreateFlow && (isFrontdesk || isReminder)) {
     const isHealthcareFrontdesk = product === 'healthcare'
     const createTitle = isFrontdesk ? 'New front desk agent' : 'New reminder agent'
+    const createModuleName = isFrontdesk ? 'Front desk' : 'Reminder'
+    const createChatHistory = isReminder ? REMINDER_CREATE_CHAT_HISTORY : FRONTDESK_CREATE_CHAT_HISTORY
+    // Nothing is selected on the landing screen — a chat only gets recorded in
+    // the list once the user actually sends a prompt, matching Claude/ChatGPT.
+    const sideNavChats = createFlowSubmitted
+      ? [{ id: 'current', label: liveChatName || createTitle }, ...createChatHistory]
+      : createChatHistory
 
     const createChat = (
-      <div className={`flex h-full flex-col ${createWorkflowSplit && isReminder ? 'hidden' : ''}`}>
-        <TopNav initials="S" />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Landing: page-left header. Chat: title lives inside the 720px column. */}
-          {!createFlowSubmitted && (
-            <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
-              <div className="flex items-center gap-sm">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateFlow(false)}
-                  className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                  aria-label="Back"
-                >
-                  <Icon name="arrow_back" size={20} />
-                </button>
-                <h1 className="text-h3 text-text-primary">{createTitle}</h1>
+      <div className={`flex h-full ${createWorkflowSplit && isReminder ? 'hidden' : ''}`}>
+        <div className="screen-fade-in flex h-full shrink-0">
+          <ChatHistorySideNav
+            title={createModuleName}
+            chats={sideNavChats}
+            activeChatId={historyChatId ?? undefined}
+            onSelectChat={setHistoryChatId}
+            onNewChat={openCreateFlow}
+          />
+        </div>
+        <div className="screen-fade-in flex h-full flex-1 flex-col overflow-hidden" style={{ animationDelay: '60ms' }}>
+          <TopNav initials="S" />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {/* Landing: page-left header. Chat: title lives inside the 720px column. */}
+            {!createFlowSubmitted && (
+              <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
+                <div className="flex items-center gap-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateFlow(false)}
+                    className="flex size-7 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover"
+                    aria-label="Back"
+                  >
+                    <Icon name="arrow_back" size={20} />
+                  </button>
+                  <h1 className="text-h3 text-text-primary">{createTitle}</h1>
+                </div>
               </div>
-            </div>
-          )}
-          <div className="flex flex-1 items-start justify-center overflow-auto px-lg pb-lg pt-0">
-            {isHealthcareFrontdesk || isReminder ? (
-              <HealthcareFrontdeskCreateAgentScreen
-                key={createFlowKey}
-                pageTitle={createTitle}
-                onBack={() => setShowCreateFlow(false)}
-                onSubmittedChange={setCreateFlowSubmitted}
-                onCreateFromScratch={() => setShowSetupWizard(true)}
-                onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
-                onCreateAgent={handleCreateAgentSuccess}
-                onViewWorkflow={isReminder ? openCreateWorkflowSplit : undefined}
-                libraryCards={isReminder ? REMINDER_CREATE_CARDS : undefined}
-                initialPrompt={isReminder ? REMINDER_CREATE_PROMPT : undefined}
-                fromScratchLabel={isReminder ? 'Create from scratch' : 'Setup manually'}
-                variant={isReminder ? 'reminder' : 'frontdesk'}
-              />
-            ) : (
-              <CreateAgentEmptyState
-                key={createFlowKey}
-                onCreateFromScratch={() => setShowSetupWizard(true)}
-                onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
-              />
             )}
+            <div className="flex flex-1 items-start justify-center overflow-auto px-lg pb-lg pt-0">
+              {isHealthcareFrontdesk || isReminder ? (
+                <HealthcareFrontdeskCreateAgentScreen
+                  key={createFlowKey}
+                  pageTitle={createTitle}
+                  onBack={() => setShowCreateFlow(false)}
+                  onSubmittedChange={(submitted) => {
+                    setCreateFlowSubmitted(submitted)
+                    if (submitted) setHistoryChatId('current')
+                  }}
+                  onAgentNameChange={setLiveChatName}
+                  onCreateFromScratch={() => setShowSetupWizard(true)}
+                  onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
+                  onCreateAgent={handleCreateAgentSuccess}
+                  onViewWorkflow={isReminder ? openCreateWorkflowSplit : undefined}
+                  libraryCards={isReminder ? REMINDER_CREATE_CARDS : undefined}
+                  initialPrompt={isReminder ? REMINDER_CREATE_PROMPT : undefined}
+                  fromScratchLabel={isReminder ? 'Create from scratch' : 'Setup manually'}
+                  variant={isReminder ? 'reminder' : 'frontdesk'}
+                />
+              ) : (
+                <CreateAgentEmptyState
+                  key={createFlowKey}
+                  onCreateFromScratch={() => setShowSetupWizard(true)}
+                  onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
