@@ -37,6 +37,8 @@ import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
+import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
+import type { CreateChatTurn } from '../data/createAgentChatStore'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -2584,6 +2586,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   initialPrompt,
   autoStart = false,
   historyChatId = null,
+  historyChat = null,
   fromScratchLabel = 'Setup manually',
   variant = 'frontdesk',
   workflowVisible = false,
@@ -2594,7 +2597,7 @@ function HealthcareFrontdeskCreateAgentScreen({
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
-  onCreateAgent?: (options?: { publish?: boolean }) => void
+  onCreateAgent?: (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => void
   onViewWorkflow?: () => void
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
@@ -2605,6 +2608,8 @@ function HealthcareFrontdeskCreateAgentScreen({
   autoStart?: boolean
   /** When set, shows a static past transcript for this recent-chat id (no thinking / typing). */
   historyChatId?: string | null
+  /** Full transcript for a recent/saved chat — preferred over looking up by id. */
+  historyChat?: ChatHistoryTranscript | null
   fromScratchLabel?: string
   variant?: 'frontdesk' | 'reminder'
   workflowVisible?: boolean
@@ -2618,22 +2623,24 @@ function HealthcareFrontdeskCreateAgentScreen({
   canvasProcedureId?: string | null
 }) {
   const isReminderFlow = variant === 'reminder'
-  const historyChat = historyChatId
-    ? (isReminderFlow ? REMINDER_CHAT_HISTORY : FRONTDESK_CHAT_HISTORY).find((c) => c.id === historyChatId) ?? null
-    : null
+  const resolvedHistoryChat =
+    historyChat ??
+    (historyChatId
+      ? (isReminderFlow ? REMINDER_CHAT_HISTORY : FRONTDESK_CHAT_HISTORY).find((c) => c.id === historyChatId) ?? null
+      : null)
 
   useEffect(() => {
-    if (!historyChat) return
+    if (!resolvedHistoryChat) return
     onSubmittedChange?.(true)
-    onDraftReady?.(historyChat.draftTitle)
+    onDraftReady?.(resolvedHistoryChat.draftTitle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyChat?.id])
+  }, [resolvedHistoryChat?.id])
 
   // Past chats render a static transcript — keep this before live-flow hooks via a child.
-  if (historyChat) {
+  if (resolvedHistoryChat) {
     return (
       <HistoryChatReplay
-        chat={historyChat}
+        chat={resolvedHistoryChat}
         onBack={onBack}
         pageTitle={pageTitle}
       />
@@ -2684,7 +2691,7 @@ function HealthcareFrontdeskCreateAgentLive({
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
-  onCreateAgent?: (options?: { publish?: boolean }) => void
+  onCreateAgent?: (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => void
   onViewWorkflow?: () => void
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
@@ -2846,6 +2853,42 @@ function HealthcareFrontdeskCreateAgentLive({
     setPreviewOpen(false)
     setPreviewActive(false)
     setPreviewSessionEnded(false)
+  }
+
+  const saveCreatedAgent = (options?: { publish?: boolean }) => {
+    const draftTitle = isReminderFlow
+      ? (agentName || REMINDER_BUILD_CARD.title)
+      : (agentName || FRONTDESK_BUILD_CARD.title)
+    const draftDescription = isReminderFlow
+      ? REMINDER_BUILD_CARD.description
+      : FRONTDESK_BUILD_CARD.description
+    onCreateAgent?.({
+      ...options,
+      chat: buildSavedCreateChat({
+        variant: isReminderFlow ? 'reminder' : 'frontdesk',
+        prompt,
+        draftTitle,
+        draftDescription,
+        docsAnswer,
+        docsFileLabels: docsAttachments.map((f) => f.label),
+        docsProvided,
+        docsBuildComplete,
+        docsDraftReadyDone,
+        refillAnswer,
+        refillProcedureCreated,
+        createAgentAnswer,
+        draftBuildReady,
+        reviewFollowUpAnswer,
+        testReplyDone,
+        testAgentAnswers,
+        timingAnswer,
+        timingFollowDone,
+        rescheduleAnswer,
+        connectAnswer,
+        connectFileLabels: connectAttachments.map((f) => f.label),
+        reminderBuildDone,
+      }),
+    })
   }
 
   const handleStartTestAgent = (label = 'Test agent') => {
@@ -3398,7 +3441,7 @@ function HealthcareFrontdeskCreateAgentLive({
                             onDraftReady?.(REMINDER_BUILD_CARD.title)
                           }}
                           onViewWorkflow={onViewWorkflow}
-                          onSaveAgent={() => onCreateAgent?.()}
+                          onSaveAgent={() => saveCreatedAgent()}
                           onMakeChanges={resetCreateFlow}
                           onSuppressAutoScroll={suppressAutoScrollBriefly}
                           workflowVisible={workflowVisible}
@@ -3411,17 +3454,6 @@ function HealthcareFrontdeskCreateAgentLive({
                 <>
                   <CreateAgentIntroReply onComplete={() => setIntroReplyDone(true)} />
                   {introReplyDone && <MessageActions copyText={CREATE_AGENT_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />}
-                  {phase === 'ask-docs' && introReplyDone && (
-                    <div className="agent-build-fade ml-3xl mt-sm">
-                      <button
-                        type="button"
-                        onClick={() => submitDocs('No documents added', false)}
-                        className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                      >
-                        Skip for now
-                      </button>
-                    </div>
-                  )}
                 </>
               )
             )}
@@ -3967,7 +3999,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onCreateAgent?.()}
+                    onClick={() => saveCreatedAgent()}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Save this agent
@@ -4367,6 +4399,223 @@ type ChatHistoryTranscript = {
   draftTitle: string
   draftDescription: string
   replies: string[][]
+  trail?: CreateChatTurn[]
+  variant?: 'frontdesk' | 'reminder'
+}
+
+function cleanTrailParagraph(text: string) {
+  return text
+    .replace(/^ACTION_CONT:\s*/, '')
+    .replace(/^ACTION:\s*/, '')
+    .replace(/^CALLOUT:\s*/, '')
+    .replace(/^WARN:\s*/, '')
+    .replace(/^INDENT:\s*/, '')
+}
+
+function agentParagraphs(paragraphs: string[]): CreateChatTurn {
+  return { kind: 'agent', paragraphs: paragraphs.map(cleanTrailParagraph) }
+}
+
+type SavedCreateChatSnapshot = {
+  variant: 'frontdesk' | 'reminder'
+  prompt: string
+  draftTitle: string
+  draftDescription: string
+  docsAnswer?: string
+  docsFileLabels?: string[]
+  docsProvided?: boolean
+  docsBuildComplete?: boolean
+  docsDraftReadyDone?: boolean
+  refillAnswer?: string
+  refillProcedureCreated?: boolean
+  createAgentAnswer?: string
+  draftBuildReady?: boolean
+  reviewFollowUpAnswer?: string
+  testReplyDone?: boolean
+  testAgentAnswers?: string[]
+  timingAnswer?: string
+  timingFollowDone?: boolean
+  rescheduleAnswer?: string
+  connectAnswer?: string
+  connectFileLabels?: string[]
+  reminderBuildDone?: boolean
+}
+
+function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
+  const trail: CreateChatTurn[] = []
+  const trimmed = snap.prompt.trim()
+  if (trimmed) trail.push({ kind: 'user', text: trimmed })
+
+  if (snap.variant === 'reminder') {
+    trail.push({ kind: 'thoughts', text: REMINDER_CREATE_THOUGHTS_TEXT })
+    trail.push(agentParagraphs(REMINDER_CREATE_INTRO_PARAGRAPHS))
+    if (snap.timingAnswer) {
+      trail.push({ kind: 'user', text: snap.timingAnswer })
+      trail.push({ kind: 'thoughts', text: REMINDER_AFTER_TIMING_THOUGHTS_TEXT })
+    }
+    if (snap.timingFollowDone) {
+      trail.push(
+        agentParagraphs([
+          ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
+          ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS,
+        ]),
+      )
+    }
+    if (snap.rescheduleAnswer) {
+      trail.push({ kind: 'user', text: snap.rescheduleAnswer })
+      trail.push({ kind: 'thoughts', text: REMINDER_AFTER_HANDOFF_THOUGHTS_TEXT })
+      trail.push(agentParagraphs(REMINDER_HANDOFF_REPLY_PARAGRAPHS))
+    }
+    if (snap.connectAnswer) {
+      trail.push({ kind: 'user', text: snap.connectAnswer })
+      if (snap.connectFileLabels?.length) {
+        trail.push({ kind: 'user-files', labels: snap.connectFileLabels })
+      }
+      const continues = !snap.connectAnswer.startsWith('No')
+      if (continues) {
+        const hasEmail = Boolean(snap.connectFileLabels?.length)
+        trail.push({
+          kind: 'thoughts',
+          text: hasEmail ? REMINDER_AFTER_EMAIL_THOUGHTS_TEXT : REMINDER_READY_TO_BUILD_THOUGHTS_TEXT,
+        })
+        trail.push(
+          agentParagraphs([
+            hasEmail ? REMINDER_BUILD_REPLY_WITH_EMAIL : REMINDER_BUILD_REPLY_DEFAULT,
+          ]),
+        )
+        if (snap.reminderBuildDone) {
+          trail.push({
+            kind: 'draft',
+            title: snap.draftTitle,
+            description: snap.draftDescription,
+          })
+        }
+      }
+    }
+    return trail
+  }
+
+  // Front desk
+  trail.push({ kind: 'thoughts', text: CREATE_AGENT_THOUGHTS_TEXT })
+  trail.push(agentParagraphs(CREATE_AGENT_INTRO_PARAGRAPHS))
+
+  if (snap.docsFileLabels?.length) {
+    trail.push({ kind: 'user-files', labels: snap.docsFileLabels })
+  } else if (snap.docsAnswer) {
+    trail.push({ kind: 'user', text: snap.docsAnswer })
+  }
+
+  if (snap.docsProvided) {
+    trail.push({ kind: 'thoughts', text: CREATE_AGENT_DOCS_THOUGHTS_TEXT })
+    trail.push(agentParagraphs(CREATE_AGENT_DOCS_REPLY_PARAGRAPHS))
+    if (snap.docsBuildComplete) {
+      trail.push({ kind: 'status', text: 'Analyzed transcripts and built your draft procedures' })
+      trail.push({ kind: 'thoughts', text: CREATE_AGENT_POST_BUILD_THOUGHTS_TEXT })
+    }
+    if (snap.docsDraftReadyDone) {
+      trail.push(
+        agentParagraphs([
+          ...CREATE_AGENT_DRAFT_READY_INTRO,
+          'What your callers actually ask for:',
+          ...CALLER_JOB_BREAKDOWN.map((j) => `• ${j.label} — ${j.pct}`),
+          ...CREATE_AGENT_DRAFT_READY_CLOSING,
+        ]),
+      )
+    }
+  }
+
+  if (snap.refillAnswer) {
+    trail.push({ kind: 'user', text: snap.refillAnswer })
+    if (snap.refillAnswer.startsWith('Add procedure')) {
+      trail.push({ kind: 'thoughts', text: CREATE_AGENT_REFILL_THOUGHTS_TEXT })
+      trail.push(agentParagraphs(CREATE_AGENT_REFILL_REPLY_PARAGRAPHS))
+      if (snap.refillProcedureCreated) {
+        trail.push({
+          kind: 'status',
+          text: `Added procedure "${REFILL_PROCEDURE_NAME}" to your library`,
+        })
+        trail.push(
+          agentParagraphs([
+            "Now that I've created the procedure, I can go ahead and create the agent draft. Would you like me to proceed?",
+          ]),
+        )
+      }
+    }
+  }
+
+  if (snap.createAgentAnswer) {
+    trail.push({ kind: 'user', text: snap.createAgentAnswer })
+  }
+
+  if (snap.draftBuildReady) {
+    trail.push({
+      kind: 'draft',
+      title: snap.draftTitle,
+      description: snap.draftDescription,
+    })
+    trail.push({ kind: 'thoughts', text: CREATE_AGENT_REVIEW_THOUGHTS_TEXT })
+  }
+
+  if (snap.reviewFollowUpAnswer) {
+    trail.push({ kind: 'user', text: snap.reviewFollowUpAnswer })
+    trail.push({ kind: 'thoughts', text: CREATE_AGENT_TEST_THOUGHTS_TEXT })
+    if (snap.testReplyDone) {
+      trail.push(agentParagraphs(CREATE_AGENT_TEST_REPLY_PARAGRAPHS))
+    }
+  }
+
+  for (const answer of snap.testAgentAnswers ?? []) {
+    trail.push({ kind: 'user', text: answer })
+  }
+
+  // Always end with the draft card if we have a title and haven't already added it
+  if (
+    snap.draftTitle &&
+    !trail.some((t) => t.kind === 'draft') &&
+    (snap.draftBuildReady || snap.docsDraftReadyDone || snap.docsBuildComplete)
+  ) {
+    trail.push({
+      kind: 'draft',
+      title: snap.draftTitle,
+      description: snap.draftDescription,
+    })
+  }
+
+  return trail
+}
+
+/** Builds a recent-chat entry from a finished full-page co-pilot session. */
+function buildSavedCreateChat(snap: SavedCreateChatSnapshot): ChatHistoryTranscript {
+  const trimmed = snap.prompt.trim()
+  const title =
+    snap.draftTitle.replace(/^New\s+/i, '').trim() ||
+    (trimmed.length > 42 ? `${trimmed.slice(0, 42)}…` : trimmed) ||
+    (snap.variant === 'reminder' ? 'Reminder agent' : 'Front desk agent')
+
+  const trail = buildCreateChatTrail(snap)
+  const replies = trail
+    .filter((t): t is Extract<CreateChatTurn, { kind: 'agent' }> => t.kind === 'agent')
+    .map((t) => t.paragraphs)
+
+  return {
+    id: `saved-${Date.now()}`,
+    title,
+    prompt: trimmed,
+    draftTitle: snap.draftTitle,
+    draftDescription: snap.draftDescription,
+    replies:
+      replies.length > 0
+        ? replies
+        : [
+            [
+              snap.variant === 'reminder'
+                ? 'Draft is ready. Unconfirmed patients get a Reminder call that can confirm, cancel, or hand off a reschedule.'
+                : 'Your draft is ready. Review the procedures anytime, or reopen this chat from Create with AI.',
+            ],
+          ],
+    trail,
+    variant: snap.variant,
+  }
 }
 
 const FRONTDESK_CHAT_HISTORY: ChatHistoryTranscript[] = [
@@ -4502,6 +4751,7 @@ function HistoryChatReplay({
   onBack?: () => void
   pageTitle?: string
 }) {
+  const trail = chat.trail
   return (
     <div className="relative flex h-full min-h-0 w-full max-w-[1600px] flex-1 justify-center gap-xl self-stretch pr-sm">
       <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
@@ -4521,47 +4771,130 @@ function HistoryChatReplay({
               </div>
             )}
 
-            <div className="flex justify-end pt-md">
-              <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">
-                {chat.prompt}
-              </span>
-            </div>
-
-            {chat.replies.map((paragraphs, replyIndex) => (
-              <div key={replyIndex}>
-                <div className="mt-3xl flex gap-sm">
-                  <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                    <SparkleLoader size={14} spinning={false} />
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
-                    <TypedParagraphs paragraphs={paragraphs} instant />
-                  </div>
-                </div>
-                <MessageActions className="ml-3xl" copyText={paragraphs.join('\n\n')} />
-              </div>
-            ))}
-
-            <div className="mt-3xl flex flex-col gap-md">
-              <p className="text-body leading-6">
-                <span className="font-medium text-text-primary">
-                  {chat.draftTitle.includes('reminder') ? 'Reminder' : 'Front desk'} agent draft is ready
-                </span>
-              </p>
-              <div className="rounded-md border border-border bg-surface p-lg">
-                <div className="flex items-start gap-sm">
-                  <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-sm">
-                      <span className="text-body text-text-primary">{chat.draftTitle}</span>
-                      <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
-                        Draft
+            {trail?.length ? (
+              trail.map((turn, i) => {
+                if (turn.kind === 'user') {
+                  return (
+                    <div key={i} className="mt-3xl flex justify-end first:pt-md">
+                      <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">
+                        {turn.text}
                       </span>
                     </div>
-                    <p className="mt-xs text-small text-text-secondary">{chat.draftDescription}</p>
+                  )
+                }
+                if (turn.kind === 'user-files') {
+                  return (
+                    <div key={i} className="mt-3xl flex justify-end">
+                      <div className="flex max-w-[80%] flex-wrap justify-end gap-sm">
+                        {turn.labels.map((label) => (
+                          <RefChip key={label} kind="file" label={label} />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                }
+                if (turn.kind === 'thoughts') {
+                  return (
+                    <div key={i} className="mt-3xl flex flex-col gap-sm">
+                      <p className="text-small text-text-secondary">{turn.label || 'Thoughts'}</p>
+                      <pre className="whitespace-pre-wrap rounded-md bg-surface-hover px-md py-sm font-sans text-small leading-5 text-text-secondary">
+                        {turn.text}
+                      </pre>
+                    </div>
+                  )
+                }
+                if (turn.kind === 'agent') {
+                  return (
+                    <div key={i}>
+                      <div className="mt-3xl flex gap-sm">
+                        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                          <SparkleLoader size={14} spinning={false} />
+                        </span>
+                        <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+                          <TypedParagraphs paragraphs={turn.paragraphs} instant />
+                        </div>
+                      </div>
+                      <MessageActions className="ml-3xl" copyText={turn.paragraphs.join('\n\n')} />
+                    </div>
+                  )
+                }
+                if (turn.kind === 'status') {
+                  return (
+                    <p key={i} className="mt-lg text-small text-text-secondary">
+                      {turn.text}
+                    </p>
+                  )
+                }
+                if (turn.kind === 'draft') {
+                  return (
+                    <div key={i} className="mt-3xl flex flex-col gap-md">
+                      <p className="text-body leading-6 text-text-primary">
+                        {turn.title.includes('reminder') ? 'Reminder' : 'Front desk'} agent draft is ready
+                      </p>
+                      <div className="rounded-md border border-border bg-surface p-lg">
+                        <div className="flex items-start gap-sm">
+                          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-sm">
+                              <span className="text-body text-text-primary">{turn.title}</span>
+                              <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                                Draft
+                              </span>
+                            </div>
+                            <p className="mt-xs text-small text-text-secondary">{turn.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              })
+            ) : (
+              <>
+                <div className="flex justify-end pt-md">
+                  <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">
+                    {chat.prompt}
+                  </span>
+                </div>
+
+                {chat.replies.map((paragraphs, replyIndex) => (
+                  <div key={replyIndex}>
+                    <div className="mt-3xl flex gap-sm">
+                      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                        <SparkleLoader size={14} spinning={false} />
+                      </span>
+                      <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+                        <TypedParagraphs paragraphs={paragraphs} instant />
+                      </div>
+                    </div>
+                    <MessageActions className="ml-3xl" copyText={paragraphs.join('\n\n')} />
+                  </div>
+                ))}
+
+                <div className="mt-3xl flex flex-col gap-md">
+                  <p className="text-body leading-6">
+                    <span className="text-text-primary">
+                      {chat.draftTitle.includes('reminder') ? 'Reminder' : 'Front desk'} agent draft is ready
+                    </span>
+                  </p>
+                  <div className="rounded-md border border-border bg-surface p-lg">
+                    <div className="flex items-start gap-sm">
+                      <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-sm">
+                          <span className="text-body text-text-primary">{chat.draftTitle}</span>
+                          <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                            Draft
+                          </span>
+                        </div>
+                        <p className="mt-xs text-small text-text-secondary">{chat.draftDescription}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -4594,6 +4927,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [toastMessage, setToastMessage] = useState('')
   /** Recent-chats rail shown alongside the create-agent flow — null = "All chats" (fresh). */
   const [chatHistorySelectedId, setChatHistorySelectedId] = useState<string | null>(null)
+  /** Chats saved via "Save agent" from the full-page co-pilot — prepended to the recent list. */
+  const [savedCreateChats, setSavedCreateChats] = useState<ChatHistoryTranscript[]>(() =>
+    (['frontdesk', 'reminder'] as const)
+      .map((v) => getLastSavedCreateChat(v))
+      .filter((c): c is ChatHistoryTranscript => Boolean(c)),
+  )
   const { procedures: procedureLibrary } = useProcedureStore()
 
   const openCreateFlow = () => {
@@ -4647,7 +4986,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setInlineProcedureOpen(false)
   }
 
-  const handleCreateAgentSuccess = (options?: { publish?: boolean }) => {
+  const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
+    if (options?.chat) {
+      setSavedCreateChats((prev) => [options.chat!, ...prev.filter((c) => c.id !== options.chat!.id)])
+      rememberCreateAgentChat(isReminder ? 'reminder' : 'frontdesk', options.chat)
+    }
     setShowCreateFlow(false)
     setShowSetupWizard(false)
     setInstanceInitialTab('workflow')
@@ -4905,7 +5248,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   if (showCreateFlow && (isFrontdesk || isReminder)) {
     const isHealthcareFrontdesk = product === 'healthcare'
     const chatHistoryTitle = 'Front desk'
-    const chatHistoryItems = isFrontdesk ? FRONTDESK_CHAT_HISTORY : REMINDER_CHAT_HISTORY
+    const createVariant = isReminder ? 'reminder' : 'frontdesk'
+    const staticChatHistory = isFrontdesk ? FRONTDESK_CHAT_HISTORY : REMINDER_CHAT_HISTORY
+    const chatHistoryItems = [
+      ...savedCreateChats.filter((c) => !c.variant || c.variant === createVariant),
+      ...staticChatHistory,
+    ]
     const historyChat = chatHistorySelectedId
       ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
       : null
@@ -5041,11 +5389,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     onViewWorkflow={isReminder ? openCreateWorkflow : undefined}
                     libraryCards={isReminder ? REMINDER_CREATE_CARDS : undefined}
                     initialPrompt={
-                      chatHistoryItems.find((item) => item.id === chatHistorySelectedId)?.prompt
+                      historyChat?.prompt
                       ?? (isReminder ? REMINDER_CREATE_PROMPT : undefined)
                     }
                     autoStart={false}
                     historyChatId={chatHistorySelectedId}
+                    historyChat={historyChat}
                     fromScratchLabel={isReminder ? 'Create from scratch' : 'Setup manually'}
                     variant={isReminder ? 'reminder' : 'frontdesk'}
                     workflowVisible={createWorkflowOpen}

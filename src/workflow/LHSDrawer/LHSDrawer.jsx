@@ -565,6 +565,8 @@ export default function LHSDrawer({
   onProcedureClick = null,
   onCollapse = null,
   showTabs = false,
+  /** When set, Create with AI shows this saved co-pilot transcript instead of the empty welcome. */
+  aiTranscript = null,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
 
@@ -586,7 +588,14 @@ export default function LHSDrawer({
   const procedureSubItems = procedures
     ? buildProcedureSubItems(procedures)
     : PROCEDURE_SUB_ITEMS;
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [activeTab, setActiveTab] = useState(
+    aiTranscript ? 'Create with AI' : defaultTab,
+  );
+
+  // A transcript can resolve after mount (e.g. saved during this session).
+  useEffect(() => {
+    if (aiTranscript) setActiveTab('Create with AI');
+  }, [aiTranscript]);
   const [openSection, setOpenSection] = useState(defaultOpenSection);
   const toggleSection = (section) =>
     setOpenSection((prev) => (prev === section ? null : section));
@@ -849,10 +858,95 @@ export default function LHSDrawer({
       ) : (
         <div className="lhs-drawer__ai-body">
           <div className="lhs-drawer__ai-chat-area">
-            <AIChatBubble
-              message="Hi! I'm here to help you build your Review response agent. Tell me what you'd like to build"
-              options={AI_OPTIONS}
-            />
+            {aiTranscript?.trail?.length || aiTranscript?.prompt ? (
+              <div className="lhs-drawer__ai-transcript">
+                {aiTranscript.trail?.length
+                  ? aiTranscript.trail.map((turn, i) => {
+                      if (turn.kind === 'user') {
+                        return (
+                          <div key={i} className="lhs-drawer__ai-user-msg">
+                            {turn.text}
+                          </div>
+                        )
+                      }
+                      if (turn.kind === 'user-files') {
+                        return (
+                          <div key={i} className="lhs-drawer__ai-user-files">
+                            {turn.labels.map((label) => (
+                              <span key={label} className="lhs-drawer__ai-file-chip">
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        )
+                      }
+                      if (turn.kind === 'thoughts') {
+                        return (
+                          <details key={i} className="lhs-drawer__ai-thoughts">
+                            <summary>{turn.label || 'Thoughts'}</summary>
+                            <pre className="lhs-drawer__ai-thoughts-body">{turn.text}</pre>
+                          </details>
+                        )
+                      }
+                      if (turn.kind === 'agent') {
+                        return (
+                          <AIChatBubble
+                            key={i}
+                            message={(turn.paragraphs || []).join('\n')}
+                          />
+                        )
+                      }
+                      if (turn.kind === 'status') {
+                        return (
+                          <div key={i} className="lhs-drawer__ai-status">
+                            {turn.text}
+                          </div>
+                        )
+                      }
+                      if (turn.kind === 'draft') {
+                        return (
+                          <div key={i} className="lhs-drawer__ai-draft-card">
+                            <span className="material-symbols-outlined">account_tree</span>
+                            <div>
+                              <div className="lhs-drawer__ai-draft-title">{turn.title}</div>
+                              {turn.description && (
+                                <div className="lhs-drawer__ai-draft-desc">{turn.description}</div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      }
+                      return null
+                    })
+                  : (
+                    <>
+                      <div className="lhs-drawer__ai-user-msg">{aiTranscript.prompt}</div>
+                      {(aiTranscript.replies ?? []).map((paragraphs, replyIndex) => (
+                        <AIChatBubble
+                          key={replyIndex}
+                          message={Array.isArray(paragraphs) ? paragraphs.join('\n') : String(paragraphs)}
+                        />
+                      ))}
+                      {aiTranscript.draftTitle && (
+                        <div className="lhs-drawer__ai-draft-card">
+                          <span className="material-symbols-outlined">account_tree</span>
+                          <div>
+                            <div className="lhs-drawer__ai-draft-title">{aiTranscript.draftTitle}</div>
+                            {aiTranscript.draftDescription && (
+                              <div className="lhs-drawer__ai-draft-desc">{aiTranscript.draftDescription}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+              </div>
+            ) : (
+              <AIChatBubble
+                message={`Hi! I'm here to help you build your ${agentName || 'Review response'} agent. Tell me what you'd like to build`}
+                options={AI_OPTIONS}
+              />
+            )}
           </div>
           <AIPromptBox onSend={() => {}} />
         </div>

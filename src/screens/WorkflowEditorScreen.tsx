@@ -6,6 +6,7 @@ import {
 } from '../data/agentWorkflows'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
+import { getLastSavedCreateChat, createChatVariantForAgent } from '../data/createAgentChatStore'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -63,6 +64,8 @@ interface WorkflowEditorScreenProps {
   previewProcedureId?: string | null
   previewProcedureDetail?: Record<string, unknown> | null
   onPreviewProcedureIdChange?: (id: string | null) => void
+  /** Saved co-pilot transcript shown in the Create with AI tab after Save agent. */
+  aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
 }
 
 export function WorkflowEditorScreen({
@@ -79,10 +82,14 @@ export function WorkflowEditorScreen({
   previewProcedureId = null,
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
+  aiTranscript = null,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
   const shownName = displayName ?? agentName
+  const createChatVariant =
+    createChatVariantForAgent(shownName) ?? createChatVariantForAgent(agentName)
+  const resolvedAiTranscript = aiTranscript ?? getLastSavedCreateChat(createChatVariant)
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'
@@ -209,6 +216,7 @@ export function WorkflowEditorScreen({
           previewProcedureId={previewProcedureId}
           previewProcedureDetail={previewProcedureDetail}
           onPreviewProcedureIdChange={onPreviewProcedureIdChange}
+          aiTranscript={resolvedAiTranscript}
         />
       </Suspense>
     </div>

@@ -688,6 +688,8 @@ export default function AgentBuilder({
   /** Optional full RHS detail payload — used when the procedure isn't in the live library. */
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
+  /** Saved co-pilot transcript for the Create with AI tab. */
+  aiTranscript = null,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -2191,6 +2193,7 @@ export default function AgentBuilder({
                 product={product}
                 agentName={agentName}
                 procedures={procedures}
+                aiTranscript={aiTranscript}
                 onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
                 onProcedureClick={viewOnly ? undefined : (procedureId) => {
                   setLhsPreviewProcedureId(procedureId);
