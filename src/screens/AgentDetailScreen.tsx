@@ -30,7 +30,7 @@ interface AgentDetailScreenProps {
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
   /** Bubbled up from `AgentInstanceScreen` — see its own doc comment. */
-  onRecommendationDetailActiveChange?: (active: boolean) => void
+  onFullBleedDetailActiveChange?: (active: boolean) => void
   /** Set by the host app when a "Track your feedback" link (Inbox) should open a specific
    *  recommendation inside a specific agent instance. */
   initialRecommendationFocus?: { instanceName: string; recommendationId: string; feedbackPrefill?: string } | null
@@ -375,7 +375,7 @@ function CreateAgentEmptyState({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSettings, onAgentSetupActiveChange, onNavigateToInbox, product, onRecommendationDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSettings, onAgentSetupActiveChange, onNavigateToInbox, product, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -676,7 +676,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
         onOpenIntegrationSettings={onOpenIntegrationSettings}
         onNavigateToInbox={onNavigateToInbox}
         product={product}
-        onRecommendationDetailActiveChange={onRecommendationDetailActiveChange}
+        onFullBleedDetailActiveChange={onFullBleedDetailActiveChange}
         initialRecommendationId={
           initialRecommendationFocus?.instanceName === selectedInstance.name ? initialRecommendationFocus.recommendationId : null
         }

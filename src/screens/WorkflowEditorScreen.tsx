@@ -184,6 +184,7 @@ export function WorkflowEditorScreen({
           initialStatus={resolvedStatus}
           publishDisabled={publishDisabled}
           defaultOpenSection="Tasks"
+          defaultLhsCollapsed={!wizardDraft}
         />
       </Suspense>
     </div>

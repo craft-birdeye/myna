@@ -16,7 +16,6 @@ import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 interface RunDetailViewProps {
   row: HealthcareLogRow
   onBack: () => void
-  onViewConversation?: () => void
   /** The agent instance this run belongs to (e.g. "Front desk agent - North region") — carried
    *  onto any feedback submitted from this run's transcript so it lands on the right agent's
    *  Recommendation tab. */
@@ -134,7 +133,7 @@ function WorkflowCanvas({ instanceName }: { instanceName: string }) {
 }
 
 /* ── main export ── */
-export function RunDetailView({ row, onBack, onViewConversation, instanceName = 'Front desk agent north region' }: RunDetailViewProps) {
+export function RunDetailView({ row, onBack, instanceName = 'Front desk agent north region' }: RunDetailViewProps) {
   const statusVariant =
     row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
 
@@ -150,7 +149,7 @@ export function RunDetailView({ row, onBack, onViewConversation, instanceName = 
         >
           <BackArrowIcon />
         </button>
-        <h1 className="text-h3 text-text-primary">Run - {row.timestamp}</h1>
+        <h1 className="text-h3 text-text-primary">Log - {row.timestamp}</h1>
         <Chip label={row.status} variant={statusVariant} />
       </div>
 
@@ -159,7 +158,7 @@ export function RunDetailView({ row, onBack, onViewConversation, instanceName = 
         <WorkflowCanvas instanceName={instanceName} />
 
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
-          <LogDetailsPanel row={row} agentName={instanceName} onViewConversation={onViewConversation} />
+          <LogDetailsPanel row={row} agentName={instanceName} />
         </div>
       </div>
     </div>

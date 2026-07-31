@@ -52,6 +52,8 @@ export type {
   LogTranscriptEntry,
   LogToolCall,
 } from './LogDetailsPanel/LogDetailsPanel.types'
+export { RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
+export type { RunDetailsPanelProps, RunLogField, RunLogStep, RunLogStepType } from './RunDetailsPanel/RunDetailsPanel.types'
 export { Icon } from './Icon/Icon'
 export { IconRail } from './IconRail/IconRail'
 export { SideNav } from './SideNav/SideNav'

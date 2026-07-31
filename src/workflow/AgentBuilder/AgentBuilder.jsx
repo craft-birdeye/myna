@@ -623,6 +623,7 @@ export default function AgentBuilder({
   onAddProcedure,
   publishDisabled = false,
   defaultOpenSection = 'Tasks',
+  defaultLhsCollapsed = false,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -664,7 +665,7 @@ export default function AgentBuilder({
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  const [lhsCollapsed, setLhsCollapsed] = useState(defaultLhsCollapsed);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
@@ -7,6 +7,8 @@ import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
+import { RunDetailsPanel } from '../RunDetailsPanel/RunDetailsPanel'
+import type { RunLogStep } from '../RunDetailsPanel/RunDetailsPanel.types'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import { Toast } from '../Toast/Toast'
 import { Tooltip } from '../Tooltip/Tooltip'
@@ -27,8 +29,74 @@ function normalizeChannel(channel: string): Channel {
   return 'Text'
 }
 
-const DEFAULT_SUMMARY =
-  "The caller reported a bad headache she suspected was a migraine. The agent traced it to a back tooth with mild swelling, then routed her to booking, which scheduled her with Dr. Patel for Thursday at 2 PM."
+// Logs-tab trigger/task steps for this call — mirrors the same lookup + booking tool calls shown
+// inline in the Conversation tab's transcript, just summarized as a run history.
+const CALL_LOG_STEPS: RunLogStep[] = [
+  {
+    id: 'step-1',
+    type: 'trigger',
+    stepNumber: 1,
+    title: 'Conversation started',
+    output: [
+      { key: 'Source', value: 'Voice call' },
+      { key: 'Comments', value: 'I am having a very bad headache. I think it is migraine.' },
+    ],
+  },
+  {
+    id: 'step-2',
+    type: 'task',
+    stepNumber: 2,
+    title: 'Look up patient record',
+    output: [{ key: 'Summary', value: 'Patient record found' }],
+    tool: {
+      name: 'Patient record - Lookup',
+      properties: [
+        { key: 'patientPresent', value: 'true' },
+        { key: 'guarantorPresent', value: 'false' },
+        { key: 'cids', value: '425270500, 563631216, 503143111' },
+        {
+          key: 'patientDetails',
+          properties: [
+            { key: 'PatientFirstName', value: 'Sarah' },
+            { key: 'PatientLastName', value: 'Weiss' },
+            { key: 'phone', value: '919) 747-3001' },
+            { key: 'emailId', value: 'sarahl@xyz.com' },
+            { key: 'patientDob', value: '02-01-1998' },
+            { key: 'patientId', value: 'a764c0d3-fd32-44f0-8c89-79fd12' },
+          ],
+        },
+        { key: 'futureAppointments', value: '-' },
+        { key: 'pastAppointments', value: '-' },
+        { key: 'cancelledAppointments', value: '1' },
+      ],
+    },
+    inputs: [
+      { key: 'phoneNumber', value: '(032) 902 9023' },
+      { key: 'lookupType', value: 'patient' },
+    ],
+  },
+  {
+    id: 'step-3',
+    type: 'task',
+    stepNumber: 3,
+    title: 'Schedule appointment',
+    output: [{ key: 'Summary', value: "You're all set for Thursday at 2 PM with Dr. Patel." }],
+    tool: {
+      name: 'Schedule Appointment',
+      properties: [
+        { key: 'appointmentId', value: 'AP93F2KcTm' },
+        { key: 'start', value: '2026-05-14T14:00:00' },
+        { key: 'end', value: '2026-05-14T14:30:00' },
+        { key: 'specialistName', value: 'Dr. Patel' },
+      ],
+    },
+    inputs: [
+      { key: 'patientId', value: 'a764c0d3-fd32-44f0-8c89-79fd12' },
+      { key: 'specialistId', value: '1717392' },
+      { key: 'start', value: '2026-05-14T14:00:00' },
+    ],
+  },
+]
 
 const DEFAULT_TOOL_OUTPUT: LogToolOutputEntry[] = [
   { kind: 'field', key: 'patientPresent', value: 'true' },
@@ -188,17 +256,6 @@ function parseDurationSecs(duration: string): number {
   if (verbose) return Number(verbose[1]) * 60 + Number(verbose[2] ?? 0)
   const secsOnly = Number(duration)
   return Number.isFinite(secsOnly) ? secsOnly : 332
-}
-
-function formatDurationLabel(secs: number): string {
-  const mins = Math.floor(secs / 60)
-  const rem = secs % 60
-  return `${mins}m ${String(rem).padStart(2, '0')}s`
-}
-
-function startTimeLabel(timestamp: string): string {
-  const match = timestamp.match(/(\d{1,2}:\d{2}\s*[ap]m)/i)
-  return match?.[1] ?? timestamp
 }
 
 function FieldRow({ fieldKey, value }: { fieldKey: string; value: string }) {
@@ -362,15 +419,6 @@ function ToolCallBlock({ tool }: { tool: LogToolCall }) {
   )
 }
 
-function MetaField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="m-0 text-small text-text-tertiary">{label}</p>
-      <p className="m-0 mt-xs text-body text-text-primary">{value}</p>
-    </div>
-  )
-}
-
 function agentMetaLine(entry: Extract<LogTranscriptEntry, { role: 'agent' }>): string | null {
   const parts: string[] = []
   if (entry.llmResponseTime) parts.push(`LLM response time : ${entry.llmResponseTime}`)
@@ -433,23 +481,11 @@ function TranscriptEntry({
 export function LogDetailsPanel({
   row,
   agentName = 'Front desk agent - North region',
-  callerNumber = '(032) 902 9023',
-  sidNumber = 'CA45 T78 932',
-  languageDetected = 'English',
-  callEndReason = 'User ended the conversation',
-  routedVia = 'Reminder agent',
-  summary = DEFAULT_SUMMARY,
   transcript = DEFAULT_TRANSCRIPT,
   durationSecs,
   audioUrl = voicemailSample,
-  onViewConversation,
 }: LogDetailsPanelProps) {
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
-  const displayCaller =
-    row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : callerNumber
-
-  const [summaryOpen, setSummaryOpen] = useState(true)
-  const [transcriptOpen, setTranscriptOpen] = useState(true)
 
   // Same thumbs up/down → "share feedback" flow as the Inbox transcript view — thumbs-up
   // commits immediately, thumbs-down opens the modal and only commits on submit.
@@ -504,75 +540,54 @@ export function LogDetailsPanel({
     return messageFeedback[messageId] ?? null
   }
 
+  // Chat auto-scrolls to track the call recording's playhead — the waveform itself stays put
+  // (pinned above), only the transcript below it moves. A manual scroll (wheel/touch/drag)
+  // suspends this until the user opts back in via "Resume auto scrolling".
+  const [autoScroll, setAutoScroll] = useState(true)
+  const [playbackProgress, setPlaybackProgress] = useState({ elapsed: 0, total: 0 })
+  const chatScrollRef = useRef<HTMLDivElement>(null)
+  // Set right before a programmatic scrollTop write, so the very next `onScroll` it fires can
+  // be told apart from a genuine user-driven one (which should suspend auto-scroll).
+  const isProgrammaticScrollRef = useRef(false)
+
+  useEffect(() => {
+    if (!autoScroll) return
+    const el = chatScrollRef.current
+    if (!el || playbackProgress.total <= 0) return
+    const fraction = Math.min(1, Math.max(0, playbackProgress.elapsed / playbackProgress.total))
+    const maxScroll = el.scrollHeight - el.clientHeight
+    if (maxScroll <= 0) return
+    isProgrammaticScrollRef.current = true
+    el.scrollTop = fraction * maxScroll
+  }, [autoScroll, playbackProgress])
+
+  const handleChatScroll = () => {
+    if (isProgrammaticScrollRef.current) {
+      isProgrammaticScrollRef.current = false
+      return
+    }
+    setAutoScroll(false)
+  }
+
   return (
-    <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
-      {/* Header — matches RHSPanelHeader (0 15px, height 60) */}
-      <div className="flex h-[60px] shrink-0 items-center justify-between px-[15px]">
-        <h2 className="m-0 text-body text-text-primary">Conversation details</h2>
-        {onViewConversation && (
-          <button
-            type="button"
-            onClick={onViewConversation}
-            className="flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
-          >
-            View conversation
-            <Icon name="open_in_new" size={16} />
-          </button>
-        )}
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-[15px] py-lg">
-        {/* Meta card */}
-        <div className="mb-2xl rounded-sm border border-border px-lg py-lg">
-          <div className="grid grid-cols-2 gap-x-lg gap-y-lg">
-            <MetaField label="Caller number" value={displayCaller} />
-            <MetaField label="Language detected" value={languageDetected} />
-            <MetaField label="Duration" value={formatDurationLabel(totalSecs)} />
-            <MetaField label="Call SID" value={sidNumber} />
-            <MetaField label="Start time" value={startTimeLabel(row.timestamp)} />
-            <MetaField label="Call end reason" value={callEndReason} />
-            <MetaField label="Routed via" value={routedVia} />
-          </div>
-        </div>
-
-        {/* AI summary */}
-        <div className="ai-summary-panel mb-2xl shrink-0">
-          <button
-            type="button"
-            onClick={() => setSummaryOpen((v) => !v)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <span className="flex items-center gap-xs">
-              <Icon name="auto_awesome" size={20} className="shrink-0 text-ai-brand" />
-              <span className="text-body text-text-primary">Summary</span>
-            </span>
-            <Icon
-              name={summaryOpen ? 'expand_less' : 'expand_more'}
-              size={20}
-              className="text-text-secondary"
-            />
-          </button>
-          {summaryOpen && (
-            <p className="m-0 mt-sm text-body leading-[1.6] text-text-secondary">{summary}</p>
-          )}
-        </div>
-
-        {/* Call transcript — player + messages */}
-        <div className="flex flex-col">
-          <button
-            type="button"
-            onClick={() => setTranscriptOpen((v) => !v)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <span className="text-body text-text-primary">Call transcript</span>
-          </button>
-          {transcriptOpen && (
-            <div className="mt-[32px] flex flex-col gap-3xl">
+    <>
+      <RunDetailsPanel
+        steps={CALL_LOG_STEPS}
+        conversation={
+          <div className="relative flex h-full flex-col">
+            <div className="shrink-0 px-[15px] pt-lg">
               <CallRecordingPlayer
                 audioUrl={audioUrl}
                 durationSecs={totalSecs}
                 padded={false}
+                onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
               />
+            </div>
+            <div
+              ref={chatScrollRef}
+              onScroll={handleChatScroll}
+              className="mt-3xl min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl"
+            >
               <div className="flex flex-col gap-3xl">
                 {transcript.map((entry) => (
                   <TranscriptEntry
@@ -586,9 +601,19 @@ export function LogDetailsPanel({
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      </div>
+            {!autoScroll && (
+              <button
+                type="button"
+                onClick={() => setAutoScroll(true)}
+                className="absolute bottom-lg left-1/2 z-10 flex h-9 -translate-x-1/2 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white shadow-modal transition-colors hover:bg-primary-hover"
+              >
+                <Icon name="arrow_downward" size={16} className="text-white" />
+                Resume auto scrolling
+              </button>
+            )}
+          </div>
+        }
+      />
 
       <ShareFeedbackModal
         open={shareFeedbackMessageId !== null}
@@ -596,6 +621,6 @@ export function LogDetailsPanel({
         onSubmit={handleShareFeedbackSubmit}
       />
       <Toast message={toastMessage} visible={toastVisible} onClose={() => setToastVisible(false)} />
-    </div>
+    </>
   )
 }

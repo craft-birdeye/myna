@@ -10,4 +10,7 @@ export interface CallRecordingPlayerProps {
   /** Apply the drawer player padding (16px 20px). Default true. */
   padded?: boolean
   className?: string
+  /** Fires whenever the playhead moves (playback ticking, or a seek/scrub on the waveform). */
+  onProgress?: (elapsedSecs: number, totalSecs: number) => void
+  onPlayingChange?: (playing: boolean) => void
 }

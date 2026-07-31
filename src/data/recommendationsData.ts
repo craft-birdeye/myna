@@ -1935,18 +1935,23 @@ export function pickReporterName(seed: string): string {
 /** Formats a `Recommendation.timeAgo` value (e.g. "15m ago", "4h ago", "Just now") for the
  *  Recommendation tab's Date column: minutes/hours ago under 24h, "Yesterday" for the next day,
  *  and an absolute date ("March 15, 2026") beyond that. */
-export function formatRecommendationDate(timeAgo: string): string {
-  if (timeAgo === 'Just now') return timeAgo
-
+/** Parses a `Recommendation.timeAgo` value (e.g. "15m ago", "4h ago", "Just now") into minutes
+ *  elapsed — shared by `formatRecommendationDate` and `recommendationAgeMinutes` (for sorting).
+ *  Returns `null` for an already-absolute date or unrecognized format. */
+function parseTimeAgoMinutes(timeAgo: string): number | null {
+  if (timeAgo === 'Just now') return 0
   const minutesMatch = timeAgo.match(/^(\d+)m ago$/)
+  if (minutesMatch) return Number(minutesMatch[1])
   const hoursMatch = timeAgo.match(/^(\d+)h ago$/)
+  if (hoursMatch) return Number(hoursMatch[1]) * 60
   const daysMatch = timeAgo.match(/^(\d+)d ago$/)
+  if (daysMatch) return Number(daysMatch[1]) * 1440
+  return null
+}
 
-  let minutesElapsed: number
-  if (minutesMatch) minutesElapsed = Number(minutesMatch[1])
-  else if (hoursMatch) minutesElapsed = Number(hoursMatch[1]) * 60
-  else if (daysMatch) minutesElapsed = Number(daysMatch[1]) * 1440
-  else return timeAgo // already an absolute date or some other format — pass through untouched
+export function formatRecommendationDate(timeAgo: string): string {
+  const minutesElapsed = parseTimeAgoMinutes(timeAgo)
+  if (minutesElapsed === null) return timeAgo // already an absolute date or some other format
 
   if (minutesElapsed < 1) return 'Just now'
   if (minutesElapsed < 60) return `${minutesElapsed} minute${minutesElapsed === 1 ? '' : 's'} ago`
@@ -1959,6 +1964,13 @@ export function formatRecommendationDate(timeAgo: string): string {
 
   const date = new Date(Date.now() - minutesElapsed * 60_000)
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+/** Minutes elapsed for a `Recommendation.timeAgo` value — lower means more recent. Used to sort
+ *  the Recommendation tab by date (default order, and the Date column's own sort). Unrecognized/
+ *  absolute-date formats sort as oldest, since there's no elapsed time to compare against "now". */
+export function recommendationAgeMinutes(timeAgo: string): number {
+  return parseTimeAgoMinutes(timeAgo) ?? Number.MAX_SAFE_INTEGER
 }
 
 export function sortRecommendations(recs: Recommendation[]): Recommendation[] {

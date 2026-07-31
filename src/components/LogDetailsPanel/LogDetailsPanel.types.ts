@@ -52,15 +52,8 @@ export interface LogDetailsPanelProps {
   row: HealthcareLogRow
   agentName?: string
   agentBadge?: string
-  callerNumber?: string
-  sidNumber?: string
-  languageDetected?: string
-  callEndReason?: string
-  routedVia?: string
   metrics?: LogDetailsMetric[]
-  summary?: string
   transcript?: LogTranscriptEntry[]
   durationSecs?: number
   audioUrl?: string
-  onViewConversation?: () => void
 }

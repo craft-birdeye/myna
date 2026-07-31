@@ -22,7 +22,6 @@ import { RecommendationsTab } from './RecommendationsTab'
 import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
-import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 
 interface AgentInstanceScreenProps {
@@ -33,10 +32,10 @@ interface AgentInstanceScreenProps {
   onOpenIntegrationSettings?: (integrationId: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
-  /** Fires whenever a single recommendation's detail screen becomes the active view (or stops
-   *  being it) — lets the app-level layout hide the secondary sidebar so that screen can go
+  /** Fires whenever a recommendation detail or log detail screen becomes the active view (or
+   *  stops being it) — lets the app-level layout hide the secondary sidebar so that screen can go
    *  full-bleed. */
-  onRecommendationDetailActiveChange?: (active: boolean) => void
+  onFullBleedDetailActiveChange?: (active: boolean) => void
   /** Set when the host app should jump straight to a specific recommendation (e.g. from a
    *  "Track your feedback" link in the Inbox) instead of the default Outcomes tab. */
   initialRecommendationId?: string | null
@@ -323,7 +322,7 @@ export function AgentInstanceScreen({
   onOpenIntegrationSettings,
   onNavigateToInbox,
   product,
-  onRecommendationDetailActiveChange,
+  onFullBleedDetailActiveChange,
   initialRecommendationId,
   onInitialRecommendationConsumed,
   initialFeedbackPrefill,
@@ -336,9 +335,9 @@ export function AgentInstanceScreen({
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
 
   useEffect(() => {
-    onRecommendationDetailActiveChange?.(selectedRecommendationId !== null)
-    return () => onRecommendationDetailActiveChange?.(false)
-  }, [selectedRecommendationId, onRecommendationDetailActiveChange])
+    onFullBleedDetailActiveChange?.(selectedRecommendationId !== null || selectedRun !== null)
+    return () => onFullBleedDetailActiveChange?.(false)
+  }, [selectedRecommendationId, selectedRun, onFullBleedDetailActiveChange])
 
   useEffect(() => {
     if (!initialRecommendationId) return
@@ -383,13 +382,12 @@ export function AgentInstanceScreen({
   if (selectedRun) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav initials="S" />
+        <TopNav title="Front desk" initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
           <RunDetailView
             row={selectedRun}
             instanceName={instanceName}
             onBack={() => setSelectedRun(null)}
-            onViewConversation={() => onNavigateToInbox?.(FRONT_DESK_INBOX_CONVERSATION_ID)}
           />
         </div>
       </div>

@@ -317,7 +317,7 @@ export function App() {
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
-  const [isViewingRecommendationDetail, setIsViewingRecommendationDetail] = useState(false)
+  const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
   const [settingsSubScreen, setSettingsSubScreen] = useState<string | null>(null)
@@ -393,7 +393,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingRecommendationDetail && railActive !== 'settings' && railActive !== 'inbox' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && (
         <SideNav
           title="Front desk"
           sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
@@ -601,7 +601,7 @@ export function App() {
             onEditAgent={handleEditAgent}
             onOpenIntegrationSettings={openIntegrationSettings}
             onAgentSetupActiveChange={setIsAgentSetupActive}
-            onRecommendationDetailActiveChange={setIsViewingRecommendationDetail}
+            onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
             onNavigateToInbox={(conversationId) => {
               setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
               setRailActive('inbox')

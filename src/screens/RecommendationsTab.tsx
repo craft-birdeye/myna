@@ -1,6 +1,6 @@
 import { Chip, DataTable, EmptyState, Icon, type Column } from '../components'
 import { AiAgentIcon } from '../assets/AiAgentIcon'
-import { computeImpact, formatRecommendationDate, RECOMMENDATIONS, sortRecommendations, type Recommendation } from '../data/recommendationsData'
+import { computeImpact, formatRecommendationDate, recommendationAgeMinutes, RECOMMENDATIONS, type Recommendation } from '../data/recommendationsData'
 import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 import { useRecommendationOverridesStore } from '../data/RecommendationOverridesStoreContext'
 
@@ -12,7 +12,12 @@ interface RecommendationsTabProps {
   isDraft?: boolean
 }
 
-const COLUMNS: Column<Recommendation>[] = [
+/** Row shape rendered by the table — adds a sortable numeric age alongside the raw `timeAgo`
+ *  string, so the Date column (and the default order) can sort chronologically instead of
+ *  alphabetically sorting strings like "15m ago" vs "2h ago". */
+type RecommendationRow = Recommendation & { ageMinutes: number }
+
+const COLUMNS: Column<RecommendationRow>[] = [
   {
     key: 'title',
     label: 'Recommendation',
@@ -20,8 +25,8 @@ const COLUMNS: Column<Recommendation>[] = [
     minWidth: 280,
     render: (_, rec) => (
       <div className="flex min-w-0 flex-col gap-xs py-xs">
-        <p className="truncate text-body text-text-primary">{rec.title}</p>
-        <p className="line-clamp-1 text-small text-text-secondary">{rec.summary}</p>
+        <p className="truncate text-body text-text-primary group-hover/row:text-text-action">{rec.title}</p>
+        <p className="line-clamp-1 text-small text-text-secondary group-hover/row:text-text-action">{rec.summary}</p>
       </div>
     ),
   },
@@ -42,9 +47,10 @@ const COLUMNS: Column<Recommendation>[] = [
     ),
   },
   {
-    key: 'timeAgo',
+    key: 'ageMinutes',
     label: 'Date',
     width: 140,
+    sortable: true,
     render: (_, rec) => <span className="text-small text-text-secondary">{formatRecommendationDate(rec.timeAgo)}</span>,
   },
   {
@@ -74,12 +80,15 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false }: Rec
   const feedbackForAgent = feedbackRecommendations.filter((rec) => rec.agentName === agentName)
   const combined = [...RECOMMENDATIONS, ...feedbackForAgent]
   const maxConversationCount = Math.max(0, ...combined.map((rec) => rec.conversationCount))
-  const data = sortRecommendations(
-    combined.map((rec) => ({ ...rec, priority: computeImpact(rec.conversationCount, maxConversationCount) })),
-  ).map((rec) => ({
-    ...rec,
-    status: overrides[rec.id]?.status ?? 'open',
-  }))
+  const data: RecommendationRow[] = combined
+    .map((rec) => ({
+      ...rec,
+      priority: computeImpact(rec.conversationCount, maxConversationCount),
+      status: overrides[rec.id]?.status ?? 'open',
+      ageMinutes: recommendationAgeMinutes(rec.timeAgo),
+    }))
+    // Default order: most recent first — the table's own column sort takes over once a header is clicked.
+    .sort((a, b) => a.ageMinutes - b.ageMinutes)
 
   if (isDraft) {
     return (
