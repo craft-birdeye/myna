@@ -8,6 +8,7 @@ import {
   type CopilotThreadOrigin,
 } from '../../data/CopilotThreadsStoreContext'
 import { CopilotPanelProps } from './CopilotPanel.types'
+import { REVIEW_AGENT_SCRIPT, isReviewAgentTrigger } from './reviewAgentScript'
 
 /** BirdAI gradient sparkle cluster — one large 4-point star + two accents. */
 function BirdAiStar({ size = 72 }: { size?: number }) {
@@ -40,6 +41,18 @@ const SUGGESTIONS = [
   'What should this agent do better?',
 ]
 
+// Shown when the panel is opened on a brand-new / untitled agent (the create-from-scratch flow),
+// so the reviewer can kick off the scripted build with one click.
+const CREATE_SUGGESTIONS = [
+  'Create a review agent',
+  'What can you help me build?',
+]
+
+function isBlankAgent(agentName: string): boolean {
+  const n = agentName.trim().toLowerCase()
+  return n === '' || n === 'this agent' || n === 'untitled agent'
+}
+
 /** Scripted acknowledgement so the prototype composer feels alive end-to-end. */
 function cannedReply(agentName: string): string {
   return `Got it — I've noted that for ${agentName.replace(/ - .+$/, '').toLowerCase()}. I'll fold it into my next recommendation pass; anything I change will show up on the Recommendation tab for your review.`
@@ -67,7 +80,7 @@ function ThreadTranscript({ thread }: { thread: CopilotThread }) {
             <div className="mt-xs shrink-0">
               <BirdAiStar size={20} />
             </div>
-            <p className="m-0 min-w-0 text-body text-text-primary">{m.text}</p>
+            <p className="m-0 min-w-0 whitespace-pre-line text-body text-text-primary">{m.text}</p>
           </div>
         ),
       )}
@@ -122,12 +135,38 @@ function Composer({ onSend, placeholder = 'Ask your Copilot…' }: { onSend: (te
   )
 }
 
+/** Scripted-demo composer — one tap plays the next turn instead of free typing. */
+function TapToContinue({ onTap, disabled }: { onTap: () => void; disabled: boolean }) {
+  return (
+    <div className="shrink-0 px-lg pb-lg">
+      <button
+        type="button"
+        onMouseDown={(e) => {
+          e.preventDefault()
+          if (!disabled) onTap()
+        }}
+        aria-label="Continue"
+        className={`flex w-full items-center justify-between rounded-lg border border-border bg-surface px-md py-md text-left shadow-card ${
+          disabled ? 'cursor-default opacity-70' : 'hover:bg-surface-hover'
+        }`}
+      >
+        <span className="text-body text-text-tertiary">
+          {disabled ? 'Copilot is working…' : 'Tap to continue…'}
+        </span>
+        <span className="flex size-8 items-center justify-center rounded-full bg-text-primary text-white">
+          <Icon name="arrow_upward" size={18} />
+        </span>
+      </button>
+    </div>
+  )
+}
+
 /**
  * The one Copilot surface: a docked side panel scoped to an agent instance. Home view is the
  * agent's conversation history (create flow, recommendations, coaching feedback, ad-hoc asks);
  * threads open in place, except recommendation-linked ones which navigate to the detail page.
  */
-export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, onOpenRecommendation }: CopilotPanelProps) {
+export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, onOpenRecommendation, onBuildAgent }: CopilotPanelProps) {
   const { listThreads, getThread, upsertThread, appendMessages } = useCopilotThreadsStore()
   const [view, setView] = useState<'home' | 'history'>('home')
   const [openThreadId, setOpenThreadId] = useState<string | null>(null)
@@ -135,8 +174,21 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
   const [replying, setReplying] = useState(false)
   const replyTimer = useRef<number | null>(null)
 
+  // Scripted "create a review agent" demo flow (see reviewAgentScript.ts). `scriptIndex` is the
+  // NEXT step to play; -1 means the flow hasn't started. Each composer tap plays one step.
+  const [scriptThreadId, setScriptThreadId] = useState<string | null>(null)
+  const [scriptIndex, setScriptIndex] = useState(-1)
+  const [scriptPlaying, setScriptPlaying] = useState(false)
+  const [thinkingLine, setThinkingLine] = useState<string | null>(null)
+  const scriptTimers = useRef<number[]>([])
+  const clearScriptTimers = () => {
+    scriptTimers.current.forEach((t) => window.clearTimeout(t))
+    scriptTimers.current = []
+  }
+
   useEffect(() => () => {
     if (replyTimer.current) window.clearTimeout(replyTimer.current)
+    clearScriptTimers()
   }, [])
 
   const expanded = onExpand ? false : expandedInternal
@@ -144,6 +196,61 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
 
   const threads = listThreads(agentName)
   const openThread = openThreadId ? getThread(openThreadId) : undefined
+
+  const scriptActive =
+    scriptThreadId !== null &&
+    openThreadId === scriptThreadId &&
+    scriptIndex >= 0 &&
+    scriptIndex < REVIEW_AGENT_SCRIPT.length
+
+  const LINE_MS = 850
+
+  /** Reveal one script step: optional user line, then transient thinking lines, then the reply. */
+  const playStep = (threadId: string, stepIndex: number, appendUser: boolean) => {
+    const step = REVIEW_AGENT_SCRIPT[stepIndex]
+    if (!step) return
+    clearScriptTimers()
+    setScriptPlaying(true)
+    if (appendUser && step.user) {
+      appendMessages(threadId, [copilotMessage('user', step.user)])
+    }
+    const lines = step.thinking ?? []
+    lines.forEach((line, i) => {
+      scriptTimers.current.push(window.setTimeout(() => setThinkingLine(line), i * LINE_MS))
+    })
+    const replyAt = lines.length * LINE_MS + (lines.length ? 350 : 300)
+    scriptTimers.current.push(
+      window.setTimeout(() => {
+        setThinkingLine(null)
+        appendMessages(threadId, [copilotMessage('copilot', step.reply)])
+        setScriptPlaying(false)
+        setScriptIndex(stepIndex + 1)
+        // Final "Build it" step — tell the host to load the Library agent onto the canvas.
+        if (stepIndex === REVIEW_AGENT_SCRIPT.length - 1) {
+          onBuildAgent?.()
+        }
+      }, replyAt),
+    )
+  }
+
+  const startReviewScript = (typedText: string) => {
+    const id = upsertThread({
+      agentName,
+      origin: 'create',
+      title: 'Create a review agent',
+      messages: [copilotMessage('user', typedText)],
+    })
+    setOpenThreadId(id)
+    setScriptThreadId(id)
+    setScriptIndex(0)
+    playStep(id, 0, false)
+  }
+
+  /** Composer tap in scripted mode — plays the next exchange. */
+  const advanceScript = () => {
+    if (scriptPlaying || !scriptThreadId) return
+    playStep(scriptThreadId, scriptIndex, true)
+  }
 
   const scheduleReply = (threadId: string) => {
     setReplying(true)
@@ -154,6 +261,11 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
   }
 
   const handleSend = (text: string) => {
+    // "Create a review agent" kicks off the scripted build flow instead of a canned reply.
+    if (scriptIndex < 0 && isReviewAgentTrigger(text)) {
+      startReviewScript(text)
+      return
+    }
     if (openThreadId && openThread) {
       appendMessages(openThreadId, [copilotMessage('user', text)])
       scheduleReply(openThreadId)
@@ -246,13 +358,20 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
       {openThread ? (
         <>
           <ThreadTranscript thread={openThread} />
-          {replying && (
+          {(thinkingLine || replying) && (
             <div className="flex items-center gap-sm px-lg pb-sm">
-              <BirdAiStar size={16} />
-              <span className="text-small text-text-tertiary">Copilot is thinking…</span>
+              <span className="relative flex size-4 shrink-0 items-center justify-center">
+                <span className="absolute inline-flex size-3 animate-ping rounded-full bg-ai-brand opacity-60" />
+                <BirdAiStar size={14} />
+              </span>
+              <span className="text-small text-text-tertiary">{thinkingLine ?? 'Copilot is thinking…'}</span>
             </div>
           )}
-          <Composer onSend={handleSend} placeholder="Reply to your Copilot…" />
+          {scriptActive ? (
+            <TapToContinue onTap={advanceScript} disabled={scriptPlaying} />
+          ) : (
+            <Composer onSend={handleSend} placeholder="Reply to your Copilot…" />
+          )}
         </>
       ) : view === 'history' ? (
         /* History — this agent's past Copilot conversations, opened from the header icon */
@@ -294,7 +413,7 @@ export function CopilotPanel({ agentName, userName = 'John', onClose, onExpand, 
 
           <div className="shrink-0 px-lg pb-md">
             <div className="flex flex-wrap gap-sm">
-              {SUGGESTIONS.map((s) => (
+              {(isBlankAgent(agentName) ? CREATE_SUGGESTIONS : SUGGESTIONS).map((s) => (
                 <button
                   key={s}
                   type="button"

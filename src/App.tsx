@@ -6,6 +6,7 @@ import { RecommendationOverridesStoreProvider } from './data/RecommendationOverr
 import { CopilotThreadsStoreProvider } from './data/CopilotThreadsStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
 import { CopilotPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { REVIEW_AGENT_BUILT_NAME } from './components/CopilotPanel/reviewAgentScript'
 import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
 import { SalesPipelineScreen, buildLeadDetailProps, type LeadDetailArgs } from './screens/SalesPipelineScreen'
 import { ServiceRequestsScreen, buildServiceRequestDetailProps, type ServiceRequestDetailArgs } from './screens/ServiceRequestsScreen'
@@ -512,8 +513,9 @@ export function App() {
             </div>
             {workflowAiAssistOpen && (
               <CopilotPanel
-                agentName={editingAgentName ?? 'this agent'}
+                agentName={editingAgentName || 'Untitled agent'}
                 onClose={() => setWorkflowAiAssistOpen(false)}
+                onBuildAgent={() => setEditingAgentName(REVIEW_AGENT_BUILT_NAME)}
               />
             )}
           </div>

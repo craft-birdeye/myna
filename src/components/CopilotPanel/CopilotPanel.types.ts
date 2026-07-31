@@ -9,4 +9,7 @@ export interface CopilotPanelProps {
   /** Opens a recommendation's detail page — used by history threads that link to one
    *  (coaching feedback, recommendation visits). When omitted those threads open in place. */
   onOpenRecommendation?: (recommendationId: string) => void
+  /** Fired when the scripted "create a review agent" flow finishes ("Build it") so the
+   *  host can drop the first Library agent onto the canvas. */
+  onBuildAgent?: () => void
 }
