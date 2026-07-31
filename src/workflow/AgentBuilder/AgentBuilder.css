@@ -25,6 +25,13 @@
   pointer-events: none;
 }
 
+/* Hidden (not just covered) while the AI chat is expanded — the small drawer's
+   own "Create with AI" tab renders the same recap content, so it must not stay
+   visible behind the full-canvas overlay. */
+.agent-builder__lhs--ai-expanded {
+  visibility: hidden;
+}
+
 /* ─── Expand pill (floats over canvas when LHS is collapsed) ─── */
 .ab-lhs-expand-pill {
   position: absolute;
@@ -82,6 +89,87 @@
   transition: max-width 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.15s ease 0.07s;
 }
 
+/* ─── "Create with AI" expanded — floats as a rounded card over the canvas
+   area (LHS + canvas + RHS), inset with margin so the dotted canvas
+   background still peeks around it and it still reads as "inside the
+   canvas," not a bare full-page takeover. Confined below this screen's own
+   header since .agent-builder is the nearest positioned ancestor, and never
+   covers the app's own chrome. Always mounted once the tab is AI-live so the
+   open/close transition can animate both ways, not just on mount. ─── */
+.agent-builder__ai-fullpage {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-40px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1), transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.agent-builder__ai-fullpage--open {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+}
+
+.agent-builder__ai-fullpage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 52px;
+  padding: 0 20px;
+  border-bottom: 1px solid #e9e9eb;
+}
+
+.agent-builder__ai-fullpage-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-family: 'Roboto', sans-serif;
+  color: #212121;
+}
+
+.agent-builder__ai-fullpage-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #667085;
+}
+
+.agent-builder__ai-fullpage-collapse-btn:hover {
+  background: #f2f4f7;
+  color: #212121;
+}
+
+.agent-builder__ai-fullpage-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
 .agent-builder__canvas {
   flex: 1;
   min-width: 0;
@@ -101,12 +189,6 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.agent-builder__ai-assist {
-  flex-shrink: 0;
-  height: 100%;
-  z-index: 5;
 }
 
 /* ─── Build mode wrapper ─── */

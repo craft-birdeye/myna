@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
-import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
 import { SalesPipelineScreen, buildLeadDetailProps, type LeadDetailArgs } from './screens/SalesPipelineScreen'
 import { ServiceRequestsScreen, buildServiceRequestDetailProps, type ServiceRequestDetailArgs } from './screens/ServiceRequestsScreen'
@@ -308,7 +308,6 @@ export function App() {
   )
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
-  const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
@@ -420,32 +419,24 @@ export function App() {
             onInitialConversationConsumed={() => setInboxFocusId(null)}
           />
         ) : isEditingWorkflow ? (
-          <div className="flex h-full w-full overflow-hidden">
-            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-              <TopNav title="Front desk" initials="S" />
-              <div className="flex-1 overflow-hidden">
-                <WorkflowEditorScreen
-                  agentName={editingAgentName}
-                  onClose={() => {
-                    setEditingAgentName(null)
-                    setWizardAgentDraft(null)
-                    setWorkflowAiAssistOpen(false)
-                  }}
-                  product={activeProduct}
-                  wizardDraft={wizardAgentDraft}
-                  agentStatus={
-                    editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                      ? 'Draft'
-                      : undefined
-                  }
-                  aiAssistOpen={workflowAiAssistOpen}
-                  onAiAssistOpenChange={setWorkflowAiAssistOpen}
-                />
-              </div>
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <TopNav title="Front desk" initials="S" />
+            <div className="flex-1 overflow-hidden">
+              <WorkflowEditorScreen
+                agentName={editingAgentName}
+                onClose={() => {
+                  setEditingAgentName(null)
+                  setWizardAgentDraft(null)
+                }}
+                product={activeProduct}
+                wizardDraft={wizardAgentDraft}
+                agentStatus={
+                  editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
+                    ? 'Draft'
+                    : undefined
+                }
+              />
             </div>
-            {workflowAiAssistOpen && (
-              <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
-            )}
           </div>
         ) : navActive === 'review-waitlist' && waitlistDetail ? (
           <>

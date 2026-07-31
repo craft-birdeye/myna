@@ -9,8 +9,6 @@ export default function GraphControls({
   onOrientationChange,
   onRun,
   onEdit,
-  onAiAssist = undefined,
-  aiAssistActive = false,
   zoom = 100,
   onZoomSelect,
   onFitView,
@@ -118,18 +116,6 @@ export default function GraphControls({
           <span className="material-symbols-outlined">play_arrow</span>
         </button>
       </GraphControlTooltip>
-
-      {onAiAssist && (
-        <GraphControlTooltip text="AI assist">
-          <button
-            className={`graph-controls__run graph-controls__ai-assist${aiAssistActive ? ' graph-controls__ai-assist--active' : ''}`}
-            onClick={onAiAssist}
-            type="button"
-          >
-            <span className="material-symbols-outlined graph-controls__ai-assist-icon">auto_awesome</span>
-          </button>
-        </GraphControlTooltip>
-      )}
     </div>
   );
 }

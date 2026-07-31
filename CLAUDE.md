@@ -146,6 +146,7 @@ If a component exists here, import it — do not recreate it.
 | InfoTooltip | components/InfoTooltip/InfoTooltip.tsx | text, variant?='detail'\|'brief' — info-icon button wrapping `Tooltip`; use this (not a hand-rolled hover panel) whenever a label/title needs an explanatory "ⓘ" hint |
 | IconRail    | components/IconRail/IconRail.tsx       | logoSrc, brand, groups[] (header?, items[]), activeId, onSelect? — collapsed 56px, expands to 262px on hover |
 | SideNav     | components/SideNav/SideNav.tsx         | title, sections[], activeId, onSelect?                              |
+| ChatHistorySideNav | components/ChatHistorySideNav/ChatHistorySideNav.tsx | title, chats[] ({id,label}), activeChatId?, onSelectChat?, onNewChat? — 222px L2 panel (same width as `SideNav`) for chat-style flows: module-name title, "Search chats" filter row, "All chats" row with a blue add-circle "new chat" button, collapsible "Recent chats" list. Used on the front desk/reminder create-agent **landing** screen only in `AgentDetailScreen` — hidden once the user submits a prompt, so the chat becomes a full-page experience with no side rail |
 | TopNav      | components/TopNav/TopNav.tsx           | avatarUrl?, initials?, onAdd?, onHelp?, onMenu?                     |
 | PageHeader  | components/PageHeader/PageHeader.tsx   | date, providerLabel?, view?, onPrev?, onNext?, onToday?, onViewChange?, onFilter? |
 | MetricTiles | components/MetricTiles/MetricTiles.tsx | metrics[] ({ id, value, label })                                   |

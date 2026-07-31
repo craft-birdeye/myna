@@ -618,5 +618,67 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  gap: 12px;
   min-height: 0;
 }
+
+.lhs-drawer__tabs--visible {
+  display: flex;
+  align-items: center;
+}
+
+/* Expand icon lives inline in the "Create with AI" tab label, revealed on
+   hover/focus of that tab rather than sitting unanchored in the content area. */
+.lhs-drawer__ai-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  color: #667085;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.lhs-drawer__tab:hover .lhs-drawer__ai-expand-btn,
+.lhs-drawer__ai-expand-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lhs-drawer__ai-expand-btn:hover {
+  background: #f2f4f7;
+  color: #212121;
+}
+
+.lhs-drawer__ai-expand-btn .material-symbols-outlined {
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+}
+
+/* Collapse-editor button relocated into the tab row so it's reachable from
+   either tab, not just tucked inside "Create manually"'s search row. */
+.lhs-drawer__collapse-btn--tabs {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.lhs-drawer__ai-user-msg {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #212121;
+  font-size: 14px;
+  line-height: 20px;
+  font-family: 'Roboto', sans-serif;
+}
+

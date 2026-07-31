@@ -54,8 +54,9 @@ interface WorkflowEditorScreenProps {
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
-  aiAssistOpen?: boolean
-  onAiAssistOpenChange?: (open: boolean) => void
+  /** Show a mock recap of the create-agent chat in the LHS "Create with AI"
+   * tab (and default to that tab) instead of the canvas's generic demo copy. */
+  showAiRecap?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -64,8 +65,7 @@ export function WorkflowEditorScreen({
   product = 'automotive',
   agentStatus = 'Running',
   wizardDraft = null,
-  aiAssistOpen,
-  onAiAssistOpenChange,
+  showAiRecap = false,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -188,8 +188,7 @@ export function WorkflowEditorScreen({
           initialStatus={resolvedStatus}
           publishDisabled={publishDisabled}
           defaultOpenSection="Tasks"
-          aiAssistOpen={aiAssistOpen}
-          onAiAssistOpenChange={onAiAssistOpenChange}
+          showAiRecap={showAiRecap}
         />
       </Suspense>
     </div>

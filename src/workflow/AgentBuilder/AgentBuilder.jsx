@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import LHSDrawer, { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK } from '../LHSDrawer/LHSDrawer';
+import LHSDrawer, { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK, AiRecapChat } from '../LHSDrawer/LHSDrawer';
+import AIPromptBox from '../Molecules/AIPromptBox/AIPromptBox';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
 import RHS from '../Organisms/Panels/RHS/RHS';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
@@ -10,7 +11,6 @@ import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomToo
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
-import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -679,8 +679,7 @@ export default function AgentBuilder({
   defaultOpenSection = 'Tasks',
   initialZoom = 1,
   runDisabled = false,
-  aiAssistOpen: aiAssistOpenProp,
-  onAiAssistOpenChange,
+  showAiRecap = false,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -723,13 +722,7 @@ export default function AgentBuilder({
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
-  const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
-  // AI assist panel is controlled by the parent when it needs to render the
-  // panel itself (e.g. spanning the full app height, above this editor's own
-  // header) — falls back to internal state otherwise.
-  const aiAssistControlled = onAiAssistOpenChange != null;
-  const aiAssistOpen = aiAssistControlled ? aiAssistOpenProp : aiAssistOpenInternal;
-  const setAiAssistOpen = aiAssistControlled ? onAiAssistOpenChange : setAiAssistOpenInternal;
+  const [aiChatExpanded, setAiChatExpanded] = useState(false);
   const [lhsForceOpenSection, setLhsForceOpenSection] = useState(null);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
@@ -755,16 +748,6 @@ export default function AgentBuilder({
   useEffect(() => {
     setLiveProcedures(procedures);
   }, [procedures]);
-
-  /* ─── Close AI assist when another right-side panel (node details / preview) opens ─── */
-  useEffect(() => {
-    if (drawerOpen || previewOpen) setAiAssistOpen(false);
-  }, [drawerOpen, previewOpen]);
-
-  /* ─── Collapse the LHS drawer whenever AI assist opens (toolbar click, or externally controlled) ─── */
-  useEffect(() => {
-    if (aiAssistOpen) setLhsCollapsed(true);
-  }, [aiAssistOpen]);
 
   /* ─── View-only: keep canvas state in sync when workflow props change ─── */
   useEffect(() => {
@@ -2144,9 +2127,10 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
+          <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}${aiChatExpanded ? ' agent-builder__lhs--ai-expanded' : ''}`}>
             <LHSDrawer
-              defaultTab="Create manually"
+              defaultTab={showAiRecap ? 'Create with AI' : 'Create manually'}
+              showAiRecap={showAiRecap}
               defaultOpenSection={defaultOpenSection}
               forceOpenSection={lhsForceOpenSection}
               onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
@@ -2161,8 +2145,32 @@ export default function AgentBuilder({
                 setActiveProcedureId(null);
                 setDrawerOpen(true);
               }}
+              onExpandAiChat={showAiRecap ? () => setAiChatExpanded(true) : undefined}
             />
           </div>
+
+          {showAiRecap && (
+            <div
+              className={`agent-builder__ai-fullpage${aiChatExpanded ? ' agent-builder__ai-fullpage--open' : ''}`}
+              aria-hidden={!aiChatExpanded}
+            >
+              <div className="agent-builder__ai-fullpage-header">
+                <span className="agent-builder__ai-fullpage-title">Create with AI</span>
+                <button
+                  type="button"
+                  className="agent-builder__ai-fullpage-collapse-btn"
+                  onClick={() => setAiChatExpanded(false)}
+                  aria-label="Collapse back to panel"
+                >
+                  <span className="material-symbols-outlined">close_fullscreen</span>
+                </button>
+              </div>
+              <div className="agent-builder__ai-fullpage-body">
+                <AiRecapChat agentName={agentName} />
+                <AIPromptBox onSend={() => {}} placeholder="Ask a follow-up or request a change…" />
+              </div>
+            </div>
+          )}
 
           {lhsCollapsed && (
             <button
@@ -2189,12 +2197,6 @@ export default function AgentBuilder({
               initialZoom={initialZoom}
               runDisabled={runDisabled}
               onEdit={viewOnly ? onEdit : undefined}
-              onAiAssist={viewOnly ? undefined : () => {
-                setDrawerOpen(false);
-                setPreviewOpen(false);
-                setAiAssistOpen(true);
-              }}
-              aiAssistActive={aiAssistOpen}
               onRun={() => {
                 if (isReminderAgent) {
                   setBookTestModalOpen(true);
@@ -2206,13 +2208,7 @@ export default function AgentBuilder({
             />
           </div>
 
-          {!aiAssistControlled && aiAssistOpen && (
-            <div className="agent-builder__ai-assist">
-              <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
-            </div>
-          )}
-
-          {drawerOpen && (
+          {drawerOpen && !aiChatExpanded && (
             <div key={selectedNodeId} className="agent-builder__rhs">
               <RHSErrorBoundary key={selectedNodeId}>
                 {renderRHSPanel()}
@@ -2220,7 +2216,7 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {previewOpen && (
+          {previewOpen && !aiChatExpanded && (
             <div className="agent-builder__preview">
               <PreviewPanel
                 onClose={() => {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  ChatHistorySideNav,
   Chip,
   ComposerAttachPopover,
   CustomizeColumnsDrawer,
@@ -30,7 +31,6 @@ import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
-import { AiAssistPanel } from '../components/AiAssistPanel/AiAssistPanel'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
@@ -265,6 +265,18 @@ const REMINDER_CREATE_CARDS = [
     description:
       "Sends recurring reminders for chronic condition follow-ups, lab reorders, and prescription refills. Detects gaps in care by querying the patient's care plan and nudges patients who have fallen out of schedule.",
   },
+]
+
+const FRONTDESK_CREATE_CHAT_HISTORY = [
+  { id: 'chat-insurance-triage', label: 'Insurance verification and triage bot' },
+  { id: 'chat-after-hours', label: 'After-hours patient triage assistant' },
+  { id: 'chat-reschedule', label: 'Reschedule and cancellation handling' },
+]
+
+const REMINDER_CREATE_CHAT_HISTORY = [
+  { id: 'chat-no-show', label: 'No-show risk intervention agent' },
+  { id: 'chat-pre-visit', label: 'Pre-visit preparation reminder' },
+  { id: 'chat-medication', label: 'Chronic care & medication reminder' },
 ]
 
 // ── Per-agent library cards ──────────────────────────────────────────────────
@@ -2403,8 +2415,8 @@ function ProcedurePreviewPanel({
     : Math.max(0, procedure.context.length - visibleContext.length)
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="flex shrink-0 items-center justify-between gap-sm bg-surface px-lg py-[18px]">
+    <div className="flex h-full w-full flex-col overflow-hidden bg-surface">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-sm bg-surface px-lg py-[18px]">
         <div className="flex min-w-0 items-center gap-sm">
           <button
             type="button"
@@ -3032,13 +3044,6 @@ function HealthcareFrontdeskCreateAgentScreen({
           }
           .thoughts-caret { animation: thoughts-caret 0.9s step-end infinite; }
         `}</style>
-
-        {/* Spacer mirrors the right panel's width so the chat stays centered on
-            wide screens, but collapses first (shrink-[999]) on narrow ones so the
-            chat keeps its width and the panel stays pinned to the right edge. */}
-        {(openProcedureName || previewOpen) && (
-          <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
-        )}
 
         <div className="flex w-full min-w-0 max-w-[720px] flex-col">
         {pageTitle && (
@@ -3859,39 +3864,60 @@ function HealthcareFrontdeskCreateAgentScreen({
         </div>
         </div>
 
-        {(openProcedureName || previewOpen) && (
-          <div className="sticky top-0 -bottom-lg hidden w-[480px] shrink-0 self-start pb-lg lg:block">
-            {previewOpen ? (
-              <div className="h-[calc(100vh-168px)]">
-                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full">
-                  <PreviewPanel
-                    key={previewKey}
-                    onClose={handlePreviewClose}
-                    onPreviewActiveChange={handlePreviewActiveChange}
-                    onSessionEnded={handlePreviewSessionEnded}
-                    agentName={agentName || 'Front desk agent'}
-                    showViewDetails={false}
-                    showViewLogs={false}
-                    scriptedTranscript={CREATE_AGENT_TEST_TRANSCRIPT}
-                  />
-                </div>
-              </div>
-            ) : (
-              (() => {
-                const procedure =
-                  openProcedureName === REMINDER_CALL_PROCEDURE_NAME
-                    ? REMINDER_CALL_PROCEDURE
-                    : HC_PROCEDURES.find((p) => p.name === openProcedureName)
-                if (!procedure) return null
-                return (
-                  <div className="h-[calc(100vh-168px)]">
-                    <ProcedurePreviewPanel procedure={procedure} onClose={() => setOpenProcedureName(null)} />
+        {/* Right-side panels (procedure preview, test-call preview) share one
+            drawer — an overlay with a backdrop that slides in from the right,
+            matching the FormDrawer convention used elsewhere in the app,
+            instead of a docked panel that pushes the chat column. */}
+        {(() => {
+          const drawerOpen = Boolean(openProcedureName || previewOpen)
+          const closeDrawer = () => {
+            if (previewOpen) handlePreviewClose()
+            else setOpenProcedureName(null)
+          }
+          return (
+            <div className={`fixed inset-0 z-[100] ${drawerOpen ? '' : 'pointer-events-none'}`} aria-hidden={!drawerOpen}>
+              <div
+                onClick={closeDrawer}
+                className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${drawerOpen ? 'opacity-100' : 'opacity-0'}`}
+              />
+              <aside
+                className={`absolute right-0 top-0 flex h-full w-[600px] max-w-[92vw] flex-col overflow-hidden bg-surface shadow-dropdown transition-transform duration-200 ${
+                  drawerOpen ? 'translate-x-0' : 'translate-x-full'
+                }`}
+              >
+                {previewOpen ? (
+                  <div className="h-full">
+                    <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full [&_.preview-panel]:!rounded-none [&_.preview-panel]:!border-0 [&_.preview-panel]:!shadow-none">
+                      <PreviewPanel
+                        key={previewKey}
+                        onClose={handlePreviewClose}
+                        onPreviewActiveChange={handlePreviewActiveChange}
+                        onSessionEnded={handlePreviewSessionEnded}
+                        agentName={agentName || 'Front desk agent'}
+                        showViewDetails={false}
+                        showViewLogs={false}
+                        scriptedTranscript={CREATE_AGENT_TEST_TRANSCRIPT}
+                      />
+                    </div>
                   </div>
-                )
-              })()
-            )}
-          </div>
-        )}
+                ) : (
+                  (() => {
+                    const procedure =
+                      openProcedureName === REMINDER_CALL_PROCEDURE_NAME
+                        ? REMINDER_CALL_PROCEDURE
+                        : HC_PROCEDURES.find((p) => p.name === openProcedureName)
+                    if (!procedure) return null
+                    return (
+                      <div className="h-full">
+                        <ProcedurePreviewPanel procedure={procedure} onClose={() => setOpenProcedureName(null)} />
+                      </div>
+                    )
+                  })()
+                )}
+              </aside>
+            </div>
+          )
+        })()}
       </div>
     )
   }
@@ -4000,38 +4026,28 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
-  /** Reminder create → View workflow: split canvas + Copilot. */
+  /** Reminder create → View workflow: split canvas view. */
   const [createWorkflowSplit, setCreateWorkflowSplit] = useState(false)
-  const [createCopilotOpen, setCreateCopilotOpen] = useState(false)
-  const [createCopilotSlideIn, setCreateCopilotSlideIn] = useState(false)
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [historyChatId, setHistoryChatId] = useState<string | null>(null)
 
   const openCreateFlow = () => {
     setCreateFlowKey((k) => k + 1)
     setShowSetupWizard(false)
     setCreateWorkflowSplit(false)
-    setCreateCopilotOpen(false)
-    setCreateCopilotSlideIn(false)
     setCreateFlowSubmitted(false)
+    setHistoryChatId(null)
     setShowCreateFlow(true)
   }
 
   const openCreateWorkflowSplit = () => {
     setCreateWorkflowSplit(true)
-    setCreateCopilotOpen(true)
-    setCreateCopilotSlideIn(false)
-    // Next frame so width transitions from 0 → 400px
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => setCreateCopilotSlideIn(true))
-    })
   }
 
   const closeCreateWorkflowSplit = () => {
-    setCreateCopilotSlideIn(false)
-    setCreateCopilotOpen(false)
     setCreateWorkflowSplit(false)
   }
 
@@ -4290,9 +4306,23 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   if (showCreateFlow && (isFrontdesk || isReminder)) {
     const isHealthcareFrontdesk = product === 'healthcare'
     const createTitle = isFrontdesk ? 'New front desk agent' : 'New reminder agent'
+    const createModuleName = isFrontdesk ? 'Front desk' : 'Reminder'
+    const createChatHistory = isReminder ? REMINDER_CREATE_CHAT_HISTORY : FRONTDESK_CREATE_CHAT_HISTORY
 
     const createChat = (
-      <div className={`flex h-full flex-col ${createWorkflowSplit && isReminder ? 'hidden' : ''}`}>
+      <div className={`flex h-full ${createWorkflowSplit && isReminder ? 'hidden' : ''}`}>
+        {/* L2 chat-history sidebar: landing only — once a prompt is sent, the
+            chat becomes a full-page experience with no side rail. */}
+        {!createFlowSubmitted && (
+          <ChatHistorySideNav
+            title={createModuleName}
+            chats={createChatHistory}
+            activeChatId={historyChatId ?? undefined}
+            onSelectChat={setHistoryChatId}
+            onNewChat={openCreateFlow}
+          />
+        )}
+        <div className="flex h-full flex-1 flex-col overflow-hidden">
         <TopNav initials="S" />
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Landing: page-left header. Chat: title lives inside the 720px column. */}
@@ -4336,10 +4366,13 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             )}
           </div>
         </div>
+        </div>
       </div>
     )
 
-    // View workflow — Reminder: edit-mode canvas left, Copilot slides in on the right
+    // View workflow — Reminder: edit-mode canvas, LHS "Create with AI" tab
+    // shows a mock recap of the create-agent chat instead of the canvas's
+    // usual generic demo content.
     if (createWorkflowSplit && isReminder) {
       return (
         <>
@@ -4351,34 +4384,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 agentStatus="Draft"
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflowSplit}
-                aiAssistOpen={createCopilotOpen}
-                onAiAssistOpenChange={(open) => {
-                  setCreateCopilotOpen(open)
-                  if (open) {
-                    setCreateCopilotSlideIn(false)
-                    window.requestAnimationFrame(() => {
-                      window.requestAnimationFrame(() => setCreateCopilotSlideIn(true))
-                    })
-                  } else {
-                    setCreateCopilotSlideIn(false)
-                  }
-                }}
+                showAiRecap
               />
-            </div>
-            <div
-              className="h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-              style={{ width: createCopilotOpen && createCopilotSlideIn ? 400 : 0 }}
-              aria-hidden={!createCopilotOpen}
-            >
-              <div className="h-full w-[400px]">
-                <AiAssistPanel
-                  onClose={() => {
-                    setCreateCopilotSlideIn(false)
-                    window.setTimeout(() => setCreateCopilotOpen(false), 300)
-                  }}
-                  onExpand={closeCreateWorkflowSplit}
-                />
-              </div>
             </div>
           </div>
         </>

@@ -553,6 +553,32 @@ const AI_OPTIONS = [
   'Suggesting replies in dashboard',
 ];
 
+const AI_RECAP_OPTIONS = [
+  'Add a channel',
+  'Change reminder timing',
+  'Add another location',
+  'Publish this agent',
+];
+
+// Mock recap of the create-agent chat — shown in the "Create with AI" tab when
+// this canvas is reached via "View workflow." A demo-only stand-in, not a live
+// transcript. Exported so AgentBuilder can reuse it in the expanded, full-canvas
+// overlay (which must render outside the narrow LHS drawer to span full width).
+export function AiRecapChat({ agentName }) {
+  return (
+    <>
+      <div className="lhs-drawer__ai-user-msg">
+        I want a reminder agent that sends appointment reminders and follows up
+        automatically with patients at risk of no-showing.
+      </div>
+      <AIChatBubble
+        message={`Got it — ${agentName || 'this agent'} is set up to send scheduled reminders before each appointment and automatically escalate to a human when a patient is flagged as high no-show risk. Anything you'd like to adjust?`}
+        options={AI_RECAP_OPTIONS}
+      />
+    </>
+  );
+}
+
 export default function LHSDrawer({
   defaultTab = 'Create manually',
   defaultOpenSection = 'Tasks',
@@ -564,6 +590,8 @@ export default function LHSDrawer({
   procedures = null,
   onProcedureClick = null,
   onCollapse = null,
+  showAiRecap = false,
+  onExpandAiChat = null,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
 
@@ -787,7 +815,7 @@ export default function LHSDrawer({
 
   return (
     <div className="lhs-drawer" ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
-      <div className="lhs-drawer__tabs">
+      <div className={`lhs-drawer__tabs${showAiRecap ? ' lhs-drawer__tabs--visible' : ''}`}>
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -796,12 +824,38 @@ export default function LHSDrawer({
           >
             <span className="lhs-drawer__tab-label">
               {tab === 'Create with AI' ? (
-                <>Create with <AiSparkleIcon /></>
+                <>
+                  Create with <AiSparkleIcon />
+                  {showAiRecap && onExpandAiChat && (
+                    <span
+                      className="lhs-drawer__ai-expand-btn"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); onExpandAiChat(); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onExpandAiChat(); } }}
+                      aria-label="Expand chat to full canvas"
+                    >
+                      <span className="material-symbols-outlined">open_in_full</span>
+                    </span>
+                  )}
+                </>
               ) : tab}
             </span>
             <span className="lhs-drawer__tab-underline" />
           </button>
         ))}
+        {showAiRecap && onCollapse && (
+          <Tooltip text="Collapse editor" position="bottom">
+            <button
+              className="lhs-drawer__collapse-btn lhs-drawer__collapse-btn--tabs"
+              onClick={onCollapse}
+              type="button"
+              aria-label="Collapse editor"
+            >
+              <span className="material-symbols-outlined">left_panel_close</span>
+            </button>
+          </Tooltip>
+        )}
       </div>
 
       {activeTab === 'Create manually' ? (
@@ -816,7 +870,7 @@ export default function LHSDrawer({
               showLeftIcon
               customIconClass="icon_phoenix-search-glass"
             />
-            {onCollapse && (
+            {onCollapse && !showAiRecap && (
               <Tooltip text="Collapse editor" position="bottom">
                 <button
                   className="lhs-drawer__collapse-btn"
@@ -848,12 +902,16 @@ export default function LHSDrawer({
       ) : (
         <div className="lhs-drawer__ai-body">
           <div className="lhs-drawer__ai-chat-area">
-            <AIChatBubble
-              message="Hi! I'm here to help you build your Review response agent. Tell me what you'd like to build"
-              options={AI_OPTIONS}
-            />
+            {showAiRecap ? (
+              <AiRecapChat agentName={agentName} />
+            ) : (
+              <AIChatBubble
+                message="Hi! I'm here to help you build your Review response agent. Tell me what you'd like to build"
+                options={AI_OPTIONS}
+              />
+            )}
           </div>
-          <AIPromptBox onSend={() => {}} />
+          <AIPromptBox onSend={() => {}} placeholder={showAiRecap ? 'Ask a follow-up or request a change…' : undefined} />
         </div>
       )}
 

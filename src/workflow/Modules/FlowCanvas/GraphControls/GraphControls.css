@@ -162,22 +162,6 @@
   background: #fff;
 }
 
-.graph-controls__ai-assist {
-  color: #6834b7;
-}
-
-.graph-controls__ai-assist:hover {
-  background: #f2f4f7;
-}
-
-.graph-controls__ai-assist--active {
-  background: #e5e9f0;
-}
-
-.graph-controls__ai-assist-icon {
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
-}
-
 .graph-control-tooltip {
   position: relative;
   display: inline-flex;
