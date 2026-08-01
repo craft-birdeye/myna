@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection } from '../components'
+import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type NavSection, type VoiceChatMessage } from '../components'
+import { TrackFeedbackIcon } from '../assets/TrackFeedbackIcon'
+import { TrainAgentIcon } from '../assets/TrainAgentIcon'
 import voicemailSample from '../assets/voicemail_sample.mp3'
 import {
   FRONT_DESK_CALL_SUMMARY,
@@ -121,6 +123,53 @@ const CHAT_EVENTS: ChatEvent[] = [
   { kind: 'status',    id: 's4', text: 'Call ended - Call Duration: 57s',           time: '01:36 PM' },
   { kind: 'recording', id: 'r1', time: '01:37 PM' },
 ]
+
+type BubbleEvent = Extract<ChatEvent, { kind: 'bubble' }>
+
+function bubbleLine(event: BubbleEvent, customerName: string): { speaker: string; text: string } {
+  return {
+    speaker: event.sender === 'agent' ? 'Myna' : customerName,
+    text: event.text ?? event.fields?.map((f) => `${f.label}: ${f.value}`).join(' • ') ?? '',
+  }
+}
+
+/** Builds the "Read the reported conversation" screenshot for a generic (non-scripted) Inbox
+ *  feedback submission — just the single flagged message itself (matching the hand-scripted
+ *  coaching examples, which only ever quote the one bad reply), plus the full transcript for the
+ *  "View Transcript" side panel. Returns `null` when the flagged message can't be found (e.g. it's
+ *  not a `bubble` event), so the caller skips attaching a screenshot rather than showing an empty one. */
+function buildReportedConversation(
+  events: ChatEvent[],
+  flaggedMessageId: string,
+  customerName: string,
+): { reportedExcerpt: { speaker: string; text: string }[]; reportedTranscript: { speaker: string; text: string }[] } | null {
+  const bubbles = events.filter((e): e is BubbleEvent => e.kind === 'bubble')
+  const flagged = bubbles.find((e) => e.id === flaggedMessageId)
+  if (!flagged) return null
+
+  return {
+    reportedExcerpt: [bubbleLine(flagged, customerName)],
+    reportedTranscript: bubbles.map((e) => bubbleLine(e, customerName)),
+  }
+}
+
+/** Same as `buildReportedConversation`, but for a voice-call transcript's `VoiceChatMessage[]`
+ *  (system/agent/user turns) instead of Inbox chat `ChatEvent[]`. */
+function buildReportedConversationFromVoiceMessages(
+  messages: VoiceChatMessage[],
+  flaggedMessageId: string,
+  customerName: string,
+): { reportedExcerpt: { speaker: string; text: string }[]; reportedTranscript: { speaker: string; text: string }[] } | null {
+  const turns = messages.filter((m) => m.role !== 'system')
+  const flagged = turns.find((m) => String(m.id) === flaggedMessageId)
+  if (!flagged) return null
+
+  const toLine = (m: VoiceChatMessage) => ({ speaker: m.role === 'agent' ? 'Myna' : customerName, text: m.text })
+  return {
+    reportedExcerpt: [toLine(flagged)],
+    reportedTranscript: turns.map(toLine),
+  }
+}
 
 const INBOX_NAV_SECTIONS: NavSection[] = [
   {
@@ -718,7 +767,9 @@ export function InboxScreen({
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
-  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
+  // Maps a chat-bubble message id to the recommendation id its feedback landed on, once known —
+  // that bubble's "Coach agent" link switches to "Track your feedback" pointing at it.
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
   const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -729,15 +780,6 @@ export function InboxScreen({
     setToastVisible(true)
   }
 
-  const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
-    if (value === 'down') {
-      setShareFeedbackMessageId(messageId)
-      return
-    }
-    setMessageFeedback((prev) => ({ ...prev, [messageId]: value }))
-    if (value === 'up') showFeedbackToast('Thanks for the feedback!')
-  }
-
   const handleShareFeedbackClose = () => {
     setShareFeedbackMessageId(null)
   }
@@ -745,11 +787,11 @@ export function InboxScreen({
   const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
     const feedbackMessageId = shareFeedbackMessageId
-    setMessageFeedback((prev) => ({ ...prev, [feedbackMessageId]: 'down' }))
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
 
-    submitFeedback({
+    const reportedConversation = buildReportedConversation(threadEvents, feedbackMessageId, selectedConvo.name)
+    const recId = submitFeedback({
       text: details,
       agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
       conversation: {
@@ -761,7 +803,10 @@ export function InboxScreen({
       },
       conversationId: selectedConvo.id,
       messageId: feedbackMessageId,
+      reportedExcerpt: reportedConversation?.reportedExcerpt,
+      reportedTranscript: reportedConversation?.reportedTranscript,
     })
+    setRecIdByMessage((prev) => ({ ...prev, [feedbackMessageId]: recId }))
   }
 
   // Thumbs-down inside a voice-call transcript drawer (Dana Whitfield, the coaching examples,
@@ -769,6 +814,9 @@ export function InboxScreen({
   // regular chat-bubble flow above, tagged to whichever conversation is currently open.
   const handleVoiceDrawerFeedback = (details: string, messageId: string) => {
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    const voiceMessages = coachingCall?.messages ?? FRONT_DESK_VOICE_MESSAGES
+    const reportedConversation = buildReportedConversationFromVoiceMessages(voiceMessages, messageId, selectedConvo.name)
 
     return submitFeedback({
       text: details,
@@ -782,6 +830,8 @@ export function InboxScreen({
       },
       conversationId: selectedConvo.id,
       messageId,
+      reportedExcerpt: reportedConversation?.reportedExcerpt,
+      reportedTranscript: reportedConversation?.reportedTranscript,
     })
   }
 
@@ -809,11 +859,6 @@ export function InboxScreen({
       messageId,
     })
     onNavigateToRecommendation?.(agentName, recId, feedbackPrefill)
-  }
-
-  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
-    if (shareFeedbackMessageId === messageId) return 'down'
-    return messageFeedback[messageId] ?? null
   }
 
   useEffect(() => {
@@ -1085,26 +1130,39 @@ export function InboxScreen({
                         event.text ?? ''
                       )
 
+                    const recId = recIdByMessage[event.id]
+
                     return (
-                      <ChatBubble
-                        key={event.id}
-                        sender={isAgent ? 'business' : 'user'}
-                        text={bubbleText}
-                        showFeedback={isAgent}
-                        feedback={isAgent ? feedbackForMessage(event.id) : undefined}
-                        onFeedbackChange={
-                          isAgent
-                            ? (value) => handleFeedbackChange(event.id, value)
-                            : undefined
-                        }
-                      >
-                        <span className="flex items-center gap-xs text-small text-text-tertiary">
-                          {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
-                          {event.time}
-                          {!isAgent && event.showLink && (
-                            <Icon name="link" size={14} className="text-text-tertiary" />
-                          )}
-                        </span>
+                      <ChatBubble key={event.id} sender={isAgent ? 'business' : 'user'} text={bubbleText}>
+                        <div className="flex items-center gap-sm">
+                          <span className="flex items-center gap-xs text-small text-text-tertiary">
+                            {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
+                            {event.time}
+                            {!isAgent && event.showLink && (
+                              <Icon name="link" size={14} className="text-text-tertiary" />
+                            )}
+                          </span>
+                          {isAgent &&
+                            (recId ? (
+                              <button
+                                type="button"
+                                onClick={() => handleTrackFeedback(recId)}
+                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                              >
+                                <TrackFeedbackIcon size={18} color="currentColor" />
+                                Track your feedback
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setShareFeedbackMessageId(event.id)}
+                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                              >
+                                <TrainAgentIcon size={18} color="currentColor" />
+                                Coach agent
+                              </button>
+                            ))}
+                        </div>
                       </ChatBubble>
                     )
                   }

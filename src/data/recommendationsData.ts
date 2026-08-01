@@ -155,6 +155,16 @@ export interface Recommendation {
   /** Name of the person who flagged the message — shown in the Recommendation tab's Type
    *  column in place of "Human feedback". Only set for `source: 'feedback'` rows. */
   reportedBy?: string
+  /** Short excerpt of the real Inbox exchange the feedback was raised on — rendered as a "Read
+   *  the reported conversation" screenshot at the top of the recommendation detail chat. Only
+   *  set for generic (non-`introBlocks`) `source: 'feedback'` rows — the hand-scripted coaching
+   *  examples already embed their own excerpt directly inside `introBlocks`. */
+  reportedExcerpt?: { speaker: string; text: string }[]
+  /** Full transcript backing `reportedExcerpt`, shown via the "View Transcript" side panel. */
+  reportedTranscript?: { speaker: string; text: string }[]
+  /** The exact text a team member typed when flagging the message — quoted in the "Read the
+   *  reported conversation" block's Feedback line. */
+  reportedFeedbackText?: string
   /**
    * When a recommendation spans more than one gap type (procedure + knowledge + action all at
    * once), this lists each piece separately for the detail screen. Omitted = single-type
@@ -2093,4 +2103,95 @@ export function impactSummary(conversationCount: number, reason: string): string
  *  reads as "4 conversations impacted • Reported via inbox feedback". */
 export function similarIssuesSummary(count: number): string {
   return impactSummary(count + 3, 'reported via inbox feedback')
+}
+
+export const GENERIC_FEEDBACK_APPROVAL_PROMPT =
+  'Do you accept these changes? Accept to submit them for review, or reject to discard them.'
+
+const GAP_TYPE_SEARCH_NOTE: Record<GapType, string> = {
+  knowledge: "The procedure library doesn't have this information on file yet — that's exactly why the agent couldn't answer it.",
+  action: "The agent isn't wired up to take this action yet — the procedure stops short of it.",
+  procedure: "The current procedure doesn't account for this — it needs an explicit rule for it.",
+}
+
+const GAP_TYPE_FIX_NOTE: Record<GapType, string> = {
+  knowledge: "add this to the agent's knowledge",
+  action: 'wire this action into the procedure',
+  procedure: 'update the procedure',
+}
+
+/** Builds a coaching-style scripted narrative (reported excerpt → thoughts → procedure update →
+ *  before/after test → approval prompt) for a free-text Inbox feedback submission — matching the
+ *  hand-authored C1–C4 coaching examples' shape. Since there's no real LLM, the "fix" is a
+ *  generic templated acknowledgment rather than a genuinely reasoned change. */
+export function buildGenericFeedbackIntroBlocks({
+  gapType,
+  title,
+  procedureTitle,
+  text,
+  reportedExcerpt,
+  reportedTranscript,
+}: {
+  gapType: GapType
+  title: string
+  procedureTitle: string
+  text: string
+  reportedExcerpt?: { speaker: string; text: string }[]
+  reportedTranscript?: { speaker: string; text: string }[]
+}): IntroBlock[] {
+  const hasExcerpt = Boolean(reportedExcerpt && reportedExcerpt.length > 0)
+  const blocks: IntroBlock[] = []
+
+  if (hasExcerpt) {
+    blocks.push({
+      kind: 'collapsible',
+      label: 'Read the reported conversation',
+      meta: 'Previously',
+      defaultExpanded: true,
+      reportedExcerpt,
+      feedback: text,
+      children: reportedTranscript ? [{ kind: 'transcript', lines: reportedTranscript }] : [],
+    })
+  }
+
+  blocks.push(
+    { kind: 'thought', text: `The feedback flags: "${text}" — let me check what the procedure says today before changing anything.` },
+    { kind: 'thought', label: 'Searched procedures', text: GAP_TYPE_SEARCH_NOTE[gapType] },
+    { kind: 'thought', text: `I'll ${GAP_TYPE_FIX_NOTE[gapType]} so the agent handles this correctly going forward.` },
+    {
+      kind: 'collapsible',
+      label: `Procedure updated: ${procedureTitle}`,
+      meta: '1 change',
+      children: [{ kind: 'list', items: [{ label: title, text }] }],
+    },
+    { kind: 'thought', text: 'Testing with the reported message.' },
+  )
+
+  if (hasExcerpt) {
+    blocks.push({
+      kind: 'collapsible',
+      label: 'Current agent response',
+      meta: 'Before this update',
+      defaultExpanded: true,
+      children: [{ kind: 'transcript', lines: reportedExcerpt! }],
+    })
+  }
+
+  blocks.push(
+    {
+      kind: 'collapsible',
+      label: 'Revised agent response',
+      meta: 'Now',
+      defaultExpanded: true,
+      children: [
+        {
+          kind: 'transcript',
+          lines: [{ speaker: 'Myna', text: "Thanks for flagging that — I've updated things so this is handled correctly now." }],
+        },
+      ],
+    },
+    { kind: 'text', text: `Done — I've updated ${procedureTitle} based on this feedback.` },
+  )
+
+  return blocks
 }

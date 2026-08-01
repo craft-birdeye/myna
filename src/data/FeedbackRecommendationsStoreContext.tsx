@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { buildCoachingFeedbackRecommendation } from './coachingFeedbackRecommendations'
 import {
+  buildGenericFeedbackIntroBlocks,
   classifyFeedbackType,
+  GENERIC_FEEDBACK_APPROVAL_PROMPT,
   pickReporterName,
   similarIssuesSummary,
   titleFromFeedback,
@@ -21,6 +23,11 @@ interface SubmitFeedbackInput {
   /** Id of the specific message that was marked thumbs-down — carried onto the recommendation so
    *  the real transcript preview can highlight that exact message. */
   messageId?: string
+  /** Short excerpt of the real exchange around the flagged message — rendered as a "Read the
+   *  reported conversation" screenshot on the recommendation detail page. */
+  reportedExcerpt?: { speaker: string; text: string }[]
+  /** Full transcript backing `reportedExcerpt`, shown via the "View Transcript" side panel. */
+  reportedTranscript?: { speaker: string; text: string }[]
 }
 
 interface FeedbackRecommendationsStore {
@@ -60,7 +67,15 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
     }
   }, [feedbackRecommendations])
 
-  const submitFeedback = ({ text, agentName, conversation, conversationId, messageId }: SubmitFeedbackInput): string => {
+  const submitFeedback = ({
+    text,
+    agentName,
+    conversation,
+    conversationId,
+    messageId,
+    reportedExcerpt,
+    reportedTranscript,
+  }: SubmitFeedbackInput): string => {
     // The four coaching-example transcripts (Inbox voice calls C1–C4) get a fully hand-scripted
     // chat — same pattern as the AI-detected recommendations — instead of the generic
     // heuristic-classified one below.
@@ -115,15 +130,12 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
       }
 
       const title = titleFromFeedback(text, gapType)
-      // Human feedback is most often a knowledge gap (the agent didn't know something) — those
-      // can't be accepted sight-unseen, so route them through the same "upload the real
-      // document, then review" gate used for AI-detected knowledge recommendations.
-      const needsSourceDocument = gapType === 'knowledge'
+      const procedureTitle = title
       const newRecommendation: Recommendation = {
         id: resultId,
         gapType,
         title,
-        procedureTitle: title,
+        procedureTitle,
         summary: similarIssuesSummary(1),
         priority: priorityForCount(1),
         timeAgo: 'Just now',
@@ -141,17 +153,15 @@ export function FeedbackRecommendationsStoreProvider({ children }: { children: R
         sourceConversationId: conversationId,
         sourceMessageId: messageId,
         reportedBy: pickReporterName(feedbackKey),
-        manualUpdates: needsSourceDocument
-          ? [
-              {
-                icon: 'upload_file',
-                title: 'Upload supporting document',
-                description:
-                  "We don't have this confirmed anywhere yet — upload the relevant document (e.g. hours, policy, pricing) so we can add accurate information to the agent's knowledge.",
-                relatedType: 'knowledge',
-              },
-            ]
-          : undefined,
+        reportedExcerpt,
+        reportedTranscript,
+        reportedFeedbackText: text,
+        // Same coaching-style scripted narrative as the hand-authored C1–C4 examples (reported
+        // excerpt → thoughts → procedure update → before/after test → approval prompt) — built
+        // generically here since arbitrary Inbox feedback can't be hand-authored ahead of time.
+        introBlocks: buildGenericFeedbackIntroBlocks({ gapType, title, procedureTitle, text, reportedExcerpt, reportedTranscript }),
+        introApprovalPrompt: GENERIC_FEEDBACK_APPROVAL_PROMPT,
+        approvedReply: `${procedureTitle} has been updated based on this feedback.`,
       }
       return [...prev, newRecommendation]
     })
