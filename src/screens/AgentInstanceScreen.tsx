@@ -1,13 +1,10 @@
 import { useState } from 'react'
 import {
   Chip,
-  CoachAgentPanel,
   DataTable,
-  EmptyState,
   Icon,
   MetricTiles,
   Tabs,
-  Tooltip,
   TopNav,
   type ChipVariant,
   type Column,
@@ -21,11 +18,12 @@ import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
 import { WorkflowViewerTab } from './WorkflowViewerTab'
 import { RecommendationsTab } from './RecommendationsTab'
-import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
+import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { ANNETTE_BLACK_CONVERSATION_ID } from '../data/annetteBlackChatConversation'
 import { REMINDER_INBOX_CONVERSATION_ID } from '../data/reminderInboxConversation'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -323,7 +321,6 @@ export function AgentInstanceScreen({
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
-  const [coachOpen, setCoachOpen] = useState(false)
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -345,6 +342,10 @@ export function AgentInstanceScreen({
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
+  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
+  const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
+  // A Draft instance hasn't handled any real conversations yet, so there's nothing to base a recommendation on.
+  const isDraftInstance = instanceStatus === 'Draft'
   const showHealthcareLogs =
     activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
@@ -377,10 +378,9 @@ export function AgentInstanceScreen({
       <div className="flex h-full flex-col">
         <TopNav initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
-          <FrontdeskRecommendationsTab
-            instanceName={instanceName}
-            selectedId={selectedRecommendationId}
-            onSelect={setSelectedRecommendationId}
+          <RecommendationDetailScreen
+            recommendationId={selectedRecommendationId}
+            onBack={() => setSelectedRecommendationId(null)}
           />
         </div>
       </div>
@@ -408,21 +408,6 @@ export function AgentInstanceScreen({
               <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
             </div>
             <div className="flex items-center gap-sm">
-              {isRecommendationTab && (
-                <Tooltip content="Coach agent" variant="brief">
-                  <button
-                    type="button"
-                    aria-label="Coach agent"
-                    aria-pressed={coachOpen}
-                    onClick={() => setCoachOpen((open) => !open)}
-                    className={`flex size-9 items-center justify-center rounded-sm border border-border-selected text-text-icon hover:bg-surface-l2 ${
-                      coachOpen ? 'bg-surface-selected' : 'bg-surface'
-                    }`}
-                  >
-                    <Icon name="auto_awesome" size={20} />
-                  </button>
-                </Tooltip>
-              )}
               <div className="relative">
                 <button
                   type="button"
@@ -487,15 +472,17 @@ export function AgentInstanceScreen({
           </div>
 
           {/* Tabs */}
-          <div className="shrink-0 px-2xl">
-            <Tabs
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={(tabId) => {
-                setActiveTab(tabId)
-                if (tabId !== 'recommendation') setCoachOpen(false)
-              }}
-            />
+          <div className="flex shrink-0 items-center justify-between px-2xl">
+            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+            {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && (
+              <button
+                type="button"
+                onClick={clearAllFeedback}
+                className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+              >
+                Clear human feedback
+              </button>
+            )}
           </div>
 
           {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -507,24 +494,8 @@ export function AgentInstanceScreen({
               product={product}
             />
           ) : isRecommendationTab ? (
-            <div className="flex min-h-0 flex-1 overflow-hidden">
-              {agentName === 'Front desk agent' ? (
-                <FrontdeskRecommendationsTab
-                  instanceName={instanceName}
-                  selectedId={null}
-                  onSelect={setSelectedRecommendationId}
-                  onAnalyzeWithAi={() => setCoachOpen(true)}
-                />
-              ) : agentName === 'Reminder agent' ? (
-                <div className="flex flex-1 items-center justify-center">
-                  <EmptyState
-                    title="No recommendations yet"
-                    description="Recommendations will appear here once there's enough activity to analyze."
-                  />
-                </div>
-              ) : (
-                <RecommendationsTab />
-              )}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} isDraft={isDraftInstance} />
             </div>
           ) : (
             <div className="flex-1 overflow-auto">
@@ -558,13 +529,6 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
-
-        {coachOpen && isRecommendationTab && (
-          <CoachAgentPanel
-            agentName={instanceName}
-            onClose={() => setCoachOpen(false)}
-          />
-        )}
       </div>
     </div>
   )

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  ChatHistoryPanel,
+  AttachMenuPopover,
   Chip,
   ComposerAttachPopover,
   CustomizeColumnsDrawer,
   DataTable,
+  FilesModal,
   FilterPanel,
   HeaderSearchField,
   Icon,
@@ -12,6 +13,7 @@ import {
   InfoCard,
   InfoCardListItem,
   InfoTooltip,
+  MediaLibraryModal,
   MetricTiles,
   RefChip,
   Tabs,
@@ -35,6 +37,8 @@ import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
+import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
+import { AiAgentIcon } from '../assets/AiAgentIcon'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
@@ -514,58 +518,26 @@ const JOB_TO_PROCEDURE: Record<string, string> = {
 }
 
 
-// Bobbing ghost mascot — bluish-gray only, no color — shown for the final
-// "building the agent" step (see the showProgress gate below).
-function GhostLoader() {
+// Bouncing-dots "thinking" indicator — matches the Recommendation detail chat's TypingDots.
+function TypingDots() {
   return (
-    <div className="flex flex-col items-start" aria-hidden>
-      <div className="ghost-float text-[#e2e5e9]">
-        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-          <path
-            d="M32 4C18 4 8 14 8 28v20c0 1.5 1.7 2.4 3 1.5l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1.3.9 3-.1 3-1.5V28C56 14 46 4 32 4z"
-            fill="currentColor"
-          />
-          <circle cx="24" cy="27" r="3" fill="#9ca3af" />
-          <circle cx="40" cy="27" r="3" fill="#9ca3af" />
-        </svg>
-      </div>
-      <div className="ghost-shadow-pulse mt-xs h-[6px] w-8 rounded-full bg-[#d1d5db]" />
+    <div className="flex items-center gap-[5px]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="size-[7px] rounded-full bg-[#6b9fd4]"
+          style={{ animation: 'sim-bounce 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }}
+        />
+      ))}
     </div>
   )
 }
 
-function AgentBuildLoaderRow({
-  label,
-  animKey,
-  showProgress = false,
-  variant = 'spinner',
-}: {
-  label: string
-  animKey?: number | string
-  showProgress?: boolean
-  variant?: 'spinner' | 'sparkle'
-}) {
+function AgentBuildLoaderRow() {
   return (
-    <div className="agent-build-fade mt-lg flex flex-col gap-sm" key={animKey}>
-      {showProgress && <GhostLoader />}
-      <div className="flex items-center gap-xs text-small text-text-secondary">
-        {!showProgress && variant === 'sparkle' && (
-          <Icon name="auto_awesome" size={16} className="sparkle-twinkle text-ai-brand" fill />
-        )}
-        {!showProgress && variant === 'spinner' && (
-          <Icon name="progress_activity" size={16} className="animate-spin text-text-icon" />
-        )}
-        <span>{label}</span>
-        <span className="inline-flex items-center gap-px" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="animate-pulse size-1 rounded-full bg-text-secondary"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </span>
-      </div>
+    <div className="agent-build-fade mt-lg flex items-center gap-md">
+      <AiAvatarChatIcon size={24} className="shrink-0" />
+      <TypingDots />
     </div>
   )
 }
@@ -590,19 +562,19 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
   }
 
   const btn =
-    'flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary'
+    'flex size-6 items-center justify-center rounded-sm text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-secondary'
 
   return (
-    <div className={`agent-build-fade mt-sm flex items-center gap-xs ${className ?? ''}`}>
+    <div className={`msg-actions-row mt-xs flex items-center gap-xs opacity-0 transition-opacity ${className ?? ''}`}>
       <Tooltip content="Good response" variant="brief">
         <button
           type="button"
           aria-label="Good response"
           aria-pressed={feedback === 'up'}
           onClick={() => setFeedback((prev) => (prev === 'up' ? null : 'up'))}
-          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-primary' : ''}`}
+          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-secondary' : ''}`}
         >
-          <Icon name="thumb_up" size={20} fill={feedback === 'up'} />
+          <Icon name="thumb_up" size={15} fill={feedback === 'up'} />
         </button>
       </Tooltip>
       <Tooltip content="Bad response" variant="brief">
@@ -611,9 +583,9 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           aria-label="Bad response"
           aria-pressed={feedback === 'down'}
           onClick={() => setFeedback((prev) => (prev === 'down' ? null : 'down'))}
-          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-primary' : ''}`}
+          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-secondary' : ''}`}
         >
-          <Icon name="thumb_down" size={20} fill={feedback === 'down'} />
+          <Icon name="thumb_down" size={15} fill={feedback === 'down'} />
         </button>
       </Tooltip>
       <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief">
@@ -623,7 +595,7 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           onClick={handleCopy}
           className={btn}
         >
-          <Icon name={copied ? 'check' : 'copy_all'} size={20} />
+          <Icon name={copied ? 'check' : 'copy_all'} size={15} />
         </button>
       </Tooltip>
     </div>
@@ -1030,24 +1002,14 @@ function CreateAgentThinkingPanel({
   )
 }
 
-// Intro "Thinking" loader — deliberately mirrors the Thoughts header layout
-// (same mt-3xl / gap-sm / size-18 icon / text-body) so the icon and label sit
-// in the exact same spot before and after loading; only the content swaps.
-function IntroThinkingLoaderRow({ label, animKey }: { label: string; animKey?: string }) {
+// Intro "Thinking" loader — sits in the same slot the Thoughts row (bolt icon + label) takes
+// over once loading finishes.
+function IntroThinkingLoaderRow() {
   return (
     <div className="mt-3xl flex flex-col gap-sm">
-      <div key={animKey} className="agent-build-fade flex items-center gap-sm">
-        <SparkleLoader size={18} className="shrink-0" />
-        <span className="text-body text-text-secondary">{label}</span>
-        <span className="inline-flex items-center gap-px" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="animate-pulse size-1 rounded-full bg-text-secondary"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </span>
+      <div className="agent-build-fade flex items-center gap-md">
+        <AiAvatarChatIcon size={24} className="shrink-0" />
+        <TypingDots />
       </div>
     </div>
   )
@@ -1224,21 +1186,15 @@ const CREATE_AGENT_INTRO_PARAGRAPHS = [
 ]
 
 function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
       {/* Sparkle avatar, left-aligned to sit in the same column as the Thoughts icon.
           Animates while the reply types, then rests. */}
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_INTRO_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -1246,20 +1202,14 @@ function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
 }
 
 function ReminderCreateIntroReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={REMINDER_CREATE_INTRO_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -1284,10 +1234,8 @@ function ReminderCadenceFollowUp({
   }, [stage])
 
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={stage !== 'done'} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
@@ -1330,20 +1278,14 @@ function ReminderCadenceFollowUp({
 }
 
 function ReminderHandoffFollowUp({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={REMINDER_HANDOFF_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -1357,21 +1299,15 @@ function ReminderBuildReply({
   hasEmailAttachment: boolean
   onComplete?: () => void
 }) {
-  const [done, setDone] = useState(false)
   const text = hasEmailAttachment ? REMINDER_BUILD_REPLY_WITH_EMAIL : REMINDER_BUILD_REPLY_DEFAULT
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={[text]}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -1396,10 +1332,8 @@ function ReminderPostDraftFollowUp({
 
   return (
     <>
-      <div className="agent-build-fade mt-3xl flex gap-sm">
-        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-          <SparkleLoader size={14} spinning={!done} />
-        </span>
+      <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+        <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
         <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
           <TypedParagraphs
             fast
@@ -1411,9 +1345,6 @@ function ReminderPostDraftFollowUp({
           />
         </div>
       </div>
-      {done && (
-        <MessageActions className="ml-3xl" copyText={REMINDER_POST_DRAFT_REPLY} />
-      )}
       {done && !answer && (
         <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
           {pills.map((label) => (
@@ -1427,6 +1358,9 @@ function ReminderPostDraftFollowUp({
             </button>
           ))}
         </div>
+      )}
+      {done && (
+        <MessageActions className="ml-3xl" copyText={REMINDER_POST_DRAFT_REPLY} />
       )}
       {answer && <UserBubble>{answer}</UserBubble>}
     </>
@@ -1757,12 +1691,6 @@ function ReminderAfterRescheduleBeat({
           }}
         />
       )}
-      {replyDone && (
-        <MessageActions
-          className="ml-3xl"
-          copyText={REMINDER_HANDOFF_REPLY_PARAGRAPHS.join('\n\n')}
-        />
-      )}
       {replyDone && !connectAnswer && (
         <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
           {REMINDER_CONNECT_PILLS.map((label) => (
@@ -1776,6 +1704,12 @@ function ReminderAfterRescheduleBeat({
             </button>
           ))}
         </div>
+      )}
+      {replyDone && (
+        <MessageActions
+          className="ml-3xl"
+          copyText={REMINDER_HANDOFF_REPLY_PARAGRAPHS.join('\n\n')}
+        />
       )}
       {connectAnswer && <UserBubble>{connectAnswer}</UserBubble>}
       {connectAttachments.length > 0 && <UserDocsMessage files={connectAttachments} />}
@@ -1880,19 +1814,13 @@ const CREATE_AGENT_DOCS_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterDocsReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_DOCS_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -1932,10 +1860,8 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
   }, [stage])
 
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={stage !== 'done'} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_DRAFT_READY_INTRO}
@@ -1991,19 +1917,13 @@ const CREATE_AGENT_REFILL_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterRefillReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -2045,19 +1965,13 @@ const CREATE_AGENT_TEST_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_TEST_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -2515,7 +2429,7 @@ function ProcedurePreviewPanel({
 
       <div
         ref={bodyScrollRef}
-        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-md py-lg"
+        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-md pb-3xl pt-lg"
       >
         <div className="flex flex-col gap-sm">
           <p className="text-small text-text-secondary">
@@ -2709,6 +2623,10 @@ function HealthcareFrontdeskCreateAgentLive({
 }) {
   const isReminderFlow = variant === 'reminder'
   const [prompt, setPrompt] = useState('')
+  const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
+  const [filesModalOpen, setFilesModalOpen] = useState(false)
+  const landingImageInputRef = useRef<HTMLInputElement | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [phase, setPhase] = useState<CreatePhase>('ask-docs')
   const [docsAnswer, setDocsAnswer] = useState('')
@@ -2802,6 +2720,9 @@ function HealthcareFrontdeskCreateAgentLive({
   const threadRef = useRef<HTMLDivElement | null>(null)
   const threadScrollRef = useRef<HTMLDivElement | null>(null)
   const [threadOverflowing, setThreadOverflowing] = useState(false)
+  // "Scroll to latest" should only show once the user has actually scrolled away
+  // from the bottom — not just whenever the thread is tall enough to overflow.
+  const [isScrolledUp, setIsScrolledUp] = useState(false)
   // When true, the auto-follow ResizeObserver ignores height changes. Set briefly
   // whenever the user manually toggles a Thoughts panel so opening/closing it
   // never moves the page.
@@ -2994,6 +2915,20 @@ function HealthcareFrontdeskCreateAgentLive({
     observer.observe(thread)
     observer.observe(scrollEl)
     return () => observer.disconnect()
+  }, [submitted])
+
+  // Track whether the user has scrolled away from the bottom, so the chevron only
+  // appears once there's actually somewhere to scroll back down to.
+  useEffect(() => {
+    const scrollEl = threadScrollRef.current
+    if (!scrollEl) return
+    const handleScroll = () => {
+      const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight
+      setIsScrolledUp(distanceFromBottom > 40)
+    }
+    handleScroll()
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
+    return () => scrollEl.removeEventListener('scroll', handleScroll)
   }, [submitted])
 
   // Auto-follow: while the conversation is actively being generated (loaders and
@@ -3287,7 +3222,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
   if (submitted) {
     return (
-      <div className="relative flex h-full min-h-0 w-full max-w-[1600px] flex-1 justify-center gap-xl self-stretch pr-sm">
+      <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
         <style>{`
           .agent-build-fade { animation: agent-build-fade-in 0.25s ease-out; }
           @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
@@ -3296,6 +3231,19 @@ function HealthcareFrontdeskCreateAgentLive({
             50%      { transform: scale(1.15) rotate(8deg); opacity: 1; }
           }
           .sparkle-twinkle { animation: sparkle-twinkle 1.1s ease-in-out infinite; }
+          @keyframes sim-bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40% { transform: translateY(-5px); opacity: 1; }
+          }
+          /* Like/dislike/copy row stays hidden until its turn (.chat-turn, marking either the
+             message's own row or an ancestor wrapping it) is hovered, or the row itself is
+             hovered/focused — covers both sibling- and nested-actions-row placements. */
+          .chat-turn:hover ~ .msg-actions-row,
+          .chat-turn:hover .msg-actions-row,
+          .msg-actions-row:hover,
+          .msg-actions-row:focus-within {
+            opacity: 1;
+          }
           @keyframes thoughts-caret {
             0%, 49% { opacity: 1; }
             50%, 100% { opacity: 0; }
@@ -3335,10 +3283,7 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         {introThinking ? (
-          <IntroThinkingLoaderRow
-            label={INTRO_STATUS_LABELS[introStatusIndex] ?? 'Thinking'}
-            animKey={`intro-${introStatusIndex}`}
-          />
+          <IntroThinkingLoaderRow />
         ) : (
           <>
             <CreateAgentThinkingPanel
@@ -3359,12 +3304,6 @@ function HealthcareFrontdeskCreateAgentLive({
               isReminderFlow ? (
                 <>
                   <ReminderCreateIntroReply onComplete={() => setIntroReplyDone(true)} />
-                  {introReplyDone && (
-                    <MessageActions
-                      copyText={REMINDER_CREATE_INTRO_PARAGRAPHS.join('\n\n')}
-                      className="ml-3xl"
-                    />
-                  )}
                   {introReplyDone && !timingAnswer && (
                     <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                       <button
@@ -3375,6 +3314,12 @@ function HealthcareFrontdeskCreateAgentLive({
                         Yes correct
                       </button>
                     </div>
+                  )}
+                  {introReplyDone && (
+                    <MessageActions
+                      copyText={REMINDER_CREATE_INTRO_PARAGRAPHS.join('\n\n')}
+                      className="ml-3xl"
+                    />
                   )}
                   {timingAnswer && <UserBubble>{timingAnswer}</UserBubble>}
                   {timingAnswer && (
@@ -3399,17 +3344,6 @@ function HealthcareFrontdeskCreateAgentLive({
                           onComplete={() => setTimingFollowDone(true)}
                         />
                       )}
-                      {timingFollowDone && (
-                        <MessageActions
-                          className="ml-3xl"
-                          copyText={[
-                            ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
-                            ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS.map((line) =>
-                              line.replace(/^•\s*/, ''),
-                            ),
-                          ].join('\n\n')}
-                        />
-                      )}
                       {timingFollowDone && !rescheduleAnswer && (
                         <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                           {REMINDER_RESCHEDULE_PILLS.map((label) => (
@@ -3423,6 +3357,17 @@ function HealthcareFrontdeskCreateAgentLive({
                             </button>
                           ))}
                         </div>
+                      )}
+                      {timingFollowDone && (
+                        <MessageActions
+                          className="ml-3xl"
+                          copyText={[
+                            ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
+                            ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS.map((line) =>
+                              line.replace(/^•\s*/, ''),
+                            ),
+                          ].join('\n\n')}
+                        />
                       )}
                       {rescheduleAnswer && <UserBubble>{rescheduleAnswer}</UserBubble>}
                       {rescheduleAnswer && (
@@ -3465,11 +3410,7 @@ function HealthcareFrontdeskCreateAgentLive({
             ))}
 
             {!isReminderFlow && stepThinkingPhase === 'ask-jobs' && (
-              <AgentBuildLoaderRow
-                label={(STEP_THINKING_LABELS['ask-jobs'] ?? [])[stepThinkingIndex] ?? 'Analyzing your documents'}
-                animKey={`ask-jobs-${stepThinkingIndex}`}
-                variant="sparkle"
-              />
+              <AgentBuildLoaderRow />
             )}
 
             {!isReminderFlow && showStep('ask-jobs') && (
@@ -3512,19 +3453,6 @@ function HealthcareFrontdeskCreateAgentLive({
                     {docsDraftReady && (
                       <GhostwriterDraftReadyReply onComplete={() => setDocsDraftReadyDone(true)} />
                     )}
-                    {docsDraftReadyDone && (
-                      <MessageActions
-                        className="ml-3xl"
-                        copyText={[
-                          ...CREATE_AGENT_DRAFT_READY_INTRO,
-                          'What your callers actually ask for:',
-                          ...CALLER_JOB_BREAKDOWN.map((j) => `• ${j.label} — ${j.pct}`),
-                          ...CREATE_AGENT_DRAFT_READY_CLOSING.map((line) =>
-                            line.replace(/^INDENT:\s*/, ''),
-                          ),
-                        ].join('\n')}
-                      />
-                    )}
                     {docsDraftReadyDone && !refillAnswer && (
                       <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                         <button
@@ -3542,6 +3470,19 @@ function HealthcareFrontdeskCreateAgentLive({
                           Skip refills for now. Let&apos;s keep it to the four
                         </button>
                       </div>
+                    )}
+                    {docsDraftReadyDone && (
+                      <MessageActions
+                        className="ml-3xl"
+                        copyText={[
+                          ...CREATE_AGENT_DRAFT_READY_INTRO,
+                          'What your callers actually ask for:',
+                          ...CALLER_JOB_BREAKDOWN.map((j) => `• ${j.label} — ${j.pct}`),
+                          ...CREATE_AGENT_DRAFT_READY_CLOSING.map((line) =>
+                            line.replace(/^INDENT:\s*/, ''),
+                          ),
+                        ].join('\n')}
+                      />
                     )}
                     {refillAnswer && <UserBubble>{refillAnswer}</UserBubble>}
 
@@ -3570,7 +3511,7 @@ function HealthcareFrontdeskCreateAgentLive({
                         )}
                         {refillProcedureCreated && (
                           <>
-                            <div className="ml-3xl flex flex-col gap-sm">
+                            <div className="chat-turn ml-3xl flex flex-col gap-sm">
                               <p className="text-body leading-6 text-text-primary">
                                 I've added the procedure to your library:
                               </p>
@@ -3603,10 +3544,8 @@ function HealthcareFrontdeskCreateAgentLive({
                               copyText={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS.join('\n')}
                             />
 
-                            <div className="agent-build-fade mt-3xl flex gap-sm">
-                              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                                <SparkleLoader size={14} spinning={false} />
-                              </span>
+                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
                                 Now that I've created the procedure, I can go ahead and create the agent draft. Would
                                 you like me to proceed?
@@ -3665,10 +3604,8 @@ function HealthcareFrontdeskCreateAgentLive({
                         />
                         {reviewThoughtsDone && (
                           <>
-                            <div className="agent-build-fade mt-3xl flex gap-sm">
-                              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                                <SparkleLoader size={14} spinning={false} />
-                              </span>
+                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
                                 I have created a Front desk agent for you to answer inbound calls, book and
                                 reschedule appointments, answer basic insurance questions, and hand off anything
@@ -3747,7 +3684,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
                 {!docsProvided && (
                   <>
-                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     {docsProvided
                       ? "I've analyzed the call transcripts you uploaded. Here's what I found across 847 calls from the last 3 months:"
@@ -3770,7 +3707,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   </div>
                 </div>
 
-                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     Based on this analysis, here are a few use cases / jobs to be done that stood out — select the ones that are relevant for your agent.
                   </p>
@@ -3859,7 +3796,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
             {!isReminderFlow && showStep('ask-confirm-create') && (phase === 'ask-confirm-create' || confirmCreateAnswer) && (
               <>
-                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     Can I go ahead and create an agent based on these use cases?
                   </p>
@@ -3894,15 +3831,11 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
 
             {!isReminderFlow && stepThinking && stepThinkingPhase && stepThinkingPhase !== 'ask-jobs' && (
-              <AgentBuildLoaderRow
-                label={(STEP_THINKING_LABELS[stepThinkingPhase] ?? [])[stepThinkingIndex] ?? 'Thinking'}
-                animKey={`${stepThinkingPhase}-${stepThinkingIndex}`}
-                variant="sparkle"
-              />
+              <AgentBuildLoaderRow />
             )}
 
             {!isReminderFlow && phase === 'summary' && (
-              <div className="agent-build-fade mt-2xl flex flex-col gap-md">
+              <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-md">
                 {selectedProcedures.length > 0 && (
                   <div className="flex flex-col gap-sm">
                     <p className="text-body leading-6 text-text-primary">
@@ -3972,11 +3905,9 @@ function HealthcareFrontdeskCreateAgentLive({
             ))}
 
             {!isReminderFlow && showTestFollowUp && (
-              <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+              <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                 <div className="flex gap-sm">
-                  <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                    <SparkleLoader size={14} spinning={false} />
-                  </span>
+                  <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                   <p className="flex-1 text-body leading-6 text-text-primary">
                     How did your agent perform? Was it able to get you desired test result? What would you like to do
                     next?
@@ -4018,7 +3949,7 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         <div className="z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm pt-md">
-          {threadOverflowing && (
+          {threadOverflowing && isScrolledUp && (
             <div className="flex justify-center">
               <button
                 type="button"
@@ -4128,10 +4059,17 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
         </div>
 
+        {/* Matches the panel's own width now that it's absolutely positioned (out of
+            flex flow) — keeps the chat column centered exactly as it was when the
+            panel still participated in this row's layout. */}
         {((openProcedureName && !workflowVisible) || previewOpen) && (
-          <div className="sticky top-0 -bottom-lg hidden w-[500px] shrink-0 self-start overflow-hidden rounded-lg lg:block">
+          <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
+        )}
+
+        {((openProcedureName && !workflowVisible) || previewOpen) && (
+          <div className="absolute -top-10 bottom-2xl right-sm hidden w-[500px] overflow-hidden rounded-lg lg:block">
             {previewOpen ? (
-              <div className="h-[calc(100vh-168px)]">
+              <div className="h-full">
                 <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full">
                   <PreviewPanel
                     key={previewKey}
@@ -4153,7 +4091,7 @@ function HealthcareFrontdeskCreateAgentLive({
                     : HC_PROCEDURES.find((p) => p.name === openProcedureName)
                 if (!procedure) return null
                 return (
-                  <div className="h-[calc(100vh-152px)]">
+                  <div className="h-full">
                     <ProcedurePreviewPanel procedure={procedure} onClose={() => handleOpenProcedure(null)} />
                   </div>
                 )
@@ -4210,9 +4148,7 @@ function HealthcareFrontdeskCreateAgentLive({
       <div className="flex h-full w-full flex-col overflow-hidden pb-md">
         <div className="flex min-h-0 flex-1 flex-col justify-center gap-md overflow-hidden">
           <div className="flex translate-y-lg items-start justify-start gap-md">
-            <span className="mt-xs flex size-10 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-              <SparkleLoader size={22} spinning={false} />
-            </span>
+            <AiAvatarChatIcon size={40} className="mt-1 shrink-0" />
             <div className="flex min-w-0 flex-col items-start gap-md">
               <p className="text-h3 leading-8 text-text-primary">
                 Hi! I’m here to help you build your {isReminderFlow ? 'Reminder' : 'Front desk'} agent. Tell me what you’d like to build
@@ -4309,6 +4245,26 @@ function HealthcareFrontdeskCreateAgentLive({
 
       <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
         <div className="flex flex-col gap-md rounded-[14px] bg-surface px-lg py-md shadow-card">
+          {landingAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-sm">
+              {landingAttachments.map((item) => (
+                <span
+                  key={item.id}
+                  className="flex h-7 items-center gap-xs rounded-sm bg-chip-neutral-bg pl-sm pr-xs text-body text-text-primary"
+                >
+                  {item.label}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${item.label}`}
+                    onClick={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
+                    className="flex size-5 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-l2"
+                  >
+                    <Icon name="close" size={16} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -4326,14 +4282,37 @@ function HealthcareFrontdeskCreateAgentLive({
             className="scrollbar-light min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-md">
-              <Tooltip content="Add files" variant="brief">
+            <div className="flex items-center gap-sm">
+              <AttachMenuPopover
+                onSelect={(option) => {
+                  if (option === 'upload-image') landingImageInputRef.current?.click()
+                  else if (option === 'media-library') setMediaLibraryOpen(true)
+                  else if (option === 'files') setFilesModalOpen(true)
+                }}
+              />
+              <input
+                ref={landingImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setLandingAttachments((prev) => [
+                      ...prev,
+                      { id: `image-${Date.now()}`, kind: 'file', label: file.name },
+                    ])
+                  }
+                  e.target.value = ''
+                }}
+              />
+              <Tooltip content="Dictate" variant="brief">
                 <button
                   type="button"
-                  aria-label="Add files"
+                  aria-label="Dictate"
                   className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
                 >
-                  <Icon name="add" size={18} />
+                  <Icon name="mic" size={18} />
                 </button>
               </Tooltip>
             </div>
@@ -4348,6 +4327,27 @@ function HealthcareFrontdeskCreateAgentLive({
           </div>
         </div>
       </div>
+
+      <MediaLibraryModal
+        open={mediaLibraryOpen}
+        onClose={() => setMediaLibraryOpen(false)}
+        onDone={(selected) =>
+          setLandingAttachments((prev) => [
+            ...prev,
+            ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+          ])
+        }
+      />
+      <FilesModal
+        open={filesModalOpen}
+        onClose={() => setFilesModalOpen(false)}
+        onDone={(selected) =>
+          setLandingAttachments((prev) => [
+            ...prev,
+            ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+          ])
+        }
+      />
 
       <p className="m-0 mt-3xl text-center text-body text-text-secondary">
         <button
@@ -4806,10 +4806,8 @@ function HistoryChatReplay({
                 if (turn.kind === 'agent') {
                   return (
                     <div key={i}>
-                      <div className="mt-3xl flex gap-sm">
-                        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                          <SparkleLoader size={14} spinning={false} />
-                        </span>
+                      <div className="chat-turn mt-3xl flex gap-sm">
+                        <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                         <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
                           <TypedParagraphs paragraphs={turn.paragraphs} instant />
                         </div>
@@ -4860,10 +4858,8 @@ function HistoryChatReplay({
 
                 {chat.replies.map((paragraphs, replyIndex) => (
                   <div key={replyIndex}>
-                    <div className="mt-3xl flex gap-sm">
-                      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                        <SparkleLoader size={14} spinning={false} />
-                      </span>
+                    <div className="chat-turn mt-3xl flex gap-sm">
+                      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                       <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
                         <TypedParagraphs paragraphs={paragraphs} instant />
                       </div>
@@ -4917,6 +4913,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false)
   const [createWorkflowMounted, setCreateWorkflowMounted] = useState(false)
+  const [createLeftPaneCollapsed, setCreateLeftPaneCollapsed] = useState(false)
   const [createSideTab, setCreateSideTab] = useState<'ai' | 'manual'>('ai')
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
@@ -4949,18 +4946,6 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setShowCreateFlow(true)
   }
 
-  const selectChatHistoryItem = (id: string) => {
-    setChatHistorySelectedId(id)
-    setCreateFlowKey((k) => k + 1)
-    setShowSetupWizard(false)
-    setCreateWorkflowOpen(false)
-    setCreateWorkflowMounted(false)
-    setCreateFlowSubmitted(false)
-    setCreateDraftAgentName(null)
-    setCanvasProcedureId(null)
-    setInlineProcedureOpen(false)
-  }
-
   const selectAllChats = () => {
     setChatHistorySelectedId(null)
     setCreateFlowKey((k) => k + 1)
@@ -4976,12 +4961,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const openCreateWorkflow = () => {
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
+    setCreateLeftPaneCollapsed(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
   }
 
   const closeCreateWorkflow = () => {
     setCreateWorkflowOpen(false)
     setCreateSideTab('ai')
+    setCreateLeftPaneCollapsed(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
   }
@@ -5265,49 +5252,72 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
     return (
       <div className="flex h-full">
-        {!createWorkflowOpen && !createFlowSubmitted && (
-          <ChatHistoryPanel
-            title={chatHistoryTitle}
-            items={chatHistoryItems}
-            selectedId={chatHistorySelectedId}
-            onSelect={selectChatHistoryItem}
-            onAllChats={selectAllChats}
-          />
-        )}
         <div className="flex h-full min-w-0 flex-1 flex-col">
-        <TopNav initials="S" />
+        <TopNav title={chatHistoryTitle} initials="S" />
         <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
           <section
-            className={`z-10 flex shrink-0 flex-col overflow-hidden bg-surface transition-[width,top] duration-300 ease-in-out motion-reduce:transition-none ${
+            className={`z-10 flex shrink-0 flex-col overflow-hidden bg-surface transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
               createWorkflowOpen
-                ? 'absolute bottom-sm left-sm top-[calc(52px+theme(spacing.sm))] w-96 rounded-lg border border-border shadow-card'
+                ? `absolute bottom-sm left-sm top-[calc(52px+theme(spacing.sm))] w-96 rounded-lg border border-border shadow-card ${
+                    createLeftPaneCollapsed ? 'pointer-events-none -translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
+                  }`
                 : 'relative w-full'
             }`}
             aria-label={createWorkflowOpen ? 'Create with AI conversation' : undefined}
+            aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              <div className="flex h-14 shrink-0 items-end gap-xl px-lg">
+              <div className="flex h-14 shrink-0 items-end justify-between gap-md px-lg">
+                <div className="flex items-end gap-xl">
+                  <div className="group relative flex h-10 items-center gap-xs px-sm text-body">
+                    <button
+                      type="button"
+                      onClick={() => setCreateSideTab('ai')}
+                      className={`flex items-center gap-xs ${
+                        createSideTab === 'ai' ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      Create with
+                      <span className="relative inline-flex h-[14px] w-4 shrink-0 items-center">
+                        <span className="text-small text-ai-brand">AI</span>
+                        <AiAgentIcon size={7} className="absolute -right-[3px] -top-[3px]" />
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Expand"
+                      title="Expand to full page"
+                      onClick={closeCreateWorkflow}
+                      className="flex size-5 shrink-0 items-center justify-center rounded-sm text-text-icon opacity-0 transition-opacity hover:bg-surface-hover group-hover:opacity-100"
+                    >
+                      <Icon name="open_in_full" size={14} />
+                    </button>
+                    <span
+                      className={`pointer-events-none absolute inset-x-0 -bottom-[2px] h-[2px] ${
+                        createSideTab === 'ai' ? 'bg-primary' : 'bg-transparent'
+                      }`}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCreateSideTab('manual')}
+                    className={`h-10 border-b-2 px-sm text-body ${
+                      createSideTab === 'manual'
+                        ? 'border-primary text-text-primary'
+                        : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    Create manually
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setCreateSideTab('ai')}
-                  className={`h-10 border-b-2 px-sm text-body ${
-                    createSideTab === 'ai'
-                      ? 'border-primary text-text-primary'
-                      : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
+                  aria-label="Collapse panel"
+                  title="Collapse panel"
+                  onClick={() => setCreateLeftPaneCollapsed(true)}
+                  className="mb-xs flex size-8 shrink-0 items-center justify-center self-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                 >
-                  Create with AI
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCreateSideTab('manual')}
-                  className={`h-10 border-b-2 px-sm text-body ${
-                    createSideTab === 'manual'
-                      ? 'border-primary text-text-primary'
-                      : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  Create manually
+                  <Icon name="left_panel_close" size={20} />
                 </button>
               </div>
             ) : createFlowSubmitted ? (
@@ -5329,7 +5339,16 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     >
                       <Icon name="arrow_back" size={20} />
                     </button>
-                    <h1 className="text-h3 text-text-primary">{createTitle}</h1>
+                    <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{createTitle}</h1>
+                    {isReminder && createDraftAgentName && !createWorkflowOpen && (
+                      <button
+                        type="button"
+                        onClick={openCreateWorkflow}
+                        className="shrink-0 rounded-sm text-body text-text-action hover:underline"
+                      >
+                        View workflow
+                      </button>
+                    )}
                   </div>
                   {inlineProcedureOpen && (
                     <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
@@ -5347,13 +5366,13 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 >
                   <Icon name="arrow_back" size={20} />
                 </button>
-                <h1 className="text-h3 text-text-primary">{createTitle}</h1>
+                <h1 className="text-h3 text-text-primary text-left">Create agent</h1>
               </div>
             )}
             <div
               className={`scrollbar-subtle flex min-h-0 flex-1 justify-center pt-0 ${
                 createFlowSubmitted || createWorkflowOpen
-                  ? 'items-stretch overflow-hidden'
+                  ? 'items-stretch overflow-visible'
                   : 'items-start overflow-auto pb-lg'
               } ${createWorkflowOpen ? (createSideTab === 'manual' ? 'px-0 py-0' : 'px-md') : 'px-lg'}`}
             >
@@ -5413,6 +5432,18 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               )}
             </div>
           </section>
+
+          {createWorkflowOpen && createLeftPaneCollapsed && (
+            <button
+              type="button"
+              aria-label="Expand panel"
+              title="Expand panel"
+              onClick={() => setCreateLeftPaneCollapsed(false)}
+              className="absolute bottom-sm left-sm z-10 flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon shadow-card hover:bg-surface-l2"
+            >
+              <Icon name="left_panel_open" size={20} />
+            </button>
+          )}
 
           {createWorkflowMounted && isReminder && (
             <section
