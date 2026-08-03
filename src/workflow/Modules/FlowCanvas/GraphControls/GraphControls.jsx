@@ -9,6 +9,7 @@ export default function GraphControls({
   onOrientationChange,
   onRun,
   onEdit,
+  onView,
   zoom = 100,
   onZoomSelect,
   onFitView,
@@ -31,28 +32,26 @@ export default function GraphControls({
 
   return (
     <div className="graph-controls">
-      {!viewOnly && (
-        <div className="graph-controls__toggle">
-          <GraphControlTooltip text="Vertical layout">
-            <button
-              className={`graph-controls__toggle-btn${orientation === 'vertical' ? ' graph-controls__toggle-btn--active' : ''}`}
-              onClick={() => onOrientationChange?.('vertical')}
-              type="button"
-            >
-              <span className="material-symbols-outlined">arrow_downward</span>
-            </button>
-          </GraphControlTooltip>
-          <GraphControlTooltip text="Horizontal layout">
-            <button
-              className={`graph-controls__toggle-btn${orientation === 'horizontal' ? ' graph-controls__toggle-btn--active' : ''}`}
-              onClick={() => onOrientationChange?.('horizontal')}
-              type="button"
-            >
-              <span className="material-symbols-outlined">arrow_forward</span>
-            </button>
-          </GraphControlTooltip>
-        </div>
-      )}
+      <div className="graph-controls__toggle">
+        <GraphControlTooltip text="Vertical layout">
+          <button
+            className={`graph-controls__toggle-btn${orientation === 'vertical' ? ' graph-controls__toggle-btn--active' : ''}`}
+            onClick={() => onOrientationChange?.('vertical')}
+            type="button"
+          >
+            <span className="material-symbols-outlined">arrow_downward</span>
+          </button>
+        </GraphControlTooltip>
+        <GraphControlTooltip text="Horizontal layout">
+          <button
+            className={`graph-controls__toggle-btn${orientation === 'horizontal' ? ' graph-controls__toggle-btn--active' : ''}`}
+            onClick={() => onOrientationChange?.('horizontal')}
+            type="button"
+          >
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </GraphControlTooltip>
+      </div>
 
       <div className="graph-controls__zoom" ref={dropdownRef}>
         <GraphControlTooltip text="Zoom">
@@ -97,12 +96,27 @@ export default function GraphControls({
         )}
       </div>
 
-      {onEdit && (
-        <GraphControlTooltip text="Edit workflow">
-          <button className="graph-controls__run" onClick={onEdit} type="button">
-            <span className="material-symbols-outlined">edit</span>
-          </button>
-        </GraphControlTooltip>
+      {(onEdit || onView) && (
+        <div className="graph-controls__mode-toggle">
+          <GraphControlTooltip text="Edit workflow">
+            <button
+              className={`graph-controls__toggle-btn${!viewOnly ? ' graph-controls__toggle-btn--active' : ''}`}
+              onClick={onEdit}
+              type="button"
+            >
+              <span className="material-symbols-outlined">edit</span>
+            </button>
+          </GraphControlTooltip>
+          <GraphControlTooltip text="View workflow">
+            <button
+              className={`graph-controls__toggle-btn${viewOnly ? ' graph-controls__toggle-btn--active' : ''}`}
+              onClick={onView}
+              type="button"
+            >
+              <span className="material-symbols-outlined">visibility</span>
+            </button>
+          </GraphControlTooltip>
+        </div>
       )}
 
       <GraphControlTooltip text="Preview">

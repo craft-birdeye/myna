@@ -54,6 +54,8 @@ interface WorkflowEditorScreenProps {
   /** Shown in the builder header and start node; workflow lookup still uses `agentName`. */
   displayName?: string
   onClose: () => void
+  /** Eye icon in the canvas toolbar — defaults to onClose when not provided. */
+  onViewWorkflow?: () => void
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
@@ -72,6 +74,7 @@ export function WorkflowEditorScreen({
   agentName,
   displayName,
   onClose,
+  onViewWorkflow,
   product = 'automotive',
   agentStatus = 'Running',
   wizardDraft = null,
@@ -196,6 +199,7 @@ export function WorkflowEditorScreen({
           pageTitle={shownName}
           appTitle={shownName}
           onClose={onClose}
+          onView={onViewWorkflow ?? onClose}
           product={product}
           activeNavId={activeNavId}
           moduleSlug="myna"

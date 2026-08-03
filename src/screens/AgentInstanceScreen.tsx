@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Chip,
   DataTable,
@@ -33,6 +33,8 @@ interface AgentInstanceScreenProps {
   onBack: () => void
   onEditAgent?: (agentName: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
+  /** Reported true while a Recommendation is open full-page, so the app shell hides the L2 side nav. */
+  onAgentSetupActiveChange?: (active: boolean) => void
   product?: string
   initialTab?: string
 }
@@ -313,6 +315,7 @@ export function AgentInstanceScreen({
   onBack,
   onEditAgent,
   onNavigateToInbox,
+  onAgentSetupActiveChange,
   product,
   initialTab = 'outcomes',
 }: AgentInstanceScreenProps) {
@@ -321,6 +324,12 @@ export function AgentInstanceScreen({
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
+
+  // Full-page recommendation chat hides the L2 side nav, matching the create-agent flow.
+  useEffect(() => {
+    onAgentSetupActiveChange?.(selectedRecommendationId !== null)
+    return () => onAgentSetupActiveChange?.(false)
+  }, [selectedRecommendationId, onAgentSetupActiveChange])
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -376,7 +385,7 @@ export function AgentInstanceScreen({
   if (selectedRecommendationId) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav initials="S" />
+        <TopNav title="Front desk" initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
           <RecommendationDetailScreen
             recommendationId={selectedRecommendationId}

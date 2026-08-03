@@ -310,6 +310,9 @@ export function App() {
   )
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
+  // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
+  // closing the editor) knows which instance + tab to land on instead of its own defaults.
+  const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
   const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
@@ -431,6 +434,14 @@ export function App() {
                 <WorkflowEditorScreen
                   agentName={editingAgentName}
                   onClose={() => {
+                    setEditingAgentName(null)
+                    setWizardAgentDraft(null)
+                    setWorkflowAiAssistOpen(false)
+                  }}
+                  onViewWorkflow={() => {
+                    if (editingAgentName) {
+                      setPendingAgentInstanceView({ instanceName: editingAgentName, tab: 'workflow' })
+                    }
                     setEditingAgentName(null)
                     setWizardAgentDraft(null)
                     setWorkflowAiAssistOpen(false)
@@ -595,6 +606,8 @@ export function App() {
               setRailActive('inbox')
             }}
             product={activeProduct}
+            pendingInstanceView={pendingAgentInstanceView}
+            onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
           />
         ) : appointmentDetail ? (
           <>

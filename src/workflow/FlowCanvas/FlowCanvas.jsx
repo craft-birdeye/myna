@@ -408,6 +408,7 @@ function FlowCanvasInner({
   onOrientationChange,
   onRun,
   onEdit,
+  onView,
   selectedNodeId,
   viewOnly = false,
   product = 'healthcare',
@@ -667,6 +668,7 @@ function FlowCanvasInner({
           onOrientationChange={onOrientationChange}
           onRun={onRun}
           onEdit={onEdit}
+          onView={onView}
           zoom={zoom}
           onZoomSelect={(z) => zoomTo(z, { duration: 200 })}
           onFitView={() => { positionToStart(); }}

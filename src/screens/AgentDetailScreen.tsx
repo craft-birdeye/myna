@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   AttachMenuPopover,
   Chip,
-  ComposerAttachPopover,
   CustomizeColumnsDrawer,
   DataTable,
   FilesModal,
@@ -58,6 +57,9 @@ interface AgentDetailScreenProps {
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
+  /** Set (e.g. by the canvas eye icon) to reopen a specific instance + tab after a remount. */
+  pendingInstanceView?: { instanceName: string; tab: string } | null
+  onPendingInstanceViewConsumed?: () => void
 }
 
 interface AgentInstance {
@@ -745,12 +747,6 @@ const REMINDER_CONNECT_PILLS = ['Yes, correct', 'No, make changes'] as const
 const REMINDER_EMAIL_REPLY =
   "Yes. Oh — and here's the reminder email we send manually today. Keep the same tone."
 
-const REMINDER_EMAIL_FILE: AttachItem = {
-  id: 'lakeside-reminder-email',
-  kind: 'file',
-  label: 'lakeside-reminder-email.docx',
-}
-
 const REMINDER_AFTER_EMAIL_THOUGHTS_TEXT = `A single small document — Extracting: warm, first-name tone; short paragraphs; includes the parking-instructions link and the "reply CONFIRM" convention. I'll reuse that voice and structure for both scheduled reminder messages, and keep their existing CONFIRM keyword as the confirmation mechanism for text.
 
 Everything is now resolved or defaultable. Tool check against the catalog: email + text reminders ✓ (reminder tool), voice calling ✓, handoff to the Front desk agent ✓ (it's live). No missing integrations. Defaults to flag at review: calling window 9am–7pm patient-local (from "no weird hours"), caller ID = clinic main line, stop conditions, booked-inside-window skip rule, English only. Time to build — this one is fast, no need to tell her to leave.`
@@ -789,13 +785,6 @@ const FRONTDESK_BUILD_CARD = {
 // Pre-filled into the composer when John clicks the box after the draft review.
 const FINAL_REVIEW_PROMPT =
   'Before I accept — the greeting is too generic. Make it "Thank you for calling Riverside Family Clinic, this is Ava. How can I help?" And let me test the booking flow.'
-
-// The docs John attaches when he responds to the "add your materials" step.
-const JOHN_DOCS_FILES: { id: string; label: string }[] = [
-  { id: 'john-doc-calls', label: 'front-desk-calls-june.zip' },
-  { id: 'john-doc-faq', label: 'insurance-faq.pdf' },
-  { id: 'john-doc-sop', label: 'front-desk-SOP.docx' },
-]
 
 // John's response after the docs prompt: right-aligned attachment chips —
 // same right-side placement as the first user message, proper RefChip attachments.
@@ -2245,14 +2234,18 @@ function FrontdeskBuildingCard({
   refillAdded,
   onDone,
   persisted = false,
+  onViewWorkflow,
   openProcedureName,
   onOpenProcedure,
+  workflowVisible = false,
 }: {
   refillAdded: boolean
   onDone?: () => void
   persisted?: boolean
+  onViewWorkflow?: () => void
   openProcedureName: string | null
   onOpenProcedure: (name: string) => void
+  workflowVisible?: boolean
 }) {
   const steps = DRAFT_BUILD_STATUS_LABELS.map((label, i) => ({ id: `fd-draft-${i}`, label }))
   const [step, setStep] = useState(persisted ? steps.length : 0)
@@ -2300,12 +2293,23 @@ function FrontdeskBuildingCard({
         <div className="flex items-start gap-sm">
           <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-sm">
-              <span className="text-body text-text-primary">{FRONTDESK_BUILD_CARD.title}</span>
-              {done && (
-                <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
-                  Draft
-                </span>
+            <div className="flex items-center justify-between gap-sm">
+              <div className="flex min-w-0 items-center gap-sm">
+                <span className="text-body text-text-primary">{FRONTDESK_BUILD_CARD.title}</span>
+                {done && (
+                  <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                    Draft
+                  </span>
+                )}
+              </div>
+              {done && !workflowVisible && (
+                <button
+                  type="button"
+                  onClick={onViewWorkflow}
+                  className="shrink-0 rounded-sm text-body text-text-action hover:underline"
+                >
+                  View workflow
+                </button>
               )}
             </div>
             <p className="mt-xs text-small text-text-secondary">{FRONTDESK_BUILD_CARD.description}</p>
@@ -2679,9 +2683,16 @@ function HealthcareFrontdeskCreateAgentLive({
   const [openProcedureName, setOpenProcedureName] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
 
+  // The header row's spacer (which keeps the 720px chat column centered) needs to
+  // reserve the same width whenever EITHER the inline procedure panel OR the
+  // Test-agent preview panel occupies the RHS slot — they share the same visual slot.
+  useEffect(() => {
+    onInlineProcedureOpenChange?.((Boolean(openProcedureName) || previewOpen) && !workflowVisible)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openProcedureName, previewOpen, workflowVisible])
+
   const handleOpenProcedure = (name: string | null) => {
     setOpenProcedureName(name)
-    onInlineProcedureOpenChange?.(Boolean(name) && !workflowVisible)
     if (!onCanvasProcedureChange) return
     // Full-page conversation → inline procedure panel beside the chat.
     // Workflow canvas open → procedure opens on the canvas RHS instead.
@@ -3126,45 +3137,8 @@ function HealthcareFrontdeskCreateAgentLive({
     advanceWithThinking('ask-confirm-create')
   }
 
-  const handleAttachSelect = (item: AttachItem) => {
-    // "+ Add file" stands in for a real file picker in this prototype.
-    const resolved: AttachItem =
-      item.id === 'add-file'
-        ? { id: `file-${Date.now()}`, kind: 'file', label: 'Front-desk-call-transcripts.pdf' }
-        : item
-    setAttachments((prev) => (prev.some((a) => a.id === resolved.id) ? prev : [...prev, resolved]))
-  }
-
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id))
-  }
-
-  const handlePaperclipAttach = () => {
-    // Reminder create flow: plus button attaches the lakeside reminder email sample.
-    if (isReminderFlow && handoffFollowDone && !connectAnswer) {
-      setAttachments((prev) =>
-        prev.some((a) => a.label === REMINDER_EMAIL_FILE.label)
-          ? prev
-          : [...prev, REMINDER_EMAIL_FILE],
-      )
-      return
-    }
-    // During the docs step, the paperclip stands in for John adding his files.
-    const items: AttachItem[] =
-      phase === 'ask-docs'
-        ? JOHN_DOCS_FILES.map((f) => ({ id: f.id, kind: 'file', label: f.label }))
-        : [
-            'Call transcripts. April to July 2026.',
-            'Escalation matrix / triage protocol',
-            'On-call staff directory / routing contacts',
-          ].map((label) => ({ id: `paperclip-${Date.now()}-${label}`, kind: 'file', label }))
-    setAttachments((prev) => {
-      const next = [...prev]
-      items.forEach((item) => {
-        if (!next.some((a) => a.label === item.label)) next.push(item)
-      })
-      return next
-    })
   }
 
   const canSendFollowUp =
@@ -3255,7 +3229,7 @@ function HealthcareFrontdeskCreateAgentLive({
             wide screens, but collapses first (shrink-[999]) on narrow ones so the
             chat keeps its width and the panel stays pinned to the right edge.
             When the workflow canvas is open, procedures open on the canvas RHS instead. */}
-        {((openProcedureName && !workflowVisible) || previewOpen) && (
+        {((openProcedureName || previewOpen) && !workflowVisible) && (
           <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
         )}
 
@@ -3580,6 +3554,8 @@ function HealthcareFrontdeskCreateAgentLive({
                         <FrontdeskBuildingCard
                           refillAdded={refillAnswer.startsWith('Add procedure')}
                           persisted={draftBuildReady}
+                          onViewWorkflow={onViewWorkflow}
+                          workflowVisible={workflowVisible}
                           openProcedureName={openProcedureName}
                           onOpenProcedure={handleOpenProcedure}
                           onDone={() => {
@@ -3634,6 +3610,15 @@ function HealthcareFrontdeskCreateAgentLive({
                               >
                                 Test agent
                               </button>
+                              {!workflowVisible && (
+                                <button
+                                  type="button"
+                                  onClick={onViewWorkflow}
+                                  className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                                >
+                                  View workflow
+                                </button>
+                              )}
                             </div>
                             {reviewFollowUpAnswer && (
                               <>
@@ -3669,6 +3654,15 @@ function HealthcareFrontdeskCreateAgentLive({
                                     >
                                       Test agent
                                     </button>
+                                    {!workflowVisible && (
+                                      <button
+                                        type="button"
+                                        onClick={onViewWorkflow}
+                                        className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                                      >
+                                        View workflow
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </>
@@ -4027,17 +4021,23 @@ function HealthcareFrontdeskCreateAgentLive({
               className="scrollbar-light min-h-9 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary disabled:cursor-not-allowed"
             />
             <div className="flex items-center justify-between align-bottom">
-              <div className="flex items-center gap-sm text-text-icon">
-                <Tooltip content="Add files" variant="brief">
-                  <ComposerAttachPopover
-                    onSelect={handleAttachSelect}
-                    onAddClick={handlePaperclipAttach}
-                    disabled={composerLocked}
-                  />
-                </Tooltip>
+              <div className="flex items-center gap-xs text-text-icon">
+                <AttachMenuPopover
+                  disabled={composerLocked}
+                  onSelect={(option) => {
+                    if (option === 'upload-image') landingImageInputRef.current?.click()
+                    else if (option === 'media-library') setMediaLibraryOpen(true)
+                    else if (option === 'files') setFilesModalOpen(true)
+                  }}
+                />
                 <Tooltip content="Dictate" variant="brief">
-                  <button type="button" aria-label="Dictate" className="hover:text-text-primary" disabled={composerLocked}>
-                    <Icon name="mic" size={18} />
+                  <button
+                    type="button"
+                    aria-label="Dictate"
+                    disabled={composerLocked}
+                    className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Icon name="mic" size={20} />
                   </button>
                 </Tooltip>
               </div>
@@ -4062,15 +4062,19 @@ function HealthcareFrontdeskCreateAgentLive({
         {/* Matches the panel's own width now that it's absolutely positioned (out of
             flex flow) — keeps the chat column centered exactly as it was when the
             panel still participated in this row's layout. */}
-        {((openProcedureName && !workflowVisible) || previewOpen) && (
+        {((openProcedureName || previewOpen) && !workflowVisible) && (
           <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
         )}
 
-        {((openProcedureName && !workflowVisible) || previewOpen) && (
-          <div className="absolute -top-10 bottom-2xl right-sm hidden w-[500px] overflow-hidden rounded-lg lg:block">
+        {((openProcedureName || previewOpen) && !workflowVisible) && (
+          <div
+            className={`absolute -top-10 bottom-2xl right-sm hidden w-[500px] overflow-hidden rounded-lg lg:block ${
+              previewOpen ? 'border border-border bg-surface shadow-card' : ''
+            }`}
+          >
             {previewOpen ? (
               <div className="h-full">
-                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full">
+                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full [&_.preview-panel]:!rounded-none [&_.preview-panel]:!border-0 [&_.preview-panel]:!shadow-none [&_.preview-panel__header]:!h-[60px] [&_.preview-panel__header]:!px-[15px] [&_.preview-panel__header]:!py-0 [&_.preview-panel__title]:!text-[16px] [&_.preview-panel__title]:!font-normal [&_.preview-panel__title]:!leading-6 [&_.preview-panel__title]:![letter-spacing:-0.32px] [&_.preview-panel__title]:!text-[#212121] [&_.preview-panel__close-btn_.material-symbols-outlined]:![font-size:24px] [&_.preview-panel__close-btn]:!text-[#303030]">
                   <PreviewPanel
                     key={previewKey}
                     onClose={handlePreviewClose}
@@ -4099,6 +4103,40 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
           </div>
         )}
+
+        <input
+          ref={landingImageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              setAttachments((prev) => [...prev, { id: `image-${Date.now()}`, kind: 'file', label: file.name }])
+            }
+            e.target.value = ''
+          }}
+        />
+        <MediaLibraryModal
+          open={mediaLibraryOpen}
+          onClose={() => setMediaLibraryOpen(false)}
+          onDone={(selected) =>
+            setAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
+        <FilesModal
+          open={filesModalOpen}
+          onClose={() => setFilesModalOpen(false)}
+          onDone={(selected) =>
+            setAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
       </div>
     )
   }
@@ -4196,7 +4234,7 @@ function HealthcareFrontdeskCreateAgentLive({
             className="scrollbar-none min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="mt-auto flex items-center justify-between">
-            <div className="flex items-center gap-sm text-text-icon">
+            <div className="flex items-center gap-xs text-text-icon">
               <AttachMenuPopover
                 onSelect={(option) => {
                   if (option === 'upload-image') landingImageInputRef.current?.click()
@@ -4206,7 +4244,7 @@ function HealthcareFrontdeskCreateAgentLive({
               />
               <Tooltip content="Dictate" variant="brief">
                 <button type="button" aria-label="Dictate" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="mic" size={18} />
+                  <Icon name="mic" size={20} />
                 </button>
               </Tooltip>
               <Tooltip content="Add context" variant="brief">
@@ -4330,7 +4368,7 @@ function HealthcareFrontdeskCreateAgentLive({
             className="scrollbar-light min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-sm">
+            <div className="flex items-center gap-xs">
               <AttachMenuPopover
                 onSelect={(option) => {
                   if (option === 'upload-image') landingImageInputRef.current?.click()
@@ -4360,7 +4398,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   aria-label="Dictate"
                   className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
                 >
-                  <Icon name="mic" size={18} />
+                  <Icon name="mic" size={20} />
                 </button>
               </Tooltip>
             </div>
@@ -4946,16 +4984,26 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product, pendingInstanceView, onPendingInstanceViewConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedInstance, setSelectedInstance] = useState<string | null>(null)
+  const [selectedInstance, setSelectedInstance] = useState<string | null>(
+    pendingInstanceView?.instanceName ?? null,
+  )
   const [selectedInstanceDisplayName, setSelectedInstanceDisplayName] = useState<string | null>(null)
-  const [instanceInitialTab, setInstanceInitialTab] = useState('outcomes')
+  const [instanceInitialTab, setInstanceInitialTab] = useState(pendingInstanceView?.tab ?? 'outcomes')
+
+  useEffect(() => {
+    if (!pendingInstanceView) return
+    setSelectedInstance(pendingInstanceView.instanceName)
+    setInstanceInitialTab(pendingInstanceView.tab)
+    onPendingInstanceViewConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingInstanceView])
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
@@ -5153,11 +5201,16 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
 
+  // `AgentInstanceScreen` reports its own full-page states (e.g. an open recommendation) via
+  // `instanceSetupActive` — merged here so it and the create-flow/setup-wizard state below don't
+  // race to overwrite the same `onAgentSetupActiveChange` callback from App.tsx.
+  const [instanceSetupActive, setInstanceSetupActive] = useState(false)
+
   useEffect(() => {
-    const isAgentSetupActive = (isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)
+    const isAgentSetupActive = ((isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)) || instanceSetupActive
     onAgentSetupActiveChange?.(isAgentSetupActive)
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, isReminder, showCreateFlow, showSetupWizard, onAgentSetupActiveChange])
+  }, [isFrontdesk, isReminder, showCreateFlow, showSetupWizard, instanceSetupActive, onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     { key: 'name', label: 'Agent name', width: 230, sortable: true, locked: true },
     {
@@ -5317,47 +5370,41 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              <div className="relative flex h-14 shrink-0 items-end px-lg pb-sm">
-                <div className="absolute left-1/2 top-0 flex h-14 -translate-x-1/2 items-end gap-xl whitespace-nowrap">
-                  <div className="group relative flex h-10 items-center justify-center px-sm text-body">
-                    <button
-                      type="button"
-                      onClick={() => setCreateSideTab('ai')}
-                      className={`flex items-center gap-xs transition-transform duration-150 ease-out group-hover:-translate-x-[11px] ${
-                        createSideTab === 'ai' ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
-                      }`}
-                    >
-                      Create with
-                      <span className="relative inline-flex h-[14px] w-4 shrink-0 items-center">
-                        <span className="text-small text-ai-brand">AI</span>
-                        <AiAgentIcon size={7} className="absolute -right-[3px] -top-[3px]" />
+              // Reuses LHSDrawer's own tab/collapse-button classes (lhs-drawer__tab*,
+              // lhs-drawer__collapse-btn) so this header matches the "edit agent" canvas panel exactly.
+              <div className="flex h-12 shrink-0 items-center gap-sm px-lg">
+                <div className="lhs-drawer__tabs lhs-drawer__tabs--visible flex-1">
+                  <div className={`group relative lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}>
+                    <span className="lhs-drawer__tab-label">
+                      <span className="relative inline-flex items-center gap-xs">
+                        <button
+                          type="button"
+                          onClick={() => setCreateSideTab('ai')}
+                          className="inline-flex items-center gap-xs"
+                        >
+                          Create with AI
+                          <AiAgentIcon size={16} className="shrink-0" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Expand"
+                          title="Expand to full page"
+                          onClick={closeCreateWorkflow}
+                          className="absolute left-full top-1/2 ml-xs flex size-5 shrink-0 -translate-y-1/2 scale-90 items-center justify-center rounded-sm text-text-icon opacity-0 transition-[opacity,transform] duration-150 ease-out hover:bg-surface-selected group-hover:scale-100 group-hover:opacity-100"
+                        >
+                          <Icon name="open_in_full" size={14} />
+                        </button>
                       </span>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Expand"
-                      title="Expand to full page"
-                      onClick={closeCreateWorkflow}
-                      className="absolute left-full top-1/2 ml-[2px] flex size-5 shrink-0 -translate-y-1/2 scale-90 items-center justify-center rounded-sm text-text-icon opacity-0 transition-[opacity,transform] duration-150 ease-out hover:bg-surface-hover group-hover:scale-100 group-hover:opacity-100"
-                    >
-                      <Icon name="open_in_full" size={14} />
-                    </button>
-                    <span
-                      className={`pointer-events-none absolute inset-x-0 -bottom-[2px] h-[2px] ${
-                        createSideTab === 'ai' ? 'bg-primary' : 'bg-transparent'
-                      }`}
-                    />
+                    </span>
+                    <span className="lhs-drawer__tab-underline" />
                   </div>
                   <button
                     type="button"
                     onClick={() => setCreateSideTab('manual')}
-                    className={`h-10 border-b-2 px-sm text-body ${
-                      createSideTab === 'manual'
-                        ? 'border-primary text-text-primary'
-                        : 'border-transparent text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`lhs-drawer__tab${createSideTab === 'manual' ? ' lhs-drawer__tab--active' : ''}`}
                   >
-                    Create manually
+                    <span className="lhs-drawer__tab-label">Create manually</span>
+                    <span className="lhs-drawer__tab-underline" />
                   </button>
                 </div>
                 <button
@@ -5365,9 +5412,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   aria-label="Collapse panel"
                   title="Collapse panel"
                   onClick={() => setCreateLeftPaneCollapsed(true)}
-                  className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                  className="lhs-drawer__collapse-btn shrink-0"
                 >
-                  <Icon name="left_panel_close" size={20} />
+                  <Icon name="left_panel_close" size={18} />
                 </button>
               </div>
             ) : createFlowSubmitted ? (
@@ -5390,7 +5437,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       <Icon name="arrow_back" size={20} />
                     </button>
                     <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{createTitle}</h1>
-                    {isReminder && createDraftAgentName && !createWorkflowOpen && (
+                    {(isReminder || isFrontdesk) && createDraftAgentName && !createWorkflowOpen && (
                       <button
                         type="button"
                         onClick={openCreateWorkflow}
@@ -5455,7 +5502,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     onCreateFromScratch={() => setShowSetupWizard(true)}
                     onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
                     onCreateAgent={handleCreateAgentSuccess}
-                    onViewWorkflow={isReminder ? openCreateWorkflow : undefined}
+                    onViewWorkflow={(isReminder || isFrontdesk) ? openCreateWorkflow : undefined}
                     libraryCards={isReminder ? REMINDER_CREATE_CARDS : undefined}
                     initialPrompt={
                       historyChat?.prompt
@@ -5495,7 +5542,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             </button>
           )}
 
-          {createWorkflowMounted && isReminder && (
+          {createWorkflowMounted && (isReminder || isFrontdesk) && (
             <section
               className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out motion-reduce:transition-none ${
                 createWorkflowOpen
@@ -5505,11 +5552,17 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               aria-hidden={!createWorkflowOpen}
             >
               <WorkflowEditorScreen
-                agentName="Reminder agent - North region"
+                agentName={isReminder ? 'Reminder agent - North region' : 'Front desk agent - North region'}
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
+                onViewWorkflow={() => {
+                  closeCreateWorkflow()
+                  setShowCreateFlow(false)
+                  setInstanceInitialTab('workflow')
+                  setSelectedInstance(`${agentName} - North region`)
+                }}
                 hideLhs
                 createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
                 previewProcedureId={canvasProcedureId}
@@ -5546,6 +5599,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
+          onAgentSetupActiveChange={setInstanceSetupActive}
           product={product}
         />
         <Toast

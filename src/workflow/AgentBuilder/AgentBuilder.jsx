@@ -671,6 +671,7 @@ export default function AgentBuilder({
   onSaveTemplate,
   onClose,
   onEdit,
+  onView,
   viewOnly = false,
   product = 'automotive',
   procedures = null,
@@ -2236,7 +2237,8 @@ export default function AgentBuilder({
               agentName={agentName}
               initialZoom={initialZoom}
               runDisabled={runDisabled}
-              onEdit={viewOnly ? onEdit : undefined}
+              onEdit={onEdit}
+              onView={onView}
               onRun={() => {
                 if (isReminderAgent) {
                   setBookTestModalOpen(true);

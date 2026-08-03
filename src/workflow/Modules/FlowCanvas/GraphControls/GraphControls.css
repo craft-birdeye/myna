@@ -30,6 +30,19 @@
   height: 36px;
 }
 
+/* Separate selector from .graph-controls__toggle (the orientation group) so the
+   view-only mode override that hides orientation controls doesn't also hide this. */
+.graph-controls__mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  padding: 4px;
+  height: 36px;
+}
+
 .graph-controls__toggle-btn {
   width: 24px;
   height: 24px;

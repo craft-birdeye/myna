@@ -47,7 +47,7 @@ export function AttachMenuPopover({ onSelect, disabled = false, className = '' }
           open ? 'bg-surface-hover text-text-primary' : ''
         }`}
       >
-        <Icon name="add" size={18} />
+        <Icon name="add" size={20} />
       </button>
 
       {open && (
