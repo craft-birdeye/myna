@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Chip, DataTable, EmptyState, Icon, type Column } from '../components'
 import { AiAgentIcon } from '../assets/AiAgentIcon'
 import { computeImpact, formatRecommendationDate, recommendationAgeMinutes, RECOMMENDATIONS, type Recommendation } from '../data/recommendationsData'
@@ -74,9 +75,58 @@ const COLUMNS: Column<RecommendationRow>[] = [
   },
 ]
 
+function DiscardRecommendationModal({
+  title,
+  onCancel,
+  onConfirm,
+}: {
+  title: string
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
+      <div className="w-[480px] rounded-md bg-surface p-xl shadow-modal">
+        <div className="flex items-center justify-between">
+          <h3 className="text-h3 text-text-primary">Discard the recommendation</h3>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close"
+            className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          >
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+        <p className="mt-lg text-body text-text-secondary">
+          Once you discard "<span className="text-text-primary">{title}</span>", all similar types of
+          recommendations will be discarded in the future as well. Are you sure you want to continue?
+        </p>
+        <div className="mt-xl flex items-center justify-end gap-md">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex h-9 items-center rounded-sm border border-border bg-surface px-lg text-body text-chip-danger-text hover:bg-surface-hover"
+          >
+            Discard
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function RecommendationsTab({ agentName, onSelect, isDraft = false }: RecommendationsTabProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
-  const { overrides } = useRecommendationOverridesStore()
+  const { overrides, setRecommendationStatus } = useRecommendationOverridesStore()
+  const [discardTarget, setDiscardTarget] = useState<RecommendationRow | null>(null)
   const feedbackForAgent = feedbackRecommendations.filter((rec) => rec.agentName === agentName)
   const combined = [...RECOMMENDATIONS, ...feedbackForAgent]
   const maxConversationCount = Math.max(0, ...combined.map((rec) => rec.conversationCount))
@@ -87,6 +137,9 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false }: Rec
       status: overrides[rec.id]?.status ?? 'open',
       ageMinutes: recommendationAgeMinutes(rec.timeAgo),
     }))
+    // Discarding a recommendation dismisses it from the list entirely — unlike Reject, which just
+    // flips its Status chip and keeps the row visible.
+    .filter((rec) => overrides[rec.id]?.status !== 'discarded')
     // Default order: most recent first — the table's own column sort takes over once a header is clicked.
     .sort((a, b) => a.ageMinutes - b.ageMinutes)
 
@@ -109,7 +162,25 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false }: Rec
         rowHeight={64}
         onRowClick={(rec) => onSelect(rec.id)}
         scrollOnHover
+        rowActions={[
+          {
+            icon: 'remove_circle',
+            label: 'Discard this recommendation',
+            onClick: (rec) => setDiscardTarget(rec),
+          },
+        ]}
       />
+
+      {discardTarget && (
+        <DiscardRecommendationModal
+          title={discardTarget.title}
+          onCancel={() => setDiscardTarget(null)}
+          onConfirm={() => {
+            setRecommendationStatus(discardTarget.id, 'discarded')
+            setDiscardTarget(null)
+          }}
+        />
+      )}
     </div>
   )
 }

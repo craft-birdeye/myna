@@ -11,7 +11,7 @@ const STORAGE_KEY = 'myna:recommendationOverrides'
 export interface RecommendationOverride {
   /** Proposed-steps overrides, keyed by gap type — supports recommendations with multiple change sections. */
   changeStepOverrides?: Partial<Record<GapType, ProcedureStep[]>>
-  status?: 'accepted' | 'rejected'
+  status?: 'accepted' | 'rejected' | 'discarded'
 }
 
 interface RecommendationOverridesStore {
@@ -22,7 +22,7 @@ interface RecommendationOverridesStore {
     text: string,
     forcedType?: GapType,
   ) => void
-  setRecommendationStatus: (id: string, status: 'accepted' | 'rejected') => void
+  setRecommendationStatus: (id: string, status: 'accepted' | 'rejected' | 'discarded') => void
   /** Wipes all copilot refinements and status for one recommendation, restoring the authored
    *  original — an escape hatch for clearing out test/junk input typed into the copilot box. */
   resetOverrides: (id: string) => void
@@ -86,7 +86,7 @@ export function RecommendationOverridesStoreProvider({ children }: { children: R
     })
   }
 
-  const setRecommendationStatus = (id: string, status: 'accepted' | 'rejected') => {
+  const setRecommendationStatus = (id: string, status: 'accepted' | 'rejected' | 'discarded') => {
     setOverrides((prev) => ({
       ...prev,
       [id]: { ...prev[id], status },

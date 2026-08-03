@@ -345,6 +345,7 @@ function ToolCallLine({ tool }: { tool: LogToolCall }) {
         <Icon name="build" size={16} className="shrink-0" />
         {tool.name}
         <Icon name="check_circle" size={16} fill className="shrink-0 text-accent-positive" />
+        {tool.durationLabel && <span className="shrink-0 whitespace-nowrap">• {tool.durationLabel}</span>}
         <Icon name={open ? 'expand_less' : 'expand_more'} size={16} className="shrink-0" />
       </button>
 
