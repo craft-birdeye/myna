@@ -5372,7 +5372,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             {createWorkflowOpen ? (
               // Reuses LHSDrawer's own tab/collapse-button classes (lhs-drawer__tab*,
               // lhs-drawer__collapse-btn) so this header matches the "edit agent" canvas panel exactly.
-              <div className="flex h-12 shrink-0 items-center gap-sm px-lg">
+              <div className="flex h-12 shrink-0 items-center gap-sm px-2xl">
                 <div className="lhs-drawer__tabs lhs-drawer__tabs--visible flex-1">
                   <div className={`group relative lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}>
                     <span className="lhs-drawer__tab-label">
@@ -5471,10 +5471,10 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 createFlowSubmitted || createWorkflowOpen
                   ? 'items-stretch overflow-visible'
                   : 'items-start overflow-auto pb-lg'
-              } ${createWorkflowOpen ? (createSideTab === 'manual' ? 'px-0 py-0' : 'px-md') : 'px-lg'}`}
+              } ${createWorkflowOpen ? (createSideTab === 'manual' ? 'px-0 py-0' : 'px-2xl') : 'px-lg'}`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
-                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer__body]:!px-lg [&_.lhs-drawer__body]:!pt-0">
+                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer\_\_body]:!px-2xl [&_.lhs-drawer\_\_body]:!pt-0">
                   <LHSDrawer
                     defaultTab="Create manually"
                     defaultOpenSection="Tasks"
