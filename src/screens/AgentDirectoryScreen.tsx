@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, type Metric } from '../components'
+import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Tabs, type Metric, type Tab } from '../components'
 import {
   getAgentDirectory,
   PERSONA_GROUPS,
@@ -11,6 +11,15 @@ type SortMode = 'runs' | 'persona' | 'custom'
 
 const STATUS_OPTIONS = ['All agents', 'Running', 'Paused', 'Needs attention']
 const DATE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
+
+// Co-worker brand names for the three persona groups — Jay (marketing), Myna
+// (operations/front desk), Robin (customer experience) — shown as tabs.
+// Healthcare only, for now.
+const COWORKER_NAME: Record<AgentPersonaId, string> = {
+  marketing: 'Jay',
+  operations: 'Myna',
+  cx: 'Robin',
+}
 
 // 16,230 → { display: '16.2K', exact: '16,230' }. Already-compact values ("1.9K", "434") pass through untouched.
 function formatK(raw: string): { display: string; exact?: string } {
@@ -487,7 +496,12 @@ export function AgentDirectoryScreen({
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
   const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
+  const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId | 'all'>('marketing')
   const dragIdRef = useRef<string | null>(null)
+
+  // "Co-workers" rebrand (tabs, renamed header, coworkers tile) — Healthcare
+  // only, for now. Dental/Automotive keep the original "Agents" experience.
+  const showCoworkers = product === 'healthcare'
 
   const statusFiltered = AGENT_DIRECTORY.filter((a) => {
     if (statusFilter === 'Running') return a.running > 0
@@ -515,6 +529,24 @@ export function AgentDirectoryScreen({
     return customOrder.indexOf(a.id) - customOrder.indexOf(b.id)
   })
 
+  // "All" tab plus one tab per coworker, sitting alongside the same sort
+  // dropdown used elsewhere — the tab narrows which agents show, the
+  // dropdown still controls their order within that set.
+  const coworkerFilteredAgents = [...(
+    activeCoworkerTab === 'all' ? statusFiltered : statusFiltered.filter((a) => a.persona === activeCoworkerTab)
+  )].sort((a, b) => {
+    if (sortMode === 'persona') {
+      const pa = PERSONA_GROUPS.findIndex((p) => p.id === a.persona)
+      const pb = PERSONA_GROUPS.findIndex((p) => p.id === b.persona)
+      return pa - pb || a.name.localeCompare(b.name)
+    }
+    return customOrder.indexOf(a.id) - customOrder.indexOf(b.id)
+  })
+  const COWORKER_TABS: Tab[] = [
+    { id: 'all', label: 'All' },
+    ...PERSONA_GROUPS.map((g) => ({ id: g.id, label: COWORKER_NAME[g.id] })),
+  ]
+
   const runningCount = AGENT_DIRECTORY.filter((a) => a.running > 0).length
   const attentionCount = AGENT_DIRECTORY.filter((a) => a.alert).length
   const totalTimeSavedHrs = AGENT_DIRECTORY.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
@@ -524,6 +556,7 @@ export function AgentDirectoryScreen({
   )
 
   const SUMMARY_METRICS: Metric[] = [
+    { id: 'coworkers', value: String(PERSONA_GROUPS.length), label: 'Co-workers' },
     { id: 'running', value: String(runningCount), label: 'Running agents' },
     { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved', delta: '16%', trend: 'up' },
     { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved', delta: '14%', trend: 'up' },
@@ -551,12 +584,16 @@ export function AgentDirectoryScreen({
 
   return (
     <div className="flex h-full flex-col">
-      <TopNav title="Agents" initials="S" />
+      <TopNav title={showCoworkers ? 'Co-workers' : 'Agents'} initials="S" />
 
       <div className="flex-1 overflow-auto bg-surface">
         <ReportHeader
-          title="Agents overview"
-          subtitle="Manage and monitor AI agents across your business."
+          title={showCoworkers ? 'Overview' : 'Agents overview'}
+          subtitle={
+            showCoworkers
+              ? 'Manage all your co-workers across your business.'
+              : 'Manage and monitor AI agents across your business.'
+          }
           rightSlot={
             <div className="flex shrink-0 items-center gap-sm">
               <TopBarDropdown value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} />
@@ -572,30 +609,50 @@ export function AgentDirectoryScreen({
         />
 
         <div className="flex flex-col gap-3xl px-2xl pb-2xl pt-sm">
-          <MetricTiles metrics={SUMMARY_METRICS} />
+          <MetricTiles metrics={showCoworkers ? SUMMARY_METRICS : SUMMARY_METRICS.filter((m) => m.id !== 'coworkers')} />
 
           <div className="flex flex-col gap-lg">
-            <div className="flex items-center justify-between gap-lg">
-              <h2 className="text-h3 text-text-primary">Agent directory</h2>
+            {!showCoworkers ? (
+              <div className="flex items-center justify-between gap-lg">
+                <h2 className="text-h3 text-text-primary">Agent directory</h2>
 
-              <SortDropdown
-                sortMode={sortMode}
-                personaFilter={personaFilter}
-                onSortModeChange={(m) => {
-                  setSortMode(m)
-                  if (m !== 'persona') setPersonaFilter(null)
-                }}
-                onPersonaFilterChange={setPersonaFilter}
-              />
-            </div>
+                <SortDropdown
+                  sortMode={sortMode}
+                  personaFilter={personaFilter}
+                  onSortModeChange={(m) => {
+                    setSortMode(m)
+                    if (m !== 'persona') setPersonaFilter(null)
+                  }}
+                  onPersonaFilterChange={setPersonaFilter}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-lg">
+                <Tabs
+                  tabs={COWORKER_TABS}
+                  activeTab={activeCoworkerTab}
+                  onChange={(id) => setActiveCoworkerTab(id as AgentPersonaId | 'all')}
+                />
 
-            {visibleAgents.length === 0 ? (
+                <SortDropdown
+                  sortMode={sortMode}
+                  personaFilter={personaFilter}
+                  onSortModeChange={(m) => {
+                    setSortMode(m)
+                    if (m !== 'persona') setPersonaFilter(null)
+                  }}
+                  onPersonaFilterChange={setPersonaFilter}
+                />
+              </div>
+            )}
+
+            {(showCoworkers ? coworkerFilteredAgents : visibleAgents).length === 0 ? (
               <div className="flex h-48 items-center justify-center text-body text-text-tertiary">
                 No agents match this persona yet.
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-lg">
-                {visibleAgents.map((agent) => (
+                {(showCoworkers ? coworkerFilteredAgents : visibleAgents).map((agent) => (
                   <AgentCard
                     key={agent.id}
                     agent={agent}
