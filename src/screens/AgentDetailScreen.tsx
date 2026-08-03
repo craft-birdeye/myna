@@ -5467,14 +5467,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               </div>
             )}
             <div
-              className={`scrollbar-subtle flex min-h-0 flex-1 justify-center pt-0 ${
+              className={`scrollbar-subtle flex min-h-0 flex-1 justify-center ${
                 createFlowSubmitted || createWorkflowOpen
                   ? 'items-stretch overflow-visible'
                   : 'items-start overflow-auto pb-lg'
-              } ${createWorkflowOpen ? (createSideTab === 'manual' ? 'px-0 py-0' : 'px-2xl') : 'px-lg'}`}
+              } ${createWorkflowOpen ? 'px-2xl pt-lg' : 'px-lg pt-0'}`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
-                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer\_\_body]:!px-2xl [&_.lhs-drawer\_\_body]:!pt-0">
+                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer\_\_body]:!p-0">
                   <LHSDrawer
                     defaultTab="Create manually"
                     defaultOpenSection="Tasks"
