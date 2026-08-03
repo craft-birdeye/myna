@@ -2433,7 +2433,7 @@ function ProcedurePreviewPanel({
 
       <div
         ref={bodyScrollRef}
-        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-md pb-3xl pt-lg"
+        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-lg pb-3xl pt-lg"
       >
         <div className="flex flex-col gap-sm">
           <p className="text-small text-text-secondary">
