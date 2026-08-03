@@ -1,5 +1,7 @@
+import { Fragment } from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { Chip, LogDetailsPanel } from '../components'
+import { CALL_LOG_STEPS } from '../components/LogDetailsPanel/LogDetailsPanel'
 import type { HealthcareLogRow, LogStatus } from '../data/healthcareAgentLogs'
 import StartNode from '../workflow/Molecules/Canvas/StartNode/StartNode'
 import CanvasNode from '../workflow/Molecules/Canvas/CanvasNode/CanvasNode'
@@ -67,14 +69,20 @@ function RunFlowConnector({
 
 const RUN_PROCEDURE_ITEMS = PROCEDURE_CHIPS.map((name) => ({ id: name, name }))
 
+// The canvas mirrors the Logs tab's step list (`CALL_LOG_STEPS`) exactly — one Task node per
+// task step — so the two never drift apart, for any log.
+const TASK_STEPS = CALL_LOG_STEPS.filter((step) => step.type === 'task')
+
 /* ── workflow canvas ── */
 function WorkflowCanvas({ instanceName, status }: { instanceName: string; status: LogStatus }) {
-  // A simple linear Trigger → Procedures flow: the trigger always fires (the conversation did
-  // start), so it's green whenever the run isn't itself still queued. If the run failed, the
-  // procedures step is where it halted — that one shows red instead of green.
+  // A simple linear Trigger → Tasks → Procedures flow: the trigger always fires (the conversation
+  // did start), so it's green whenever the run isn't itself still queued. If the run failed, the
+  // last step is where it halted — that one shows red instead of green.
   const halted = status === 'Failed'
   const triggerState = 'implemented'
+  const taskState = halted ? 'halted' : 'implemented'
   const proceduresState = halted ? 'halted' : 'implemented'
+  const proceduresStepNumber = TASK_STEPS.length + 2
 
   return (
     <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
@@ -117,11 +125,33 @@ function WorkflowCanvas({ instanceName, status }: { instanceName: string; status
           />
         </div>
 
+        {TASK_STEPS.map((step) => (
+          <Fragment key={step.id}>
+            <RunFlowConnector height={FLOW_CONNECTOR_GAP} showAdd />
+            <div className="flow-canvas__node-center">
+              <CanvasNode
+                nodeType="task"
+                label="Task"
+                stepNumber={step.stepNumber}
+                title={step.title}
+                description={step.tool ? `Tool : ${step.tool.name}` : ''}
+                titlePlaceholder=""
+                descriptionPlaceholder=""
+                viewOnly
+                state={taskState}
+                onToggleChange={() => {}}
+                onAddClick={() => {}}
+                onDelete={() => {}}
+              />
+            </div>
+          </Fragment>
+        ))}
+
         <RunFlowConnector height={FLOW_CONNECTOR_GAP} showAdd />
 
         <div className="flow-canvas__node-center">
           <ProceduresNode
-            stepNumber={3}
+            stepNumber={proceduresStepNumber}
             procedureItems={RUN_PROCEDURE_ITEMS as never[]}
             hasToggle
             toggleEnabled

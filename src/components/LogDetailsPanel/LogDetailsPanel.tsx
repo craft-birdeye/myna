@@ -32,7 +32,7 @@ function normalizeChannel(channel: string): Channel {
 
 // Logs-tab trigger/task steps for this call — mirrors the same lookup + booking tool calls shown
 // inline in the Conversation tab's transcript, just summarized as a run history.
-const CALL_LOG_STEPS: RunLogStep[] = [
+export const CALL_LOG_STEPS: RunLogStep[] = [
   {
     id: 'step-1',
     type: 'trigger',
@@ -169,6 +169,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "I'm really sorry you're dealing with that — a bad headache is no fun. Just so I point you in the right direction: is the pain coming from your teeth, jaw, or gums, or is it more of a general head pain?",
     llmResponseTime: '0.51s',
     tts: '820ms',
+    knowledgeBase: '5s',
     time: '5:31 PM',
     toolCall: {
       id: 'tool-1',
@@ -207,6 +208,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "Good to know there's no fever. Swelling near a tooth is still worth having a dentist look at soon, so let's get you an appointment rather than wait it out.",
     llmResponseTime: '0.39s',
     tts: '610ms',
+    knowledgeBase: '10s',
     time: '5:32 PM',
   },
   { id: 'sys2', role: 'system', text: 'Routed to appointment booking agent' },
@@ -420,11 +422,48 @@ function ToolCallLine({ tool }: { tool: LogToolCall }) {
   )
 }
 
-function agentMetaLine(entry: Extract<LogTranscriptEntry, { role: 'agent' }>): string | null {
-  const parts: string[] = []
-  if (entry.llmResponseTime) parts.push(`LLM : ${entry.llmResponseTime}`)
-  if (entry.tts) parts.push(`TTS : ${entry.tts}`)
-  return parts.length > 0 ? parts.join(' • ') : null
+/** Explains each meta-line abbreviation on hover — shown for LLM/TTS/KB (agent bubbles) and STT
+ *  (caller bubbles), all part of the same transcript-metrics family. */
+const META_LABEL_TOOLTIPS: Record<string, string> = {
+  LLM: 'Large language model',
+  TTS: 'Text to speech',
+  STT: 'Speech to text',
+  KB: 'Knowledge base',
+}
+
+function MetaLabel({ label }: { label: string }) {
+  return (
+    <Tooltip content={META_LABEL_TOOLTIPS[label]} variant="brief">
+      <span className="cursor-default">{label}</span>
+    </Tooltip>
+  )
+}
+
+/** Renders a set of "LABEL : value" segments (each label carrying its own explanatory tooltip),
+ *  joined by "•" — optionally followed by a plain trailing segment (e.g. a timestamp) that has no
+ *  tooltip of its own. */
+function MetaLine({ parts, trailing }: { parts: { label: string; value: string }[]; trailing?: string }) {
+  if (parts.length === 0 && !trailing) return null
+  return (
+    <span className="text-small text-text-tertiary">
+      {parts.map((part, i) => (
+        <span key={part.label}>
+          {i > 0 && ' • '}
+          <MetaLabel label={part.label} />
+          {` : ${part.value}`}
+        </span>
+      ))}
+      {trailing && `${parts.length > 0 ? ' • ' : ''}${trailing}`}
+    </span>
+  )
+}
+
+function agentMetaParts(entry: Extract<LogTranscriptEntry, { role: 'agent' }>): { label: string; value: string }[] {
+  const parts: { label: string; value: string }[] = []
+  if (entry.llmResponseTime) parts.push({ label: 'LLM', value: entry.llmResponseTime })
+  if (entry.tts) parts.push({ label: 'TTS', value: entry.tts })
+  if (entry.knowledgeBase) parts.push({ label: 'KB', value: entry.knowledgeBase })
+  return parts
 }
 
 function TranscriptEntry({
@@ -449,7 +488,7 @@ function TranscriptEntry({
   }
 
   if (entry.role === 'caller') {
-    const callerMeta = [entry.durationLabel && `STT : ${entry.durationLabel}`, entry.time].filter(Boolean).join(' • ')
+    const sttParts = entry.durationLabel ? [{ label: 'STT', value: entry.durationLabel }] : []
     return (
       <ChatBubble
         sender="user"
@@ -457,12 +496,12 @@ function TranscriptEntry({
         gap="gap-sm"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
-        {callerMeta && <span className="text-small text-text-tertiary">{callerMeta}</span>}
+        <MetaLine parts={sttParts} trailing={entry.time} />
       </ChatBubble>
     )
   }
 
-  const meta = agentMetaLine(entry)
+  const metaParts = agentMetaParts(entry)
 
   return (
     <>
@@ -473,7 +512,9 @@ function TranscriptEntry({
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
         <div className="flex w-full max-w-[85%] items-center gap-sm">
-          <span className="min-w-0 flex-1 text-small text-text-tertiary">{meta}</span>
+          <div className="min-w-0 flex-1">
+            <MetaLine parts={metaParts} />
+          </div>
           <div className="flex shrink-0 items-center gap-xs">
             {recId ? (
               <button

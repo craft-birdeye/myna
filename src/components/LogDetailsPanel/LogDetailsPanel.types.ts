@@ -43,6 +43,7 @@ export type LogTranscriptEntry =
       text: string
       llmResponseTime?: string
       tts?: string
+      knowledgeBase?: string
       toolCall?: LogToolCall
       /** Shown at the end of the meta line (e.g. "5:31 PM"). */
       time?: string
