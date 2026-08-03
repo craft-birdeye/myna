@@ -80,27 +80,35 @@ export function VoiceChatDrawer({
                   const recId = recIdByMessage[String(m.id)]
                   return (
                     <ChatBubble key={m.id} sender="business" text={m.text}>
-                      {recId ? (
-                        <button
-                          type="button"
-                          onClick={() => onTrackFeedback?.(recId)}
-                          className="flex items-center gap-xs text-small text-text-action hover:underline"
-                        >
-                          <TrackFeedbackIcon size={18} color="currentColor" />
-                          Track your feedback
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
-                          }
-                          className="flex items-center gap-xs text-small text-text-action hover:underline"
-                        >
-                          <TrainAgentIcon size={18} color="currentColor" />
-                          Coach agent
-                        </button>
-                      )}
+                      <div className="flex items-center gap-xs">
+                        {recId ? (
+                          <button
+                            type="button"
+                            onClick={() => onTrackFeedback?.(recId)}
+                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                          >
+                            <TrackFeedbackIcon size={18} color="currentColor" />
+                            Track your feedback
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
+                            }
+                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                          >
+                            <TrainAgentIcon size={18} color="currentColor" />
+                            Coach agent
+                          </button>
+                        )}
+                        {m.time && (
+                          <>
+                            <span className="text-small text-text-tertiary">•</span>
+                            <span className="text-small text-text-tertiary">{m.time}</span>
+                          </>
+                        )}
+                      </div>
                     </ChatBubble>
                   )
                 }

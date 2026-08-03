@@ -43,10 +43,11 @@ export type LogTranscriptEntry =
       text: string
       llmResponseTime?: string
       tts?: string
-      knowledgeBase?: string
       toolCall?: LogToolCall
+      /** Shown at the end of the meta line (e.g. "5:31 PM"). */
+      time?: string
     }
-  | { id: string; role: 'caller'; text: string; durationLabel?: string }
+  | { id: string; role: 'caller'; text: string; durationLabel?: string; time?: string }
 
 export interface LogDetailsPanelProps {
   row: HealthcareLogRow
@@ -56,4 +57,7 @@ export interface LogDetailsPanelProps {
   transcript?: LogTranscriptEntry[]
   durationSecs?: number
   audioUrl?: string
+  /** Called when a "Track your feedback" link is clicked — the host screen navigates to that
+   *  recommendation's detail page. */
+  onTrackFeedback?: (recommendationId: string) => void
 }

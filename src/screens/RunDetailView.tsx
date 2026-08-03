@@ -1,6 +1,6 @@
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { Chip, LogDetailsPanel } from '../components'
-import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
+import type { HealthcareLogRow, LogStatus } from '../data/healthcareAgentLogs'
 import StartNode from '../workflow/Molecules/Canvas/StartNode/StartNode'
 import CanvasNode from '../workflow/Molecules/Canvas/CanvasNode/CanvasNode'
 import ProceduresNode from '../workflow/Molecules/Canvas/ProceduresNode/ProceduresNode'
@@ -20,6 +20,9 @@ interface RunDetailViewProps {
    *  onto any feedback submitted from this run's transcript so it lands on the right agent's
    *  Recommendation tab. */
   instanceName?: string
+  /** Called when a "Track your feedback" link is clicked — the host screen navigates to that
+   *  recommendation's detail page. */
+  onTrackFeedback?: (recommendationId: string) => void
 }
 
 const PROCEDURE_CHIPS = [
@@ -65,7 +68,14 @@ function RunFlowConnector({
 const RUN_PROCEDURE_ITEMS = PROCEDURE_CHIPS.map((name) => ({ id: name, name }))
 
 /* ── workflow canvas ── */
-function WorkflowCanvas({ instanceName }: { instanceName: string }) {
+function WorkflowCanvas({ instanceName, status }: { instanceName: string; status: LogStatus }) {
+  // A simple linear Trigger → Procedures flow: the trigger always fires (the conversation did
+  // start), so it's green whenever the run isn't itself still queued. If the run failed, the
+  // procedures step is where it halted — that one shows red instead of green.
+  const halted = status === 'Failed'
+  const triggerState = 'implemented'
+  const proceduresState = halted ? 'halted' : 'implemented'
+
   return (
     <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
       <div
@@ -100,6 +110,7 @@ function WorkflowCanvas({ instanceName }: { instanceName: string }) {
             titlePlaceholder=""
             descriptionPlaceholder=""
             viewOnly
+            state={triggerState}
             onToggleChange={() => {}}
             onAddClick={() => {}}
             onDelete={() => {}}
@@ -116,6 +127,7 @@ function WorkflowCanvas({ instanceName }: { instanceName: string }) {
             toggleEnabled
             toggleDisabled
             viewOnly
+            state={proceduresState}
             onToggleChange={() => {}}
             onDelete={() => {}}
             onMoveUp={() => {}}
@@ -133,7 +145,7 @@ function WorkflowCanvas({ instanceName }: { instanceName: string }) {
 }
 
 /* ── main export ── */
-export function RunDetailView({ row, onBack, instanceName = 'Front desk agent north region' }: RunDetailViewProps) {
+export function RunDetailView({ row, onBack, instanceName = 'Front desk agent north region', onTrackFeedback }: RunDetailViewProps) {
   const statusVariant =
     row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
 
@@ -155,10 +167,10 @@ export function RunDetailView({ row, onBack, instanceName = 'Front desk agent no
 
       {/* Body — full-bleed canvas with overlaid details panel (matches trigger/task RHS) */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <WorkflowCanvas instanceName={instanceName} />
+        <WorkflowCanvas instanceName={instanceName} status={row.status} />
 
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
-          <LogDetailsPanel row={row} agentName={instanceName} />
+          <LogDetailsPanel row={row} agentName={instanceName} onTrackFeedback={onTrackFeedback} />
         </div>
       </div>
     </div>

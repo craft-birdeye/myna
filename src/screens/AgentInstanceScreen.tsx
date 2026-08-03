@@ -388,6 +388,11 @@ export function AgentInstanceScreen({
             row={selectedRun}
             instanceName={instanceName}
             onBack={() => setSelectedRun(null)}
+            onTrackFeedback={(recommendationId) => {
+              setSelectedRun(null)
+              setActiveTab('recommendation')
+              setSelectedRecommendationId(recommendationId)
+            }}
           />
         </div>
       </div>

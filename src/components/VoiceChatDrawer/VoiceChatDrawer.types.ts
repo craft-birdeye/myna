@@ -2,6 +2,8 @@ export interface VoiceChatMessage {
   id: string | number
   role: 'system' | 'agent' | 'user'
   text: string
+  /** Shown beside "Coach agent" / "Track your feedback" on this bubble (e.g. "5:23 PM"). */
+  time?: string
 }
 
 export interface VoiceChatDrawerProps {

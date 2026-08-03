@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { TrackFeedbackIcon } from '../../assets/TrackFeedbackIcon'
+import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
-import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
 import { RunDetailsPanel } from '../RunDetailsPanel/RunDetailsPanel'
@@ -153,12 +154,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?',
     llmResponseTime: '0.42s',
     tts: '700ms',
+    time: '5:30 PM',
   },
   {
     id: 'c1',
     role: 'caller',
     text: 'I am having a very bad headache. I think it is migraine.',
     durationLabel: '5s',
+    time: '5:30 PM',
   },
   {
     id: 'a2',
@@ -166,7 +169,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "I'm really sorry you're dealing with that — a bad headache is no fun. Just so I point you in the right direction: is the pain coming from your teeth, jaw, or gums, or is it more of a general head pain?",
     llmResponseTime: '0.51s',
     tts: '820ms',
-    knowledgeBase: '5s',
+    time: '5:31 PM',
     toolCall: {
       id: 'tool-1',
       name: 'Patient record - Lookup',
@@ -181,6 +184,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: 'Now that you ask — it kind of started near my back tooth and spread up.',
     durationLabel: '4s',
+    time: '5:31 PM',
   },
   {
     id: 'a3',
@@ -188,12 +192,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you, that helps. Pain that radiates from a tooth can sometimes need prompt attention. Are you having any swelling in your face or jaw, fever, or trouble swallowing or breathing?',
     llmResponseTime: '0.48s',
     tts: '640ms',
+    time: '5:31 PM',
   },
   {
     id: 'c3',
     role: 'caller',
     text: 'A little swelling near the tooth, no fever',
     durationLabel: '3s',
+    time: '5:32 PM',
   },
   {
     id: 'a4',
@@ -201,6 +207,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "Good to know there's no fever. Swelling near a tooth is still worth having a dentist look at soon, so let's get you an appointment rather than wait it out.",
     llmResponseTime: '0.39s',
     tts: '610ms',
+    time: '5:32 PM',
   },
   { id: 'sys2', role: 'system', text: 'Routed to appointment booking agent' },
   { id: 'sys3', role: 'system', text: 'Procedure switched : Book appointment' },
@@ -210,12 +217,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'I have an opening this Thursday at 2 PM with Dr. Patel — would that work for you?',
     llmResponseTime: '0.35s',
     tts: '580ms',
+    time: '5:32 PM',
   },
   {
     id: 'c4',
     role: 'caller',
     text: 'Yes please, Thursday at 2 PM works.',
     durationLabel: '3s',
+    time: '5:33 PM',
   },
   {
     id: 'a6',
@@ -223,6 +232,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "You're all set for Thursday at 2 PM with Dr. Patel. Anything else I can help with?",
     llmResponseTime: '0.31s',
     tts: '520ms',
+    time: '5:33 PM',
     toolCall: {
       id: 'tool-2',
       name: 'Schedule Appointment',
@@ -246,6 +256,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: "No, that's all. Thank you!",
     durationLabel: '2s',
+    time: '5:33 PM',
   },
 ]
 
@@ -302,7 +313,12 @@ function NestedObjectBlock({
   )
 }
 
-function ToolCallBlock({ tool }: { tool: LogToolCall }) {
+/** "Show info" dropdown under an agent bubble — reveals LLM response time / TTS / knowledge base
+ *  / tool response time meta. Tool calls themselves render separately via `ToolCallLine`. */
+/** A tool call this turn made, rendered as its own centered line (matching the style of system
+ *  events like "Routed to appointment booking agent") instead of an inline pill — click to
+ *  expand its structured output below it. */
+function ToolCallLine({ tool }: { tool: LogToolCall }) {
   const [open, setOpen] = useState(false)
   const [inputsOpen, setInputsOpen] = useState(false)
 
@@ -315,55 +331,39 @@ function ToolCallBlock({ tool }: { tool: LogToolCall }) {
     }))
 
   function handleCopy() {
-    const text = JSON.stringify(
-      {
-        name: tool.name,
-        output,
-        inputs: tool.inputs,
-      },
-      null,
-      2,
-    )
+    const text = JSON.stringify({ name: tool.name, output, inputs: tool.inputs }, null, 2)
     void navigator.clipboard?.writeText(text)
   }
 
   return (
-    <div className="w-[380px] max-w-full rounded-md bg-surface-l2">
-      {/* Header row — same background as the expanded body, no seam on open */}
+    <div className="flex flex-col items-center gap-sm py-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-end gap-sm px-[12px] py-sm text-left text-small hover:opacity-80"
+        className="flex items-center gap-xs text-small text-text-tertiary hover:text-text-secondary"
       >
-        <Icon
-          name={open ? 'expand_more' : 'chevron_right'}
-          size={16}
-          className="shrink-0 text-text-tertiary"
-        />
-        <span className="truncate text-text-action">Tool : {tool.name}</span>
+        <Icon name="build" size={16} className="shrink-0" />
+        {tool.name}
         <Icon name="check_circle" size={16} fill className="shrink-0 text-accent-positive" />
-        <span className="shrink-0 text-text-tertiary">
-          {`{ ${tool.propertyCount} properties }`}
-          {tool.durationLabel ? ` • ${tool.durationLabel}` : ''}
-        </span>
+        <Icon name={open ? 'expand_less' : 'expand_more'} size={16} className="shrink-0" />
       </button>
 
       {open && (
-        <div className="relative px-[12px] pb-sm">
-          <div className="absolute right-[12px] top-0 z-[1]">
+        <div className="relative w-[380px] max-w-full rounded-lg bg-surface-l2 px-md py-md">
+          <div className="absolute right-md top-md z-[1]">
             <Tooltip content="Copy" variant="brief">
               <button
                 type="button"
                 onClick={handleCopy}
                 aria-label="Copy"
-                className="flex size-7 items-center justify-center rounded-sm text-text-tertiary hover:bg-surface-hover hover:text-text-icon"
+                className="flex size-7 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-icon"
               >
                 <Icon name="content_copy" size={16} />
               </button>
             </Tooltip>
           </div>
 
-          <div className="flex flex-col gap-xs">
+          <div className="flex flex-col gap-xs pr-2xl">
             {output.map((entry, i) => {
               if (entry.kind === 'field') {
                 return <FieldRow key={`${entry.key}-${i}`} fieldKey={entry.key} value={entry.value} />
@@ -421,21 +421,23 @@ function ToolCallBlock({ tool }: { tool: LogToolCall }) {
 
 function agentMetaLine(entry: Extract<LogTranscriptEntry, { role: 'agent' }>): string | null {
   const parts: string[] = []
-  if (entry.llmResponseTime) parts.push(`LLM response time : ${entry.llmResponseTime}`)
+  if (entry.llmResponseTime) parts.push(`LLM : ${entry.llmResponseTime}`)
   if (entry.tts) parts.push(`TTS : ${entry.tts}`)
-  if (entry.knowledgeBase) parts.push(`Knowledge base : ${entry.knowledgeBase}`)
   return parts.length > 0 ? parts.join(' • ') : null
 }
 
 function TranscriptEntry({
   entry,
-  feedback,
-  onFeedbackChange,
+  recId,
+  onCoachAgent,
+  onTrackFeedback,
 }: {
   entry: LogTranscriptEntry
-  /** Only meaningful for `role: 'agent'` entries — the other roles never show thumbs. */
-  feedback?: MessageFeedbackValue
-  onFeedbackChange?: (value: MessageFeedbackValue) => void
+  /** Only meaningful for `role: 'agent'` entries — the other roles never show Coach agent. Set
+   *  once feedback has been submitted for this message, switching it to "Track your feedback". */
+  recId?: string
+  onCoachAgent?: () => void
+  onTrackFeedback?: () => void
 }) {
   if (entry.role === 'system') {
     return (
@@ -446,6 +448,7 @@ function TranscriptEntry({
   }
 
   if (entry.role === 'caller') {
+    const callerMeta = [entry.durationLabel && `STT : ${entry.durationLabel}`, entry.time].filter(Boolean).join(' • ')
     return (
       <ChatBubble
         sender="user"
@@ -453,9 +456,7 @@ function TranscriptEntry({
         gap="gap-sm"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
-        {entry.durationLabel && (
-          <span className="text-small text-text-tertiary">STT : {entry.durationLabel}</span>
-        )}
+        {callerMeta && <span className="text-small text-text-tertiary">{callerMeta}</span>}
       </ChatBubble>
     )
   }
@@ -463,18 +464,46 @@ function TranscriptEntry({
   const meta = agentMetaLine(entry)
 
   return (
-    <ChatBubble
-      sender="business"
-      text={entry.text}
-      gap="gap-sm"
-      bubbleClassName="max-w-[85%] px-lg py-md"
-      showFeedback
-      feedback={feedback}
-      onFeedbackChange={onFeedbackChange}
-      footer={entry.toolCall && <ToolCallBlock tool={entry.toolCall} />}
-    >
-      {meta && <span className="text-small text-text-tertiary">{meta}</span>}
-    </ChatBubble>
+    <>
+      <ChatBubble
+        sender="business"
+        text={entry.text}
+        gap="gap-sm"
+        bubbleClassName="max-w-[85%] px-lg py-md"
+      >
+        <div className="flex w-full max-w-[85%] items-center gap-sm">
+          <span className="min-w-0 flex-1 text-small text-text-tertiary">{meta}</span>
+          <div className="flex shrink-0 items-center gap-xs">
+            {recId ? (
+              <button
+                type="button"
+                onClick={onTrackFeedback}
+                className="flex items-center gap-xs text-small text-text-action hover:underline"
+              >
+                <TrackFeedbackIcon size={18} color="currentColor" />
+                Track your feedback
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onCoachAgent}
+                className="flex items-center gap-xs text-small text-text-action hover:underline"
+              >
+                <TrainAgentIcon size={18} color="currentColor" />
+                Coach agent
+              </button>
+            )}
+            {entry.time && (
+              <>
+                <span className="shrink-0 text-small text-text-tertiary">•</span>
+                <span className="shrink-0 text-small text-text-tertiary">{entry.time}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </ChatBubble>
+      {entry.toolCall && <ToolCallLine tool={entry.toolCall} />}
+    </>
   )
 }
 
@@ -484,13 +513,15 @@ export function LogDetailsPanel({
   transcript = DEFAULT_TRANSCRIPT,
   durationSecs,
   audioUrl = voicemailSample,
+  onTrackFeedback,
 }: LogDetailsPanelProps) {
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
 
-  // Same thumbs up/down → "share feedback" flow as the Inbox transcript view — thumbs-up
-  // commits immediately, thumbs-down opens the modal and only commits on submit.
+  // Same "Coach agent" → "Track your feedback" flow as the Inbox transcript view — Coach agent
+  // opens the Share-feedback modal; once submitted, that message's link switches to "Track your
+  // feedback", pointing at the recommendation the feedback landed on.
   const { submitFeedback } = useFeedbackRecommendationsStore()
-  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
   const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -500,15 +531,6 @@ export function LogDetailsPanel({
     setToastVisible(true)
   }
 
-  const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
-    if (value === 'down') {
-      setShareFeedbackMessageId(messageId)
-      return
-    }
-    setMessageFeedback((prev) => ({ ...prev, [messageId]: value }))
-    if (value === 'up') showFeedbackToast('Thanks for the feedback!')
-  }
-
   const handleShareFeedbackClose = () => {
     setShareFeedbackMessageId(null)
   }
@@ -516,11 +538,10 @@ export function LogDetailsPanel({
   const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
     const feedbackMessageId = shareFeedbackMessageId
-    setMessageFeedback((prev) => ({ ...prev, [feedbackMessageId]: 'down' }))
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
 
-    submitFeedback({
+    const recId = submitFeedback({
       text: details,
       agentName,
       conversation: {
@@ -533,11 +554,7 @@ export function LogDetailsPanel({
       conversationId: row.timestamp,
       messageId: feedbackMessageId,
     })
-  }
-
-  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
-    if (shareFeedbackMessageId === messageId) return 'down'
-    return messageFeedback[messageId] ?? null
+    setRecIdByMessage((prev) => ({ ...prev, [feedbackMessageId]: recId }))
   }
 
   // Chat auto-scrolls to track the call recording's playhead — the waveform itself stays put
@@ -593,9 +610,12 @@ export function LogDetailsPanel({
                   <TranscriptEntry
                     key={entry.id}
                     entry={entry}
-                    feedback={entry.role === 'agent' ? feedbackForMessage(entry.id) : undefined}
-                    onFeedbackChange={
-                      entry.role === 'agent' ? (value) => handleFeedbackChange(entry.id, value) : undefined
+                    recId={entry.role === 'agent' ? recIdByMessage[entry.id] : undefined}
+                    onCoachAgent={entry.role === 'agent' ? () => setShareFeedbackMessageId(entry.id) : undefined}
+                    onTrackFeedback={
+                      entry.role === 'agent'
+                        ? () => recIdByMessage[entry.id] && onTrackFeedback?.(recIdByMessage[entry.id])
+                        : undefined
                     }
                   />
                 ))}
