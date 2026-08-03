@@ -4170,6 +4170,18 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         <div className="flex min-h-40 shrink-0 flex-col gap-md rounded-lg border border-border-selected bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
+          {landingAttachments.length > 0 && (
+            <div className="flex flex-wrap items-center gap-sm">
+              {landingAttachments.map((item) => (
+                <RefChip
+                  key={item.id}
+                  kind={item.kind}
+                  label={item.label}
+                  onRemove={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
+                />
+              ))}
+            </div>
+          )}
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -4185,9 +4197,16 @@ function HealthcareFrontdeskCreateAgentLive({
           />
           <div className="mt-auto flex items-center justify-between">
             <div className="flex items-center gap-sm text-text-icon">
-              <Tooltip content="Add files" variant="brief">
-                <button type="button" aria-label="Add files" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="attach_file" size={22} />
+              <AttachMenuPopover
+                onSelect={(option) => {
+                  if (option === 'upload-image') landingImageInputRef.current?.click()
+                  else if (option === 'media-library') setMediaLibraryOpen(true)
+                  else if (option === 'files') setFilesModalOpen(true)
+                }}
+              />
+              <Tooltip content="Dictate" variant="brief">
+                <button type="button" aria-label="Dictate" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
+                  <Icon name="mic" size={18} />
                 </button>
               </Tooltip>
               <Tooltip content="Add context" variant="brief">
@@ -4216,6 +4235,43 @@ function HealthcareFrontdeskCreateAgentLive({
             </button>
           </div>
         </div>
+
+        <input
+          ref={landingImageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              setLandingAttachments((prev) => [
+                ...prev,
+                { id: `image-${Date.now()}`, kind: 'file', label: file.name },
+              ])
+            }
+            e.target.value = ''
+          }}
+        />
+        <MediaLibraryModal
+          open={mediaLibraryOpen}
+          onClose={() => setMediaLibraryOpen(false)}
+          onDone={(selected) =>
+            setLandingAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
+        <FilesModal
+          open={filesModalOpen}
+          onClose={() => setFilesModalOpen(false)}
+          onDone={(selected) =>
+            setLandingAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
       </div>
     )
   }
@@ -4246,22 +4302,14 @@ function HealthcareFrontdeskCreateAgentLive({
       <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
         <div className="flex flex-col gap-md rounded-[14px] bg-surface px-lg py-md shadow-card">
           {landingAttachments.length > 0 && (
-            <div className="flex flex-wrap gap-sm">
+            <div className="flex flex-wrap items-center gap-sm">
               {landingAttachments.map((item) => (
-                <span
+                <RefChip
                   key={item.id}
-                  className="flex h-7 items-center gap-xs rounded-sm bg-chip-neutral-bg pl-sm pr-xs text-body text-text-primary"
-                >
-                  {item.label}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${item.label}`}
-                    onClick={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
-                    className="flex size-5 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-l2"
-                  >
-                    <Icon name="close" size={16} />
-                  </button>
-                </span>
+                  kind={item.kind}
+                  label={item.label}
+                  onRemove={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
+                />
               ))}
             </div>
           )}
@@ -4962,6 +5010,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
     setCreateLeftPaneCollapsed(false)
+    setCanvasProcedureId(null)
+    setInlineProcedureOpen(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
   }
 
@@ -5267,8 +5317,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              <div className="flex h-14 shrink-0 items-end justify-between gap-md px-lg">
-                <div className="flex items-end gap-xl">
+              <div className="relative flex h-14 shrink-0 items-center px-lg">
+                <div className="absolute left-1/2 top-0 flex h-14 -translate-x-1/2 items-end gap-xl whitespace-nowrap">
                   <div className="group relative flex h-10 items-center gap-xs px-sm text-body">
                     <button
                       type="button"
@@ -5315,7 +5365,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   aria-label="Collapse panel"
                   title="Collapse panel"
                   onClick={() => setCreateLeftPaneCollapsed(true)}
-                  className="mb-xs flex size-8 shrink-0 items-center justify-center self-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                  className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                 >
                   <Icon name="left_panel_close" size={20} />
                 </button>
@@ -5439,7 +5489,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               aria-label="Expand panel"
               title="Expand panel"
               onClick={() => setCreateLeftPaneCollapsed(false)}
-              className="absolute bottom-sm left-sm z-10 flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon shadow-card hover:bg-surface-l2"
+              className="absolute left-sm top-[calc(52px+theme(spacing.sm))] z-10 flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon shadow-card hover:bg-surface-l2"
             >
               <Icon name="left_panel_open" size={20} />
             </button>
@@ -5461,7 +5511,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
                 hideLhs
-                createAiPanelOpen={createWorkflowOpen}
+                createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
                 previewProcedureId={canvasProcedureId}
                 previewProcedureDetail={
                   canvasProcedureId === REMINDER_CALL_PROCEDURE_NAME

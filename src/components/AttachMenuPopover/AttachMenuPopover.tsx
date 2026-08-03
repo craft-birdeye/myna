@@ -59,7 +59,7 @@ export function AttachMenuPopover({ onSelect, disabled = false, className = '' }
               onClick={() => pick(opt.id)}
               className="flex w-full items-center gap-md px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
             >
-              <Icon name={opt.icon} size={22} className="shrink-0 text-text-icon" />
+              <Icon name={opt.icon} size={18} className="shrink-0 text-[#303030]" />
               {opt.label}
             </button>
           ))}

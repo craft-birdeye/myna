@@ -89,6 +89,18 @@
   transition: flex 0.2s ease;
 }
 
+/* Reserves the width of the floating "Create with AI" panel (docked over the
+   canvas from outside AgentBuilder) so the canvas's own centered content
+   (toolbar, etc.) centers within the visible area instead of the full width. */
+.agent-builder__ai-panel-spacer {
+  flex: 0 0 0px;
+  transition: flex-basis 0.3s ease-in-out;
+}
+
+.agent-builder__ai-panel-spacer--open {
+  flex-basis: 392px;
+}
+
 .agent-builder__canvas--with-rhs {
   flex: 1;
 }

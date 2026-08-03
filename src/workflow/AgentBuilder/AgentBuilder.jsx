@@ -2215,6 +2215,13 @@ export default function AgentBuilder({
             </button>
           )}
 
+          {hideLhs && (
+            <div
+              className={`agent-builder__ai-panel-spacer${createAiPanelOpen ? ' agent-builder__ai-panel-spacer--open' : ''}`}
+              aria-hidden
+            />
+          )}
+
           <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
             <FlowCanvas
               nodes={nodes}
