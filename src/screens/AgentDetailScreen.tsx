@@ -5317,13 +5317,13 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              <div className="relative flex h-14 shrink-0 items-center px-lg">
+              <div className="relative flex h-14 shrink-0 items-end px-lg pb-sm">
                 <div className="absolute left-1/2 top-0 flex h-14 -translate-x-1/2 items-end gap-xl whitespace-nowrap">
-                  <div className="group relative flex h-10 items-center gap-xs px-sm text-body">
+                  <div className="group relative flex h-10 items-center justify-center px-sm text-body">
                     <button
                       type="button"
                       onClick={() => setCreateSideTab('ai')}
-                      className={`flex items-center gap-xs ${
+                      className={`flex items-center gap-xs transition-transform duration-150 ease-out group-hover:-translate-x-[11px] ${
                         createSideTab === 'ai' ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
                       }`}
                     >
@@ -5338,7 +5338,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       aria-label="Expand"
                       title="Expand to full page"
                       onClick={closeCreateWorkflow}
-                      className="flex size-5 shrink-0 items-center justify-center rounded-sm text-text-icon opacity-0 transition-opacity hover:bg-surface-hover group-hover:opacity-100"
+                      className="absolute left-full top-1/2 ml-[2px] flex size-5 shrink-0 -translate-y-1/2 scale-90 items-center justify-center rounded-sm text-text-icon opacity-0 transition-[opacity,transform] duration-150 ease-out hover:bg-surface-hover group-hover:scale-100 group-hover:opacity-100"
                     >
                       <Icon name="open_in_full" size={14} />
                     </button>
