@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  ChatHistoryPanel,
   Chip,
   ComposerAttachPopover,
   CustomizeColumnsDrawer,
@@ -37,7 +36,7 @@ import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
+import { rememberCreateAgentChat } from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -4925,14 +4924,6 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [inlineProcedureOpen, setInlineProcedureOpen] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
-  /** Recent-chats rail shown alongside the create-agent flow — null = "All chats" (fresh). */
-  const [chatHistorySelectedId, setChatHistorySelectedId] = useState<string | null>(null)
-  /** Chats saved via "Save agent" from the full-page co-pilot — prepended to the recent list. */
-  const [savedCreateChats, setSavedCreateChats] = useState<ChatHistoryTranscript[]>(() =>
-    (['frontdesk', 'reminder'] as const)
-      .map((v) => getLastSavedCreateChat(v))
-      .filter((c): c is ChatHistoryTranscript => Boolean(c)),
-  )
   const { procedures: procedureLibrary } = useProcedureStore()
 
   const openCreateFlow = () => {
@@ -4945,32 +4936,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
-    setChatHistorySelectedId(null)
     setShowCreateFlow(true)
-  }
-
-  const selectChatHistoryItem = (id: string) => {
-    setChatHistorySelectedId(id)
-    setCreateFlowKey((k) => k + 1)
-    setShowSetupWizard(false)
-    setCreateWorkflowOpen(false)
-    setCreateWorkflowMounted(false)
-    setCreateFlowSubmitted(false)
-    setCreateDraftAgentName(null)
-    setCanvasProcedureId(null)
-    setInlineProcedureOpen(false)
-  }
-
-  const selectAllChats = () => {
-    setChatHistorySelectedId(null)
-    setCreateFlowKey((k) => k + 1)
-    setShowSetupWizard(false)
-    setCreateWorkflowOpen(false)
-    setCreateWorkflowMounted(false)
-    setCreateFlowSubmitted(false)
-    setCreateDraftAgentName(null)
-    setCanvasProcedureId(null)
-    setInlineProcedureOpen(false)
   }
 
   const openCreateWorkflow = () => {
@@ -4988,7 +4954,6 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
   const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
     if (options?.chat) {
-      setSavedCreateChats((prev) => [options.chat!, ...prev.filter((c) => c.id !== options.chat!.id)])
       rememberCreateAgentChat(isReminder ? 'reminder' : 'frontdesk', options.chat)
     }
     setShowCreateFlow(false)
@@ -5117,10 +5082,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
 
   useEffect(() => {
-    const isAgentSetupActive = (isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)
+    // Setup wizard is full-bleed (no SideNav). Create-with-AI keeps SideNav.
+    const isAgentSetupActive = (isFrontdesk || isReminder) && showSetupWizard
     onAgentSetupActiveChange?.(isAgentSetupActive)
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, isReminder, showCreateFlow, showSetupWizard, onAgentSetupActiveChange])
+  }, [isFrontdesk, isReminder, showSetupWizard, onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     { key: 'name', label: 'Agent name', width: 230, sortable: true, locked: true },
     {
@@ -5247,33 +5213,13 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
   if (showCreateFlow && (isFrontdesk || isReminder)) {
     const isHealthcareFrontdesk = product === 'healthcare'
-    const chatHistoryTitle = 'Front desk'
-    const createVariant = isReminder ? 'reminder' : 'frontdesk'
-    const staticChatHistory = isFrontdesk ? FRONTDESK_CHAT_HISTORY : REMINDER_CHAT_HISTORY
-    const chatHistoryItems = [
-      ...savedCreateChats.filter((c) => !c.variant || c.variant === createVariant),
-      ...staticChatHistory,
-    ]
-    const historyChat = chatHistorySelectedId
-      ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
-      : null
-    const createTitle = historyChat?.draftTitle
-      ?? createDraftAgentName
+    const createTitle = createDraftAgentName
       ?? (isFrontdesk ? 'New front desk agent' : 'New reminder agent')
     const createWorkflowAgentName = createDraftAgentName
       ?? (isReminder ? REMINDER_BUILD_CARD.title : FRONTDESK_BUILD_CARD.title)
 
     return (
       <div className="flex h-full">
-        {!createWorkflowOpen && !createFlowSubmitted && (
-          <ChatHistoryPanel
-            title={chatHistoryTitle}
-            items={chatHistoryItems}
-            selectedId={chatHistorySelectedId}
-            onSelect={selectChatHistoryItem}
-            onAllChats={selectAllChats}
-          />
-        )}
         <div className="flex h-full min-w-0 flex-1 flex-col">
         <TopNav initials="S" />
         <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
@@ -5320,10 +5266,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   <div className="flex w-full min-w-0 max-w-[720px] items-center gap-sm">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (chatHistorySelectedId) selectAllChats()
-                        else setShowCreateFlow(false)
-                      }}
+                      onClick={() => setShowCreateFlow(false)}
                       className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
                       aria-label="Back"
                     >
@@ -5378,23 +5321,15 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 >
                   <HealthcareFrontdeskCreateAgentScreen
                     key={createFlowKey}
-                    onBack={() => {
-                      if (chatHistorySelectedId) selectAllChats()
-                      else setShowCreateFlow(false)
-                    }}
+                    onBack={() => setShowCreateFlow(false)}
                     onSubmittedChange={setCreateFlowSubmitted}
                     onCreateFromScratch={() => setShowSetupWizard(true)}
                     onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
                     onCreateAgent={handleCreateAgentSuccess}
                     onViewWorkflow={isReminder ? openCreateWorkflow : undefined}
                     libraryCards={isReminder ? REMINDER_CREATE_CARDS : undefined}
-                    initialPrompt={
-                      historyChat?.prompt
-                      ?? (isReminder ? REMINDER_CREATE_PROMPT : undefined)
-                    }
+                    initialPrompt={isReminder ? REMINDER_CREATE_PROMPT : undefined}
                     autoStart={false}
-                    historyChatId={chatHistorySelectedId}
-                    historyChat={historyChat}
                     fromScratchLabel={isReminder ? 'Create from scratch' : 'Setup manually'}
                     variant={isReminder ? 'reminder' : 'frontdesk'}
                     workflowVisible={createWorkflowOpen}
