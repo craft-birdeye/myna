@@ -126,6 +126,15 @@ function makeLink(overrides?: Record<number, string>, nameToIndex?: Map<string, 
   }
 }
 
+// Shared floating-tooltip chrome — flat (no shadow), matches the `ChartTooltip` used by every
+// other chart in the dashboard (bg-surface, rounded-md), with a hairline border standing in for
+// the elevation a shadow would otherwise give. `shown` drives a subtle slide + fade transition;
+// callers keep rendering the last data for a beat after hiding so the exit animation can play.
+const FLOATING_TOOLTIP_BASE =
+  'fixed z-[9999] rounded-md border border-border bg-surface pointer-events-none transition-all duration-150 ease-out'
+const floatingTooltipVisibility = (shown: boolean, centered = false) =>
+  `${centered ? '-translate-x-1/2' : ''} ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`
+
 /* ── Link relationship tooltip ── */
 interface LinkTooltipProps {
   x: number
@@ -133,18 +142,16 @@ interface LinkTooltipProps {
   sourceName: string
   targetName: string
   value: number
+  shown: boolean
 }
-function LinkTooltip({ x, y, sourceName, targetName, value }: LinkTooltipProps) {
+function LinkTooltip({ x, y, sourceName, targetName, value, shown }: LinkTooltipProps) {
   return (
-    <div style={{
-      position: 'fixed', left: x + 12, top: y - 16, zIndex: 9999,
-      background: '#fff', border: '1px solid #e5e9f0', borderRadius: 8,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-      padding: '8px 14px', whiteSpace: 'nowrap',
-      fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#424242',
-      pointerEvents: 'none',
-    }}>
-      {sourceName} <span style={{ color: '#9e9e9e' }}>→</span> {targetName}: <span style={{ fontWeight: 500, color: '#212121' }}>{value.toLocaleString()} interactions</span>
+    <div
+      className={`${FLOATING_TOOLTIP_BASE} whitespace-nowrap px-md py-sm text-small text-text-secondary ${floatingTooltipVisibility(shown)}`}
+      style={{ left: x + 12, top: y - 16 }}
+    >
+      {sourceName} <span className="text-text-tertiary">→</span> {targetName}:{' '}
+      <span className="text-text-primary">{value.toLocaleString()} interactions</span>
     </div>
   )
 }
@@ -154,23 +161,20 @@ interface BreakdownTooltipProps {
   x: number
   y: number
   items: Array<{ label: string; pct: string; value: number }>
+  shown: boolean
 }
-function BreakdownTooltip({ x, y, items }: BreakdownTooltipProps) {
+function BreakdownTooltip({ x, y, items, shown }: BreakdownTooltipProps) {
   return (
-    <div style={{
-      position: 'fixed', left: x + 12, top: y - 8, zIndex: 9999,
-      background: '#fff', border: '1px solid #e5e9f0', borderRadius: 8,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-      padding: '10px 14px', minWidth: 220,
-      fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#212121',
-      pointerEvents: 'none',
-    }}>
+    <div
+      className={`${FLOATING_TOOLTIP_BASE} min-w-[220px] p-md text-small ${floatingTooltipVisibility(shown)}`}
+      style={{ left: x + 12, top: y - 8 }}
+    >
       {items.map((item) => (
-        <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, padding: '4px 0' }}>
-          <span style={{ color: '#424242' }}>{item.label}</span>
-          <span style={{ display: 'flex', gap: 10 }}>
-            <span style={{ color: '#7c4dff', fontWeight: 500 }}>{item.pct}</span>
-            <span style={{ color: '#757575' }}>{item.value.toLocaleString()}</span>
+        <div key={item.label} className="flex items-center justify-between gap-lg py-xs">
+          <span className="text-text-secondary">{item.label}</span>
+          <span className="flex gap-sm">
+            <span className="text-text-action">{item.pct}</span>
+            <span className="text-text-tertiary">{item.value.toLocaleString()}</span>
           </span>
         </div>
       ))}
@@ -178,10 +182,37 @@ function BreakdownTooltip({ x, y, items }: BreakdownTooltipProps) {
   )
 }
 
+// Generic show/hide-with-transition helper: keeps rendering the last non-null value for one
+// exit-transition beat after it's cleared, and only fades in from a hidden first frame (via rAF)
+// on a genuinely new appearance — a value update while already shown just updates in place.
+function useTooltipTransition<T>(exitMs = 150) {
+  const [data, setData] = useState<T | null>(null)
+  const [shown, setShown] = useState(false)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const set = useCallback((next: T | null) => {
+    if (next !== null) {
+      if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null }
+      setData((prev) => {
+        if (prev === null) requestAnimationFrame(() => setShown(true))
+        else setShown(true)
+        return next
+      })
+    } else {
+      setShown(false)
+      hideTimer.current = setTimeout(() => setData(null), exitMs)
+    }
+  }, [exitMs])
+
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current) }, [])
+
+  return { data, shown, set }
+}
+
 export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnHeaderTooltips, nodeColors, terminalNodes, onNodeClick, nodePadding = 10 }: SankeyChartProps) {
-  const [hoverState, setHoverState] = useState<{ idx: number; x: number; y: number } | null>(null)
-  const [headerTooltip, setHeaderTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
-  const [linkHover, setLinkHover] = useState<LinkHoverState | null>(null)
+  const { data: hoverState, shown: hoverShown, set: setHoverState } = useTooltipTransition<{ idx: number; x: number; y: number }>()
+  const { data: headerTooltip, shown: headerTooltipShown, set: setHeaderTooltip } = useTooltipTransition<{ text: string; x: number; y: number }>()
+  const { data: linkHover, shown: linkHoverShown, set: setLinkHover } = useTooltipTransition<LinkHoverState>()
   const [measuredWidth, setMeasuredWidth] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -196,7 +227,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
     if (idx === null) { setHoverState(null); return }
     if (nodes[idx]?.breakdown) setHoverState({ idx, x, y })
     else setHoverState(null)
-  }, [nodes])
+  }, [nodes, setHoverState])
 
   // Inject a hidden phantom node so terminalNodes don't jump to the last column.
   // Recharts forces any node with no outgoing links to maxDepth — adding a tiny
@@ -208,7 +239,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
     ? [...links, ...terminalNodes.map((i) => ({ source: i, target: phantomIndex, value: 0.001 }))]
     : links
 
-  const clearHovers = useCallback(() => { setHoverState(null); setLinkHover(null) }, [])
+  const clearHovers = useCallback(() => { setHoverState(null); setLinkHover(null) }, [setHoverState, setLinkHover])
 
   const nameToIndex = new Map(sankeyNodes.map((n, i) => [n.name, i]))
   const NodeComponent = makeNode(nodeColors, handleHover, measuredWidth, onNodeClick, linkHover, clearHovers)
@@ -280,13 +311,16 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
       </ResponsiveContainer>
 
       {activeBreakdown && hoverState && (
-        <BreakdownTooltip x={hoverState.x} y={hoverState.y} items={activeBreakdown} />
+        <BreakdownTooltip x={hoverState.x} y={hoverState.y} items={activeBreakdown} shown={hoverShown} />
       )}
       {linkHover && (
-        <LinkTooltip x={linkHover.x} y={linkHover.y} sourceName={linkHover.sourceName} targetName={linkHover.targetName} value={linkHover.value} />
+        <LinkTooltip x={linkHover.x} y={linkHover.y} sourceName={linkHover.sourceName} targetName={linkHover.targetName} value={linkHover.value} shown={linkHoverShown} />
       )}
       {headerTooltip && (
-        <div className="pointer-events-none fixed z-[120] -translate-x-1/2 rounded-sm bg-[#1c1c1c] px-sm py-xs text-small text-white" style={{ left: headerTooltip.x, top: headerTooltip.y, maxWidth: 280, whiteSpace: 'normal' }}>
+        <div
+          className={`${FLOATING_TOOLTIP_BASE} px-sm py-xs text-small text-text-secondary ${floatingTooltipVisibility(headerTooltipShown, true)}`}
+          style={{ left: headerTooltip.x, top: headerTooltip.y, maxWidth: 280, whiteSpace: 'normal' }}
+        >
           {headerTooltip.text}
         </div>
       )}

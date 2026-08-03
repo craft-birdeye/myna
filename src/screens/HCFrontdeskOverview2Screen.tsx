@@ -20,6 +20,45 @@ import {
   type SankeyNode,
 } from '../components'
 
+// ─── Conversations vs. sessions terminology switcher ──────────────────────────
+// A conversation is the full back-and-forth thread with a patient, possibly spanning multiple
+// visits over time. A session is just one exchange within that thread — from an agent's first
+// message to that agent's resolution. This page's copy is written generically against whichever
+// noun is currently selected; only the label changes, not the underlying data.
+
+type ViewMode = 'conversations' | 'sessions'
+
+interface NounForms {
+  capPlural: string
+  capSingular: string
+  lowPlural: string
+  lowSingular: string
+}
+
+const NOUN_FORMS: Record<ViewMode, NounForms> = {
+  conversations: { capPlural: 'Conversations', capSingular: 'Conversation', lowPlural: 'conversations', lowSingular: 'conversation' },
+  sessions:      { capPlural: 'Sessions',      capSingular: 'Session',      lowPlural: 'sessions',      lowSingular: 'session' },
+}
+
+function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange: (mode: ViewMode) => void }) {
+  return (
+    <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface p-[2px]">
+      {(['conversations', 'sessions'] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode)}
+          className={`rounded-sm px-md py-xs text-body capitalize transition-colors ${
+            value === mode ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          {mode}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ─── Conversation data per funnel node ────────────────────────────────────────
 
 interface FunnelConversation {
@@ -169,10 +208,73 @@ const CHAT_BY_CONVO: Record<string, ChatMsg[]> = {
   'na-1': [
     { id: '1', sender: 'agent',    text: "Thanks for calling North Clinic. We're unable to take your call right now — please leave a message.", time: '09:58 AM' },
   ],
+  // Extended into 3 separate sessions (different days) for the "Resolved" sessions-mode demo —
+  // see SESSIONS_BY_NODE. Message ids 1-3 / 4-6 / 7-9 are each their own session.
   'res-1': [
-    { id: '1', sender: 'customer', text: "Hi, I wanted to confirm my appointment and ask a quick question about prep.", time: '09:07 AM' },
-    { id: '2', sender: 'agent',    text: "You're confirmed for Thursday, and no special prep is needed for this visit.", time: '09:09 AM' },
-    { id: '3', sender: 'customer', text: "Great, that's all I needed. Thanks!",                                        time: '09:10 AM' },
+    { id: '1', sender: 'customer', text: "Hi, I wanted to confirm my appointment and ask a quick question about prep.", time: 'Jun 5, 2025, 09:07 AM' },
+    { id: '2', sender: 'agent',    text: "You're confirmed for Thursday, and no special prep is needed for this visit.", time: 'Jun 5, 2025, 09:09 AM' },
+    { id: '3', sender: 'customer', text: "Great, that's all I needed. Thanks!",                                        time: 'Jun 5, 2025, 09:10 AM' },
+    { id: '4', sender: 'customer', text: "Following up — can you also confirm what insurance you have on file for me?", time: 'Jun 8, 2025, 02:20 PM' },
+    { id: '5', sender: 'agent',    text: "You have Blue Cross Blue Shield on file, verified as active.",                time: 'Jun 8, 2025, 02:22 PM' },
+    { id: '6', sender: 'customer', text: "Perfect, thank you.",                                                        time: 'Jun 8, 2025, 02:23 PM' },
+    { id: '7', sender: 'customer', text: "Last thing — can I get a copy of my visit summary emailed to me?",           time: 'Jun 11, 2025, 09:30 AM' },
+    { id: '8', sender: 'agent',    text: "Sent! You should have it in your inbox now.",                                time: 'Jun 11, 2025, 09:32 AM' },
+    { id: '9', sender: 'customer', text: "Got it, thanks again!",                                                      time: 'Jun 11, 2025, 09:33 AM' },
+  ],
+  // Fresh multi-session thread for the "AI agents involved" sessions-mode demo.
+  'inv-myna-2': [
+    { id: '1', sender: 'customer', text: "Hi, I'd like to book a new patient consultation for early June.",  time: 'Jun 3, 2025, 08:50 AM' },
+    { id: '2', sender: 'agent',    text: "I have an opening Jun 5 at 9am — would that work?",                time: 'Jun 3, 2025, 08:52 AM' },
+    { id: '3', sender: 'customer', text: "Yes, that's perfect.",                                             time: 'Jun 3, 2025, 08:53 AM' },
+    { id: '4', sender: 'customer', text: "Quick follow-up — do I need to bring anything for the first visit?", time: 'Jun 6, 2025, 11:20 AM' },
+    { id: '5', sender: 'agent',    text: "Just a photo ID and your insurance card, if you have one.",          time: 'Jun 6, 2025, 11:22 AM' },
+    { id: '6', sender: 'customer', text: "Got it, thank you!",                                                time: 'Jun 6, 2025, 11:23 AM' },
+    { id: '7', sender: 'customer', text: "Actually, can we push my visit to the afternoon instead?",           time: 'Jun 8, 2025, 03:40 PM' },
+    { id: '8', sender: 'agent',    text: "Sure — I've moved it to 2pm on Jun 5.",                              time: 'Jun 8, 2025, 03:42 PM' },
+    { id: '9', sender: 'customer', text: "Perfect, thanks again.",                                            time: 'Jun 8, 2025, 03:43 PM' },
+  ],
+  'inv-myna-4': [
+    { id: '1', sender: 'customer', text: "Can you confirm my prescription refill was sent to my pharmacy?",   time: 'Jun 4, 2025, 09:38 AM' },
+    { id: '2', sender: 'agent',    text: "Yes, it was sent to CVS on Main St this morning.",                  time: 'Jun 4, 2025, 09:40 AM' },
+    { id: '3', sender: 'customer', text: "Great, thank you!",                                                 time: 'Jun 4, 2025, 09:41 AM' },
+    { id: '4', sender: 'customer', text: "One more question — how long does a refill usually take to process?", time: 'Jun 7, 2025, 01:10 PM' },
+    { id: '5', sender: 'agent',    text: "Usually same-day, but can take up to 24 hours depending on the pharmacy.", time: 'Jun 7, 2025, 01:12 PM' },
+    { id: '6', sender: 'customer', text: "Understood, thanks.",                                               time: 'Jun 7, 2025, 01:13 PM' },
+    { id: '7', sender: 'customer', text: "Can I also switch my pharmacy on file to Walgreens?",                time: 'Jun 9, 2025, 04:05 PM' },
+    { id: '8', sender: 'agent',    text: "Done — your pharmacy on file is now Walgreens.",                    time: 'Jun 9, 2025, 04:07 PM' },
+    { id: '9', sender: 'customer', text: "Appreciate it!",                                                    time: 'Jun 9, 2025, 04:08 PM' },
+  ],
+  'inv-myna-3': [
+    { id: '1', sender: 'customer', text: "I need to reschedule my visit next week — is Thursday open?",       time: 'Jun 10, 2025, 10:05 AM' },
+    { id: '2', sender: 'agent',    text: "Thursday at 10am is open — I've moved your visit there.",           time: 'Jun 10, 2025, 10:07 AM' },
+    { id: '3', sender: 'customer', text: "Thank you!",                                                        time: 'Jun 10, 2025, 10:08 AM' },
+  ],
+  'res-2': [
+    { id: '1', sender: 'customer', text: "I was charged twice for my last visit and need this corrected.",   time: 'Jun 2, 2025, 08:40 AM' },
+    { id: '2', sender: 'agent',    text: "I've reviewed your account and refunded the duplicate charge.",      time: 'Jun 2, 2025, 08:44 AM' },
+    { id: '3', sender: 'customer', text: "Thank you for fixing that so quickly.",                              time: 'Jun 2, 2025, 08:45 AM' },
+    { id: '4', sender: 'customer', text: "Also, can you confirm my updated billing address?",                  time: 'Jun 5, 2025, 01:15 PM' },
+    { id: '5', sender: 'agent',    text: "Yes, it's updated to 220 Oak Street as of last week.",               time: 'Jun 5, 2025, 01:17 PM' },
+    { id: '6', sender: 'customer', text: "That's correct, thanks.",                                            time: 'Jun 5, 2025, 01:18 PM' },
+    { id: '7', sender: 'customer', text: "One more thing — can I set up a payment plan for my remaining balance?", time: 'Jun 9, 2025, 03:00 PM' },
+    { id: '8', sender: 'agent',    text: "Absolutely, I've set up a 3-month payment plan for you.",            time: 'Jun 9, 2025, 03:05 PM' },
+    { id: '9', sender: 'customer', text: "Thank you so much for the help.",                                    time: 'Jun 9, 2025, 03:06 PM' },
+  ],
+  'res-3': [
+    { id: '1', sender: 'customer', text: "Can you confirm my prescription refill is set?",                    time: 'Jun 10, 2025, 09:00 AM' },
+    { id: '2', sender: 'agent',    text: "Yes, it's confirmed and sent to your pharmacy.",                    time: 'Jun 10, 2025, 09:02 AM' },
+    { id: '3', sender: 'customer', text: "Great, thank you!",                                                 time: 'Jun 10, 2025, 09:03 AM' },
+  ],
+  'res-4': [
+    { id: '1', sender: 'customer', text: "Can you confirm the time for my appointment tomorrow?",             time: 'Jun 4, 2025, 09:23 AM' },
+    { id: '2', sender: 'agent',    text: "You're confirmed for 9:30am tomorrow.",                             time: 'Jun 4, 2025, 09:25 AM' },
+    { id: '3', sender: 'customer', text: "Great, thank you!",                                                 time: 'Jun 4, 2025, 09:26 AM' },
+    { id: '4', sender: 'customer', text: "Quick question — is parking available on site?",                     time: 'Jun 6, 2025, 12:40 PM' },
+    { id: '5', sender: 'agent',    text: "Yes, free parking is available in the north lot.",                   time: 'Jun 6, 2025, 12:41 PM' },
+    { id: '6', sender: 'customer', text: "Perfect, thanks.",                                                   time: 'Jun 6, 2025, 12:42 PM' },
+    { id: '7', sender: 'customer', text: "Can you also add my spouse to the visit as an authorized contact?",  time: 'Jun 9, 2025, 10:10 AM' },
+    { id: '8', sender: 'agent',    text: "Done — your spouse is now listed as an authorized contact.",         time: 'Jun 9, 2025, 10:12 AM' },
+    { id: '9', sender: 'customer', text: "Thank you!",                                                        time: 'Jun 9, 2025, 10:13 AM' },
   ],
   'trf-1': [
     { id: '1', sender: 'customer', text: "I was charged for a service I don't think I received.",                     time: '09:33 AM' },
@@ -219,6 +321,43 @@ const DEFAULT_CHAT: ChatMsg[] = [
   { id: '5', sender: 'customer', text: "Great, thanks for confirming!",                        time: '09:04 AM' },
 ]
 
+// ─── Sessions-mode demo: one conversation can hold several sessions ──────────
+// A session is a single agent-message-to-resolution exchange; a conversation can hold several,
+// spread across different days. Opening a session jumps straight into its parent conversation's
+// full thread, scrolled to where that session starts — demoed for two nodes ("AI agents involved"
+// and "Resolved") rather than rebuilding every node's data twice.
+interface FunnelSession extends FunnelConversation {
+  convoId: string
+  anchorMsgId: string
+}
+
+const SESSIONS_BY_NODE: Partial<Record<string, FunnelSession[]>> = {
+  'AI agents involved': [
+    { id: 'sess-myna-1a', convoId: 'inv-myna-1', name: 'Grace Liu',    message: 'AI confirmed appointment details and answered an insurance question.', location: 'North Clinic', assignee: 'Front desk AI', date: 'Jun 5, 2025',  anchorMsgId: '1' },
+    { id: 'sess-myna-1b', convoId: 'inv-myna-1', name: 'Grace Liu',    message: 'AI moved her appointment to the following week.',                      location: 'North Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025',  anchorMsgId: '4' },
+    { id: 'sess-myna-1c', convoId: 'inv-myna-1', name: 'Grace Liu',    message: 'AI sent a prescription refill request to her pharmacy.',               location: 'North Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025', anchorMsgId: '7', unread: true },
+    { id: 'sess-myna-2a', convoId: 'inv-myna-2', name: 'Tomás Rivera', message: 'AI booked a new patient consultation.',                                location: 'South Clinic', assignee: 'Front desk AI', date: 'Jun 3, 2025',  anchorMsgId: '1' },
+    { id: 'sess-myna-2b', convoId: 'inv-myna-2', name: 'Tomás Rivera', message: 'AI answered a first-visit prep question.',                             location: 'South Clinic', assignee: 'Front desk AI', date: 'Jun 6, 2025',  anchorMsgId: '4' },
+    { id: 'sess-myna-2c', convoId: 'inv-myna-2', name: 'Tomás Rivera', message: 'AI moved his visit to the afternoon.',                                 location: 'South Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025',  anchorMsgId: '7', unread: true },
+    { id: 'sess-myna-4a', convoId: 'inv-myna-4', name: 'Walter Boone', message: 'AI confirmed a prescription refill was sent to the pharmacy.',         location: 'North Clinic', assignee: 'Front desk AI', date: 'Jun 4, 2025',  anchorMsgId: '1' },
+    { id: 'sess-myna-4b', convoId: 'inv-myna-4', name: 'Walter Boone', message: 'AI answered a question about refill processing time.',                 location: 'North Clinic', assignee: 'Front desk AI', date: 'Jun 7, 2025',  anchorMsgId: '4' },
+    { id: 'sess-myna-4c', convoId: 'inv-myna-4', name: 'Walter Boone', message: 'AI updated his pharmacy on file to Walgreens.',                        location: 'North Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025',  anchorMsgId: '7', unread: true },
+    { id: 'sess-myna-3a', convoId: 'inv-myna-3', name: 'Nina Patel',   message: 'AI handled a reschedule request end-to-end.',                          location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025', anchorMsgId: '1' },
+  ],
+  'Resolved': [
+    { id: 'sess-res-1a', convoId: 'res-1', name: 'Aditi Rao',        message: 'Appointment confirmed and a prep question answered.',       location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 5, 2025',  anchorMsgId: '1' },
+    { id: 'sess-res-1b', convoId: 'res-1', name: 'Aditi Rao',        message: 'Confirmed her insurance on file was active.',                location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 8, 2025',  anchorMsgId: '4' },
+    { id: 'sess-res-1c', convoId: 'res-1', name: 'Aditi Rao',        message: 'Emailed her a copy of the visit summary.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 11, 2025', anchorMsgId: '7', unread: true },
+    { id: 'sess-res-2a', convoId: 'res-2', name: 'Brandon Lee',      message: 'Refunded a duplicate billing charge.',                        location: 'South Clinic',    assignee: 'Kelsy Hiltz',   date: 'Jun 2, 2025',  anchorMsgId: '1' },
+    { id: 'sess-res-2b', convoId: 'res-2', name: 'Brandon Lee',      message: 'Confirmed his updated billing address.',                      location: 'South Clinic',    assignee: 'Kelsy Hiltz',   date: 'Jun 5, 2025',  anchorMsgId: '4' },
+    { id: 'sess-res-2c', convoId: 'res-2', name: 'Brandon Lee',      message: 'Set up a 3-month payment plan for his balance.',              location: 'South Clinic',    assignee: 'Kelsy Hiltz',   date: 'Jun 9, 2025',  anchorMsgId: '7', unread: true },
+    { id: 'sess-res-4a', convoId: 'res-4', name: 'Nathaniel Cole',   message: 'Confirmed his appointment time for the next day.',            location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 4, 2025',  anchorMsgId: '1' },
+    { id: 'sess-res-4b', convoId: 'res-4', name: 'Nathaniel Cole',   message: 'Answered a question about on-site parking.',                  location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 6, 2025',  anchorMsgId: '4' },
+    { id: 'sess-res-4c', convoId: 'res-4', name: 'Nathaniel Cole',   message: 'Added his spouse as an authorized contact.',                  location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025',  anchorMsgId: '7', unread: true },
+    { id: 'sess-res-3a', convoId: 'res-3', name: 'Fatima Noor',      message: 'Prescription refill confirmed, no further action needed.',    location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025', anchorMsgId: '1' },
+  ],
+}
+
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l.toLowerCase().replace(/\s+/g, '-'), label: l }))
 
 const FILTER_FIELDS: FilterField[] = [
@@ -248,13 +387,15 @@ function HCCard(props: React.ComponentProps<typeof ChartCard>) {
 
 const DATE_RANGE_OPTIONS = ['Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months', 'Custom']
 
-const SUMMARY_STATS = [
-  { id: 'handled',        value: '700',    label: 'Interactions involved',  delta: '70%', trend: 'up' as const },
-  { id: 'resolved',       value: '560',    label: 'Interactions resolved' },
-  { id: 'resolutionRate', value: '80%',    label: 'Resolution rate' },
-  { id: 'hours',          value: '37 hrs', label: 'Staff hours saved' },
-  { id: 'savings',        value: '$521',   label: 'Monthly savings',        delta: '36%', trend: 'up' as const },
-]
+function getSummaryStats(forms: NounForms) {
+  return [
+    { id: 'handled',        value: '700',    label: `${forms.capPlural} involved`,  delta: '70%', trend: 'up' as const },
+    { id: 'resolved',       value: '560',    label: `${forms.capPlural} resolved` },
+    { id: 'resolutionRate', value: '80%',    label: 'Resolution rate' },
+    { id: 'hours',          value: '37 hrs', label: 'Staff hours saved' },
+    { id: 'savings',        value: '$521',   label: 'Monthly savings',        delta: '36%', trend: 'up' as const },
+  ]
+}
 
 // Six-month trends, one per funnel column — vertical stacked bar charts.
 // The story: six months ago humans still handled the majority of interactions; AI agents
@@ -443,14 +584,16 @@ const INTENT_TABLE_DATA: IntentRow[] = INTENT_DATA.map((d) => ({
   resolvedPct: '80%',
   transferredPct: '20%',
 }))
-const INTENT_COLUMNS: Column<IntentRow>[] = [
-  { key: 'intent',         label: 'Intent',            width: 180, sortable: true },
-  { key: 'officeHours',    label: 'Office hours calls', width: 160, sortable: true },
-  { key: 'afterHours',     label: 'After hours calls',  width: 160, sortable: true },
-  { key: 'totalCalls',     label: 'Total calls',        width: 130, sortable: true },
-  { key: 'resolvedPct',    label: 'Resolved',           width: 130, sortable: true, render: (v) => <span className="text-chip-success-text">{v as string}</span> },
-  { key: 'transferredPct', label: 'Transferred',        width: 130, sortable: true, render: (v) => <span className="text-chip-warning-text">{v as string}</span> },
-]
+function getIntentColumns(forms: NounForms): Column<IntentRow>[] {
+  return [
+    { key: 'intent',         label: 'Intent',            width: 180, sortable: true },
+    { key: 'officeHours',    label: `Office hours ${forms.lowPlural}`, width: 160, sortable: true },
+    { key: 'afterHours',     label: `After hours ${forms.lowPlural}`,  width: 160, sortable: true },
+    { key: 'totalCalls',     label: `Total ${forms.lowPlural}`,        width: 130, sortable: true },
+    { key: 'resolvedPct',    label: 'Resolved',           width: 130, sortable: true, render: (v) => <span className="text-chip-success-text">{v as string}</span> },
+    { key: 'transferredPct', label: 'Transferred',        width: 130, sortable: true, render: (v) => <span className="text-chip-warning-text">{v as string}</span> },
+  ]
+}
 
 // ─── Copied from Front desk overview ─────────────────────────────────────────
 
@@ -513,11 +656,13 @@ const LEVEL_COLUMN_LABEL: Record<string, string> = {
   'By state': 'State',
   'By region': 'Region',
 }
-const LEVEL_TITLE: Record<string, string> = {
-  'By location': 'Interactions by location',
-  'By city': 'Interactions by city',
-  'By state': 'Interactions by state',
-  'By region': 'Interactions by region',
+function getLevelTitle(forms: NounForms): Record<string, string> {
+  return {
+    'By location': `${forms.capPlural} by location`,
+    'By city': `${forms.capPlural} by city`,
+    'By state': `${forms.capPlural} by state`,
+    'By region': `${forms.capPlural} by region`,
+  }
 }
 
 function groupKeyOf(level: string, locationLabel: string): string {
@@ -631,7 +776,7 @@ function InlineHeadingDropdown({
 
 // Trend of office hours vs. after hours volume for the selected intent — helps identify which
 // intents are being handled after hours. Reuses the same StackedBarChart used elsewhere.
-function IntentTrendCard() {
+function IntentTrendCard({ forms }: { forms: NounForms }) {
   const [selectedIntent, setSelectedIntent] = useState('General inquiry')
 
   const chartData = INTENT_TREND_MONTHS.map((month, i) => ({
@@ -642,11 +787,11 @@ function IntentTrendCard() {
 
   return (
     <HCCard
-      title="Intent trend analysis"
+      title={`${forms.capSingular} intent trend analysis`}
       titleSuffix={
         <>
           <InlineHeadingDropdown value={selectedIntent} options={INTENT_OPTIONS} onChange={setSelectedIntent} />
-          <InfoTooltip text="Monthly office hours vs. after hours trend for the selected intent — see which intents are being addressed after hours." />
+          <InfoTooltip text="Monthly office hours vs. after-hours trend for the selected intent, highlighting which intents are addressed after hours" />
         </>
       }
     >
@@ -705,7 +850,7 @@ function LocationTableSkeleton({ columnCount }: { columnCount: number }) {
   )
 }
 
-function InteractionsByDimensionCard() {
+function InteractionsByDimensionCard({ forms }: { forms: NounForms }) {
   const [dimension, setDimension] = useState('Outcomes')
   const [level, setLevel] = useState('By location')
   const [loading, setLoading] = useState(false)
@@ -732,7 +877,7 @@ function InteractionsByDimensionCard() {
   // the location column in every view, so it's always clear how big a group is before
   // drilling into its channel/outcome/sub-outcome split.
   const TOTAL_INTERACTIONS_COLUMN: Column<LocationBreakdownRow> = {
-    key: 'totalInteractions', label: 'Total interactions', width: 160, sortable: true,
+    key: 'totalInteractions', label: `Total ${forms.lowPlural}`, width: 160, sortable: true,
   }
   const LOCATION_COLUMN: Column<LocationBreakdownRow> = {
     key: 'location', label: LEVEL_COLUMN_LABEL[level], width: 180, sortable: true,
@@ -799,11 +944,11 @@ function InteractionsByDimensionCard() {
 
   return (
     <HCCard
-      title={LEVEL_TITLE[level]}
+      title={getLevelTitle(forms)[level]}
       titleSuffix={
         <>
           <InlineHeadingDropdown value={dimension} options={DIMENSION_OPTIONS} onChange={setDimension} />
-          <InfoTooltip text="Breaks down each location's interaction volume by channel, outcome, or sub-outcome — switch the view with the dropdown." />
+          <InfoTooltip text={`Each location's ${forms.lowSingular} volume broken down by channel, outcome, or sub-outcome. Switch the view with the dropdown.`} />
         </>
       }
       toolbar={<DateRangeSelector value={level} options={LEVEL_OPTIONS} onChange={setLevel} />}
@@ -818,6 +963,8 @@ function InteractionsByDimensionCard() {
 }
 
 export function HCFrontdeskOverview2Screen() {
+  const [viewMode, setViewMode] = useState<ViewMode>('conversations')
+  const forms = NOUN_FORMS[viewMode]
   const [dateRange, setDateRange] = useState('Last 6 months')
   const [filterOpen, setFilterOpen] = useState(false)
   const [nodeDrawer, setNodeDrawer] = useState<string | null>(null)
@@ -825,6 +972,9 @@ export function HCFrontdeskOverview2Screen() {
   const [selectedConvo, setSelectedConvo] = useState<FunnelConversation | null>(null)
   const [detailVisible, setDetailVisible] = useState(false)
   const [message, setMessage] = useState('')
+  const [scrollToMsgId, setScrollToMsgId] = useState<string | null>(null)
+  const [highlightMsgId, setHighlightMsgId] = useState<string | null>(null)
+  const chatScrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (nodeDrawer !== null) {
@@ -838,13 +988,34 @@ export function HCFrontdeskOverview2Screen() {
     }
   }, [selectedConvo])
 
+  // Jump straight to the session's messages once its parent conversation's full thread has
+  // slid into view and mounted, briefly highlighting them so it's obvious what just happened.
+  useEffect(() => {
+    if (!detailVisible || !scrollToMsgId) return
+    const t = setTimeout(() => {
+      chatScrollRef.current?.querySelector(`[data-msg-id="${scrollToMsgId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setHighlightMsgId(scrollToMsgId)
+      setTimeout(() => setHighlightMsgId(null), 1500)
+    }, 320)
+    return () => clearTimeout(t)
+  }, [detailVisible, scrollToMsgId])
+
   function openDetail(convo: FunnelConversation) {
+    setScrollToMsgId(null)
     setSelectedConvo(convo)
+  }
+
+  // A session is just one exchange inside its parent conversation's full thread — open that
+  // thread and scroll straight to where this session starts.
+  function openSession(session: FunnelSession) {
+    const { convoId, anchorMsgId, ...convo } = session
+    setScrollToMsgId(anchorMsgId)
+    setSelectedConvo({ ...convo, id: convoId })
   }
 
   function closeDetail() {
     setDetailVisible(false)
-    setTimeout(() => setSelectedConvo(null), 300)
+    setTimeout(() => { setSelectedConvo(null); setScrollToMsgId(null) }, 300)
   }
 
   function closeNodeDrawer() {
@@ -852,6 +1023,12 @@ export function HCFrontdeskOverview2Screen() {
     setListVisible(false)
     setTimeout(() => setNodeDrawer(null), 300)
   }
+
+  // In sessions mode, a couple of nodes have real per-session data (see SESSIONS_BY_NODE);
+  // every other node falls back to the same conversation-level list used in conversations mode.
+  const drawerItems: Array<FunnelConversation | FunnelSession> = nodeDrawer
+    ? (viewMode === 'sessions' ? SESSIONS_BY_NODE[nodeDrawer] : undefined) ?? CONVERSATIONS_BY_NODE[nodeDrawer] ?? []
+    : []
 
   return (
     <div className="flex h-full flex-col">
@@ -861,9 +1038,10 @@ export function HCFrontdeskOverview2Screen() {
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
           title="Front desk overview 2"
-          subtitle="Frontdesk agent outcomes of addressing patient inquiries, managing appointments, and achieving cost savings by AI agents"
+          subtitle="Front desk agent outcomes across patient inquiries, appointments, and cost savings."
           rightSlot={
             <div className="flex items-center gap-sm">
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <DateRangeSelector
                 value={dateRange}
                 options={DATE_RANGE_OPTIONS}
@@ -883,9 +1061,9 @@ export function HCFrontdeskOverview2Screen() {
 
         <div className="flex flex-col gap-lg p-2xl">
 
-          <SummaryStats stats={SUMMARY_STATS} />
+          <SummaryStats stats={getSummaryStats(forms)} />
 
-          <HCCard title="Interactions funnel" tooltip="Traces interaction volume by channel (call, text, email), through AI agent/human involvement, to the outcome and sub-outcome of each interaction. Click any section to see the underlying conversations.">
+          <HCCard title={`${forms.capPlural} funnel`} tooltip={`${forms.capSingular} volume by channel, through AI agent or human involvement, to the outcome of each ${forms.lowSingular}. Select any section to see the underlying ${forms.lowPlural}.`}>
             <SankeyChart
               nodes={FUNNEL_NODES}
               links={FUNNEL_LINKS}
@@ -896,13 +1074,13 @@ export function HCFrontdeskOverview2Screen() {
               // column, adding one extra gap there — a smaller nodePadding keeps that column's
               // scale close enough to the others that all four read as equally full.
               nodePadding={4}
-              columnHeaders={['Interactions by channel', 'Involvement', 'Outcome', 'Sub-outcome']}
+              columnHeaders={[`${forms.capPlural} by channel`, 'Involvement', 'Outcome', 'Sub-outcome']}
               onNodeClick={(name) => { if (CONVERSATIONS_BY_NODE[name]) setNodeDrawer(name) }}
             />
           </HCCard>
 
           <div className="grid grid-cols-2 gap-lg">
-            <HCCard title="Interaction trend by channel" tooltip="Monthly interaction volume by channel — call, text, and email.">
+            <HCCard title={`${forms.capSingular} trend by channel`} tooltip={`Monthly ${forms.lowSingular} volume by channel`}>
               <StackedBarChart
                 data={CHANNEL_TREND_DATA}
                 series={CHANNEL_TREND_SERIES}
@@ -912,7 +1090,7 @@ export function HCFrontdeskOverview2Screen() {
               />
             </HCCard>
 
-            <HCCard title="Involvement trend" tooltip="Monthly breakdown of interactions by who was involved — AI agents, a human agent, or not answered.">
+            <HCCard title="Involvement trend" tooltip={`Monthly breakdown of ${forms.lowPlural} handled by AI agents, a human agent, or left unanswered`}>
               <StackedBarChart
                 data={INVOLVEMENT_TREND_DATA}
                 series={INVOLVEMENT_TREND_SERIES}
@@ -924,7 +1102,7 @@ export function HCFrontdeskOverview2Screen() {
           </div>
 
           <div className="grid grid-cols-2 gap-lg">
-            <HCCard title="Outcome trend" tooltip="Monthly breakdown of resolved vs. transferred interactions.">
+            <HCCard title="Outcome trend" tooltip={`Monthly breakdown of resolved vs transferred ${forms.lowPlural}`}>
               <StackedBarChart
                 data={OUTCOME_TREND_DATA}
                 series={OUTCOME_TREND_SERIES}
@@ -934,7 +1112,7 @@ export function HCFrontdeskOverview2Screen() {
               />
             </HCCard>
 
-            <HCCard title="Interaction timing trend" tooltip="Monthly office hours vs. after hours split of AI agent-handled interactions.">
+            <HCCard title={`${forms.capSingular} timing trend`} tooltip={`Monthly split of AI agent-handled ${forms.lowPlural} during office hours and after hours`}>
               <StackedBarChart
                 data={TIMING_TREND_DATA}
                 series={TIMING_TREND_SERIES}
@@ -945,7 +1123,7 @@ export function HCFrontdeskOverview2Screen() {
             </HCCard>
           </div>
 
-          <HCCard title="Interaction intent breakdown by working hours" tooltip="AI agent-handled calls by intent, comparing office hours volume to after-hours volume for each category.">
+          <HCCard title={`${forms.capSingular} intent breakdown by working hours`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with the office vs. after-hours split and resolution outcome for each category`}>
             <StackedBarChart
               data={INTENT_DATA}
               series={INTENT_SERIES}
@@ -957,14 +1135,14 @@ export function HCFrontdeskOverview2Screen() {
             />
           </HCCard>
 
-          <IntentTrendCard />
+          <IntentTrendCard forms={forms} />
 
-          <HCCard title="Interaction intent breakdown by outcome" tooltip="AI agent-handled calls by intent, with the office/after-hours split and resolution outcome for each category.">
-            <DataTable columns={INTENT_COLUMNS} data={INTENT_TABLE_DATA} stickyFirstColumn />
+          <HCCard title={`${forms.capSingular} intent breakdown by outcome`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with the office/after-hours split and resolution outcome for each category.`}>
+            <DataTable columns={getIntentColumns(forms)} data={INTENT_TABLE_DATA} stickyFirstColumn />
           </HCCard>
 
           <div className="grid grid-cols-2 gap-lg">
-            <HCCard title="Answers from source" tooltip="Shows the last source used to respond in each unique conversation, broken down by source type.">
+            <HCCard title="Answers from source" tooltip={`The last source used to respond in each unique ${forms.lowSingular}, broken down by source type`}>
               <ChartStatRow stats={[
                 { value: '4.4K', label: 'Link' },
                 { value: '2.4K', label: 'FAQ'  },
@@ -973,17 +1151,17 @@ export function HCFrontdeskOverview2Screen() {
               <DonutChart data={SOURCE_DONUT} centerValue="6.8k" centerLabel="Total responses" />
             </HCCard>
 
-            <HCCard title="Conversations by channel" tooltip="Shows the channel used for each interaction — call, text, or email.">
+            <HCCard title={`${forms.capPlural} by channel`} tooltip={`How ${forms.lowPlural} are distributed across call, text, and email`}>
               <ChartStatRow stats={[
                 { value: '600', label: 'Call'  },
                 { value: '300', label: 'Text'  },
                 { value: '100', label: 'Email' },
               ]} />
-              <DonutChart data={CHANNEL_DONUT} centerValue="1K" centerLabel="Total interactions" />
+              <DonutChart data={CHANNEL_DONUT} centerValue="1K" centerLabel={`Total ${forms.lowPlural}`} />
             </HCCard>
           </div>
 
-          <HCCard title="Insurances verified" tooltip="Monthly view of unique conversations where the patient's insurance was successfully verified by the agent.">
+          <HCCard title="Insurances verified" tooltip={`Monthly count of unique ${forms.lowPlural} where the agent verified the patient's insurance`}>
             <ChartStatRow stats={[
               { value: '1.2K',  label: 'Total verified'    },
               { value: '94.2%', label: 'Verification rate' },
@@ -998,7 +1176,7 @@ export function HCFrontdeskOverview2Screen() {
             />
           </HCCard>
 
-          <InteractionsByDimensionCard />
+          <InteractionsByDimensionCard forms={forms} />
 
         </div>
       </div>
@@ -1026,43 +1204,52 @@ export function HCFrontdeskOverview2Screen() {
                 <span className="text-h3 text-text-primary">{nodeDrawer}</span>
               </div>
               <span className="text-small text-text-tertiary">
-                {(CONVERSATIONS_BY_NODE[nodeDrawer]?.length ?? 0).toLocaleString()} conversations
+                {drawerItems.length.toLocaleString()} {forms.lowPlural}
               </span>
             </div>
             <div className="flex-1 overflow-y-auto px-sm py-sm">
-              {(CONVERSATIONS_BY_NODE[nodeDrawer] ?? []).map((convo) => (
+              {drawerItems.map((item) => {
+                const isSession = 'anchorMsgId' in item
+                const chatId = isSession ? item.convoId : item.id
+                return (
                 <button
-                  key={convo.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => openDetail(convo)}
-                  className={`flex w-full flex-col gap-xs rounded-md px-md py-md text-left transition-colors ${selectedConvo?.id === convo.id ? 'bg-[#dbeafe]' : 'hover:bg-surface-hover'}`}
+                  onClick={() => isSession ? openSession(item) : openDetail(item)}
+                  className={`flex w-full flex-col gap-xs rounded-md px-md py-md text-left transition-colors ${selectedConvo?.id === chatId && (!isSession || scrollToMsgId === item.anchorMsgId) ? 'bg-[#dbeafe]' : 'hover:bg-surface-hover'}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-xs">
-                      {convo.unread && <span className="size-[6px] shrink-0 rounded-full bg-primary" />}
-                      <span className="text-body text-text-primary">{convo.name}</span>
-                      {convo.verified && <Icon name="mode_heat" size={14} className="text-text-icon" />}
+                      {item.unread && <span className="size-[6px] shrink-0 rounded-full bg-primary" />}
+                      <span className="text-body text-text-primary">{item.name}</span>
+                      {item.verified && <Icon name="mode_heat" size={14} className="text-text-icon" />}
                     </div>
-                    <span className="shrink-0 text-small text-text-secondary">{convo.date}</span>
+                    <span className="shrink-0 text-small text-text-secondary">{item.date}</span>
                   </div>
-                  {(() => {
-                    const msgs = CHAT_BY_CONVO[convo.id] ?? DEFAULT_CHAT
+                  {isSession ? (
+                    // Sessions don't have a single "last message" of their own — the underlying
+                    // thread's last message may belong to a later session — so show the curated
+                    // one-line summary of just this session instead.
+                    <span className="truncate text-small text-text-secondary">{item.message}</span>
+                  ) : (() => {
+                    const msgs = CHAT_BY_CONVO[item.id] ?? DEFAULT_CHAT
                     const last = msgs[msgs.length - 1]
                     const preview = last.sender === 'agent' ? `Agent: ${last.text}` : last.text
                     return <span className="truncate text-small text-text-secondary">{preview}</span>
                   })()}
                   <div className="flex items-center gap-xs text-small text-text-tertiary">
-                    <span>{convo.location}</span>
-                    {convo.assignee && (
+                    <span>{item.location}</span>
+                    {item.assignee && (
                       <>
                         <span>•</span>
                         <Icon name="group" size={12} />
-                        <span>{convo.assignee}</span>
+                        <span>{item.assignee}</span>
                       </>
                     )}
                   </div>
                 </button>
-              ))}
+                )
+              })}
             </div>
           </div>
         </>
@@ -1095,12 +1282,16 @@ export function HCFrontdeskOverview2Screen() {
           </div>
 
           {/* Chat messages — exact copy */}
-          <div className="flex flex-1 flex-col gap-md overflow-y-auto px-2xl py-lg">
+          <div ref={chatScrollRef} className="flex flex-1 flex-col gap-md overflow-y-auto px-2xl py-lg">
             <div className="flex items-center justify-center">
               <span className="text-small text-text-secondary">Thu • Jun 10</span>
             </div>
             {(CHAT_BY_CONVO[selectedConvo.id] ?? DEFAULT_CHAT).map((msg) => (
-              <div key={msg.id} className={`flex flex-col ${msg.sender === 'agent' ? 'items-end' : 'items-start'}`}>
+              <div
+                key={msg.id}
+                data-msg-id={msg.id}
+                className={`flex flex-col rounded-md transition-colors duration-500 ${msg.sender === 'agent' ? 'items-end' : 'items-start'} ${highlightMsgId === msg.id ? 'bg-chip-warning-bg' : ''}`}
+              >
                 <div className={`max-w-[70%] rounded-lg px-md py-sm ${
                   msg.sender === 'agent'
                     ? 'bg-[#dbeafe] text-body text-text-primary'
