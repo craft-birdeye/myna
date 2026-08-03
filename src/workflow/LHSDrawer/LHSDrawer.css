@@ -39,6 +39,7 @@
 .lhs-drawer__tabs {
   display: none;
   width: 100%;
+  align-items: center;
   gap: 8px;
   background: #fff;
 }

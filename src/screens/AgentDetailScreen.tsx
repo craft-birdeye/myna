@@ -5474,7 +5474,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               } ${createWorkflowOpen ? (createSideTab === 'manual' ? 'px-0 py-0' : 'px-md') : 'px-lg'}`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
-                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer__body]:!px-md [&_.lhs-drawer__body]:!pt-0">
+                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer__body]:!px-lg [&_.lhs-drawer__body]:!pt-0">
                   <LHSDrawer
                     defaultTab="Create manually"
                     defaultOpenSection="Tasks"

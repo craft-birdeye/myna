@@ -808,6 +808,18 @@ export default function LHSDrawer({
             <span className="lhs-drawer__tab-underline" />
           </button>
         ))}
+        {showTabs && onCollapse && (
+          <Tooltip text="Collapse editor" position="bottom">
+            <button
+              className="lhs-drawer__collapse-btn"
+              onClick={onCollapse}
+              type="button"
+              aria-label="Collapse editor"
+            >
+              <span className="material-symbols-outlined">left_panel_close</span>
+            </button>
+          </Tooltip>
+        )}
       </div>
 
       {activeTab === 'Create manually' ? (
@@ -822,18 +834,6 @@ export default function LHSDrawer({
               showLeftIcon
               customIconClass="icon_phoenix-search-glass"
             />
-            {onCollapse && (
-              <Tooltip text="Collapse editor" position="bottom">
-                <button
-                  className="lhs-drawer__collapse-btn"
-                  onClick={onCollapse}
-                  type="button"
-                  aria-label="Collapse editor"
-                >
-                  <span className="material-symbols-outlined">left_panel_close</span>
-                </button>
-              </Tooltip>
-            )}
           </div>
 
           <div className="lhs-drawer__sections">
