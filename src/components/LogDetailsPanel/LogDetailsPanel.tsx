@@ -645,7 +645,7 @@ export function LogDetailsPanel({
             <div
               ref={chatScrollRef}
               onScroll={handleChatScroll}
-              className="mt-3xl min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl"
+              className="mt-3xl min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges]"
             >
               <div className="flex flex-col gap-3xl">
                 {transcript.map((entry) => (
