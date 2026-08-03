@@ -22,6 +22,7 @@ import { FrontdeskRecommendationsTab } from './FrontdeskRecommendationsTab'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from '../data/frontDeskCallConversation'
+import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -335,6 +336,7 @@ export function AgentInstanceScreen({
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
+  const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[instanceName] ?? 0
   const showHealthcareLogs =
     activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
@@ -375,6 +377,12 @@ export function AgentInstanceScreen({
           <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
         </div>
         <div className="flex items-center gap-sm">
+          {isWorkflowTab && issueCount > 0 && (
+            <span className="flex items-center gap-xs text-small text-text-secondary">
+              <Icon name="error" size={14} className="text-chip-danger-text" />
+              {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
+            </span>
+          )}
 <div className="relative">
             <button
               type="button"

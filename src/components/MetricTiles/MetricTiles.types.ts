@@ -11,6 +11,8 @@ export interface Metric {
   info?: boolean
   /** Tooltip text shown on hover of the info icon. */
   tooltip?: string
+  /** Override the value's text color token (e.g. "text-chip-danger-text" for an alert count). */
+  valueColorClassName?: string
 }
 
 export interface MetricTilesProps {

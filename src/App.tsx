@@ -37,6 +37,7 @@ import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { ReviewsAllScreen } from './screens/ReviewsAllScreen'
+import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import iconMarketing from './assets/icon-marketing.svg'
 import iconAgents from './assets/icon-agents.svg'
@@ -460,7 +461,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && railActive !== 'settings' && railActive !== 'inbox' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && (
         <SideNav
           title={isReviewsActive ? 'Reviews AI' : 'Front desk'}
           sections={isReviewsActive ? REVIEWS_NAV_SECTIONS : (NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS)}
@@ -500,6 +501,15 @@ export function App() {
           <InboxScreen
             initialConversationId={inboxFocusId}
             onInitialConversationConsumed={() => setInboxFocusId(null)}
+          />
+        ) : railActive === 'agents' ? (
+          <AgentDirectoryScreen
+            key={activeProduct}
+            product={activeProduct}
+            onOpenAgent={(navId) => {
+              setRailActive('frontdesk')
+              setNavActive(navId)
+            }}
           />
         ) : isEditingWorkflow ? (
           <>
