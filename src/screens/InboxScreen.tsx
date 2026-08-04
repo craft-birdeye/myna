@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection } from '../components'
+import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection } from '../components'
 import voicemailSample from '../assets/voicemail_sample.mp3'
 import {
   FRONT_DESK_CALL_SUMMARY,
@@ -10,6 +10,11 @@ import {
   ANNETTE_BLACK_CHAT_EVENTS,
   ANNETTE_BLACK_CONVERSATION_ID,
 } from '../data/annetteBlackChatConversation'
+import {
+  REMINDER_CONVERSATION_EVENTS,
+  REMINDER_INBOX_CONVERSATION_ID,
+} from '../data/reminderInboxConversation'
+import { addAgentFeedbackRecommendation } from '../data/agentFeedbackRecommendations'
 import { AgentDetailScreen } from './AgentDetailScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 
@@ -36,6 +41,16 @@ const CONVERSATIONS: Conversation[] = [
     date: '5:30 PM',
     unread: true,
   },
+  {
+    id: REMINDER_INBOX_CONVERSATION_ID,
+    name: 'Sarah Lauren',
+    verified: true,
+    message: 'Myna: Let me connect you with our front desk team.',
+    location: 'Henry Schein Dental',
+    assignee: 'Reminder agent',
+    date: '09:55 PM',
+    unread: true,
+  },
   { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', date: '03:25 PM' },
   {
     id: ANNETTE_BLACK_CONVERSATION_ID,
@@ -43,7 +58,7 @@ const CONVERSATIONS: Conversation[] = [
     verified: true,
     message: 'That helped!',
     location: 'Rock Dental Brands',
-    assignee: 'Myna',
+    assignee: 'Front desk agent - North region',
     date: '02:09 PM',
     unread: true,
   },
@@ -693,8 +708,34 @@ export function InboxScreen({
     setShareFeedbackMessageId(null)
   }
 
-  const handleShareFeedbackSubmit = (_details: string) => {
+  const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
+
+    const flaggedEvent = threadEvents.find(
+      (event) => event.kind === 'bubble' && event.id === shareFeedbackMessageId,
+    )
+    const flaggedReminderEntry = isReminderRun
+      ? REMINDER_CONVERSATION_EVENTS.find(
+          (entry) => entry.kind === 'message' && entry.id === shareFeedbackMessageId,
+        )
+      : undefined
+    const agentResponse =
+      flaggedReminderEntry?.kind === 'message'
+        ? flaggedReminderEntry.text
+        : flaggedEvent?.kind === 'bubble' && typeof flaggedEvent.text === 'string'
+          ? flaggedEvent.text
+          : ''
+
+    addAgentFeedbackRecommendation({
+      messageId: shareFeedbackMessageId,
+      feedback: details,
+      agentResponse,
+      conversationName: selectedConvo.name,
+      conversationLocation: selectedConvo.location,
+      channel: isAnnetteChat ? 'Chat' : isFrontDeskCall || isReminderRun ? 'Voice' : 'Text',
+      agentName: selectedConvo.assignee ?? 'Front desk agent',
+    })
+
     setMessageFeedback((prev) => ({ ...prev, [shareFeedbackMessageId]: 'down' }))
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
@@ -721,9 +762,10 @@ export function InboxScreen({
   const currentTabSet = TABS_BY_NAV[activeNav] ?? DEFAULT_TAB_SET
   const isFrontDeskCall = selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID
   const isAnnetteChat = selectedConvo.id === ANNETTE_BLACK_CONVERSATION_ID
+  const isReminderRun = selectedConvo.id === REMINDER_INBOX_CONVERSATION_ID
   const threadEvents: ChatEvent[] = isAnnetteChat
     ? ANNETTE_BLACK_CHAT_EVENTS
-    : isFrontDeskCall
+    : isFrontDeskCall || isReminderRun
       ? []
       : CHAT_EVENTS
 
@@ -900,6 +942,18 @@ export function InboxScreen({
                     contactName={selectedConvo.name}
                   />
                 </>
+              ) : isReminderRun ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">Sun • May 24</span>
+                  </div>
+                  <RunConversationThread
+                    entries={REMINDER_CONVERSATION_EVENTS}
+                    meta="time"
+                    feedbackForMessage={feedbackForMessage}
+                    onFeedbackChange={handleFeedbackChange}
+                  />
+                </>
               ) : !isAnnetteChat ? (
                 <>
                   <div className="flex items-center justify-center">
@@ -918,7 +972,7 @@ export function InboxScreen({
                 </>
               ) : null}
 
-              {!isFrontDeskCall &&
+              {!isFrontDeskCall && !isReminderRun &&
                 threadEvents.map((event) => {
                   if (event.kind === 'date') {
                     return <ChatSystemLabel key={event.id} text={event.label} />

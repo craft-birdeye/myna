@@ -41,12 +41,14 @@ export type LogTranscriptEntry =
       id: string
       role: 'agent'
       text: string
+      time?: string
       llmResponseTime?: string
       tts?: string
       knowledgeBase?: string
       toolCall?: LogToolCall
+      reasoning?: string
     }
-  | { id: string; role: 'caller'; text: string; durationLabel?: string }
+  | { id: string; role: 'caller'; text: string; time?: string; durationLabel?: string }
 
 export interface LogDetailsPanelProps {
   row: HealthcareLogRow

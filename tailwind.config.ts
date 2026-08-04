@@ -30,6 +30,7 @@ export default {
         },
         border: {
           DEFAULT: '#e5e9f0', // borders/primary/1
+          strong: '#cccccc', // slightly darker divider (dashed card dividers, hover borders)
           selected: '#e5e9f0', // Selected - NEW
           'chart-btn': '#cccccc', // chart card action button stroke
           input: '#e5e9f0', // text field / select / dropdown border

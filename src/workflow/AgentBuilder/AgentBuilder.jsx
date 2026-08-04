@@ -10,6 +10,7 @@ import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomToo
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
+import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -341,7 +342,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             ...item.data,
             stepNumber: topLevelStep,
             title: 'Based on conditions',
-            subtitle: 'Build condition-specific flows',
+            subtitle: nodeDetails[nodeId]?.description || 'Build condition-specific flows',
           }
         : item.data?.subtype === 'Schedule-based'
           ? {
@@ -696,6 +697,19 @@ export default function AgentBuilder({
   publishDisabled = false,
   issueCount = 0,
   defaultOpenSection = 'Tasks',
+  initialZoom = 1,
+  runDisabled = false,
+  aiAssistOpen: aiAssistOpenProp,
+  onAiAssistOpenChange,
+  hideLhs = false,
+  createAiPanelOpen = false,
+  /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
+  previewProcedureId = null,
+  /** Optional full RHS detail payload — used when the procedure isn't in the live library. */
+  previewProcedureDetail = null,
+  onPreviewProcedureIdChange,
+  /** Saved co-pilot transcript for the Create with AI tab. */
+  aiTranscript = null,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -723,6 +737,24 @@ export default function AgentBuilder({
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
+  const externalPreviewRef = useRef(null);
+
+  /* Sync external Create-with-AI procedure clicks into the canvas RHS. */
+  useEffect(() => {
+    if (previewProcedureId) {
+      externalPreviewRef.current = previewProcedureId;
+      setLhsPreviewProcedureId(previewProcedureId);
+      setSelectedNodeId(null);
+      setActiveProcedureId(null);
+      setDrawerOpen(true);
+      return;
+    }
+    if (externalPreviewRef.current) {
+      externalPreviewRef.current = null;
+      setLhsPreviewProcedureId(null);
+      setDrawerOpen(false);
+    }
+  }, [previewProcedureId]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [bookTestModalOpen, setBookTestModalOpen] = useState(false);
   const [testAppointment, setTestAppointment] = useState(null);
@@ -740,6 +772,14 @@ export default function AgentBuilder({
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
+  // AI assist panel is controlled by the parent when it needs to render the
+  // panel itself (e.g. spanning the full app height, above this editor's own
+  // header) — falls back to internal state otherwise.
+  const aiAssistControlled = onAiAssistOpenChange != null;
+  const aiAssistOpen = aiAssistControlled ? aiAssistOpenProp : aiAssistOpenInternal;
+  const setAiAssistOpen = aiAssistControlled ? onAiAssistOpenChange : setAiAssistOpenInternal;
+  const [lhsForceOpenSection, setLhsForceOpenSection] = useState(null);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];
@@ -764,6 +804,11 @@ export default function AgentBuilder({
   useEffect(() => {
     setLiveProcedures(procedures);
   }, [procedures]);
+
+  /* ─── Close AI assist when another right-side panel (node details / preview) opens ─── */
+  useEffect(() => {
+    if (drawerOpen || previewOpen) setAiAssistOpen(false);
+  }, [drawerOpen, previewOpen]);
 
   /* ─── View-only: keep canvas state in sync when workflow props change ─── */
   useEffect(() => {
@@ -888,6 +933,7 @@ export default function AgentBuilder({
   /* ─── Agent name is derived from nodeDetails (single source of truth) ─── */
   const agentName = nodeDetails[START_NODE_ID]?.agentName || (typeof pageTitle === 'string' ? pageTitle : '') || '';
   const isReminderAgent = /reminder/i.test(agentName);
+  const isReviewResponseAgent = /review response/i.test(agentName);
   const [agentDesc] = useState(initialDescription || '');
   // isTemplateMode uses state so it correctly activates after applyAgent loads templateId from Firestore
   const isTemplateMode = !!agentTemplateId && agentStatus !== 'Running';
@@ -1144,6 +1190,8 @@ export default function AgentBuilder({
 
   const handleDeleteNode = useCallback((nodeId) => {
     setNodeList((prev) => {
+      const target = prev.find((n) => n.id === nodeId);
+      if (!target || target.flowType === 'trigger') return prev;
       const updated = prev.filter((n) => n.id !== nodeId);
       return updated.map((n, i) => ({
         ...n,
@@ -1182,6 +1230,11 @@ export default function AgentBuilder({
       detailsSnapshot: collectDetailsSnapshot(nodeId, nodeDetails),
     });
   }, [nodeList, nodeDetails]);
+
+  const handleReplaceTrigger = useCallback(() => {
+    setLhsCollapsed(false);
+    setLhsForceOpenSection('Trigger');
+  }, []);
 
   const handlePasteBelow = useCallback((afterNodeId) => {
     if (!clipboard) return;
@@ -1376,6 +1429,12 @@ export default function AgentBuilder({
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
     };
+    if (n.type === 'trigger') {
+      extra.onReplace = () => handleReplaceTrigger();
+    } else {
+      extra.onDelete = () => handleDeleteNode(n.id);
+      extra.onCopy = () => handleCopyNode(n.id);
+    }
     if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
       extra.onToggleChange = (enabled) => handleNodeToggleChange(n.id, enabled);
@@ -1490,6 +1549,36 @@ export default function AgentBuilder({
       };
     }
 
+    if (effectiveType === 'trigger' && !branchPathId) {
+      const currentList = latestRef.current.nodeList || [];
+      const triggerIdx = currentList.findIndex((n) => n.flowType === 'trigger');
+      const oldTriggerId = triggerIdx !== -1 ? currentList[triggerIdx].id : null;
+
+      setNodeList((prev) => {
+        const idx = prev.findIndex((n) => n.flowType === 'trigger');
+        let updated;
+        if (idx !== -1) {
+          updated = [...prev];
+          updated[idx] = newNode;
+        } else {
+          updated = [newNode, ...prev];
+        }
+        return updated.map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+      });
+
+      setNodeDetails((prev) => {
+        const copy = { ...prev };
+        if (oldTriggerId) delete copy[oldTriggerId];
+        return { ...copy, [id]: details };
+      });
+
+      setSelectedNodeId(id);
+      setDrawerOpen(true);
+      setActiveProcedureId(null);
+      setLhsForceOpenSection(null);
+      return;
+    }
+
     if (branchPathId) {
       setNodeDetails((prev) => {
         const branchPath = prev[branchPathId] || {};
@@ -1510,11 +1599,9 @@ export default function AgentBuilder({
           [id]: details,
         };
       });
-      if (type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID) {
-        setSelectedNodeId(id);
-        setDrawerOpen(true);
-        setActiveProcedureId(CUSTOM_PROCEDURE_ID);
-      }
+      setSelectedNodeId(id);
+      setDrawerOpen(true);
+      setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
       return;
     }
 
@@ -1556,19 +1643,18 @@ export default function AgentBuilder({
 
     if (type === 'branch') {
       const path1Id = `${id}-path-1`;
-      const path2Id = `${id}-path-2`;
       const fallbackId = `${id}-path-fallback`;
       Object.assign(details, {
         basedOn: 'conditions',
+        description: 'Build condition-specific flows',
+        mergeBranches: true,
         branches: [
           { id: path1Id, name: 'Branch 1' },
-          { id: path2Id, name: 'Branch 2' },
           { id: fallbackId, name: 'No conditions met', isFallback: true },
         ],
       });
       extraDetails = {
         [path1Id]: { branchName: 'Branch 1', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
-        [path2Id]: { branchName: 'Branch 2', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
         [fallbackId]: { branchName: 'No conditions met', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
       };
     }
@@ -1604,11 +1690,9 @@ export default function AgentBuilder({
       ...extraDetails,
     }));
 
-    if (type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID) {
-      setSelectedNodeId(id);
-      setDrawerOpen(true);
-      setActiveProcedureId(CUSTOM_PROCEDURE_ID);
-    }
+    setSelectedNodeId(id);
+    setDrawerOpen(true);
+    setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
   }, [agentName, product]);
 
   const handleNodeClick = useCallback((node) => {
@@ -1713,7 +1797,19 @@ export default function AgentBuilder({
 
   const renderRHSPanel = () => {
     if (lhsPreviewProcedureId) {
-      const mergedProc = getProcedureDetailContent(lhsPreviewProcedureId, {}, product);
+      const closeLhsPreview = () => {
+        const wasExternal = externalPreviewRef.current === lhsPreviewProcedureId;
+        externalPreviewRef.current = null;
+        setLhsPreviewProcedureId(null);
+        setDrawerOpen(false);
+        if (wasExternal) onPreviewProcedureIdChange?.(null);
+      };
+      const mergedProc =
+        previewProcedureDetail &&
+        (previewProcedureDetail.id === lhsPreviewProcedureId ||
+          previewProcedureDetail.name === lhsPreviewProcedureId)
+          ? previewProcedureDetail
+          : getProcedureDetailContent(lhsPreviewProcedureId, {}, product);
       return (
         <RHS
           key={`lhs-preview-${lhsPreviewProcedureId}`}
@@ -1721,14 +1817,14 @@ export default function AgentBuilder({
           title={mergedProc.name}
           viewOnly={viewOnly}
           product={product}
-          onBack={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
+          onBack={closeLhsPreview}
           bodyProps={{
             initialValues: mergedProc,
             onFieldChange: () => {},
             onOpenToolDrawer: () => setToolPickerOpen(true),
           }}
-          onClose={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
-          onSave={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
+          onClose={closeLhsPreview}
+          onSave={closeLhsPreview}
         />
       );
     }
@@ -1791,7 +1887,7 @@ export default function AgentBuilder({
             }));
             handleCloseDrawer();
           }}
-          onPreview={() => setPreviewOpen((v) => !v)}
+          onPreview={isReviewResponseAgent ? undefined : () => setPreviewOpen((v) => !v)}
           previewOpen={previewOpen}
           previewActive={previewActive}
           onExpand={() => {}}
@@ -1837,15 +1933,25 @@ export default function AgentBuilder({
     }
 
     if (flowType === 'branch') {
+      const pathDetails = Object.fromEntries(
+        (currentDetails.branches || []).map((b) => [b.id, nodeDetails[b.id] || {}]),
+      );
       return (
         <RHS
           variant="controlBranch"
-          title="Branch details"
+          title="Branch"
           viewOnly={viewOnly}
           product={product}
           bodyProps={{
-            initialValues: { ...currentDetails, branchNodeId: selectedNodeId },
+            initialValues: {
+              ...currentDetails,
+              description: currentDetails.description ?? selectedNode?.data?.descriptionPlaceholder ?? '',
+              mergeBranches: currentDetails.mergeBranches ?? true,
+              branchNodeId: selectedNodeId,
+              pathDetails,
+            },
             onFieldChange: activeFieldChange,
+            onPathFieldChange: (pathId, field, value) => handleNodeFieldChange(pathId, field, value),
             onDeleteBranch: (branchId) => handleDeleteBranchPath(branchId),
           }}
           onClose={handleCloseDrawer}
@@ -1990,11 +2096,11 @@ export default function AgentBuilder({
       );
     }
 
-    if (data.hasAiIcon) {
+    if (data.hasAiIcon || data.subtype === 'Custom') {
       return (
         <RHS
           variant="llmTask"
-          title="LLM Task"
+          title="Task"
           viewOnly={viewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, onOpenToolDrawer: () => setToolPickerOpen(true), onOpenTool: openToolByName }}
@@ -2165,7 +2271,10 @@ export default function AgentBuilder({
       </div>
 
       {/* ─── Builder body ─── */}
-      <div className="agent-builder-wrapper" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}>
+      <div
+        className="agent-builder-wrapper"
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
+      >
         {viewOnly && (
           <div className="ab-view-banner">
             <span className="material-symbols-outlined">visibility</span>
@@ -2180,25 +2289,31 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
-            <LHSDrawer
-              defaultTab="Create manually"
-              defaultOpenSection={defaultOpenSection}
-              viewOnly={viewOnly}
-              product={product}
-              agentName={agentName}
-              procedures={procedures}
-              onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
-              onProcedureClick={viewOnly ? undefined : (procedureId) => {
-                setLhsPreviewProcedureId(procedureId);
-                setSelectedNodeId(null);
-                setActiveProcedureId(null);
-                setDrawerOpen(true);
-              }}
-            />
-          </div>
+          {!hideLhs && (
+            <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
+              <LHSDrawer
+                defaultTab="Create manually"
+                showTabs={!viewOnly}
+                defaultOpenSection={defaultOpenSection}
+                forceOpenSection={lhsForceOpenSection}
+                onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
+                viewOnly={viewOnly}
+                product={product}
+                agentName={agentName}
+                procedures={procedures}
+                aiTranscript={aiTranscript}
+                onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
+                onProcedureClick={viewOnly ? undefined : (procedureId) => {
+                  setLhsPreviewProcedureId(procedureId);
+                  setSelectedNodeId(null);
+                  setActiveProcedureId(null);
+                  setDrawerOpen(true);
+                }}
+              />
+            </div>
+          )}
 
-          {lhsCollapsed && (
+          {!hideLhs && lhsCollapsed && (
             <button
               className="ab-lhs-expand-pill"
               onClick={() => setLhsCollapsed(false)}
@@ -2222,8 +2337,11 @@ export default function AgentBuilder({
               viewOnly={viewOnly}
               product={product}
               agentName={agentName}
+              initialZoom={initialZoom}
+              runDisabled={runDisabled}
               onEdit={viewOnly ? onEdit : undefined}
               onRun={() => {
+                if (isReviewResponseAgent) return;
                 if (isReminderAgent) {
                   setBookTestModalOpen(true);
                 } else {
@@ -2234,15 +2352,21 @@ export default function AgentBuilder({
             />
           </div>
 
+          {!aiAssistControlled && aiAssistOpen && (
+            <div className="agent-builder__ai-assist">
+              <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
+            </div>
+          )}
+
           {drawerOpen && (
-            <div key={selectedNodeId} className="agent-builder__rhs">
-              <RHSErrorBoundary key={selectedNodeId}>
+            <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
+              <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
               </RHSErrorBoundary>
             </div>
           )}
 
-          {previewOpen && (
+          {previewOpen && !isReviewResponseAgent && (
             <div className="agent-builder__preview">
               <PreviewPanel
                 onClose={() => {

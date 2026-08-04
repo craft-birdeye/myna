@@ -71,12 +71,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?',
     llmResponseTime: '0.42s',
     tts: '700ms',
+    time: '5:30 PM',
   },
   {
     id: 'c1',
     role: 'caller',
     text: 'I am having a very bad headache. I think it is migraine.',
     durationLabel: '5s',
+    time: '5:30 PM',
   },
   {
     id: 'a2',
@@ -85,6 +87,9 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     llmResponseTime: '0.51s',
     tts: '820ms',
     knowledgeBase: '5s',
+    time: '5:31 PM',
+    reasoning:
+      "The caller reported a severe headache and suspected a migraine. I need to determine whether the pain is dental in origin — teeth, jaw, or gums — versus general head pain before routing to urgent care or booking.",
     toolCall: {
       id: 'tool-1',
       name: 'Patient record - Lookup',
@@ -99,6 +104,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: 'Now that you ask — it kind of started near my back tooth and spread up.',
     durationLabel: '4s',
+    time: '5:31 PM',
   },
   {
     id: 'a3',
@@ -106,12 +112,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you, that helps. Pain that radiates from a tooth can sometimes need prompt attention. Are you having any swelling in your face or jaw, fever, or trouble swallowing or breathing?',
     llmResponseTime: '0.48s',
     tts: '640ms',
+    time: '5:31 PM',
   },
   {
     id: 'c3',
     role: 'caller',
     text: 'A little swelling near the tooth, no fever',
     durationLabel: '3s',
+    time: '5:32 PM',
   },
   {
     id: 'a4',
@@ -119,6 +127,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "Good to know there's no fever. Swelling near a tooth is still worth having a dentist look at soon, so let's get you an appointment rather than wait it out.",
     llmResponseTime: '0.39s',
     tts: '610ms',
+    time: '5:32 PM',
   },
   { id: 'sys2', role: 'system', text: 'Routed to appointment booking agent' },
   { id: 'sys3', role: 'system', text: 'Procedure switched : Book appointment' },
@@ -128,12 +137,14 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'I have an opening this Thursday at 2 PM with Dr. Patel — would that work for you?',
     llmResponseTime: '0.35s',
     tts: '580ms',
+    time: '5:32 PM',
   },
   {
     id: 'c4',
     role: 'caller',
     text: 'Yes please, Thursday at 2 PM works.',
     durationLabel: '3s',
+    time: '5:33 PM',
   },
   {
     id: 'a6',
@@ -141,6 +152,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "You're all set for Thursday at 2 PM with Dr. Patel. Anything else I can help with?",
     llmResponseTime: '0.31s',
     tts: '520ms',
+    time: '5:33 PM',
     toolCall: {
       id: 'tool-2',
       name: 'Schedule Appointment',
@@ -164,6 +176,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: "No, that's all. Thank you!",
     durationLabel: '2s',
+    time: '5:33 PM',
   },
 ]
 
@@ -193,6 +206,135 @@ function FieldRow({ fieldKey, value }: { fieldKey: string; value: string }) {
       <RefChip kind="context" label={fieldKey} />
       <span className="min-w-0 break-all text-text-primary">{value}</span>
     </div>
+  )
+}
+
+const LLM_DETAILS_MODEL = 'Qwen3.6-35B-A3B'
+const TTS_DETAILS_MODEL = 'eleven_multilingual_v2'
+
+function parseDurationMs(label: string, fallback = 480): number {
+  const match = label.match(/([\d.]+)\s*(ms|s)/i)
+  if (!match) return fallback
+  const n = Number(match[1])
+  return match[2].toLowerCase() === 's' ? Math.round(n * 1000) : Math.round(n)
+}
+
+function llmDetailMetrics(llmResponseTime: string): { label: string; value: string }[] {
+  // Prototype metrics — first-byte / first-sentence sit under the reported LLM time.
+  const totalMs = parseDurationMs(llmResponseTime, 480)
+  const firstByte = Math.max(80, Math.round(totalMs * 0.21))
+  const firstSentence = Math.max(firstByte + 4, Math.round(totalMs * 0.22))
+  const lastSentence = Math.max(firstSentence + 20, Math.round(totalMs * 0.29))
+  return [
+    { label: 'Time to first byte from LLM service', value: `${firstByte} ms` },
+    { label: 'Time to first sentence from LLM service', value: `${firstSentence} ms` },
+    { label: 'Time to last sentence from LLM service', value: `${lastSentence} ms` },
+  ]
+}
+
+function ttsDetailMetrics(tts: string): { label: string; value: string }[] {
+  const totalMs = parseDurationMs(tts, 640)
+  const firstByte = Math.max(40, Math.round(totalMs * 0.18))
+  return [{ label: 'Time to first byte', value: `${firstByte} ms` }]
+}
+
+function DiagnosticDetailsCard({
+  title,
+  model,
+  metrics,
+  onClose,
+}: {
+  title: string
+  model: string
+  metrics: { label: string; value: string }[]
+  onClose: () => void
+}) {
+  return (
+    <div className="ml-auto w-[380px] max-w-full rounded-[12px] bg-surface-l2 px-md py-md">
+      <div className="mb-md flex items-center justify-between gap-sm">
+        <p className="m-0 text-small leading-[1.6] text-text-secondary">{title}</p>
+        <button
+          type="button"
+          aria-label={`Close ${title}`}
+          onClick={onClose}
+          className="flex size-5 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+        >
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-lg">
+        <div className="flex flex-col gap-xs">
+          <p className="m-0 text-small leading-[1.6] text-text-tertiary">Model</p>
+          <p className="m-0 text-small leading-[1.6] text-text-secondary">{model}</p>
+        </div>
+
+        <div className="flex flex-col gap-sm">
+          <p className="m-0 text-small leading-[1.6] text-text-tertiary">Metrics</p>
+          <div className="flex flex-col gap-sm">
+            {metrics.map((row) => (
+              <div key={row.label} className="flex items-start justify-between gap-md">
+                <p className="m-0 min-w-0 text-small leading-[1.6] text-text-secondary">{row.label}</p>
+                <p className="m-0 shrink-0 text-small leading-[1.6] text-text-secondary">{row.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AgentMetaLine({
+  entry,
+  llmOpen,
+  ttsOpen,
+  onToggleLlm,
+  onToggleTts,
+}: {
+  entry: Extract<LogTranscriptEntry, { role: 'agent' }>
+  llmOpen: boolean
+  ttsOpen: boolean
+  onToggleLlm: () => void
+  onToggleTts: () => void
+}) {
+  const afterTts: string[] = []
+  if (entry.knowledgeBase) afterTts.push(`Knowledge base ${entry.knowledgeBase}`)
+  if (entry.time) afterTts.push(entry.time)
+
+  if (!entry.llmResponseTime && !entry.tts && afterTts.length === 0) return null
+
+  const metaBtn = (active: boolean) =>
+    `rounded-sm transition-colors hover:bg-surface-hover hover:text-text-secondary ${
+      active ? 'bg-surface-hover text-text-secondary' : ''
+    }`
+
+  return (
+    <span className="whitespace-pre-wrap text-small text-text-tertiary">
+      {entry.llmResponseTime && (
+        <button
+          type="button"
+          onClick={onToggleLlm}
+          aria-expanded={llmOpen}
+          className={metaBtn(llmOpen)}
+        >
+          LLM {entry.llmResponseTime}
+        </button>
+      )}
+      {entry.llmResponseTime && entry.tts && '  •  '}
+      {entry.tts && (
+        <button
+          type="button"
+          onClick={onToggleTts}
+          aria-expanded={ttsOpen}
+          className={metaBtn(ttsOpen)}
+        >
+          TTS {entry.tts}
+        </button>
+      )}
+      {(entry.llmResponseTime || entry.tts) && afterTts.length > 0 && '  •  '}
+      {afterTts.join('  •  ')}
+    </span>
   )
 }
 
@@ -231,9 +373,13 @@ function NestedObjectBlock({
   )
 }
 
-function ToolCallBlock({ tool }: { tool: LogToolCall }) {
-  const [open, setOpen] = useState(false)
+function AgentTurnAccordions({ tool, reasoning }: { tool: LogToolCall; reasoning?: string }) {
+  const [toolOpen, setToolOpen] = useState(false)
+  const [reasoningOpen, setReasoningOpen] = useState(false)
   const [inputsOpen, setInputsOpen] = useState(false)
+
+  const accordionTrigger =
+    'inline-flex items-center gap-xs rounded-[12px] border-0 px-sm py-xs text-small transition-colors hover:bg-surface-hover'
 
   const output: LogToolOutputEntry[] =
     tool.output ??
@@ -256,36 +402,82 @@ function ToolCallBlock({ tool }: { tool: LogToolCall }) {
     void navigator.clipboard?.writeText(text)
   }
 
-  return (
-    <div className="w-[380px] max-w-full rounded-md bg-surface-l2">
-      {/* Header row — same background as the expanded body, no seam on open */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-end gap-sm px-[12px] py-sm text-left text-small hover:opacity-80"
-      >
-        <Icon
-          name={open ? 'expand_more' : 'chevron_right'}
-          size={16}
-          className="shrink-0 text-text-tertiary"
-        />
-        <span className="truncate text-text-action">Tool : {tool.name}</span>
-        <Icon name="check_circle" size={16} fill className="shrink-0 text-accent-positive" />
-        <span className="shrink-0 text-text-tertiary">
-          {`{ ${tool.propertyCount} properties }`}
-          {tool.durationLabel ? ` • ${tool.durationLabel}` : ''}
-        </span>
-      </button>
+  function toggleReasoning() {
+    setReasoningOpen((open) => {
+      const next = !open
+      if (next) {
+        setToolOpen(false)
+        setInputsOpen(false)
+      }
+      return next
+    })
+  }
 
-      {open && (
-        <div className="relative px-[12px] pb-sm">
-          <div className="absolute right-[12px] top-0 z-[1]">
+  function toggleTool() {
+    setToolOpen((open) => {
+      const next = !open
+      if (next) setReasoningOpen(false)
+      else setInputsOpen(false)
+      return next
+    })
+  }
+
+  return (
+    <div className="flex w-full max-w-full flex-col gap-sm">
+      <div className="flex flex-wrap items-center justify-end gap-xs">
+        {reasoning && (
+          <button
+            type="button"
+            onClick={toggleReasoning}
+            className={`${accordionTrigger} text-text-tertiary hover:text-text-secondary ${
+              reasoningOpen ? 'bg-surface-hover hover:bg-surface-hover' : ''
+            }`}
+          >
+            Reasoning
+            <Icon
+              name={reasoningOpen ? 'expand_less' : 'expand_more'}
+              size={16}
+              className="shrink-0"
+            />
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={toggleTool}
+          className={`${accordionTrigger} min-w-0 text-left text-text-tertiary hover:text-text-secondary ${
+            toolOpen ? 'bg-surface-hover hover:bg-surface-hover' : ''
+          }`}
+        >
+          <Icon name="build" size={16} className="shrink-0" />
+          <span className="truncate">{tool.name}</span>
+          <Icon name="check_circle" size={16} fill className="shrink-0 text-accent-positive" />
+          {tool.durationLabel && (
+            <span className="shrink-0 whitespace-nowrap text-text-tertiary">• {tool.durationLabel}</span>
+          )}
+          <Icon
+            name={toolOpen ? 'expand_less' : 'expand_more'}
+            size={16}
+            className="shrink-0 text-text-tertiary"
+          />
+        </button>
+      </div>
+
+      {reasoning && reasoningOpen && (
+        <div className="ml-auto w-[380px] max-w-full rounded-[12px] bg-surface-l2 px-md py-md">
+          <p className="m-0 text-small leading-[1.6] text-text-secondary">{reasoning}</p>
+        </div>
+      )}
+
+      {toolOpen && (
+        <div className="relative ml-auto w-[380px] max-w-full rounded-[12px] bg-surface-l2 px-md py-md">
+          <div className="absolute right-md top-md z-[1]">
             <Tooltip content="Copy" variant="brief">
               <button
                 type="button"
                 onClick={handleCopy}
                 aria-label="Copy"
-                className="flex size-7 items-center justify-center rounded-sm text-text-tertiary hover:bg-surface-hover hover:text-text-icon"
+                className="flex size-7 items-center justify-center rounded-[12px] text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-icon"
               >
                 <Icon name="content_copy" size={16} />
               </button>
@@ -311,7 +503,7 @@ function ToolCallBlock({ tool }: { tool: LogToolCall }) {
           <button
             type="button"
             onClick={() => {
-              setOpen(false)
+              setToolOpen(false)
               setInputsOpen(false)
             }}
             className="mt-sm text-small text-text-action hover:text-primary-hover"
@@ -357,15 +549,10 @@ function MetaField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function agentMetaLine(entry: Extract<LogTranscriptEntry, { role: 'agent' }>): string | null {
-  const parts: string[] = []
-  if (entry.llmResponseTime) parts.push(`LLM response time : ${entry.llmResponseTime}`)
-  if (entry.tts) parts.push(`TTS : ${entry.tts}`)
-  if (entry.knowledgeBase) parts.push(`Knowledge base : ${entry.knowledgeBase}`)
-  return parts.length > 0 ? parts.join(' • ') : null
-}
-
 function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
+  const [llmOpen, setLlmOpen] = useState(false)
+  const [ttsOpen, setTtsOpen] = useState(false)
+
   if (entry.role === 'system') {
     return (
       <div className="py-sm">
@@ -382,14 +569,16 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
         gap="gap-sm"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
-        {entry.durationLabel && (
-          <span className="text-small text-text-tertiary">STT : {entry.durationLabel}</span>
+        {(entry.durationLabel || entry.time) && (
+          <span className="text-small text-text-tertiary">
+            {[entry.durationLabel ? `STT ${entry.durationLabel}` : null, entry.time]
+              .filter(Boolean)
+              .join('  •  ')}
+          </span>
         )}
       </ChatBubble>
     )
   }
-
-  const meta = agentMetaLine(entry)
 
   return (
     <ChatBubble
@@ -398,8 +587,38 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
       gap="gap-sm"
       bubbleClassName="max-w-[85%] px-lg py-md"
     >
-      {meta && <span className="text-small text-text-tertiary">{meta}</span>}
-      {entry.toolCall && <ToolCallBlock tool={entry.toolCall} />}
+      <AgentMetaLine
+        entry={entry}
+        llmOpen={llmOpen}
+        ttsOpen={ttsOpen}
+        onToggleLlm={() => {
+          setLlmOpen((v) => !v)
+          setTtsOpen(false)
+        }}
+        onToggleTts={() => {
+          setTtsOpen((v) => !v)
+          setLlmOpen(false)
+        }}
+      />
+      {llmOpen && entry.llmResponseTime && (
+        <DiagnosticDetailsCard
+          title="LLM details"
+          model={LLM_DETAILS_MODEL}
+          metrics={llmDetailMetrics(entry.llmResponseTime)}
+          onClose={() => setLlmOpen(false)}
+        />
+      )}
+      {ttsOpen && entry.tts && (
+        <DiagnosticDetailsCard
+          title="TTS details"
+          model={TTS_DETAILS_MODEL}
+          metrics={ttsDetailMetrics(entry.tts)}
+          onClose={() => setTtsOpen(false)}
+        />
+      )}
+      {entry.toolCall && (
+        <AgentTurnAccordions tool={entry.toolCall} reasoning={entry.reasoning} />
+      )}
     </ChatBubble>
   )
 }

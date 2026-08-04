@@ -1,3 +1,14 @@
+export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
+export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
+export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
+export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
+export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
+export type {
+  RunConversationEntry,
+  RunDetailsPanelProps,
+  RunLogField,
+  RunLogStep,
+} from './RunDetailsPanel/RunDetailsPanel.types'
 export { Chip } from './Chip/Chip'
 export { ChatBubble, ChatSystemLabel } from './ChatBubble/ChatBubble'
 export type {
@@ -52,6 +63,7 @@ export { SideNav } from './SideNav/SideNav'
 export { TopNav } from './TopNav/TopNav'
 export { PageHeader } from './PageHeader/PageHeader'
 export { RefChip } from './RefChip/RefChip'
+export { ComposerAttachPopover } from './ComposerAttachPopover/ComposerAttachPopover'
 export { SelectMenu } from './SelectMenu/SelectMenu'
 export { LanguageSelectMenu, LanguageFlag } from './LanguageSelectMenu/LanguageSelectMenu'
 export { StatusFilterDropdown } from './StatusFilterDropdown/StatusFilterDropdown'
@@ -133,6 +145,7 @@ export type { SideNavProps, NavSection, NavLeaf } from './SideNav/SideNav.types'
 export type { TopNavProps } from './TopNav/TopNav.types'
 export type { PageHeaderProps, AppointmentView, AppointmentTimescale } from './PageHeader/PageHeader.types'
 export type { RefChipProps } from './RefChip/RefChip.types'
+export type { AttachItem, AttachItemKind, ComposerAttachPopoverProps } from './ComposerAttachPopover/ComposerAttachPopover.types'
 export type { SelectMenuProps, SelectOption } from './SelectMenu/SelectMenu.types'
 export type { StatusFilterDropdownProps, StatusFilterOption } from './StatusFilterDropdown/StatusFilterDropdown.types'
 export { ALL_STATUS_IDS, STATUS_FILTER_OPTIONS } from './StatusFilterDropdown/StatusFilterDropdown.types'

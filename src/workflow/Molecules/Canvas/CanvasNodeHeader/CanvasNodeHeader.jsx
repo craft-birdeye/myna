@@ -5,6 +5,10 @@ import './CanvasNodeHeader.css';
 
 const AddIcon = () => <span className="material-symbols-outlined cnh__btn-icon">add_circle</span>;
 const MoreIcon = () => <span className="material-symbols-outlined cnh__btn-icon">more_vert</span>;
+const DeleteIcon = () => <span className="material-symbols-outlined cnh__btn-icon cnh__btn-icon--delete">delete</span>;
+const CopyIcon = () => <span className="material-symbols-outlined cnh__btn-icon">content_copy</span>;
+const ReplaceIcon = () => <span className="material-symbols-outlined cnh__btn-icon">swap_horiz</span>;
+const PasteIcon = () => <span className="material-symbols-outlined cnh__btn-icon">content_paste</span>;
 
 // ── Custom SVG icons from Figma (node-id: 41-43388) ─────────────────────────
 const TriggerIcon = () => (
@@ -62,7 +66,8 @@ export default function CanvasNodeHeader({
   onAddClick,
   onMenuClick,
   onDelete,
-  onCopy = undefined,
+  onCopy,
+  onReplace,
   hasClipboard = false,
   onPasteBelow = undefined,
   onPasteReplace = undefined,
@@ -94,6 +99,12 @@ export default function CanvasNodeHeader({
     onCopy?.();
   };
 
+  const handleReplace = (e) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onReplace?.();
+  };
+
   const handlePasteBelow = (e) => {
     e.stopPropagation();
     setMenuOpen(false);
@@ -105,6 +116,8 @@ export default function CanvasNodeHeader({
     setMenuOpen(false);
     onPasteReplace?.();
   };
+
+  const isTrigger = nodeType === 'trigger';
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -158,22 +171,35 @@ export default function CanvasNodeHeader({
             <Button type="link" customIcon={<MoreIcon />} onClick={handleMoreClick} noHover aria-label="More options" />
             {menuOpen && (
               <div className="cnh__context-menu">
-                <button className="cnh__context-menu-item" onClick={handleCopy}>
-                  <span>Copy</span>
-                </button>
-                {hasClipboard && (
+                {isTrigger ? (
+                  <button className="cnh__context-menu-item" onClick={handleReplace}>
+                    <ReplaceIcon />
+                    <span>Replace</span>
+                  </button>
+                ) : (
                   <>
-                    <button className="cnh__context-menu-item" onClick={handlePasteBelow}>
-                      <span>Paste below</span>
+                    <button className="cnh__context-menu-item" onClick={handleCopy}>
+                      <CopyIcon />
+                      <span>Copy</span>
                     </button>
-                    <button className="cnh__context-menu-item" onClick={handlePasteReplace}>
-                      <span>Paste to replace</span>
+                    {hasClipboard && (
+                      <>
+                        <button className="cnh__context-menu-item" onClick={handlePasteBelow}>
+                          <PasteIcon />
+                          <span>Paste below</span>
+                        </button>
+                        <button className="cnh__context-menu-item" onClick={handlePasteReplace}>
+                          <PasteIcon />
+                          <span>Paste to replace</span>
+                        </button>
+                      </>
+                    )}
+                    <button className="cnh__context-menu-item cnh__context-menu-item--delete" onClick={handleDelete}>
+                      <DeleteIcon />
+                      <span>Delete</span>
                     </button>
                   </>
                 )}
-                <button className="cnh__context-menu-item cnh__context-menu-item--delete" onClick={handleDelete}>
-                  <span>Remove</span>
-                </button>
               </div>
             )}
           </div>

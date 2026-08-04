@@ -18,9 +18,9 @@
 /* ─── Root panel ─── */
 .lhs-drawer {
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
-  border: none;
+  border-radius: 12px;
+  box-shadow: 0px 2px 12px rgba(33, 33, 33, 0.06);
+  border: 1px solid #e5e9f0;
   width: 360px;
   height: 100%;
   display: flex;
@@ -41,6 +41,10 @@
   width: 100%;
   gap: 8px;
   background: #fff;
+}
+
+.lhs-drawer__tabs--visible {
+  display: flex;
 }
 
 .lhs-drawer__tab {
@@ -93,7 +97,6 @@
 }
 
 /* ─── Tab content area ─── */
-.lhs-drawer__body,
 .lhs-drawer__ai-body {
   padding-top: 16px;
 }
@@ -108,7 +111,9 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
-  padding-right: 2px;
+  padding-top: 8px;
+  padding-right: 8px;
+  padding-left: 8px;
   scrollbar-width: 4px;
   scrollbar-color: #ccd5e4 transparent;
 }
@@ -617,6 +622,162 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #ccd5e4 transparent;
+}
+
+/* `justify-content: flex-end` clips the top of an overflowing scroll container,
+   so bottom-align via auto margin instead. */
+.lhs-drawer__ai-chat-area > *:first-child {
+  margin-top: auto;
+}
+
+.lhs-drawer__ai-chat-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.lhs-drawer__ai-chat-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lhs-drawer__ai-chat-area::-webkit-scrollbar-thumb {
+  background: #ccd5e4;
+  border-radius: 3px;
+}
+
+.lhs-drawer__ai-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.lhs-drawer__ai-user-msg {
+  align-self: flex-end;
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-surface-hover, #f0f0f0);
+  color: var(--color-text-primary, #252525);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.lhs-drawer__ai-user-files {
+  align-self: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 90%;
+}
+
+.lhs-drawer__ai-file-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 16px;
+  color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lhs-drawer__ai-thoughts {
+  display: block;
+  padding: 8px 0;
+  background: #fff;
+}
+
+.lhs-drawer__ai-thoughts summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 20px;
+  color: #555;
+  list-style: none;
+}
+
+.lhs-drawer__ai-thoughts summary::-webkit-details-marker {
+  display: none;
+}
+
+.lhs-drawer__ai-thoughts summary::before {
+  content: 'bolt';
+  font-family: 'Material Symbols Outlined';
+  font-size: 18px;
+  line-height: 18px;
+  color: #6b7280;
+}
+
+.lhs-drawer__ai-thoughts summary::after {
+  content: 'expand_less';
+  font-family: 'Material Symbols Outlined';
+  font-size: 18px;
+  line-height: 18px;
+  color: #6b7280;
+}
+
+.lhs-drawer__ai-thoughts:not([open]) summary::after {
+  content: 'expand_more';
+}
+
+.lhs-drawer__ai-thoughts-body {
+  margin: 16px 0 0 9px;
+  padding: 0 0 0 16px;
+  border-left: 1px solid #e5e9f0;
+  background: #fff;
+  color: #757575;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 24px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.lhs-drawer__ai-status {
+  font-size: 12px;
+  line-height: 18px;
+  color: #6b7280;
+  padding: 4px 0;
+}
+
+.lhs-drawer__ai-draft-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--color-surface, #fff);
+}
+
+.lhs-drawer__ai-draft-card .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--color-text-icon, #6b7280);
+}
+
+.lhs-drawer__ai-draft-title {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-primary, #252525);
+}
+
+.lhs-drawer__ai-draft-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-text-secondary, #6b7280);
 }

@@ -206,10 +206,11 @@ const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
 
 
 const HEALTHCARE_REMINDER_NODES = [
-  { id: 'hcr-1', flowType: 'trigger',    data: { title: 'Appointment is booked',          subtype: 'Appointment booked', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name',          descriptionPlaceholder: 'Enter description' } },
-  { id: 'hcr-2', flowType: 'task',       data: { title: 'Appointment reminder',            subtype: 'Integration',        hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name',             descriptionPlaceholder: '3 weeks, 3 days and 24 hours before · Email & text' } },
-  { id: 'hcr-3', flowType: 'delay',      data: { title: 'Until 12 hrs before appointment', subtype: 'Delay',              hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Configure delay settings',    descriptionPlaceholder: 'Wait for specific time or event.' } },
-  { id: 'hcr-4', flowType: 'branch',     data: { title: 'Based on conditions',             subtype: 'Branch',             hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name',           descriptionPlaceholder: 'Appointment confirmed or not?' } },
+  { id: 'hcr-1', flowType: 'trigger', data: { title: 'Appointment is booked', subtype: 'Appointment booked', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Agent triggers when an appointment is booked' } },
+  { id: 'hcr-2', flowType: 'task', data: { title: 'Send scheduled reminders', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Send text and email reminders 4 weeks before appointment' } },
+  { id: 'hcr-3', flowType: 'task', data: { title: 'Schedule appointment reminder', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Send text and email reminders 2 weeks before appointment' } },
+  { id: 'hcr-4', flowType: 'delay', data: { title: 'Delay until 2 days before appointment date and time', subtype: 'Delay', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Configure delay settings', descriptionPlaceholder: 'Wait for a specific time or event' } },
+  { id: 'hcr-5', flowType: 'branch', data: { title: 'Based on conditions', subtype: 'Branch', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Build condition-specific flows' } },
 ]
 
 const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
@@ -233,7 +234,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
   },
   'hcr-1': {
     triggerName: 'Appointment is booked',
-    description: 'Fires when a new appointment is created or confirmed in the system for any configured location.',
+    description: 'Agent triggers when an appointment is booked',
     conditions: [
       { id: 1, fieldValue: 'appointment_status', operatorValue: 'equals', valueValue: 'booked' },
     ],
@@ -261,17 +262,49 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
     },
   },
   'hcr-2': {
-    taskName: 'Appointment reminder',
-    description: '3 weeks, 3 days and 24 hours before · Email & text',
+    taskName: 'Send scheduled reminders',
+    description: 'Send text and email reminders 4 weeks before appointment',
     selectedTools: ['reminder-tool'],
   },
-  'hcr-3': { name: 'Until 12 hrs before appointment', duration: '12', unit: 'hours' },
+  'hcr-3': {
+    taskName: 'Schedule appointment reminder',
+    description: 'Send text and email reminders 2 weeks before appointment',
+    selectedTools: ['reminder-tool'],
+  },
   'hcr-4': {
+    name: 'Delay until 2 days before appointment date and time',
+    duration: '2',
+    unit: 'days',
+  },
+  'hcr-5': {
     basedOn: 'conditions',
     branches: [
-      { id: 'hcr-4-path-1', name: 'Appointment not confirmed' },
-      { id: 'hcr-4-path-2', name: 'Appointment confirmed', isFallback: true },
+      { id: 'hcr-5-path-1', name: 'Not confirmed' },
+      { id: 'hcr-5-path-2', name: 'Confirmed', isFallback: true },
     ],
+  },
+  'hcr-5-path-1': {
+    branchName: 'Not confirmed',
+    description: 'The appointment has not been confirmed.',
+    conditions: [
+      { id: 1, fieldValue: 'appointment_status', operatorValue: 'not_equals', valueValue: 'confirmed' },
+    ],
+    parentId: 'hcr-5',
+    isBranchPath: true,
+    nodes: [
+      { id: 'hcr-6', flowType: 'task', data: { title: 'Initiate voice call', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Call the customer' } },
+    ],
+  },
+  'hcr-5-path-2': {
+    branchName: 'Confirmed',
+    description: 'The appointment is confirmed.',
+    conditions: [
+      { id: 1, fieldValue: 'appointment_status', operatorValue: 'equals', valueValue: 'confirmed' },
+    ],
+    parentId: 'hcr-5',
+    isBranchPath: true,
+    isFallback: true,
+    nodes: [],
   },
   'hcr-4-path-1': {
     branchName: 'Appointment not confirmed',
@@ -338,7 +371,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
       { id: 'hcr-10', flowType: 'task', data: { title: 'Send text reminder', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: '3 hours before' } },
     ],
   },
-  'hcr-5': {
+  'hcr-legacy-voice-call': {
     taskName: 'Initiate voice call',
     description: 'Call the patient for their upcoming appointment.',
     toolId: 'initiate-voice-call',
@@ -477,7 +510,11 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
     isBranchPath: true,
     nodes: [],
   },
-  'hcr-6': { selectedAgent: 'frontdesk-north', name: 'Front desk agent - North region', description: 'Transfer to the front desk agent for assisted patient handling with a reminder.', intent: 'Reminder' },
+  'hcr-6': {
+    taskName: 'Initiate voice call',
+    description: 'Call the customer',
+    selectedTools: ['voice-call'],
+  },
   'hcr-7': { name: 'Wait 2 hours',       duration: '2', unit: 'hours' },
   'hcr-8': { taskName: 'Send text reminder', description: '3 hours before', selectedTools: ['send-confirmation'] },
   'hcr-9':  { taskName: 'Send text reminder', description: '3 hours before', selectedTools: ['send-confirmation'] },
@@ -485,9 +522,56 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
   'hcr-11': { name: 'Wait 2 hours', duration: '2', unit: 'hours' },
 }
 
+/** The attached flow is intentionally scoped to Reminder agent - North region. */
+export const HEALTHCARE_REMINDER_NORTH_WORKFLOW: AgentWorkflow = {
+  nodes: HEALTHCARE_REMINDER_NODES,
+  nodeDetails: HEALTHCARE_REMINDER_NODE_DETAILS,
+}
+
+/** Original Reminder workflow retained for East, South, and West regions. */
+const HEALTHCARE_REMINDER_DEFAULT_NODES = [
+  { id: 'hcr-1', flowType: 'trigger', data: { title: 'Appointment is booked', subtype: 'Appointment booked', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Enter description' } },
+  { id: 'hcr-2', flowType: 'task', data: { title: 'Appointment reminder', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: '3 weeks, 3 days and 24 hours before · Email & text' } },
+  { id: 'hcr-3', flowType: 'delay', data: { title: 'Until 12 hrs before appointment', subtype: 'Delay', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Configure delay settings', descriptionPlaceholder: 'Wait for specific time or event.' } },
+  { id: 'hcr-4', flowType: 'branch', data: { title: 'Based on conditions', subtype: 'Branch', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Appointment confirmed or not?' } },
+]
+
+const HEALTHCARE_REMINDER_DEFAULT_NODE_DETAILS: Record<string, any> = {
+  ...HEALTHCARE_REMINDER_NODE_DETAILS,
+  'hcr-1': {
+    ...HEALTHCARE_REMINDER_NODE_DETAILS['hcr-1'],
+    description: 'Fires when a new appointment is created or confirmed in the system for any configured location.',
+  },
+  'hcr-2': {
+    taskName: 'Appointment reminder',
+    description: '3 weeks, 3 days and 24 hours before · Email & text',
+    selectedTools: ['reminder-tool'],
+  },
+  'hcr-3': { name: 'Until 12 hrs before appointment', duration: '12', unit: 'hours' },
+  'hcr-4': {
+    basedOn: 'conditions',
+    branches: [
+      { id: 'hcr-4-path-1', name: 'Appointment not confirmed' },
+      { id: 'hcr-4-path-2', name: 'Appointment confirmed', isFallback: true },
+    ],
+  },
+  'hcr-5': HEALTHCARE_REMINDER_NODE_DETAILS['hcr-legacy-voice-call'],
+  'hcr-6': {
+    selectedAgent: 'frontdesk-north',
+    name: 'Front desk agent - North region',
+    description: 'Transfer to the front desk agent for assisted patient handling with a reminder.',
+    intent: 'Reminder',
+  },
+}
+
+const HEALTHCARE_REMINDER_DEFAULT_WORKFLOW: AgentWorkflow = {
+  nodes: HEALTHCARE_REMINDER_DEFAULT_NODES,
+  nodeDetails: HEALTHCARE_REMINDER_DEFAULT_NODE_DETAILS,
+}
+
 export const AUTOMOTIVE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,           nodeDetails: FRONTDESK_NODE_DETAILS           },
-  'Reminder agent':  { nodes: HEALTHCARE_REMINDER_NODES,  nodeDetails: HEALTHCARE_REMINDER_NODE_DETAILS },
+  'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,             nodeDetails: OUTREACH_NODE_DETAILS            },
 }
 
@@ -1007,13 +1091,376 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
   'tr-11': { taskName: 'Assign conversation status', description: 'Mark the conversation as needing follow-up since no reply was received.', selectedTools: ['assign-conversation-status'] },
 }
 
+// ─── Review response agent ───────────────────────────────────────────────────
+// Workflow: new/updated review → triage → branch
+//   → "Respond": extract details → generate response → post reply
+//   → "No conditions met" (spam): send email alert
+
+const REVIEW_RESPONSE_NODES = [
+  {
+    id: 'rr-1',
+    flowType: 'trigger' as const,
+    data: {
+      title: 'When a new review is received or updated',
+      subtype: 'Entity trigger',
+      headerLabel: 'Trigger',
+      hasToggle: true,
+      toggleEnabled: true,
+      hasAiIcon: false,
+      titlePlaceholder: 'Enter trigger name',
+      descriptionPlaceholder: 'Enter description',
+    },
+  },
+  {
+    id: 'rr-2',
+    flowType: 'task' as const,
+    data: {
+      title: 'Triage review',
+      subtype: 'Custom',
+      hasToggle: true,
+      toggleEnabled: true,
+      hasAiIcon: false,
+      titlePlaceholder: 'Enter task name',
+      descriptionPlaceholder:
+        'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+    },
+  },
+  {
+    id: 'rr-3',
+    flowType: 'branch' as const,
+    data: {
+      title: 'Based on conditions',
+      subtype: 'Branch',
+      hasToggle: true,
+      toggleEnabled: true,
+      hasAiIcon: false,
+      titlePlaceholder: 'Enter branch name',
+      descriptionPlaceholder: 'Build condition-specific flows',
+    },
+  },
+]
+
+const REVIEW_RESPONSE_LOCATION_CITIES = [
+  'Mountain view, CA',
+  'Seattle, WA',
+  'Dallas, TX',
+  'Chicago, IL',
+  'Phoenix, AZ',
+  'Atlanta, GA',
+  'Denver, CO',
+  'Boston, MA',
+  'New York, NY',
+  'Philadelphia, PA',
+  'Austin, TX',
+  'San Antonio, TX',
+  'Portland, OR',
+  'San Diego, CA',
+  'Miami, FL',
+  'Las Vegas, NV',
+]
+
+/** 104 locations so Agent details shows 4 chips + "+ 100 more". */
+const REVIEW_RESPONSE_LOCATIONS = Array.from({ length: 104 }, (_, i) => {
+  const id = String(1001 + i)
+  const city = REVIEW_RESPONSE_LOCATION_CITIES[i % REVIEW_RESPONSE_LOCATION_CITIES.length]
+  return { id, name: `${id} - ${city}` }
+})
+
+const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
+  '__start__': {
+    agentName: 'Review response agent replying autonomously',
+    goals:
+      'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review',
+    outcomes:
+      'Ensure safe, effortless engagement by relying exclusively on your pre-approved templates. Eliminate manual effort and operational overhead by autonomously responding across platforms',
+    locations: REVIEW_RESPONSE_LOCATIONS,
+  },
+  'rr-1': {
+    triggerName: 'When a new review is received or updated',
+    description: 'Agent triggers on new or updated reviews across all sources and locations.',
+    conditions: [
+      { id: 1, fieldValue: 'review_event', operatorValue: 'equals', valueValue: 'created_or_updated' },
+    ],
+    conditionOptions: {
+      field: [
+        { value: 'review_event',  label: 'Review event' },
+        { value: 'review_source', label: 'Review source' },
+        { value: 'location',      label: 'Location' },
+      ],
+      operator: [
+        { value: 'equals',     label: 'Equals' },
+        { value: 'not_equals', label: 'Does not equal' },
+      ],
+      value: [
+        { value: 'created_or_updated', label: 'Created or updated' },
+        { value: 'created',            label: 'Created' },
+        { value: 'updated',            label: 'Updated' },
+      ],
+    },
+  },
+  'rr-2': {
+    taskName: 'Triage review',
+    description:
+      'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+    llmModel: 'Fast',
+    contextFields: [
+      { value: 'Review.comment', type: 'variable' },
+      { value: 'Review.source', type: 'variable' },
+      { value: 'https://www.yelp.com/guidelines', type: 'link' },
+      { value: 'Review.rating', type: 'variable' },
+      { value: 'Review.id', type: 'variable' },
+      { value: 'Location.name', type: 'variable' },
+      { value: 'Location.brand', type: 'variable' },
+      { value: 'https://support.google.com/business/answer/4596773', type: 'link' },
+      { value: 'Business.contentPolicy', type: 'variable' },
+      { value: 'Review.language', type: 'variable' },
+      { value: 'Contact.email', type: 'variable' },
+    ],
+    inputFields: [
+      { value: 'Review.comment', type: 'variable' },
+      { value: 'Review.source', type: 'variable' },
+      { value: 'Review.rating', type: 'variable' },
+    ],
+    systemPrompt:
+      'You are the First-Line triaging agent. Analyze the incoming review if it is a genuine customer review or irrelevant spam.',
+    userPrompt:
+      'If the review content violates any content terms of {{Review.source}} treat it as spam.\n' +
+      'If the review contains business-unrelated self-promotion or distracts from the business profile, treat it as spam.\n' +
+      'Otherwise mark it as a genuine customer review.\n' +
+      'Set Review.isSpam and Review.spamReason accordingly.',
+    outputFields: [
+      { value: 'Review.isSpam', type: 'variable' },
+      { value: 'Review.spamReason', type: 'variable' },
+    ],
+  },
+  'rr-3': {
+    basedOn: 'conditions',
+    branches: [
+      { id: 'rr-3-path-respond', name: 'Respond' },
+      { id: 'rr-3-path-fallback', name: 'No conditions met', isFallback: true },
+    ],
+  },
+  'rr-3-path-respond': {
+    branchName: 'Respond',
+    description: 'Review is a genuine customer review — extract details, generate a reply, and post it.',
+    conditions: [
+      { id: 1, fieldValue: 'Review.isSpam', operatorValue: 'equals', valueValue: 'false' },
+    ],
+    conditionOptions: {
+      field: [
+        { value: 'Review.isSpam', label: 'Review.isSpam' },
+        { value: 'triage_result', label: 'Triage result' },
+      ],
+      operator: [
+        { value: 'equals',     label: 'Equals' },
+        { value: 'not_equals', label: 'Does not equal' },
+      ],
+      value: [
+        { value: 'true',  label: 'True' },
+        { value: 'false', label: 'False' },
+        { value: 'genuine', label: 'Genuine' },
+        { value: 'spam', label: 'Spam' },
+      ],
+    },
+    parentId: 'rr-3',
+    isBranchPath: true,
+    nodes: [
+      {
+        id: 'rr-4',
+        flowType: 'task' as const,
+        data: {
+          title: 'Review details extraction',
+          subtype: 'Custom',
+          hasToggle: true,
+          toggleEnabled: true,
+          hasAiIcon: false,
+          titlePlaceholder: 'Enter task name',
+          descriptionPlaceholder:
+            'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+        },
+      },
+      {
+        id: 'rr-5',
+        flowType: 'task' as const,
+        data: {
+          title: 'Response generation',
+          subtype: 'Custom',
+          hasToggle: true,
+          toggleEnabled: true,
+          hasAiIcon: false,
+          titlePlaceholder: 'Enter task name',
+          descriptionPlaceholder:
+            'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+        },
+      },
+      {
+        id: 'rr-6',
+        flowType: 'task' as const,
+        data: {
+          title: 'Send a review response',
+          subtype: 'Custom',
+          hasToggle: true,
+          toggleEnabled: true,
+          hasAiIcon: false,
+          titlePlaceholder: 'Enter task name',
+          descriptionPlaceholder: 'Reply to the review using the generated response',
+        },
+      },
+    ],
+  },
+  'rr-4': {
+    taskName: 'Review details extraction',
+    description:
+      'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+    llmModel: 'Thinking',
+    contextFields: [
+      { value: 'Location.name', type: 'variable' },
+      { value: 'Location.brand', type: 'variable' },
+      { value: 'location.speciality', type: 'variable' },
+      { value: 'www.aspendental.com', type: 'link' },
+      { value: 'Location.address', type: 'variable' },
+      { value: 'Business.vocabulary', type: 'variable' },
+    ],
+    inputFields: [
+      { value: 'Review.comment', type: 'variable' },
+      { value: 'Review.rating', type: 'variable' },
+      { value: 'Review.source', type: 'variable' },
+      { value: 'Contact.assistedby', type: 'variable' },
+    ],
+    systemPrompt:
+      'You are a Review Intelligence Extractor. Your job is to analyze a customer review and extract details. Be precise. Do not hallucinate. If something is not mentioned or cannot be confidently determined, leave the field empty.',
+    userPrompt:
+      'Analyze the following review:\n' +
+      'Review Text: {{Review.text}}\n' +
+      'Star Rating: {{Review.rating}}\n' +
+      'Perform all of the following:\n' +
+      '1. Detect the review language\n' +
+      '2. Score sentiment and severity, and explain the severity reason\n' +
+      '3. Decide whether to escalate (legal threats, safety, CRITICAL)\n' +
+      '4. Extract topics, staff mentions, and competitor mentions\n' +
+      'Never invent staff or competitor names that are not in the review.',
+    outputFields: [
+      { value: 'Review.language', type: 'variable' },
+      { value: 'Review.severity', type: 'variable' },
+      { value: 'Review.sentiment', type: 'variable' },
+      { value: 'Review.severityreason', type: 'variable' },
+      { value: 'Review.escalate', type: 'variable' },
+      { value: 'Topics', type: 'variable' },
+      { value: 'Staff_mentions', type: 'variable' },
+      { value: 'Competitor_mentions', type: 'variable' },
+    ],
+  },
+  'rr-5': {
+    taskName: 'Response generation',
+    description:
+      'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+    llmModel: 'Balanced',
+    contextFields: [
+      { value: 'Location.brand', type: 'variable' },
+      { value: 'Location.name', type: 'variable' },
+      { value: 'Locaiton.alias', type: 'variable' },
+      { value: 'Location.address', type: 'variable' },
+      { value: 'Location.phone', type: 'variable' },
+      { value: 'Location.email', type: 'variable' },
+      { value: 'Location.hours', type: 'variable' },
+      { value: 'Brand.voice', type: 'variable' },
+      { value: 'Brand.tone', type: 'variable' },
+      { value: 'Business.seoKeywords', type: 'variable' },
+      { value: 'Business.phone', type: 'variable' },
+      { value: 'Business.email', type: 'variable' },
+      { value: 'Review.source', type: 'variable' },
+      { value: 'Contact.firstName', type: 'variable' },
+      { value: 'Location.speciality', type: 'variable' },
+      { value: 'Brand.forbiddenPhrases', type: 'variable' },
+      { value: 'Business.offlineInvite', type: 'variable' },
+      { value: 'Location.website', type: 'variable' },
+      { value: 'Brand.signature', type: 'variable' },
+      { value: 'Business.faq', type: 'variable' },
+    ],
+    inputFields: [
+      { value: '4.review.sentiment', type: 'variable' },
+      { value: '4.review.language', type: 'variable' },
+      { value: '4.review.escalate', type: 'variable' },
+      { value: '4.topics', type: 'variable' },
+    ],
+    systemPrompt:
+      'You are a marketing manager specialised in writing responses to customer reviews',
+    userPrompt:
+      'Write a response to {{Review.text}} with Star rating: {{Review.rating}}\n' +
+      'Apply all relevant rules below (cumulative, not exclusive).\n' +
+      'Rule 0 — LANGUAGE: reply in the same language as the review ({{4.review.language}}).\n' +
+      'Rule 1 — LENGTH: keep the reply under 60 words.\n' +
+      'Rule 2 — POSITIVE: for positive sentiment, thank them and add one SEO keyword.\n' +
+      'Rule 3 — NEGATIVE: never name staff; acknowledge and invite them to call or email the business.\n' +
+      'Rule 4 — ESCALATE: if {{4.review.escalate}} is true, keep the reply short and recommend an immediate call.',
+    outputFields: [
+      { value: 'Review.response', type: 'variable' },
+    ],
+  },
+  'rr-6': {
+    taskName: 'Send a review response',
+    description: 'Reply to the review using the generated response',
+    llmModel: 'Fast',
+    contextFields: [],
+    inputFields: [],
+    systemPrompt:
+      'You are a marketing manager specialised in responding to reviews. Given the generated response, post it to the review.',
+    userPrompt:
+      'Use response from {{5.review.response}} and respond using {{Review responder}}',
+    outputFields: [],
+    selectedTools: ['review-responder'],
+  },
+  'rr-3-path-fallback': {
+    branchName: 'No conditions met',
+    description: 'Review was marked as spam — alert the team instead of posting a reply.',
+    conditions: [],
+    parentId: 'rr-3',
+    isBranchPath: true,
+    isFallback: true,
+    nodes: [
+      {
+        id: 'rr-7',
+        flowType: 'task' as const,
+        data: {
+          title: 'Send an email alert',
+          subtype: 'Integration',
+          hasToggle: true,
+          toggleEnabled: true,
+          hasAiIcon: false,
+          titlePlaceholder: 'Enter task name',
+          descriptionPlaceholder:
+            'Alerts specific users when a review has been marked as SPAM and user has to take an action to flag it on the review site.',
+        },
+      },
+    ],
+  },
+  'rr-7': {
+    taskName: 'Send an email alert',
+    description:
+      'Alerts specific users when a review has been marked as SPAM and user has to take an action to flag it on the review site.',
+    selectedTools: ['send-email'],
+  },
+}
+
+export const REVIEW_RESPONSE_WORKFLOW: AgentWorkflow = {
+  nodes: REVIEW_RESPONSE_NODES,
+  nodeDetails: REVIEW_RESPONSE_NODE_DETAILS,
+}
+
 export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,             nodeDetails: FRONTDESK_HC_NODE_DETAILS          },
-  'Reminder agent':  { nodes: HEALTHCARE_REMINDER_NODES,   nodeDetails: HEALTHCARE_REMINDER_NODE_DETAILS   },
+  'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,              nodeDetails: OUTREACH_NODE_DETAILS              },
   'Pre-visit agent':  { nodes: PREVISIT_NODES,             nodeDetails: PREVISIT_NODE_DETAILS              },
   'Waitlist agent':   { nodes: WAITLIST_NODES,             nodeDetails: WAITLIST_NODE_DETAILS              },
   'Tagging & routing agent': { nodes: TAGGING_ROUTING_NODES, nodeDetails: TAGGING_ROUTING_NODE_DETAILS      },
+  // Instance names strip to "Review response agent"; library / create uses the longer titles.
+  'Review response agent': REVIEW_RESPONSE_WORKFLOW,
+  'Review response agent replying autonomously': REVIEW_RESPONSE_WORKFLOW,
+  'Review response agent replying using templates': REVIEW_RESPONSE_WORKFLOW,
+  'Review response agent replying after human approval': REVIEW_RESPONSE_WORKFLOW,
+  'Review response agent suggesting replies in dashboard': REVIEW_RESPONSE_WORKFLOW,
+  'Review response agents': REVIEW_RESPONSE_WORKFLOW,
 }
 
 // ─── Shared voice-call conditionOptions (reused across all three dental agents) ─
