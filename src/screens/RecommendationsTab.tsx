@@ -88,7 +88,7 @@ function DiscardRecommendationModal({
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
       <div className="w-[480px] rounded-md bg-surface p-xl shadow-modal">
         <div className="flex items-center justify-between">
-          <h3 className="text-h3 text-text-primary">Discard the recommendation</h3>
+          <h3 className="text-h3 text-text-primary">Discard this recommendation</h3>
           <button
             type="button"
             onClick={onCancel}
@@ -113,7 +113,7 @@ function DiscardRecommendationModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="flex h-9 items-center rounded-sm border border-border bg-surface px-lg text-body text-chip-danger-text hover:bg-surface-hover"
+            className="flex h-9 items-center rounded-sm bg-[#de1b0c] px-lg text-body text-white transition-colors hover:bg-[#c11709]"
           >
             Discard
           </button>
