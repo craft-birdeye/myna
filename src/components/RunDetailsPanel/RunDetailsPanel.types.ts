@@ -36,24 +36,4 @@ export interface RunDetailsPanelProps {
   showTabs?: boolean
   /** Panel header title. Default "Run details". */
   title?: string
-  /** When false, hides the header row (title + optional "View conversation" button) entirely.
-   *  Default true. */
-  showHeader?: boolean
-  /** Renders a call-recording waveform inline in the Conversation tab, right after whichever
-   *  system entry has `insertCallRecordingAfter` set — sticky once scrolled past. Only meaningful
-   *  when the underlying call actually included a voice leg. Default false. */
-  showCallRecording?: boolean
-  audioUrl?: string
-  durationSecs?: number
-  /** Shows a third "Call details" tab (Caller number, Language detected, Duration, Call SID,
-   *  Start time, Call end reason, Routed via) when provided. */
-  callDetails?: {
-    callerNumber: string
-    languageDetected: string
-    duration: string
-    sidNumber: string
-    startTime: string
-    callEndReason: string
-    routedVia: string
-  }
 }
