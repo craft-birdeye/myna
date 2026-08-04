@@ -37,6 +37,7 @@ import { IntegrationDetailScreen } from './screens/IntegrationDetailScreen'
 import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
+import { OverviewScreen } from './screens/OverviewScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import iconMarketing from './assets/icon-marketing.svg'
@@ -402,7 +403,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'overview' && (
         <SideNav
           title="Front desk"
           sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
@@ -421,7 +422,9 @@ export function App() {
         />
       )}
       <main className="flex flex-1 flex-col overflow-hidden">
-        {railActive === 'settings' ? (
+        {railActive === 'overview' ? (
+          <OverviewScreen />
+        ) : railActive === 'settings' ? (
           settingsSubScreen?.startsWith('integration-') ? (
             <IntegrationDetailScreen
               integrationId={settingsSubScreen.replace('integration-', '')}
