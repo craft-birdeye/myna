@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Chip, CustomizeColumnsDrawer, FilterPanel, Icon, InfoTooltip, Tabs, TopNav, type ChipVariant, type ColumnOption, type FilterField } from '../components'
+import { Chip, CustomizeColumnsDrawer, FilterPanel, Icon, InfoTooltip, MessageDrawer, Tabs, TopNav, type ChipVariant, type ColumnOption, type FilterField } from '../components'
 
 type ProcedureStatus = 'Diagnosed' | 'Accepted' | 'Rejected' | 'Completed'
 
@@ -112,12 +112,14 @@ const ALL_COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'fee',       label: 'Fee',        locked: false },
 ]
 
+const countByStatus = (s: ProcedureStatus) => PROCEDURES.filter(p => p.status === s).length
+
 const TABS = [
-  { id: 'all',       label: 'All'       },
-  { id: 'diagnosed', label: 'Diagnosed' },
-  { id: 'accepted',  label: 'Accepted'  },
-  { id: 'rejected',  label: 'Rejected'  },
-  { id: 'completed', label: 'Completed' },
+  { id: 'diagnosed', label: 'Diagnosed', count: countByStatus('Diagnosed') },
+  { id: 'accepted',  label: 'Accepted',  count: countByStatus('Accepted')  },
+  { id: 'rejected',  label: 'Rejected',  count: countByStatus('Rejected')  },
+  { id: 'completed', label: 'Completed', count: countByStatus('Completed') },
+  { id: 'all',       label: 'All',       count: PROCEDURES.length          },
 ]
 
 const DEFAULT_COL_WIDTHS: Record<string, number> = {
@@ -162,7 +164,7 @@ function DetailField({ label, children }: { label: string; children: React.React
 }
 
 // Procedure detail drawer — flat two-column grid, no card border
-function ProcedureDrawer({ proc, onClose }: { proc: Procedure | null; onClose: () => void }) {
+function ProcedureDrawer({ proc, onClose, onSendCommunication }: { proc: Procedure | null; onClose: () => void; onSendCommunication: (proc: Procedure) => void }) {
   useEffect(() => {
     if (!proc) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -180,15 +182,26 @@ function ProcedureDrawer({ proc, onClose }: { proc: Procedure | null; onClose: (
       <div className="fixed inset-y-0 right-0 z-[201] flex w-[650px] flex-col border-l border-border bg-surface shadow-modal">
 
         {/* Header */}
-        <div className="flex items-center gap-md border-b border-border px-2xl py-lg">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-sm hover:bg-surface-hover"
-          >
-            <Icon name="arrow_back" size={20} className="text-text-icon" />
-          </button>
-          <span className="text-h3 text-text-primary">Procedure details</span>
+        <div className="flex items-center justify-between border-b border-border px-2xl py-lg">
+          <div className="flex items-center gap-md">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex size-8 shrink-0 items-center justify-center rounded-sm hover:bg-surface-hover"
+            >
+              <Icon name="arrow_back" size={20} className="text-text-icon" />
+            </button>
+            <span className="text-h3 text-text-primary">Procedure details</span>
+          </div>
+          {proc.status === 'Diagnosed' && (
+            <button
+              type="button"
+              onClick={() => onSendCommunication(proc)}
+              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              Send communication
+            </button>
+          )}
         </div>
 
         <div className="flex flex-1 flex-col overflow-auto px-2xl py-lg">
@@ -285,6 +298,7 @@ export function ManageTreatmentPlansScreen() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(PROCEDURES.map(p => p.patientId)))
   const [rowMenu, setRowMenu]             = useState<{ procId: string; top: number; left: number } | null>(null)
   const [detailProc, setDetailProc]       = useState<Procedure | null>(null)
+  const [messagingProc, setMessagingProc] = useState<Procedure | null>(null)
   const [search, setSearch]               = useState('')
   const [searchOpen, setSearchOpen]       = useState(false)
   const [colWidths, setColWidths]         = useState<Record<string, number>>(DEFAULT_COL_WIDTHS)
@@ -412,12 +426,12 @@ export function ManageTreatmentPlansScreen() {
             {groups.length === 0 ? (
               <div className="flex h-48 items-center justify-center text-body text-text-tertiary">No treatment plans found.</div>
             ) : (
-              <div className="overflow-x-auto rounded-sm border border-border">
+              <div className="overflow-x-auto">
                 <table className="border-collapse text-body" style={{ minWidth: '100%', width: 'max-content' }}>
                   <thead>
                     <tr className="border-b border-border bg-surface text-left text-small text-text-secondary">
-                      <th style={{ width: w('chevron'), minWidth: w('chevron') }} className="relative px-md py-sm font-normal" />
-                      <th style={{ width: w('patient'), minWidth: w('patient') }} className="relative px-md py-sm font-normal">
+                      <th style={{ width: w('chevron'), minWidth: w('chevron'), left: 0 }} className="sticky z-[6] bg-inherit px-md py-sm font-normal" />
+                      <th style={{ width: w('patient'), minWidth: w('patient'), left: w('chevron') }} className="sticky relative z-[6] border-r border-border bg-inherit px-md py-sm font-normal">
                         Patient
                         <ColDivider colKey="patient" onMouseDown={startResize} />
                       </th>
@@ -471,12 +485,12 @@ export function ManageTreatmentPlansScreen() {
                             className="cursor-pointer border-b border-border bg-surface hover:bg-surface-hover"
                             onClick={() => toggleGroup(group.patientId)}
                           >
-                            <td className="px-md py-sm align-top pt-[14px]">
+                            <td style={{ left: 0 }} className="sticky z-[6] bg-inherit px-md py-sm align-top pt-[14px]">
                               <Icon name={isOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size={18} className="text-text-secondary" />
                             </td>
-                            <td className="px-md py-sm">
+                            <td style={{ left: w('chevron') }} className="sticky z-[6] border-r border-border bg-inherit px-md py-sm">
                               <div className="flex items-center gap-sm">
-                                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-white">{group.patientInitials}</div>
+                                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-selected text-xs text-text-secondary">{group.patientInitials}</div>
                                 <div>
                                   <div className="text-body text-text-primary">{group.patientName}</div>
                                   <div className="text-small text-text-tertiary">{group.procedures.length} procedure{group.procedures.length !== 1 ? 's' : ''} · {group.planId}</div>
@@ -504,8 +518,8 @@ export function ManageTreatmentPlansScreen() {
                                 key={proc.id}
                                 className={`group/row border-b border-border bg-surface-l2 ${menuOpen ? 'bg-surface-hover' : 'hover:bg-surface-hover'}`}
                               >
-                                <td className="px-md py-sm" />
-                                <td className="px-md py-sm" />
+                                <td style={{ left: 0 }} className="sticky z-[6] bg-inherit px-md py-sm" />
+                                <td style={{ left: w('chevron') }} className="sticky z-[6] border-r border-border bg-inherit px-md py-sm" />
                                 {showDiagnosed && <td className="px-md py-sm text-small text-text-secondary">{formatDate(proc.diagnosed)}</td>}
                                 {showOffice    && <td className="px-md py-sm text-small text-text-secondary">{proc.office}</td>}
                                 {showStatus    && <td className="px-md py-sm"><Chip label={proc.status} variant={STATUS_CHIP[proc.status]} /></td>}
@@ -582,7 +596,21 @@ export function ManageTreatmentPlansScreen() {
         onRestoreDefault={() => setVisibleKeys(['diagnosed', 'office', 'status', 'procedure', 'provider', 'fee'])}
       />
 
-      <ProcedureDrawer proc={detailProc} onClose={() => setDetailProc(null)} />
+      <ProcedureDrawer
+        proc={detailProc}
+        onClose={() => setDetailProc(null)}
+        onSendCommunication={(proc) => {
+          setDetailProc(null)
+          setMessagingProc(proc)
+        }}
+      />
+
+      <MessageDrawer
+        open={messagingProc !== null}
+        patient={messagingProc?.patientName ?? ''}
+        status={messagingProc?.status}
+        onClose={() => setMessagingProc(null)}
+      />
     </div>
   )
 }

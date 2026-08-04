@@ -170,13 +170,13 @@ const OUTREACH_NODE_DETAILS: Record<string, any> = {
 const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
   '__start__': {
     agentName: 'Front desk agent - North region',
-    goals: 'Serves as the first point of contact for inbound calls, texts, and chats — routing customer inquiries, scheduling service and sales appointments, answering vehicle and inventory questions, and escalating complex cases to the right department.',
+    goals: 'Serves as the first point of contact for inbound calls, texts, and chats — routing patient inquiries, scheduling and confirming appointments, answering practice and insurance questions, and escalating urgent or clinical concerns to the right team member.',
     outcomes: [
-      '1. Customer inquiry is resolved or routed without human intervention',
-      '2. Service or sales appointment is confirmed, modified, or cancelled and reflected in the DMS',
-      '3. Vehicle availability and pricing questions are answered instantly from inventory data',
-      '4. No customer is left waiting without a response or a clear next step',
-      '5. Escalations include a full summary of the conversation and identified customer intent',
+      '1. Patient inquiry is resolved or routed without human intervention',
+      '2. Appointment requests are confirmed, modified, or cancelled and reflected in the practice management system',
+      '3. Questions about hours, location, insurance, and services are answered instantly from the knowledge base',
+      '4. No patient is left waiting without a response or a clear next step',
+      '5. Escalations include a full summary of the conversation and identified patient intent',
     ].join('\n'),
     locations: [
       '1001 - Mountain View, CA',
@@ -196,10 +196,13 @@ const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
   'fd-1': { ...FRONTDESK_NODE_DETAILS['fd-1'] },
   'fd-2': {
     procedureIds: [
-      'General inquiry',
-      'Talk to human',
-      'Book, cancel, reschedule appointment',
-      'Verify insurance',
+      'Greeting & Intent Detection',
+      'Department Transfer',
+      'General Inquiry',
+      'Handle Unclear Message',
+      'Emergency / Urgent Handling',
+      'Talk to Human',
+      'Spanish Language Handling',
     ],
   },
 }

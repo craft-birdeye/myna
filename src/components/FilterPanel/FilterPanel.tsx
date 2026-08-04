@@ -63,7 +63,11 @@ export function FilterPanel({
         <div className="flex flex-1 flex-col gap-sm overflow-y-auto px-xl pb-xl">
           <div className="flex flex-col gap-sm">
             {fields.map((field) => {
-              const count = selections[field.id]?.length ?? 0
+              const selected = selections[field.id] ?? []
+              const count = selected.length
+              const displayText = field.formatSelectionLabel
+                ? field.formatSelectionLabel(selected, field.options ?? [])
+                : `${field.label}${count > 0 ? ` (${count})` : ''}`
               return (
                 <button
                   key={field.id}
@@ -78,8 +82,7 @@ export function FilterPanel({
                       count > 0 ? 'text-text-primary' : 'text-text-secondary'
                     }`}
                   >
-                    {field.label}
-                    {count > 0 && ` (${count})`}
+                    {displayText}
                   </span>
                   <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
                 </button>

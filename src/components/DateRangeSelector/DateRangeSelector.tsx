@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Icon } from '../Icon/Icon'
+import { SelectMenu } from '../SelectMenu/SelectMenu'
 import { DateRangeSelectorProps } from './DateRangeSelector.types'
 
+// Panel styling (colors, fonts, checkmark) comes from SelectMenu — the shared single/multi-select
+// dropdown — so every select-style dropdown in the app stays visually consistent by construction.
 export function DateRangeSelector({ value, options, onChange }: DateRangeSelectorProps) {
   const [open, setOpen] = useState(false)
 
@@ -19,24 +22,16 @@ export function DateRangeSelector({ value, options, onChange }: DateRangeSelecto
       {open && (
         <>
           <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-[110] mt-xs min-w-[180px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
-            {options.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => {
-                  onChange(opt)
-                  setOpen(false)
-                }}
-                className={`block w-full px-md py-sm text-left text-body transition-colors ${
-                  opt === value
-                    ? 'font-medium text-primary'
-                    : 'text-text-primary hover:bg-surface-hover'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+          <div className="absolute right-0 top-full z-[110] mt-xs min-w-[200px]">
+            <SelectMenu
+              options={options.map((opt) => ({ value: opt, label: opt }))}
+              value={[value]}
+              searchable={false}
+              onChange={([next]) => {
+                onChange(next)
+                setOpen(false)
+              }}
+            />
           </div>
         </>
       )}

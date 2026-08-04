@@ -60,4 +60,6 @@ export interface DataTableProps<T = Record<string, unknown>> {
   rowClassName?: (row: T, index: number) => string
   /** Row height in px. Defaults to 48 (h-12). */
   rowHeight?: number
+  /** Freeze the first column in place while the rest of the table scrolls horizontally. */
+  stickyFirstColumn?: boolean
 }

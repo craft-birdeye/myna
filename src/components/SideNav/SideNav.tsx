@@ -78,7 +78,7 @@ function Section({
   )
 }
 
-export function SideNav({ title, sections, activeId, onSelect }: SideNavProps) {
+export function SideNav({ title, sections, activeId, onSelect, actionSlot }: SideNavProps) {
   const [expandedId, setExpandedId] = useState(() => defaultExpandedSection(sections, activeId))
 
   useEffect(() => {
@@ -109,6 +109,7 @@ export function SideNav({ title, sections, activeId, onSelect }: SideNavProps) {
       <div className="flex h-[52px] shrink-0 flex-col justify-center px-2xl">
         <h1 className="text-h3 text-text-primary">{title}</h1>
       </div>
+      {actionSlot}
       <nav className="flex flex-1 flex-col gap-xs overflow-y-auto px-lg py-sm">
         {sections.map((section) => (
           <Section

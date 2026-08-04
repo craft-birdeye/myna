@@ -33,6 +33,8 @@ export interface StackedBarChartProps {
   showBarLabels?: boolean
   /** Hide the bottom legend. */
   hideLegend?: boolean
+  /** Render horizontal bars (categories on the Y-axis) — useful when category labels are long. */
+  horizontal?: boolean
 }
 
 const axisTick = { fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }
@@ -101,7 +103,67 @@ function StackedBarTooltip({
   )
 }
 
-export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend }: StackedBarChartProps) {
+export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend, horizontal }: StackedBarChartProps) {
+  const legend = !hideLegend && (
+    <Legend
+      align="left"
+      iconType="circle"
+      iconSize={8}
+      formatter={(value) => <span style={{ color: '#555555' }}>{value}</span>}
+      wrapperStyle={{ fontSize: 12, fontFamily: 'Roboto', paddingTop: 8 }}
+    />
+  )
+  const tooltip = (
+    <Tooltip
+      cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+      content={(props) => (
+        <StackedBarTooltip
+          {...props}
+          series={series}
+          data={data}
+          xKey={xKey}
+          grouped={!!grouped}
+        />
+      )}
+    />
+  )
+
+  if (horizontal) {
+    const longestLabel = Math.max(...data.map((d) => String(d[xKey] ?? '').length))
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart data={data} layout="vertical" margin={{ top: 8, right: showBarLabels ? 32 : 8, left: 0, bottom: 0 }} barCategoryGap="28%">
+          <CartesianGrid stroke={chartColors.grid} horizontal={false} vertical={!showBarLabels} />
+          <XAxis type="number" tick={axisTick} tickLine={false} axisLine={{ stroke: chartColors.grid }} hide={showBarLabels} />
+          <YAxis dataKey={xKey} type="category" tick={axisTick} tickLine={false} axisLine={false} width={Math.min(140, 8 * longestLabel + 16)} />
+          {tooltip}
+          {legend}
+          {series.map((s, i) => (
+            <Bar
+              key={s.key}
+              dataKey={s.key}
+              name={s.label}
+              stackId={grouped ? undefined : 'a'}
+              fill={s.color}
+              radius={grouped || i === series.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]}
+              maxBarSize={20}
+              isAnimationActive={false}
+            >
+              {showBarLabels && i === series.length - 1 && (
+                <LabelList
+                  dataKey={s.key}
+                  position="right"
+                  formatter={kFormat}
+                  style={{ fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }}
+                />
+              )}
+            </Bar>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    )
+  }
+
   const xTick = xAxisAngle
     ? { ...axisTick, angle: xAxisAngle, textAnchor: 'end' as const, dy: 4 }
     : axisTick
@@ -121,27 +183,8 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
           ? <YAxis hide width={0} />
           : <YAxis tick={axisTick} tickLine={false} axisLine={false} width={40} />
         }
-        <Tooltip
-          cursor={{ fill: 'rgba(0,0,0,0.04)' }}
-          content={(props) => (
-            <StackedBarTooltip
-              {...props}
-              series={series}
-              data={data}
-              xKey={xKey}
-              grouped={!!grouped}
-            />
-          )}
-        />
-        {!hideLegend && (
-          <Legend
-            align="left"
-            iconType="circle"
-            iconSize={8}
-            formatter={(value) => <span style={{ color: '#555555' }}>{value}</span>}
-            wrapperStyle={{ fontSize: 12, fontFamily: 'Roboto', paddingTop: 8 }}
-          />
-        )}
+        {tooltip}
+        {legend}
         {series.map((s, i) => (
           <Bar
             key={s.key}
