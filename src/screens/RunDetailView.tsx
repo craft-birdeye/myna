@@ -1,5 +1,6 @@
 import React from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
+import voicemailSample from '../assets/voicemail_sample.mp3'
 import { Chip, LogDetailsPanel, RunDetailsPanel, type RunLogStep } from '../components'
 import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
 import {
@@ -27,7 +28,6 @@ interface RunDetailViewProps {
   row: HealthcareLogRow
   instanceName: string
   onBack: () => void
-  onViewConversation?: () => void
   onEditAgent?: () => void
 }
 
@@ -57,6 +57,30 @@ function getImplementedSteps(row: HealthcareLogRow): LogStepId[] {
   if (row.implementedSteps?.length) return row.implementedSteps
   if (row.status === 'Complete') return ['trigger', 'procedures']
   return ['trigger']
+}
+
+function parseDurationSecs(duration: string): number {
+  const mmss = duration.match(/^(\d+):(\d+)$/)
+  if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2])
+  const secsOnly = Number(duration)
+  return Number.isFinite(secsOnly) ? secsOnly : 332
+}
+
+function formatDurationLabel(secs: number): string {
+  const mins = Math.floor(secs / 60)
+  const rem = secs % 60
+  return `${mins}m ${String(rem).padStart(2, '0')}s`
+}
+
+function startTimeLabel(timestamp: string): string {
+  const match = timestamp.match(/(\d{1,2}:\d{2}\s*[ap]m)/i)
+  return match?.[1] ?? timestamp
+}
+
+/** Reminder agent's log rows never carry a real caller-facing phone number in `contact` (it's
+ *  often a name), so this mirrors the Front-desk "Call details" fallback. */
+function displayCallerNumber(row: HealthcareLogRow): string {
+  return row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : '(032) 902 9023'
 }
 
 function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
@@ -431,10 +455,13 @@ function WorkflowCanvas({
 }
 
 /* ── main export ── */
-export function RunDetailView({ row, instanceName, onBack, onViewConversation, onEditAgent }: RunDetailViewProps) {
+export function RunDetailView({ row, instanceName, onBack, onEditAgent }: RunDetailViewProps) {
   const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
   const isReviewResponse = agentName.startsWith('Review response agent')
+  const isReminder = agentName === 'Reminder agent'
+  const hasVoiceCall = row.channel.toLowerCase().includes('voice')
+  const totalSecs = parseDurationSecs(row.duration)
   const agentWorkflow =
     instanceName === 'Reminder agent - North region'
       ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
@@ -443,7 +470,7 @@ export function RunDetailView({ row, instanceName, onBack, onViewConversation, o
         : undefined
   const statusVariant =
     row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
-  const useRunDetailsPanel = agentName === 'Reminder agent' || isReviewResponse
+  const useRunDetailsPanel = isReminder || isReviewResponse
 
   return (
     <div className="relative flex h-full flex-col bg-surface">
@@ -485,13 +512,29 @@ export function RunDetailView({ row, instanceName, onBack, onViewConversation, o
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
           {useRunDetailsPanel ? (
             <RunDetailsPanel
-              onViewConversation={isReviewResponse ? undefined : onViewConversation}
               steps={isReviewResponse ? buildReviewResponseRunSteps(row) : undefined}
               showTabs={!isReviewResponse}
               title={isReviewResponse ? 'Log details' : undefined}
+              showHeader={isReviewResponse}
+              showCallRecording={isReminder && hasVoiceCall}
+              audioUrl={isReminder ? voicemailSample : undefined}
+              durationSecs={isReminder ? totalSecs : undefined}
+              callDetails={
+                isReminder
+                  ? {
+                      callerNumber: displayCallerNumber(row),
+                      languageDetected: 'English',
+                      duration: formatDurationLabel(totalSecs),
+                      sidNumber: 'CA45 T78 932',
+                      startTime: startTimeLabel(row.timestamp),
+                      callEndReason: 'User ended the conversation',
+                      routedVia: instanceName,
+                    }
+                  : undefined
+              }
             />
           ) : (
-            <LogDetailsPanel row={row} onViewConversation={onViewConversation} />
+            <LogDetailsPanel row={row} />
           )}
         </div>
       </div>

@@ -209,131 +209,47 @@ function FieldRow({ fieldKey, value }: { fieldKey: string; value: string }) {
   )
 }
 
-const LLM_DETAILS_MODEL = 'Qwen3.6-35B-A3B'
-const TTS_DETAILS_MODEL = 'eleven_multilingual_v2'
-
-function parseDurationMs(label: string, fallback = 480): number {
-  const match = label.match(/([\d.]+)\s*(ms|s)/i)
-  if (!match) return fallback
-  const n = Number(match[1])
-  return match[2].toLowerCase() === 's' ? Math.round(n * 1000) : Math.round(n)
+/** Explains each meta-line abbreviation on hover — LLM/TTS/KB (agent bubbles) and STT (caller
+ *  bubbles), all part of the same transcript-metrics family. */
+const META_LABEL_TOOLTIPS: Record<string, string> = {
+  LLM: 'Large language model',
+  TTS: 'Text to speech',
+  STT: 'Speech to text',
+  KB: 'Knowledge base',
 }
 
-function llmDetailMetrics(llmResponseTime: string): { label: string; value: string }[] {
-  // Prototype metrics — first-byte / first-sentence sit under the reported LLM time.
-  const totalMs = parseDurationMs(llmResponseTime, 480)
-  const firstByte = Math.max(80, Math.round(totalMs * 0.21))
-  const firstSentence = Math.max(firstByte + 4, Math.round(totalMs * 0.22))
-  const lastSentence = Math.max(firstSentence + 20, Math.round(totalMs * 0.29))
-  return [
-    { label: 'Time to first byte from LLM service', value: `${firstByte} ms` },
-    { label: 'Time to first sentence from LLM service', value: `${firstSentence} ms` },
-    { label: 'Time to last sentence from LLM service', value: `${lastSentence} ms` },
-  ]
-}
-
-function ttsDetailMetrics(tts: string): { label: string; value: string }[] {
-  const totalMs = parseDurationMs(tts, 640)
-  const firstByte = Math.max(40, Math.round(totalMs * 0.18))
-  return [{ label: 'Time to first byte', value: `${firstByte} ms` }]
-}
-
-function DiagnosticDetailsCard({
-  title,
-  model,
-  metrics,
-  onClose,
-}: {
-  title: string
-  model: string
-  metrics: { label: string; value: string }[]
-  onClose: () => void
-}) {
+function MetaLabel({ label }: { label: string }) {
   return (
-    <div className="ml-auto w-[380px] max-w-full rounded-[12px] bg-surface-l2 px-md py-md">
-      <div className="mb-md flex items-center justify-between gap-sm">
-        <p className="m-0 text-small leading-[1.6] text-text-secondary">{title}</p>
-        <button
-          type="button"
-          aria-label={`Close ${title}`}
-          onClick={onClose}
-          className="flex size-5 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
-        >
-          <Icon name="close" size={16} />
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-lg">
-        <div className="flex flex-col gap-xs">
-          <p className="m-0 text-small leading-[1.6] text-text-tertiary">Model</p>
-          <p className="m-0 text-small leading-[1.6] text-text-secondary">{model}</p>
-        </div>
-
-        <div className="flex flex-col gap-sm">
-          <p className="m-0 text-small leading-[1.6] text-text-tertiary">Metrics</p>
-          <div className="flex flex-col gap-sm">
-            {metrics.map((row) => (
-              <div key={row.label} className="flex items-start justify-between gap-md">
-                <p className="m-0 min-w-0 text-small leading-[1.6] text-text-secondary">{row.label}</p>
-                <p className="m-0 shrink-0 text-small leading-[1.6] text-text-secondary">{row.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <Tooltip content={META_LABEL_TOOLTIPS[label]} variant="brief">
+      <span className="cursor-default">{label}</span>
+    </Tooltip>
   )
 }
 
-function AgentMetaLine({
-  entry,
-  llmOpen,
-  ttsOpen,
-  onToggleLlm,
-  onToggleTts,
-}: {
-  entry: Extract<LogTranscriptEntry, { role: 'agent' }>
-  llmOpen: boolean
-  ttsOpen: boolean
-  onToggleLlm: () => void
-  onToggleTts: () => void
-}) {
-  const afterTts: string[] = []
-  if (entry.knowledgeBase) afterTts.push(`Knowledge base ${entry.knowledgeBase}`)
-  if (entry.time) afterTts.push(entry.time)
-
-  if (!entry.llmResponseTime && !entry.tts && afterTts.length === 0) return null
-
-  const metaBtn = (active: boolean) =>
-    `rounded-sm transition-colors hover:bg-surface-hover hover:text-text-secondary ${
-      active ? 'bg-surface-hover text-text-secondary' : ''
-    }`
+function AgentMetaLine({ entry }: { entry: Extract<LogTranscriptEntry, { role: 'agent' }> }) {
+  if (!entry.llmResponseTime && !entry.tts && !entry.knowledgeBase && !entry.time) return null
 
   return (
-    <span className="whitespace-pre-wrap text-small text-text-tertiary">
+    <span className="text-small text-text-tertiary">
       {entry.llmResponseTime && (
-        <button
-          type="button"
-          onClick={onToggleLlm}
-          aria-expanded={llmOpen}
-          className={metaBtn(llmOpen)}
-        >
-          LLM {entry.llmResponseTime}
-        </button>
+        <>
+          <MetaLabel label="LLM" /> {`: ${entry.llmResponseTime}`}
+        </>
       )}
-      {entry.llmResponseTime && entry.tts && '  •  '}
+      {entry.llmResponseTime && entry.tts && ' • '}
       {entry.tts && (
-        <button
-          type="button"
-          onClick={onToggleTts}
-          aria-expanded={ttsOpen}
-          className={metaBtn(ttsOpen)}
-        >
-          TTS {entry.tts}
-        </button>
+        <>
+          <MetaLabel label="TTS" /> {`: ${entry.tts}`}
+        </>
       )}
-      {(entry.llmResponseTime || entry.tts) && afterTts.length > 0 && '  •  '}
-      {afterTts.join('  •  ')}
+      {(entry.llmResponseTime || entry.tts) && entry.knowledgeBase && ' • '}
+      {entry.knowledgeBase && (
+        <>
+          <MetaLabel label="KB" /> {`: ${entry.knowledgeBase}`}
+        </>
+      )}
+      {(entry.llmResponseTime || entry.tts || entry.knowledgeBase) && entry.time && ' • '}
+      {entry.time}
     </span>
   )
 }
@@ -550,9 +466,6 @@ function MetaField({ label, value }: { label: string; value: string }) {
 }
 
 function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
-  const [llmOpen, setLlmOpen] = useState(false)
-  const [ttsOpen, setTtsOpen] = useState(false)
-
   if (entry.role === 'system') {
     return (
       <div className="py-sm">
@@ -571,9 +484,13 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
       >
         {(entry.durationLabel || entry.time) && (
           <span className="text-small text-text-tertiary">
-            {[entry.durationLabel ? `STT ${entry.durationLabel}` : null, entry.time]
-              .filter(Boolean)
-              .join('  •  ')}
+            {entry.durationLabel && (
+              <>
+                <MetaLabel label="STT" /> {`: ${entry.durationLabel}`}
+              </>
+            )}
+            {entry.durationLabel && entry.time && ' • '}
+            {entry.time}
           </span>
         )}
       </ChatBubble>
@@ -587,35 +504,7 @@ function TranscriptEntry({ entry }: { entry: LogTranscriptEntry }) {
       gap="gap-sm"
       bubbleClassName="max-w-[85%] px-lg py-md"
     >
-      <AgentMetaLine
-        entry={entry}
-        llmOpen={llmOpen}
-        ttsOpen={ttsOpen}
-        onToggleLlm={() => {
-          setLlmOpen((v) => !v)
-          setTtsOpen(false)
-        }}
-        onToggleTts={() => {
-          setTtsOpen((v) => !v)
-          setLlmOpen(false)
-        }}
-      />
-      {llmOpen && entry.llmResponseTime && (
-        <DiagnosticDetailsCard
-          title="LLM details"
-          model={LLM_DETAILS_MODEL}
-          metrics={llmDetailMetrics(entry.llmResponseTime)}
-          onClose={() => setLlmOpen(false)}
-        />
-      )}
-      {ttsOpen && entry.tts && (
-        <DiagnosticDetailsCard
-          title="TTS details"
-          model={TTS_DETAILS_MODEL}
-          metrics={ttsDetailMetrics(entry.tts)}
-          onClose={() => setTtsOpen(false)}
-        />
-      )}
+      <AgentMetaLine entry={entry} />
       {entry.toolCall && (
         <AgentTurnAccordions tool={entry.toolCall} reasoning={entry.reasoning} />
       )}
@@ -634,32 +523,18 @@ export function LogDetailsPanel({
   transcript = DEFAULT_TRANSCRIPT,
   durationSecs,
   audioUrl = voicemailSample,
-  onViewConversation,
 }: LogDetailsPanelProps) {
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
   const displayCaller =
     row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : callerNumber
+  // A purely text/web-chat conversation never recorded a call — no waveform to show.
+  const hasVoiceCall = row.channel.toLowerCase().includes('voice')
 
   const [summaryOpen, setSummaryOpen] = useState(true)
   const [transcriptOpen, setTranscriptOpen] = useState(true)
 
   return (
     <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
-      {/* Header — matches RHSPanelHeader (0 15px, height 60) */}
-      <div className="flex h-[60px] shrink-0 items-center justify-between px-[15px]">
-        <h2 className="m-0 text-body text-text-primary">Conversation details</h2>
-        {onViewConversation && (
-          <button
-            type="button"
-            onClick={onViewConversation}
-            className="flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
-          >
-            View conversation
-            <Icon name="open_in_new" size={16} />
-          </button>
-        )}
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto px-[15px] py-lg">
         {/* Meta card */}
         <div className="mb-2xl rounded-sm border border-border px-lg py-lg">
@@ -707,11 +582,16 @@ export function LogDetailsPanel({
           </button>
           {transcriptOpen && (
             <div className="mt-[32px] flex flex-col gap-3xl">
-              <CallRecordingPlayer
-                audioUrl={audioUrl}
-                durationSecs={totalSecs}
-                padded={false}
-              />
+              {hasVoiceCall && (
+                <div>
+                  <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
+                  <CallRecordingPlayer
+                    audioUrl={audioUrl}
+                    durationSecs={totalSecs}
+                    padded={false}
+                  />
+                </div>
+              )}
               <div className="flex flex-col gap-3xl">
                 {transcript.map((entry) => (
                   <TranscriptEntry key={entry.id} entry={entry} />
