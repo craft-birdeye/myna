@@ -118,6 +118,24 @@
   align-items: center;
 }
 
+.cnh__more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cnh__more-btn:hover {
+  background: #f4f6f7;
+}
+
 .cnh__context-menu {
   position: absolute;
   top: 100%;

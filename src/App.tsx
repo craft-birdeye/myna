@@ -258,8 +258,6 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'generation-agents', label: 'Generation agents' },
       { id: 'response-agents',   label: 'Response agents' },
-      { id: 'tagging-agents',    label: 'Tagging agents' },
-      { id: 'marketing-agents',  label: 'Marketing agents' },
     ],
   },
   {
@@ -329,6 +327,7 @@ const AGENT_NAMES: Record<string, string> = {
   'treatment-plan-agent':      'Treatment plan agent',
   'review-response-agents':    'Review response agents',
   'response-agents':           'Review response agents',
+  'generation-agents':         'Review generation agents',
 }
 
 // ─── "View details" deep links ─────────────────────────────────────────────
@@ -545,6 +544,10 @@ export function App() {
         ) : railActive === 'reviews' ? (
           navActive === 'view-all-reviews' || navActive === 'all-reviews' ? (
             <AllReviewsScreen />
+          ) : navActive === 'respond-to-reviews' ? (
+            <AllReviewsScreen unansweredOnly />
+          ) : navActive === 'monitor-agent-replies' ? (
+            <AllReviewsScreen agentRepliesOnly />
           ) : AGENT_NAMES[navActive] ? (
             <AgentDetailScreen
               key={navActive}

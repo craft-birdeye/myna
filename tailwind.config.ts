@@ -48,6 +48,10 @@ export default {
           danger: { bg: '#fef6f5', text: '#de1b0c' }, // Red/10 · negative
           neutral: { bg: '#eaeaea', text: '#555555' }, // Gray/40 · Gray/300
         },
+        rating: {
+          star: '#F2C052', // filled review star
+          empty: '#B9BCC0', // empty / unfilled review star
+        },
         tooltip: { DEFAULT: '#252525' }, // Gray/800 — Tooltip / Web (Aero DS, node 2180:72)
       },
       spacing: {

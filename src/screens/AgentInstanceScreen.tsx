@@ -143,6 +143,18 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'conversationsManaged', value: '95%', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Share of conversations tagged and routed end-to-end at this location.' },
     { id: 'timeSaved', value: '32m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing at this location.' },
   ],
+  'Review generation agents': [
+    { id: 'reviewsReceived', value: '137', label: 'Reviews received', delta: '1.3%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+    { id: 'contactsReached', value: '150', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+    { id: 'clickThroughRate', value: '5.1%', label: 'Click-through rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+    { id: 'timeSaved', value: '5h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+  ],
+  'Review generation agent': [
+    { id: 'reviewsReceived', value: '137', label: 'Reviews received', delta: '1.3%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+    { id: 'contactsReached', value: '150', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+    { id: 'clickThroughRate', value: '5.1%', label: 'Click-through rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+    { id: 'timeSaved', value: '5h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+  ],
 }
 
 const DEFAULT_METRICS: Metric[] = [
@@ -206,6 +218,15 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Chicago, IL',     count: '250', statusUpdated: '400', conversationsAssigned: '200', conversationsManaged: '92%', timeSaved: '5m'  },
     { location: 'Los Angeles, CA', count: '200', statusUpdated: '50',  conversationsAssigned: '200', conversationsManaged: '88%', timeSaved: '10m' },
     { location: 'Stamford, CT',    count: '100', statusUpdated: '50',  conversationsAssigned: '100', conversationsManaged: '88%', timeSaved: '2m'  },
+  ],
+  'Review generation agent': [
+    { location: 'Atlanta, GA',      count: '1', reviewsReceived: '30', contactsReached: '30', clickThroughRate: '4.9%', timeSaved: '1h' },
+    { location: 'Stamford, CT',     count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '4.8%', timeSaved: '1h' },
+    { location: 'Los Angeles, CA',  count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '5.3%', timeSaved: '1h' },
+    { location: 'New York City, NY', count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '5.4%', timeSaved: '1h' },
+    { location: 'San Diego, CA',    count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '5.1%', timeSaved: '20m' },
+    { location: 'Las Vegas, NV',    count: '1', reviewsReceived: '20', contactsReached: '10', clickThroughRate: '4.7%', timeSaved: '20m' },
+    { location: 'Chicago, IL',      count: '1', reviewsReceived: '7',  contactsReached: '10', clickThroughRate: '4.8%', timeSaved: '20m' },
   ],
 }
 
@@ -314,6 +335,14 @@ const TAGGING_ROUTING_COLUMNS: Column<LocationRow>[] = [
   { key: 'timeSaved',             label: 'Time saved',             width: 140, sortable: true },
 ]
 
+const REVIEW_GENERATION_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location', label: 'Location', width: 220, sortable: true },
+  { key: 'reviewsReceived', label: 'Reviews received', width: 160, sortable: true },
+  { key: 'contactsReached', label: 'Contacts reached', width: 160, sortable: true },
+  { key: 'clickThroughRate', label: 'Click-through rate', width: 160, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
+]
+
 export function AgentInstanceScreen({
   instanceName,
   displayName,
@@ -336,12 +365,18 @@ export function AgentInstanceScreen({
   const agentName = instanceName.replace(/ - .+$/, '')
   const shownName = displayName ?? instanceName
   const isReviewResponse = agentName.startsWith('Review response agent')
+  const isReviewGeneration = agentName.startsWith('Review generation agent')
+  const reviewGenerationKey = 'Review generation agent'
 
   useEffect(() => {
     onFullBleedChange?.(Boolean(selectedRun) && isReviewResponse)
     return () => onFullBleedChange?.(false)
   }, [selectedRun, isReviewResponse, onFullBleedChange])
-  const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
+  const metrics: Metric[] = (
+    isReviewGeneration
+      ? METRICS_BY_AGENT[reviewGenerationKey]
+      : METRICS_BY_AGENT[agentName]
+  ) ?? DEFAULT_METRICS
   const COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
     : agentName === 'Front desk agent'    ? FRONTDESK_COLUMNS
@@ -351,17 +386,26 @@ export function AgentInstanceScreen({
     : agentName === 'Revenue agent'       ? REVENUE_COLUMNS
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
+    : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
     : DEFAULT_COLUMNS
-  const locations = LOCATIONS_BY_AGENT[agentName] ?? LOCATIONS_BY_AGENT['Front desk agent']
+  const locations = (
+    isReviewGeneration
+      ? LOCATIONS_BY_AGENT[reviewGenerationKey]
+      : LOCATIONS_BY_AGENT[agentName]
+  ) ?? LOCATIONS_BY_AGENT['Front desk agent']
   const isTaggingRouting = agentName === 'Tagging & routing agent'
-  const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : isReviewResponse ? REVIEW_RESPONSE_TABS : TABS
+  const tabs = isTaggingRouting
+    ? TAGGING_ROUTING_TABS
+    : isReviewResponse || isReviewGeneration
+      ? REVIEW_RESPONSE_TABS
+      : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
-  const showEmptyRecommendations = agentName === 'Reminder agent' || isReviewResponse
+  const showEmptyRecommendations = agentName === 'Reminder agent' || isReviewResponse || isReviewGeneration
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[instanceName] ?? 0
   const showHealthcareLogs =
-    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || isReviewResponse)
+    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || isReviewResponse || isReviewGeneration)
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && product === 'dental' && Boolean(dentalOutboundLogRows)
@@ -465,6 +509,16 @@ export function AgentInstanceScreen({
                       aria-hidden
                     />
                     <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+                      <button
+                        type="button"
+                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                        onClick={() => {
+                          setActionsOpen(false)
+                          onEditAgent?.(instanceName)
+                        }}
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"

@@ -93,6 +93,9 @@ interface AgentInstance {
   reviewsResponded?: string
   responseRate?: string
   avgResponseTime?: string
+  reviewsReceived?: string
+  contactsReached?: string
+  clickThroughRate?: string
   /** Open issues for this instance — shown next to the status chip and gating Publish in the editor. */
   issues?: number
   [key: string]: string | number | undefined
@@ -148,6 +151,9 @@ interface RegionRow {
   reviewsResponded?: string
   responseRate?: string
   avgResponseTime?: string
+  reviewsReceived?: string
+  contactsReached?: string
+  clickThroughRate?: string
   /** Overrides the default `${agentName} - ${region}` row label. */
   instanceName?: string
 }
@@ -212,6 +218,30 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
     { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
     { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+  ],
+  'Review generation agents': [
+    {
+      region: 'North Region',
+      status: 'Running',
+      channels: 'Email, Text',
+      reviewsReceived: '112',
+      contactsReached: '115',
+      clickThroughRate: '3.4%',
+      timeSaved: '4h 10m',
+      locations: '10',
+      instanceName: 'Review generation agent - North Region',
+    },
+    {
+      region: 'A/B testing',
+      status: 'Running',
+      channels: 'Email, Text',
+      reviewsReceived: '137',
+      contactsReached: '150',
+      clickThroughRate: '5.1%',
+      timeSaved: '5h 8m',
+      locations: '20',
+      instanceName: 'Review generation agent with A/B testing, smart targeting and split campaigns 1',
+    },
   ],
 }
 
@@ -400,6 +430,18 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       id: 'reviews-response-dashboard-suggestions',
       title: 'Review response agent suggesting replies in dashboard',
       description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
+    },
+  ],
+  'Review generation agents': [
+    {
+      id: 'reviews-generation-standard',
+      title: 'Review generation agent',
+      description: 'Sends review requests to customers after transactions complete across email and text.',
+    },
+    {
+      id: 'reviews-generation-ab',
+      title: 'Review generation agent with A/B testing',
+      description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
     },
   ],
 }
@@ -5394,7 +5436,7 @@ function HealthcareFrontdeskCreateAgentLive({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
               className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
             >
-              <h3 className="line-clamp-2 shrink-0 text-body text-text-primary">{tpl.title}</h3>
+              <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
               <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
               <div className={INFO_CARD_LAYOUT.ctaWrap}>
                 <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
@@ -6050,6 +6092,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
       { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
     ],
+    'Review generation agents': [
+      { id: 'reviewsReceived', value: '249', label: 'Reviews received', delta: '16.4%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+      { id: 'contactsReached', value: '265', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+      { id: 'clickThroughRate', value: '4.9%', label: 'Click-through rate', delta: '0.3%', trend: 'down', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+      { id: 'timeSaved', value: '9h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+    ],
   }
 
   const DEFAULT_METRICS: Metric[] = [
@@ -6099,6 +6147,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     reviewsResponded: r.reviewsResponded,
     responseRate: r.responseRate,
     avgResponseTime: r.avgResponseTime,
+    reviewsReceived: r.reviewsReceived,
+    contactsReached: r.contactsReached,
+    clickThroughRate: r.clickThroughRate,
     issues: r.issues,
   }))
 
@@ -6111,7 +6162,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
   const isReviewResponse  = agentName === 'Review response agents'
-  const hideChannels      = isTaggingRouting || isReviewResponse
+  const isReviewGeneration = agentName === 'Review generation agents'
+  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration
 
   useEffect(() => {
     // Instance screen owns full-bleed signaling (e.g. View log) while drilled in.
@@ -6196,6 +6248,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { key: 'responseRate' as keyof AgentInstance, label: 'Response rate', width: 130, sortable: true },
       { key: 'avgResponseTime' as keyof AgentInstance, label: 'Average response time', width: 170, sortable: true },
       { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
+    ] : isReviewGeneration ? [
+      { key: 'reviewsReceived' as keyof AgentInstance, label: 'Reviews received', width: 150, sortable: true },
+      { key: 'contactsReached' as keyof AgentInstance, label: 'Contacts reached', width: 150, sortable: true },
+      { key: 'clickThroughRate' as keyof AgentInstance, label: 'Click-through rate', width: 150, sortable: true },
+      { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
     ] : [
       { key: 'interactions' as keyof AgentInstance, label: 'Interactions handled', width: 200, sortable: true },
       { key: 'fcr' as keyof AgentInstance, label: 'First contact resolution rate', width: 220, sortable: true },
@@ -6211,7 +6268,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   // are shown by default. Agents with more metrics (Recall, Revenue, Treatment plan, etc.)
   // still default to the first two, with the rest available via Customize columns.
   const metricKeys = COLUMN_DEFS.slice(hideChannels ? 2 : 3, -1).map((c) => String(c.key))
-  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse
+  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse || isReviewGeneration
   const DEFAULT_VISIBLE = ['name', 'status', ...(hideChannels ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
@@ -6612,7 +6669,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               </div>
             </>
           ) : libraryView === 'grid' ? (
-            <div className="grid grid-cols-1 gap-lg px-2xl py-lg md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
               {visibleLibraryCards.map((card) => (
                 <InfoCard key={card.title} {...card} />
               ))}
