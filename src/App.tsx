@@ -36,6 +36,7 @@ import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
+import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import iconMarketing from './assets/icon-marketing.svg'
 import iconAgents from './assets/icon-agents.svg'
@@ -56,7 +57,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'agents', label: 'Agents', icon: iconAgents, kind: 'image', badge: 'New' },
+      { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
     ],
   },
   {
@@ -431,7 +432,15 @@ export function App() {
       <IconRail
         logoSrc={logoSrc}
         brand={PRODUCT_BRAND[activeProduct]}
-        groups={RAIL_GROUPS}
+        groups={
+          activeProduct === 'healthcare'
+            ? RAIL_GROUPS
+            : RAIL_GROUPS.map((g) =>
+                g.id === 'main'
+                  ? { ...g, items: g.items.map((i) => (i.id === 'agents' ? { ...i, label: 'Agents' } : i)) }
+                  : g,
+              )
+        }
         activeId={railActive}
         onSelect={(id) => {
           setRailActive(id)
@@ -443,7 +452,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && railActive !== 'settings' && railActive !== 'inbox' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && (
         railActive === 'reviews' ? (
           <SideNav
             key="reviews"
@@ -495,6 +504,15 @@ export function App() {
           <InboxScreen
             initialConversationId={inboxFocusId}
             onInitialConversationConsumed={() => setInboxFocusId(null)}
+          />
+        ) : railActive === 'agents' ? (
+          <AgentDirectoryScreen
+            key={activeProduct}
+            product={activeProduct}
+            onOpenAgent={(navId) => {
+              setRailActive('frontdesk')
+              setNavActive(navId)
+            }}
           />
         ) : isEditingWorkflow ? (
           <div className="flex h-full w-full overflow-hidden">

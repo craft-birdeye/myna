@@ -8,6 +8,7 @@ const MoreIcon = () => <span className="material-symbols-outlined cnh__btn-icon"
 const DeleteIcon = () => <span className="material-symbols-outlined cnh__btn-icon cnh__btn-icon--delete">delete</span>;
 const CopyIcon = () => <span className="material-symbols-outlined cnh__btn-icon">content_copy</span>;
 const ReplaceIcon = () => <span className="material-symbols-outlined cnh__btn-icon">swap_horiz</span>;
+const PasteIcon = () => <span className="material-symbols-outlined cnh__btn-icon">content_paste</span>;
 
 // ── Custom SVG icons from Figma (node-id: 41-43388) ─────────────────────────
 const TriggerIcon = () => (
@@ -67,6 +68,9 @@ export default function CanvasNodeHeader({
   onDelete,
   onCopy,
   onReplace,
+  hasClipboard = false,
+  onPasteBelow = undefined,
+  onPasteReplace = undefined,
   onMoveUp,
   onMoveDown,
   canMoveUp = false,
@@ -99,6 +103,18 @@ export default function CanvasNodeHeader({
     e.stopPropagation();
     setMenuOpen(false);
     onReplace?.();
+  };
+
+  const handlePasteBelow = (e) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onPasteBelow?.();
+  };
+
+  const handlePasteReplace = (e) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onPasteReplace?.();
   };
 
   const isTrigger = nodeType === 'trigger';
@@ -166,6 +182,18 @@ export default function CanvasNodeHeader({
                       <CopyIcon />
                       <span>Copy</span>
                     </button>
+                    {hasClipboard && (
+                      <>
+                        <button className="cnh__context-menu-item" onClick={handlePasteBelow}>
+                          <PasteIcon />
+                          <span>Paste below</span>
+                        </button>
+                        <button className="cnh__context-menu-item" onClick={handlePasteReplace}>
+                          <PasteIcon />
+                          <span>Paste to replace</span>
+                        </button>
+                      </>
+                    )}
                     <button className="cnh__context-menu-item cnh__context-menu-item--delete" onClick={handleDelete}>
                       <DeleteIcon />
                       <span>Delete</span>

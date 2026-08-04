@@ -419,7 +419,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       source: prevId,
       target: nodeId,
       type: 'addButton',
-      ...(prevIsProcedures ? { data: { hideAddButton: true } } : {}),
+      data: { betweenCards: true, ...(prevIsProcedures ? { hideAddButton: true } : {}) },
     });
 
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
@@ -466,7 +466,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
               vcChildData = { ...vcChildData, title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title, subtitle: vcChildDet.description ?? vcChildData.subtitle };
             }
             nodes.push({ id: vcChildId, type: vcChild.flowType, position: { x: vcBranchX, y: vcNodeStartY + vcIdx * 250 }, data: vcChildData });
-            edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId } });
+            edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId, betweenCards: vcPrevId !== vcBranch.id } });
             vcPrevId = vcChildId;
           });
           const vcEndId = `${vcBranch.id}-end`;
@@ -500,7 +500,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
           }
           const childY = branchNodeStartY + childYOffset;
           nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
-          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
+          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
           previousId = childNode.id;
           previousChildFlowType = childNode.flowType;
           childYOffset += 250;
@@ -537,7 +537,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                 }
                 const innerChildY = innerNodeStartY + innerYOff;
                 nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
-                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId } });
+                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
                 innerPrevId = innerChildId;
                 innerYOff += 250;
                 if (innerChild.flowType === 'voiceCall') {
@@ -598,57 +598,76 @@ function nextId() {
   return `node-${nodeIdCounter}`;
 }
 
-function duplicateNodeDetails(sourceId, newId, allDetails) {
-  const source = allDetails[sourceId];
-  if (!source) return { nodeDetails: {}, extraDetails: {} };
+/** Find where a node lives — the top-level trunk, or a branch/loop container's `nodes` array. */
+function locateNodeContainer(nodeId, nodeList, nodeDetails) {
+  const rootIdx = nodeList.findIndex((n) => n.id === nodeId);
+  if (rootIdx !== -1) return { containerId: null, index: rootIdx };
+  for (const [key, details] of Object.entries(nodeDetails)) {
+    if (Array.isArray(details?.nodes)) {
+      const idx = details.nodes.findIndex((n) => n.id === nodeId);
+      if (idx !== -1) return { containerId: key, index: idx };
+    }
+  }
+  return null;
+}
 
-  const cloned = JSON.parse(JSON.stringify(source));
-  const extraDetails = {};
+/** Recursively snapshot a node's nodeDetails entry plus every entry it references (branch paths, loop children). */
+function collectDetailsSnapshot(nodeId, nodeDetails, out = {}) {
+  if (out[nodeId]) return out;
+  const details = nodeDetails[nodeId];
+  if (!details) return out;
+  out[nodeId] = JSON.parse(JSON.stringify(details));
+  (details.nodes || []).forEach((child) => collectDetailsSnapshot(child.id, nodeDetails, out));
+  (details.branches || []).forEach((b) => collectDetailsSnapshot(b.id, nodeDetails, out));
+  return out;
+}
 
-  if (Array.isArray(cloned.branches)) {
-    cloned.branches = cloned.branches.map((branch, index) => {
-      const newPathId = `${newId}-path-copy-${index}-${Date.now()}`;
-      const pathDetails = allDetails[branch.id];
-      extraDetails[newPathId] = pathDetails
-        ? {
-            ...JSON.parse(JSON.stringify(pathDetails)),
-            parentId: newId,
-            nodes: (pathDetails.nodes || []).map((child) => {
-              const childNewId = nextId();
-              if (allDetails[child.id]) {
-                extraDetails[childNewId] = JSON.parse(JSON.stringify(allDetails[child.id]));
-              }
-              return { ...child, id: childNewId, data: { ...child.data } };
-            }),
-          }
-        : {
-            branchName: branch.name,
-            description: '',
-            conditions: [],
-            parentId: newId,
-            isBranchPath: true,
-            isFallback: branch.isFallback,
-            isVoiceCallBranch: branch.isVoiceCallBranch,
-            nodes: [],
-          };
-      return { ...branch, id: newPathId };
-    });
+/** Recursively collect a node's own id plus every id it references (branch paths, loop children). */
+function collectAllIds(nodeId, nodeDetails, out = []) {
+  if (out.includes(nodeId)) return out;
+  out.push(nodeId);
+  const details = nodeDetails[nodeId];
+  if (!details) return out;
+  (details.nodes || []).forEach((child) => collectAllIds(child.id, nodeDetails, out));
+  (details.branches || []).forEach((b) => collectAllIds(b.id, nodeDetails, out));
+  return out;
+}
+
+/**
+ * Clone a node (and, recursively, any branch/loop children it references) with fresh ids,
+ * reading source data from a `detailsSnapshot` map rather than live nodeDetails. Fills
+ * `extraOut` with `{ [newId]: clonedDetails }` for the node itself and every cloned descendant.
+ */
+function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
+  const newId = nextId();
+  const clonedEntry = { ...nodeEntry, id: newId, data: { ...nodeEntry.data } };
+  const sourceDetails = detailsSnapshot[nodeEntry.id] || {};
+  const clonedDetails = JSON.parse(JSON.stringify(sourceDetails));
+
+  if (Array.isArray(clonedDetails.nodes)) {
+    clonedDetails.nodes = clonedDetails.nodes.map((child) =>
+      cloneSubtreeForPaste(child, detailsSnapshot, extraOut));
   }
 
-  if (Array.isArray(cloned.nodes) && !cloned.isBranchPath) {
-    cloned.nodes = (source.nodes || []).map((inner) => {
-      const innerNewId = nextId();
-      if (allDetails[inner.id]) {
-        extraDetails[innerNewId] = JSON.parse(JSON.stringify(allDetails[inner.id]));
+  if (Array.isArray(clonedDetails.branches)) {
+    clonedDetails.branches = clonedDetails.branches.map((branch) => {
+      const branchSource = detailsSnapshot[branch.id];
+      const newBranchId = `${newId}-path-${nextId()}`;
+      if (branchSource) {
+        const clonedBranch = JSON.parse(JSON.stringify(branchSource));
+        clonedBranch.parentId = newId;
+        if (Array.isArray(clonedBranch.nodes)) {
+          clonedBranch.nodes = clonedBranch.nodes.map((child) =>
+            cloneSubtreeForPaste(child, detailsSnapshot, extraOut));
+        }
+        extraOut[newBranchId] = clonedBranch;
       }
-      return { ...inner, id: innerNewId, data: { ...inner.data } };
+      return { ...branch, id: newBranchId };
     });
   }
 
-  return {
-    nodeDetails: { [newId]: cloned },
-    extraDetails,
-  };
+  extraOut[newId] = clonedDetails;
+  return clonedEntry;
 }
 
 export default function AgentBuilder({
@@ -676,6 +695,7 @@ export default function AgentBuilder({
   procedures = null,
   onAddProcedure,
   publishDisabled = false,
+  issueCount = 0,
   defaultOpenSection = 'Tasks',
   initialZoom = 1,
   runDisabled = false,
@@ -712,6 +732,8 @@ export default function AgentBuilder({
   const [navId, setNavId] = useState(activeNavId);
   const [nodeList, setNodeList] = useState(() => initialNodes || []);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  // Canvas node clipboard — holds a copied node's entry + a snapshot of its (and any referenced branch/loop) details
+  const [clipboard, setClipboard] = useState(null);
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
@@ -1197,31 +1219,96 @@ export default function AgentBuilder({
   }, [selectedNodeId]);
 
   const handleCopyNode = useCallback((nodeId) => {
-    const newId = nextId();
-    setNodeList((prev) => {
-      const idx = prev.findIndex((n) => n.id === nodeId);
-      if (idx === -1) return prev;
-      if (prev[idx].flowType === 'trigger') return prev;
-      const source = prev[idx];
-      const cloned = {
-        ...source,
-        id: newId,
-        data: { ...source.data },
-      };
-      const updated = [...prev.slice(0, idx + 1), cloned, ...prev.slice(idx + 1)];
-      return updated.map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const nodeEntry = located.containerId
+      ? nodeDetails[located.containerId]?.nodes?.[located.index]
+      : nodeList[located.index];
+    if (!nodeEntry) return;
+    setClipboard({
+      nodeEntry: JSON.parse(JSON.stringify(nodeEntry)),
+      detailsSnapshot: collectDetailsSnapshot(nodeId, nodeDetails),
     });
-    setNodeDetails((prev) => {
-      const { nodeDetails, extraDetails } = duplicateNodeDetails(nodeId, newId, prev);
-      if (!nodeDetails[newId]) return prev;
-      return { ...prev, ...nodeDetails, ...extraDetails };
-    });
-  }, []);
+  }, [nodeList, nodeDetails]);
 
   const handleReplaceTrigger = useCallback(() => {
     setLhsCollapsed(false);
     setLhsForceOpenSection('Trigger');
   }, []);
+
+  const handlePasteBelow = useCallback((afterNodeId) => {
+    if (!clipboard) return;
+    const located = locateNodeContainer(afterNodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const extraOut = {};
+    const newEntry = cloneSubtreeForPaste(clipboard.nodeEntry, clipboard.detailsSnapshot, extraOut);
+
+    if (located.containerId) {
+      setNodeDetails((prev) => {
+        const container = prev[located.containerId] || {};
+        const existingNodes = container.nodes || [];
+        const nextNodes = [
+          ...existingNodes.slice(0, located.index + 1),
+          newEntry,
+          ...existingNodes.slice(located.index + 1),
+        ].map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+        return {
+          ...prev,
+          ...extraOut,
+          [located.containerId]: { ...container, nodes: nextNodes },
+        };
+      });
+    } else {
+      setNodeList((prev) => {
+        const next = [
+          ...prev.slice(0, located.index + 1),
+          newEntry,
+          ...prev.slice(located.index + 1),
+        ];
+        return next.map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+      });
+      setNodeDetails((prev) => ({ ...prev, ...extraOut }));
+    }
+  }, [clipboard, nodeList, nodeDetails]);
+
+  const handlePasteReplace = useCallback((nodeId) => {
+    if (!clipboard) return;
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const extraOut = {};
+    const newEntry = cloneSubtreeForPaste(clipboard.nodeEntry, clipboard.detailsSnapshot, extraOut);
+    const oldIds = collectAllIds(nodeId, nodeDetails);
+
+    if (located.containerId) {
+      setNodeDetails((prev) => {
+        const parentContainer = prev[located.containerId] || {};
+        const nodes = (parentContainer.nodes || []).map((n, i) => {
+          const updated = n.id === nodeId ? newEntry : n;
+          return { ...updated, data: { ...updated.data, stepNumber: i + 1 } };
+        });
+        const copy = { ...prev };
+        oldIds.forEach((id) => { delete copy[id]; });
+        Object.assign(copy, extraOut);
+        copy[located.containerId] = { ...parentContainer, nodes };
+        return copy;
+      });
+    } else {
+      setNodeList((prev) => prev.map((n, i) => {
+        const updated = n.id === nodeId ? newEntry : n;
+        return { ...updated, data: { ...updated.data, stepNumber: i + 1 } };
+      }));
+      setNodeDetails((prev) => {
+        const copy = { ...prev };
+        oldIds.forEach((id) => { delete copy[id]; });
+        Object.assign(copy, extraOut);
+        return copy;
+      });
+    }
+    if (oldIds.includes(selectedNodeId)) {
+      setSelectedNodeId(null);
+      setDrawerOpen(false);
+    }
+  }, [clipboard, nodeList, nodeDetails, selectedNodeId]);
 
   const handleAddBranchPath = useCallback((branchNodeId) => {
     const newPathId = `${branchNodeId}-path-${Date.now()}`;
@@ -1332,6 +1419,11 @@ export default function AgentBuilder({
     if (n.type === 'branchEnd') return n;
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
+      onDelete: () => handleDeleteNode(n.id),
+      onCopy: () => handleCopyNode(n.id),
+      hasClipboard: !!clipboard,
+      onPasteBelow: () => handlePasteBelow(n.id),
+      onPasteReplace: () => handlePasteReplace(n.id),
       onMoveUp: () => handleMoveNode(n.id, 'up'),
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
@@ -2094,6 +2186,12 @@ export default function AgentBuilder({
     </div>
   ) : (
     <div className="ab-header-actions">
+      {issueCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555', fontSize: 13 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, lineHeight: 1, color: '#de1b0c' }}>error</span>
+          Resolve issues ({issueCount})
+        </div>
+      )}
       {/* Cloud save icon — matches Figma 41-43635 */}
       <button
         type="button"
@@ -2108,7 +2206,7 @@ export default function AgentBuilder({
         theme="primary"
         label={isTemplateMode ? 'Save template' : 'Publish'}
         onClick={isTemplateMode ? handleSaveTemplate : handlePublish}
-        disabled={!isTemplateMode && publishDisabled}
+        disabled={!isTemplateMode && (publishDisabled || issueCount > 0)}
       />
     </div>
   );
@@ -2232,6 +2330,8 @@ export default function AgentBuilder({
               onNodeClick={handleNodeClick}
               onDropNode={viewOnly ? undefined : handleDropNode}
               onNodesReorder={viewOnly ? undefined : handleNodesReorder}
+              hasClipboard={!viewOnly && !!clipboard}
+              onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
               selectedNodeId={selectedNodeId}
               orientation="vertical"
               viewOnly={viewOnly}
