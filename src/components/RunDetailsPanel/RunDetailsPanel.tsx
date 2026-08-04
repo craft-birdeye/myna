@@ -159,9 +159,10 @@ function LogsTab({ steps }: { steps: RunLogStep[] }) {
 
 /** Right-hand "Run details" pane — Logs tab shows the trigger/task steps this run executed
  *  (expandable field/tool trees); Conversation tab renders whatever the caller passes in (e.g. a
- *  call recording player + transcript). Opened from a log row's "View log" action. */
-export function RunDetailsPanel({ steps, conversation }: RunDetailsPanelProps) {
-  const [tab, setTab] = useState<'logs' | 'conversation'>('logs')
+ *  call recording player + transcript); an optional Call details tab (to the right of the other
+ *  two) shows caller/call metadata. Opened from a log row's "View log" action. */
+export function RunDetailsPanel({ steps, conversation, callDetails }: RunDetailsPanelProps) {
+  const [tab, setTab] = useState<'logs' | 'conversation' | 'call-details'>('logs')
 
   return (
     <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
@@ -170,20 +171,25 @@ export function RunDetailsPanel({ steps, conversation }: RunDetailsPanelProps) {
           tabs={[
             { id: 'logs', label: 'Logs' },
             { id: 'conversation', label: 'Conversation' },
+            ...(callDetails ? [{ id: 'call-details', label: 'Call details' }] : []),
           ]}
           activeTab={tab}
-          onChange={(id) => setTab(id as 'logs' | 'conversation')}
+          onChange={(id) => setTab(id as 'logs' | 'conversation' | 'call-details')}
         />
       </div>
 
-      {tab === 'logs' ? (
+      {tab === 'logs' && (
         <div className="min-h-0 flex-1 overflow-y-auto px-[15px] py-lg">
           <LogsTab steps={steps} />
         </div>
-      ) : (
+      )}
+      {tab === 'conversation' && (
         // No overflow/padding here — the conversation node owns its own pinned-player +
         // independently-scrolling chat layout (see `LogDetailsPanel`).
         <div className="relative min-h-0 flex-1 overflow-hidden">{conversation}</div>
+      )}
+      {tab === 'call-details' && (
+        <div className="min-h-0 flex-1 overflow-y-auto px-[15px] py-lg">{callDetails}</div>
       )}
     </div>
   )

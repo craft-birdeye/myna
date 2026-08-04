@@ -61,4 +61,11 @@ export interface LogDetailsPanelProps {
   /** Called when a "Track your feedback" link is clicked — the host screen navigates to that
    *  recommendation's detail page. */
   onTrackFeedback?: (recommendationId: string) => void
+  /** Overrides for the "Call details" tab — fall back to sensible demo defaults. */
+  callerNumber?: string
+  sidNumber?: string
+  languageDetected?: string
+  callEndReason?: string
+  /** Defaults to `agentName`. */
+  routedVia?: string
 }

@@ -271,6 +271,58 @@ function parseDurationSecs(duration: string): number {
   return Number.isFinite(secsOnly) ? secsOnly : 332
 }
 
+function formatDurationLabel(secs: number): string {
+  const mins = Math.floor(secs / 60)
+  const rem = secs % 60
+  return `${mins}m ${String(rem).padStart(2, '0')}s`
+}
+
+function startTimeLabel(timestamp: string): string {
+  const match = timestamp.match(/(\d{1,2}:\d{2}\s*[ap]m)/i)
+  return match?.[1] ?? timestamp
+}
+
+function MetaField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="m-0 text-small text-text-tertiary">{label}</p>
+      <p className="m-0 mt-xs text-body text-text-primary">{value}</p>
+    </div>
+  )
+}
+
+function CallDetailsTab({
+  callerNumber,
+  languageDetected,
+  durationSecs,
+  sidNumber,
+  startTime,
+  callEndReason,
+  routedVia,
+}: {
+  callerNumber: string
+  languageDetected: string
+  durationSecs: number
+  sidNumber: string
+  startTime: string
+  callEndReason: string
+  routedVia: string
+}) {
+  return (
+    <div className="rounded-sm border border-border px-lg py-lg">
+      <div className="grid grid-cols-2 gap-x-lg gap-y-lg">
+        <MetaField label="Caller number" value={callerNumber} />
+        <MetaField label="Language detected" value={languageDetected} />
+        <MetaField label="Duration" value={formatDurationLabel(durationSecs)} />
+        <MetaField label="Call SID" value={sidNumber} />
+        <MetaField label="Start time" value={startTime} />
+        <MetaField label="Call end reason" value={callEndReason} />
+        <MetaField label="Routed via" value={routedVia} />
+      </div>
+    </div>
+  )
+}
+
 function FieldRow({ fieldKey, value }: { fieldKey: string; value: string }) {
   return (
     <div className="flex flex-wrap items-center gap-sm text-small">
@@ -556,8 +608,15 @@ export function LogDetailsPanel({
   durationSecs,
   audioUrl = voicemailSample,
   onTrackFeedback,
+  callerNumber = '(032) 902 9023',
+  sidNumber = 'CA45 T78 932',
+  languageDetected = 'English',
+  callEndReason = 'User ended the conversation',
+  routedVia = agentName,
 }: LogDetailsPanelProps) {
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
+  const displayCaller =
+    row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : callerNumber
 
   // Same "Coach agent" → "Track your feedback" flow as the Inbox transcript view — Coach agent
   // opens the Share-feedback modal; once submitted, that message's link switches to "Track your
@@ -632,6 +691,17 @@ export function LogDetailsPanel({
     <>
       <RunDetailsPanel
         steps={CALL_LOG_STEPS}
+        callDetails={
+          <CallDetailsTab
+            callerNumber={displayCaller}
+            languageDetected={languageDetected}
+            durationSecs={totalSecs}
+            sidNumber={sidNumber}
+            startTime={startTimeLabel(row.timestamp)}
+            callEndReason={callEndReason}
+            routedVia={routedVia}
+          />
+        }
         conversation={
           <div className="relative flex h-full flex-col">
             <div className="shrink-0 px-[15px] pt-lg">

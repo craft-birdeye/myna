@@ -27,4 +27,7 @@ export interface RunDetailsPanelProps {
   steps: RunLogStep[]
   /** Rendered inside the "Conversation" tab — e.g. a call recording player + transcript. */
   conversation: ReactNode
+  /** Rendered inside a third "Call details" tab (to the right of Conversation) when provided —
+   *  e.g. caller number, duration, call SID. Tab is omitted entirely when not passed. */
+  callDetails?: ReactNode
 }
