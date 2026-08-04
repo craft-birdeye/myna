@@ -996,10 +996,12 @@ export function LogDetailsPanel({
                   <EmailActionCard title="Appointment booked" />
                   <ReminderSentCard time="08:03 PM" />
                   <EmailActionCard title="Reminder confirmation" />
+                  <ChatSystemLabel text="Voice call started" />
                   {/* Sticky from here down — pins to the top of the scroll area once scrolled
                    *  past, and releases back to its normal place in the flow once scrolled back
                    *  up to it, matching the always-pinned waveform on other agents. */}
                   <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
+                    <p className="m-0 mb-sm text-small text-text-tertiary">Call recording</p>
                     <CallRecordingPlayer
                       audioUrl={audioUrl}
                       durationSecs={totalSecs}
@@ -1007,7 +1009,6 @@ export function LogDetailsPanel({
                       onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
                     />
                   </div>
-                  <ChatSystemLabel text="Voice call started" />
                   {transcriptNodes}
                 </div>
               </div>
