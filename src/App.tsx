@@ -438,14 +438,6 @@ export function App() {
                     setWizardAgentDraft(null)
                     setWorkflowAiAssistOpen(false)
                   }}
-                  onViewWorkflow={() => {
-                    if (editingAgentName) {
-                      setPendingAgentInstanceView({ instanceName: editingAgentName, tab: 'workflow' })
-                    }
-                    setEditingAgentName(null)
-                    setWizardAgentDraft(null)
-                    setWorkflowAiAssistOpen(false)
-                  }}
                   product={activeProduct}
                   wizardDraft={wizardAgentDraft}
                   agentStatus={

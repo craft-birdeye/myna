@@ -3,13 +3,12 @@ import { Icon } from '../Icon/Icon'
 import type { AttachMenuOption, AttachMenuPopoverProps } from './AttachMenuPopover.types'
 
 const OPTIONS: { id: AttachMenuOption; label: string; icon: string }[] = [
-  { id: 'upload-image', label: 'Upload image', icon: 'computer' },
-  { id: 'media-library', label: 'Media library', icon: 'perm_media' },
+  { id: 'upload-image', label: 'Upload', icon: 'computer' },
   { id: 'files', label: 'Files', icon: 'draft' },
 ]
 
 // Plus-button trigger + anchored menu for the "Build your agent" composer:
-// upload an image from disk, or pick from the media library / files pickers.
+// upload a file from disk, or pick from the files picker.
 export function AttachMenuPopover({ onSelect, disabled = false, className = '' }: AttachMenuPopoverProps) {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)

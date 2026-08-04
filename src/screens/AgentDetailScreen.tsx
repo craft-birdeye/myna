@@ -2423,17 +2423,19 @@ function ProcedurePreviewPanel({
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card">
-      <RHSSidePanelHeader
-        title={procedure.name}
-        onPreview={undefined}
-        onClose={onClose}
-        showActions={false}
-        showMoreMenu={false}
-      />
+      <div className="[&>div]:!p-xl">
+        <RHSSidePanelHeader
+          title={procedure.name}
+          onPreview={undefined}
+          onClose={onClose}
+          showActions={false}
+          showMoreMenu={false}
+        />
+      </div>
 
       <div
         ref={bodyScrollRef}
-        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-lg pb-3xl pt-lg"
+        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-xl pb-3xl pt-xl"
       >
         <div className="flex flex-col gap-sm">
           <p className="text-small text-text-secondary">
@@ -4074,7 +4076,7 @@ function HealthcareFrontdeskCreateAgentLive({
           >
             {previewOpen ? (
               <div className="h-full">
-                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full [&_.preview-panel]:!rounded-none [&_.preview-panel]:!border-0 [&_.preview-panel]:!shadow-none [&_.preview-panel__header]:!h-[60px] [&_.preview-panel__header]:!px-[15px] [&_.preview-panel__header]:!py-0 [&_.preview-panel__title]:!text-[16px] [&_.preview-panel__title]:!font-normal [&_.preview-panel__title]:!leading-6 [&_.preview-panel__title]:![letter-spacing:-0.32px] [&_.preview-panel__title]:!text-[#212121] [&_.preview-panel__close-btn_.material-symbols-outlined]:![font-size:24px] [&_.preview-panel__close-btn]:!text-[#303030]">
+                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full [&_.preview-panel]:!rounded-none [&_.preview-panel]:!border-0 [&_.preview-panel]:!shadow-none [&_.preview-panel__header]:!h-[64px] [&_.preview-panel__header]:!px-xl [&_.preview-panel__header]:!py-0 [&_.preview-panel__title]:!text-[16px] [&_.preview-panel__title]:!font-normal [&_.preview-panel__title]:!leading-6 [&_.preview-panel__title]:![letter-spacing:-0.32px] [&_.preview-panel__title]:!text-[#212121] [&_.preview-panel__close-btn_.material-symbols-outlined]:![font-size:24px] [&_.preview-panel__close-btn]:!text-[#303030] [&_.preview-panel__body--outbound]:!p-xl">
                   <PreviewPanel
                     key={previewKey}
                     onClose={handlePreviewClose}
@@ -5557,12 +5559,6 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 agentStatus="Draft"
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
-                onViewWorkflow={() => {
-                  closeCreateWorkflow()
-                  setShowCreateFlow(false)
-                  setInstanceInitialTab('workflow')
-                  setSelectedInstance(`${agentName} - North region`)
-                }}
                 hideLhs
                 createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
                 previewProcedureId={canvasProcedureId}

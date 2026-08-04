@@ -98,24 +98,28 @@ export default function GraphControls({
 
       {(onEdit || onView) && (
         <div className="graph-controls__mode-toggle">
-          <GraphControlTooltip text="Edit workflow">
-            <button
-              className={`graph-controls__toggle-btn${!viewOnly ? ' graph-controls__toggle-btn--active' : ''}`}
-              onClick={onEdit}
-              type="button"
-            >
-              <span className="material-symbols-outlined">edit</span>
-            </button>
-          </GraphControlTooltip>
-          <GraphControlTooltip text="View workflow">
-            <button
-              className={`graph-controls__toggle-btn${viewOnly ? ' graph-controls__toggle-btn--active' : ''}`}
-              onClick={onView}
-              type="button"
-            >
-              <span className="material-symbols-outlined">visibility</span>
-            </button>
-          </GraphControlTooltip>
+          {onEdit && (
+            <GraphControlTooltip text="Edit workflow">
+              <button
+                className={`graph-controls__toggle-btn${!viewOnly ? ' graph-controls__toggle-btn--active' : ''}`}
+                onClick={onEdit}
+                type="button"
+              >
+                <span className="material-symbols-outlined">edit</span>
+              </button>
+            </GraphControlTooltip>
+          )}
+          {onView && (
+            <GraphControlTooltip text="View workflow">
+              <button
+                className={`graph-controls__toggle-btn${viewOnly ? ' graph-controls__toggle-btn--active' : ''}`}
+                onClick={onView}
+                type="button"
+              >
+                <span className="material-symbols-outlined">visibility</span>
+              </button>
+            </GraphControlTooltip>
+          )}
         </div>
       )}
 
