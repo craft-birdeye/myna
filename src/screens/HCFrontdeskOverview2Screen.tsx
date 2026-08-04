@@ -360,7 +360,20 @@ const SESSIONS_BY_NODE: Partial<Record<string, FunnelSession[]>> = {
 
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l.toLowerCase().replace(/\s+/g, '-'), label: l }))
 
+// Collapsed filter button reads "All channels" by default (and stays that way if every option
+// ends up checked), the single option's own name — pluralized — when exactly one is picked
+// (e.g. "Call" -> "Calls"), or a plain count once there's more than one but not all.
+function formatChannelSelectionLabel(selected: string[], options: { value: string; label: string }[]): string {
+  if (selected.length === 0 || selected.length === options.length) return 'All channels'
+  if (selected.length === 1) {
+    const opt = options.find((o) => o.value === selected[0])
+    return opt ? `${opt.label}s` : '1 selected'
+  }
+  return `${selected.length} selected`
+}
+
 const FILTER_FIELDS: FilterField[] = [
+  { id: 'channel', label: 'Channels', options: opts('Call', 'Text', 'Email'), multi: true, formatSelectionLabel: formatChannelSelectionLabel },
   { id: 'region',          label: 'Region',              options: opts('Northeast', 'Southeast', 'Midwest', 'Southwest', 'West Coast', 'Pacific Northwest') },
   { id: 'division',        label: 'Division',            options: opts('Division A', 'Division B', 'Division C', 'Division D', 'Division E') },
   { id: 'city',            label: 'City',                options: opts('Austin', 'San Francisco', 'Phoenix', 'Denver', 'Seattle', 'Dallas', 'Houston', 'Chicago') },
@@ -387,13 +400,16 @@ function HCCard(props: React.ComponentProps<typeof ChartCard>) {
 
 const DATE_RANGE_OPTIONS = ['Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months', 'Custom']
 
-function getSummaryStats(forms: NounForms) {
+// grandTotal/resolvedTotal come straight from the filtered funnel (exact); hours/savings are
+// business-value metrics with no per-channel data behind them, so they scale with volume ratio.
+function getSummaryStats(forms: NounForms, grandTotal: number, resolvedTotal: number, ratio: number) {
+  const resolutionRate = grandTotal > 0 ? Math.round((resolvedTotal / grandTotal) * 100) : 0
   return [
-    { id: 'handled',        value: '700',    label: `${forms.capPlural} involved`,  delta: '70%', trend: 'up' as const },
-    { id: 'resolved',       value: '560',    label: `${forms.capPlural} resolved` },
-    { id: 'resolutionRate', value: '80%',    label: 'Resolution rate' },
-    { id: 'hours',          value: '37 hrs', label: 'Staff hours saved' },
-    { id: 'savings',        value: '$521',   label: 'Monthly savings',        delta: '36%', trend: 'up' as const },
+    { id: 'handled',        value: grandTotal.toLocaleString(),    label: `${forms.capPlural} involved`,  delta: '70%', trend: 'up' as const },
+    { id: 'resolved',       value: resolvedTotal.toLocaleString(), label: `${forms.capPlural} resolved` },
+    { id: 'resolutionRate', value: `${resolutionRate}%`,           label: 'Resolution rate' },
+    { id: 'hours',          value: `${Math.round(37 * ratio)} hrs`, label: 'Staff hours saved' },
+    { id: 'savings',        value: `$${Math.round(521 * ratio)}`,   label: 'Monthly savings',        delta: '36%', trend: 'up' as const },
   ]
 }
 
@@ -431,19 +447,18 @@ const INVOLVEMENT_TREND_SERIES = [
   { key: 'notAnswered', label: 'Not answered',   color: '#de1b0c' },
 ]
 
-// Resolution rate (resolved ÷ (resolved + transferred)) improves steadily each month —
-// 80% in Feb up to 85.7% by Jul — even though raw volume still moves up and down.
+// Transferred decreases every single month (AI needing fewer human handoffs as it improves) —
+// unlike the other trends on this page, this one is a clean, unambiguous decline, not up-and-down
+// noise. Resolved is derived, not independent: resolved[m] = involved[m] − transferred[m], where
+// involved[m] = INVOLVEMENT_TREND_DATA[m].myna + .human — so resolution rate still climbs
+// (75% in Feb to 85.7% by Jul) and Jul (the "current month" anchor used elsewhere) is unchanged.
 const OUTCOME_TREND_DATA = [
-  { month: 'Feb', resolved: 616, transferred: 154 },
-  { month: 'Mar', resolved: 684, transferred: 161 },
-  { month: 'Apr', resolved: 652, transferred: 143 },
-  { month: 'May', resolved: 747, transferred: 148 },
-  { month: 'Jun', resolved: 706, transferred: 134 },
+  { month: 'Feb', resolved: 580, transferred: 190 },
+  { month: 'Mar', resolved: 670, transferred: 175 },
+  { month: 'Apr', resolved: 633, transferred: 162 },
+  { month: 'May', resolved: 743, transferred: 152 },
+  { month: 'Jun', resolved: 695, transferred: 145 },
   { month: 'Jul', resolved: 840, transferred: 140 },
-]
-const OUTCOME_TREND_SERIES = [
-  { key: 'resolved',    label: 'Resolved',    color: '#4cae3d' },
-  { key: 'transferred', label: 'Transferred', color: '#f59e0b' },
 ]
 
 // Office hours / after hours split of AI agent-handled interactions only
@@ -467,22 +482,6 @@ const TIMING_TREND_SERIES = [
 // Every unit of volume carries all the way through the Outcome column (Resolved + Transferred +
 // Missed sum to the full 1,000) so that column isn't vertically centered shorter than the rest —
 // only "Missed" (8) terminates there instead of continuing into Sub-outcome.
-const FUNNEL_NODES: SankeyNode[] = [
-  { name: 'Call 60%' },
-  { name: 'Text 30%' },
-  { name: 'Email 10%' },
-  { name: 'AI agents involved 70%' },
-  { name: 'Human involved 28%' },
-  { name: 'Not answered 2%' },
-  { name: 'Resolved 84%' },
-  { name: 'Transferred 14%' },
-  { name: 'Missed 2%' },
-  { name: 'Answered 46%' },
-  { name: 'Pending 21%' },
-  { name: 'Bookings 18%' },
-  { name: 'Rescheduled 10%' },
-  { name: 'Cancellations 4%' },
-]
 const FUNNEL_LINKS: SankeyLink[] = [
   // channel → involvement (real per-channel splits, not an even proportion of the channel total)
   { source: 0, target: 3, value: 470 }, // Call    → AI agents involved
@@ -515,6 +514,80 @@ const FUNNEL_NODE_COLORS: Record<number, string> = {
   0: '#1976d2', 1: '#3f51b5', 2: '#9c27b0',
   3: '#7c4dff', 4: '#4cae3d', 5: '#de1b0c', 6: '#4cae3d', 7: '#f59e0b', 8: '#de1b0c',
   9: '#00bcd4', 10: '#f5a623', 11: '#e056c7', 12: '#8bc34a', 13: '#4cae3d',
+}
+
+// ─── Channel filter ───────────────────────────────────────────────────────────
+// Every chart on this page is driven off the channel split established by the funnel
+// (Call 600 / Text 300 / Email 100 of 1,000). Deselecting a channel in the "Channels" filter
+// re-derives the whole page from there: the funnel is recomputed exactly (each downstream node
+// rescaled by how much of its inflow survived the filter, preserving flow conservation column to
+// column), and every other chart — which only has aggregate, not per-channel, data — scales by
+// the resulting ratio of filtered-to-total volume. Only "Interaction/Conversation/Session trend
+// by channel" and "Conversations by channel" are true per-channel data, so those filter exactly
+// instead of scaling.
+const CHANNEL_KEYS = ['call', 'text', 'email'] as const
+type ChannelKey = typeof CHANNEL_KEYS[number]
+const CHANNEL_NODE_INDEX: Record<ChannelKey, number> = { call: 0, text: 1, email: 2 }
+const FUNNEL_NODE_BASE_NAMES = [
+  'Call', 'Text', 'Email',
+  'AI agents involved', 'Human involved', 'Not answered',
+  'Resolved', 'Transferred', 'Missed',
+  'Answered', 'Pending', 'Bookings', 'Rescheduled', 'Cancellations',
+]
+// Column groupings by node index — used to recompute each node's % label relative to its own
+// column's new total (the Sub-outcome column excludes "Missed", so it never sums to the same
+// total as the other three — see the nodePadding comment above the SankeyChart usage below).
+const FUNNEL_COLUMNS = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11, 12, 13]]
+
+function computeFilteredFunnel(selectedChannels: ChannelKey[]) {
+  const selectedIdx = new Set(selectedChannels.map((c) => CHANNEL_NODE_INDEX[c]))
+
+  const originalIncoming: Record<number, number> = {}
+  const originalChannelTotal: Record<number, number> = { 0: 0, 1: 0, 2: 0 }
+  for (const l of FUNNEL_LINKS) {
+    originalIncoming[l.target as number] = (originalIncoming[l.target as number] ?? 0) + l.value
+    const s = l.source as number
+    if (s === 0 || s === 1 || s === 2) originalChannelTotal[s] += l.value
+  }
+
+  // Walk the links in the same channel → involvement → outcome → sub-outcome order they're
+  // authored in: channel links are hard-filtered, every link past that is scaled by how much of
+  // its source node's inflow survived filtering, so each node's outflow always sums back to
+  // exactly its (possibly reduced) inflow — real flow conservation, not a single global ratio.
+  const newIncoming: Record<number, number> = {}
+  const newLinks: SankeyLink[] = []
+  for (const l of FUNNEL_LINKS) {
+    const s = l.source as number
+    if (s === 0 || s === 1 || s === 2) {
+      if (selectedIdx.has(s)) {
+        newLinks.push({ ...l })
+        newIncoming[l.target as number] = (newIncoming[l.target as number] ?? 0) + l.value
+      }
+    } else {
+      const orig = originalIncoming[s] ?? 0
+      const now = newIncoming[s] ?? 0
+      const scale = orig > 0 ? now / orig : 0
+      const val = Math.round(l.value * scale)
+      if (val > 0) {
+        newLinks.push({ ...l, value: val })
+        newIncoming[l.target as number] = (newIncoming[l.target as number] ?? 0) + val
+      }
+    }
+  }
+
+  const nodeTotal = (i: number) => (i <= 2 ? (selectedIdx.has(i) ? originalChannelTotal[i] : 0) : (newIncoming[i] ?? 0))
+
+  const nodes: SankeyNode[] = FUNNEL_COLUMNS.flatMap((col) => {
+    const colTotal = col.reduce((sum, i) => sum + nodeTotal(i), 0)
+    return col.map((i) => {
+      const pct = colTotal > 0 ? Math.round((nodeTotal(i) / colTotal) * 100) : 0
+      return { name: `${FUNNEL_NODE_BASE_NAMES[i]} ${pct}%` }
+    })
+  })
+
+  const grandTotal = CHANNEL_KEYS.reduce((sum, k) => sum + (selectedIdx.has(CHANNEL_NODE_INDEX[k]) ? originalChannelTotal[CHANNEL_NODE_INDEX[k]] : 0), 0)
+
+  return { nodes, links: newLinks, grandTotal, resolvedTotal: nodeTotal(6) }
 }
 
 // Office hours vs after hours, by intent — AI agent-handled calls only (700 total)
@@ -576,14 +649,6 @@ interface IntentRow {
   transferredPct: string
   [key: string]: string | number
 }
-const INTENT_TABLE_DATA: IntentRow[] = INTENT_DATA.map((d) => ({
-  intent: d.intent,
-  officeHours: d.office,
-  afterHours: d.after,
-  totalCalls: d.office + d.after,
-  resolvedPct: '80%',
-  transferredPct: '20%',
-}))
 function getIntentColumns(forms: NounForms): Column<IntentRow>[] {
   return [
     { key: 'intent',         label: 'Intent',            width: 180, sortable: true },
@@ -603,13 +668,6 @@ const SOURCE_DONUT = [
   { name: 'File', value: 26.3, color: '#4cae3d' },
 ]
 
-// Matches the channels used throughout this page's funnel (Call/Text/Email), not the
-// Webchat/Voice/Text set from the original Front desk overview.
-const CHANNEL_DONUT = [
-  { name: 'Call',  value: 60.0, color: '#1976d2' },
-  { name: 'Text',  value: 30.0, color: '#3f51b5' },
-  { name: 'Email', value: 10.0, color: '#9c27b0' },
-]
 
 const INSURANCE_DATA = [
   { month: 'Dec', verified: 464 },
@@ -620,6 +678,107 @@ const INSURANCE_DATA = [
   { month: 'May', verified: 297 },
 ]
 const INSURANCE_SERIES = [{ key: 'verified', label: 'Verified', color: '#1976d2' }]
+
+// ─── Ratio-scaled datasets ─────────────────────────────────────────────────────
+// None of these have per-channel data behind them, so a channel filter scales every value by
+// the funnel's filtered/full ratio — same shape, smaller volume. "Interaction trend by channel"
+// and "Conversations by channel" (below) are real per-channel data and filter exactly instead.
+function scaleRows<T extends Record<string, unknown>>(rows: T[], keys: (keyof T)[], ratio: number): T[] {
+  return rows.map((row) => {
+    const next = { ...row }
+    for (const k of keys) {
+      if (typeof row[k] === 'number') next[k] = Math.round((row[k] as number) * ratio) as T[keyof T]
+    }
+    return next
+  })
+}
+const getInvolvementTrendData = (ratio: number) => scaleRows(INVOLVEMENT_TREND_DATA, ['myna', 'human', 'notAnswered'], ratio)
+const getTimingTrendData = (ratio: number) => scaleRows(TIMING_TREND_DATA, ['office', 'after'], ratio)
+
+// Resolved's own sub-outcome split (from the funnel: Answered 400 / Pending 170 / Bookings 145 /
+// Rescheduled 85 / Cancellations 40, of a 840 Resolved total) is fixed — every month's Resolved
+// value carries the same proportions. Each sub-outcome is its own upfront stacked segment plus a
+// legend entry, alongside Transferred — no separate "Resolved" segment, since these five together
+// *are* Resolved. Colors match the funnel's Sub-outcome column exactly (same category, same hue),
+// picked to be mutually distinct rather than shades of one color — five shades of green all read
+// the same at a glance; cyan/amber/pink/light-green/green/blue don't.
+const OUTCOME_RESOLVED_TOTAL = 840
+const OUTCOME_RESOLVED_BREAKDOWN = [
+  { key: 'resolvedAnswered',      label: 'Answered',      color: '#00bcd4', share: 400 / OUTCOME_RESOLVED_TOTAL },
+  { key: 'resolvedPending',       label: 'Pending',       color: '#f5a623', share: 170 / OUTCOME_RESOLVED_TOTAL },
+  { key: 'resolvedBookings',      label: 'Bookings',      color: '#e056c7', share: 145 / OUTCOME_RESOLVED_TOTAL },
+  { key: 'resolvedRescheduled',   label: 'Rescheduled',   color: '#8bc34a', share: 85 / OUTCOME_RESOLVED_TOTAL },
+  { key: 'resolvedCancellations', label: 'Cancellations', color: '#4cae3d', share: 40 / OUTCOME_RESOLVED_TOTAL },
+]
+const OUTCOME_TREND_SUBOUTCOME_SERIES = [
+  ...OUTCOME_RESOLVED_BREAKDOWN.map(({ key, label, color }) => ({ key, label, color })),
+  { key: 'transferred', label: 'Transferred', color: '#1976d2' },
+]
+const INVOLVEMENT_FILTER_OPTIONS = ['All involvements', 'AI agents involved', 'Human involved']
+
+// Human involvement never transfers (see FUNNEL_LINKS), so every month's Transferred count is
+// entirely AI's — that's enough to split each month's existing Resolved/Involvement totals into
+// an exact AI-only and Human-only outcome trend, without inventing a whole new dataset.
+function getOutcomeTrendData(involvement: string, ratio: number) {
+  return OUTCOME_TREND_DATA.map((row, i) => {
+    const inv = INVOLVEMENT_TREND_DATA[i]
+    const aiTransferred = row.transferred
+    const aiResolved = inv.myna - aiTransferred
+    const humanResolved = inv.human
+    const resolved = involvement === 'AI agents involved' ? aiResolved : involvement === 'Human involved' ? humanResolved : row.resolved
+    const transferred = involvement === 'Human involved' ? 0 : involvement === 'AI agents involved' ? aiTransferred : row.transferred
+    const scaledResolved = Math.round(resolved * ratio)
+    const out: Record<string, string | number> = { month: row.month, resolved: scaledResolved, transferred: Math.round(transferred * ratio) }
+    for (const b of OUTCOME_RESOLVED_BREAKDOWN) out[b.key] = Math.round(scaledResolved * b.share)
+    return out
+  })
+}
+const getIntentData = (ratio: number) => scaleRows(INTENT_DATA, ['office', 'after'], ratio)
+function getIntentTableData(ratio: number): IntentRow[] {
+  return getIntentData(ratio).map((d) => ({
+    intent: d.intent,
+    officeHours: d.office,
+    afterHours: d.after,
+    totalCalls: d.office + d.after,
+    resolvedPct: '80%',
+    transferredPct: '20%',
+  }))
+}
+function getIntentTrendForIntent(intent: string, ratio: number) {
+  return (INTENT_TREND_BY_INTENT[intent] ?? []).map((m) => ({
+    office: Math.round(m.office * ratio),
+    after: Math.round(m.after * ratio),
+  }))
+}
+function getInsuranceData(ratio: number) {
+  return scaleRows(INSURANCE_DATA, ['verified'], ratio)
+}
+const scaleK = (value: number, ratio: number, suffix: 'K' | 'k' = 'K') => `${(value * ratio).toFixed(1)}${suffix}`
+function getSourceStats(ratio: number) {
+  return [
+    { value: scaleK(4.4, ratio), label: 'Link' },
+    { value: scaleK(2.4, ratio), label: 'FAQ'  },
+    { value: scaleK(1.6, ratio), label: 'File' },
+  ]
+}
+
+// Real per-channel totals, unlike everything above — a channel filter here is exact, not scaled.
+const CHANNEL_TOTALS: Record<ChannelKey, number> = { call: 600, text: 300, email: 100 }
+const CHANNEL_LABELS: Record<ChannelKey, string> = { call: 'Call', text: 'Text', email: 'Email' }
+const CHANNEL_COLORS: Record<ChannelKey, string> = { call: '#1976d2', text: '#3f51b5', email: '#9c27b0' }
+const formatCompact = (n: number) => (n >= 1000 ? `${parseFloat((n / 1000).toFixed(1))}K` : `${n}`)
+function getChannelStats(selectedChannels: ChannelKey[]) {
+  const selected = new Set(selectedChannels)
+  return CHANNEL_KEYS.map((k) => ({ value: selected.has(k) ? CHANNEL_TOTALS[k].toLocaleString() : '0', label: CHANNEL_LABELS[k] }))
+}
+function getChannelDonut(selectedChannels: ChannelKey[]) {
+  const selected = new Set(selectedChannels)
+  return CHANNEL_KEYS.filter((k) => selected.has(k)).map((k) => ({ name: CHANNEL_LABELS[k], value: CHANNEL_TOTALS[k], color: CHANNEL_COLORS[k] }))
+}
+function getChannelTrendSeries(selectedChannels: ChannelKey[]) {
+  const selected = new Set(selectedChannels)
+  return CHANNEL_TREND_SERIES.filter((s) => selected.has(s.key as ChannelKey))
+}
 
 // ─── Interactions by location ─────────────────────────────────────────────────
 // Location is always the row (first column). The dropdown only picks which
@@ -774,15 +933,45 @@ function InlineHeadingDropdown({
   )
 }
 
+// Resolved's 5 sub-outcomes plus Transferred, filterable by who was involved (All / AI agents /
+// Human) — same inline "- {value} ⌄" dropdown treatment as Intent trend analysis. All 6 are real
+// upfront stacked segments with their own legend entries (no separate "Resolved" segment — these
+// five together are Resolved), so e.g. Bookings this month vs. last is a direct read, not a hover.
+function OutcomeTrendCard({ forms, ratio }: { forms: NounForms; ratio: number }) {
+  const [involvement, setInvolvement] = useState('All involvements')
+  const chartData = getOutcomeTrendData(involvement, ratio)
+
+  return (
+    <HCCard
+      title="Outcome trend"
+      titleSuffix={
+        <>
+          <InlineHeadingDropdown value={involvement} options={INVOLVEMENT_FILTER_OPTIONS} onChange={setInvolvement} />
+          <InfoTooltip text={`Monthly breakdown of resolved ${forms.lowPlural} (answered, pending, bookings, rescheduled, cancellations) and transferred ${forms.lowPlural}`} />
+        </>
+      }
+    >
+      <StackedBarChart
+        data={chartData}
+        series={OUTCOME_TREND_SUBOUTCOME_SERIES}
+        xKey="month"
+        height={280}
+        showBarLabels
+      />
+    </HCCard>
+  )
+}
+
 // Trend of office hours vs. after hours volume for the selected intent — helps identify which
 // intents are being handled after hours. Reuses the same StackedBarChart used elsewhere.
-function IntentTrendCard({ forms }: { forms: NounForms }) {
+function IntentTrendCard({ forms, ratio }: { forms: NounForms; ratio: number }) {
   const [selectedIntent, setSelectedIntent] = useState('General inquiry')
 
+  const filteredIntentTrend = getIntentTrendForIntent(selectedIntent, ratio)
   const chartData = INTENT_TREND_MONTHS.map((month, i) => ({
     month,
-    office: INTENT_TREND_BY_INTENT[selectedIntent]?.[i]?.office ?? 0,
-    after: INTENT_TREND_BY_INTENT[selectedIntent]?.[i]?.after ?? 0,
+    office: filteredIntentTrend[i]?.office ?? 0,
+    after: filteredIntentTrend[i]?.after ?? 0,
   }))
 
   return (
@@ -850,7 +1039,7 @@ function LocationTableSkeleton({ columnCount }: { columnCount: number }) {
   )
 }
 
-function InteractionsByDimensionCard({ forms }: { forms: NounForms }) {
+function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounForms; selectedChannels: ChannelKey[] }) {
   const [dimension, setDimension] = useState('Outcomes')
   const [level, setLevel] = useState('By location')
   const [loading, setLoading] = useState(false)
@@ -862,12 +1051,17 @@ function InteractionsByDimensionCard({ forms }: { forms: NounForms }) {
     return () => clearTimeout(t)
   }, [level])
 
+  // No per-location per-channel outcome/sub-outcome data exists, so — same as the rest of the
+  // page — everything but the Channel columns themselves scales by this group's own channel mix
+  // (exact, since LOCATION_CHANNEL_BREAKDOWN really is per-channel) rather than one flat ratio.
   const rows = groupsForLevel(level).map((group) => {
     const members = membersOfGroup(level, group)
-    const totalInteractions = members.reduce((sum, m) => sum + (LOCATIONS.find((l) => l.label === m)?.total ?? 0), 0)
-    const resolved = sumField(LOCATION_OUTCOME_BREAKDOWN, members, 'resolved')
-    const resolutionRate = Math.round((resolved / totalInteractions) * 100)
-    return { group, members, totalInteractions, resolved, resolutionRate }
+    const fullTotal = members.reduce((sum, m) => sum + (LOCATIONS.find((l) => l.label === m)?.total ?? 0), 0)
+    const totalInteractions = selectedChannels.reduce((sum, ch) => sum + sumField(LOCATION_CHANNEL_BREAKDOWN, members, ch), 0)
+    const channelShare = fullTotal > 0 ? totalInteractions / fullTotal : 0
+    const resolved = Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, members, 'resolved') * channelShare)
+    const resolutionRate = totalInteractions > 0 ? Math.round((resolved / totalInteractions) * 100) : 0
+    return { group, members, totalInteractions, resolved, resolutionRate, channelShare }
   })
 
   let columns: Column<LocationBreakdownRow>[]
@@ -896,8 +1090,8 @@ function InteractionsByDimensionCard({ forms }: { forms: NounForms }) {
       location: r.group,
       totalInteractions: r.totalInteractions,
       resolved: r.resolved,
-      transferred: sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'transferred'),
-      missed: sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'missed'),
+      transferred: Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'transferred') * r.channelShare),
+      missed: Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'missed') * r.channelShare),
       resolutionRate: r.resolutionRate,
     }))
   } else if (dimension === 'Sub-outcomes') {
@@ -915,12 +1109,12 @@ function InteractionsByDimensionCard({ forms }: { forms: NounForms }) {
     data = rows.map((r) => ({
       location: r.group,
       totalInteractions: r.totalInteractions,
-      answered: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'answered'),
-      pending: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'pending'),
-      bookings: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'bookings'),
-      rescheduled: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'rescheduled'),
-      cancellations: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'cancellations'),
-      transferred: sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'transferred'),
+      answered: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'answered') * r.channelShare),
+      pending: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'pending') * r.channelShare),
+      bookings: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'bookings') * r.channelShare),
+      rescheduled: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'rescheduled') * r.channelShare),
+      cancellations: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'cancellations') * r.channelShare),
+      transferred: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'transferred') * r.channelShare),
       resolutionRate: r.resolutionRate,
     }))
   } else {
@@ -932,12 +1126,13 @@ function InteractionsByDimensionCard({ forms }: { forms: NounForms }) {
       { key: 'email', label: 'Email', width: 120, sortable: true },
       RESOLUTION_RATE_COLUMN,
     ]
+    const isSelected = new Set(selectedChannels)
     data = rows.map((r) => ({
       location: r.group,
       totalInteractions: r.totalInteractions,
-      call: sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'call'),
-      text: sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'text'),
-      email: sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'email'),
+      call: isSelected.has('call') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'call') : 0,
+      text: isSelected.has('text') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'text') : 0,
+      email: isSelected.has('email') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'email') : 0,
       resolutionRate: r.resolutionRate,
     }))
   }
@@ -967,6 +1162,11 @@ export function HCFrontdeskOverview2Screen() {
   const forms = NOUN_FORMS[viewMode]
   const [dateRange, setDateRange] = useState('Last 6 months')
   const [filterOpen, setFilterOpen] = useState(false)
+  const [filterSelections, setFilterSelections] = useState<Record<string, string[]>>({})
+  // Empty selection reads as "no filter" (show every channel) rather than "show nothing".
+  const selectedChannels = ((filterSelections.channel?.length ? filterSelections.channel : CHANNEL_KEYS) as ChannelKey[])
+  const filteredFunnel = computeFilteredFunnel(selectedChannels)
+  const channelRatio = filteredFunnel.grandTotal / 1000
   const [nodeDrawer, setNodeDrawer] = useState<string | null>(null)
   const [listVisible, setListVisible] = useState(false)
   const [selectedConvo, setSelectedConvo] = useState<FunnelConversation | null>(null)
@@ -1061,12 +1261,12 @@ export function HCFrontdeskOverview2Screen() {
 
         <div className="flex flex-col gap-lg p-2xl">
 
-          <SummaryStats stats={getSummaryStats(forms)} />
+          <SummaryStats stats={getSummaryStats(forms, filteredFunnel.grandTotal, filteredFunnel.resolvedTotal, channelRatio)} />
 
           <HCCard title={`${forms.capPlural} funnel`} tooltip={`${forms.capSingular} volume by channel, through AI agent or human involvement, to the outcome of each ${forms.lowSingular}. Select any section to see the underlying ${forms.lowPlural}.`}>
             <SankeyChart
-              nodes={FUNNEL_NODES}
-              links={FUNNEL_LINKS}
+              nodes={filteredFunnel.nodes}
+              links={filteredFunnel.links}
               height={440}
               nodeColors={FUNNEL_NODE_COLORS}
               terminalNodes={[8]}
@@ -1083,7 +1283,7 @@ export function HCFrontdeskOverview2Screen() {
             <HCCard title={`${forms.capSingular} trend by channel`} tooltip={`Monthly ${forms.lowSingular} volume by channel`}>
               <StackedBarChart
                 data={CHANNEL_TREND_DATA}
-                series={CHANNEL_TREND_SERIES}
+                series={getChannelTrendSeries(selectedChannels)}
                 xKey="month"
                 height={280}
                 showBarLabels
@@ -1092,7 +1292,7 @@ export function HCFrontdeskOverview2Screen() {
 
             <HCCard title="Involvement trend" tooltip={`Monthly breakdown of ${forms.lowPlural} handled by AI agents, a human agent, or left unanswered`}>
               <StackedBarChart
-                data={INVOLVEMENT_TREND_DATA}
+                data={getInvolvementTrendData(channelRatio)}
                 series={INVOLVEMENT_TREND_SERIES}
                 xKey="month"
                 height={280}
@@ -1102,19 +1302,11 @@ export function HCFrontdeskOverview2Screen() {
           </div>
 
           <div className="grid grid-cols-2 gap-lg">
-            <HCCard title="Outcome trend" tooltip={`Monthly breakdown of resolved vs transferred ${forms.lowPlural}`}>
-              <StackedBarChart
-                data={OUTCOME_TREND_DATA}
-                series={OUTCOME_TREND_SERIES}
-                xKey="month"
-                height={280}
-                showBarLabels
-              />
-            </HCCard>
+            <OutcomeTrendCard forms={forms} ratio={channelRatio} />
 
             <HCCard title={`${forms.capSingular} timing trend`} tooltip={`Monthly split of AI agent-handled ${forms.lowPlural} during office hours and after hours`}>
               <StackedBarChart
-                data={TIMING_TREND_DATA}
+                data={getTimingTrendData(channelRatio)}
                 series={TIMING_TREND_SERIES}
                 xKey="month"
                 height={280}
@@ -1125,7 +1317,7 @@ export function HCFrontdeskOverview2Screen() {
 
           <HCCard title={`${forms.capSingular} intent breakdown by working hours`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with the office vs. after-hours split and resolution outcome for each category`}>
             <StackedBarChart
-              data={INTENT_DATA}
+              data={getIntentData(channelRatio)}
               series={INTENT_SERIES}
               xKey="intent"
               height={340}
@@ -1135,39 +1327,31 @@ export function HCFrontdeskOverview2Screen() {
             />
           </HCCard>
 
-          <IntentTrendCard forms={forms} />
+          <IntentTrendCard forms={forms} ratio={channelRatio} />
 
           <HCCard title={`${forms.capSingular} intent breakdown by outcome`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with the office/after-hours split and resolution outcome for each category.`}>
-            <DataTable columns={getIntentColumns(forms)} data={INTENT_TABLE_DATA} stickyFirstColumn />
+            <DataTable columns={getIntentColumns(forms)} data={getIntentTableData(channelRatio)} stickyFirstColumn />
           </HCCard>
 
           <div className="grid grid-cols-2 gap-lg">
             <HCCard title="Answers from source" tooltip={`The last source used to respond in each unique ${forms.lowSingular}, broken down by source type`}>
-              <ChartStatRow stats={[
-                { value: '4.4K', label: 'Link' },
-                { value: '2.4K', label: 'FAQ'  },
-                { value: '1.6K', label: 'File' },
-              ]} />
-              <DonutChart data={SOURCE_DONUT} centerValue="6.8k" centerLabel="Total responses" />
+              <ChartStatRow stats={getSourceStats(channelRatio)} />
+              <DonutChart data={SOURCE_DONUT} centerValue={scaleK(6.8, channelRatio, 'k')} centerLabel="Total responses" />
             </HCCard>
 
             <HCCard title={`${forms.capPlural} by channel`} tooltip={`How ${forms.lowPlural} are distributed across call, text, and email`}>
-              <ChartStatRow stats={[
-                { value: '600', label: 'Call'  },
-                { value: '300', label: 'Text'  },
-                { value: '100', label: 'Email' },
-              ]} />
-              <DonutChart data={CHANNEL_DONUT} centerValue="1K" centerLabel={`Total ${forms.lowPlural}`} />
+              <ChartStatRow stats={getChannelStats(selectedChannels)} />
+              <DonutChart data={getChannelDonut(selectedChannels)} centerValue={formatCompact(filteredFunnel.grandTotal)} centerLabel={`Total ${forms.lowPlural}`} />
             </HCCard>
           </div>
 
           <HCCard title="Insurances verified" tooltip={`Monthly count of unique ${forms.lowPlural} where the agent verified the patient's insurance`}>
             <ChartStatRow stats={[
-              { value: '1.2K',  label: 'Total verified'    },
+              { value: scaleK(1.2, channelRatio, 'K'),  label: 'Total verified'    },
               { value: '94.2%', label: 'Verification rate' },
             ]} />
             <StackedBarChart
-              data={INSURANCE_DATA}
+              data={getInsuranceData(channelRatio)}
               series={INSURANCE_SERIES}
               xKey="month"
               height={220}
@@ -1176,13 +1360,15 @@ export function HCFrontdeskOverview2Screen() {
             />
           </HCCard>
 
-          <InteractionsByDimensionCard forms={forms} />
+          <InteractionsByDimensionCard forms={forms} selectedChannels={selectedChannels} />
 
         </div>
       </div>
       <FilterPanel
         open={filterOpen}
         fields={FILTER_FIELDS}
+        selections={filterSelections}
+        onSelectionsChange={setFilterSelections}
         onClose={() => setFilterOpen(false)}
         onAdvancedFilters={() => {}}
       />

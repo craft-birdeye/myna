@@ -59,7 +59,7 @@ function makeNode(overrides?: Record<number, string>, onHover?: (idx: number | n
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function Node({ x, y, width, height, index, payload, containerWidth }: any) {
     const [hovered, setHovered] = useState(false)
-    if (payload?.name === '__phantom__') return null
+    if (payload?.name === '__phantom__' || height < 1) return null
     const cw = measuredWidth || containerWidth || 800
     const onRightEdge = x > cw - 60
     const fill = colorAt(index, overrides)
