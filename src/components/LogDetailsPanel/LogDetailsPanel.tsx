@@ -359,9 +359,6 @@ const REMINDER_TOOL_OUTPUT: LogToolOutputEntry[] = [
 ]
 
 export const REMINDER_TRANSCRIPT: LogTranscriptEntry[] = [
-  { id: 'rsys1', role: 'system', text: 'Appointment booked — Routine checkup, Sat Jun 14 · 2:30 PM' },
-  { id: 'rsys2', role: 'system', text: 'Appointment reminder email sent' },
-  { id: 'rsys3', role: 'system', text: 'Voice call started' },
   {
     id: 'ra1',
     role: 'agent',
