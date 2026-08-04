@@ -1001,7 +1001,7 @@ export function LogDetailsPanel({
                    *  past, and releases back to its normal place in the flow once scrolled back
                    *  up to it, matching the always-pinned waveform on other agents. */}
                   <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
-                    <p className="m-0 mb-sm text-small text-text-tertiary">Call recording</p>
+                    <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
                     <CallRecordingPlayer
                       audioUrl={audioUrl}
                       durationSecs={totalSecs}
