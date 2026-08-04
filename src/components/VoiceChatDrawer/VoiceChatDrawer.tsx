@@ -2,42 +2,36 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
-import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
+import { TrackFeedbackIcon } from '../../assets/TrackFeedbackIcon'
+import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
-import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
-import { Toast } from '../Toast/Toast'
 import type { VoiceChatDrawerProps } from './VoiceChatDrawer.types'
 
 export function VoiceChatDrawer({
   open,
   messages,
   summary,
-  audioUrl,
-  durationSecs = 0,
+  feedbackPrefill,
+  onSubmitFeedback,
+  onTrackFeedback,
+  onCoachAgentDirect,
   mode = 'voice',
   title,
   onClose,
 }: VoiceChatDrawerProps) {
   const isChat = mode === 'chat'
   const [summaryOpen, setSummaryOpen] = useState(true)
-  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
+  // Once a message's feedback is submitted, its "Coach agent" link becomes a "Track your
+  // feedback" link pointing at the recommendation the feedback landed on.
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
   const [shareFeedbackId, setShareFeedbackId] = useState<string | null>(null)
-  const [toastVisible, setToastVisible] = useState(false)
   const headerTitle = title ?? (isChat ? 'Chat with Myna' : 'Call with Myna')
 
-  const handleFeedbackChange = (id: string, value: MessageFeedbackValue) => {
-    if (value === 'down') {
-      setShareFeedbackId(id)
-      return
-    }
-    setMessageFeedback((prev) => ({ ...prev, [id]: value }))
-    if (value === 'up') setToastVisible(true)
-  }
-
-  const handleShareFeedbackSubmit = () => {
+  const handleShareFeedbackSubmit = (details: string) => {
     if (shareFeedbackId === null) return
-    setMessageFeedback((prev) => ({ ...prev, [shareFeedbackId]: 'down' }))
+    const recId = onSubmitFeedback?.(details, shareFeedbackId)
+    if (recId) setRecIdByMessage((prev) => ({ ...prev, [shareFeedbackId]: recId }))
     setShareFeedbackId(null)
   }
 
@@ -56,14 +50,6 @@ export function VoiceChatDrawer({
           </div>
 
           <div className="pp-details__body">
-            {!isChat && (
-              <CallRecordingPlayer
-                audioUrl={audioUrl}
-                durationSecs={durationSecs}
-                active={open}
-              />
-            )}
-
             {/* Summary card */}
             {summary && (
               <div className="pp-summary-card">
@@ -91,15 +77,39 @@ export function VoiceChatDrawer({
                   return <ChatSystemLabel key={m.id} text={m.text} />
                 }
                 if (m.role === 'agent') {
+                  const recId = recIdByMessage[String(m.id)]
                   return (
-                    <ChatBubble
-                      key={m.id}
-                      sender="business"
-                      text={m.text}
-                      showFeedback
-                      feedback={messageFeedback[String(m.id)] ?? null}
-                      onFeedbackChange={(value) => handleFeedbackChange(String(m.id), value)}
-                    />
+                    <ChatBubble key={m.id} sender="business" text={m.text}>
+                      <div className="flex items-center gap-xs">
+                        {recId ? (
+                          <button
+                            type="button"
+                            onClick={() => onTrackFeedback?.(recId)}
+                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                          >
+                            <TrackFeedbackIcon size={18} color="currentColor" />
+                            Track your feedback
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
+                            }
+                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                          >
+                            <TrainAgentIcon size={18} color="currentColor" />
+                            Coach agent
+                          </button>
+                        )}
+                        {m.time && (
+                          <>
+                            <span className="text-small text-text-tertiary">•</span>
+                            <span className="text-small text-text-tertiary">{m.time}</span>
+                          </>
+                        )}
+                      </div>
+                    </ChatBubble>
                   )
                 }
                 return (
@@ -115,11 +125,7 @@ export function VoiceChatDrawer({
         open={shareFeedbackId !== null}
         onClose={() => setShareFeedbackId(null)}
         onSubmit={handleShareFeedbackSubmit}
-      />
-      <Toast
-        message="Thanks for the feedback!"
-        visible={toastVisible}
-        onClose={() => setToastVisible(false)}
+        initialDetails={feedbackPrefill}
       />
     </div>,
     document.body,

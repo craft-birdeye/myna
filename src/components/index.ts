@@ -8,8 +8,15 @@ export type {
   RunDetailsPanelProps,
   RunLogField,
   RunLogStep,
+  RunLogStepType,
 } from './RunDetailsPanel/RunDetailsPanel.types'
 export { Chip } from './Chip/Chip'
+export { Block } from './Block/Block'
+export type { BlockProps, BlockVariant } from './Block/Block.types'
+export { ProcedureSidePanel } from './ProcedureSidePanel/ProcedureSidePanel'
+export type { ProcedureSidePanelProps, ProcedureSidePanelStep } from './ProcedureSidePanel/ProcedureSidePanel.types'
+export { TranscriptSidePanel } from './TranscriptSidePanel/TranscriptSidePanel'
+export type { TranscriptSidePanelProps, TranscriptSidePanelLine } from './TranscriptSidePanel/TranscriptSidePanel.types'
 export { ChatBubble, ChatSystemLabel } from './ChatBubble/ChatBubble'
 export type {
   ChatBubbleProps,
