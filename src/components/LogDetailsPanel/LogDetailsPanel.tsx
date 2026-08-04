@@ -983,10 +983,15 @@ export function LogDetailsPanel({
               <div
                 ref={chatScrollRef}
                 onScroll={handleChatScroll}
-                className="min-h-0 flex-1 overflow-y-auto px-[15px] pt-lg pb-2xl [scrollbar-gutter:stable_both-edges]"
+                className="min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges]"
               >
                 <div className="flex flex-col gap-3xl">
-                  <ChatSystemLabel text="Email conversation started" />
+                  {/* Top spacing lives here (not on the scroll container) — the sticky waveform
+                   *  below anchors to `top: 0` of the scroll container's padding edge, so any
+                   *  padding-top on the container itself would leave a permanent gap once stuck. */}
+                  <div className="pt-lg">
+                    <ChatSystemLabel text="Email conversation started" />
+                  </div>
                   <AppointmentBookedCard time="08:03 PM" />
                   <EmailActionCard title="Appointment booked" />
                   <ReminderSentCard time="08:03 PM" />
