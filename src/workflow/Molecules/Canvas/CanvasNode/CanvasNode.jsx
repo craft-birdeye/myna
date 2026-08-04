@@ -38,6 +38,8 @@ export default function CanvasNode({
 
   const isOff = hasToggle && !on;
   const stateClass = state !== 'default' ? ` canvas-node--${state}` : '';
+  const showHeaderAdd = hasAddButton && !viewOnly && nodeType !== 'branch';
+  const showFooterAdd = hasAddButton && !viewOnly && nodeType === 'branch';
 
   return (
     <div className={`canvas-node${stateClass}`}>
@@ -50,7 +52,7 @@ export default function CanvasNode({
         toggleDisabled={toggleDisabled}
         viewOnly={viewOnly}
         onToggleChange={handleToggle}
-        hasAddButton={hasAddButton && !viewOnly}
+        hasAddButton={showHeaderAdd}
         onAddClick={onAddClick}
         onDelete={onDelete}
         onCopy={onCopy}
@@ -67,6 +69,20 @@ export default function CanvasNode({
             descriptionPlaceholder={descriptionPlaceholder}
           />
         </div>
+      )}
+      {showFooterAdd && (
+        <button
+          type="button"
+          className="canvas-node__add-branch"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddClick?.();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <span className="material-symbols-outlined">add</span>
+          Add a branch
+        </button>
       )}
     </div>
   );

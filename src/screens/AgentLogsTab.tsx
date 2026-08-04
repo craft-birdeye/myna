@@ -3,8 +3,11 @@ import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
   REMINDER_LOGS_ROWS,
+  REVIEW_RESPONSE_LOGS_ROWS,
+  toHealthcareLogRow,
   type HealthcareLogRow,
   type PrevisitLogRow,
+  type ReviewResponseLogRow,
 } from '../data/healthcareAgentLogs'
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -39,6 +42,19 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
+]
+
+const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 140,
+    sortable: true,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+  },
+  { key: 'contact', label: 'Contact', width: 220, sortable: true },
+  { key: 'source', label: 'Source', width: 180, sortable: true },
 ]
 
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -92,6 +108,22 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
             icon: 'visibility',
             label: 'View run',
             onClick: (row) => onViewRun?.(row as HealthcareLogRow),
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (agentName?.startsWith('Review response agent')) {
+    return (
+      <div className="px-lg py-lg">
+        <DataTable
+          columns={REVIEW_RESPONSE_LOG_COLUMNS}
+          data={REVIEW_RESPONSE_LOGS_ROWS}
+          rowAction={{
+            icon: 'visibility',
+            label: 'View log',
+            onClick: (row) => onViewRun?.(toHealthcareLogRow(row as ReviewResponseLogRow)),
           }}
         />
       </div>

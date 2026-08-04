@@ -1,24 +1,162 @@
-.branchItem {
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: 'Roboto', arial, sans-serif;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+}
+
+.sectionLabelText {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: #212121;
+}
+
+.required {
+  font-size: 12px;
+  line-height: 18px;
+  color: #de1b0c;
+}
+
+.hint {
+  font-size: 11px;
+  line-height: 16px;
+  color: #8f8f8f;
+}
+
+.mergeRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border: 1px solid #e5e9f0;
-  border-radius: 4px;
-  background: #fff;
+  gap: 12px;
+}
+
+.mergeLabel {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.branchesSection {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.branchItem .deleteBtn {
-  opacity: 0;
-  transition: opacity 0.15s ease;
+.branchesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.branchItem:hover .deleteBtn {
-  opacity: 1;
+.branchesHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: #8f8f8f;
+}
+
+.accordionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accordionItem {
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.accordionItemOpen {
+  border-color: #ccd5e4;
+}
+
+.accordionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.accordionHeaderOpen {
+  border-bottom: 1px solid #e5e9f0;
+}
+
+.accordionTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accordionActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  color: #8f8f8f;
+}
+
+.accordionActions :global(.material-symbols-outlined) {
+  font-size: 20px;
+}
+
+.dragHandle {
+  display: flex;
+  align-items: center;
+  color: #8f8f8f;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.dragHandle :global(.material-symbols-outlined) {
+  font-size: 20px;
+}
+
+.dragHandleDisabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.accordionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+}
+
+.conditionsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .deleteBtn {
+  opacity: 0;
+  transition: opacity 0.15s ease;
   background: none;
   border: none;
   cursor: pointer;
@@ -29,6 +167,11 @@
   flex-shrink: 0;
 }
 
+.accordionItem:hover .deleteBtn,
+.accordionHeader:focus-within .deleteBtn {
+  opacity: 1;
+}
+
 .deleteBtn :global(.material-symbols-outlined) {
   font-size: 18px;
   color: #616161;
@@ -36,4 +179,68 @@
 
 .deleteBtn:hover :global(.material-symbols-outlined) {
   color: #212121;
+}
+
+.addLink {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  align-self: flex-start;
+  color: #1976d2;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.addLink :global(.material-symbols-outlined) {
+  font-size: 20px;
+  color: #1976d2;
+}
+
+.pctItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  gap: 8px;
+}
+
+.pctItem :global(.material-symbols-outlined) {
+  font-size: 20px;
+  color: #8f8f8f;
+  flex-shrink: 0;
+}
+
+.pctName {
+  flex: 1;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.pctInput {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 80px;
+  font-size: 13px;
+  color: #555;
+}
+
+.pctOk {
+  font-size: 11px;
+  color: #2e7d32;
+}
+
+.pctBad {
+  font-size: 11px;
+  color: #de1b0c;
 }

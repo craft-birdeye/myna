@@ -89,6 +89,9 @@ interface AgentInstance {
   statusUpdated?: string
   conversationsAssigned?: string
   conversationsManaged?: string
+  reviewsResponded?: string
+  responseRate?: string
+  avgResponseTime?: string
   [key: string]: string | undefined
 }
 
@@ -137,6 +140,11 @@ interface RegionRow {
   statusUpdated?: string
   conversationsAssigned?: string
   conversationsManaged?: string
+  reviewsResponded?: string
+  responseRate?: string
+  avgResponseTime?: string
+  /** Overrides the default `${agentName} - ${region}` row label. */
+  instanceName?: string
 }
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
@@ -193,6 +201,12 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'East Region',  status: 'Running', channels: 'Text, Chat',             statusUpdated: '1000', conversationsAssigned: '800', conversationsManaged: '900', timeSaved: '15m', locations: '250' },
     { region: 'South Region', status: 'Paused',  channels: 'Voice call, Text',       statusUpdated: '450',  conversationsAssigned: '400', conversationsManaged: '400', timeSaved: '3m',  locations: '200' },
     { region: 'West Region',  status: 'Draft',   channels: 'Chat',                   statusUpdated: '400',  conversationsAssigned: '350', conversationsManaged: '380', timeSaved: '2m',  locations: '100' },
+  ],
+  'Review response agents': [
+    { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
+    { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
+    { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
+    { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
 }
 
@@ -272,6 +286,29 @@ const REMINDER_CREATE_CARDS = [
   },
 ]
 
+const REVIEW_RESPONSE_CREATE_CARDS = [
+  {
+    id: 'reviews-response-templates',
+    title: 'Review response agent replying using templates',
+    description: 'Uses pre-defined templates and responds to reviews automatically.',
+  },
+  {
+    id: 'reviews-response-autonomous',
+    title: 'Review response agent replying autonomously',
+    description: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
+  },
+  {
+    id: 'reviews-response-human-approval',
+    title: 'Review response agent replying after human approval',
+    description: 'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting.',
+  },
+  {
+    id: 'reviews-response-dashboard-suggestions',
+    title: 'Review response agent suggesting replies in dashboard',
+    description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
+  },
+]
+
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
@@ -336,6 +373,28 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       id: 'tagging-routing',
       title: 'Tagging & routing',
       description: 'Analyze conversations to assign the right contact status, route messages to the appropriate team or user, and manage when conversations stay open or closed.',
+    },
+  ],
+  'Review response agents': [
+    {
+      id: 'reviews-response-templates',
+      title: 'Review response agent replying using templates',
+      description: 'Uses pre-defined templates and responds to reviews automatically.',
+    },
+    {
+      id: 'reviews-response-autonomous',
+      title: 'Review response agent replying autonomously',
+      description: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
+    },
+    {
+      id: 'reviews-response-human-approval',
+      title: 'Review response agent replying after human approval',
+      description: 'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting.',
+    },
+    {
+      id: 'reviews-response-dashboard-suggestions',
+      title: 'Review response agent suggesting replies in dashboard',
+      description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
     },
   ],
 }
@@ -636,6 +695,145 @@ const JOHN_CREATE_PROMPT =
 const REMINDER_CREATE_PROMPT =
   "Every time an appointment gets booked, I want patients to automatically get reminded — email and text. Start about a month out, then again a week before. If they still haven't confirmed two days before the appointment, have the agent actually call them. If they don't pick up, send a text. And nobody should get calls at weird hours"
 
+const REVIEW_RESPONSE_CREATE_PROMPT =
+  'Create a review response agent that monitors new reviews, analyzes sentiment, and posts thoughtful replies automatically — escalating negative reviews for human approval before publishing.'
+
+const REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT = `Inbound review-response agent — not outbound outreach. The product is: new review lands → triage → analyze → draft → publish (or hold).
+
+What I heard:
+• Monitor new reviews continuously
+• Analyze sentiment
+• Write thoughtful, on-brand replies
+• Auto-post by default, escalate negatives for human approval
+
+Volume context to surface: ~120 new reviews/week, ~2,400 still unanswered — backlog is the urgency.
+
+Open questions before I draft the workflow:
+• Sources — Google / Facebook / Yelp / all
+• Location scope
+• Spam handling (don't waste replies on non-customers)
+• Negative-reply policy (staff mentions, offline invite)
+• Writing rules (language, length, SEO)
+• Final publish mode — reconcile "escalate negatives" with how aggressive auto-post should be`
+
+const REVIEW_RESPONSE_INTRO_PARAGRAPHS = [
+  "You're getting about 120 new reviews a week and 2,400 are still unanswered. I'll build an agent that triages every review, writes an on-brand reply, and publishes it — let me get a few details right.",
+  'First: which review sources should it watch — Google, Facebook, Yelp, or all of them?',
+]
+
+const REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS = `Sources: all of them. Trigger becomes every new or updated review across the full source set — no per-site filters to maintain.
+
+Next: location scope. They have 4 locations. Covering all from day one means one policy everywhere; a smaller pilot would be quieter for the first week.`
+
+const REVIEW_RESPONSE_SOURCES_REPLY = [
+  "Done — it'll trigger on every new or updated review across all sources.",
+  'And which locations should it cover: all 4, or just a few to start?',
+]
+
+const REVIEW_RESPONSE_AFTER_LOCATIONS_THOUGHTS = `Locations: all 4. Same reply policy at every location.
+
+Before drafting replies, spam is the gate. ~7% of inbound isn't a real customer — if we reply to those we burn trust and waste quota. I'll propose a triage branch that peels spam off before any drafting.`
+
+const REVIEW_RESPONSE_LOCATIONS_REPLY = [
+  'Scoped to all 4 locations.',
+  "Now, spam — about 7% of what comes in isn't a real customer, so I'll add a triage step up front so we never reply to those.",
+]
+
+const REVIEW_RESPONSE_AFTER_SPAM_OK_THOUGHTS = `Spam triage accepted as a hard gate before reply generation.
+
+Open question: silent drop vs notify. Email alerts let the team flag spam on the review site without clogging the reply queue.`
+
+const REVIEW_RESPONSE_SPAM_ALERT_REPLY = [
+  'Do you want to receive alerts for these spam reviews in your email?',
+]
+
+const REVIEW_RESPONSE_AFTER_SPAM_ALERT_THOUGHTS = `Spam alerts: email preferred. Need the destination — account default (john@birdeye.com) vs a shared ops inbox.`
+
+const REVIEW_RESPONSE_SPAM_EMAIL_REPLY = [
+  'Which address should they go to — your account email (john@birdeye.com), or a different one?',
+]
+
+const REVIEW_RESPONSE_AFTER_SPAM_EMAIL_THOUGHTS = `Spam path locked: branch off → email alert to account address → no reply drafted.
+
+Onto genuine reviews. Negatives are the high-risk path — 41% name a staff member. Recommendation: never name staff in a negative reply; acknowledge and take the conversation offline. Confirm: invite unhappy customers to call, email, or both?`
+
+const REVIEW_RESPONSE_OFFLINE_REPLY = [
+  'Set. Spam reviews now branch off and email you an alert so your team can flag them on the review site.',
+  'Now the genuine ones — negative reviews especially. 41% of your negative reviews name a staff member. My recommendation: never name staff in a negative reply — acknowledge it and take the conversation offline. Should unhappy customers be invited to call or email the business?',
+]
+
+const REVIEW_RESPONSE_AFTER_OFFLINE_THOUGHTS = `Offline invite: phone + email. Good for de-escalation.
+
+Also baking in CRITICAL severity (legal threats / safety) → recommend an immediate call; those shouldn't ride the normal auto-reply path.
+
+Writing style defaults to propose next:
+1. Reply in the review's language
+2. Keep under 60 words
+3. Add one SEO keyword to positive replies only`
+
+const REVIEW_RESPONSE_WRITING_REPLY = [
+  "Good. I'll also flag severe cases — legal threats or safety issues — as CRITICAL and recommend an immediate call.",
+  'For writing style, I suggest three rules: reply in the review\'s language, keep it under 60 words, and add one SEO keyword to positive replies only. Keep all three?',
+]
+
+const REVIEW_RESPONSE_AFTER_WRITING_THOUGHTS = `Writing rules locked: language match, ≤60 words, SEO keyword on positives only.
+
+Final fork — and it may soften the original "escalate negatives for approval" ask: publish automatically vs wait in the dashboard. Auto-post clears the 2,400 backlog faster; approval is safer. If they choose auto, I'll still recommend a short hold window as a safety net.`
+
+const REVIEW_RESPONSE_PUBLISH_REPLY = [
+  "Last decision, and it's the big one: should replies post automatically, or wait in the dashboard for your approval?",
+]
+
+const REVIEW_RESPONSE_AFTER_PUBLISH_THOUGHTS = `Publish mode: automatic. Keeping a 15-minute hold so the team can catch anything before it goes live — safety net without a full approval queue.
+
+I have enough to build: all sources × 4 locations → spam triage + email alert → analyze (sentiment, topics, severity, staff mentions) → draft under the writing rules → publish with 15-min hold. CRITICAL cases stay flagged for an immediate call.`
+
+const REVIEW_RESPONSE_HOLD_REPLY = [
+  "Smart to keep a safety net — I'll post directly with a 15-minute hold so your team can catch anything first. That's everything I need.",
+  "Perfect — here's exactly what I will build, step by step:",
+  'STEP: Step 1: Trigger — the agent runs whenever a new review is created or an existing review is updated, across all enabled sources and all 4 locations.',
+  'STEP: Step 2: Triage task — it first checks whether the review is genuine customer feedback or spam/policy-violating content.',
+  'STEP: Step 3: Branching decision',
+  '   • If spam/invalid: it does not generate a public reply. It sends your team an email alert with source, reviewer, and reason so someone can take action on the review site.',
+  '   • If genuine: it continues to response generation.',
+  'STEP: Step 4: Insight extraction task — for genuine reviews, it extracts sentiment, key topics, severity level, and any staff mentions to guide tone and handling.',
+  "STEP: Step 5: Response generation task — it drafts an on-brand reply in the same language as the review, keeps it concise (under 60 words), and follows your safety rules.",
+  'STEP: Step 6: Guardrails — for sensitive negative cases, it avoids naming staff directly, and CRITICAL risk signals (legal/safety) are flagged for immediate follow-up.',
+  'STEP: Step 7: Send response task — it posts automatically with a 15-minute hold window, giving your team a short safety net before the reply goes fully live.',
+  'If this flow looks right, type build and I will generate this exact draft on the canvas.',
+]
+
+const REVIEW_RESPONSE_AFTER_BUILD_THOUGHTS = `Assembling the workflow from the decisions above. No open questions left — draft the agent and summarize what's on the canvas.`
+
+const REVIEW_RESPONSE_SUMMARY_PARAGRAPHS = [
+  'Your review response agent is ready:',
+  '• Triggers on every new review across all sources, all 4 locations',
+  '• Triages spam → emails you an alert',
+  '• Analyzes genuine reviews (sentiment, topics, severity, staff mentions)',
+  '• Writes an on-brand reply in the review\'s language, under 60 words',
+  '• Publishes directly with a 15-minute hold',
+  'Review it on the canvas, then hit Publish when you\'re happy.',
+]
+
+const REVIEW_RESPONSE_BUILD_CARD = {
+  title: 'New review response agent',
+  description:
+    'Monitors new reviews across all sources, triages spam, drafts on-brand replies, and publishes with a 15-minute hold.',
+}
+
+const REVIEW_RESPONSE_POST_DRAFT_REPLY =
+  'Now that I have created the new review response agent, what would you like me to do?'
+
+const REVIEW_RESPONSE_POST_DRAFT_PILLS = ['Make changes', 'Save agent', 'View in agent builder'] as const
+
+const REVIEW_RESPONSE_DESIGN_STEPS = [
+  { id: 'trigger', label: 'Wiring review triggers across sources' },
+  { id: 'spam', label: 'Adding spam triage and email alerts' },
+  { id: 'analyze', label: 'Configuring sentiment and severity analysis' },
+  { id: 'reply', label: 'Setting reply style and publish hold' },
+  { id: 'final', label: 'Final checks' },
+] as const
+
 // Reminder ghostwriter: reasoning shown after the first send.
 const REMINDER_CREATE_THOUGHTS_TEXT = `This is an event-triggered, time-paced, multi-channel outbound reminder agent — not a conversational front-desk agent. The workflow is the product: appointment booked → paced reminders → confirmation check → escalate to a call if needed.
 
@@ -793,7 +991,7 @@ const REMINDER_BUILD_REPLY_DEFAULT =
 const REMINDER_POST_DRAFT_REPLY =
   'Now that I have created the new reminder agent for email and text, what would you like me to do?'
 
-const REMINDER_POST_DRAFT_PILLS = ['Make changes', 'Save agent', 'View workflow'] as const
+const REMINDER_POST_DRAFT_PILLS = ['Make changes', 'Save agent', 'View in agent builder'] as const
 
 const REMINDER_DESIGN_STEPS = [
   { id: 'templates', label: 'Creating email and text templates' },
@@ -1073,6 +1271,7 @@ function TypedParagraphs({
   instant?: boolean
 }) {
   const [visible, setVisible] = useState(instant ? paragraphs.length - 1 : 0)
+  const isStepRailLine = (value: string) => value.startsWith('STEP:') || /^\s+•/.test(value)
   const texts = paragraphs.map((p) => (typeof p === 'string' ? p : ''))
   const current = texts[visible] ?? ''
   const { typed, done } = useTypewriter(instant ? '' : current, {
@@ -1097,112 +1296,163 @@ function TypedParagraphs({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, visible, fast, instant])
 
-  return (
-    <>
-      {paragraphs.map((p, i) => {
-        if (i > visible) return null
-        const isActive = !instant && i === visible
-        const source = typeof p === 'string' ? p : ''
-        const text = typeof p === 'string' ? (isActive ? typed : p) : p
-        const caret = isActive && !done ? <TypingCaret /> : null
+  const visibleItems = paragraphs
+    .map((p, i) => ({ p, i }))
+    .filter(({ i }) => i <= visible)
+  const stepIndices = visibleItems
+    .filter(({ p }) => typeof p === 'string' && isStepRailLine(p))
+    .map(({ i }) => i)
+  const firstStepIndex = stepIndices.length > 0 ? Math.min(...stepIndices) : -1
+  const lastStepIndex = stepIndices.length > 0 ? Math.max(...stepIndices) : -1
 
-        if (source.startsWith('•')) {
-          const label = typeof text === 'string' ? text.replace(/^•\s*/, '') : text
-          return (
-            <div key={i} className={`agent-build-fade flex items-start gap-sm ${className ?? ''}`}>
-              <span className="shrink-0 text-[18px] leading-6" aria-hidden>
-                •
-              </span>
-              <span className="min-w-0 flex-1">
-                {label}
-                {caret}
-              </span>
-            </div>
-          )
-        }
+  const renderParagraph = (p: ReactNode, i: number) => {
+    const isInStepRail = firstStepIndex !== -1 && i >= firstStepIndex && i <= lastStepIndex
+    const railClassName = isInStepRail ? 'agent-build-fade' : `agent-build-fade ${className ?? ''}`
+    const contentClassName = isInStepRail ? className ?? '' : ''
+    const rowClassName = [railClassName, contentClassName].filter(Boolean).join(' ')
+    const isActive = !instant && i === visible
+    const source = typeof p === 'string' ? p : ''
+    const text = typeof p === 'string' ? (isActive ? typed : p) : p
+    const caret = isActive && !done ? <TypingCaret /> : null
 
-        if (source.startsWith('→')) {
-          const label = typeof text === 'string' ? text.replace(/^→\s*/, '') : text
-          return (
-            <div key={i} className={`agent-build-fade flex items-start gap-sm ${className ?? ''}`}>
-              <Icon name="arrow_forward" size={18} className="mt-px shrink-0 text-accent-positive" />
-              <span className="min-w-0 flex-1">
-                {label}
-                {caret}
-              </span>
-            </div>
-          )
-        }
+    if (source.startsWith('•')) {
+      const label = typeof text === 'string' ? text.replace(/^•\s*/, '') : text
+      return (
+        <div key={i} className={`flex items-start gap-sm ${rowClassName}`}>
+          <span className="shrink-0 text-[18px] leading-6" aria-hidden>
+            •
+          </span>
+          <span className="min-w-0 flex-1">
+            {label}
+            {caret}
+          </span>
+        </div>
+      )
+    }
 
-        if (source.startsWith('ACTION:')) {
-          const label = typeof text === 'string' ? text.replace(/^ACTION:\s*/, '') : text
-          return (
-            <div key={i} className={`agent-build-fade flex items-start gap-sm ${className ?? ''}`}>
-              <Icon name="arrow_forward" size={18} className="mt-px shrink-0 text-accent-positive" />
-              <span className="min-w-0 flex-1 text-text-primary">
-                {label}
-                {caret}
-              </span>
-            </div>
-          )
-        }
+    if (source.startsWith('→')) {
+      const label = typeof text === 'string' ? text.replace(/^→\s*/, '') : text
+      return (
+        <div key={i} className={`flex items-start gap-sm ${rowClassName}`}>
+          <Icon name="arrow_forward" size={18} className="mt-px shrink-0 text-accent-positive" />
+          <span className="min-w-0 flex-1">
+            {label}
+            {caret}
+          </span>
+        </div>
+      )
+    }
 
-        if (source.startsWith('ACTION_CONT:')) {
-          const label = typeof text === 'string' ? text.replace(/^ACTION_CONT:\s*/, '') : text
+    if (source.startsWith('ACTION:')) {
+      const label = typeof text === 'string' ? text.replace(/^ACTION:\s*/, '') : text
+      return (
+        <div key={i} className={`flex items-start gap-sm ${rowClassName}`}>
+          <Icon name="arrow_forward" size={18} className="mt-px shrink-0 text-accent-positive" />
+          <span className="min-w-0 flex-1 text-text-primary">
+            {label}
+            {caret}
+          </span>
+        </div>
+      )
+    }
+
+    if (source.startsWith('ACTION_CONT:')) {
+      const label = typeof text === 'string' ? text.replace(/^ACTION_CONT:\s*/, '') : text
+      return (
+        <p key={i} className={`-mt-sm ml-[26px] ${rowClassName}`}>
+          {label}
+          {caret}
+        </p>
+      )
+    }
+
+    if (source.startsWith('INDENT:')) {
+      const label = typeof text === 'string' ? text.replace(/^INDENT:\s*/, '') : text
+      return (
+        <div key={i} className={`flex items-start gap-sm ${rowClassName}`}>
+          <Icon name="lightbulb" size={18} className="mt-px shrink-0 text-[#E6AA04]" />
+          <span className="min-w-0 flex-1 text-text-secondary">
+            {label}
+            {caret}
+          </span>
+        </div>
+      )
+    }
+
+    if (source.startsWith('CALLOUT:')) {
+      const label = typeof text === 'string' ? text.replace(/^CALLOUT:\s*/, '') : text
+      return (
+        <div key={i} className={`flex items-start gap-sm ${rowClassName}`}>
+          <Icon name="schedule" size={18} className="mt-px shrink-0 text-[#E6AA04]" />
+          <span className="min-w-0 flex-1 text-text-primary">
+            {label}
+            {caret}
+          </span>
+        </div>
+      )
+    }
+
+    if (source.startsWith('STEP:')) {
+      const label = typeof text === 'string' ? text.replace(/^STEP:\s*/, '') : text
+      if (typeof label === 'string') {
+        const match = label.match(/^(Step\s+\d+:)\s*(.*)$/i)
+        if (match) {
+          const [, stepLabel, rest] = match
           return (
-            <p key={i} className={`agent-build-fade -mt-sm ml-[26px] ${className ?? ''}`}>
-              {label}
+            <p key={i} className={rowClassName}>
+              <span className="font-medium text-text-primary">{stepLabel}</span>{' '}
+              <span className="text-text-secondary">{rest}</span>
               {caret}
             </p>
           )
         }
+      }
+      return (
+        <p key={i} className={rowClassName}>
+          {label}
+          {caret}
+        </p>
+      )
+    }
 
-        if (source.startsWith('INDENT:')) {
-          const label = typeof text === 'string' ? text.replace(/^INDENT:\s*/, '') : text
-          return (
-            <div key={i} className={`agent-build-fade flex items-start gap-sm ${className ?? ''}`}>
-              <Icon name="lightbulb" size={18} className="mt-px shrink-0 text-[#E6AA04]" />
-              <span className="min-w-0 flex-1 text-text-secondary">
-                {label}
-                {caret}
-              </span>
-            </div>
-          )
-        }
-
-        if (source.startsWith('CALLOUT:')) {
-          const label = typeof text === 'string' ? text.replace(/^CALLOUT:\s*/, '') : text
-          return (
-            <div key={i} className={`agent-build-fade flex items-start gap-sm ${className ?? ''}`}>
-              <Icon name="schedule" size={18} className="mt-px shrink-0 text-[#E6AA04]" />
-              <span className="min-w-0 flex-1 text-text-primary">
-                {label}
-                {caret}
-              </span>
-            </div>
-          )
-        }
-
-        if (source.startsWith('WARN:')) {
-          const label = typeof text === 'string' ? text.replace(/^WARN:\s*/, '') : text
-          return (
-            <div key={i} className={`agent-build-fade flex items-start gap-sm ${className ?? ''}`}>
-              <Icon name="warning" size={18} className="mt-px shrink-0 text-[#E6AA04]" />
-              <span className="min-w-0 flex-1 text-text-primary">
-                {label}
-                {caret}
-              </span>
-            </div>
-          )
-        }
-
-        return (
-          <p key={i} className={`agent-build-fade ${className ?? ''}`}>
-            {text}
+    if (source.startsWith('WARN:')) {
+      const label = typeof text === 'string' ? text.replace(/^WARN:\s*/, '') : text
+      return (
+        <div key={i} className={`flex items-start gap-sm ${rowClassName}`}>
+          <Icon name="warning" size={18} className="mt-px shrink-0 text-[#E6AA04]" />
+          <span className="min-w-0 flex-1 text-text-primary">
+            {label}
             {caret}
-          </p>
-        )
-      })}
+          </span>
+        </div>
+      )
+    }
+
+    return (
+      <p key={i} className={rowClassName}>
+        {text}
+        {caret}
+      </p>
+    )
+  }
+
+  return (
+    <>
+      {visibleItems
+        .filter(({ i }) => i < firstStepIndex || firstStepIndex === -1)
+        .map(({ p, i }) => renderParagraph(p, i))}
+      {firstStepIndex !== -1 && (
+        <div className="ml-[9px] border-l border-border pl-lg">
+          <div className="flex flex-col gap-md">
+            {visibleItems
+              .filter(({ i }) => i >= firstStepIndex && i <= lastStepIndex)
+              .map(({ p, i }) => renderParagraph(p, i))}
+          </div>
+        </div>
+      )}
+      {visibleItems
+        .filter(({ i }) => i > lastStepIndex && firstStepIndex !== -1)
+        .map(({ p, i }) => renderParagraph(p, i))}
     </>
   )
 }
@@ -1262,6 +1512,718 @@ function ReminderCreateIntroReply({ onComplete }: { onComplete?: () => void }) {
         />
       </div>
     </div>
+  )
+}
+
+function ReviewAgentReply({
+  paragraphs,
+  onComplete,
+}: {
+  paragraphs: string[]
+  onComplete?: () => void
+}) {
+  const [done, setDone] = useState(false)
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <TypedParagraphs
+          fast
+          paragraphs={paragraphs}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+type ReviewChoiceStep = {
+  /** Scripted demo reply pre-filled when the user clicks the composer. */
+  composerFill: string
+  /** Short options relevant to the current question. */
+  primary: string[]
+}
+
+const REVIEW_RESPONSE_CHOICES = {
+  sources: {
+    composerFill: 'Watch all sources.',
+    primary: ['All sources', 'Google only', 'Facebook only'],
+  },
+  locations: {
+    composerFill: 'All 4 locations.',
+    primary: ['All 4 locations', 'Just a few to start'],
+  },
+  spamOk: {
+    composerFill: 'ok',
+    primary: ['ok', 'Sounds good'],
+  },
+  spamAlert: {
+    composerFill: 'Yes, email me the spam alerts.',
+    primary: ['Email me alerts', 'No alerts'],
+  },
+  spamEmail: {
+    composerFill: 'Use my account email.',
+    primary: ['Use my account email', 'Use a different address'],
+  },
+  offline: {
+    composerFill: 'Yes — phone and email.',
+    primary: ['Phone and email', 'Phone only', 'Email only'],
+  },
+  writing: {
+    composerFill: 'Keep all three.',
+    primary: ['Keep all three', 'Skip SEO keywords'],
+  },
+  publish: {
+    composerFill: 'Post automatically.',
+    primary: ['Post automatically', 'Wait for approval'],
+  },
+  build: {
+    composerFill: 'Build agent.',
+    primary: ['Build agent'],
+  },
+} as const satisfies Record<string, ReviewChoiceStep>
+
+function ReviewChoicePills({
+  primary,
+  onPick,
+}: {
+  primary: readonly string[]
+  onPick: (label: string) => void
+}) {
+  // Choice pills only — no "Additional answers" overflow.
+  return (
+    <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
+      {primary.map((label) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => onPick(label)}
+          className={
+            label.toLowerCase() === 'build agent'
+              ? 'flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover'
+              : 'flex h-9 items-center rounded-sm border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover'
+          }
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ReviewBuildingCard({
+  onDone,
+  persisted = false,
+  onViewWorkflow,
+  workflowVisible = false,
+}: {
+  onDone?: () => void
+  persisted?: boolean
+  onViewWorkflow?: () => void
+  workflowVisible?: boolean
+}) {
+  const [step, setStep] = useState(persisted ? REVIEW_RESPONSE_DESIGN_STEPS.length : 0)
+  const completedRef = useRef(false)
+  const done = persisted || step >= REVIEW_RESPONSE_DESIGN_STEPS.length
+  const displayStep = persisted ? REVIEW_RESPONSE_DESIGN_STEPS.length : step
+  const collapsed = done && workflowVisible
+
+  useEffect(() => {
+    if (persisted) return
+    if (done) {
+      if (!completedRef.current) {
+        completedRef.current = true
+        const t = window.setTimeout(() => onDone?.(), 600)
+        return () => window.clearTimeout(t)
+      }
+      return
+    }
+    const t = window.setTimeout(() => setStep((s) => s + 1), 1000)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, done, persisted])
+
+  return (
+    <div className="agent-build-fade mt-3xl flex flex-col gap-md">
+      <p className="text-body leading-6">
+        {done ? (
+          <span className="text-text-primary">Review response agent draft is ready</span>
+        ) : (
+          <span className="inline-flex items-center gap-xs">
+            <span className="text-text-primary">Creating the review response agent</span>
+            <span className="inline-flex items-center gap-px" aria-hidden>
+              {[0, 1, 2].map((dot) => (
+                <span
+                  key={dot}
+                  className="animate-pulse size-1 rounded-full bg-text-tertiary"
+                  style={{ animationDelay: `${dot * 0.15}s` }}
+                />
+              ))}
+            </span>
+          </span>
+        )}
+      </p>
+      <div className="rounded-md border border-border bg-surface p-lg">
+        <div className="flex items-start gap-sm">
+          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-sm">
+              <div className="flex min-w-0 items-center gap-sm">
+                <span className="text-body text-text-primary">{REVIEW_RESPONSE_BUILD_CARD.title}</span>
+                {done && (
+                  <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                    Draft
+                  </span>
+                )}
+              </div>
+              {done && !workflowVisible && (
+                <button
+                  type="button"
+                  onClick={onViewWorkflow}
+                  className="shrink-0 rounded-sm text-body text-text-action hover:underline"
+                >
+                  View in agent builder
+                </button>
+              )}
+            </div>
+            <p className="mt-xs text-body text-text-secondary">{REVIEW_RESPONSE_BUILD_CARD.description}</p>
+            {!done && !collapsed && (
+              <ul className="mt-md flex flex-col gap-sm">
+                {REVIEW_RESPONSE_DESIGN_STEPS.map((item, index) => {
+                  const complete = index < displayStep
+                  const active = index === displayStep
+                  return (
+                    <li key={item.id} className="flex items-center gap-sm text-body">
+                      <Icon
+                        name={complete ? 'check_circle' : active ? 'progress_activity' : 'radio_button_unchecked'}
+                        size={18}
+                        className={complete ? 'text-accent-positive' : active ? 'animate-spin text-ai-brand' : 'text-text-tertiary'}
+                      />
+                      <span className={complete || active ? 'text-text-primary' : 'text-text-tertiary'}>
+                        {item.label}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReviewResponseThread({
+  onDraftReady,
+  onCreateAgent,
+  onViewWorkflow,
+  onMakeChanges,
+  workflowVisible = false,
+  suppressAutoScrollBriefly,
+  pendingAnswer,
+  onPendingAnswerConsumed,
+  onComposerFillChange,
+  onBusyChange,
+}: {
+  onDraftReady?: (name: string | null) => void
+  onCreateAgent?: (options?: { publish?: boolean }) => void
+  onViewWorkflow?: () => void
+  onMakeChanges?: () => void
+  workflowVisible?: boolean
+  suppressAutoScrollBriefly: () => void
+  /** Answer submitted from the bottom composer (click-to-fill → send). */
+  pendingAnswer?: string
+  onPendingAnswerConsumed?: () => void
+  /** Scripted reply for the current open question — parent fills composer on click. */
+  onComposerFillChange?: (text: string | null) => void
+  onBusyChange?: (busy: boolean) => void
+}) {
+  const [introDone, setIntroDone] = useState(false)
+  const [sourcesAnswer, setSourcesAnswer] = useState('')
+  const [sourcesThoughtsOpen, setSourcesThoughtsOpen] = useState(true)
+  const [sourcesReplyReady, setSourcesReplyReady] = useState(false)
+  const [sourcesReplyDone, setSourcesReplyDone] = useState(false)
+  const [locationsAnswer, setLocationsAnswer] = useState('')
+  const [locationsThoughtsOpen, setLocationsThoughtsOpen] = useState(true)
+  const [locationsReplyReady, setLocationsReplyReady] = useState(false)
+  const [locationsReplyDone, setLocationsReplyDone] = useState(false)
+  const [spamOkAnswer, setSpamOkAnswer] = useState('')
+  const [spamOkThoughtsOpen, setSpamOkThoughtsOpen] = useState(true)
+  const [spamAlertReady, setSpamAlertReady] = useState(false)
+  const [spamAlertDone, setSpamAlertDone] = useState(false)
+  const [spamAlertAnswer, setSpamAlertAnswer] = useState('')
+  const [spamAlertThoughtsOpen, setSpamAlertThoughtsOpen] = useState(true)
+  const [spamEmailReady, setSpamEmailReady] = useState(false)
+  const [spamEmailDone, setSpamEmailDone] = useState(false)
+  const [spamEmailAnswer, setSpamEmailAnswer] = useState('')
+  const [spamEmailThoughtsOpen, setSpamEmailThoughtsOpen] = useState(true)
+  const [offlineReady, setOfflineReady] = useState(false)
+  const [offlineDone, setOfflineDone] = useState(false)
+  const [offlineAnswer, setOfflineAnswer] = useState('')
+  const [offlineThoughtsOpen, setOfflineThoughtsOpen] = useState(true)
+  const [writingReady, setWritingReady] = useState(false)
+  const [writingDone, setWritingDone] = useState(false)
+  const [writingAnswer, setWritingAnswer] = useState('')
+  const [writingThoughtsOpen, setWritingThoughtsOpen] = useState(true)
+  const [publishReady, setPublishReady] = useState(false)
+  const [publishDone, setPublishDone] = useState(false)
+  const [publishAnswer, setPublishAnswer] = useState('')
+  const [publishThoughtsOpen, setPublishThoughtsOpen] = useState(true)
+  const [holdReady, setHoldReady] = useState(false)
+  const [holdDone, setHoldDone] = useState(false)
+  const [buildAnswer, setBuildAnswer] = useState('')
+  const [buildThoughtsOpen, setBuildThoughtsOpen] = useState(true)
+  const [summaryReady, setSummaryReady] = useState(false)
+  const [summaryDone, setSummaryDone] = useState(false)
+  const [buildCardDone, setBuildCardDone] = useState(false)
+  const [postDraftDone, setPostDraftDone] = useState(false)
+  const [postDraftAnswer, setPostDraftAnswer] = useState('')
+
+  const awaitingStep =
+    introDone && !sourcesAnswer
+      ? 'sources'
+      : sourcesReplyDone && !locationsAnswer
+        ? 'locations'
+        : locationsReplyDone && !spamOkAnswer
+          ? 'spamOk'
+          : spamAlertDone && !spamAlertAnswer
+            ? 'spamAlert'
+            : spamEmailDone && !spamEmailAnswer
+              ? 'spamEmail'
+              : offlineDone && !offlineAnswer
+                ? 'offline'
+                : writingDone && !writingAnswer
+                  ? 'writing'
+                  : publishDone && !publishAnswer
+                    ? 'publish'
+                    : holdDone && !buildAnswer
+                      ? 'build'
+                      : null
+
+  const applyAnswer = (raw: string) => {
+    const text = raw.trim()
+    if (!text || !awaitingStep) return
+    const fill = REVIEW_RESPONSE_CHOICES[awaitingStep].composerFill
+
+    switch (awaitingStep) {
+      case 'sources':
+        setSourcesAnswer(
+          text === 'All sources' || text === fill ? fill : text,
+        )
+        break
+      case 'locations':
+        setLocationsAnswer(
+          text === 'All 4 locations' || text === fill ? fill : text,
+        )
+        break
+      case 'spamOk':
+        setSpamOkAnswer(text === 'ok' || text === fill ? fill : text)
+        break
+      case 'spamAlert':
+        setSpamAlertAnswer(
+          text === 'Email me alerts' || text === fill ? fill : text,
+        )
+        break
+      case 'spamEmail':
+        setSpamEmailAnswer(
+          text === 'Use my account email' || text === fill ? fill : text,
+        )
+        break
+      case 'offline':
+        setOfflineAnswer(
+          text === 'Phone and email' || text === fill ? fill : text,
+        )
+        break
+      case 'writing':
+        setWritingAnswer(
+          text === 'Keep all three' || text === fill ? fill : text,
+        )
+        break
+      case 'publish':
+        setPublishAnswer(
+          text === 'Post automatically' || text === fill ? fill : text,
+        )
+        break
+      case 'build':
+        setBuildAnswer(text === 'Build agent' || text === fill ? fill : text)
+        break
+    }
+  }
+
+  useEffect(() => {
+    if (!pendingAnswer?.trim() || !awaitingStep) return
+    applyAnswer(pendingAnswer)
+    onPendingAnswerConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAnswer, awaitingStep])
+
+  useEffect(() => {
+    onComposerFillChange?.(
+      awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep].composerFill : null,
+    )
+  }, [awaitingStep, onComposerFillChange])
+
+  const busy =
+    !introDone ||
+    (Boolean(sourcesAnswer) && !sourcesReplyDone) ||
+    (Boolean(locationsAnswer) && !locationsReplyDone) ||
+    (Boolean(spamOkAnswer) && !spamAlertDone) ||
+    (Boolean(spamAlertAnswer) && !spamEmailDone) ||
+    (Boolean(spamEmailAnswer) && !offlineDone) ||
+    (Boolean(offlineAnswer) && !writingDone) ||
+    (Boolean(writingAnswer) && !publishDone) ||
+    (Boolean(publishAnswer) && !holdDone) ||
+    (Boolean(buildAnswer) && !summaryDone) ||
+    (summaryDone && !buildCardDone) ||
+    (buildCardDone && !postDraftDone)
+
+  useEffect(() => {
+    onBusyChange?.(busy)
+  }, [busy, onBusyChange])
+
+  useEffect(() => {
+    if (buildCardDone) onDraftReady?.(REVIEW_RESPONSE_BUILD_CARD.title)
+  }, [buildCardDone, onDraftReady])
+
+  const handlePostDraftAnswer = (label: string) => {
+    if (label === 'View in agent builder') {
+      onViewWorkflow?.()
+      return
+    }
+    setPostDraftAnswer(label)
+    if (label === 'Save agent') onCreateAgent?.()
+    else if (label === 'Make changes') onMakeChanges?.()
+  }
+
+  const choice = awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep] : null
+  const postDraftPills = workflowVisible
+    ? REVIEW_RESPONSE_POST_DRAFT_PILLS.filter((label) => label !== 'View in agent builder')
+    : REVIEW_RESPONSE_POST_DRAFT_PILLS
+
+  return (
+    <>
+      <ReviewAgentReply paragraphs={REVIEW_RESPONSE_INTRO_PARAGRAPHS} onComplete={() => setIntroDone(true)} />
+      {introDone && (
+        <MessageActions copyText={REVIEW_RESPONSE_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />
+      )}
+      {choice && awaitingStep === 'sources' && (
+        <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+      )}
+      {sourcesAnswer && <UserBubble>{sourcesAnswer}</UserBubble>}
+      {sourcesAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={sourcesThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setSourcesThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setSourcesThoughtsOpen(false)
+              setSourcesReplyReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS}
+            fast
+          />
+          {sourcesReplyReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_SOURCES_REPLY}
+              onComplete={() => setSourcesReplyDone(true)}
+            />
+          )}
+          {sourcesReplyDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_SOURCES_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'locations' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {locationsAnswer && <UserBubble>{locationsAnswer}</UserBubble>}
+      {locationsAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={locationsThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setLocationsThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setLocationsThoughtsOpen(false)
+              setLocationsReplyReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_LOCATIONS_THOUGHTS}
+            fast
+          />
+          {locationsReplyReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_LOCATIONS_REPLY}
+              onComplete={() => setLocationsReplyDone(true)}
+            />
+          )}
+          {locationsReplyDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_LOCATIONS_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'spamOk' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {spamOkAnswer && <UserBubble>{spamOkAnswer}</UserBubble>}
+      {spamOkAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={spamOkThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setSpamOkThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setSpamOkThoughtsOpen(false)
+              setSpamAlertReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_SPAM_OK_THOUGHTS}
+            fast
+          />
+          {spamAlertReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_SPAM_ALERT_REPLY}
+              onComplete={() => setSpamAlertDone(true)}
+            />
+          )}
+          {spamAlertDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_SPAM_ALERT_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'spamAlert' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {spamAlertAnswer && <UserBubble>{spamAlertAnswer}</UserBubble>}
+      {spamAlertAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={spamAlertThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setSpamAlertThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setSpamAlertThoughtsOpen(false)
+              setSpamEmailReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_SPAM_ALERT_THOUGHTS}
+            fast
+          />
+          {spamEmailReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_SPAM_EMAIL_REPLY}
+              onComplete={() => setSpamEmailDone(true)}
+            />
+          )}
+          {spamEmailDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_SPAM_EMAIL_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'spamEmail' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {spamEmailAnswer && <UserBubble>{spamEmailAnswer}</UserBubble>}
+      {spamEmailAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={spamEmailThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setSpamEmailThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setSpamEmailThoughtsOpen(false)
+              setOfflineReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_SPAM_EMAIL_THOUGHTS}
+            fast
+          />
+          {offlineReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_OFFLINE_REPLY}
+              onComplete={() => setOfflineDone(true)}
+            />
+          )}
+          {offlineDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_OFFLINE_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'offline' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {offlineAnswer && <UserBubble>{offlineAnswer}</UserBubble>}
+      {offlineAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={offlineThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setOfflineThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setOfflineThoughtsOpen(false)
+              setWritingReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_OFFLINE_THOUGHTS}
+            fast
+          />
+          {writingReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_WRITING_REPLY}
+              onComplete={() => setWritingDone(true)}
+            />
+          )}
+          {writingDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_WRITING_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'writing' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {writingAnswer && <UserBubble>{writingAnswer}</UserBubble>}
+      {writingAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={writingThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setWritingThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setWritingThoughtsOpen(false)
+              setPublishReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_WRITING_THOUGHTS}
+            fast
+          />
+          {publishReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_PUBLISH_REPLY}
+              onComplete={() => setPublishDone(true)}
+            />
+          )}
+          {publishDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_PUBLISH_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'publish' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {publishAnswer && <UserBubble>{publishAnswer}</UserBubble>}
+      {publishAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={publishThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setPublishThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setPublishThoughtsOpen(false)
+              setHoldReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_PUBLISH_THOUGHTS}
+            fast
+          />
+          {holdReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_HOLD_REPLY}
+              onComplete={() => setHoldDone(true)}
+            />
+          )}
+          {holdDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_HOLD_REPLY.join('\n\n')} className="ml-3xl" />
+          )}
+          {choice && awaitingStep === 'build' && (
+            <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
+          )}
+        </>
+      )}
+      {buildAnswer && <UserBubble>{buildAnswer}</UserBubble>}
+      {buildAnswer && (
+        <>
+          <CreateAgentThinkingPanel
+            open={buildThoughtsOpen}
+            onToggle={() => {
+              suppressAutoScrollBriefly()
+              setBuildThoughtsOpen((prev) => !prev)
+            }}
+            onComplete={() => {
+              setBuildThoughtsOpen(false)
+              setSummaryReady(true)
+            }}
+            text={REVIEW_RESPONSE_AFTER_BUILD_THOUGHTS}
+            fast
+          />
+          {summaryReady && (
+            <ReviewAgentReply
+              paragraphs={REVIEW_RESPONSE_SUMMARY_PARAGRAPHS}
+              onComplete={() => setSummaryDone(true)}
+            />
+          )}
+          {summaryDone && (
+            <MessageActions copyText={REVIEW_RESPONSE_SUMMARY_PARAGRAPHS.join('\n\n')} className="ml-3xl" />
+          )}
+          {summaryDone && (
+            <ReviewBuildingCard
+              onDone={() => setBuildCardDone(true)}
+              onViewWorkflow={onViewWorkflow}
+              workflowVisible={workflowVisible}
+            />
+          )}
+          {buildCardDone && (
+            <>
+              <div className="agent-build-fade mt-3xl flex gap-sm">
+                <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                  <SparkleLoader size={14} spinning={!postDraftDone} />
+                </span>
+                <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+                  <TypedParagraphs
+                    fast
+                    paragraphs={[REVIEW_RESPONSE_POST_DRAFT_REPLY]}
+                    onDone={() => setPostDraftDone(true)}
+                  />
+                </div>
+              </div>
+              {postDraftDone && (
+                <MessageActions className="ml-3xl" copyText={REVIEW_RESPONSE_POST_DRAFT_REPLY} />
+              )}
+              {postDraftDone && !postDraftAnswer && (
+                <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
+                  {postDraftPills.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => handlePostDraftAnswer(label)}
+                      className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {postDraftAnswer && <UserBubble>{postDraftAnswer}</UserBubble>}
+            </>
+          )}
+        </>
+      )}
+    </>
   )
 }
 
@@ -1390,7 +2352,7 @@ function ReminderPostDraftFollowUp({
 }) {
   const [done, setDone] = useState(false)
   const pills = hideViewWorkflow
-    ? REMINDER_POST_DRAFT_PILLS.filter((label) => label !== 'View workflow')
+    ? REMINDER_POST_DRAFT_PILLS.filter((label) => label !== 'View in agent builder')
     : REMINDER_POST_DRAFT_PILLS
 
   return (
@@ -1513,7 +2475,7 @@ function ReminderBuildingCard({
                   onClick={onViewWorkflow}
                   className="shrink-0 rounded-sm text-body text-text-action hover:underline"
                 >
-                  View workflow
+                  View in agent builder
                 </button>
               )}
             </div>
@@ -1721,7 +2683,7 @@ function ReminderAfterRescheduleBeat({
   const emailDoneRef = useRef(false)
 
   const handlePostDraftAnswer = (label: string) => {
-    if (label === 'View workflow') {
+    if (label === 'View in agent builder') {
       onViewWorkflow?.()
       return
     }
@@ -2610,7 +3572,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   /** Full transcript for a recent/saved chat — preferred over looking up by id. */
   historyChat?: ChatHistoryTranscript | null
   fromScratchLabel?: string
-  variant?: 'frontdesk' | 'reminder'
+  variant?: 'frontdesk' | 'reminder' | 'review-response'
   workflowVisible?: boolean
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
@@ -2699,7 +3661,7 @@ function HealthcareFrontdeskCreateAgentLive({
   initialPrompt?: string
   autoStart?: boolean
   fromScratchLabel?: string
-  variant?: 'frontdesk' | 'reminder'
+  variant?: 'frontdesk' | 'reminder' | 'review-response'
   workflowVisible?: boolean
   onDraftReady?: (name: string | null) => void
   onCanvasProcedureChange?: (name: string | null) => void
@@ -2707,6 +3669,7 @@ function HealthcareFrontdeskCreateAgentLive({
   canvasProcedureId?: string | null
 }) {
   const isReminderFlow = variant === 'reminder'
+  const isReviewFlow = variant === 'review-response'
   const [prompt, setPrompt] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [phase, setPhase] = useState<CreatePhase>('ask-docs')
@@ -2797,6 +3760,9 @@ function HealthcareFrontdeskCreateAgentLive({
   const previewActiveRef = useRef(false)
   const [loaderIndex, setLoaderIndex] = useState<number | null>(null)
   const [followUp, setFollowUp] = useState('')
+  const [reviewComposerFill, setReviewComposerFill] = useState<string | null>(null)
+  const [reviewPendingAnswer, setReviewPendingAnswer] = useState('')
+  const [reviewThreadBusy, setReviewThreadBusy] = useState(true)
   const [attachments, setAttachments] = useState<AttachItem[]>([])
   const threadRef = useRef<HTMLDivElement | null>(null)
   const threadScrollRef = useRef<HTMLDivElement | null>(null)
@@ -2826,7 +3792,9 @@ function HealthcareFrontdeskCreateAgentLive({
       (Boolean(timingAnswer) && !timingFollowDone) ||
       (Boolean(rescheduleAnswer) && !handoffFollowDone) ||
       (connectAnswerContinues && !reminderBuildDone))
-  const composerLocked = building || stepThinking || previewLocksComposer || reminderGenerating
+  const reviewGenerating =
+    isReviewFlow && (introThinking || !introReplyReady || reviewThreadBusy)
+  const composerLocked = building || stepThinking || previewLocksComposer || reminderGenerating || reviewGenerating
   const composerPlaceholder = previewLocksComposer
     ? previewActive
       ? 'Test in progress...'
@@ -2855,12 +3823,16 @@ function HealthcareFrontdeskCreateAgentLive({
   }
 
   const saveCreatedAgent = (options?: { publish?: boolean }) => {
-    const draftTitle = isReminderFlow
-      ? (agentName || REMINDER_BUILD_CARD.title)
-      : (agentName || FRONTDESK_BUILD_CARD.title)
-    const draftDescription = isReminderFlow
-      ? REMINDER_BUILD_CARD.description
-      : FRONTDESK_BUILD_CARD.description
+    const draftTitle = isReviewFlow
+      ? (agentName || REVIEW_RESPONSE_BUILD_CARD.title)
+      : isReminderFlow
+        ? (agentName || REMINDER_BUILD_CARD.title)
+        : (agentName || FRONTDESK_BUILD_CARD.title)
+    const draftDescription = isReviewFlow
+      ? REVIEW_RESPONSE_BUILD_CARD.description
+      : isReminderFlow
+        ? REMINDER_BUILD_CARD.description
+        : FRONTDESK_BUILD_CARD.description
     onCreateAgent?.({
       ...options,
       chat: buildSavedCreateChat({
@@ -2935,6 +3907,9 @@ function HealthcareFrontdeskCreateAgentLive({
     setReminderBuildDone(false)
     timingPromptFilledRef.current = false
     emailPromptFilledRef.current = false
+    setReviewComposerFill(null)
+    setReviewPendingAnswer('')
+    setReviewThreadBusy(true)
     setDocsThoughtsOpen(true)
     setDocsReplyReady(false)
     setDocsReplyDone(false)
@@ -3019,7 +3994,7 @@ function HealthcareFrontdeskCreateAgentLive({
     if (!introThinking) return
     setIntroStatusIndex(0)
     let i = 0
-    const rotateMs = isReminderFlow ? 550 : 700
+    const rotateMs = isReminderFlow || isReviewFlow ? 550 : 700
     const rotate = window.setInterval(() => {
       i += 1
       if (i >= INTRO_STATUS_LABELS.length) {
@@ -3234,9 +4209,11 @@ function HealthcareFrontdeskCreateAgentLive({
   const canSendFollowUp =
     isReminderFlow && handoffFollowDone && !connectAnswer
       ? Boolean(followUp.trim() || attachments.length > 0)
-      : phase === 'ask-docs'
-        ? Boolean(followUp.trim() || attachments.length > 0)
-        : Boolean(followUp.trim())
+      : isReviewFlow
+        ? Boolean(followUp.trim() && reviewComposerFill && !reviewThreadBusy)
+        : phase === 'ask-docs'
+          ? Boolean(followUp.trim() || attachments.length > 0)
+          : Boolean(followUp.trim())
 
   const handleFollowUpSend = () => {
     if (!canSendFollowUp || building || introThinking || stepThinking || previewLocksComposer || reminderGenerating) return
@@ -3253,6 +4230,13 @@ function HealthcareFrontdeskCreateAgentLive({
         setAttachments([])
         setFollowUp('')
       }
+      return
+    }
+    // Review response create flow: send composer text into the thread's current question.
+    if (isReviewFlow) {
+      if (!reviewComposerFill || reviewThreadBusy || !followUp.trim()) return
+      setReviewPendingAnswer(followUp.trim())
+      setFollowUp('')
       return
     }
     // After the draft review, further messages are just logged to the thread.
@@ -3350,12 +4334,34 @@ function HealthcareFrontdeskCreateAgentLive({
                 setThinkingOpen(false)
                 setIntroReplyReady(true)
               }}
-              text={isReminderFlow ? REMINDER_CREATE_THOUGHTS_TEXT : CREATE_AGENT_THOUGHTS_TEXT}
-              fast={isReminderFlow}
+              text={
+                isReviewFlow
+                  ? REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT
+                  : isReminderFlow
+                    ? REMINDER_CREATE_THOUGHTS_TEXT
+                    : CREATE_AGENT_THOUGHTS_TEXT
+              }
+              fast={isReminderFlow || isReviewFlow}
             />
 
             {introReplyReady && (
-              isReminderFlow ? (
+              isReviewFlow ? (
+                <ReviewResponseThread
+                  onDraftReady={(name) => {
+                    if (name) setAgentName(name)
+                    onDraftReady?.(name)
+                  }}
+                  onCreateAgent={() => saveCreatedAgent()}
+                  onViewWorkflow={onViewWorkflow}
+                  onMakeChanges={resetCreateFlow}
+                  workflowVisible={workflowVisible}
+                  suppressAutoScrollBriefly={suppressAutoScrollBriefly}
+                  pendingAnswer={reviewPendingAnswer}
+                  onPendingAnswerConsumed={() => setReviewPendingAnswer('')}
+                  onComposerFillChange={setReviewComposerFill}
+                  onBusyChange={setReviewThreadBusy}
+                />
+              ) : isReminderFlow ? (
                 <>
                   <ReminderCreateIntroReply onComplete={() => setIntroReplyDone(true)} />
                   {introReplyDone && (
@@ -4059,6 +5065,11 @@ function HealthcareFrontdeskCreateAgentLive({
                   setFollowUp(REMINDER_EMAIL_REPLY)
                   return
                 }
+                // Review response: click composer to pre-fill the current question's reply.
+                if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+                  setFollowUp(reviewComposerFill)
+                  return
+                }
                 // Once the draft review is done, clicking into the box pre-fills
                 // John's next message so the demo can continue in one click.
                 if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
@@ -4080,6 +5091,10 @@ function HealthcareFrontdeskCreateAgentLive({
                 ) {
                   emailPromptFilledRef.current = true
                   setFollowUp(REMINDER_EMAIL_REPLY)
+                  return
+                }
+                if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+                  setFollowUp(reviewComposerFill)
                 }
               }}
               onChange={(e) => setFollowUp(e.target.value)}
@@ -5024,6 +6039,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { id: 'conversationsManaged', value: '2500', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations tagged and routed end-to-end by the agent.' },
       { id: 'timeSaved', value: '40m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing.' },
     ],
+    'Review response agents': [
+      { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+      { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+      { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+      { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+    ],
   }
 
   const DEFAULT_METRICS: Metric[] = [
@@ -5037,7 +6058,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
   const regions = REGIONS_BY_AGENT[agentName] ?? DEFAULT_REGIONS
   const data: AgentInstance[] = regions.map((r) => ({
-    name: `${agentName} - ${r.region}`,
+    name: r.instanceName ?? `${agentName} - ${r.region}`,
     status: r.status,
     channels: r.channels,
     interactions: r.interactions,
@@ -5070,6 +6091,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     statusUpdated: r.statusUpdated,
     conversationsAssigned: r.conversationsAssigned,
     conversationsManaged: r.conversationsManaged,
+    reviewsResponded: r.reviewsResponded,
+    responseRate: r.responseRate,
+    avgResponseTime: r.avgResponseTime,
   }))
 
   const isReminder        = agentName === 'Reminder agent'
@@ -5080,13 +6104,23 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isRevenue         = agentName === 'Revenue agent'
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
+  const isReviewResponse  = agentName === 'Review response agents'
+  const hideChannels      = isTaggingRouting || isReviewResponse
 
   useEffect(() => {
-    // Setup wizard is full-bleed (no SideNav). Create-with-AI keeps SideNav.
-    const isAgentSetupActive = (isFrontdesk || isReminder) && showSetupWizard
-    onAgentSetupActiveChange?.(isAgentSetupActive)
+    // Instance screen owns full-bleed signaling (e.g. View log) while drilled in.
+    if (selectedInstance) return
+    // Setup wizard is full-bleed (no SideNav). Review response create landing
+    // also hides L2 while the create flow is open.
+    const hideSideNav =
+      ((isFrontdesk || isReminder) && showSetupWizard) ||
+      (isReviewResponse && showCreateFlow)
+    onAgentSetupActiveChange?.(hideSideNav)
+  }, [isFrontdesk, isReminder, isReviewResponse, showSetupWizard, showCreateFlow, selectedInstance, onAgentSetupActiveChange])
+
+  useEffect(() => {
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, isReminder, showSetupWizard, onAgentSetupActiveChange])
+  }, [onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     { key: 'name', label: 'Agent name', width: 230, sortable: true, locked: true },
     {
@@ -5096,7 +6130,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       sortable: true,
       render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
     },
-    ...(isTaggingRouting ? [] : [{ key: 'channels' as keyof AgentInstance, label: 'Channels', width: 140, sortable: true }]),
+    ...(hideChannels ? [] : [{ key: 'channels' as keyof AgentInstance, label: 'Channels', width: 140, sortable: true }]),
     ...(isReminder ? [
       { key: 'bookings' as keyof AgentInstance, label: 'Total bookings', width: 110, sortable: true },
       { key: 'confirmed' as keyof AgentInstance, label: 'Appointments confirmed', width: 145, sortable: true },
@@ -5141,6 +6175,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { key: 'conversationsAssigned' as keyof AgentInstance, label: 'Conversations assigned', width: 180, sortable: true },
       { key: 'conversationsManaged' as keyof AgentInstance, label: 'Conversations managed', width: 180, sortable: true },
       { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
+    ] : isReviewResponse ? [
+      { key: 'reviewsResponded' as keyof AgentInstance, label: 'Reviews responded', width: 150, sortable: true },
+      { key: 'responseRate' as keyof AgentInstance, label: 'Response rate', width: 130, sortable: true },
+      { key: 'avgResponseTime' as keyof AgentInstance, label: 'Average response time', width: 170, sortable: true },
+      { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
     ] : [
       { key: 'interactions' as keyof AgentInstance, label: 'Interactions handled', width: 200, sortable: true },
       { key: 'fcr' as keyof AgentInstance, label: 'First contact resolution rate', width: 220, sortable: true },
@@ -5155,9 +6194,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   // Front desk, Pre-visit, Waitlist, and Reminder each report exactly 4 metrics, so all 4
   // are shown by default. Agents with more metrics (Recall, Revenue, Treatment plan, etc.)
   // still default to the first two, with the rest available via Customize columns.
-  const metricKeys = COLUMN_DEFS.slice(isTaggingRouting ? 2 : 3, -1).map((c) => String(c.key))
-  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting
-  const DEFAULT_VISIBLE = ['name', 'status', ...(isTaggingRouting ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
+  const metricKeys = COLUMN_DEFS.slice(hideChannels ? 2 : 3, -1).map((c) => String(c.key))
+  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse
+  const DEFAULT_VISIBLE = ['name', 'status', ...(hideChannels ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
 
@@ -5211,12 +6250,16 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }
 
 
-  if (showCreateFlow && (isFrontdesk || isReminder)) {
+  if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse)) {
     const isHealthcareFrontdesk = product === 'healthcare'
     const createTitle = createDraftAgentName
-      ?? (isFrontdesk ? 'New front desk agent' : 'New reminder agent')
+      ?? (isFrontdesk ? 'New front desk agent' : isReminder ? 'New reminder agent' : 'New review response agent')
     const createWorkflowAgentName = createDraftAgentName
-      ?? (isReminder ? REMINDER_BUILD_CARD.title : FRONTDESK_BUILD_CARD.title)
+      ?? (isReviewResponse
+        ? REVIEW_RESPONSE_BUILD_CARD.title
+        : isReminder
+          ? REMINDER_BUILD_CARD.title
+          : FRONTDESK_BUILD_CARD.title)
 
     return (
       <div className="flex h-full">
@@ -5311,7 +6354,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   />
                 </div>
               )}
-              {(isHealthcareFrontdesk || isReminder) ? (
+              {(isReviewResponse || isReminder || (isFrontdesk && isHealthcareFrontdesk)) ? (
                 <div
                   className={
                     createWorkflowOpen && createSideTab === 'manual'
@@ -5323,15 +6366,49 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     key={createFlowKey}
                     onBack={() => setShowCreateFlow(false)}
                     onSubmittedChange={setCreateFlowSubmitted}
-                    onCreateFromScratch={() => setShowSetupWizard(true)}
-                    onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
+                    onCreateFromScratch={() => {
+                      if (isReviewResponse) {
+                        setShowCreateFlow(false)
+                        onEditAgent?.('Review response agent replying autonomously')
+                        return
+                      }
+                      setShowSetupWizard(true)
+                    }}
+                    onSelectFromLibrary={(templateId) => {
+                      if (isReviewResponse) {
+                        const card = REVIEW_RESPONSE_CREATE_CARDS.find((c) => c.id === templateId)
+                        setShowCreateFlow(false)
+                        onEditAgent?.(card?.title ?? 'Review response agent')
+                        return
+                      }
+                      setShowCreateFlow(false)
+                      onEditAgent?.('')
+                    }}
                     onCreateAgent={handleCreateAgentSuccess}
-                    onViewWorkflow={isReminder ? openCreateWorkflow : undefined}
-                    libraryCards={isReminder ? REMINDER_CREATE_CARDS : undefined}
-                    initialPrompt={isReminder ? REMINDER_CREATE_PROMPT : undefined}
+                    onViewWorkflow={(isReminder || isReviewResponse) ? openCreateWorkflow : undefined}
+                    libraryCards={
+                      isReminder
+                        ? REMINDER_CREATE_CARDS
+                        : isReviewResponse
+                          ? REVIEW_RESPONSE_CREATE_CARDS
+                          : undefined
+                    }
+                    initialPrompt={
+                      isReminder
+                        ? REMINDER_CREATE_PROMPT
+                        : isReviewResponse
+                          ? REVIEW_RESPONSE_CREATE_PROMPT
+                          : undefined
+                    }
                     autoStart={false}
-                    fromScratchLabel={isReminder ? 'Create from scratch' : 'Setup manually'}
-                    variant={isReminder ? 'reminder' : 'frontdesk'}
+                    fromScratchLabel={(isReminder || isReviewResponse) ? 'Create from scratch' : 'Setup manually'}
+                    variant={
+                      isReminder
+                        ? 'reminder'
+                        : isReviewResponse
+                          ? 'review-response'
+                          : 'frontdesk'
+                    }
                     workflowVisible={createWorkflowOpen}
                     onDraftReady={setCreateDraftAgentName}
                     onCanvasProcedureChange={isReminder ? setCanvasProcedureId : undefined}
@@ -5349,7 +6426,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             </div>
           </section>
 
-          {createWorkflowMounted && isReminder && (
+          {createWorkflowMounted && (isReminder || isReviewResponse) && (
             <section
               className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out motion-reduce:transition-none ${
                 createWorkflowOpen
@@ -5359,23 +6436,29 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               aria-hidden={!createWorkflowOpen}
             >
               <WorkflowEditorScreen
-                agentName="Reminder agent - North region"
+                agentName={
+                  isReviewResponse
+                    ? 'Review response agent - North Region'
+                    : 'Reminder agent - North region'
+                }
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
                 hideLhs
                 createAiPanelOpen={createWorkflowOpen}
-                previewProcedureId={canvasProcedureId}
+                previewProcedureId={isReminder ? canvasProcedureId : null}
                 previewProcedureDetail={
-                  canvasProcedureId === REMINDER_CALL_PROCEDURE_NAME
-                    ? REMINDER_CALL_RHS_DETAIL
-                    : (() => {
-                        const found = HC_PROCEDURES.find((p) => p.name === canvasProcedureId)
-                        return found ? procedureToRhsDetail(found) : null
-                      })()
+                  isReminder
+                    ? canvasProcedureId === REMINDER_CALL_PROCEDURE_NAME
+                      ? REMINDER_CALL_RHS_DETAIL
+                      : (() => {
+                          const found = HC_PROCEDURES.find((p) => p.name === canvasProcedureId)
+                          return found ? procedureToRhsDetail(found) : null
+                        })()
+                    : null
                 }
-                onPreviewProcedureIdChange={setCanvasProcedureId}
+                onPreviewProcedureIdChange={isReminder ? setCanvasProcedureId : undefined}
               />
             </section>
           )}
@@ -5400,6 +6483,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
+          onFullBleedChange={onAgentSetupActiveChange}
           product={product}
         />
         <Toast
@@ -5426,7 +6510,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 <>
                   <button
                     type="button"
-                    onClick={() => (isFrontdesk || isReminder) ? openCreateFlow() : onEditAgent?.('')}
+                    onClick={() => (isFrontdesk || isReminder || isReviewResponse) ? openCreateFlow() : onEditAgent?.('')}
                     className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                   >
                     Create agent

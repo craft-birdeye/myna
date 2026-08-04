@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Chip,
   CoachAgentPanel,
@@ -35,6 +35,8 @@ interface AgentInstanceScreenProps {
   onBack: () => void
   onEditAgent?: (agentName: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
+  /** Hide L2 SideNav while a full-bleed view (e.g. View log) is open. */
+  onFullBleedChange?: (active: boolean) => void
   product?: string
   initialTab?: string
 }
@@ -81,6 +83,9 @@ const TABS: Tab[] = [
 
 // Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
 const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
+
+// Review response agents hide Settings.
+const REVIEW_RESPONSE_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings')
 
 const METRICS_BY_AGENT: Record<string, Metric[]> = {
   'Front desk agent': [
@@ -315,6 +320,7 @@ export function AgentInstanceScreen({
   onBack,
   onEditAgent,
   onNavigateToInbox,
+  onFullBleedChange,
   product,
   initialTab = 'outcomes',
 }: AgentInstanceScreenProps) {
@@ -328,6 +334,12 @@ export function AgentInstanceScreen({
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
   const shownName = displayName ?? instanceName
+  const isReviewResponse = agentName.startsWith('Review response agent')
+
+  useEffect(() => {
+    onFullBleedChange?.(Boolean(selectedRun) && isReviewResponse)
+    return () => onFullBleedChange?.(false)
+  }, [selectedRun, isReviewResponse, onFullBleedChange])
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
   const COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
@@ -341,12 +353,13 @@ export function AgentInstanceScreen({
     : DEFAULT_COLUMNS
   const locations = LOCATIONS_BY_AGENT[agentName] ?? LOCATIONS_BY_AGENT['Front desk agent']
   const isTaggingRouting = agentName === 'Tagging & routing agent'
-  const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : TABS
+  const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : isReviewResponse ? REVIEW_RESPONSE_TABS : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
+  const showEmptyRecommendations = agentName === 'Reminder agent' || isReviewResponse
   const showHealthcareLogs =
-    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent')
+    activeTab === 'logs' && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || isReviewResponse)
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && product === 'dental' && Boolean(dentalOutboundLogRows)
@@ -408,7 +421,7 @@ export function AgentInstanceScreen({
               <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
             </div>
             <div className="flex items-center gap-sm">
-              {isRecommendationTab && (
+              {isRecommendationTab && !showEmptyRecommendations && (
                 <Tooltip content="Coach agent" variant="brief">
                   <button
                     type="button"
@@ -515,7 +528,7 @@ export function AgentInstanceScreen({
                   onSelect={setSelectedRecommendationId}
                   onAnalyzeWithAi={() => setCoachOpen(true)}
                 />
-              ) : agentName === 'Reminder agent' ? (
+              ) : showEmptyRecommendations ? (
                 <div className="flex flex-1 items-center justify-center">
                   <EmptyState
                     title="No recommendations yet"

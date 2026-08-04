@@ -32,4 +32,8 @@ export interface RunDetailsPanelProps {
   onViewConversation?: () => void
   steps?: RunLogStep[]
   conversation?: ReminderConversationEntry[]
+  /** When false, hides Logs/Conversation tabs and shows logs only. Default true. */
+  showTabs?: boolean
+  /** Panel header title. Default "Run details". */
+  title?: string
 }

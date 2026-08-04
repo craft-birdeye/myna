@@ -374,13 +374,15 @@ export function RunDetailsPanel({
   onViewConversation,
   steps = DEFAULT_STEPS,
   conversation = DEFAULT_CONVERSATION,
+  showTabs = true,
+  title = 'Run details',
 }: RunDetailsPanelProps) {
   const [tab, setTab] = useState<'logs' | 'conversation'>('logs')
 
   return (
     <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
       <div className="flex h-[60px] shrink-0 items-center justify-between px-[15px]">
-        <h2 className="m-0 text-body text-text-primary">Run details</h2>
+        <h2 className="m-0 text-body text-text-primary">{title}</h2>
         {onViewConversation && (
           <button
             type="button"
@@ -393,19 +395,25 @@ export function RunDetailsPanel({
         )}
       </div>
 
-      <div className="shrink-0 border-b border-border px-[15px]">
-        <Tabs
-          tabs={[
-            { id: 'logs', label: 'Logs' },
-            { id: 'conversation', label: 'Conversation' },
-          ]}
-          activeTab={tab}
-          onChange={(id) => setTab(id as 'logs' | 'conversation')}
-        />
-      </div>
+      {showTabs && (
+        <div className="shrink-0 border-b border-border px-[15px]">
+          <Tabs
+            tabs={[
+              { id: 'logs', label: 'Logs' },
+              { id: 'conversation', label: 'Conversation' },
+            ]}
+            activeTab={tab}
+            onChange={(id) => setTab(id as 'logs' | 'conversation')}
+          />
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-[15px] py-lg">
-        {tab === 'logs' ? <LogsTab steps={steps} /> : <RunConversationThread entries={conversation} />}
+        {!showTabs || tab === 'logs' ? (
+          <LogsTab steps={steps} />
+        ) : (
+          <RunConversationThread entries={conversation} />
+        )}
       </div>
     </div>
   )

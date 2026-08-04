@@ -1,6 +1,6 @@
 import React from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { Chip, LogDetailsPanel, RunDetailsPanel } from '../components'
+import { Chip, LogDetailsPanel, RunDetailsPanel, type RunLogStep } from '../components'
 import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
 import {
   HEALTHCARE_AGENT_WORKFLOWS,
@@ -59,6 +59,170 @@ function getImplementedSteps(row: HealthcareLogRow): LogStepId[] {
   return ['trigger']
 }
 
+function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
+  const source = String(row.source ?? row.channel ?? 'Google')
+  const trigger: RunLogStep = {
+    id: 'rr-log-1',
+    type: 'trigger',
+    stepNumber: 1,
+    title: 'When a new review is received or updated',
+    output: [
+      { key: 'Source', value: source },
+      { key: 'Reviewer', value: row.contact },
+      { key: 'Received at', value: row.timestamp },
+    ],
+    inputs: [
+      { key: 'reviewEvent', value: 'created_or_updated' },
+      { key: 'source', value: source },
+    ],
+  }
+
+  if (row.status === 'In progress') {
+    return [
+      trigger,
+      {
+        id: 'rr-log-2',
+        type: 'task',
+        stepNumber: 2,
+        title: 'Triage review',
+        note: 'In progress — checking whether a response is required.',
+      },
+    ]
+  }
+
+  if (row.status === 'Failed') {
+    return [
+      trigger,
+      {
+        id: 'rr-log-2',
+        type: 'task',
+        stepNumber: 2,
+        title: 'Triage review',
+        output: [
+          { key: 'Decision', value: 'No response required' },
+          { key: 'Reason', value: 'Spam or content-policy violation' },
+        ],
+        inputs: [
+          { key: 'Review.comment', value: 'Unrelated promotional content' },
+          { key: 'Review.source', value: source },
+          { key: 'Review.rating', value: '1' },
+        ],
+      },
+      {
+        id: 'rr-log-3',
+        type: 'branch',
+        stepNumber: 3,
+        title: 'No conditions met',
+        outputLabel: 'Branch output',
+        output: [{ key: 'Path', value: 'Send email alert' }],
+        inputs: [{ key: 'Review.isSpam', value: 'true' }],
+      },
+      {
+        id: 'rr-log-4',
+        type: 'task',
+        stepNumber: 4,
+        title: 'Send email alert',
+        output: [{ key: 'Status', value: 'Failed to send alert' }],
+        tool: {
+          name: 'Send email',
+          properties: [
+            { key: 'to', value: 'reviews@business.com' },
+            { key: 'subject', value: 'Review flagged — no response' },
+          ],
+        },
+        inputs: [
+          { key: 'reviewer', value: row.contact },
+          { key: 'source', value: source },
+          { key: 'spamReason', value: 'Content-policy violation' },
+        ],
+      },
+    ]
+  }
+
+  return [
+    trigger,
+    {
+      id: 'rr-log-2',
+      type: 'task',
+      stepNumber: 2,
+      title: 'Triage review',
+      output: [
+        { key: 'Decision', value: 'Response required' },
+        { key: 'Review type', value: 'Genuine customer review' },
+      ],
+      inputs: [
+        { key: 'Review.comment', value: 'Wait was longer than expected…' },
+        { key: 'Review.source', value: source },
+        { key: 'Review.rating', value: '3' },
+      ],
+    },
+    {
+      id: 'rr-log-3',
+      type: 'branch',
+      stepNumber: 3,
+      title: 'Respond',
+      outputLabel: 'Branch output',
+      output: [{ key: 'Path', value: 'Respond' }],
+      inputs: [{ key: 'Review.isSpam', value: 'false' }],
+    },
+    {
+      id: 'rr-log-4',
+      type: 'task',
+      stepNumber: 4,
+      title: 'Extract review details',
+      output: [
+        { key: 'Topics', value: 'Service quality, wait time' },
+        { key: 'Sentiment', value: 'Mixed' },
+        { key: 'Severity', value: 'Medium' },
+      ],
+      inputs: [
+        { key: 'Review.comment', value: 'Wait was longer than expected…' },
+        { key: 'Review.rating', value: '3' },
+        { key: 'Review.source', value: source },
+      ],
+    },
+    {
+      id: 'rr-log-5',
+      type: 'task',
+      stepNumber: 5,
+      title: 'Generate response',
+      output: [
+        {
+          key: 'Draft reply',
+          value: `Thank you for your feedback, ${row.contact.split(' ')[0]}. We're sorry to hear about your experience and would love the chance to make it right.`,
+        },
+      ],
+      inputs: [
+        { key: 'Topics', value: 'Service quality, wait time' },
+        { key: 'Sentiment', value: 'Mixed' },
+        { key: 'Brand.voice', value: 'Warm and professional' },
+      ],
+    },
+    {
+      id: 'rr-log-6',
+      type: 'task',
+      stepNumber: 6,
+      title: 'Send response',
+      output: [
+        { key: 'Posted to', value: source },
+        { key: 'Status', value: 'Published' },
+      ],
+      tool: {
+        name: 'Review responder',
+        properties: [
+          { key: 'source', value: source },
+          { key: 'reviewer', value: row.contact },
+        ],
+      },
+      inputs: [
+        { key: 'draftReply', value: 'Generated response text' },
+        { key: 'source', value: source },
+        { key: 'reviewer', value: row.contact },
+      ],
+    },
+  ]
+}
+
 /* ── generic workflow node shape (from agentWorkflows seeds) ── */
 interface WorkflowNodeSeed {
   id: string
@@ -70,13 +234,19 @@ interface WorkflowNodeSeed {
   }
 }
 
-/** Node ids this run executed, including nodes nested in branch paths. */
+/** Node ids this run executed — follows only the taken branch path, not every branch. */
 function getExecutedNodeIds(
   row: HealthcareLogRow,
   nodes: WorkflowNodeSeed[],
   nodeDetails: Record<string, unknown>,
 ): string[] {
-  if (row.status !== 'Complete') {
+  // Explicit list from the log row wins when present.
+  const explicit = row.executedNodeIds
+  if (Array.isArray(explicit) && explicit.length > 0) {
+    return explicit.filter((id): id is string => typeof id === 'string')
+  }
+
+  if (row.status === 'In progress') {
     return nodes.slice(0, Math.min(2, nodes.length)).map((node) => node.id)
   }
 
@@ -84,11 +254,21 @@ function getExecutedNodeIds(
   const visit = (items: WorkflowNodeSeed[]) => {
     items.forEach((node) => {
       ids.push(node.id)
-      const detail = nodeDetails[node.id] as { branches?: Array<{ id: string }> } | undefined
-      detail?.branches?.forEach((branch) => {
-        const path = nodeDetails[branch.id] as { nodes?: WorkflowNodeSeed[] } | undefined
-        if (path?.nodes) visit(path.nodes)
-      })
+      const detail = nodeDetails[node.id] as {
+        branches?: Array<{ id: string; isFallback?: boolean }>
+      } | undefined
+      if (!detail?.branches?.length) return
+
+      // Complete → primary (non-fallback) path; Failed → fallback / last path.
+      const chosen =
+        row.status === 'Failed'
+          ? detail.branches.find((b) => b.isFallback) ?? detail.branches[detail.branches.length - 1]
+          : detail.branches.find((b) => !b.isFallback) ?? detail.branches[0]
+
+      const path = chosen
+        ? (nodeDetails[chosen.id] as { nodes?: WorkflowNodeSeed[] } | undefined)
+        : undefined
+      if (path?.nodes) visit(path.nodes)
     })
   }
   visit(nodes)
@@ -254,6 +434,7 @@ function WorkflowCanvas({
 export function RunDetailView({ row, instanceName, onBack, onViewConversation, onEditAgent }: RunDetailViewProps) {
   const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
+  const isReviewResponse = agentName.startsWith('Review response agent')
   const agentWorkflow =
     instanceName === 'Reminder agent - North region'
       ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
@@ -262,6 +443,7 @@ export function RunDetailView({ row, instanceName, onBack, onViewConversation, o
         : undefined
   const statusVariant =
     row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
+  const useRunDetailsPanel = agentName === 'Reminder agent' || isReviewResponse
 
   return (
     <div className="relative flex h-full flex-col bg-surface">
@@ -301,8 +483,13 @@ export function RunDetailView({ row, instanceName, onBack, onViewConversation, o
         )}
 
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
-          {agentName === 'Reminder agent' ? (
-            <RunDetailsPanel onViewConversation={onViewConversation} />
+          {useRunDetailsPanel ? (
+            <RunDetailsPanel
+              onViewConversation={isReviewResponse ? undefined : onViewConversation}
+              steps={isReviewResponse ? buildReviewResponseRunSteps(row) : undefined}
+              showTabs={!isReviewResponse}
+              title={isReviewResponse ? 'Log details' : undefined}
+            />
           ) : (
             <LogDetailsPanel row={row} onViewConversation={onViewConversation} />
           )}

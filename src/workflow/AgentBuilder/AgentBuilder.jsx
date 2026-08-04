@@ -342,7 +342,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             ...item.data,
             stepNumber: topLevelStep,
             title: 'Based on conditions',
-            subtitle: 'Build condition-specific flows',
+            subtitle: nodeDetails[nodeId]?.description || 'Build condition-specific flows',
           }
         : item.data?.subtype === 'Schedule-based'
           ? {
@@ -911,6 +911,7 @@ export default function AgentBuilder({
   /* ─── Agent name is derived from nodeDetails (single source of truth) ─── */
   const agentName = nodeDetails[START_NODE_ID]?.agentName || (typeof pageTitle === 'string' ? pageTitle : '') || '';
   const isReminderAgent = /reminder/i.test(agentName);
+  const isReviewResponseAgent = /review response/i.test(agentName);
   const [agentDesc] = useState(initialDescription || '');
   // isTemplateMode uses state so it correctly activates after applyAgent loads templateId from Firestore
   const isTemplateMode = !!agentTemplateId && agentStatus !== 'Running';
@@ -1550,19 +1551,18 @@ export default function AgentBuilder({
 
     if (type === 'branch') {
       const path1Id = `${id}-path-1`;
-      const path2Id = `${id}-path-2`;
       const fallbackId = `${id}-path-fallback`;
       Object.assign(details, {
         basedOn: 'conditions',
+        description: 'Build condition-specific flows',
+        mergeBranches: true,
         branches: [
           { id: path1Id, name: 'Branch 1' },
-          { id: path2Id, name: 'Branch 2' },
           { id: fallbackId, name: 'No conditions met', isFallback: true },
         ],
       });
       extraDetails = {
         [path1Id]: { branchName: 'Branch 1', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
-        [path2Id]: { branchName: 'Branch 2', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
         [fallbackId]: { branchName: 'No conditions met', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
       };
     }
@@ -1795,7 +1795,7 @@ export default function AgentBuilder({
             }));
             handleCloseDrawer();
           }}
-          onPreview={() => setPreviewOpen((v) => !v)}
+          onPreview={isReviewResponseAgent ? undefined : () => setPreviewOpen((v) => !v)}
           previewOpen={previewOpen}
           previewActive={previewActive}
           onExpand={() => {}}
@@ -1841,15 +1841,25 @@ export default function AgentBuilder({
     }
 
     if (flowType === 'branch') {
+      const pathDetails = Object.fromEntries(
+        (currentDetails.branches || []).map((b) => [b.id, nodeDetails[b.id] || {}]),
+      );
       return (
         <RHS
           variant="controlBranch"
-          title="Branch details"
+          title="Branch"
           viewOnly={viewOnly}
           product={product}
           bodyProps={{
-            initialValues: { ...currentDetails, branchNodeId: selectedNodeId },
+            initialValues: {
+              ...currentDetails,
+              description: currentDetails.description ?? selectedNode?.data?.descriptionPlaceholder ?? '',
+              mergeBranches: currentDetails.mergeBranches ?? true,
+              branchNodeId: selectedNodeId,
+              pathDetails,
+            },
             onFieldChange: activeFieldChange,
+            onPathFieldChange: (pathId, field, value) => handleNodeFieldChange(pathId, field, value),
             onDeleteBranch: (branchId) => handleDeleteBranchPath(branchId),
           }}
           onClose={handleCloseDrawer}
@@ -1994,11 +2004,11 @@ export default function AgentBuilder({
       );
     }
 
-    if (data.hasAiIcon) {
+    if (data.hasAiIcon || data.subtype === 'Custom') {
       return (
         <RHS
           variant="llmTask"
-          title="LLM Task"
+          title="Task"
           viewOnly={viewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, onOpenToolDrawer: () => setToolPickerOpen(true), onOpenTool: openToolByName }}
@@ -2231,6 +2241,7 @@ export default function AgentBuilder({
               runDisabled={runDisabled}
               onEdit={viewOnly ? onEdit : undefined}
               onRun={() => {
+                if (isReviewResponseAgent) return;
                 if (isReminderAgent) {
                   setBookTestModalOpen(true);
                 } else {
@@ -2255,7 +2266,7 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {previewOpen && (
+          {previewOpen && !isReviewResponseAgent && (
             <div className="agent-builder__preview">
               <PreviewPanel
                 onClose={() => {
