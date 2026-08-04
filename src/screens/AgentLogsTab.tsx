@@ -16,8 +16,10 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
   'In progress': 'warning',
 }
 
+const TIMESTAMP_CELL = (v: unknown) => <span className="group-hover/row:text-text-action">{String(v)}</span>
+
 const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -64,7 +66,7 @@ const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
 }
 
 const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -80,7 +82,7 @@ const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
 ]
 
 const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -136,7 +138,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
         <DataTable
           columns={PREVISIT_COLUMNS}
           data={PREVISIT_LOGS_ROWS}
-          rowAction={{ icon: 'visibility', label: 'View run', onClick: () => {} }}
+          rowAction={{ icon: 'visibility', label: 'View log', onClick: () => {} }}
         />
       </div>
     )
@@ -159,10 +161,11 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={LOG_COLUMNS}
-          data={HEALTHCARE_LOGS_ROWS}
+          data={agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS}
+          onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
-            label: 'View run',
+            label: 'View log',
             onClick: (row) => onViewRun?.(row as HealthcareLogRow),
           }}
         />
