@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
+import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
+import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
@@ -331,6 +333,12 @@ const AGENT_NAMES: Record<string, string> = {
   'response-agents':           'Review response agents',
 }
 
+// Reverse of AGENT_NAMES — used to resolve a Recommendation's `agentName` (a full instance
+// name like "Front desk agent - North region") back to the navActive id that opens it.
+const AGENT_NAV_ID_BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(AGENT_NAMES).map(([id, name]) => [name, id]),
+)
+
 // ─── "View details" deep links ─────────────────────────────────────────────
 // Detail views open in a new browser tab. Since this prototype has no URL
 // router, the clicked row's args are JSON-encoded into the URL so the fresh
@@ -373,12 +381,14 @@ export function App() {
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
   const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
+  const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
   const [settingsSubScreen, setSettingsSubScreen] = useState<string | null>(null)
   const [agentToastMessage, setAgentToastMessage] = useState('')
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
+  const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
 
   function handleProductChange(id: string) {
     setActiveProduct(id)
@@ -428,6 +438,8 @@ export function App() {
 
   return (
     <ProcedureStoreProvider>
+    <FeedbackRecommendationsStoreProvider>
+    <RecommendationOverridesStoreProvider>
     <div className="flex h-screen w-screen overflow-hidden bg-surface text-text-primary">
       <IconRail
         logoSrc={logoSrc}
@@ -452,7 +464,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && (
         railActive === 'reviews' ? (
           <SideNav
             key="reviews"
@@ -504,6 +516,14 @@ export function App() {
           <InboxScreen
             initialConversationId={inboxFocusId}
             onInitialConversationConsumed={() => setInboxFocusId(null)}
+            onNavigateToRecommendation={(instanceName, recommendationId, feedbackPrefill) => {
+              const baseName = instanceName.replace(/ - .+$/, '')
+              const navId = AGENT_NAV_ID_BY_NAME[baseName]
+              if (!navId) return
+              setRecommendationFocus({ instanceName, recommendationId, feedbackPrefill })
+              setNavActive(navId)
+              setRailActive('frontdesk')
+            }}
           />
         ) : railActive === 'agents' ? (
           <AgentDirectoryScreen
@@ -699,10 +719,13 @@ export function App() {
             agentName={AGENT_NAMES[navActive]}
             onEditAgent={handleEditAgent}
             onAgentSetupActiveChange={setIsAgentSetupActive}
+            onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
             onNavigateToInbox={(conversationId) => {
               setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
               setRailActive('inbox')
             }}
+            initialRecommendationFocus={recommendationFocus}
+            onInitialRecommendationFocusConsumed={() => setRecommendationFocus(null)}
             product={activeProduct}
           />
         ) : appointmentDetail ? (
@@ -733,6 +756,8 @@ export function App() {
         onClose={() => setAgentToastVisible(false)}
       />
     </div>
+    </RecommendationOverridesStoreProvider>
+    </FeedbackRecommendationsStoreProvider>
     </ProcedureStoreProvider>
   )
 }

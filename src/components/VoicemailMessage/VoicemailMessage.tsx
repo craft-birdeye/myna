@@ -72,6 +72,10 @@ export function VoicemailMessage({
   audioUrl,
   messages = FRONT_DESK_VOICE_MESSAGES,
   contactName,
+  feedbackPrefill,
+  onSubmitFeedback,
+  onTrackFeedback,
+  onCoachAgentDirect,
 }: VoicemailMessageProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -205,8 +209,10 @@ export function VoicemailMessage({
           open={drawerOpen}
           messages={messages}
           summary={summary}
-          audioUrl={audioUrl}
-          durationSecs={durationSecs}
+          feedbackPrefill={feedbackPrefill}
+          onSubmitFeedback={onSubmitFeedback}
+          onTrackFeedback={onTrackFeedback}
+          onCoachAgentDirect={onCoachAgentDirect}
           title={contactName ? `Call with ${contactName}` : undefined}
           onClose={() => setDrawerOpen(false)}
         />

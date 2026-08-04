@@ -8,7 +8,13 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
 }
 
 const LOG_COLUMNS: Column<OutboundLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true },
+  {
+    key: 'timestamp',
+    label: 'Timestamp',
+    width: 240,
+    sortable: true,
+    render: (v) => <span className="group-hover/row:text-text-action">{String(v)}</span>,
+  },
   {
     key: 'status',
     label: 'Status',
@@ -29,7 +35,7 @@ export function OutboundAgentLogsTab({ rows }: { rows: OutboundLogRow[] }) {
         scrollOnHover
         rowAction={{
           icon: 'visibility',
-          label: 'View run',
+          label: 'View log',
           onClick: () => {},
         }}
       />

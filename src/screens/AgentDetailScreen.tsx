@@ -54,6 +54,12 @@ interface AgentDetailScreenProps {
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
+  /** Bubbled up from `AgentInstanceScreen` — see its own doc comment. */
+  onFullBleedDetailActiveChange?: (active: boolean) => void
+  /** Set by the host app when a "Track your feedback" link (Inbox) should open a specific
+   *  recommendation inside a specific agent instance. */
+  initialRecommendationFocus?: { instanceName: string; recommendationId: string; feedbackPrefill?: string } | null
+  onInitialRecommendationFocusConsumed?: () => void
 }
 
 interface AgentInstance {
@@ -107,6 +113,13 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
   Running: 'success',
   Paused:  'warning',
   Draft:   'neutral',
+}
+
+// Default row order for the instance table — active agents first, drafts last.
+const STATUS_ORDER: Record<string, number> = {
+  Running: 0,
+  Paused: 1,
+  Draft: 2,
 }
 
 interface RegionRow {
@@ -5921,7 +5934,7 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -6100,7 +6113,19 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     responseRate: r.responseRate,
     avgResponseTime: r.avgResponseTime,
     issues: r.issues,
-  }))
+  })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
+
+  useEffect(() => {
+    if (!initialRecommendationFocus) return
+    const match = data.find((d) => d.name === initialRecommendationFocus.instanceName)
+    if (match) {
+      setSelectedInstance(match.name)
+      setSelectedInstanceDisplayName(null)
+    }
+    // Only react to focus-id changes; `data` is derived fresh each render and would otherwise
+    // retrigger this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRecommendationFocus])
 
   const isReminder        = agentName === 'Reminder agent'
   const isFrontdesk       = agentName === 'Front desk agent'
@@ -6485,12 +6510,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }
 
   if (selectedInstance) {
+    const instanceStatus = data.find((d) => d.name === selectedInstance)?.status
     return (
       <>
         <AgentInstanceScreen
           key={`${selectedInstance}-${selectedInstanceDisplayName ?? ''}-${instanceInitialTab}`}
           instanceName={selectedInstance}
           displayName={selectedInstanceDisplayName ?? undefined}
+          status={instanceStatus}
           initialTab={instanceInitialTab}
           onBack={() => {
             setSelectedInstance(null)
@@ -6500,6 +6527,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
           onFullBleedChange={onAgentSetupActiveChange}
+          onFullBleedDetailActiveChange={onFullBleedDetailActiveChange}
+          initialRecommendationId={
+            initialRecommendationFocus?.instanceName === selectedInstance ? initialRecommendationFocus.recommendationId : null
+          }
+          initialFeedbackPrefill={
+            initialRecommendationFocus?.instanceName === selectedInstance ? initialRecommendationFocus.feedbackPrefill ?? null : null
+          }
+          onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
           product={product}
         />
         <Toast

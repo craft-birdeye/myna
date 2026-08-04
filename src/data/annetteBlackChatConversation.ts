@@ -20,6 +20,11 @@ export type AnnetteChatEvent =
       isBot?: boolean
     }
 
+/** What the agent should have said once it actually has accurate business hours on file —
+ *  used as the "revised message" half of the knowledge-gap diff preview. */
+export const ANNETTE_BLACK_IMPROVED_HOURS_REPLY =
+  "Thanks for waiting — we're open Monday–Friday 8:00 AM–6:00 PM and Saturday 9:00 AM–1:00 PM. We're closed on Sundays. Would you like me to help you book a visit?"
+
 export const ANNETTE_BLACK_CHAT_EVENTS: AnnetteChatEvent[] = [
   { kind: 'date', id: 'ab-d1', label: 'Fri • Jul 17' },
   {
@@ -69,7 +74,7 @@ export const ANNETTE_BLACK_CHAT_EVENTS: AnnetteChatEvent[] = [
     kind: 'bubble',
     id: 'ab-m5',
     sender: 'agent',
-    text: "We're open Monday–Friday 8:00 AM–6:00 PM and Saturday 9:00 AM–1:00 PM. We're closed on Sundays. Would you like me to help you book a visit?",
+    text: "I'm sorry, I don't have our current business hours available right now. I'd recommend checking our website or calling the clinic directly to confirm.",
     attribution: 'Myna',
     time: '02:10 PM',
     isBot: true,
@@ -78,14 +83,14 @@ export const ANNETTE_BLACK_CHAT_EVENTS: AnnetteChatEvent[] = [
     kind: 'bubble',
     id: 'ab-m6',
     sender: 'customer',
-    text: 'That helped!',
+    text: "Seriously? You're a booking assistant and you don't know your own hours? That's frustrating.",
     time: '02:11 PM',
   },
   {
     kind: 'bubble',
     id: 'ab-m7',
     sender: 'agent',
-    text: "Glad I could help! If you need anything else — appointments, insurance questions, or directions to the clinic — just message us anytime.",
+    text: "I understand the frustration, and I apologize for the inconvenience. I still don't have that information available right now — calling the clinic directly would be the fastest way to confirm.",
     attribution: 'Myna',
     time: '02:11 PM',
     isBot: true,
