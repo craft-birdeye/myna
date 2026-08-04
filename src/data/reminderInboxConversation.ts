@@ -8,14 +8,7 @@ export interface ReminderConversationCardField {
 }
 
 export type ReminderConversationEntry =
-  | {
-      id: string
-      kind: 'system'
-      text: string
-      /** When true and `showCallRecording` is enabled, the call-recording waveform renders
-       *  immediately after this line (e.g. right when the voice portion of the call starts). */
-      insertCallRecordingAfter?: boolean
-    }
+  | { id: string; kind: 'system'; text: string }
   | {
       id: string
       kind: 'card'
@@ -51,8 +44,8 @@ export const REMINDER_CONVERSATION_EVENTS: ReminderConversationEntry[] = [
     contactName: 'Sarah Lauren',
     contactType: 'Other',
     fields: [
-      { label: 'Appointment type', value: 'Routine checkup' },
-      { label: 'Booking date and time', value: 'Sat, Jun 14, 2026 • 2:30 PM - 3:00 PM' },
+      { label: 'Appointment type', value: 'Root canal' },
+      { label: 'Booking date and time', value: 'Sun May 24, 2026 • 06:30 PM - 07:00 PM IST' },
     ],
     time: '08:03 PM',
   },
@@ -68,13 +61,13 @@ export const REMINDER_CONVERSATION_EVENTS: ReminderConversationEntry[] = [
     time: '08:03 PM',
   },
   { id: 'card-4', kind: 'card', tone: 'neutral', icon: 'mail', title: 'Reminder confirmation', actionLabel: 'Confirm' },
-  { id: 'sys-2', kind: 'system', text: 'Voice call started • 09:55 PM', insertCallRecordingAfter: true },
+  { id: 'sys-2', kind: 'system', text: 'Voice call started • 09:55 PM' },
   {
     id: 'msg-1',
     kind: 'message',
     sender: 'business',
     text:
-      "Hi there! I'm Myna, your virtual assistant from Rock Dental Brands. I'm reaching out to confirm your upcoming appointment. Is now a good time to chat?",
+      "Hi there! I'm Myna, your virtual assistant from Henry Schein Dental. I'm reaching out to confirm your upcoming appointment. Is now a good time to chat?",
     time: '09:55 PM',
     llmResponseTime: '0.42s',
     tts: '700ms',

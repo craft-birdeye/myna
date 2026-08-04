@@ -64,4 +64,5 @@ export interface LogDetailsPanelProps {
   transcript?: LogTranscriptEntry[]
   durationSecs?: number
   audioUrl?: string
+  onViewConversation?: () => void
 }
