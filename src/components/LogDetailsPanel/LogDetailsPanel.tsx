@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { TrackFeedbackIcon } from '../../assets/TrackFeedbackIcon'
 import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
@@ -262,6 +262,171 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
   },
 ]
 
+// Logs-tab steps for a Reminder agent call — mirrors that workflow's real trigger/task/delay/
+// branch/task sequence (an appointment-confirmation voice call), just summarized as a run history.
+export const REMINDER_CALL_LOG_STEPS: RunLogStep[] = [
+  {
+    id: 'r-step-1',
+    type: 'trigger',
+    stepNumber: 1,
+    title: 'Appointment is booked',
+    output: [
+      { key: 'Source', value: 'Email' },
+      { key: 'Comments', value: 'Patient booked an appointment online' },
+      {
+        key: 'Scheduled appointment',
+        properties: [
+          { key: 'Name', value: 'Sarah Lauren' },
+          { key: 'Appointment type', value: 'Routine checkup' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'r-step-2',
+    type: 'task',
+    stepNumber: 2,
+    title: 'Send scheduled reminders',
+    output: [
+      { key: 'Summary', value: 'Email reminder sent' },
+      { key: 'Status', value: 'Confirmed' },
+    ],
+    tool: {
+      name: 'Reminder tool',
+      properties: [
+        { key: 'channel', value: 'Email' },
+        { key: 'sentAt', value: '4 weeks before appointment' },
+      ],
+    },
+  },
+  {
+    id: 'r-step-3',
+    type: 'task',
+    stepNumber: 3,
+    title: 'Schedule appointment reminder',
+    output: [
+      { key: 'Summary', value: 'Email reminder sent' },
+      { key: 'Status', value: 'Confirmed' },
+    ],
+    tool: {
+      name: 'Reminder tool',
+      properties: [
+        { key: 'channel', value: 'Email' },
+        { key: 'sentAt', value: '2 weeks before appointment' },
+      ],
+    },
+  },
+  {
+    id: 'r-step-4',
+    type: 'delay',
+    stepNumber: 4,
+    title: 'Delay until 2 days before appointment date and time',
+    note: 'Delay completed.',
+  },
+  {
+    id: 'r-step-5',
+    type: 'branch',
+    stepNumber: 5,
+    title: 'Based on conditions',
+    outputLabel: 'Branch output',
+    output: [{ key: 'Status', value: 'Unconfirmed' }],
+  },
+  {
+    id: 'r-step-6',
+    type: 'task',
+    stepNumber: 6,
+    title: 'Initiate voice call',
+    output: [
+      { key: 'Source', value: 'Voice call' },
+      { key: 'Summary', value: 'Patient confirmed the appointment' },
+      { key: 'Comments', value: 'Asked a follow-up question about insurance coverage' },
+    ],
+    tool: {
+      name: 'Initiate voice call',
+      properties: [
+        { key: 'phoneNumber', value: '+1 (555) 010-1234' },
+        { key: 'callerId', value: 'Rock Dental Brands' },
+        { key: 'voice', value: 'Andrea' },
+      ],
+    },
+  },
+]
+
+const REMINDER_TOOL_OUTPUT: LogToolOutputEntry[] = [
+  { kind: 'field', key: 'phoneNumber', value: '+1 (555) 010-1234' },
+  { kind: 'field', key: 'callerId', value: 'Rock Dental Brands' },
+  { kind: 'field', key: 'voice', value: 'Andrea' },
+]
+
+export const REMINDER_TRANSCRIPT: LogTranscriptEntry[] = [
+  { id: 'rsys1', role: 'system', text: 'Appointment booked — Routine checkup, Sat Jun 14 · 2:30 PM' },
+  { id: 'rsys2', role: 'system', text: 'Appointment reminder email sent' },
+  { id: 'rsys3', role: 'system', text: 'Voice call started' },
+  {
+    id: 'ra1',
+    role: 'agent',
+    text: "Hi there! I'm Myna, your virtual assistant from Rock Dental Brands. I'm reaching out to confirm your upcoming appointment. Is now a good time to chat?",
+    llmResponseTime: '0.42s',
+    tts: '700ms',
+    time: '5:30 PM',
+    toolCall: {
+      id: 'rtool-1',
+      name: 'Initiate voice call',
+      propertyCount: 3,
+      durationLabel: '520ms',
+      output: REMINDER_TOOL_OUTPUT,
+      inputs: [{ key: 'phoneNumber', value: '+1 (555) 010-1234' }],
+    },
+  },
+  {
+    id: 'rc1',
+    role: 'caller',
+    text: 'Yes, go ahead.',
+    durationLabel: '2s',
+    time: '5:30 PM',
+  },
+  {
+    id: 'ra2',
+    role: 'agent',
+    text: "Great! You have a routine checkup scheduled with us. I just wanted to make sure you're still planning to come in and answer any questions you might have beforehand.",
+    llmResponseTime: '0.42s',
+    tts: '700ms',
+    knowledgeBase: '5s',
+    time: '5:31 PM',
+  },
+  {
+    id: 'rc2',
+    role: 'caller',
+    text: "Yes, I'll be there. Do I need to bring anything?",
+    durationLabel: '3s',
+    time: '5:31 PM',
+  },
+  {
+    id: 'ra3',
+    role: 'agent',
+    text: "Glad to hear it! Please bring a valid photo ID and your insurance card if applicable. Also, arrive about 10 minutes early to complete any paperwork. Is there anything else you'd like to know before your visit?",
+    llmResponseTime: '0.42s',
+    tts: '700ms',
+    time: '5:32 PM',
+  },
+  {
+    id: 'rc3',
+    role: 'caller',
+    text: 'Actually, can you also tell me what my insurance covers for this visit?',
+    durationLabel: '4s',
+    time: '5:32 PM',
+  },
+  { id: 'rsys4', role: 'system', text: 'Routed to Front desk agent' },
+  {
+    id: 'ra4',
+    role: 'agent',
+    text: "That's a great question! Let me connect you with our front desk team — they'll be able to walk you through your coverage details right away.",
+    llmResponseTime: '0.42s',
+    tts: '700ms',
+    time: '5:33 PM',
+  },
+]
+
 function parseDurationSecs(duration: string): number {
   const mmss = duration.match(/^(\d+):(\d+)$/)
   if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2])
@@ -320,6 +485,89 @@ function CallDetailsTab({
         <MetaField label="Routed via" value={routedVia} />
       </div>
     </div>
+  )
+}
+
+/** Shared shell for the Reminder agent's pre-voice-call email/booking cards — same bubble
+ *  background + left/right alignment convention as `ChatBubble` (business = blue/right,
+ *  user = gray/left), but with a structured icon+title+divider header instead of plain text. */
+function EmailCardShell({
+  sender,
+  icon,
+  title,
+  time,
+  children,
+}: {
+  sender: 'business' | 'user'
+  icon: string
+  title: string
+  time?: string
+  children?: ReactNode
+}) {
+  const isBusiness = sender === 'business'
+  return (
+    <div className={`flex flex-col gap-xs ${isBusiness ? 'items-end' : 'items-start'}`}>
+      <div
+        className={`w-full max-w-[85%] rounded-lg px-lg py-md text-body text-text-primary ${
+          isBusiness ? 'bg-[#dbeafe]' : 'bg-[#f0f0f0]'
+        }`}
+      >
+        <div className="flex items-center gap-xs">
+          <Icon name={icon} size={18} className="shrink-0" />
+          {title}
+        </div>
+        <div className="my-sm border-t border-dashed border-border" />
+        {children}
+      </div>
+      {time && <span className="text-small text-text-tertiary">{time}</span>}
+    </div>
+  )
+}
+
+function AppointmentBookedCard({ time }: { time: string }) {
+  return (
+    <EmailCardShell sender="business" icon="check_circle" title="Appointment booked" time={time}>
+      <div className="mt-sm flex items-center gap-sm">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-small text-text-primary">
+          SL
+        </div>
+        <div>
+          <p className="m-0 text-body text-text-primary">Sarah Lauren</p>
+          <p className="m-0 text-small text-text-tertiary">Other</p>
+        </div>
+      </div>
+      <div className="mt-md">
+        <p className="m-0 text-small text-text-tertiary">Appointment type</p>
+        <p className="m-0 mt-2xs text-body text-text-primary">Routine checkup</p>
+      </div>
+      <div className="mt-md">
+        <p className="m-0 text-small text-text-tertiary">Booking date and time</p>
+        <p className="m-0 mt-2xs text-body text-text-primary">Sat, Jun 14, 2026 • 2:30 PM - 3:00 PM</p>
+      </div>
+    </EmailCardShell>
+  )
+}
+
+function EmailActionCard({ title }: { title: string }) {
+  return (
+    <EmailCardShell sender="user" icon="mail" title={title}>
+      <p className="m-0 mt-sm text-body text-text-primary">Confirm</p>
+    </EmailCardShell>
+  )
+}
+
+function ReminderSentCard({ time }: { time: string }) {
+  return (
+    <EmailCardShell sender="business" icon="mail" title="Appointment reminder sent!" time={time}>
+      <p className="m-0 mt-sm text-body text-text-primary">Hi Sarah,</p>
+      <p className="m-0 mt-sm text-body text-text-primary">
+        This is a reminder that you have a Routine checkup scheduled for Sat, Jun 14 • 2:30 PM. Please confirm your
+        attendance by replying to this email.
+      </p>
+      <p className="m-0 mt-sm text-body text-text-primary">
+        If you need to reschedule, tap "I need to reschedule" and a team member will be in touch.
+      </p>
+    </EmailCardShell>
   )
 }
 
@@ -605,6 +853,7 @@ export function LogDetailsPanel({
   row,
   agentName = 'Front desk agent - North region',
   transcript = DEFAULT_TRANSCRIPT,
+  steps = CALL_LOG_STEPS,
   durationSecs,
   audioUrl = voicemailSample,
   onTrackFeedback,
@@ -613,7 +862,9 @@ export function LogDetailsPanel({
   languageDetected = 'English',
   callEndReason = 'User ended the conversation',
   routedVia = agentName,
+  showCallDetails = true,
 }: LogDetailsPanelProps) {
+  const isReminder = agentName.startsWith('Reminder agent')
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
   const displayCaller =
     row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : callerNumber
@@ -687,63 +938,99 @@ export function LogDetailsPanel({
     setAutoScroll(false)
   }
 
+  const transcriptNodes = transcript.map((entry) => (
+    <TranscriptEntry
+      key={entry.id}
+      entry={entry}
+      recId={entry.role === 'agent' ? recIdByMessage[entry.id] : undefined}
+      onCoachAgent={entry.role === 'agent' ? () => setShareFeedbackMessageId(entry.id) : undefined}
+      onTrackFeedback={
+        entry.role === 'agent'
+          ? () => recIdByMessage[entry.id] && onTrackFeedback?.(recIdByMessage[entry.id])
+          : undefined
+      }
+    />
+  ))
+
+  const resumeAutoScrollButton = !autoScroll && (
+    <button
+      type="button"
+      onClick={() => setAutoScroll(true)}
+      className="absolute bottom-lg left-1/2 z-10 flex h-9 -translate-x-1/2 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white shadow-modal transition-colors hover:bg-primary-hover"
+    >
+      <Icon name="arrow_downward" size={16} className="text-white" />
+      Resume auto scrolling
+    </button>
+  )
+
   return (
     <>
       <RunDetailsPanel
-        steps={CALL_LOG_STEPS}
+        steps={steps}
         callDetails={
-          <CallDetailsTab
-            callerNumber={displayCaller}
-            languageDetected={languageDetected}
-            durationSecs={totalSecs}
-            sidNumber={sidNumber}
-            startTime={startTimeLabel(row.timestamp)}
-            callEndReason={callEndReason}
-            routedVia={routedVia}
-          />
+          showCallDetails ? (
+            <CallDetailsTab
+              callerNumber={displayCaller}
+              languageDetected={languageDetected}
+              durationSecs={totalSecs}
+              sidNumber={sidNumber}
+              startTime={startTimeLabel(row.timestamp)}
+              callEndReason={callEndReason}
+              routedVia={routedVia}
+            />
+          ) : undefined
         }
         conversation={
-          <div className="relative flex h-full flex-col">
-            <div className="shrink-0 px-[15px] pt-lg">
-              <CallRecordingPlayer
-                audioUrl={audioUrl}
-                durationSecs={totalSecs}
-                padded={false}
-                onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
-              />
-            </div>
-            <div
-              ref={chatScrollRef}
-              onScroll={handleChatScroll}
-              className="mt-3xl min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges]"
-            >
-              <div className="flex flex-col gap-3xl">
-                {transcript.map((entry) => (
-                  <TranscriptEntry
-                    key={entry.id}
-                    entry={entry}
-                    recId={entry.role === 'agent' ? recIdByMessage[entry.id] : undefined}
-                    onCoachAgent={entry.role === 'agent' ? () => setShareFeedbackMessageId(entry.id) : undefined}
-                    onTrackFeedback={
-                      entry.role === 'agent'
-                        ? () => recIdByMessage[entry.id] && onTrackFeedback?.(recIdByMessage[entry.id])
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-            {!autoScroll && (
-              <button
-                type="button"
-                onClick={() => setAutoScroll(true)}
-                className="absolute bottom-lg left-1/2 z-10 flex h-9 -translate-x-1/2 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white shadow-modal transition-colors hover:bg-primary-hover"
+          isReminder ? (
+            <div className="relative flex h-full flex-col">
+              <div
+                ref={chatScrollRef}
+                onScroll={handleChatScroll}
+                className="min-h-0 flex-1 overflow-y-auto px-[15px] pt-lg pb-2xl [scrollbar-gutter:stable_both-edges]"
               >
-                <Icon name="arrow_downward" size={16} className="text-white" />
-                Resume auto scrolling
-              </button>
-            )}
-          </div>
+                <div className="flex flex-col gap-3xl">
+                  <ChatSystemLabel text="Email conversation started" />
+                  <AppointmentBookedCard time="08:03 PM" />
+                  <EmailActionCard title="Appointment booked" />
+                  <ReminderSentCard time="08:03 PM" />
+                  <EmailActionCard title="Reminder confirmation" />
+                  {/* Sticky from here down — pins to the top of the scroll area once scrolled
+                   *  past, and releases back to its normal place in the flow once scrolled back
+                   *  up to it, matching the always-pinned waveform on other agents. */}
+                  <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
+                    <CallRecordingPlayer
+                      audioUrl={audioUrl}
+                      durationSecs={totalSecs}
+                      padded={false}
+                      onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                    />
+                  </div>
+                  <ChatSystemLabel text="Voice call started" />
+                  {transcriptNodes}
+                </div>
+              </div>
+              {resumeAutoScrollButton}
+            </div>
+          ) : (
+            <div className="relative flex h-full flex-col">
+              <div className="shrink-0 px-[15px] pt-lg">
+                <CallRecordingPlayer
+                  audioUrl={audioUrl}
+                  durationSecs={totalSecs}
+                  padded={false}
+                  onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                />
+              </div>
+              <div
+                ref={chatScrollRef}
+                onScroll={handleChatScroll}
+                className="mt-3xl min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges]"
+              >
+                <div className="flex flex-col gap-3xl">{transcriptNodes}</div>
+              </div>
+              {resumeAutoScrollButton}
+            </div>
+          )
         }
       />
 

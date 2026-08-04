@@ -1,7 +1,8 @@
 import { Fragment } from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { Chip, LogDetailsPanel } from '../components'
-import { CALL_LOG_STEPS } from '../components/LogDetailsPanel/LogDetailsPanel'
+import { CALL_LOG_STEPS, REMINDER_CALL_LOG_STEPS, REMINDER_TRANSCRIPT } from '../components/LogDetailsPanel/LogDetailsPanel'
+import type { RunLogStep } from '../components/RunDetailsPanel/RunDetailsPanel.types'
 import type { HealthcareLogRow, LogStatus } from '../data/healthcareAgentLogs'
 import StartNode from '../workflow/Molecules/Canvas/StartNode/StartNode'
 import CanvasNode from '../workflow/Molecules/Canvas/CanvasNode/CanvasNode'
@@ -174,10 +175,83 @@ function WorkflowCanvas({ instanceName, status }: { instanceName: string; status
   )
 }
 
+/** Static config-style copy for step types that don't carry a `tool` (trigger/delay/branch) — task
+ *  steps instead show "Tool : <name>", same as the Front-desk canvas. */
+function reminderNodeDescription(step: RunLogStep): string {
+  if (step.tool) return `Tool : ${step.tool.name}`
+  if (step.type === 'trigger') return 'Agent triggers when an appointment is booked.'
+  if (step.type === 'delay') return 'Wait for specific time or event.'
+  if (step.type === 'branch') return 'Build condition-specific flows.'
+  return ''
+}
+
+/* ── Reminder agent's workflow canvas — a linear Trigger → Task → Task → Delay → Branch → Task
+ *  flow (the branch collapses to whichever path this run actually took), mirroring the Logs tab's
+ *  step list (`REMINDER_CALL_LOG_STEPS`) node-for-node so the two never drift apart. Unlike the
+ *  Front-desk canvas, this workflow has no trailing Procedures step. */
+function ReminderWorkflowCanvas({ instanceName, status }: { instanceName: string; status: LogStatus }) {
+  const halted = status === 'Failed'
+  const lastIndex = REMINDER_CALL_LOG_STEPS.length - 1
+
+  return (
+    <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
+      <div
+        className="flow-canvas__toolbar-anchor"
+        style={{ left: 'calc((100% - 620px) / 2)' }}
+      >
+        <GraphControls
+          viewOnly
+          runDisabled
+          zoom={100}
+          onRun={() => {}}
+          onEdit={() => {}}
+          onOrientationChange={() => {}}
+          onZoomSelect={() => {}}
+          onFitView={() => {}}
+        />
+      </div>
+
+      <div className="flex flex-col items-center pb-2xl pr-[620px] pt-[84px]">
+        <StartNode title={instanceName} subtitle="All locations" />
+
+        <RunFlowConnector height={FLOW_START_GAP} showAdd={false} />
+
+        {REMINDER_CALL_LOG_STEPS.map((step, i) => (
+          <Fragment key={step.id}>
+            {i > 0 && <RunFlowConnector height={FLOW_CONNECTOR_GAP} showAdd />}
+            <div className="flow-canvas__node-center">
+              <CanvasNode
+                nodeType={step.type}
+                label={step.type === 'trigger' ? 'Trigger' : step.type === 'delay' ? 'Delay' : step.type === 'branch' ? 'Branch' : 'Task'}
+                stepNumber={step.stepNumber}
+                title={step.title}
+                description={reminderNodeDescription(step)}
+                titlePlaceholder=""
+                descriptionPlaceholder=""
+                viewOnly
+                state={halted && i === lastIndex ? 'halted' : 'implemented'}
+                onToggleChange={() => {}}
+                onAddClick={() => {}}
+                onDelete={() => {}}
+              />
+            </div>
+          </Fragment>
+        ))}
+
+        <RunFlowConnector height={FLOW_CONNECTOR_GAP} showAdd />
+
+        <EndNode viewOnly hideAdd onDropBeforeEnd={() => {}} />
+      </div>
+    </div>
+  )
+}
+
 /* ── main export ── */
 export function RunDetailView({ row, onBack, instanceName = 'Front desk agent north region', onTrackFeedback }: RunDetailViewProps) {
   const statusVariant =
     row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
+  const agentBase = instanceName.replace(/ - .+$/, '')
+  const isReminder = agentBase === 'Reminder agent'
 
   return (
     <div className="relative flex h-full flex-col bg-surface">
@@ -197,10 +271,19 @@ export function RunDetailView({ row, onBack, instanceName = 'Front desk agent no
 
       {/* Body — full-bleed canvas with overlaid details panel (matches trigger/task RHS) */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <WorkflowCanvas instanceName={instanceName} status={row.status} />
+        {isReminder ? (
+          <ReminderWorkflowCanvas instanceName={instanceName} status={row.status} />
+        ) : (
+          <WorkflowCanvas instanceName={instanceName} status={row.status} />
+        )}
 
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
-          <LogDetailsPanel row={row} agentName={instanceName} onTrackFeedback={onTrackFeedback} />
+          <LogDetailsPanel
+            row={row}
+            agentName={instanceName}
+            onTrackFeedback={onTrackFeedback}
+            {...(isReminder ? { steps: REMINDER_CALL_LOG_STEPS, transcript: REMINDER_TRANSCRIPT, showCallDetails: false } : {})}
+          />
         </div>
       </div>
     </div>

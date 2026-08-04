@@ -123,3 +123,46 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     topic: 'Insurance inquiry',
   },
 ]
+
+export const REMINDER_LOGS_ROWS: HealthcareLogRow[] = [
+  {
+    timestamp: 'Feb 25, 2024, 5:30 pm',
+    status: 'Complete',
+    contact: 'Dana Whitfield',
+    channel: 'Voice call',
+    duration: '5:32',
+    topic: 'Appointment reminder confirmed',
+  },
+  {
+    timestamp: 'Feb 09, 2024, 5:30 pm',
+    status: 'Complete',
+    contact: 'Robert Cho',
+    channel: 'Voice call',
+    duration: '4:48',
+    topic: 'Appointment reminder confirmed',
+  },
+  {
+    timestamp: 'Feb 05, 2024, 5:30 pm',
+    status: 'Failed',
+    contact: '+1 (628) 555-0110',
+    channel: 'Web chat, Voice call',
+    duration: '1:20',
+    topic: 'Appointment reminder',
+  },
+  {
+    timestamp: 'Jan 25, 2024, 5:30 pm',
+    status: 'Failed',
+    contact: '+1 (310) 555-0190',
+    channel: 'Web chat',
+    duration: '0:45',
+    topic: 'Appointment reminder',
+  },
+  {
+    timestamp: 'Jan 18, 2024, 5:30 pm',
+    status: 'In progress',
+    contact: 'Elena Sokolova',
+    channel: 'Voice call',
+    duration: '2:10',
+    topic: 'Appointment reminder',
+  },
+]

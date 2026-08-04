@@ -2,6 +2,7 @@ import { Chip, DataTable, type ChipVariant, type Column } from '../components'
 import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
+  REMINDER_LOGS_ROWS,
   type HealthcareLogRow,
   type PrevisitLogRow,
 } from '../data/healthcareAgentLogs'
@@ -99,7 +100,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={LOG_COLUMNS}
-          data={HEALTHCARE_LOGS_ROWS}
+          data={agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS}
           onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
