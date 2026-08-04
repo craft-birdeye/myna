@@ -862,6 +862,8 @@ export function LogDetailsPanel({
   showCallDetails = true,
 }: LogDetailsPanelProps) {
   const isReminder = agentName.startsWith('Reminder agent')
+  // A purely text/web-chat conversation never recorded a call — no waveform to show.
+  const hasVoiceCall = row.channel.toLowerCase().includes('voice')
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
   const displayCaller =
     row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : callerNumber
@@ -996,19 +998,23 @@ export function LogDetailsPanel({
                   <EmailActionCard title="Appointment booked" />
                   <ReminderSentCard time="08:03 PM" />
                   <EmailActionCard title="Reminder confirmation" />
-                  <ChatSystemLabel text="Voice call started" />
-                  {/* Sticky from here down — pins to the top of the scroll area once scrolled
-                   *  past, and releases back to its normal place in the flow once scrolled back
-                   *  up to it, matching the always-pinned waveform on other agents. */}
-                  <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
-                    <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
-                    <CallRecordingPlayer
-                      audioUrl={audioUrl}
-                      durationSecs={totalSecs}
-                      padded={false}
-                      onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
-                    />
-                  </div>
+                  {hasVoiceCall && (
+                    <>
+                      <ChatSystemLabel text="Voice call started" />
+                      {/* Sticky from here down — pins to the top of the scroll area once scrolled
+                       *  past, and releases back to its normal place in the flow once scrolled
+                       *  back up to it, matching the always-pinned waveform on other agents. */}
+                      <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
+                        <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
+                        <CallRecordingPlayer
+                          audioUrl={audioUrl}
+                          durationSecs={totalSecs}
+                          padded={false}
+                          onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                        />
+                      </div>
+                    </>
+                  )}
                   {transcriptNodes}
                 </div>
               </div>
@@ -1016,18 +1022,21 @@ export function LogDetailsPanel({
             </div>
           ) : (
             <div className="relative flex h-full flex-col">
-              <div className="shrink-0 px-[15px] pt-lg">
-                <CallRecordingPlayer
-                  audioUrl={audioUrl}
-                  durationSecs={totalSecs}
-                  padded={false}
-                  onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
-                />
-              </div>
+              {hasVoiceCall && (
+                <div className="shrink-0 px-[15px] pt-lg">
+                  <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
+                  <CallRecordingPlayer
+                    audioUrl={audioUrl}
+                    durationSecs={totalSecs}
+                    padded={false}
+                    onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                  />
+                </div>
+              )}
               <div
                 ref={chatScrollRef}
                 onScroll={handleChatScroll}
-                className="mt-3xl min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges]"
+                className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-2xl [scrollbar-gutter:stable_both-edges] ${hasVoiceCall ? 'mt-3xl' : 'pt-lg'}`}
               >
                 <div className="flex flex-col gap-3xl">{transcriptNodes}</div>
               </div>
