@@ -1,5 +1,5 @@
 /** Measured height of a standard trigger/task/control card (header + step + description). */
-export const FLOW_STANDARD_NODE_HEIGHT = 94;
+export const FLOW_STANDARD_NODE_HEIGHT = 116;
 
 export const FLOW_START_GAP = 150;
 /** Measured height of the Start pill (icon + title + locations link). */

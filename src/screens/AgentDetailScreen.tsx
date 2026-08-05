@@ -3660,6 +3660,54 @@ function ProcedurePreviewPanel({
 // Matches the Figma "What would you like to build today?" prompt-box layout.
 // Scoped to Front desk agent + Healthcare product only — every other agent
 // keeps the CreateAgentEmptyState illustration above.
+function CreateFlowPageHeader({
+  onBack,
+  title,
+  centered = false,
+  inlineProcedureOpen = false,
+}: {
+  onBack: () => void
+  title: string
+  centered?: boolean
+  inlineProcedureOpen?: boolean
+}) {
+  const row = (
+    <div className="flex w-full min-w-0 max-w-[720px] items-center gap-xs">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+        aria-label="Back"
+      >
+        <Icon name="arrow_back" size={20} />
+      </button>
+      <h1 className="min-w-0 truncate text-h3 text-text-primary">{title}</h1>
+    </div>
+  )
+
+  if (centered) {
+    return (
+      <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
+        <div className="flex h-full w-full max-w-[1600px] justify-center gap-xl pr-sm">
+          {inlineProcedureOpen && (
+            <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
+          )}
+          {row}
+          {inlineProcedureOpen && (
+            <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+      {row}
+    </div>
+  )
+}
+
 export function HealthcareFrontdeskCreateAgentScreen({
   onCreateFromScratch,
   onSelectFromLibrary,
@@ -3668,6 +3716,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onBack,
   onSubmittedChange,
   pageTitle,
+  hideHeaderBack = false,
   libraryCards,
   initialPrompt,
   autoStart = false,
@@ -3688,6 +3737,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
+  /** Hides the in-column back arrow when the shell header already provides navigation. */
+  hideHeaderBack?: boolean
   libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   /** Auto-sends `initialPrompt` on mount instead of waiting for the user — used to "reopen" a recent chat. */
@@ -3729,6 +3780,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
         chat={resolvedHistoryChat}
         onBack={onBack}
         pageTitle={pageTitle}
+        hideHeaderBack={hideHeaderBack}
       />
     )
   }
@@ -3742,6 +3794,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
       onBack={onBack}
       onSubmittedChange={onSubmittedChange}
       pageTitle={pageTitle}
+      hideHeaderBack={hideHeaderBack}
       libraryCards={libraryCards}
       initialPrompt={initialPrompt}
       autoStart={autoStart}
@@ -3764,6 +3817,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onBack,
   onSubmittedChange,
   pageTitle,
+  hideHeaderBack = false,
   libraryCards,
   initialPrompt,
   autoStart = false,
@@ -3782,6 +3836,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
+  hideHeaderBack?: boolean
   libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   autoStart?: boolean
@@ -4431,16 +4486,18 @@ function HealthcareFrontdeskCreateAgentLive({
           className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
         >
         <div ref={threadRef} className="flex flex-col pb-md">
-        {pageTitle && (
+        {pageTitle && !hideHeaderBack && (
           <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-              aria-label="Back"
-            >
-              <Icon name="arrow_back" size={20} />
-            </button>
+            {!hideHeaderBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                aria-label="Back"
+              >
+                <Icon name="arrow_back" size={20} />
+              </button>
+            )}
             <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
             <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
               Draft
@@ -5393,14 +5450,16 @@ function HealthcareFrontdeskCreateAgentLive({
       <div className="flex h-full w-full flex-col items-center overflow-hidden">
         {pageTitle && (
           <div className="flex h-16 w-full max-w-[720px] shrink-0 items-center gap-sm">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-              aria-label="Back"
-            >
-              <Icon name="arrow_back" size={20} />
-            </button>
+            {!hideHeaderBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                aria-label="Back"
+              >
+                <Icon name="arrow_back" size={20} />
+              </button>
+            )}
             <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
             <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
               Draft
@@ -5495,14 +5554,16 @@ function HealthcareFrontdeskCreateAgentLive({
     }`}>
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-            aria-label="Back"
-          >
-            <Icon name="arrow_back" size={20} />
-          </button>
+          {!hideHeaderBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              aria-label="Back"
+            >
+              <Icon name="arrow_back" size={20} />
+            </button>
+          )}
           <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
         </div>
       )}
@@ -5959,10 +6020,12 @@ function HistoryChatReplay({
   chat,
   onBack,
   pageTitle,
+  hideHeaderBack = false,
 }: {
   chat: ChatHistoryTranscript
   onBack?: () => void
   pageTitle?: string
+  hideHeaderBack?: boolean
 }) {
   const trail = chat.trail
   return (
@@ -5972,14 +6035,16 @@ function HistoryChatReplay({
           <div className="flex flex-col pb-md">
             {pageTitle && (
               <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                  aria-label="Back"
-                >
-                  <Icon name="arrow_back" size={20} />
-                </button>
+                {!hideHeaderBack && (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                    aria-label="Back"
+                  >
+                    <Icon name="arrow_back" size={20} />
+                  </button>
+                )}
                 <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
                 <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
                   Draft
@@ -6519,6 +6584,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           : isReminder
             ? REMINDER_BUILD_CARD.title
             : FRONTDESK_BUILD_CARD.title)
+    const isReviewsCreateFlow = isReviewResponse || isReviewGeneration
+    const reviewsCreateInnerTitle = isReviewResponse
+      ? 'Review response agent 1'
+      : isReviewGeneration
+        ? 'Review generation agent 1'
+        : null
+    const showReviewsCreateInnerTitle =
+      isReviewsCreateFlow && (createFlowSubmitted || createWorkflowOpen)
 
     return (
       <div className="flex h-full">
@@ -6572,6 +6645,36 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 )}
               </div>
             ) : createFlowSubmitted ? (
+              isReviewsCreateFlow ? (
+                <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+                  <div className="flex w-full items-center justify-between gap-md">
+                    <div className="flex min-w-0 max-w-[720px] items-center gap-xs">
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateFlow(false)}
+                        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                        aria-label="Back"
+                      >
+                        <Icon name="arrow_back" size={20} />
+                      </button>
+                      <h1 className="min-w-0 truncate text-h3 text-text-primary">
+                        {reviewsCreateInnerTitle ?? createWorkflowAgentName}
+                      </h1>
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                        Draft
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openCreateWorkflow}
+                      disabled={!createDraftAgentName}
+                      className="flex h-9 shrink-0 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
+                    >
+                      View agent builder
+                    </button>
+                  </div>
+                </div>
+              ) : (
               // Conversation view — header aligns with the 720px chat column below it.
               <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
                 <div className="flex h-full w-full max-w-[1600px] justify-center gap-xl pr-sm">
@@ -6594,6 +6697,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   )}
                 </div>
               </div>
+              )
+            ) : isReviewsCreateFlow ? (
+              <CreateFlowPageHeader
+                onBack={() => setShowCreateFlow(false)}
+                title="Back"
+              />
             ) : (
               // Landing view — standard flush-left page header.
               <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
@@ -6609,11 +6718,17 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               </div>
             )}
             <div
-              className={`scrollbar-subtle flex min-h-0 flex-1 justify-center pt-0 ${
+              className={`scrollbar-subtle flex min-h-0 flex-1 pt-0 ${
                 createFlowSubmitted || createWorkflowOpen
                   ? 'items-stretch overflow-hidden'
                   : 'items-start overflow-auto pb-lg'
-              } ${createWorkflowOpen ? (createSideTab === 'manual' ? 'px-0 py-0' : 'px-md') : 'px-lg'}`}
+              } ${
+                createWorkflowOpen
+                  ? createSideTab === 'manual'
+                    ? 'px-0 py-0'
+                    : 'px-md'
+                  : 'justify-center px-lg'
+              }`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
                 <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer__body]:!px-md [&_.lhs-drawer__body]:!pt-0">
@@ -6638,6 +6753,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     key={createFlowKey}
                     onBack={() => setShowCreateFlow(false)}
                     onSubmittedChange={setCreateFlowSubmitted}
+                    pageTitle={showReviewsCreateInnerTitle ? reviewsCreateInnerTitle ?? undefined : undefined}
+                    hideHeaderBack={isReviewsCreateFlow}
                     onCreateFromScratch={() => {
                       if (isReviewResponse) {
                         setShowCreateFlow(false)
