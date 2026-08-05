@@ -479,7 +479,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
   return (
     <div className="relative flex h-full flex-col bg-surface">
       {/* Header — title + status chip with agent name subtitle (matches recommendation detail) */}
-      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-lg">
+      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
         <button
           type="button"
           aria-label="Back to logs"
@@ -490,7 +490,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-sm">
-            <h1 className="text-h2 text-text-primary">Run - {row.timestamp}</h1>
+            <h1 className="text-h3 text-text-primary">Log - {row.timestamp}</h1>
             <Chip label={row.status} variant={statusVariant} />
           </div>
           <p className="mt-xs text-small text-text-secondary">{instanceName}</p>

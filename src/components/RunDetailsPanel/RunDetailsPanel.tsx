@@ -439,7 +439,7 @@ export function RunConversationThread({
                 <ChatSystemLabel text={entry.text} />
               </div>
               {showCallRecording && entry.insertCallRecordingAfter && (
-                <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
+                <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-sm pt-sm">
                   <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
                   <CallRecordingPlayer
                     audioUrl={audioUrl}
@@ -522,7 +522,7 @@ export function RunDetailsPanel({
       )}
 
       {showTabs && (
-        <div className="shrink-0 border-b border-border px-[15px]">
+        <div className={`shrink-0 border-b border-border px-[15px] ${showHeader ? '' : 'pt-sm'}`}>
           <Tabs
             tabs={[
               { id: 'logs', label: 'Logs' },
@@ -535,7 +535,11 @@ export function RunDetailsPanel({
         </div>
       )}
 
-      <div className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-lg ${skipContainerTopPadding ? '' : 'pt-lg'}`}>
+      <div
+        className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-lg ${
+          skipContainerTopPadding ? '' : showHeader ? 'pt-lg' : 'pt-2xl'
+        }`}
+      >
         {(!showTabs || tab === 'logs') ? (
           <LogsTab steps={steps} />
         ) : tab === 'call-details' && (callDetails || callDetailsContent) ? (
