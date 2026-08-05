@@ -106,6 +106,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
         <DataTable
           columns={REMINDER_LOG_COLUMNS}
           data={REMINDER_LOGS_ROWS}
+          onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
             label: 'View run',
