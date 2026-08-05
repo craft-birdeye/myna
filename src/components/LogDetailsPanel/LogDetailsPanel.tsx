@@ -965,6 +965,7 @@ export function LogDetailsPanel({
       <RunDetailsPanel
         steps={steps}
         showHeader={false}
+        showCallRecording={hasVoiceCall}
         callDetailsContent={
           showCallDetails ? (
             <CallDetailsTab
