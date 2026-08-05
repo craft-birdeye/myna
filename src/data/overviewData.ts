@@ -102,16 +102,56 @@ export const OVERVIEW_SOCIAL_SERIES: OverviewSocialSeries[] = [
 ]
 
 const SOCIAL_MONTHS = [
-  'Dec 2022', 'Jan 2023', 'Feb 2023', 'Mar 2023', 'Apr 2023', 'May 2023', 'Jun 2023', 'Jul 2023', 'Aug 2023',
-  'Sep 2023', 'Oct 2023', 'Nov 2023', 'Dec 2023', 'Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024',
+  'Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024',
   'Jun 2024', 'Jul 2024', 'Aug 2024', 'Sep 2024', 'Oct 2024', 'Nov 2024', 'Dec 2024', 'Jan 2025', 'Feb 2025',
   'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025', 'Jul 2025', 'Aug 2025', 'Sep 2025', 'Oct 2025', 'Nov 2025',
   'Dec 2025',
 ]
 
 export const OVERVIEW_SOCIAL_DATA: Array<Record<string, string | number>> = SOCIAL_MONTHS.map((month, i) => {
-  if (i === 0) return { month, facebook: 0, instagram: 68, google: 0, linkedin: 0 }
-  if (i === 4) return { month, facebook: 12, instagram: 4, google: 0, linkedin: 0 }
-  if (i === 5) return { month, facebook: 6, instagram: 2, google: 0, linkedin: 0 }
+  if (i === 2) return { month, facebook: 12, instagram: 4, google: 0, linkedin: 0 }
+  if (i === 3) return { month, facebook: 6, instagram: 2, google: 0, linkedin: 0 }
   return { month, facebook: 1, instagram: 1, google: 0, linkedin: 0 }
 })
+
+export interface OverviewScore {
+  id: string
+  label: string
+  value: number
+  industryAverage: number
+  max: number
+  tooltip?: string
+}
+
+export const OVERVIEW_BIRDEYE_SCORE: OverviewScore = {
+  id: 'birdeye-score',
+  label: 'Birdeye Score',
+  value: 75.5,
+  industryAverage: 104.6,
+  max: 150,
+  tooltip: 'A composite score of your online reputation and visibility relative to competitors.',
+}
+
+export const OVERVIEW_UNDERSTANDING_SCORES: OverviewScore[] = [
+  { id: 'sentiment', label: 'Sentiment Score', value: 78.6, industryAverage: 85.8, max: 100 },
+  { id: 'reputation', label: 'Reputation Score', value: 49.3, industryAverage: 54.4, max: 100 },
+  { id: 'listing', label: 'Listing Score', value: 34.9, industryAverage: 34.9, max: 100 },
+]
+
+export interface OverviewLocationScoreRow {
+  id: string
+  location: string
+  birdeyeScore: number
+  sentimentScore: number
+  reputationScore: number
+  listingScore: number
+  [key: string]: string | number
+}
+
+export const OVERVIEW_TOP_LOCATIONS: OverviewLocationScoreRow[] = [
+  { id: 'test-1', location: 'Test 1', birdeyeScore: 126.9, sentimentScore: 100, reputationScore: 70.0, listingScore: 0 },
+  { id: 'vignesh', location: 'Vignesh', birdeyeScore: 118.2, sentimentScore: 0, reputationScore: 70.0, listingScore: 73.0 },
+  { id: 'cut-n-looks', location: 'Cut n Looks Unisex Salon', birdeyeScore: 114.7, sentimentScore: 90.0, reputationScore: 78.0, listingScore: 93.0 },
+  { id: 'cape-town', location: 'Cape Town', birdeyeScore: 114.2, sentimentScore: 93.5, reputationScore: 95.3, listingScore: 60.0 },
+  { id: 'anaheim', location: 'Anaheim, CA - Amit K', birdeyeScore: 113.9, sentimentScore: 93.4, reputationScore: 77.6, listingScore: 86.0 },
+]

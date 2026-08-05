@@ -22,7 +22,7 @@ function IconButton({
   )
 }
 
-export function TopNav({ title, avatarUrl, initials = 'S', onAdd, onHelp, onMenu }: TopNavProps) {
+export function TopNav({ title, avatarUrl, initials = 'S', onAdd, onHelp, onMenu, beforeAvatar, afterAvatar }: TopNavProps) {
   return (
     <header className="flex h-14 items-center gap-xs border-b border-border bg-surface px-2xl">
       {title && (
@@ -37,6 +37,8 @@ export function TopNav({ title, avatarUrl, initials = 'S', onAdd, onHelp, onMenu
         <Icon name="help" size={20} className="text-text-icon" />
       </IconButton>
 
+      {beforeAvatar}
+
       <span className="flex size-7 items-center justify-center">
         <span className="block size-5 overflow-hidden rounded-full">
           {avatarUrl ? (
@@ -48,6 +50,8 @@ export function TopNav({ title, avatarUrl, initials = 'S', onAdd, onHelp, onMenu
           )}
         </span>
       </span>
+
+      {afterAvatar}
 
       <IconButton label="Menu" onClick={onMenu}>
         <Icon name="menu" size={20} className="text-text-icon" />

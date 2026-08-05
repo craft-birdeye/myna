@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Tabs, type Metric, type Tab } from '../components'
+import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Tabs, DataTable, type Metric, type Tab, type Column } from '../components'
 import {
   getAgentDirectory,
   PERSONA_GROUPS,
@@ -482,13 +482,56 @@ function AgentCard({
   )
 }
 
+// ── Outcomes table (AI overview page only) ───────────────────────────────
+interface OutcomeRow {
+  id: string
+  outcomeLabel: string
+  agentName: string
+  tooltip: string
+  count: string
+  timeSaved: string
+  costSaved: string
+  [key: string]: string
+}
+
+const OUTCOME_COLUMNS: Column<OutcomeRow>[] = [
+  {
+    key: 'outcomeLabel',
+    label: 'Outcomes',
+    width: 280,
+    sortable: true,
+    render: (_, row) => (
+      <Tooltip content={row.tooltip} variant="detail" className="min-w-0">
+        <div className="min-w-0">
+          <p className="m-0 truncate text-body text-text-primary">{row.outcomeLabel}</p>
+          <p className="m-0 truncate text-small text-text-tertiary">{row.agentName}</p>
+        </div>
+      </Tooltip>
+    ),
+  },
+  { key: 'count', label: 'Count', width: 160, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 160, sortable: true },
+  { key: 'costSaved', label: 'Cost saved', width: 160, sortable: true },
+]
+
 // ── Screen ──────────────────────────────────────────────────────────────
 export function AgentDirectoryScreen({
   product = 'healthcare',
   onOpenAgent,
+  headingOverride,
+  coworkerTabsWithSubtext = false,
+  hideTopNav = false,
 }: {
   product?: string
   onOpenAgent?: (navId: string) => void
+  /** Overrides the `ReportHeader` heading below the TopNav. */
+  headingOverride?: string
+  /** Use the two-line title+subtext tab variant (agent count + suite) instead of the plain
+   *  single-line tabs. Scoped to the "AI overview" duplicate nav entry only. */
+  coworkerTabsWithSubtext?: boolean
+  /** Hides the screen's own TopNav — set when embedding this screen's body inside a host that
+   *  already renders its own TopNav (e.g. the "AI Co-worker" tab on the AI overview page). */
+  hideTopNav?: boolean
 } = {}) {
   const AGENT_DIRECTORY = getAgentDirectory(product)
   const [statusFilter, setStatusFilter] = useState('Running')
@@ -542,9 +585,32 @@ export function AgentDirectoryScreen({
     }
     return customOrder.indexOf(a.id) - customOrder.indexOf(b.id)
   })
+
+  const outcomeRows: OutcomeRow[] = coworkerFilteredAgents.map((agent) => ({
+    id: agent.id,
+    outcomeLabel: agent.outcome.label,
+    agentName: agent.name,
+    tooltip: AGENT_PRIMARY_METRIC_TOOLTIP[agent.name] ?? agent.description,
+    count: formatK(agent.outcome.value).display,
+    timeSaved: agent.timeSaved,
+    costSaved: agent.costSaved,
+  }))
+
   const COWORKER_TABS: Tab[] = [
-    { id: 'all', label: 'All' },
-    ...PERSONA_GROUPS.map((g) => ({ id: g.id, label: COWORKER_NAME[g.id] })),
+    {
+      id: 'all',
+      label: 'All',
+      ...(coworkerTabsWithSubtext && {
+        subtext: `${PERSONA_GROUPS.length} co-workers • ${AGENT_DIRECTORY.length} agents`,
+      }),
+    },
+    ...PERSONA_GROUPS.map((g) => ({
+      id: g.id,
+      label: COWORKER_NAME[g.id],
+      ...(coworkerTabsWithSubtext && {
+        subtext: `${g.label} • ${AGENT_DIRECTORY.filter((a) => a.persona === g.id).length} agents`,
+      }),
+    })),
   ]
 
   const runningCount = AGENT_DIRECTORY.filter((a) => a.running > 0).length
@@ -584,11 +650,11 @@ export function AgentDirectoryScreen({
 
   return (
     <div className="flex h-full flex-col">
-      <TopNav title={showCoworkers ? 'Co-workers' : 'Agents'} initials="S" />
+      {!hideTopNav && <TopNav title={showCoworkers ? 'Co-workers' : 'Agents'} initials="S" />}
 
       <div className="flex-1 overflow-auto bg-surface">
         <ReportHeader
-          title={showCoworkers ? 'Overview' : 'Agents overview'}
+          title={headingOverride ?? (showCoworkers ? 'Overview' : 'Agents overview')}
           subtitle={
             showCoworkers
               ? 'Manage all your co-workers across your business.'
@@ -632,6 +698,7 @@ export function AgentDirectoryScreen({
                   tabs={COWORKER_TABS}
                   activeTab={activeCoworkerTab}
                   onChange={(id) => setActiveCoworkerTab(id as AgentPersonaId | 'all')}
+                  variant={coworkerTabsWithSubtext ? 'title-subtext' : 'default'}
                 />
 
                 <SortDropdown
@@ -646,7 +713,9 @@ export function AgentDirectoryScreen({
               </div>
             )}
 
-            {(showCoworkers ? coworkerFilteredAgents : visibleAgents).length === 0 ? (
+            {coworkerTabsWithSubtext ? (
+              <DataTable columns={OUTCOME_COLUMNS} data={outcomeRows} />
+            ) : (showCoworkers ? coworkerFilteredAgents : visibleAgents).length === 0 ? (
               <div className="flex h-48 items-center justify-center text-body text-text-tertiary">
                 No agents match this persona yet.
               </div>

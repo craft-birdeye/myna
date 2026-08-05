@@ -1,6 +1,9 @@
-import { ChartCard, Icon, StackedBarChart, TopNav, TrendLineChart } from '../components'
+import { Chip, ChartCard, DataTable, Icon, InfoTooltip, StackedBarChart, TopNav, TrendLineChart, type Column } from '../components'
+import iconGoogle from '../assets/icon-google.svg'
+import iconGooglePlay from '../assets/icon-google-play.svg'
 import {
   OVERVIEW_APPOINTMENTS_STATS,
+  OVERVIEW_BIRDEYE_SCORE,
   OVERVIEW_INBOX_ACTIVITY_STATS,
   OVERVIEW_INBOX_ALERT_STATS,
   OVERVIEW_LISTINGS_GOOGLE_REPORT,
@@ -14,12 +17,21 @@ import {
   OVERVIEW_SOCIAL_DATA,
   OVERVIEW_SOCIAL_NEW_FOLLOWERS,
   OVERVIEW_SOCIAL_SERIES,
+  OVERVIEW_TOP_LOCATIONS,
+  OVERVIEW_UNDERSTANDING_SCORES,
+  type OverviewLocationScoreRow,
+  type OverviewScore,
   type OverviewStat,
 } from '../data/overviewData'
 
 interface OverviewScreenProps {
   userName?: string
   locationLabel?: string
+  /** Hides the screen's own TopNav — set when embedding this screen's body inside a host that
+   *  already renders its own TopNav (e.g. the "Business metrics" tab on the AI overview page). */
+  hideTopNav?: boolean
+  /** Hides the "Welcome, {userName}" greeting header + download button row. */
+  hideWelcomeHeader?: boolean
 }
 
 function StatGroup({ stats, columns = stats.length }: { stats: OverviewStat[]; columns?: number }) {
@@ -44,12 +56,17 @@ function InboxAlertCard() {
   )
 }
 
+const REVIEW_SOURCE_LOGOS: Record<string, string> = {
+  google: iconGoogle,
+  'google-play': iconGooglePlay,
+}
+
 function ReviewsCard() {
   const maxCount = Math.max(...OVERVIEW_REVIEWS_BREAKDOWN.map((b) => b.count))
   return (
     <ChartCard title="Reviews">
       <div className="flex flex-wrap items-start gap-3xl">
-        <div className="flex min-w-[260px] flex-1 flex-col gap-lg">
+        <div className="flex min-w-[320px] flex-1 flex-col gap-lg">
           <div className="flex items-center gap-sm">
             <span className="text-h2 text-text-primary">{OVERVIEW_REVIEWS_RATING}</span>
             <div className="flex items-center gap-[2px] text-[#f5a623]">
@@ -74,24 +91,30 @@ function ReviewsCard() {
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap gap-md">
-            {OVERVIEW_REVIEW_SOURCES.map((s) => (
-              <div key={s.id} className="flex w-[130px] flex-col items-center gap-xs rounded-sm border border-border px-md py-lg text-center">
-                <span className={`flex size-8 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
-                  {s.icon.length === 1 ? s.icon : <Icon name={s.icon} size={18} />}
-                </span>
-                <p className="m-0 text-small text-text-tertiary">{s.name}</p>
-                <p className="m-0 flex items-center gap-xs text-body text-text-primary">
-                  {s.rating}
-                  <Icon name="star" size={14} fill className="text-[#f5a623]" />
-                </p>
-                <p className="m-0 text-small text-text-tertiary">{s.reviewCount}</p>
-              </div>
-            ))}
-          </div>
         </div>
 
-        <div className="min-w-[220px]">
+        <div className="flex w-[240px] shrink-0 flex-col gap-md">
+          {OVERVIEW_REVIEW_SOURCES.map((s) => {
+            const logo = REVIEW_SOURCE_LOGOS[s.id]
+            return (
+              <div key={s.id} className="flex items-center gap-md rounded-sm border border-border px-lg py-md">
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${logo ? '' : s.iconColorClassName}`}>
+                  {logo ? <img src={logo} alt="" className="size-6" /> : <Icon name={s.icon} size={18} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
+                  <p className="m-0 flex items-center gap-xs text-body text-text-primary">
+                    {s.rating}
+                    <Icon name="star" size={14} fill className="text-[#f5a623]" />
+                    <span className="text-small text-text-tertiary">{s.reviewCount}</span>
+                  </p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="w-[220px] shrink-0">
           <StatGroup stats={OVERVIEW_REVIEWS_STATS} columns={2} />
         </div>
       </div>
@@ -136,7 +159,7 @@ function ListingsCard() {
 
 function ReferralsCard() {
   return (
-    <ChartCard title="Referrals">
+    <ChartCard title="Referrals" minHeight="0">
       <StatGroup stats={OVERVIEW_REFERRALS_STATS} columns={3} />
     </ChartCard>
   )
@@ -144,7 +167,7 @@ function ReferralsCard() {
 
 function AppointmentsCard() {
   return (
-    <ChartCard title="Appointments">
+    <ChartCard title="Appointments" minHeight="0">
       <StatGroup stats={OVERVIEW_APPOINTMENTS_STATS} columns={5} />
     </ChartCard>
   )
@@ -176,36 +199,132 @@ function SocialCard() {
   )
 }
 
+/** Spectrum meter used by the Insights AI score cards — a gradient bar with a "You" marker at the
+ *  current value's position and a tick + label at the industry-average position. */
+function ScoreBar({ value, industryAverage, max }: { value: number; industryAverage: number; max: number }) {
+  const pct = (v: number) => `${Math.min(100, Math.max(0, (v / max) * 100))}%`
+  return (
+    <div className="mt-lg">
+      <div className="relative h-2 rounded-full" style={{ background: 'linear-gradient(90deg, #ef4444, #f97316, #eab308, #86efac, #16a34a)' }}>
+        <span
+          className="absolute bottom-[10px] -translate-x-1/2 whitespace-nowrap rounded-sm bg-[#1f1f1f] px-xs py-[1px] text-[11px] leading-4 text-white"
+          style={{ left: pct(value) }}
+        >
+          You
+        </span>
+        <span
+          className="absolute inset-y-0 -translate-x-1/2 w-[2px] bg-[#1f1f1f]"
+          style={{ left: pct(industryAverage) }}
+        />
+      </div>
+      <p className="m-0 mt-sm text-small text-text-tertiary">Industry average: {industryAverage}</p>
+    </div>
+  )
+}
+
+function ScoreCard({ score, size = 'lg' }: { score: OverviewScore; size?: 'lg' | 'sm' }) {
+  return (
+    <div>
+      <div className="flex items-center gap-xs">
+        <span className={size === 'lg' ? 'text-h2 text-accent-positive' : 'text-h3 text-text-primary'}>{score.value}</span>
+      </div>
+      <p className="m-0 mt-xs flex items-center gap-xs text-small text-text-tertiary">
+        {score.label}
+        {score.tooltip && <InfoTooltip text={score.tooltip} variant="detail" />}
+      </p>
+      <ScoreBar value={score.value} industryAverage={score.industryAverage} max={score.max} />
+    </div>
+  )
+}
+
+const LOCATION_SCORE_COLUMNS: Column<OverviewLocationScoreRow>[] = [
+  { key: 'location', label: 'Locations', width: 260, sortable: true },
+  {
+    key: 'birdeyeScore',
+    label: 'Birdeye Score',
+    width: 160,
+    sortable: true,
+    render: (v) => <Chip label={String(v)} variant="success" />,
+  },
+  { key: 'sentimentScore', label: 'Sentiment Score', width: 160, sortable: true },
+  { key: 'reputationScore', label: 'Reputation Score', width: 160, sortable: true },
+  { key: 'listingScore', label: 'Listing Score', width: 160, sortable: true },
+]
+
 function InsightsAiCard() {
   return (
     <ChartCard title="Insights AI">
-      <div className="flex min-h-[160px] flex-col items-center justify-center gap-sm text-text-tertiary">
-        <Icon name="progress_activity" size={28} className="animate-spin text-text-action" />
-        <p className="m-0 text-body text-text-tertiary">Loading</p>
+      <ScoreCard score={OVERVIEW_BIRDEYE_SCORE} />
+
+      <div className="my-2xl border-t border-border" />
+
+      <p className="m-0 mb-lg flex items-center gap-xs text-body text-text-primary">
+        Understanding the Birdeye Score
+        <InfoTooltip text="How each underlying signal contributes to the overall Birdeye Score." variant="detail" />
+      </p>
+      <div className="grid grid-cols-3 gap-3xl">
+        {OVERVIEW_UNDERSTANDING_SCORES.map((score) => (
+          <ScoreCard key={score.id} score={score} size="sm" />
+        ))}
       </div>
+
+      <div className="my-2xl border-t border-border" />
+
+      <p className="m-0 mb-lg text-body text-text-primary">Top performing locations</p>
+      <DataTable columns={LOCATION_SCORE_COLUMNS} data={OVERVIEW_TOP_LOCATIONS} />
     </ChartCard>
   )
 }
 
-export function OverviewScreen({ userName = 'Akhil', locationLabel = 'All locations' }: OverviewScreenProps) {
+export function OverviewScreen({
+  userName = 'Akhil',
+  locationLabel = 'All locations',
+  hideTopNav = false,
+  hideWelcomeHeader = false,
+}: OverviewScreenProps) {
   return (
     <div className="flex h-full flex-col">
-      <TopNav title="Overview" initials="S" />
-      <div className="flex-1 overflow-y-auto bg-surface-l2 px-2xl py-xl">
-        <div className="flex flex-col gap-lg">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="m-0 text-h2 text-text-primary">Welcome, {userName}</h1>
-              <p className="m-0 mt-xs text-body text-text-secondary">Here are the things which need your attention</p>
-            </div>
+      {!hideTopNav && (
+        <TopNav
+          title="Overview"
+          initials="S"
+          beforeAvatar={
             <button
               type="button"
-              aria-label="Download"
-              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              aria-label="Settings"
+              className="flex size-7 items-center justify-center rounded-sm transition-colors hover:bg-surface-hover"
             >
-              <Icon name="download" size={20} />
+              <Icon name="settings" size={20} className="text-text-icon" />
             </button>
-          </div>
+          }
+          afterAvatar={
+            <button
+              type="button"
+              className="flex h-7 items-center gap-xs rounded-full bg-ai-brand px-md text-small text-white hover:opacity-90"
+            >
+              <Icon name="auto_awesome" size={16} />
+              Ask BirdGPT
+            </button>
+          }
+        />
+      )}
+      <div className="flex-1 overflow-y-auto bg-surface-l2 px-2xl py-xl">
+        <div className="flex flex-col gap-lg">
+          {!hideWelcomeHeader && (
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="m-0 text-h2 text-text-primary">Welcome, {userName}</h1>
+                <p className="m-0 mt-xs text-body text-text-secondary">Here are the things which need your attention</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Download"
+                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              >
+                <Icon name="download" size={20} />
+              </button>
+            </div>
+          )}
 
           <InboxAlertCard />
 

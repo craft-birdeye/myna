@@ -39,6 +39,7 @@ import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
+import { AIOverviewScreen } from './screens/AIOverviewScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import iconMarketing from './assets/icon-marketing.svg'
 import iconAgents from './assets/icon-agents.svg'
@@ -60,6 +61,7 @@ const RAIL_GROUPS: RailGroup[] = [
     items: [
       { id: 'overview', label: 'Overview', icon: 'home' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
+      { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'New' },
     ],
   },
   {
@@ -403,7 +405,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'overview' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && (
         <SideNav
           title="Front desk"
           sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
@@ -451,6 +453,15 @@ export function App() {
               setRecommendationFocus({ instanceName, recommendationId, feedbackPrefill })
               setNavActive(navId)
               setRailActive('frontdesk')
+            }}
+          />
+        ) : railActive === 'agents-2' ? (
+          <AIOverviewScreen
+            key={activeProduct}
+            product={activeProduct}
+            onOpenAgent={(navId) => {
+              setRailActive('frontdesk')
+              setNavActive(navId)
             }}
           />
         ) : railActive === 'agents' ? (
