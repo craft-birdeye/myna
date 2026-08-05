@@ -479,7 +479,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
   return (
     <div className="relative flex h-full flex-col bg-surface">
       {/* Header — title + status chip with agent name subtitle (matches recommendation detail) */}
-      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-lg">
+      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
         <button
           type="button"
           aria-label="Back to logs"
