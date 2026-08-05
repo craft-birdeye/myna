@@ -536,6 +536,8 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
                     }
                   : undefined
               }
+              agentName={isReminder ? instanceName : undefined}
+              onTrackFeedback={isReminder ? onTrackFeedback : undefined}
             />
           ) : (
             <LogDetailsPanel row={row} agentName={instanceName} onTrackFeedback={onTrackFeedback} />
