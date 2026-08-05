@@ -169,7 +169,7 @@ export function WorkflowEditorScreen({
           nodes: baseWorkflow.nodes,
           nodeDetails: {
             ...baseWorkflow.nodeDetails,
-            '__start__': HC_FRONTDESK_START,
+            '__start__': { ...HC_FRONTDESK_START, agentName: shownName },
           },
         }
       : {
