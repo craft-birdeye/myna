@@ -371,7 +371,11 @@ export function AllReviewsScreen({
     return sortReviews(base, sortBy)
   }, [searchQuery, sortBy, unansweredOnly, agentRepliesOnly])
 
-  const title = unansweredOnly ? 'Respond to reviews' : 'All reviews'
+  const title = unansweredOnly
+    ? 'Respond to reviews'
+    : agentRepliesOnly
+      ? 'Monitor agent replies'
+      : 'All reviews'
   const totalLabel = unansweredOnly ? '1,048,675 total reviews' : '1,035 total reviews'
   const averageRating = unansweredOnly ? 4.4 : 3.8
 

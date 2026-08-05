@@ -1554,6 +1554,7 @@ export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Review response agent suggesting replies in dashboard': REVIEW_RESPONSE_WORKFLOW,
   'Review response agents': REVIEW_RESPONSE_WORKFLOW,
   'Review generation agent': REVIEW_GENERATION_WORKFLOW,
+  'Review generation agent with A/B testing': REVIEW_GENERATION_WORKFLOW,
   'Review generation agents': REVIEW_GENERATION_WORKFLOW,
 }
 

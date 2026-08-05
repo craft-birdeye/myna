@@ -1,24 +1,29 @@
 .agent-builder {
   display: flex;
   height: 100%;
-  gap: 0;
+  gap: 16px;
+  /* Equal inset on all sides — top matches expand pill / graph-controls chrome */
+  padding: 16px;
   overflow: hidden;
   position: relative;
+  box-sizing: border-box;
 }
 
 .agent-builder__lhs {
-  padding: 16px;
+  padding: 0;
   flex-shrink: 0;
   overflow: visible;
   position: relative;
   z-index: 40;
-  width: 392px;
-  transition: width 0.28s cubic-bezier(0.4,0,0.2,1), padding 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
+  width: 360px;
+  /* Only width/opacity — padding lives on .agent-builder so collapse stays put on Y */
+  transition: width 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease, margin 0.28s cubic-bezier(0.4,0,0.2,1);
   opacity: 1;
 }
 
 .agent-builder__lhs--collapsed {
   width: 0;
+  margin-right: -16px; /* cancel flex gap so canvas keeps the 16px left inset */
   padding: 0;
   overflow: hidden;
   opacity: 0;
@@ -26,60 +31,58 @@
 }
 
 /* ─── Expand pill (floats over canvas when LHS is collapsed) ─── */
+/* top/left match .agent-builder padding so the pill sits in the shared inset.
+   Height matches .graph-controls chrome (padding 8 + inner 36 ≈ 54px, no shadow). */
 .ab-lhs-expand-pill {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 16px;
+  left: 16px;
   z-index: 50;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 8px;
+  gap: 8px;
+  height: 54px;
+  padding: 8px;
   background: #fff;
   border: 1px solid #e5e9f0;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: none;
   cursor: pointer;
   white-space: nowrap;
-  overflow: hidden;
+  font-family: 'Roboto', sans-serif;
   color: #555;
-  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .ab-lhs-expand-pill .material-symbols-outlined {
-  font-size: 18px !important;
-  width: 18px;
-  height: 18px;
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   line-height: 1;
+  display: block;
+  overflow: hidden;
+  color: #555;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
 .ab-lhs-expand-pill__label {
-  font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  letter-spacing: -0.26px;
-  color: #212121;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  display: inline-block;
-  transition: max-width 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.15s ease;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.28px;
+  line-height: 20px;
+  color: #555;
 }
 
 .ab-lhs-expand-pill:hover {
-  border-color: #e5e9f0;
-  background: #f4f6f7;
+  background: #f2f4f7;
   color: #212121;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
+.ab-lhs-expand-pill:hover .material-symbols-outlined,
 .ab-lhs-expand-pill:hover .ab-lhs-expand-pill__label {
-  max-width: 80px;
-  opacity: 1;
   color: #212121;
-  transition: max-width 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.15s ease 0.07s;
 }
 
 .agent-builder__canvas {
@@ -95,7 +98,7 @@
 
 .agent-builder__rhs {
   flex-shrink: 0;
-  padding: 16px;
+  padding: 0;
   overflow: hidden;
   z-index: 5;
   height: 100%;

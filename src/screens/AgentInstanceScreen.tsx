@@ -394,14 +394,14 @@ export function AgentInstanceScreen({
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
   const shownName = displayName ?? instanceName
-  const isReviewResponse = agentName.startsWith('Review response agent')
-  const isReviewGeneration = agentName.startsWith('Review generation agent')
+  const isReviewResponse = /review response agent/i.test(agentName)
+  const isReviewGeneration = /review generation agent/i.test(agentName)
   const reviewGenerationKey = 'Review generation agent'
 
   useEffect(() => {
-    onFullBleedChange?.(Boolean(selectedRun) && isReviewResponse)
+    onFullBleedChange?.(Boolean(selectedRun) && (isReviewResponse || isReviewGeneration))
     return () => onFullBleedChange?.(false)
-  }, [selectedRun, isReviewResponse, onFullBleedChange])
+  }, [selectedRun, isReviewResponse, isReviewGeneration, onFullBleedChange])
   const metrics: Metric[] = (
     isReviewGeneration
       ? METRICS_BY_AGENT[reviewGenerationKey]
@@ -434,8 +434,14 @@ export function AgentInstanceScreen({
   const isRecommendationTab = activeTab === 'recommendation'
   const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
   const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
+  const hideRecommendations = isReviewResponse || isReviewGeneration
   // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
   const isDraftInstance = instanceStatus === 'Draft'
+  const isFullBleedDetail = selectedRecommendationId !== null || selectedRun !== null
+  // TopNav product title only when L2 SideNav is hidden (full-bleed run / recommendation).
+  const topNavTitle = isFullBleedDetail
+    ? (hideRecommendations ? 'Reviews AI' : 'Front desk')
+    : undefined
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[instanceName] ?? 0
   const showHealthcareLogs =
     activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || isReviewResponse || isReviewGeneration)
@@ -447,7 +453,7 @@ export function AgentInstanceScreen({
   if (selectedRun) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav title="Front desk" initials="S" />
+        <TopNav title={topNavTitle} initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
           <RunDetailView
             row={selectedRun}
@@ -468,7 +474,7 @@ export function AgentInstanceScreen({
   if (selectedRecommendationId) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav title="Front desk" initials="S" />
+        <TopNav title={topNavTitle} initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
           <RecommendationDetailScreen
             recommendationId={selectedRecommendationId}
@@ -483,7 +489,7 @@ export function AgentInstanceScreen({
 
   return (
     <div className="flex h-full flex-col">
-      <TopNav initials="S" />
+      <TopNav title={topNavTitle} initials="S" />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -508,7 +514,7 @@ export function AgentInstanceScreen({
                   {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                 </span>
               )}
-              {isRecommendationTab && !isDraftInstance && (
+              {isRecommendationTab && !isDraftInstance && !hideRecommendations && (
                 <Tooltip content="Coach agent" variant="brief">
                   <button
                     type="button"
@@ -606,7 +612,7 @@ export function AgentInstanceScreen({
                 if (tabId !== 'recommendation') setCoachOpen(false)
               }}
             />
-            {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && (
+            {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && !hideRecommendations && (
               <button
                 type="button"
                 onClick={clearAllFeedback}
@@ -627,7 +633,12 @@ export function AgentInstanceScreen({
             />
           ) : isRecommendationTab ? (
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} isDraft={isDraftInstance} />
+              <RecommendationsTab
+                agentName={instanceName}
+                onSelect={setSelectedRecommendationId}
+                isDraft={isDraftInstance}
+                empty={hideRecommendations}
+              />
             </div>
           ) : (
             <div className="flex-1 overflow-auto">

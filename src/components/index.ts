@@ -28,6 +28,17 @@ export type { EmptyStateProps } from './EmptyState/EmptyState.types'
 export { InfoTooltip } from './InfoTooltip/InfoTooltip'
 export { Tooltip } from './Tooltip/Tooltip'
 export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'
+export { VoiceCallEngineSettings } from './VoiceCallEngineSettings/VoiceCallEngineSettings'
+export {
+  AdditionalVoiceDrawer,
+  AGENT_VOICE_OPTIONS,
+  DEFAULT_AGENT_VOICE,
+  DefaultVoiceDrawer,
+} from './VoiceSettingsDrawers/VoiceSettingsDrawers'
+export type {
+  AdditionalVoiceConfig,
+  VoiceOption,
+} from './VoiceSettingsDrawers/VoiceSettingsDrawers.types'
 export { TestCallModal } from './TestCallModal/TestCallModal'
 export type { TestCallModalProps } from './TestCallModal/TestCallModal.types'
 export { BookTestAppointmentModal } from './BookTestAppointmentModal/BookTestAppointmentModal'

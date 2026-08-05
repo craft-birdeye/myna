@@ -1,9 +1,14 @@
 import { useEffect, useState, useRef, type MouseEvent } from 'react'
 import {
+  AdditionalVoiceDrawer,
+  DEFAULT_AGENT_VOICE,
+  DefaultVoiceDrawer,
   Icon,
   LanguageFlag,
   LanguageSelectMenu,
   RefChip,
+  VoiceCallEngineSettings,
+  type AdditionalVoiceConfig,
 } from '../components'
 import {
   AGENT_LANGUAGES,
@@ -37,15 +42,28 @@ const FRONTDESK_GREETING =
 const FRONTDESK_CONSENT =
   'This call may be recorded for quality and training purposes.'
 
-interface AdditionalVoiceChip {
-  label: string
-  language: AgentLanguageId
-}
-
-const DEFAULT_ADDITIONAL_VOICES: AdditionalVoiceChip[] = [
-  { label: 'Andrea_Spanish', language: 'es' },
-  { label: 'Andrea_Italian', language: 'it' },
-  { label: 'Andrea_Korean', language: 'ko' },
+const DEFAULT_ADDITIONAL_VOICE_CONFIGS: AdditionalVoiceConfig[] = [
+  {
+    label: 'Andrea_Spanish',
+    voice: DEFAULT_AGENT_VOICE,
+    language: 'es',
+    whenToUse: 'Use this voice when the caller speaks Spanish or starts the conversation in Spanish',
+    speed: 1,
+  },
+  {
+    label: 'Andrea_Italian',
+    voice: DEFAULT_AGENT_VOICE,
+    language: 'it',
+    whenToUse: 'Use this voice when the caller speaks Italian or starts the conversation in Italian',
+    speed: 1,
+  },
+  {
+    label: 'Andrea_Korean',
+    voice: DEFAULT_AGENT_VOICE,
+    language: 'ko',
+    whenToUse: 'Use this voice when the caller speaks Korean or starts the conversation in Korean',
+    speed: 1,
+  },
 ]
 
 function isFrontDeskAgent(agentName?: string): boolean {
@@ -582,9 +600,15 @@ const VOICE_OPTIONS: VoiceOption[] = [
 
 /** Flat Reminder settings (voice → additional voice → greeting → recording). */
 function ReminderSettings() {
-  const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
-  const [additionalVoices, setAdditionalVoices] =
-    useState<AdditionalVoiceChip[]>(DEFAULT_ADDITIONAL_VOICES)
+  const [voice, setVoice] = useState(DEFAULT_AGENT_VOICE)
+  const [voiceSpeed, setVoiceSpeed] = useState(1)
+  const [additionalVoiceConfigs, setAdditionalVoiceConfigs] = useState<AdditionalVoiceConfig[]>(
+    DEFAULT_ADDITIONAL_VOICE_CONFIGS,
+  )
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [additionalDrawerOpen, setAdditionalDrawerOpen] = useState(false)
+  const [editingAdditionalVoice, setEditingAdditionalVoice] =
+    useState<AdditionalVoiceConfig | null>(null)
   const [greeting, setGreeting] = useState(
     'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?'
   )
@@ -593,21 +617,41 @@ function ReminderSettings() {
     'This call may be recorded for quality and training purposes.'
   )
 
-  function handleRemoveAdditionalVoice(label: string) {
-    setAdditionalVoices(additionalVoices.filter((v) => v.label !== label))
+  function handleDefaultVoiceSave(next: { voice: string; speed: number }) {
+    setVoice(next.voice)
+    setVoiceSpeed(next.speed)
+    setAdditionalVoiceConfigs((configs) => configs.filter((cfg) => cfg.label !== next.voice))
+    setDrawerOpen(false)
   }
 
-  function handleAddAdditionalVoice() {
-    const used = new Set(additionalVoices.map((v) => v.language))
-    const nextLang = AGENT_LANGUAGES.find(
-      (l) => l.id !== 'en' && !used.has(l.id as AgentLanguageId),
-    )
-    if (!nextLang) return
-    const baseName = voice.split(' (')[0] || 'Andrea'
-    setAdditionalVoices([
-      ...additionalVoices,
-      { label: `${baseName}_${nextLang.label}`, language: nextLang.id as AgentLanguageId },
-    ])
+  function openAddAdditionalVoice() {
+    setEditingAdditionalVoice(null)
+    setAdditionalDrawerOpen(true)
+  }
+
+  function openEditAdditionalVoice(config: AdditionalVoiceConfig) {
+    setEditingAdditionalVoice(config)
+    setAdditionalDrawerOpen(true)
+  }
+
+  function closeAdditionalDrawer() {
+    setAdditionalDrawerOpen(false)
+    setEditingAdditionalVoice(null)
+  }
+
+  function handleSaveAdditionalVoice(config: AdditionalVoiceConfig) {
+    if (editingAdditionalVoice) {
+      setAdditionalVoiceConfigs((configs) =>
+        configs.map((cfg) => (cfg.label === editingAdditionalVoice.label ? config : cfg)),
+      )
+    } else {
+      setAdditionalVoiceConfigs((configs) => [...configs, config])
+    }
+    closeAdditionalDrawer()
+  }
+
+  function handleRemoveAdditionalVoice(label: string) {
+    setAdditionalVoiceConfigs((configs) => configs.filter((cfg) => cfg.label !== label))
   }
 
   return (
@@ -616,7 +660,6 @@ function ReminderSettings() {
         Voice call settings
       </h2>
 
-      {/* Info banner */}
       <div className="flex items-center gap-sm rounded-sm bg-[#eff6ff] px-md py-md">
         <Icon name="info" size={18} className="shrink-0 text-[#3b82f6]" />
         <span className="text-body text-text-primary">
@@ -624,46 +667,79 @@ function ReminderSettings() {
         </span>
       </div>
 
-      {/* Default voice */}
+      <VoiceCallEngineSettings />
+
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
           Default voice <span className="text-chip-danger-text">*</span>
         </label>
-        <VoiceSelect value={voice} options={VOICE_OPTIONS} onChange={setVoice} chevron="right" />
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
+        >
+          <span
+            className={`min-w-0 flex-1 truncate text-left text-body ${
+              voice ? 'text-text-primary' : 'text-text-tertiary'
+            }`}
+          >
+            {voice || 'Select'}
+          </span>
+          <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+        </button>
+        <DefaultVoiceDrawer
+          open={drawerOpen}
+          voice={voice}
+          speed={voiceSpeed}
+          onClose={() => setDrawerOpen(false)}
+          onSave={handleDefaultVoiceSave}
+        />
       </div>
 
-      {/* Additional voice */}
       <div className="flex flex-col gap-xs">
-        {additionalVoices.length > 0 && (
+        {additionalVoiceConfigs.length > 0 && (
           <label className="text-small text-text-secondary">Additional voice</label>
         )}
-        {additionalVoices.length > 0 ? (
+        {additionalVoiceConfigs.length > 0 ? (
           <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
             <div className="flex flex-wrap gap-sm">
-              {additionalVoices.map((cfg) => {
+              {additionalVoiceConfigs.map((cfg) => {
                 const lang = getAgentLanguage(cfg.language)
                 return (
-                  <span
+                  <button
                     key={cfg.label}
-                    className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary"
+                    type="button"
+                    onClick={() => openEditAdditionalVoice(cfg)}
+                    className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary hover:bg-surface-hover"
                   >
                     <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
                     <span className="truncate">{cfg.label}</span>
-                    <button
-                      type="button"
+                    <span
+                      role="button"
+                      tabIndex={0}
                       aria-label={`Remove ${cfg.label}`}
-                      onClick={() => handleRemoveAdditionalVoice(cfg.label)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveAdditionalVoice(cfg.label)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleRemoveAdditionalVoice(cfg.label)
+                        }
+                      }}
                       className="flex size-4 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
                     >
                       <Icon name="close" size={14} />
-                    </button>
-                  </span>
+                    </span>
+                  </button>
                 )
               })}
             </div>
             <button
               type="button"
-              onClick={handleAddAdditionalVoice}
+              onClick={openAddAdditionalVoice}
               className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
             >
               <Icon name="add_circle" size={18} className="text-primary" />
@@ -673,20 +749,26 @@ function ReminderSettings() {
         ) : (
           <button
             type="button"
-            onClick={handleAddAdditionalVoice}
+            onClick={openAddAdditionalVoice}
             className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
           >
             <Icon name="add_circle" size={18} className="text-primary" />
             Add additional voice
           </button>
         )}
+        <AdditionalVoiceDrawer
+          open={additionalDrawerOpen}
+          initialConfig={editingAdditionalVoice}
+          defaultLanguage="en"
+          defaultSpeed={voiceSpeed}
+          defaultVoice={voice}
+          onClose={closeAdditionalDrawer}
+          onSave={handleSaveAdditionalVoice}
+        />
       </div>
 
-      {/* Greeting message */}
       <div className="flex flex-col gap-xs">
-        <label className="text-body text-text-primary">
-          Greeting message <span className="text-chip-danger-text">*</span>
-        </label>
+        <label className="text-body text-text-primary">Greeting message</label>
         <textarea
           value={greeting}
           onChange={(e) => setGreeting(e.target.value)}
@@ -695,12 +777,8 @@ function ReminderSettings() {
         />
       </div>
 
-      {/* Recording */}
       <div>
         <p className="text-body text-text-primary">Recording</p>
-        <SettingSubtext tone="tertiary">
-          Configure consent wording in each channel settings below
-        </SettingSubtext>
         <div className="mt-sm flex flex-col gap-sm">
           <label className="flex cursor-pointer items-center gap-sm">
             <input
@@ -752,9 +830,15 @@ function FrontDeskSettings() {
   const [langMenuOpen, setLangMenuOpen] = useState(false)
   const [additionalMenuOpen, setAdditionalMenuOpen] = useState(false)
   const [fieldPickerOpen, setFieldPickerOpen] = useState(false)
-  const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
-  const [additionalVoices, setAdditionalVoices] =
-    useState<AdditionalVoiceChip[]>(DEFAULT_ADDITIONAL_VOICES)
+  const [voice, setVoice] = useState(DEFAULT_AGENT_VOICE)
+  const [voiceSpeed, setVoiceSpeed] = useState(1)
+  const [additionalVoiceConfigs, setAdditionalVoiceConfigs] = useState<AdditionalVoiceConfig[]>(
+    DEFAULT_ADDITIONAL_VOICE_CONFIGS,
+  )
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [additionalDrawerOpen, setAdditionalDrawerOpen] = useState(false)
+  const [editingAdditionalVoice, setEditingAdditionalVoice] =
+    useState<AdditionalVoiceConfig | null>(null)
   const [greeting, setGreeting] = useState(FRONTDESK_GREETING)
   const [recording, setRecording] = useState<RecordingMode>('announced')
   const [consent, setConsent] = useState(FRONTDESK_CONSENT)
@@ -824,21 +908,41 @@ function FrontDeskSettings() {
     setAdditionalMenuOpen(true)
   }
 
-  function handleRemoveAdditionalVoice(label: string) {
-    setAdditionalVoices(additionalVoices.filter((v) => v.label !== label))
+  function handleDefaultVoiceSave(next: { voice: string; speed: number }) {
+    setVoice(next.voice)
+    setVoiceSpeed(next.speed)
+    setAdditionalVoiceConfigs((configs) => configs.filter((cfg) => cfg.label !== next.voice))
+    setDrawerOpen(false)
   }
 
-  function handleAddAdditionalVoice() {
-    const used = new Set(additionalVoices.map((v) => v.language))
-    const nextLang = AGENT_LANGUAGES.find(
-      (l) => l.id !== language && !used.has(l.id as AgentLanguageId),
-    )
-    if (!nextLang) return
-    const baseName = voice.split(' (')[0] || 'Andrea'
-    setAdditionalVoices([
-      ...additionalVoices,
-      { label: `${baseName}_${nextLang.label}`, language: nextLang.id as AgentLanguageId },
-    ])
+  function openAddAdditionalVoice() {
+    setEditingAdditionalVoice(null)
+    setAdditionalDrawerOpen(true)
+  }
+
+  function openEditAdditionalVoice(config: AdditionalVoiceConfig) {
+    setEditingAdditionalVoice(config)
+    setAdditionalDrawerOpen(true)
+  }
+
+  function closeAdditionalDrawer() {
+    setAdditionalDrawerOpen(false)
+    setEditingAdditionalVoice(null)
+  }
+
+  function handleSaveAdditionalVoice(config: AdditionalVoiceConfig) {
+    if (editingAdditionalVoice) {
+      setAdditionalVoiceConfigs((configs) =>
+        configs.map((cfg) => (cfg.label === editingAdditionalVoice.label ? config : cfg)),
+      )
+    } else {
+      setAdditionalVoiceConfigs((configs) => [...configs, config])
+    }
+    closeAdditionalDrawer()
+  }
+
+  function handleRemoveAdditionalVoice(label: string) {
+    setAdditionalVoiceConfigs((configs) => configs.filter((cfg) => cfg.label !== label))
   }
 
   return (
@@ -1009,53 +1113,83 @@ function FrontDeskSettings() {
 
       {/* Voice call settings */}
       <div className="flex flex-col gap-md pt-3xl">
-        <h2 className="text-[16px] font-medium leading-6 tracking-[-0.32px] text-text-primary">
+        <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
           Voice call settings
         </h2>
+
+        <VoiceCallEngineSettings />
 
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
             Default voice <span className="text-chip-danger-text">*</span>
           </label>
-          <VoiceSelect
-            value={voice}
-            options={VOICE_OPTIONS}
-            onChange={setVoice}
-            chevron="right"
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
+          >
+            <span
+              className={`min-w-0 flex-1 truncate text-left text-body ${
+                voice ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {voice || 'Select'}
+            </span>
+            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+          </button>
+          <DefaultVoiceDrawer
+            open={drawerOpen}
+            voice={voice}
+            speed={voiceSpeed}
+            onClose={() => setDrawerOpen(false)}
+            onSave={handleDefaultVoiceSave}
           />
         </div>
 
         <div className="flex flex-col gap-xs">
-          {additionalVoices.length > 0 && (
+          {additionalVoiceConfigs.length > 0 && (
             <label className="text-small text-text-secondary">Additional voice</label>
           )}
-          {additionalVoices.length > 0 ? (
+          {additionalVoiceConfigs.length > 0 ? (
             <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
               <div className="flex flex-wrap gap-sm">
-                {additionalVoices.map((cfg) => {
+                {additionalVoiceConfigs.map((cfg) => {
                   const lang = getAgentLanguage(cfg.language)
                   return (
-                    <span
+                    <button
                       key={cfg.label}
-                      className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary"
+                      type="button"
+                      onClick={() => openEditAdditionalVoice(cfg)}
+                      className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary hover:bg-surface-hover"
                     >
                       <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
                       <span className="truncate">{cfg.label}</span>
-                      <button
-                        type="button"
+                      <span
+                        role="button"
+                        tabIndex={0}
                         aria-label={`Remove ${cfg.label}`}
-                        onClick={() => handleRemoveAdditionalVoice(cfg.label)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRemoveAdditionalVoice(cfg.label)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleRemoveAdditionalVoice(cfg.label)
+                          }
+                        }}
                         className="flex size-4 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
                       >
                         <Icon name="close" size={14} />
-                      </button>
-                    </span>
+                      </span>
+                    </button>
                   )
                 })}
               </div>
               <button
                 type="button"
-                onClick={handleAddAdditionalVoice}
+                onClick={openAddAdditionalVoice}
                 className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
               >
                 <Icon name="add_circle" size={18} className="text-primary" />
@@ -1065,13 +1199,22 @@ function FrontDeskSettings() {
           ) : (
             <button
               type="button"
-              onClick={handleAddAdditionalVoice}
+              onClick={openAddAdditionalVoice}
               className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
             >
               <Icon name="add_circle" size={18} className="text-primary" />
               Add additional voice
             </button>
           )}
+          <AdditionalVoiceDrawer
+            open={additionalDrawerOpen}
+            initialConfig={editingAdditionalVoice}
+            defaultLanguage={language}
+            defaultSpeed={voiceSpeed}
+            defaultVoice={voice}
+            onClose={closeAdditionalDrawer}
+            onSave={handleSaveAdditionalVoice}
+          />
         </div>
       </div>
 

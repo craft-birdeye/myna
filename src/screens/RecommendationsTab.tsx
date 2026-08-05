@@ -11,6 +11,8 @@ interface RecommendationsTabProps {
   /** A Draft instance hasn't handled any real conversations yet, so there's nothing to base a
    *  recommendation on — show an empty state instead of the (agent-wide) recommendation list. */
   isDraft?: boolean
+  /** Force the empty state (e.g. review agents that don't surface recommendations yet). */
+  empty?: boolean
 }
 
 /** Row shape rendered by the table — adds a sortable numeric age alongside the raw `timeAgo`
@@ -123,7 +125,7 @@ function DiscardRecommendationModal({
   )
 }
 
-export function RecommendationsTab({ agentName, onSelect, isDraft = false }: RecommendationsTabProps) {
+export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty = false }: RecommendationsTabProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
   const { overrides, setRecommendationStatus } = useRecommendationOverridesStore()
   const [discardTarget, setDiscardTarget] = useState<RecommendationRow | null>(null)
@@ -143,12 +145,16 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false }: Rec
     // Default order: most recent first — the table's own column sort takes over once a header is clicked.
     .sort((a, b) => a.ageMinutes - b.ageMinutes)
 
-  if (isDraft) {
+  if (isDraft || empty) {
     return (
       <div className="flex h-full items-center justify-center px-lg py-lg">
         <EmptyState
           title="No recommendations yet"
-          description="This agent is still in draft and hasn't handled any conversations yet, so there's nothing to base a recommendation on."
+          description={
+            isDraft
+              ? "This agent is still in draft and hasn't handled any conversations yet, so there's nothing to base a recommendation on."
+              : 'Recommendations will appear here as this agent runs and finds opportunities to improve.'
+          }
         />
       </div>
     )

@@ -1,4 +1,5 @@
 import React from 'react';
+import { setFlowDragData } from '../../../flowDragData';
 import './LHSNode.css';
 
 export default function LHSNode({
@@ -16,10 +17,11 @@ export default function LHSNode({
     if (onDragStart) {
       onDragStart(e);
     } else {
-      e.dataTransfer.setData('application/reactflow-type', nodeType);
-      e.dataTransfer.setData('application/reactflow-label', label);
-      e.dataTransfer.setData('application/reactflow-description', label);
-      e.dataTransfer.effectAllowed = 'move';
+      setFlowDragData(e.dataTransfer, {
+        type: nodeType,
+        label,
+        description: label,
+      });
     }
   };
 

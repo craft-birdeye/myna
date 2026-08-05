@@ -3,8 +3,10 @@ import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
   REMINDER_LOGS_ROWS,
+  REVIEW_GENERATION_LOGS_ROWS,
   REVIEW_RESPONSE_LOGS_ROWS,
   toHealthcareLogRow,
+  toReviewGenerationLogRow,
   type HealthcareLogRow,
   type PrevisitLogRow,
   type ReviewResponseLogRow,
@@ -114,7 +116,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
     )
   }
 
-  if (agentName?.startsWith('Review response agent') || agentName?.startsWith('Review generation agent')) {
+  if (agentName?.startsWith('Review response agent')) {
     return (
       <div className="px-lg py-lg">
         <DataTable
@@ -124,6 +126,22 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
             icon: 'visibility',
             label: 'View log',
             onClick: (row) => onViewRun?.(toHealthcareLogRow(row as ReviewResponseLogRow)),
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (agentName && /review generation agent/i.test(agentName)) {
+    return (
+      <div className="px-lg py-lg">
+        <DataTable
+          columns={REVIEW_RESPONSE_LOG_COLUMNS}
+          data={REVIEW_GENERATION_LOGS_ROWS}
+          rowAction={{
+            icon: 'visibility',
+            label: 'View log',
+            onClick: (row) => onViewRun?.(toReviewGenerationLogRow(row as ReviewResponseLogRow)),
           }}
         />
       </div>

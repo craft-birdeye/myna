@@ -23,6 +23,23 @@ const EMPTY_WORKFLOW = {
   nodeDetails: { '__start__': { agentName: '', goals: '', outcomes: '', locations: [] } },
 }
 
+/** Goals / outcomes for Reviews AI create-from-scratch (empty canvas). Locations stay empty. */
+const REVIEW_RESPONSE_SCRATCH_START = {
+  goals:
+    'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review',
+  outcomes:
+    'Ensure safe, effortless engagement by relying exclusively on your pre-approved templates. Eliminate manual effort and operational overhead by autonomously responding across platforms',
+  locations: [] as string[],
+}
+
+const REVIEW_GENERATION_SCRATCH_START = {
+  goals:
+    'Request reviews from customers after a completed transaction, using email and text to maximize response rates.',
+  outcomes:
+    'Increase review volume across locations while saving staff time on manual follow-up.',
+  locations: [] as string[],
+}
+
 // Healthcare / Dental Frontdesk start-node details — defined inline to avoid
 // any module-cache staleness from agentWorkflows.ts.
 const HC_FRONTDESK_START = {
@@ -65,6 +82,8 @@ interface WorkflowEditorScreenProps {
   previewProcedureId?: string | null
   previewProcedureDetail?: Record<string, unknown> | null
   onPreviewProcedureIdChange?: (id: string | null) => void
+  /** Opens the full-page Create with AI experience. */
+  onOpenAiFullscreen?: () => void
   /** Saved co-pilot transcript shown in the Create with AI tab after Save agent. */
   aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
 }
@@ -83,6 +102,7 @@ export function WorkflowEditorScreen({
   previewProcedureId = null,
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
+  onOpenAiFullscreen,
   aiTranscript = null,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
@@ -115,6 +135,12 @@ export function WorkflowEditorScreen({
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
   const baseWorkflow = workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
+  const isEmptyScratch = !wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0
+  const reviewScratchStart = /review response/i.test(shownName)
+    ? REVIEW_RESPONSE_SCRATCH_START
+    : /review generation/i.test(shownName)
+      ? REVIEW_GENERATION_SCRATCH_START
+      : null
 
   // Extract region suffix from instance name (e.g. "Recall agent - North region" → "North region")
   const regionSuffix = agentName.includes(' - ') ? agentName.replace(/^.+ - /, '') : null
@@ -164,6 +190,18 @@ export function WorkflowEditorScreen({
 
   const workflow = wizardDraft
     ? buildWizardAgentWorkflow(wizardDraft)
+    : isEmptyScratch && reviewScratchStart
+      ? {
+          nodes: [],
+          nodeDetails: {
+            '__start__': {
+              agentName: shownName,
+              goals: reviewScratchStart.goals,
+              outcomes: reviewScratchStart.outcomes,
+              locations: [],
+            },
+          },
+        }
     : isHC && agentBaseName === 'Front desk agent'
       ? {
           nodes: baseWorkflow.nodes,
@@ -177,7 +215,8 @@ export function WorkflowEditorScreen({
           nodeDetails: patchNodeDetails(baseWorkflow.nodeDetails as unknown as Record<string, unknown>) as typeof baseWorkflow.nodeDetails,
         }
 
-  const resolvedStatus = wizardDraft ? 'Draft' : agentStatus
+  // Create-from-scratch opens an empty canvas — never show "Running".
+  const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0
   const publishDisabled = issueCount > 0
 
@@ -211,7 +250,7 @@ export function WorkflowEditorScreen({
           initialStatus={resolvedStatus}
           publishDisabled={publishDisabled}
           issueCount={issueCount}
-          defaultOpenSection="Tasks"
+          defaultOpenSection={isEmptyScratch ? 'Trigger' : 'Tasks'}
           aiAssistOpen={aiAssistOpen}
           onAiAssistOpenChange={onAiAssistOpenChange}
           hideLhs={hideLhs}
@@ -219,6 +258,7 @@ export function WorkflowEditorScreen({
           previewProcedureId={previewProcedureId}
           previewProcedureDetail={previewProcedureDetail}
           onPreviewProcedureIdChange={onPreviewProcedureIdChange}
+          onOpenAiFullscreen={onOpenAiFullscreen}
           aiTranscript={resolvedAiTranscript}
         />
       </Suspense>
