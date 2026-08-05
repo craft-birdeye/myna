@@ -6502,7 +6502,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     return () => onAgentSetupActiveChange?.(false)
   }, [onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
-    { key: 'name', label: 'Agent name', width: 230, sortable: true, locked: true },
+    {
+      key: 'name',
+      label: 'Agent name',
+      width: 230,
+      sortable: true,
+      locked: true,
+      render: (v) => <span className="group-hover/row:text-text-action">{String(v)}</span>,
+    },
     {
       key: 'status',
       label: 'Status',

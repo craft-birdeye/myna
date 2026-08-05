@@ -1,11 +1,14 @@
 import { Fragment, useState } from 'react'
+import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
+import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import { Tabs } from '../Tabs/Tabs'
+import { Toast } from '../Toast/Toast'
 import { Tooltip } from '../Tooltip/Tooltip'
 import type {
   RunConversationEntry,
@@ -381,6 +384,13 @@ export interface RunConversationThreadProps {
   showCallRecording?: boolean
   audioUrl?: string
   durationSecs?: number
+  /** 'diagnostics'-mode only — maps a business message id to the recommendation id its feedback
+   *  landed on, once known. Switches that bubble's "Coach agent" link to "Track your feedback". */
+  recIdByMessage?: Record<string, string>
+  /** 'diagnostics'-mode only — opens the Share-feedback flow for this message. */
+  onCoachAgent?: (messageId: string) => void
+  /** 'diagnostics'-mode only — navigates to the recommendation this message's feedback landed on. */
+  onTrackFeedback?: (recId: string) => void
 }
 
 /** Diagnostics-mode meta line — "LLM : X • TTS : Y", each label wrapped in an explanatory
@@ -424,6 +434,9 @@ export function RunConversationThread({
   showCallRecording = false,
   audioUrl,
   durationSecs,
+  recIdByMessage,
+  onCoachAgent,
+  onTrackFeedback,
 }: RunConversationThreadProps) {
   return (
     <div className="flex flex-col gap-lg">
@@ -439,7 +452,7 @@ export function RunConversationThread({
                 <ChatSystemLabel text={entry.text} />
               </div>
               {showCallRecording && entry.insertCallRecordingAfter && (
-                <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
+                <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-sm pt-sm">
                   <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
                   <CallRecordingPlayer
                     audioUrl={audioUrl}
@@ -460,6 +473,8 @@ export function RunConversationThread({
         }
 
         const withFeedback = meta === 'time' && entry.sender === 'business'
+        const withCoachAgent = meta === 'diagnostics' && entry.sender === 'business' && Boolean(onCoachAgent)
+        const recId = withCoachAgent ? recIdByMessage?.[entry.id] : undefined
 
         return (
           <div key={entry.id} className={showCallRecording && index === 0 ? 'pt-lg' : undefined}>
@@ -472,9 +487,38 @@ export function RunConversationThread({
               feedback={withFeedback ? feedbackForMessage?.(entry.id) ?? null : undefined}
               onFeedbackChange={withFeedback ? (value) => onFeedbackChange?.(entry.id, value) : undefined}
             >
-              {meta === 'time'
-                ? entry.time && <span className="text-small text-text-tertiary">{entry.time}</span>
-                : <DiagnosticsMeta entry={entry} />}
+              {meta === 'time' ? (
+                entry.time && <span className="text-small text-text-tertiary">{entry.time}</span>
+              ) : withCoachAgent ? (
+                <div className="flex w-full max-w-[85%] items-center gap-sm">
+                  <div className="min-w-0 flex-1">
+                    <DiagnosticsMeta entry={entry} />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-xs">
+                    {recId ? (
+                      <button
+                        type="button"
+                        onClick={() => onTrackFeedback?.(recId)}
+                        className="group flex items-center gap-xs text-small text-text-action"
+                      >
+                        <Icon name="track_changes" size={16} />
+                        <span className="group-hover:underline">Track your feedback</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onCoachAgent?.(entry.id)}
+                        className="group flex items-center gap-xs text-small text-text-action"
+                      >
+                        <Icon name="auto_awesome" size={16} />
+                        <span className="group-hover:underline">Coach agent</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <DiagnosticsMeta entry={entry} />
+              )}
             </ChatBubble>
           </div>
         )
@@ -496,12 +540,47 @@ export function RunDetailsPanel({
   durationSecs,
   callDetails,
   callDetailsContent,
+  agentName,
+  onTrackFeedback,
 }: RunDetailsPanelProps) {
   const [tab, setTab] = useState<'logs' | 'conversation' | 'call-details'>('logs')
   // The sticky waveform anchors to `top: 0` of this scroll container's padding edge — any
   // padding-top here would leave a permanent gap once it's stuck, so that spacing moves onto the
   // conversation thread's first entry instead (see `RunConversationThread`).
   const skipContainerTopPadding = showCallRecording && tab === 'conversation'
+
+  // Same "Coach agent" → "Track your feedback" flow as `LogDetailsPanel`'s call transcript —
+  // Coach agent opens the Share-feedback modal; once submitted, that message's link switches to
+  // "Track your feedback", pointing at the recommendation the feedback landed on. Only wired up
+  // when the caller passes `agentName` (e.g. the Reminder agent's run detail view).
+  const { submitFeedback } = useFeedbackRecommendationsStore()
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
+  const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  const handleShareFeedbackSubmit = (details: string) => {
+    if (!shareFeedbackMessageId || !agentName) return
+    const feedbackMessageId = shareFeedbackMessageId
+    setShareFeedbackMessageId(null)
+    setToastMessage('Feedback submitted! The agent will be trained on your input.')
+    setToastVisible(true)
+
+    const flaggedEntry = conversation.find((entry) => entry.kind === 'message' && entry.id === feedbackMessageId)
+    const recId = submitFeedback({
+      text: details,
+      agentName,
+      conversation: {
+        name: agentName,
+        message: details,
+        channel: 'Voice',
+        date: flaggedEntry?.kind === 'message' ? flaggedEntry.time ?? '' : '',
+        location: '',
+      },
+      messageId: feedbackMessageId,
+    })
+    setRecIdByMessage((prev) => ({ ...prev, [feedbackMessageId]: recId }))
+  }
 
   return (
     <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
@@ -522,7 +601,7 @@ export function RunDetailsPanel({
       )}
 
       {showTabs && (
-        <div className="shrink-0 border-b border-border px-[15px]">
+        <div className={`shrink-0 border-b border-border px-[15px] ${showHeader ? '' : 'pt-sm'}`}>
           <Tabs
             tabs={[
               { id: 'logs', label: 'Logs' },
@@ -535,7 +614,11 @@ export function RunDetailsPanel({
         </div>
       )}
 
-      <div className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-lg ${skipContainerTopPadding ? '' : 'pt-lg'}`}>
+      <div
+        className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-lg ${
+          skipContainerTopPadding ? '' : showHeader ? 'pt-lg' : 'pt-2xl'
+        }`}
+      >
         {(!showTabs || tab === 'logs') ? (
           <LogsTab steps={steps} />
         ) : tab === 'call-details' && (callDetails || callDetailsContent) ? (
@@ -548,9 +631,23 @@ export function RunDetailsPanel({
             showCallRecording={showCallRecording}
             audioUrl={audioUrl}
             durationSecs={durationSecs}
+            recIdByMessage={recIdByMessage}
+            onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
+            onTrackFeedback={onTrackFeedback}
           />
         )}
       </div>
+
+      {agentName && (
+        <>
+          <ShareFeedbackModal
+            open={shareFeedbackMessageId !== null}
+            onClose={() => setShareFeedbackMessageId(null)}
+            onSubmit={handleShareFeedbackSubmit}
+          />
+          <Toast message={toastMessage} visible={toastVisible} onClose={() => setToastVisible(false)} />
+        </>
+      )}
     </div>
   )
 }

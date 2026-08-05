@@ -34,7 +34,7 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
 ]
 
 const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -106,6 +106,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
         <DataTable
           columns={REMINDER_LOG_COLUMNS}
           data={REMINDER_LOGS_ROWS}
+          onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
             label: 'View run',
