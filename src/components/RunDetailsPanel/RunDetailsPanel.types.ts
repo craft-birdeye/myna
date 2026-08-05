@@ -63,4 +63,9 @@ export interface RunDetailsPanelProps {
   /** Overrides the built-in `CallDetailsTab` rendering of `callDetails` with arbitrary content.
    *  Also shows the "Call details" tab on its own, even without `callDetails` set. */
   callDetailsContent?: ReactNode
+  /** Agent instance name — enables the Coach agent / Track your feedback flow on business bubbles
+   *  in the Conversation tab (matching `LogDetailsPanel`) and tags any submitted feedback with it. */
+  agentName?: string
+  /** Navigates to the recommendation a message's feedback landed on (see agentName). */
+  onTrackFeedback?: (recommendationId: string) => void
 }
