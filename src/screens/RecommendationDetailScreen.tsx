@@ -36,6 +36,8 @@ interface RecommendationDetailScreenProps {
    *  prompt (pre-filled) instead of requiring a separate "Track your feedback" click first. */
   autoOpenFeedbackPrefill?: string | null
   onAutoOpenFeedbackConsumed?: () => void
+  /** Hides the "Reset to original" header button (e.g. for the Reminder agent). */
+  hideResetToOriginal?: boolean
 }
 
 // ── Confirm accept modal ──────────────────────────────────────────────────────
@@ -2012,6 +2014,7 @@ export function RecommendationDetailScreen({
   onBack,
   autoOpenFeedbackPrefill,
   onAutoOpenFeedbackConsumed,
+  hideResetToOriginal = false,
 }: RecommendationDetailScreenProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
   const { overrides, submitRefinement, setRecommendationStatus, resetOverrides } = useRecommendationOverridesStore()
@@ -2161,17 +2164,19 @@ export function RecommendationDetailScreen({
           />
         </div>
 
-        <div className="flex shrink-0 items-center gap-sm">
-          <button
-            type="button"
-            aria-label="Reset to original"
-            title="Reset to original"
-            onClick={handleResetToOriginal}
-            className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-          >
-            <Icon name="restart_alt" size={18} />
-          </button>
-        </div>
+        {!hideResetToOriginal && (
+          <div className="flex shrink-0 items-center gap-sm">
+            <button
+              type="button"
+              aria-label="Reset to original"
+              title="Reset to original"
+              onClick={handleResetToOriginal}
+              className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            >
+              <Icon name="restart_alt" size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Body */}

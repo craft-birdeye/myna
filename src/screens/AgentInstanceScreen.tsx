@@ -411,6 +411,7 @@ export function AgentInstanceScreen({
             onBack={() => setSelectedRecommendationId(null)}
             autoOpenFeedbackPrefill={pendingFeedbackPrefill}
             onAutoOpenFeedbackConsumed={() => setPendingFeedbackPrefill(null)}
+            hideResetToOriginal={agentName === 'Reminder agent'}
           />
         </div>
       </div>
