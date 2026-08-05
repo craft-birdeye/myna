@@ -3,6 +3,7 @@ import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
 import { Tooltip } from '../Tooltip/Tooltip'
 import { SendIcon } from '../../assets/SendIcon'
+import { CanvasNodeTypeIcon } from '../../workflow/Molecules/Canvas/CanvasNodeIcons'
 import { PromptComposerProps } from './PromptComposer.types'
 
 export function PromptComposer({
@@ -17,6 +18,7 @@ export function PromptComposer({
   onRemoveAttachment,
   onAttach,
   onFocus,
+  onBlur,
   onClick,
   className = '',
 }: PromptComposerProps) {
@@ -33,6 +35,11 @@ export function PromptComposer({
               key={item.id}
               kind={item.kind}
               label={item.label}
+              swatchIcon={
+                item.canvasNodeType
+                  ? <CanvasNodeTypeIcon type={item.canvasNodeType} />
+                  : undefined
+              }
               onRemove={onRemoveAttachment ? () => onRemoveAttachment(item.id) : undefined}
             />
           ))}
@@ -41,6 +48,7 @@ export function PromptComposer({
       <textarea
         value={value}
         onFocus={onFocus}
+        onBlur={onBlur}
         onClick={onClick}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
@@ -52,6 +60,7 @@ export function PromptComposer({
         rows={rows}
         disabled={disabled}
         placeholder={placeholder}
+        data-ai-composer-input=""
         className="scrollbar-light min-h-9 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary disabled:cursor-not-allowed"
       />
       <div className="flex items-center justify-between align-bottom">

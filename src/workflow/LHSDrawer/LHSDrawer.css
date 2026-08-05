@@ -25,11 +25,9 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  align-items: center;
-  /* 24px top padding matches the create-flow's header (AgentDetailScreen's
-     docked + expanded panels use the same value for visual parity). */
-  padding: 24px 24px 20px;
+  gap: 12px;
+  align-items: stretch;
+  padding: 16px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
   position: relative;
@@ -67,8 +65,9 @@
 .lhs-drawer__tabs {
   display: none;
   width: 100%;
-  align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
   background: #fff;
 }
 
@@ -76,21 +75,33 @@
   display: flex;
 }
 
-.lhs-drawer__tab {
+.lhs-drawer__tabs-list {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  min-width: 0;
   flex: 1;
+}
+
+.lhs-drawer__tab {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 0;
+  margin: 0;
+  padding: 0 0 10px;
   background: transparent;
   border: none;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 400;
   font-family: 'Roboto', sans-serif;
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #555;
+  position: relative;
 }
 
 .lhs-drawer__tab--active {
@@ -101,11 +112,14 @@
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
-  height: 32px;
-  padding: 0 8px;
+  margin: 0;
+  padding: 0;
+  height: 20px;
+  line-height: 20px;
   white-space: nowrap;
+  text-align: left;
 }
 
 .lhs-drawer__tab-ai-trigger {
@@ -164,14 +178,23 @@
 }
 
 .lhs-drawer__tab-underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
   display: block;
-  width: 100%;
   height: 2px;
   background: transparent;
+  border-radius: 1px 1px 0 0;
 }
 
 .lhs-drawer__tab--active .lhs-drawer__tab-underline {
   background: #1976d2;
+}
+
+/* ─── Tab content area ─── */
+.lhs-drawer__ai-body {
+  padding-top: 0;
 }
 
 .lhs-drawer__body {
@@ -180,13 +203,15 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 20px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
-  padding-top: 8px;
-  padding-right: 8px;
-  padding-left: 8px;
+  padding-top: 0;
+  padding-right: 0;
+  padding-left: 0;
+  text-align: left;
   scrollbar-width: 4px;
   scrollbar-color: #ccd5e4 transparent;
 }
@@ -233,15 +258,22 @@
   width: 100% !important;
 }
 
-/* ─── Collapse button inside search row ─── */
-.lhs-drawer__search > span {
+/* ─── Tab actions (fullscreen + collapse) — right-aligned ─── */
+.lhs-drawer__tab-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
+  margin-left: auto;
+  /* Sit with the tab labels (above the shared bottom rule + 10px tab padding) */
+  align-self: flex-end;
+  margin-bottom: 6px;
 }
 
 .lhs-drawer__collapse-btn {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -256,14 +288,14 @@
 }
 
 .lhs-drawer__collapse-btn:hover {
-  background: #f2f4f7;
+  background: #f5f5f5;
   color: #212121;
 }
 
 .lhs-drawer__collapse-btn .material-symbols-outlined {
-  font-size: 18px !important;
-  width: 18px;
-  height: 18px;
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
   line-height: 1;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
@@ -308,7 +340,9 @@
   width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 20px;
+  text-align: left;
 }
 
 .lhs-drawer__sections .accordionContentWrap {
@@ -607,6 +641,11 @@
   z-index: 200 !important;
 }
 
+.lhs-drawer__dropdown-zone--dragging {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .lhs-drawer__dropdown-bridge {
   width: 8px !important;
   min-height: 100% !important;
@@ -694,11 +733,10 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  /* Centers the plain welcome bubble in the available space instead of
-     leaving it pinned to the top with a dead gap above the composer. A real
-     transcript overrides this via its own margin-top: auto (below), which
-     still bottom-anchors it as the thread grows. */
-  justify-content: center;
+  /* Pin content to the bottom (near the composer). Prefer margin-top: auto on
+     children over justify-content: flex-end — the latter clips the top of an
+     overflowing scroll container. */
+  justify-content: flex-start;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -707,11 +745,9 @@
   scrollbar-color: #ccd5e4 transparent;
 }
 
-/* `justify-content: flex-end` clips the top of an overflowing scroll container,
-   so bottom-align via auto margin instead. */
-/* Bottom-anchors a real transcript (chat history hugs the bottom); the plain
-   welcome bubble has nothing to anchor against and should sit near the top. */
-.lhs-drawer__ai-chat-area > .lhs-drawer__ai-transcript:first-child {
+/* Bottom-anchor the welcome bubble and any real transcript above the composer. */
+.lhs-drawer__ai-chat-area > .lhs-drawer__ai-transcript:first-child,
+.lhs-drawer__ai-chat-area > .ai-chat-bubble:first-child {
   margin-top: auto;
 }
 
@@ -859,4 +895,8 @@
   font-size: 12px;
   line-height: 16px;
   color: var(--color-text-secondary, #6b7280);
+}
+
+.lhs-drawer__search > span {
+  flex-shrink: 0;
 }

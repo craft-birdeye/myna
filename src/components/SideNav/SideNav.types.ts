@@ -22,6 +22,8 @@ export interface NavSection {
   defaultExpanded?: boolean
   /** For flat leaf sections (no items): show an external-link icon. */
   external?: boolean
+  /** Optional badge next to the section label (e.g. "New"). */
+  badge?: string
 }
 
 export interface SideNavProps {

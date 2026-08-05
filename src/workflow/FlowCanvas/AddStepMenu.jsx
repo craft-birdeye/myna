@@ -28,7 +28,7 @@ const ITEM_DESCRIPTIONS = {
   Delay: 'Wait for a specific time or event',
 };
 
-const AI_ITEMS = new Set(['Review responder']);
+const AI_ITEMS = new Set(['Triage review', 'Review responder']);
 
 function SearchField({ value, onChange, autoFocus }) {
   return (
@@ -62,7 +62,26 @@ function NavRow({ icon, label, hasChevron, active, onClick }) {
   );
 }
 
+function itemLabel(item) {
+  return typeof item === 'string' ? item : (item?.label ?? '');
+}
+
+function itemDescription(item) {
+  return typeof item === 'string' ? '' : (item?.description ?? '');
+}
+
 function DetailRow({ title, description, hasAi, onClick }) {
+  const descRef = useRef(null);
+  const [tip, setTip] = useState(null);
+
+  function showTip() {
+    const el = descRef.current;
+    if (!el || !description) return;
+    if (el.scrollHeight <= el.clientHeight + 1) return;
+    const r = el.getBoundingClientRect();
+    setTip({ text: description, top: r.bottom + 6, left: r.left + r.width / 2 });
+  }
+
   return (
     <button type="button" className="add-step-menu__detail-row" onClick={onClick}>
       <div className="add-step-menu__detail-text">
@@ -76,9 +95,27 @@ function DetailRow({ title, description, hasAi, onClick }) {
           )}
         </div>
         {description && (
-          <span className="add-step-menu__detail-desc">{description}</span>
+          <span
+            ref={descRef}
+            className="add-step-menu__detail-desc"
+            onMouseEnter={showTip}
+            onMouseLeave={() => setTip(null)}
+          >
+            {description}
+          </span>
         )}
       </div>
+      {tip &&
+        createPortal(
+          <span
+            className="add-step-menu__desc-tooltip"
+            role="tooltip"
+            style={{ top: tip.top, left: tip.left }}
+          >
+            {tip.text}
+          </span>,
+          document.body,
+        )}
     </button>
   );
 }
@@ -103,7 +140,7 @@ export default function AddStepMenu({
   // Lock horizontal origin when the menu opens so expand/hover never shifts Branch/Delay.
   const originLeftRef = useRef(null);
 
-  const taskCards = useMemo(() => getAddStepTaskCards(product), [product]);
+  const taskCards = useMemo(() => getAddStepTaskCards(product, agentName), [product, agentName]);
   const controlCards = useMemo(() => getAddStepControlCards(), []);
   const subItemsMap = useMemo(() => getTaskSubItems(product, agentName), [product, agentName]);
 
@@ -152,11 +189,13 @@ export default function AddStepMenu({
   const activeGroup = activeSubKey ? subItemsMap[activeSubKey] : null;
   const rightQ = rightSearch.trim().toLowerCase();
   const disabledItems = new Set(['In call text']);
-  const detailItems = (activeGroup?.items || []).filter(
-    (item) =>
-      !disabledItems.has(item) &&
-      (!rightQ || item.toLowerCase().includes(rightQ)),
-  );
+  const detailItems = (activeGroup?.items || []).filter((item) => {
+    const label = itemLabel(item);
+    return (
+      !disabledItems.has(label) &&
+      (!rightQ || label.toLowerCase().includes(rightQ) || itemDescription(item).toLowerCase().includes(rightQ))
+    );
+  });
 
   const expanded = Boolean(activeGroup);
   const menuHeight = 360;
@@ -254,17 +293,21 @@ export default function AddStepMenu({
         <div className="add-step-menu__pane add-step-menu__pane--detail">
           <SearchField value={rightSearch} onChange={setRightSearch} autoFocus />
           <div className="add-step-menu__detail-list">
-            {detailItems.map((item) => (
+            {detailItems.map((item) => {
+              const label = itemLabel(item);
+              const description = itemDescription(item) || ITEM_DESCRIPTIONS[label];
+              return (
               <DetailRow
-                key={item}
-                title={item}
-                description={ITEM_DESCRIPTIONS[item]}
-                hasAi={AI_ITEMS.has(item)}
+                key={label}
+                title={label}
+                description={description}
+                hasAi={AI_ITEMS.has(label)}
                 onClick={() =>
-                  pickLeaf('task', activeCard?.dragLabel || activeCard?.label || activeSubKey, item)
+                  pickLeaf('task', activeCard?.dragLabel || activeCard?.label || activeSubKey, label)
                 }
               />
-            ))}
+              );
+            })}
             {detailItems.length === 0 && (
               <p className="add-step-menu__empty">No matching items</p>
             )}
