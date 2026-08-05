@@ -2306,7 +2306,7 @@ export default function AgentBuilder({
           {!hideLhs && !aiChatExpanded && (
             <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
               <LHSDrawer
-                defaultTab="Create manually"
+                defaultTab="Create with AI"
                 showTabs={!viewOnly}
                 defaultOpenSection={defaultOpenSection}
                 forceOpenSection={lhsForceOpenSection}

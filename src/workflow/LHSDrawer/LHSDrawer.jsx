@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FormInput, Tooltip } from '../elemental-stubs';
 import NodeType from '../Organisms/Accordion/NodeType/NodeType';
 import AIChatBubble from '../Molecules/AIChatBubble/AIChatBubble';
-import { PromptComposer } from '../../components';
+import { PromptComposer, CreateAgentLanding } from '../../components';
 
 // Uploaded procedure.svg icon — used for all procedure category cards
 const ProcedureSvgIcon = () => (
@@ -887,8 +887,9 @@ export default function LHSDrawer({
         </div>
       ) : (
         <div className="lhs-drawer__ai-body">
+          {aiTranscript?.trail?.length || aiTranscript?.prompt ? (
+            <>
           <div className="lhs-drawer__ai-chat-area">
-            {aiTranscript?.trail?.length || aiTranscript?.prompt ? (
               <div className="lhs-drawer__ai-transcript">
                 {aiTranscript.trail?.length
                   ? aiTranscript.trail.map((turn, i) => {
@@ -971,20 +972,25 @@ export default function LHSDrawer({
                     </>
                   )}
               </div>
-            ) : (
-              <AIChatBubble
-                message={`Hi! I'm here to help you build your ${agentName || 'Review response'} agent. Tell me what you'd like to build`}
-                options={AI_OPTIONS}
-              />
-            )}
           </div>
-          <PromptComposer
-            value={aiInputValue}
-            onChange={setAiInputValue}
-            onSend={() => setAiInputValue('')}
-            placeholder="What would you like to build? For example: Review response agent replying autonomously."
-            rows={2}
-          />
+              <PromptComposer
+                value={aiInputValue}
+                onChange={setAiInputValue}
+                onSend={() => setAiInputValue('')}
+                placeholder="What would you like to build? For example: Review response agent replying autonomously."
+                rows={2}
+              />
+            </>
+          ) : (
+            <CreateAgentLanding
+              greeting={`Hi! I'm here to help you build your ${agentName || 'Review response'} agent. Tell me what you'd like to build`}
+              options={AI_OPTIONS.map((label) => ({ label, onSelect: () => setAiInputValue(label) }))}
+              value={aiInputValue}
+              onChange={setAiInputValue}
+              onSend={() => setAiInputValue('')}
+              placeholder="What would you like to build? For example: Review response agent replying autonomously."
+            />
+          )}
         </div>
       )}
 
