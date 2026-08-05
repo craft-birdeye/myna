@@ -34,7 +34,7 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
 ]
 
 const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
