@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  AttachMenuPopover,
   Chip,
-  ComposerAttachPopover,
   CustomizeColumnsDrawer,
   DataTable,
+  FilesModal,
   FilterPanel,
   HeaderSearchField,
   Icon,
@@ -11,7 +12,9 @@ import {
   InfoCard,
   InfoCardListItem,
   InfoTooltip,
+  MediaLibraryModal,
   MetricTiles,
+  PromptComposer,
   RefChip,
   Tabs,
   Toast,
@@ -35,9 +38,11 @@ import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
+import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
+import { AiAgentIcon } from '../assets/AiAgentIcon'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { rememberCreateAgentChat } from '../data/createAgentChatStore'
+import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -54,6 +59,9 @@ interface AgentDetailScreenProps {
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   product?: string
+  /** Set (e.g. by the canvas eye icon) to reopen a specific instance + tab after a remount. */
+  pendingInstanceView?: { instanceName: string; tab: string } | null
+  onPendingInstanceViewConsumed?: () => void
   /** Bubbled up from `AgentInstanceScreen` — see its own doc comment. */
   onFullBleedDetailActiveChange?: (active: boolean) => void
   /** Set by the host app when a "Track your feedback" link (Inbox) should open a specific
@@ -590,58 +598,26 @@ const JOB_TO_PROCEDURE: Record<string, string> = {
 }
 
 
-// Bobbing ghost mascot — bluish-gray only, no color — shown for the final
-// "building the agent" step (see the showProgress gate below).
-function GhostLoader() {
+// Bouncing-dots "thinking" indicator — matches the Recommendation detail chat's TypingDots.
+function TypingDots() {
   return (
-    <div className="flex flex-col items-start" aria-hidden>
-      <div className="ghost-float text-[#e2e5e9]">
-        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-          <path
-            d="M32 4C18 4 8 14 8 28v20c0 1.5 1.7 2.4 3 1.5l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1.3.9 3-.1 3-1.5V28C56 14 46 4 32 4z"
-            fill="currentColor"
-          />
-          <circle cx="24" cy="27" r="3" fill="#9ca3af" />
-          <circle cx="40" cy="27" r="3" fill="#9ca3af" />
-        </svg>
-      </div>
-      <div className="ghost-shadow-pulse mt-xs h-[6px] w-8 rounded-full bg-[#d1d5db]" />
+    <div className="flex items-center gap-[5px]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="size-[7px] rounded-full bg-[#6b9fd4]"
+          style={{ animation: 'sim-bounce 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }}
+        />
+      ))}
     </div>
   )
 }
 
-function AgentBuildLoaderRow({
-  label,
-  animKey,
-  showProgress = false,
-  variant = 'spinner',
-}: {
-  label: string
-  animKey?: number | string
-  showProgress?: boolean
-  variant?: 'spinner' | 'sparkle'
-}) {
+function AgentBuildLoaderRow() {
   return (
-    <div className="agent-build-fade mt-lg flex flex-col gap-sm" key={animKey}>
-      {showProgress && <GhostLoader />}
-      <div className="flex items-center gap-xs text-small text-text-secondary">
-        {!showProgress && variant === 'sparkle' && (
-          <Icon name="auto_awesome" size={16} className="sparkle-twinkle text-ai-brand" fill />
-        )}
-        {!showProgress && variant === 'spinner' && (
-          <Icon name="progress_activity" size={16} className="animate-spin text-text-icon" />
-        )}
-        <span>{label}</span>
-        <span className="inline-flex items-center gap-px" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="animate-pulse size-1 rounded-full bg-text-secondary"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </span>
-      </div>
+    <div className="agent-build-fade mt-lg flex items-center gap-md">
+      <AiAvatarChatIcon size={24} className="shrink-0" />
+      <TypingDots />
     </div>
   )
 }
@@ -666,19 +642,19 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
   }
 
   const btn =
-    'flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary'
+    'flex size-6 items-center justify-center rounded-sm text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-secondary'
 
   return (
-    <div className={`agent-build-fade mt-sm flex items-center gap-xs ${className ?? ''}`}>
+    <div className={`msg-actions-row mt-xs flex items-center gap-xs opacity-0 transition-opacity ${className ?? ''}`}>
       <Tooltip content="Good response" variant="brief">
         <button
           type="button"
           aria-label="Good response"
           aria-pressed={feedback === 'up'}
           onClick={() => setFeedback((prev) => (prev === 'up' ? null : 'up'))}
-          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-primary' : ''}`}
+          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-secondary' : ''}`}
         >
-          <Icon name="thumb_up" size={20} fill={feedback === 'up'} />
+          <Icon name="thumb_up" size={15} fill={feedback === 'up'} />
         </button>
       </Tooltip>
       <Tooltip content="Bad response" variant="brief">
@@ -687,9 +663,9 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           aria-label="Bad response"
           aria-pressed={feedback === 'down'}
           onClick={() => setFeedback((prev) => (prev === 'down' ? null : 'down'))}
-          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-primary' : ''}`}
+          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-secondary' : ''}`}
         >
-          <Icon name="thumb_down" size={20} fill={feedback === 'down'} />
+          <Icon name="thumb_down" size={15} fill={feedback === 'down'} />
         </button>
       </Tooltip>
       <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief">
@@ -699,7 +675,7 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           onClick={handleCopy}
           className={btn}
         >
-          <Icon name={copied ? 'check' : 'copy_all'} size={20} />
+          <Icon name={copied ? 'check' : 'copy_all'} size={15} />
         </button>
       </Tooltip>
     </div>
@@ -988,12 +964,6 @@ const REMINDER_CONNECT_PILLS = ['Yes, correct', 'No, make changes'] as const
 const REMINDER_EMAIL_REPLY =
   "Yes. Oh — and here's the reminder email we send manually today. Keep the same tone."
 
-const REMINDER_EMAIL_FILE: AttachItem = {
-  id: 'lakeside-reminder-email',
-  kind: 'file',
-  label: 'lakeside-reminder-email.docx',
-}
-
 const REMINDER_AFTER_EMAIL_THOUGHTS_TEXT = `A single small document — Extracting: warm, first-name tone; short paragraphs; includes the parking-instructions link and the "reply CONFIRM" convention. I'll reuse that voice and structure for both scheduled reminder messages, and keep their existing CONFIRM keyword as the confirmation mechanism for text.
 
 Everything is now resolved or defaultable. Tool check against the catalog: email + text reminders ✓ (reminder tool), voice calling ✓, handoff to the Front desk agent ✓ (it's live). No missing integrations. Defaults to flag at review: calling window 9am–7pm patient-local (from "no weird hours"), caller ID = clinic main line, stop conditions, booked-inside-window skip rule, English only. Time to build — this one is fast, no need to tell her to leave.`
@@ -1032,13 +1002,6 @@ const FRONTDESK_BUILD_CARD = {
 // Pre-filled into the composer when John clicks the box after the draft review.
 const FINAL_REVIEW_PROMPT =
   'Before I accept — the greeting is too generic. Make it "Thank you for calling Riverside Family Clinic, this is Ava. How can I help?" And let me test the booking flow.'
-
-// The docs John attaches when he responds to the "add your materials" step.
-const JOHN_DOCS_FILES: { id: string; label: string }[] = [
-  { id: 'john-doc-calls', label: 'front-desk-calls-june.zip' },
-  { id: 'john-doc-faq', label: 'insurance-faq.pdf' },
-  { id: 'john-doc-sop', label: 'front-desk-SOP.docx' },
-]
 
 // John's response after the docs prompt: right-aligned attachment chips —
 // same right-side placement as the first user message, proper RefChip attachments.
@@ -1245,24 +1208,14 @@ function CreateAgentThinkingPanel({
   )
 }
 
-// Intro "Thinking" loader — deliberately mirrors the Thoughts header layout
-// (same mt-3xl / gap-sm / size-18 icon / text-body) so the icon and label sit
-// in the exact same spot before and after loading; only the content swaps.
-function IntroThinkingLoaderRow({ label, animKey }: { label: string; animKey?: string }) {
+// Intro "Thinking" loader — sits in the same slot the Thoughts row (bolt icon + label) takes
+// over once loading finishes.
+function IntroThinkingLoaderRow() {
   return (
     <div className="mt-3xl flex flex-col gap-sm">
-      <div key={animKey} className="agent-build-fade flex items-center gap-sm">
-        <SparkleLoader size={18} className="shrink-0" />
-        <span className="text-body text-text-secondary">{label}</span>
-        <span className="inline-flex items-center gap-px" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="animate-pulse size-1 rounded-full bg-text-secondary"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </span>
+      <div className="agent-build-fade flex items-center gap-md">
+        <AiAvatarChatIcon size={24} className="shrink-0" />
+        <TypingDots />
       </div>
     </div>
   )
@@ -1491,21 +1444,15 @@ const CREATE_AGENT_INTRO_PARAGRAPHS = [
 ]
 
 function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
       {/* Sparkle avatar, left-aligned to sit in the same column as the Thoughts icon.
           Animates while the reply types, then rests. */}
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_INTRO_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -1513,20 +1460,14 @@ function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
 }
 
 function ReminderCreateIntroReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={REMINDER_CREATE_INTRO_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -2263,10 +2204,8 @@ function ReminderCadenceFollowUp({
   }, [stage])
 
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={stage !== 'done'} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
@@ -2309,20 +2248,14 @@ function ReminderCadenceFollowUp({
 }
 
 function ReminderHandoffFollowUp({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={REMINDER_HANDOFF_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -2336,21 +2269,15 @@ function ReminderBuildReply({
   hasEmailAttachment: boolean
   onComplete?: () => void
 }) {
-  const [done, setDone] = useState(false)
   const text = hasEmailAttachment ? REMINDER_BUILD_REPLY_WITH_EMAIL : REMINDER_BUILD_REPLY_DEFAULT
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={[text]}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -2375,10 +2302,8 @@ function ReminderPostDraftFollowUp({
 
   return (
     <>
-      <div className="agent-build-fade mt-3xl flex gap-sm">
-        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-          <SparkleLoader size={14} spinning={!done} />
-        </span>
+      <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+        <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
         <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
           <TypedParagraphs
             fast
@@ -2390,9 +2315,6 @@ function ReminderPostDraftFollowUp({
           />
         </div>
       </div>
-      {done && (
-        <MessageActions className="ml-3xl" copyText={REMINDER_POST_DRAFT_REPLY} />
-      )}
       {done && !answer && (
         <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
           {pills.map((label) => (
@@ -2406,6 +2328,9 @@ function ReminderPostDraftFollowUp({
             </button>
           ))}
         </div>
+      )}
+      {done && (
+        <MessageActions className="ml-3xl" copyText={REMINDER_POST_DRAFT_REPLY} />
       )}
       {answer && <UserBubble>{answer}</UserBubble>}
     </>
@@ -2736,12 +2661,6 @@ function ReminderAfterRescheduleBeat({
           }}
         />
       )}
-      {replyDone && (
-        <MessageActions
-          className="ml-3xl"
-          copyText={REMINDER_HANDOFF_REPLY_PARAGRAPHS.join('\n\n')}
-        />
-      )}
       {replyDone && !connectAnswer && (
         <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
           {REMINDER_CONNECT_PILLS.map((label) => (
@@ -2755,6 +2674,12 @@ function ReminderAfterRescheduleBeat({
             </button>
           ))}
         </div>
+      )}
+      {replyDone && (
+        <MessageActions
+          className="ml-3xl"
+          copyText={REMINDER_HANDOFF_REPLY_PARAGRAPHS.join('\n\n')}
+        />
       )}
       {connectAnswer && <UserBubble>{connectAnswer}</UserBubble>}
       {connectAttachments.length > 0 && <UserDocsMessage files={connectAttachments} />}
@@ -2859,19 +2784,13 @@ const CREATE_AGENT_DOCS_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterDocsReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_DOCS_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -2911,10 +2830,8 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
   }, [stage])
 
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={stage !== 'done'} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_DRAFT_READY_INTRO}
@@ -2970,19 +2887,13 @@ const CREATE_AGENT_REFILL_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterRefillReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -3024,19 +2935,13 @@ const CREATE_AGENT_TEST_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
-  const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <SparkleLoader size={14} spinning={!done} />
-      </span>
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_TEST_REPLY_PARAGRAPHS}
-          onDone={() => {
-            setDone(true)
-            onComplete?.()
-          }}
+          onDone={onComplete}
         />
       </div>
     </div>
@@ -3310,14 +3215,18 @@ function FrontdeskBuildingCard({
   refillAdded,
   onDone,
   persisted = false,
+  onViewWorkflow,
   openProcedureName,
   onOpenProcedure,
+  workflowVisible = false,
 }: {
   refillAdded: boolean
   onDone?: () => void
   persisted?: boolean
+  onViewWorkflow?: () => void
   openProcedureName: string | null
   onOpenProcedure: (name: string) => void
+  workflowVisible?: boolean
 }) {
   const steps = DRAFT_BUILD_STATUS_LABELS.map((label, i) => ({ id: `fd-draft-${i}`, label }))
   const [step, setStep] = useState(persisted ? steps.length : 0)
@@ -3365,12 +3274,23 @@ function FrontdeskBuildingCard({
         <div className="flex items-start gap-sm">
           <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-sm">
-              <span className="text-body text-text-primary">{FRONTDESK_BUILD_CARD.title}</span>
-              {done && (
-                <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
-                  Draft
-                </span>
+            <div className="flex items-center justify-between gap-sm">
+              <div className="flex min-w-0 items-center gap-sm">
+                <span className="text-body text-text-primary">{FRONTDESK_BUILD_CARD.title}</span>
+                {done && (
+                  <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                    Draft
+                  </span>
+                )}
+              </div>
+              {done && !workflowVisible && (
+                <button
+                  type="button"
+                  onClick={onViewWorkflow}
+                  className="shrink-0 rounded-sm text-body text-text-action hover:underline"
+                >
+                  View in agent builder
+                </button>
               )}
             </div>
             <p className="mt-xs text-small text-text-secondary">{FRONTDESK_BUILD_CARD.description}</p>
@@ -3484,17 +3404,19 @@ function ProcedurePreviewPanel({
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card">
-      <RHSSidePanelHeader
-        title={procedure.name}
-        onPreview={undefined}
-        onClose={onClose}
-        showActions={false}
-        showMoreMenu={false}
-      />
+      <div className="[&>div]:!p-xl">
+        <RHSSidePanelHeader
+          title={procedure.name}
+          onPreview={undefined}
+          onClose={onClose}
+          showActions={false}
+          showMoreMenu={false}
+        />
+      </div>
 
       <div
         ref={bodyScrollRef}
-        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-md py-lg"
+        className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xl overflow-y-auto px-xl pb-3xl pt-xl"
       >
         <div className="flex flex-col gap-sm">
           <p className="text-small text-text-secondary">
@@ -3689,6 +3611,10 @@ function HealthcareFrontdeskCreateAgentLive({
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
   const [prompt, setPrompt] = useState('')
+  const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
+  const [filesModalOpen, setFilesModalOpen] = useState(false)
+  const landingImageInputRef = useRef<HTMLInputElement | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [phase, setPhase] = useState<CreatePhase>('ask-docs')
   const [docsAnswer, setDocsAnswer] = useState('')
@@ -3741,9 +3667,16 @@ function HealthcareFrontdeskCreateAgentLive({
   const [openProcedureName, setOpenProcedureName] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
 
+  // The header row's spacer (which keeps the 720px chat column centered) needs to
+  // reserve the same width whenever EITHER the inline procedure panel OR the
+  // Test-agent preview panel occupies the RHS slot — they share the same visual slot.
+  useEffect(() => {
+    onInlineProcedureOpenChange?.((Boolean(openProcedureName) || previewOpen) && !workflowVisible)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openProcedureName, previewOpen, workflowVisible])
+
   const handleOpenProcedure = (name: string | null) => {
     setOpenProcedureName(name)
-    onInlineProcedureOpenChange?.(Boolean(name) && !workflowVisible)
     if (!onCanvasProcedureChange) return
     // Full-page conversation → inline procedure panel beside the chat.
     // Workflow canvas open → procedure opens on the canvas RHS instead.
@@ -3785,6 +3718,9 @@ function HealthcareFrontdeskCreateAgentLive({
   const threadRef = useRef<HTMLDivElement | null>(null)
   const threadScrollRef = useRef<HTMLDivElement | null>(null)
   const [threadOverflowing, setThreadOverflowing] = useState(false)
+  // "Scroll to latest" should only show once the user has actually scrolled away
+  // from the bottom — not just whenever the thread is tall enough to overflow.
+  const [isScrolledUp, setIsScrolledUp] = useState(false)
   // When true, the auto-follow ResizeObserver ignores height changes. Set briefly
   // whenever the user manually toggles a Thoughts panel so opening/closing it
   // never moves the page.
@@ -3988,6 +3924,20 @@ function HealthcareFrontdeskCreateAgentLive({
     return () => observer.disconnect()
   }, [submitted])
 
+  // Track whether the user has scrolled away from the bottom, so the chevron only
+  // appears once there's actually somewhere to scroll back down to.
+  useEffect(() => {
+    const scrollEl = threadScrollRef.current
+    if (!scrollEl) return
+    const handleScroll = () => {
+      const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight
+      setIsScrolledUp(distanceFromBottom > 40)
+    }
+    handleScroll()
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
+    return () => scrollEl.removeEventListener('scroll', handleScroll)
+  }, [submitted])
+
   // Auto-follow: while the conversation is actively being generated (loaders and
   // typed text keep growing the thread), keep it pinned to the bottom. Manual
   // Thoughts toggles set suppressAutoScrollRef so they never move the page.
@@ -4183,45 +4133,8 @@ function HealthcareFrontdeskCreateAgentLive({
     advanceWithThinking('ask-confirm-create')
   }
 
-  const handleAttachSelect = (item: AttachItem) => {
-    // "+ Add file" stands in for a real file picker in this prototype.
-    const resolved: AttachItem =
-      item.id === 'add-file'
-        ? { id: `file-${Date.now()}`, kind: 'file', label: 'Front-desk-call-transcripts.pdf' }
-        : item
-    setAttachments((prev) => (prev.some((a) => a.id === resolved.id) ? prev : [...prev, resolved]))
-  }
-
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id))
-  }
-
-  const handlePaperclipAttach = () => {
-    // Reminder create flow: plus button attaches the lakeside reminder email sample.
-    if (isReminderFlow && handoffFollowDone && !connectAnswer) {
-      setAttachments((prev) =>
-        prev.some((a) => a.label === REMINDER_EMAIL_FILE.label)
-          ? prev
-          : [...prev, REMINDER_EMAIL_FILE],
-      )
-      return
-    }
-    // During the docs step, the paperclip stands in for John adding his files.
-    const items: AttachItem[] =
-      phase === 'ask-docs'
-        ? JOHN_DOCS_FILES.map((f) => ({ id: f.id, kind: 'file', label: f.label }))
-        : [
-            'Call transcripts. April to July 2026.',
-            'Escalation matrix / triage protocol',
-            'On-call staff directory / routing contacts',
-          ].map((label) => ({ id: `paperclip-${Date.now()}-${label}`, kind: 'file', label }))
-    setAttachments((prev) => {
-      const next = [...prev]
-      items.forEach((item) => {
-        if (!next.some((a) => a.label === item.label)) next.push(item)
-      })
-      return next
-    })
   }
 
   const canSendFollowUp =
@@ -4288,7 +4201,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
   if (submitted) {
     return (
-      <div className="relative flex h-full min-h-0 w-full max-w-[1600px] flex-1 justify-center gap-xl self-stretch pr-sm">
+      <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
         <style>{`
           .agent-build-fade { animation: agent-build-fade-in 0.25s ease-out; }
           @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
@@ -4297,6 +4210,19 @@ function HealthcareFrontdeskCreateAgentLive({
             50%      { transform: scale(1.15) rotate(8deg); opacity: 1; }
           }
           .sparkle-twinkle { animation: sparkle-twinkle 1.1s ease-in-out infinite; }
+          @keyframes sim-bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40% { transform: translateY(-5px); opacity: 1; }
+          }
+          /* Like/dislike/copy row stays hidden until its turn (.chat-turn, marking either the
+             message's own row or an ancestor wrapping it) is hovered, or the row itself is
+             hovered/focused — covers both sibling- and nested-actions-row placements. */
+          .chat-turn:hover ~ .msg-actions-row,
+          .chat-turn:hover .msg-actions-row,
+          .msg-actions-row:hover,
+          .msg-actions-row:focus-within {
+            opacity: 1;
+          }
           @keyframes thoughts-caret {
             0%, 49% { opacity: 1; }
             50%, 100% { opacity: 0; }
@@ -4308,7 +4234,7 @@ function HealthcareFrontdeskCreateAgentLive({
             wide screens, but collapses first (shrink-[999]) on narrow ones so the
             chat keeps its width and the panel stays pinned to the right edge.
             When the workflow canvas is open, procedures open on the canvas RHS instead. */}
-        {((openProcedureName && !workflowVisible) || previewOpen) && (
+        {((openProcedureName || previewOpen) && !workflowVisible) && (
           <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
         )}
 
@@ -4336,10 +4262,7 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         {introThinking ? (
-          <IntroThinkingLoaderRow
-            label={INTRO_STATUS_LABELS[introStatusIndex] ?? 'Thinking'}
-            animKey={`intro-${introStatusIndex}`}
-          />
+          <IntroThinkingLoaderRow />
         ) : (
           <>
             <CreateAgentThinkingPanel
@@ -4382,12 +4305,6 @@ function HealthcareFrontdeskCreateAgentLive({
               ) : isReminderFlow ? (
                 <>
                   <ReminderCreateIntroReply onComplete={() => setIntroReplyDone(true)} />
-                  {introReplyDone && (
-                    <MessageActions
-                      copyText={REMINDER_CREATE_INTRO_PARAGRAPHS.join('\n\n')}
-                      className="ml-3xl"
-                    />
-                  )}
                   {introReplyDone && !timingAnswer && (
                     <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                       <button
@@ -4398,6 +4315,12 @@ function HealthcareFrontdeskCreateAgentLive({
                         Yes correct
                       </button>
                     </div>
+                  )}
+                  {introReplyDone && (
+                    <MessageActions
+                      copyText={REMINDER_CREATE_INTRO_PARAGRAPHS.join('\n\n')}
+                      className="ml-3xl"
+                    />
                   )}
                   {timingAnswer && <UserBubble>{timingAnswer}</UserBubble>}
                   {timingAnswer && (
@@ -4422,17 +4345,6 @@ function HealthcareFrontdeskCreateAgentLive({
                           onComplete={() => setTimingFollowDone(true)}
                         />
                       )}
-                      {timingFollowDone && (
-                        <MessageActions
-                          className="ml-3xl"
-                          copyText={[
-                            ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
-                            ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS.map((line) =>
-                              line.replace(/^•\s*/, ''),
-                            ),
-                          ].join('\n\n')}
-                        />
-                      )}
                       {timingFollowDone && !rescheduleAnswer && (
                         <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                           {REMINDER_RESCHEDULE_PILLS.map((label) => (
@@ -4446,6 +4358,17 @@ function HealthcareFrontdeskCreateAgentLive({
                             </button>
                           ))}
                         </div>
+                      )}
+                      {timingFollowDone && (
+                        <MessageActions
+                          className="ml-3xl"
+                          copyText={[
+                            ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
+                            ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS.map((line) =>
+                              line.replace(/^•\s*/, ''),
+                            ),
+                          ].join('\n\n')}
+                        />
                       )}
                       {rescheduleAnswer && <UserBubble>{rescheduleAnswer}</UserBubble>}
                       {rescheduleAnswer && (
@@ -4488,11 +4411,7 @@ function HealthcareFrontdeskCreateAgentLive({
             ))}
 
             {!isReminderFlow && stepThinkingPhase === 'ask-jobs' && (
-              <AgentBuildLoaderRow
-                label={(STEP_THINKING_LABELS['ask-jobs'] ?? [])[stepThinkingIndex] ?? 'Analyzing your documents'}
-                animKey={`ask-jobs-${stepThinkingIndex}`}
-                variant="sparkle"
-              />
+              <AgentBuildLoaderRow />
             )}
 
             {!isReminderFlow && showStep('ask-jobs') && (
@@ -4535,19 +4454,6 @@ function HealthcareFrontdeskCreateAgentLive({
                     {docsDraftReady && (
                       <GhostwriterDraftReadyReply onComplete={() => setDocsDraftReadyDone(true)} />
                     )}
-                    {docsDraftReadyDone && (
-                      <MessageActions
-                        className="ml-3xl"
-                        copyText={[
-                          ...CREATE_AGENT_DRAFT_READY_INTRO,
-                          'What your callers actually ask for:',
-                          ...CALLER_JOB_BREAKDOWN.map((j) => `• ${j.label} — ${j.pct}`),
-                          ...CREATE_AGENT_DRAFT_READY_CLOSING.map((line) =>
-                            line.replace(/^INDENT:\s*/, ''),
-                          ),
-                        ].join('\n')}
-                      />
-                    )}
                     {docsDraftReadyDone && !refillAnswer && (
                       <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                         <button
@@ -4565,6 +4471,19 @@ function HealthcareFrontdeskCreateAgentLive({
                           Skip refills for now. Let&apos;s keep it to the four
                         </button>
                       </div>
+                    )}
+                    {docsDraftReadyDone && (
+                      <MessageActions
+                        className="ml-3xl"
+                        copyText={[
+                          ...CREATE_AGENT_DRAFT_READY_INTRO,
+                          'What your callers actually ask for:',
+                          ...CALLER_JOB_BREAKDOWN.map((j) => `• ${j.label} — ${j.pct}`),
+                          ...CREATE_AGENT_DRAFT_READY_CLOSING.map((line) =>
+                            line.replace(/^INDENT:\s*/, ''),
+                          ),
+                        ].join('\n')}
+                      />
                     )}
                     {refillAnswer && <UserBubble>{refillAnswer}</UserBubble>}
 
@@ -4593,7 +4512,7 @@ function HealthcareFrontdeskCreateAgentLive({
                         )}
                         {refillProcedureCreated && (
                           <>
-                            <div className="ml-3xl flex flex-col gap-sm">
+                            <div className="chat-turn ml-3xl flex flex-col gap-sm">
                               <p className="text-body leading-6 text-text-primary">
                                 I've added the procedure to your library:
                               </p>
@@ -4626,10 +4545,8 @@ function HealthcareFrontdeskCreateAgentLive({
                               copyText={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS.join('\n')}
                             />
 
-                            <div className="agent-build-fade mt-3xl flex gap-sm">
-                              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                                <SparkleLoader size={14} spinning={false} />
-                              </span>
+                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
                                 Now that I've created the procedure, I can go ahead and create the agent draft. Would
                                 you like me to proceed?
@@ -4664,6 +4581,8 @@ function HealthcareFrontdeskCreateAgentLive({
                         <FrontdeskBuildingCard
                           refillAdded={refillAnswer.startsWith('Add procedure')}
                           persisted={draftBuildReady}
+                          onViewWorkflow={onViewWorkflow}
+                          workflowVisible={workflowVisible}
                           openProcedureName={openProcedureName}
                           onOpenProcedure={handleOpenProcedure}
                           onDone={() => {
@@ -4688,10 +4607,8 @@ function HealthcareFrontdeskCreateAgentLive({
                         />
                         {reviewThoughtsDone && (
                           <>
-                            <div className="agent-build-fade mt-3xl flex gap-sm">
-                              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                                <SparkleLoader size={14} spinning={false} />
-                              </span>
+                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
                                 I have created a Front desk agent for you to answer inbound calls, book and
                                 reschedule appointments, answer basic insurance questions, and hand off anything
@@ -4720,6 +4637,15 @@ function HealthcareFrontdeskCreateAgentLive({
                               >
                                 Test agent
                               </button>
+                              {!workflowVisible && (
+                                <button
+                                  type="button"
+                                  onClick={onViewWorkflow}
+                                  className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                                >
+                                  View in agent builder
+                                </button>
+                              )}
                             </div>
                             {reviewFollowUpAnswer && (
                               <>
@@ -4755,6 +4681,15 @@ function HealthcareFrontdeskCreateAgentLive({
                                     >
                                       Test agent
                                     </button>
+                                    {!workflowVisible && (
+                                      <button
+                                        type="button"
+                                        onClick={onViewWorkflow}
+                                        className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                                      >
+                                        View in agent builder
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </>
@@ -4770,7 +4705,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
                 {!docsProvided && (
                   <>
-                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     {docsProvided
                       ? "I've analyzed the call transcripts you uploaded. Here's what I found across 847 calls from the last 3 months:"
@@ -4793,7 +4728,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   </div>
                 </div>
 
-                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     Based on this analysis, here are a few use cases / jobs to be done that stood out — select the ones that are relevant for your agent.
                   </p>
@@ -4882,7 +4817,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
             {!isReminderFlow && showStep('ask-confirm-create') && (phase === 'ask-confirm-create' || confirmCreateAnswer) && (
               <>
-                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     Can I go ahead and create an agent based on these use cases?
                   </p>
@@ -4917,15 +4852,11 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
 
             {!isReminderFlow && stepThinking && stepThinkingPhase && stepThinkingPhase !== 'ask-jobs' && (
-              <AgentBuildLoaderRow
-                label={(STEP_THINKING_LABELS[stepThinkingPhase] ?? [])[stepThinkingIndex] ?? 'Thinking'}
-                animKey={`${stepThinkingPhase}-${stepThinkingIndex}`}
-                variant="sparkle"
-              />
+              <AgentBuildLoaderRow />
             )}
 
             {!isReminderFlow && phase === 'summary' && (
-              <div className="agent-build-fade mt-2xl flex flex-col gap-md">
+              <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-md">
                 {selectedProcedures.length > 0 && (
                   <div className="flex flex-col gap-sm">
                     <p className="text-body leading-6 text-text-primary">
@@ -4995,11 +4926,9 @@ function HealthcareFrontdeskCreateAgentLive({
             ))}
 
             {!isReminderFlow && showTestFollowUp && (
-              <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
+              <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
                 <div className="flex gap-sm">
-                  <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                    <SparkleLoader size={14} spinning={false} />
-                  </span>
+                  <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                   <p className="flex-1 text-body leading-6 text-text-primary">
                     How did your agent perform? Was it able to get you desired test result? What would you like to do
                     next?
@@ -5041,7 +4970,7 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         <div className="z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm pt-md">
-          {threadOverflowing && (
+          {threadOverflowing && isScrolledUp && (
             <div className="flex justify-center">
               <button
                 type="button"
@@ -5054,117 +4983,92 @@ function HealthcareFrontdeskCreateAgentLive({
             </div>
           )}
 
-          <div className="flex flex-col gap-md rounded-xl border border-border bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap items-center gap-sm">
-                {attachments.map((item) => (
-                  <RefChip key={item.id} kind={item.kind} label={item.label} onRemove={() => removeAttachment(item.id)} />
-                ))}
-              </div>
-            )}
-            <textarea
-              value={followUp}
-              onFocus={() => {
-                // Reminder create flow: after the agent asks about timing, click
-                // the composer to pre-fill the scripted reply, then Enter to send.
-                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                  timingPromptFilledRef.current = true
-                  setFollowUp(REMINDER_TIMING_REPLY)
-                  return
-                }
-                // After no-connect defaults: pre-fill the email tone reply.
-                if (
-                  isReminderFlow &&
-                  handoffFollowDone &&
-                  !connectAnswer &&
-                  !followUp.trim()
-                ) {
-                  emailPromptFilledRef.current = true
-                  setFollowUp(REMINDER_EMAIL_REPLY)
-                  return
-                }
-                // Review response: click composer to pre-fill the current question's reply.
-                if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
-                  setFollowUp(reviewComposerFill)
-                  return
-                }
-                // Once the draft review is done, clicking into the box pre-fills
-                // John's next message so the demo can continue in one click.
-                if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
-                  reviewPromptFilledRef.current = true
-                  setFollowUp(FINAL_REVIEW_PROMPT)
-                }
-              }}
-              onClick={() => {
-                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                  timingPromptFilledRef.current = true
-                  setFollowUp(REMINDER_TIMING_REPLY)
-                  return
-                }
-                if (
-                  isReminderFlow &&
-                  handoffFollowDone &&
-                  !connectAnswer &&
-                  !followUp.trim()
-                ) {
-                  emailPromptFilledRef.current = true
-                  setFollowUp(REMINDER_EMAIL_REPLY)
-                  return
-                }
-                if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
-                  setFollowUp(reviewComposerFill)
-                }
-              }}
-              onChange={(e) => setFollowUp(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleFollowUpSend()
-                }
-              }}
-              rows={2}
-              disabled={composerLocked}
-              placeholder={composerPlaceholder}
-              className="scrollbar-light min-h-9 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary disabled:cursor-not-allowed"
-            />
-            <div className="flex items-center justify-between align-bottom">
-              <div className="flex items-center gap-sm text-text-icon">
-                <Tooltip content="Add files" variant="brief">
-                  <ComposerAttachPopover
-                    onSelect={handleAttachSelect}
-                    onAddClick={handlePaperclipAttach}
-                    disabled={composerLocked}
-                  />
-                </Tooltip>
-                <Tooltip content="Dictate" variant="brief">
-                  <button type="button" aria-label="Dictate" className="hover:text-text-primary" disabled={composerLocked}>
-                    <Icon name="mic" size={18} />
-                  </button>
-                </Tooltip>
-              </div>
-              <button
-                type="button"
-                aria-label="Send"
-                onClick={handleFollowUpSend}
-                disabled={!canSendFollowUp || composerLocked}
-                className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
-                  canSendFollowUp && !composerLocked
-                    ? 'text-ai-brand hover:bg-surface-hover'
-                    : 'cursor-not-allowed text-text-tertiary opacity-40'
-                }`}
-              >
-                <SendIcon size={24} />
-              </button>
-            </div>
-          </div>
+          <PromptComposer
+            value={followUp}
+            onChange={setFollowUp}
+            onSend={handleFollowUpSend}
+            onFocus={() => {
+              // Reminder create flow: after the agent asks about timing, click
+              // the composer to pre-fill the scripted reply, then Enter to send.
+              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                timingPromptFilledRef.current = true
+                setFollowUp(REMINDER_TIMING_REPLY)
+                return
+              }
+              // After no-connect defaults: pre-fill the email tone reply.
+              if (
+                isReminderFlow &&
+                handoffFollowDone &&
+                !connectAnswer &&
+                !followUp.trim()
+              ) {
+                emailPromptFilledRef.current = true
+                setFollowUp(REMINDER_EMAIL_REPLY)
+                return
+              }
+              // Review response: click composer to pre-fill the current question's reply.
+              if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+                setFollowUp(reviewComposerFill)
+                return
+              }
+              // Once the draft review is done, clicking into the box pre-fills
+              // John's next message so the demo can continue in one click.
+              if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
+                reviewPromptFilledRef.current = true
+                setFollowUp(FINAL_REVIEW_PROMPT)
+              }
+            }}
+            onClick={() => {
+              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                timingPromptFilledRef.current = true
+                setFollowUp(REMINDER_TIMING_REPLY)
+                return
+              }
+              if (
+                isReminderFlow &&
+                handoffFollowDone &&
+                !connectAnswer &&
+                !followUp.trim()
+              ) {
+                emailPromptFilledRef.current = true
+                setFollowUp(REMINDER_EMAIL_REPLY)
+                return
+              }
+              if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+                setFollowUp(reviewComposerFill)
+              }
+            }}
+            rows={2}
+            disabled={composerLocked}
+            sendDisabled={!canSendFollowUp}
+            placeholder={composerPlaceholder}
+            attachments={attachments}
+            onRemoveAttachment={removeAttachment}
+            onAttach={(option) => {
+              if (option === 'upload-image') landingImageInputRef.current?.click()
+              else if (option === 'media-library') setMediaLibraryOpen(true)
+              else if (option === 'files') setFilesModalOpen(true)
+            }}
+          />
         </div>
         </div>
 
-        {((openProcedureName && !workflowVisible) || previewOpen) && (
-          <div className="sticky top-0 -bottom-lg hidden w-[500px] shrink-0 self-start overflow-hidden rounded-lg lg:block">
+        {/* Matches the panel's own width now that it's absolutely positioned (out of
+            flex flow) — keeps the chat column centered exactly as it was when the
+            panel still participated in this row's layout. */}
+        {((openProcedureName || previewOpen) && !workflowVisible) && (
+          <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
+        )}
+
+        {((openProcedureName || previewOpen) && !workflowVisible) && (
+          <div
+            className={`absolute -top-10 bottom-2xl right-sm hidden w-[500px] overflow-hidden rounded-lg lg:block ${
+              previewOpen ? 'border border-border bg-surface shadow-card' : ''
+            }`}
+          >
             {previewOpen ? (
-              <div className="h-[calc(100vh-168px)]">
-                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full">
+              <div className="h-full">
+                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full [&_.preview-panel]:!rounded-none [&_.preview-panel]:!border-0 [&_.preview-panel]:!shadow-none [&_.preview-panel__header]:!h-[64px] [&_.preview-panel__header]:!px-xl [&_.preview-panel__header]:!py-0 [&_.preview-panel__title]:!text-[16px] [&_.preview-panel__title]:!font-normal [&_.preview-panel__title]:!leading-6 [&_.preview-panel__title]:![letter-spacing:-0.32px] [&_.preview-panel__title]:!text-[#212121] [&_.preview-panel__close-btn_.material-symbols-outlined]:![font-size:24px] [&_.preview-panel__close-btn]:!text-[#303030] [&_.preview-panel__body--outbound]:!p-xl">
                   <PreviewPanel
                     key={previewKey}
                     onClose={handlePreviewClose}
@@ -5185,7 +5089,7 @@ function HealthcareFrontdeskCreateAgentLive({
                     : HC_PROCEDURES.find((p) => p.name === openProcedureName)
                 if (!procedure) return null
                 return (
-                  <div className="h-[calc(100vh-152px)]">
+                  <div className="h-full">
                     <ProcedurePreviewPanel procedure={procedure} onClose={() => handleOpenProcedure(null)} />
                   </div>
                 )
@@ -5193,6 +5097,40 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
           </div>
         )}
+
+        <input
+          ref={landingImageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              setAttachments((prev) => [...prev, { id: `image-${Date.now()}`, kind: 'file', label: file.name }])
+            }
+            e.target.value = ''
+          }}
+        />
+        <MediaLibraryModal
+          open={mediaLibraryOpen}
+          onClose={() => setMediaLibraryOpen(false)}
+          onDone={(selected) =>
+            setAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
+        <FilesModal
+          open={filesModalOpen}
+          onClose={() => setFilesModalOpen(false)}
+          onDone={(selected) =>
+            setAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
       </div>
     )
   }
@@ -5242,9 +5180,7 @@ function HealthcareFrontdeskCreateAgentLive({
       <div className="flex h-full w-full flex-col overflow-hidden pb-md">
         <div className="flex min-h-0 flex-1 flex-col justify-center gap-md overflow-hidden">
           <div className="flex translate-y-lg items-start justify-start gap-md">
-            <span className="mt-xs flex size-10 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-              <SparkleLoader size={22} spinning={false} />
-            </span>
+            <AiAvatarChatIcon size={40} className="mt-1 shrink-0" />
             <div className="flex min-w-0 flex-col items-start gap-md">
               <p className="text-h3 leading-8 text-text-primary">
                 Hi! I’m here to help you build your {isReminderFlow ? 'Reminder' : 'Front desk'} agent. Tell me what you’d like to build
@@ -5266,6 +5202,18 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         <div className="flex min-h-40 shrink-0 flex-col gap-md rounded-lg border border-border-selected bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
+          {landingAttachments.length > 0 && (
+            <div className="flex flex-wrap items-center gap-sm">
+              {landingAttachments.map((item) => (
+                <RefChip
+                  key={item.id}
+                  kind={item.kind}
+                  label={item.label}
+                  onRemove={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
+                />
+              ))}
+            </div>
+          )}
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -5280,10 +5228,17 @@ function HealthcareFrontdeskCreateAgentLive({
             className="scrollbar-none min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="mt-auto flex items-center justify-between">
-            <div className="flex items-center gap-sm text-text-icon">
-              <Tooltip content="Add files" variant="brief">
-                <button type="button" aria-label="Add files" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="attach_file" size={22} />
+            <div className="flex items-center gap-xs text-text-icon">
+              <AttachMenuPopover
+                onSelect={(option) => {
+                  if (option === 'upload-image') landingImageInputRef.current?.click()
+                  else if (option === 'media-library') setMediaLibraryOpen(true)
+                  else if (option === 'files') setFilesModalOpen(true)
+                }}
+              />
+              <Tooltip content="Dictate" variant="brief">
+                <button type="button" aria-label="Dictate" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
+                  <Icon name="mic" size={20} />
                 </button>
               </Tooltip>
               <Tooltip content="Add context" variant="brief">
@@ -5312,6 +5267,43 @@ function HealthcareFrontdeskCreateAgentLive({
             </button>
           </div>
         </div>
+
+        <input
+          ref={landingImageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              setLandingAttachments((prev) => [
+                ...prev,
+                { id: `image-${Date.now()}`, kind: 'file', label: file.name },
+              ])
+            }
+            e.target.value = ''
+          }}
+        />
+        <MediaLibraryModal
+          open={mediaLibraryOpen}
+          onClose={() => setMediaLibraryOpen(false)}
+          onDone={(selected) =>
+            setLandingAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
+        <FilesModal
+          open={filesModalOpen}
+          onClose={() => setFilesModalOpen(false)}
+          onDone={(selected) =>
+            setLandingAttachments((prev) => [
+              ...prev,
+              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+            ])
+          }
+        />
       </div>
     )
   }
@@ -5341,6 +5333,18 @@ function HealthcareFrontdeskCreateAgentLive({
 
       <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
         <div className="flex flex-col gap-md rounded-[14px] bg-surface px-lg py-md shadow-card">
+          {landingAttachments.length > 0 && (
+            <div className="flex flex-wrap items-center gap-sm">
+              {landingAttachments.map((item) => (
+                <RefChip
+                  key={item.id}
+                  kind={item.kind}
+                  label={item.label}
+                  onRemove={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
+                />
+              ))}
+            </div>
+          )}
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -5358,14 +5362,37 @@ function HealthcareFrontdeskCreateAgentLive({
             className="scrollbar-light min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-md">
-              <Tooltip content="Add files" variant="brief">
+            <div className="flex items-center gap-xs">
+              <AttachMenuPopover
+                onSelect={(option) => {
+                  if (option === 'upload-image') landingImageInputRef.current?.click()
+                  else if (option === 'media-library') setMediaLibraryOpen(true)
+                  else if (option === 'files') setFilesModalOpen(true)
+                }}
+              />
+              <input
+                ref={landingImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setLandingAttachments((prev) => [
+                      ...prev,
+                      { id: `image-${Date.now()}`, kind: 'file', label: file.name },
+                    ])
+                  }
+                  e.target.value = ''
+                }}
+              />
+              <Tooltip content="Dictate" variant="brief">
                 <button
                   type="button"
-                  aria-label="Add files"
+                  aria-label="Dictate"
                   className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
                 >
-                  <Icon name="add" size={18} />
+                  <Icon name="mic" size={20} />
                 </button>
               </Tooltip>
             </div>
@@ -5380,6 +5407,27 @@ function HealthcareFrontdeskCreateAgentLive({
           </div>
         </div>
       </div>
+
+      <MediaLibraryModal
+        open={mediaLibraryOpen}
+        onClose={() => setMediaLibraryOpen(false)}
+        onDone={(selected) =>
+          setLandingAttachments((prev) => [
+            ...prev,
+            ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+          ])
+        }
+      />
+      <FilesModal
+        open={filesModalOpen}
+        onClose={() => setFilesModalOpen(false)}
+        onDone={(selected) =>
+          setLandingAttachments((prev) => [
+            ...prev,
+            ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
+          ])
+        }
+      />
 
       <p className="m-0 mt-3xl text-center text-body text-text-secondary">
         <button
@@ -5838,10 +5886,8 @@ function HistoryChatReplay({
                 if (turn.kind === 'agent') {
                   return (
                     <div key={i}>
-                      <div className="mt-3xl flex gap-sm">
-                        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                          <SparkleLoader size={14} spinning={false} />
-                        </span>
+                      <div className="chat-turn mt-3xl flex gap-sm">
+                        <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                         <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
                           <TypedParagraphs paragraphs={turn.paragraphs} instant />
                         </div>
@@ -5892,10 +5938,8 @@ function HistoryChatReplay({
 
                 {chat.replies.map((paragraphs, replyIndex) => (
                   <div key={replyIndex}>
-                    <div className="mt-3xl flex gap-sm">
-                      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-                        <SparkleLoader size={14} spinning={false} />
-                      </span>
+                    <div className="chat-turn mt-3xl flex gap-sm">
+                      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                       <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
                         <TypedParagraphs paragraphs={paragraphs} instant />
                       </div>
@@ -5934,21 +5978,32 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedInstance, setSelectedInstance] = useState<string | null>(null)
+  const [selectedInstance, setSelectedInstance] = useState<string | null>(
+    pendingInstanceView?.instanceName ?? null,
+  )
   const [selectedInstanceDisplayName, setSelectedInstanceDisplayName] = useState<string | null>(null)
-  const [instanceInitialTab, setInstanceInitialTab] = useState('outcomes')
+  const [instanceInitialTab, setInstanceInitialTab] = useState(pendingInstanceView?.tab ?? 'outcomes')
+
+  useEffect(() => {
+    if (!pendingInstanceView) return
+    setSelectedInstance(pendingInstanceView.instanceName)
+    setInstanceInitialTab(pendingInstanceView.tab)
+    onPendingInstanceViewConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingInstanceView])
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false)
   const [createWorkflowMounted, setCreateWorkflowMounted] = useState(false)
+  const [createLeftPaneCollapsed, setCreateLeftPaneCollapsed] = useState(false)
   const [createSideTab, setCreateSideTab] = useState<'ai' | 'manual'>('ai')
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
@@ -5957,6 +6012,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [inlineProcedureOpen, setInlineProcedureOpen] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  /** Recent-chats rail shown alongside the create-agent flow — null = "All chats" (fresh). */
+  const [chatHistorySelectedId, setChatHistorySelectedId] = useState<string | null>(null)
+  /** Chats saved via "Save agent" from the full-page co-pilot — prepended to the recent list. */
+  const [savedCreateChats, setSavedCreateChats] = useState<ChatHistoryTranscript[]>(() =>
+    (['frontdesk', 'reminder'] as const)
+      .map((v) => getLastSavedCreateChat(v))
+      .filter((c): c is ChatHistoryTranscript => Boolean(c)),
+  )
   const { procedures: procedureLibrary } = useProcedureStore()
 
   const openCreateFlow = () => {
@@ -5972,21 +6035,38 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setShowCreateFlow(true)
   }
 
+  const selectAllChats = () => {
+    setChatHistorySelectedId(null)
+    setCreateFlowKey((k) => k + 1)
+    setShowSetupWizard(false)
+    setCreateWorkflowOpen(false)
+    setCreateWorkflowMounted(false)
+    setCreateFlowSubmitted(false)
+    setCreateDraftAgentName(null)
+    setCanvasProcedureId(null)
+    setInlineProcedureOpen(false)
+  }
+
   const openCreateWorkflow = () => {
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
+    setCreateLeftPaneCollapsed(false)
+    setCanvasProcedureId(null)
+    setInlineProcedureOpen(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
   }
 
   const closeCreateWorkflow = () => {
     setCreateWorkflowOpen(false)
     setCreateSideTab('ai')
+    setCreateLeftPaneCollapsed(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
   }
 
   const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
     if (options?.chat) {
+      setSavedCreateChats((prev) => [options.chat!, ...prev.filter((c) => c.id !== options.chat!.id)])
       rememberCreateAgentChat(isReminder ? 'reminder' : 'frontdesk', options.chat)
     }
     setShowCreateFlow(false)
@@ -6138,20 +6218,23 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isReviewResponse  = agentName === 'Review response agents'
   const hideChannels      = isTaggingRouting || isReviewResponse
 
+  // `AgentInstanceScreen` reports its own full-page states (e.g. an open recommendation) via
+  // `instanceSetupActive` — merged here so it and the create-flow/setup-wizard state below don't
+  // race to overwrite the same `onAgentSetupActiveChange` callback from App.tsx.
+  const [instanceSetupActive, setInstanceSetupActive] = useState(false)
+
   useEffect(() => {
     // Instance screen owns full-bleed signaling (e.g. View log) while drilled in.
     if (selectedInstance) return
     // Setup wizard is full-bleed (no SideNav). Review response create landing
     // also hides L2 while the create flow is open.
-    const hideSideNav =
-      ((isFrontdesk || isReminder) && showSetupWizard) ||
-      (isReviewResponse && showCreateFlow)
-    onAgentSetupActiveChange?.(hideSideNav)
-  }, [isFrontdesk, isReminder, isReviewResponse, showSetupWizard, showCreateFlow, selectedInstance, onAgentSetupActiveChange])
-
-  useEffect(() => {
+    const isAgentSetupActive =
+      ((isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)) ||
+      (isReviewResponse && showCreateFlow) ||
+      instanceSetupActive
+    onAgentSetupActiveChange?.(isAgentSetupActive)
     return () => onAgentSetupActiveChange?.(false)
-  }, [onAgentSetupActiveChange])
+  }, [isFrontdesk, isReminder, isReviewResponse, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     { key: 'name', label: 'Agent name', width: 230, sortable: true, locked: true },
     {
@@ -6293,7 +6376,18 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
 
   if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse)) {
     const isHealthcareFrontdesk = product === 'healthcare'
-    const createTitle = createDraftAgentName
+    const chatHistoryTitle = 'Front desk'
+    const createVariant = isReminder ? 'reminder' : 'frontdesk'
+    const staticChatHistory = isFrontdesk ? FRONTDESK_CHAT_HISTORY : REMINDER_CHAT_HISTORY
+    const chatHistoryItems = [
+      ...savedCreateChats.filter((c) => !c.variant || c.variant === createVariant),
+      ...staticChatHistory,
+    ]
+    const historyChat = chatHistorySelectedId
+      ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
+      : null
+    const createTitle = historyChat?.draftTitle
+      ?? createDraftAgentName
       ?? (isFrontdesk ? 'New front desk agent' : isReminder ? 'New reminder agent' : 'New review response agent')
     const createWorkflowAgentName = createDraftAgentName
       ?? (isReviewResponse
@@ -6305,58 +6399,107 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     return (
       <div className="flex h-full">
         <div className="flex h-full min-w-0 flex-1 flex-col">
-        <TopNav initials="S" />
+        <TopNav title={chatHistoryTitle} initials="S" />
         <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
           <section
-            className={`z-10 flex shrink-0 flex-col overflow-hidden bg-surface transition-[width,top] duration-300 ease-in-out motion-reduce:transition-none ${
+            className={`z-10 flex shrink-0 flex-col overflow-hidden bg-surface transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
               createWorkflowOpen
-                ? 'absolute bottom-sm left-sm top-[calc(52px+theme(spacing.sm))] w-96 rounded-lg border border-border shadow-card'
+                ? `absolute bottom-sm left-sm top-[calc(52px+theme(spacing.sm))] w-96 rounded-lg border border-border shadow-card ${
+                    createLeftPaneCollapsed ? 'pointer-events-none -translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
+                  }`
                 : 'relative w-full'
             }`}
             aria-label={createWorkflowOpen ? 'Create with AI conversation' : undefined}
+            aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              <div className="flex h-14 shrink-0 items-end gap-xl px-lg">
+              // Reuses LHSDrawer's own tab/collapse-button classes (lhs-drawer__tab*,
+              // lhs-drawer__collapse-btn) so this header matches the "edit agent" canvas panel exactly.
+              <div className="flex shrink-0 items-center gap-sm px-2xl pt-lg pb-sm">
+                <div className="lhs-drawer__tabs lhs-drawer__tabs--visible flex-1">
+                  <div className={`group relative lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}>
+                    <span className="lhs-drawer__tab-label">
+                      <span className="relative inline-flex items-center gap-xs">
+                        <button
+                          type="button"
+                          onClick={() => setCreateSideTab('ai')}
+                          className="inline-flex items-center gap-xs"
+                        >
+                          Create with AI
+                          <AiAgentIcon size={16} className="shrink-0" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Expand"
+                          title="Expand to full page"
+                          onClick={closeCreateWorkflow}
+                          className="absolute left-full top-1/2 ml-xs flex size-5 shrink-0 -translate-y-1/2 scale-90 items-center justify-center rounded-sm text-text-icon opacity-0 transition-[opacity,transform] duration-150 ease-out hover:bg-surface-selected group-hover:scale-100 group-hover:opacity-100"
+                        >
+                          <Icon name="open_in_full" size={14} />
+                        </button>
+                      </span>
+                    </span>
+                    <span className="lhs-drawer__tab-underline" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCreateSideTab('manual')}
+                    className={`lhs-drawer__tab${createSideTab === 'manual' ? ' lhs-drawer__tab--active' : ''}`}
+                  >
+                    <span className="lhs-drawer__tab-label">Create manually</span>
+                    <span className="lhs-drawer__tab-underline" />
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setCreateSideTab('ai')}
-                  className={`h-10 border-b-2 px-sm text-body ${
-                    createSideTab === 'ai'
-                      ? 'border-primary text-text-primary'
-                      : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
+                  aria-label="Collapse panel"
+                  title="Collapse panel"
+                  onClick={() => setCreateLeftPaneCollapsed(true)}
+                  className="lhs-drawer__collapse-btn shrink-0"
                 >
-                  Create with AI
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCreateSideTab('manual')}
-                  className={`h-10 border-b-2 px-sm text-body ${
-                    createSideTab === 'manual'
-                      ? 'border-primary text-text-primary'
-                      : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  Create manually
+                  <Icon name="left_panel_close" size={18} />
                 </button>
               </div>
             ) : createFlowSubmitted ? (
               // Conversation view — header aligns with the 720px chat column below it.
-              <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
-                <div className="flex h-full w-full max-w-[1600px] justify-center gap-xl pr-sm">
+              <div className="flex shrink-0 justify-center bg-surface px-lg pt-lg pb-md">
+                <div className="flex w-full max-w-[1600px] justify-center gap-xl pr-sm">
                   {inlineProcedureOpen && (
                     <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
                   )}
                   <div className="flex w-full min-w-0 max-w-[720px] items-center gap-sm">
                     <button
                       type="button"
-                      onClick={() => setShowCreateFlow(false)}
+                      onClick={() => {
+                        if (chatHistorySelectedId) selectAllChats()
+                        else setShowCreateFlow(false)
+                      }}
                       className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
                       aria-label="Back"
                     >
                       <Icon name="arrow_back" size={20} />
                     </button>
-                    <h1 className="text-h3 text-text-primary">{createTitle}</h1>
+                    <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{createTitle}</h1>
+                    {(isReminder || isFrontdesk) && createDraftAgentName && !createWorkflowOpen && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Collapse"
+                          title="Dock next to workflow"
+                          onClick={openCreateWorkflow}
+                          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                        >
+                          <Icon name="close_fullscreen" size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={openCreateWorkflow}
+                          className="shrink-0 rounded-sm text-body text-text-action hover:underline"
+                        >
+                          View in agent builder
+                        </button>
+                      </>
+                    )}
                   </div>
                   {inlineProcedureOpen && (
                     <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
@@ -6374,18 +6517,18 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 >
                   <Icon name="arrow_back" size={20} />
                 </button>
-                <h1 className="text-h3 text-text-primary">{createTitle}</h1>
+                <h1 className="text-h3 text-text-primary text-left">Create agent</h1>
               </div>
             )}
             <div
-              className={`scrollbar-subtle flex min-h-0 flex-1 justify-center pt-0 ${
+              className={`scrollbar-subtle flex min-h-0 flex-1 justify-center ${
                 createFlowSubmitted || createWorkflowOpen
-                  ? 'items-stretch overflow-hidden'
+                  ? 'items-stretch overflow-visible'
                   : 'items-start overflow-auto pb-lg'
-              } ${createWorkflowOpen ? (createSideTab === 'manual' ? 'px-0 py-0' : 'px-md') : 'px-lg'}`}
+              } ${createWorkflowOpen ? 'px-2xl pt-lg' : 'px-lg pt-0'}`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
-                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer__body]:!px-md [&_.lhs-drawer__body]:!pt-0">
+                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer\_\_body]:!p-0">
                   <LHSDrawer
                     defaultTab="Create manually"
                     defaultOpenSection="Tasks"
@@ -6405,7 +6548,10 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 >
                   <HealthcareFrontdeskCreateAgentScreen
                     key={createFlowKey}
-                    onBack={() => setShowCreateFlow(false)}
+                    onBack={() => {
+                      if (chatHistorySelectedId) selectAllChats()
+                      else setShowCreateFlow(false)
+                    }}
                     onSubmittedChange={setCreateFlowSubmitted}
                     onCreateFromScratch={() => {
                       if (isReviewResponse) {
@@ -6426,7 +6572,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       onEditAgent?.('')
                     }}
                     onCreateAgent={handleCreateAgentSuccess}
-                    onViewWorkflow={(isReminder || isReviewResponse) ? openCreateWorkflow : undefined}
+                    onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse) ? openCreateWorkflow : undefined}
                     libraryCards={
                       isReminder
                         ? REMINDER_CREATE_CARDS
@@ -6435,13 +6581,16 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                           : undefined
                     }
                     initialPrompt={
-                      isReminder
+                      historyChat?.prompt
+                      ?? (isReminder
                         ? REMINDER_CREATE_PROMPT
                         : isReviewResponse
                           ? REVIEW_RESPONSE_CREATE_PROMPT
-                          : undefined
+                          : undefined)
                     }
                     autoStart={false}
+                    historyChatId={chatHistorySelectedId}
+                    historyChat={historyChat}
                     fromScratchLabel={(isReminder || isReviewResponse) ? 'Create from scratch' : 'Setup manually'}
                     variant={
                       isReminder
@@ -6467,7 +6616,19 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             </div>
           </section>
 
-          {createWorkflowMounted && (isReminder || isReviewResponse) && (
+          {createWorkflowOpen && createLeftPaneCollapsed && (
+            <button
+              type="button"
+              aria-label="Expand panel"
+              title="Expand panel"
+              onClick={() => setCreateLeftPaneCollapsed(false)}
+              className="absolute left-sm top-[calc(52px+theme(spacing.sm))] z-10 flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon shadow-card hover:bg-surface-l2"
+            >
+              <Icon name="left_panel_open" size={20} />
+            </button>
+          )}
+
+          {createWorkflowMounted && (isReminder || isFrontdesk || isReviewResponse) && (
             <section
               className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out motion-reduce:transition-none ${
                 createWorkflowOpen
@@ -6480,14 +6641,16 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 agentName={
                   isReviewResponse
                     ? 'Review response agent - North Region'
-                    : 'Reminder agent - North region'
+                    : isReminder
+                      ? 'Reminder agent - North region'
+                      : 'Front desk agent - North region'
                 }
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
                 hideLhs
-                createAiPanelOpen={createWorkflowOpen}
+                createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
                 previewProcedureId={isReminder ? canvasProcedureId : null}
                 previewProcedureDetail={
                   isReminder
@@ -6526,7 +6689,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
-          onFullBleedChange={onAgentSetupActiveChange}
+          onFullBleedChange={setInstanceSetupActive}
           onFullBleedDetailActiveChange={onFullBleedDetailActiveChange}
           initialRecommendationId={
             initialRecommendationFocus?.instanceName === selectedInstance ? initialRecommendationFocus.recommendationId : null

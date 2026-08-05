@@ -28,14 +28,11 @@ export default function AIPromptBox({ placeholder, onSend, onAttach }) {
       />
       <div className="ai-prompt-box__toolbar">
         <div className="ai-prompt-box__tools">
-          <button className="ai-prompt-box__tool-btn" onClick={onAttach} title="Attach file">
-            <span className="material-symbols-outlined">attach_file</span>
+          <button className="ai-prompt-box__tool-btn" onClick={onAttach} title="Add">
+            <span className="material-symbols-outlined">add</span>
           </button>
-          <button className="ai-prompt-box__tool-btn" title="Edit note">
-            <span className="material-symbols-outlined">edit_note</span>
-          </button>
-          <button className="ai-prompt-box__tool-btn" title="More">
-            <span className="material-symbols-outlined">more_horiz</span>
+          <button className="ai-prompt-box__tool-btn" title="Dictate">
+            <span className="material-symbols-outlined">mic</span>
           </button>
         </div>
         <button

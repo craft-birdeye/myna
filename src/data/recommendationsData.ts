@@ -1927,7 +1927,7 @@ export function computeImpact(conversationCount: number, maxConversationCount: n
   return 'Low'
 }
 
-export type RecStatus = 'open' | 'accepted' | 'rejected' | 'discarded'
+export type RecStatus = 'open' | 'accepted' | 'rejected'
 
 const PRIORITY_ORDER: Record<Priority, number> = { High: 0, Medium: 1, Low: 2 }
 

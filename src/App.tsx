@@ -379,6 +379,9 @@ export function App() {
   )
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
+  // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
+  // closing the editor) knows which instance + tab to land on instead of its own defaults.
+  const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
   const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
@@ -727,6 +730,8 @@ export function App() {
             initialRecommendationFocus={recommendationFocus}
             onInitialRecommendationFocusConsumed={() => setRecommendationFocus(null)}
             product={activeProduct}
+            pendingInstanceView={pendingAgentInstanceView}
+            onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
           />
         ) : appointmentDetail ? (
           <>

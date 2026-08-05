@@ -74,8 +74,6 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
         /* Viewer: canvas rounded, no extra containers */
         .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; }
         .wf-viewer .flow-canvas           { border-radius: 12px !important; }
-        /* Hide orientation toggle (↓ →) in view-only mode only */
-        .wf-viewer .graph-controls__toggle { display: none !important; }
       `}</style>
 
       <div className="wf-viewer" style={{ height: '100%' }}>

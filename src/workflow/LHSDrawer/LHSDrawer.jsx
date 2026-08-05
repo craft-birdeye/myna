@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FormInput, Tooltip } from '../elemental-stubs';
 import NodeType from '../Organisms/Accordion/NodeType/NodeType';
 import AIChatBubble from '../Molecules/AIChatBubble/AIChatBubble';
-import AIPromptBox from '../Molecules/AIPromptBox/AIPromptBox';
+import { PromptComposer } from '../../components';
 
 // Uploaded procedure.svg icon — used for all procedure category cards
 const ProcedureSvgIcon = () => (
@@ -10,6 +10,7 @@ const ProcedureSvgIcon = () => (
     <path d="M19.7996 6.30078H14.3996C13.9339 6.30078 13.4745 6.40922 13.058 6.6175C12.6414 6.82578 12.279 7.12819 11.9996 7.50078C11.7202 7.12819 11.3578 6.82578 10.9412 6.6175C10.5247 6.40922 10.0653 6.30078 9.59961 6.30078H4.19961C4.04048 6.30078 3.88787 6.364 3.77535 6.47652C3.66282 6.58904 3.59961 6.74165 3.59961 6.90078V17.7008C3.59961 17.8599 3.66282 18.0125 3.77535 18.125C3.88787 18.2376 4.04048 18.3008 4.19961 18.3008H9.59961C10.077 18.3008 10.5348 18.4904 10.8724 18.828C11.21 19.1656 11.3996 19.6234 11.3996 20.1008C11.3996 20.2599 11.4628 20.4125 11.5753 20.525C11.6879 20.6376 11.8405 20.7008 11.9996 20.7008C12.1587 20.7008 12.3114 20.6376 12.4239 20.525C12.5364 20.4125 12.5996 20.2599 12.5996 20.1008C12.5996 19.6234 12.7893 19.1656 13.1268 18.828C13.4644 18.4904 13.9222 18.3008 14.3996 18.3008H19.7996C19.9587 18.3008 20.1114 18.2376 20.2239 18.125C20.3364 18.0125 20.3996 17.8599 20.3996 17.7008V6.90078C20.3996 6.74165 20.3364 6.58904 20.2239 6.47652C20.1114 6.364 19.9587 6.30078 19.7996 6.30078ZM9.59961 17.1008H4.79961V7.50078H9.59961C10.077 7.50078 10.5348 7.69042 10.8724 8.02799C11.21 8.36555 11.3996 8.82339 11.3996 9.30078V17.7008C10.8808 17.3104 10.2489 17.0997 9.59961 17.1008ZM19.1996 17.1008H14.3996C13.7503 17.0997 13.1184 17.3104 12.5996 17.7008V9.30078C12.5996 8.82339 12.7893 8.36555 13.1268 8.02799C13.4644 7.69042 13.9222 7.50078 14.3996 7.50078H19.1996V17.1008Z" fill="currentColor"/>
   </svg>
 );
+import { AiAgentIcon } from '../../assets/AiAgentIcon';
 import LHSEntityGroup from '../Molecules/LHS/LHSEntityGroup/LHSEntityGroup';
 import LHSExternalAppsGroup from '../Molecules/LHS/LHSExternalAppsGroup/LHSExternalAppsGroup';
 import './LHSDrawer.css';
@@ -559,6 +560,11 @@ export default function LHSDrawer({
   showTabs = false,
   /** When set, Create with AI shows this saved co-pilot transcript instead of the empty welcome. */
   aiTranscript = null,
+  /** Shows a hover "expand" affordance on the Create with AI tab; called on click. */
+  onExpand = null,
+  /** Renders full-bleed with a name + collapse header instead of the tab bar. */
+  expanded = false,
+  onCollapseExpand = null,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
 
@@ -583,6 +589,8 @@ export default function LHSDrawer({
   const [activeTab, setActiveTab] = useState(
     aiTranscript ? 'Create with AI' : defaultTab,
   );
+  const [aiInputValue, setAiInputValue] = useState('');
+  const showAiBody = expanded || activeTab === 'Create with AI';
 
   // A transcript can resolve after mount (e.g. saved during this session).
   useEffect(() => {
@@ -788,21 +796,74 @@ export default function LHSDrawer({
   };
 
   return (
-    <div className="lhs-drawer" ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
-      <div className={`lhs-drawer__tabs${showTabs ? ' lhs-drawer__tabs--visible' : ''}`}>
-        {TABS.map((tab) => (
+    <div className={`lhs-drawer${expanded ? ' lhs-drawer--expanded' : ''}`} ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
+      {expanded ? (
+        <div className="lhs-drawer__expanded-header">
+          <span className="lhs-drawer__expanded-name">{agentName || 'Untitled agent'}</span>
           <button
-            key={tab}
-            className={`lhs-drawer__tab${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            type="button"
+            aria-label="Collapse"
+            title="Dock next to workflow"
+            onClick={onCollapseExpand}
+            className="lhs-drawer__collapse-btn"
           >
-            <span className="lhs-drawer__tab-label">{tab}</span>
-            <span className="lhs-drawer__tab-underline" />
+            <span className="material-symbols-outlined">close_fullscreen</span>
           </button>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className={`lhs-drawer__tabs${showTabs ? ' lhs-drawer__tabs--visible' : ''}`}>
+          {TABS.map((tab) =>
+            tab === 'Create with AI' ? (
+              <div
+                key={tab}
+                className={`group lhs-drawer__tab lhs-drawer__tab--ai${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
+              >
+                <span className="lhs-drawer__tab-label">
+                  <button type="button" className="lhs-drawer__tab-ai-trigger" onClick={() => setActiveTab(tab)}>
+                    Create with AI
+                    <AiAgentIcon size={16} />
+                  </button>
+                  {onExpand && (
+                    <button
+                      type="button"
+                      aria-label="Expand"
+                      title="Expand to full page"
+                      onClick={onExpand}
+                      className="lhs-drawer__expand-btn"
+                    >
+                      <span className="material-symbols-outlined">open_in_full</span>
+                    </button>
+                  )}
+                </span>
+                <span className="lhs-drawer__tab-underline" />
+              </div>
+            ) : (
+              <button
+                key={tab}
+                className={`lhs-drawer__tab${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                <span className="lhs-drawer__tab-label">{tab}</span>
+                <span className="lhs-drawer__tab-underline" />
+              </button>
+            ),
+          )}
+          {showTabs && onCollapse && (
+            <Tooltip text="Collapse editor" position="bottom">
+              <button
+                className="lhs-drawer__collapse-btn"
+                onClick={onCollapse}
+                type="button"
+                aria-label="Collapse editor"
+              >
+                <span className="material-symbols-outlined">left_panel_close</span>
+              </button>
+            </Tooltip>
+          )}
+        </div>
+      )}
 
-      {activeTab === 'Create manually' ? (
+      {!showAiBody ? (
         <div className="lhs-drawer__body">
           <div className="lhs-drawer__search">
             <FormInput
@@ -814,18 +875,6 @@ export default function LHSDrawer({
               showLeftIcon
               customIconClass="icon_phoenix-search-glass"
             />
-            {onCollapse && (
-              <Tooltip text="Collapse editor" position="bottom">
-                <button
-                  className="lhs-drawer__collapse-btn"
-                  onClick={onCollapse}
-                  type="button"
-                  aria-label="Collapse editor"
-                >
-                  <span className="material-symbols-outlined">left_panel_close</span>
-                </button>
-              </Tooltip>
-            )}
           </div>
 
           <div className="lhs-drawer__sections">
@@ -936,7 +985,13 @@ export default function LHSDrawer({
               />
             )}
           </div>
-          <AIPromptBox onSend={() => {}} />
+          <PromptComposer
+            value={aiInputValue}
+            onChange={setAiInputValue}
+            onSend={() => setAiInputValue('')}
+            placeholder="What would you like to build? For example: Review response agent replying autonomously."
+            rows={2}
+          />
         </div>
       )}
 

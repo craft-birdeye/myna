@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection, type VoiceChatMessage } from '../components'
-import { TrackFeedbackIcon } from '../assets/TrackFeedbackIcon'
-import { TrainAgentIcon } from '../assets/TrainAgentIcon'
 import voicemailSample from '../assets/voicemail_sample.mp3'
 import {
   FRONT_DESK_CALL_SUMMARY,
@@ -1212,19 +1210,19 @@ export function InboxScreen({
                               <button
                                 type="button"
                                 onClick={() => handleTrackFeedback(recId)}
-                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                                className="group flex items-center gap-xs text-small text-text-action"
                               >
-                                <TrackFeedbackIcon size={18} color="currentColor" />
-                                Track your feedback
+                                <Icon name="track_changes" size={16} />
+                                <span className="group-hover:underline">Track your feedback</span>
                               </button>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => setShareFeedbackMessageId(event.id)}
-                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                                className="group flex items-center gap-xs text-small text-text-action"
                               >
-                                <TrainAgentIcon size={18} color="currentColor" />
-                                Coach agent
+                                <Icon name="auto_awesome" size={16} />
+                                <span className="group-hover:underline">Coach agent</span>
                               </button>
                             ))}
                         </div>

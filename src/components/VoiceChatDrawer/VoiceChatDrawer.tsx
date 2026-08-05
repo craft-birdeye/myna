@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
-import { TrackFeedbackIcon } from '../../assets/TrackFeedbackIcon'
-import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
+import { Icon } from '../Icon/Icon'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import type { VoiceChatDrawerProps } from './VoiceChatDrawer.types'
@@ -85,10 +84,10 @@ export function VoiceChatDrawer({
                           <button
                             type="button"
                             onClick={() => onTrackFeedback?.(recId)}
-                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                            className="group flex items-center gap-xs text-small text-text-action"
                           >
-                            <TrackFeedbackIcon size={18} color="currentColor" />
-                            Track your feedback
+                            <Icon name="track_changes" size={16} />
+                            <span className="group-hover:underline">Track your feedback</span>
                           </button>
                         ) : (
                           <button
@@ -96,10 +95,10 @@ export function VoiceChatDrawer({
                             onClick={() =>
                               onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
                             }
-                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                            className="group flex items-center gap-xs text-small text-text-action"
                           >
-                            <TrainAgentIcon size={18} color="currentColor" />
-                            Coach agent
+                            <Icon name="auto_awesome" size={16} />
+                            <span className="group-hover:underline">Coach agent</span>
                           </button>
                         )}
                         {m.time && (

@@ -27,7 +27,9 @@
   flex-direction: column;
   gap: 20px;
   align-items: center;
-  padding: 20px 24px 20px;
+  /* 24px top padding matches the create-flow's header (AgentDetailScreen's
+     docked + expanded panels use the same value for visual parity). */
+  padding: 24px 24px 20px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
   position: relative;
@@ -35,10 +37,37 @@
   overflow: visible;
 }
 
+/* ─── Expanded (full-bleed, canvas hidden) ─── */
+.lhs-drawer--expanded {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.lhs-drawer__expanded-header {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lhs-drawer__expanded-name {
+  font-size: 20px;
+  line-height: 28px;
+  color: #212121;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ─── Custom tabs (hidden until tab switcher is enabled) ─── */
 .lhs-drawer__tabs {
   display: none;
   width: 100%;
+  align-items: center;
   gap: 8px;
   background: #fff;
 }
@@ -69,6 +98,7 @@
 }
 
 .lhs-drawer__tab-label {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -76,6 +106,54 @@
   height: 32px;
   padding: 0 8px;
   white-space: nowrap;
+}
+
+.lhs-drawer__tab-ai-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.lhs-drawer__expand-btn {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transform: translateY(-50%) scale(0.9);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #757575;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.lhs-drawer__expand-btn .material-symbols-outlined {
+  font-size: 14px !important;
+  width: 14px;
+  height: 14px;
+}
+
+.group:hover .lhs-drawer__expand-btn {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.lhs-drawer__expand-btn:hover {
+  background: #f2f4f7;
 }
 
 .lhs-drawer__tab-ai-icon {
@@ -88,17 +166,12 @@
 .lhs-drawer__tab-underline {
   display: block;
   width: 100%;
-  height: 1px;
+  height: 2px;
   background: transparent;
 }
 
 .lhs-drawer__tab--active .lhs-drawer__tab-underline {
   background: #1976d2;
-}
-
-/* ─── Tab content area ─── */
-.lhs-drawer__ai-body {
-  padding-top: 16px;
 }
 
 .lhs-drawer__body {
@@ -172,20 +245,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border: 1px solid #e5e9f0;
+  background: transparent;
+  border: none;
   border-radius: 4px;
   cursor: pointer;
-  color: #666;
+  color: #212121;
   padding: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
   position: relative;
 }
 
 .lhs-drawer__collapse-btn:hover {
   background: #f2f4f7;
   color: #212121;
-  border-color: #c8cdd8;
 }
 
 .lhs-drawer__collapse-btn .material-symbols-outlined {
@@ -622,6 +694,11 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  /* Centers the plain welcome bubble in the available space instead of
+     leaving it pinned to the top with a dead gap above the composer. A real
+     transcript overrides this via its own margin-top: auto (below), which
+     still bottom-anchors it as the thread grows. */
+  justify-content: center;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -632,7 +709,9 @@
 
 /* `justify-content: flex-end` clips the top of an overflowing scroll container,
    so bottom-align via auto margin instead. */
-.lhs-drawer__ai-chat-area > *:first-child {
+/* Bottom-anchors a real transcript (chat history hugs the bottom); the plain
+   welcome bubble has nothing to anchor against and should sit near the top. */
+.lhs-drawer__ai-chat-area > .lhs-drawer__ai-transcript:first-child {
   margin-top: auto;
 }
 

@@ -394,6 +394,7 @@ function WorkflowCanvas({
           zoom={zoom}
           onRun={() => {}}
           onEdit={() => {}}
+          onView={() => {}}
           onOrientationChange={() => {}}
           onZoomSelect={(fraction: number) => setZoom(Math.round(fraction * 100))}
           onFitView={() => {}}
