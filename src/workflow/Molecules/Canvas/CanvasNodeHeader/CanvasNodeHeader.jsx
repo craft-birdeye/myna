@@ -166,9 +166,9 @@ export default function CanvasNodeHeader({
             {menuOpen && (
               <div className="cnh__context-menu">
                 {isTrigger ? (
-                  <button className="cnh__context-menu-item cnh__context-menu-item--delete" onClick={handleDelete}>
-                    <DeleteIcon />
-                    <span>Delete</span>
+                  <button className="cnh__context-menu-item" onClick={handleReplace}>
+                    <ReplaceIcon />
+                    <span>Replace</span>
                   </button>
                 ) : (
                   <>

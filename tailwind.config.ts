@@ -49,10 +49,6 @@ export default {
           neutral: { bg: '#eaeaea', text: '#555555' }, // Gray/40 · Gray/300
           info: { bg: '#e8f1fc', text: '#1976d2' }, // Blue/10 · informational (matches text/action primary)
         },
-        rating: {
-          star: '#F2C052', // filled review star
-          empty: '#B9BCC0', // empty / unfilled review star
-        },
         tooltip: { DEFAULT: '#252525' }, // Gray/800 — Tooltip / Web (Aero DS, node 2180:72)
       },
       spacing: {

@@ -24,21 +24,11 @@ export type SavedCreateChat = {
   variant?: CreateChatVariant
 }
 
-/** In-progress Create with AI thread shared between the LHS panel and fullscreen. */
-export type CreateAiDraftSession = {
-  agentKey: string
-  trail: CreateChatTurn[]
-  updatedAt: number
-}
-
 const STORAGE_KEY = 'myna.savedCreateChats'
-const DRAFT_STORAGE_KEY = 'myna.createAiDraftSessions'
 
 type Store = Partial<Record<CreateChatVariant, SavedCreateChat>>
-type DraftStore = Record<string, CreateAiDraftSession>
 
 let memoryStore: Store = readStore()
-let draftMemoryStore: DraftStore = readDraftStore()
 
 function readStore(): Store {
   try {
@@ -55,27 +45,6 @@ function writeStore(store: Store) {
   } catch {
     // Storage unavailable (private mode / quota) — memory copy still works.
   }
-}
-
-function readDraftStore(): DraftStore {
-  try {
-    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as DraftStore) : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeDraftStore(store: DraftStore) {
-  try {
-    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(store))
-  } catch {
-    // Storage unavailable — memory copy still works.
-  }
-}
-
-function normalizeAgentKey(agentKey: string): string {
-  return (agentKey || 'agent').trim().toLowerCase()
 }
 
 export function rememberCreateAgentChat(variant: CreateChatVariant, chat: SavedCreateChat) {
@@ -100,57 +69,4 @@ export function createChatVariantForAgent(name: string): CreateChatVariant | nul
   if (lower.includes('reminder')) return 'reminder'
   if (lower.includes('front desk') || lower.includes('frontdesk')) return 'frontdesk'
   return null
-}
-
-export function getCreateAiDraftSession(agentKey: string): CreateAiDraftSession | null {
-  const key = normalizeAgentKey(agentKey)
-  const store = { ...readDraftStore(), ...draftMemoryStore }
-  return store[key] ?? null
-}
-
-export function setCreateAiDraftTrail(agentKey: string, trail: CreateChatTurn[]): CreateAiDraftSession {
-  const key = normalizeAgentKey(agentKey)
-  const next: CreateAiDraftSession = {
-    agentKey: key,
-    trail,
-    updatedAt: Date.now(),
-  }
-  draftMemoryStore = { ...readDraftStore(), ...draftMemoryStore, [key]: next }
-  writeDraftStore(draftMemoryStore)
-  return next
-}
-
-export function appendCreateAiDraftTurn(
-  agentKey: string,
-  turn: CreateChatTurn,
-): CreateAiDraftSession {
-  const existing = getCreateAiDraftSession(agentKey)
-  return setCreateAiDraftTrail(agentKey, [...(existing?.trail ?? []), turn])
-}
-
-export function clearCreateAiDraftSession(agentKey: string) {
-  const key = normalizeAgentKey(agentKey)
-  const store = { ...readDraftStore(), ...draftMemoryStore }
-  delete store[key]
-  draftMemoryStore = store
-  writeDraftStore(draftMemoryStore)
-}
-
-/** Prefer an in-progress LHS draft; fall back to the last saved create chat. */
-export function getRetainedCreateAiChat(agentName: string): SavedCreateChat | null {
-  const draft = getCreateAiDraftSession(agentName)
-  if (draft?.trail?.length) {
-    const firstUser = draft.trail.find((t) => t.kind === 'user')
-    return {
-      id: `draft-${normalizeAgentKey(agentName)}`,
-      title: agentName || 'Create with AI',
-      prompt: firstUser && firstUser.kind === 'user' ? firstUser.text : '',
-      draftTitle: '',
-      draftDescription: '',
-      replies: [],
-      trail: draft.trail,
-      variant: createChatVariantForAgent(agentName) ?? undefined,
-    }
-  }
-  return getLastSavedCreateChat(createChatVariantForAgent(agentName))
 }

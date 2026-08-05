@@ -19,8 +19,6 @@ export default function AddStepButton({
   onDrop,
   showPasteOption = false,
   onPaste,
-  /** When true, the + control is display-only (no click / menu). Drag-drop still works. */
-  disableClick = false,
 }) {
   const btnRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,7 +70,6 @@ export default function AddStepButton({
   function handleClick(e) {
     e.preventDefault();
     e.stopPropagation();
-    if (disableClick) return;
     if (showPasteOption) {
       if (fabOpen) {
         closeFab();
@@ -125,7 +122,6 @@ export default function AddStepButton({
     (menuOpen || fabOpen) ? 'add-step-btn--open' : '',
     isDraggingFromLHS ? 'add-step-btn--lhs-drag' : '',
     isDragOver ? 'add-step-btn--drop-target' : '',
-    disableClick ? 'add-step-btn--noninteractive' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -137,8 +133,6 @@ export default function AddStepButton({
         type="button"
         className={btnClass}
         aria-label="Add step"
-        aria-disabled={disableClick || undefined}
-        tabIndex={disableClick ? -1 : undefined}
         onClick={handleClick}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
