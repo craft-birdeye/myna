@@ -30,7 +30,7 @@ export function TopNav({ title, avatarUrl, initials = 'S', onAdd, onHelp, onMenu
       )}
       {!title && <span className="flex-1" />}
       <IconButton label="Create new" onClick={onAdd}>
-        <Icon name="add_circle" size={20} fill className="text-text-action" />
+        <Icon name="add_circle" size={21} fill className="text-text-action" />
       </IconButton>
 
       <IconButton label="Help" onClick={onHelp}>

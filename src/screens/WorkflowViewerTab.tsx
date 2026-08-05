@@ -6,7 +6,12 @@
  * - Canvas has left/right padding and rounded corners
  */
 import React, { Suspense } from 'react'
-import { AUTOMOTIVE_AGENT_WORKFLOWS, HEALTHCARE_AGENT_WORKFLOWS, DENTAL_AGENT_WORKFLOWS } from '../data/agentWorkflows'
+import {
+  AUTOMOTIVE_AGENT_WORKFLOWS,
+  DENTAL_AGENT_WORKFLOWS,
+  HEALTHCARE_AGENT_WORKFLOWS,
+  HEALTHCARE_REMINDER_NORTH_WORKFLOW,
+} from '../data/agentWorkflows'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 
 // @ts-ignore
@@ -20,14 +25,17 @@ const EMPTY_WORKFLOW = {
 
 interface WorkflowViewerTabProps {
   instanceName: string
+  /** Overrides the start-node / page title (e.g. newly created draft name). */
+  displayName?: string
   onEdit: () => void
   product?: string
 }
 
-export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowViewerTabProps) {
+export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }: WorkflowViewerTabProps) {
   const { procedures } = useProcedureStore()
   // instanceName is e.g. "Frontdesk agent - North region"; extract the agent name prefix
   const agentName = instanceName.replace(/ - .+$/, '')
+  const shownName = displayName ?? instanceName
   const isHCProduct = product === 'healthcare' || product === 'dental'
 
   const filteredProcedures = procedures.filter((p) =>
@@ -37,7 +45,22 @@ export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowVie
     product === 'healthcare' ? HEALTHCARE_AGENT_WORKFLOWS :
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
-  const workflow = workflowMap[agentName] ?? EMPTY_WORKFLOW
+  const baseWorkflow =
+    product === 'healthcare' && instanceName === 'Reminder agent - North region'
+      ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
+      : workflowMap[agentName] ?? EMPTY_WORKFLOW
+
+  // Patch the start-node label so newly created drafts show their draft name on the canvas.
+  const workflow = {
+    nodes: baseWorkflow.nodes,
+    nodeDetails: {
+      ...baseWorkflow.nodeDetails,
+      '__start__': {
+        ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
+        agentName: shownName,
+      },
+    },
+  }
 
   return (
     <div className="relative flex-1 overflow-hidden" style={{ height: '100%' }}>
@@ -51,8 +74,6 @@ export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowVie
         /* Viewer: canvas rounded, no extra containers */
         .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; }
         .wf-viewer .flow-canvas           { border-radius: 12px !important; }
-        /* Hide orientation toggle (↓ →) in view-only mode only */
-        .wf-viewer .graph-controls__toggle { display: none !important; }
       `}</style>
 
       <div className="wf-viewer" style={{ height: '100%' }}>
@@ -62,9 +83,9 @@ export function WorkflowViewerTab({ instanceName, onEdit, product }: WorkflowVie
           </div>
         }>
           <AgentBuilder
-            key={`${agentName}::${product ?? 'automotive'}`}
-            pageTitle={instanceName}
-            appTitle={instanceName}
+            key={`${agentName}::${shownName}::${product ?? 'automotive'}`}
+            pageTitle={shownName}
+            appTitle={shownName}
             viewOnly={true}
             onEdit={onEdit}
             product={product ?? 'automotive'}

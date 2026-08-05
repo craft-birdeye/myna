@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react'
-
 export interface RunLogField {
   key: string
   value?: string
@@ -23,11 +21,46 @@ export interface RunLogStep {
   note?: string
 }
 
+// Conversation entry shape is shared with the inbox deep-link data.
+export type {
+  ReminderConversationCardField as RunConversationCardField,
+  ReminderConversationEntry as RunConversationEntry,
+} from '../../data/reminderInboxConversation'
+import type { ReactNode } from 'react'
+import type { ReminderConversationEntry } from '../../data/reminderInboxConversation'
+
 export interface RunDetailsPanelProps {
-  steps: RunLogStep[]
-  /** Rendered inside the "Conversation" tab — e.g. a call recording player + transcript. */
-  conversation: ReactNode
-  /** Rendered inside a third "Call details" tab (to the right of Conversation) when provided —
-   *  e.g. caller number, duration, call SID. Tab is omitted entirely when not passed. */
-  callDetails?: ReactNode
+  onViewConversation?: () => void
+  steps?: RunLogStep[]
+  conversation?: ReminderConversationEntry[]
+  /** Overrides the built-in `RunConversationThread` rendering of `conversation` with arbitrary
+   *  content (e.g. `LogDetailsPanel`'s own call-transcript layout). Takes precedence when set. */
+  conversationContent?: ReactNode
+  /** When false, hides Logs/Conversation tabs and shows logs only. Default true. */
+  showTabs?: boolean
+  /** Panel header title. Default "Run details". */
+  title?: string
+  /** When false, hides the header row (title + optional "View conversation" button) entirely.
+   *  Default true. */
+  showHeader?: boolean
+  /** Renders a call-recording waveform inline in the Conversation tab, right after whichever
+   *  system entry has `insertCallRecordingAfter` set — sticky once scrolled past. Only meaningful
+   *  when the underlying call actually included a voice leg. Default false. */
+  showCallRecording?: boolean
+  audioUrl?: string
+  durationSecs?: number
+  /** Shows a third "Call details" tab (Caller number, Language detected, Duration, Call SID,
+   *  Start time, Call end reason, Routed via) when provided. */
+  callDetails?: {
+    callerNumber: string
+    languageDetected: string
+    duration: string
+    sidNumber: string
+    startTime: string
+    callEndReason: string
+    routedVia: string
+  }
+  /** Overrides the built-in `CallDetailsTab` rendering of `callDetails` with arbitrary content.
+   *  Also shows the "Call details" tab on its own, even without `callDetails` set. */
+  callDetailsContent?: ReactNode
 }

@@ -3,7 +3,21 @@ import { createPortal } from 'react-dom'
 import { AiAgentIcon } from '../assets/AiAgentIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { Block, ChatBubble, ChatSystemLabel, Chip, Icon, ProcedureSidePanel, TranscriptSidePanel } from '../components'
+import { SendIcon } from '../assets/SendIcon'
+import {
+  AttachMenuPopover,
+  Block,
+  ChatBubble,
+  ChatSystemLabel,
+  Chip,
+  FilesModal,
+  Icon,
+  MediaLibraryModal,
+  ProcedureSidePanel,
+  RefChip,
+  Tooltip,
+  TranscriptSidePanel,
+} from '../components'
 import {
   CONV_THREADS,
   GAP_ICON,
@@ -36,8 +50,6 @@ interface RecommendationDetailScreenProps {
    *  prompt (pre-filled) instead of requiring a separate "Track your feedback" click first. */
   autoOpenFeedbackPrefill?: string | null
   onAutoOpenFeedbackConsumed?: () => void
-  /** Hides the "Reset to original" header button (e.g. for the Reminder agent). */
-  hideResetToOriginal?: boolean
 }
 
 // ── Confirm accept modal ──────────────────────────────────────────────────────
@@ -645,6 +657,9 @@ function CopilotFooter({
 }) {
   const [copilotInput, setCopilotInput] = useState('')
   const [attached, setAttached] = useState(false)
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
+  const [filesModalOpen, setFilesModalOpen] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Auto-grow the composer to fit its content (e.g. a long pre-filled reply) instead of
@@ -667,24 +682,15 @@ function CopilotFooter({
 
   return (
     <div className="shrink-0 bg-surface px-2xl py-md">
-      <div className="mx-auto flex w-full max-w-[900px] flex-col gap-sm">
+      <div className="mx-auto flex w-full max-w-[720px] flex-col gap-sm">
         <div
-          className={`flex flex-col gap-sm rounded-md border bg-surface px-lg pb-sm pt-md transition-colors focus-within:border-ai-brand ${
-            prefill ? 'border-ai-brand' : 'border-border-selected'
+          className={`flex flex-col gap-md rounded-xl border bg-surface px-lg py-md shadow-card transition-colors focus-within:border-ai-brand ${
+            prefill ? 'border-ai-brand' : 'border-border'
           }`}
         >
           {attached && (
-            <div className="flex w-fit items-center gap-xs rounded-sm border border-border bg-surface-subtle px-sm py-xs">
-              <Icon name="picture_as_pdf" size={16} className="shrink-0 text-chip-danger-text" />
-              <span className="text-small text-text-primary">{ATTACHMENT_NAME}</span>
-              <button
-                type="button"
-                aria-label="Remove attachment"
-                onClick={() => setAttached(false)}
-                className="flex size-4 shrink-0 items-center justify-center rounded-full text-text-icon hover:bg-surface-hover"
-              >
-                <Icon name="close" size={12} />
-              </button>
+            <div className="flex flex-wrap items-center gap-sm">
+              <RefChip kind="file" label={ATTACHMENT_NAME} onRemove={() => setAttached(false)} />
             </div>
           )}
           <textarea
@@ -706,40 +712,66 @@ function CopilotFooter({
             className="max-h-[240px] min-h-12 w-full resize-none overflow-y-auto bg-transparent p-0 text-body !leading-[24px] text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-md text-text-icon">
-              <button type="button" aria-label="More options" className="flex items-center justify-center hover:text-text-primary">
-                <Icon name="add" size={20} />
-              </button>
-              <button
-                type="button"
-                aria-label="Attach a document"
-                title="Wait for me to upload the documents"
+            <div className="flex items-center gap-xs text-text-icon">
+              <AttachMenuPopover
                 disabled={isThinking}
-                onClick={() => setAttached((v) => !v)}
-                className={`flex items-center justify-center transition-colors ${attached ? 'text-text-primary' : 'hover:text-text-primary'}`}
-              >
-                <Icon name="attach_file" size={20} />
-              </button>
-              <button type="button" aria-label="Voice input" className="flex items-center justify-center hover:text-text-primary">
-                <Icon name="mic" size={20} />
-              </button>
+                onSelect={(option) => {
+                  if (option === 'upload-image') imageInputRef.current?.click()
+                  else if (option === 'media-library') setMediaLibraryOpen(true)
+                  else if (option === 'files') setFilesModalOpen(true)
+                }}
+              />
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) setAttached(true)
+                  e.target.value = ''
+                }}
+              />
+              <Tooltip content="Dictate" variant="brief">
+                <button
+                  type="button"
+                  aria-label="Voice input"
+                  disabled={isThinking}
+                  className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
+                >
+                  <Icon name="mic" size={20} />
+                </button>
+              </Tooltip>
             </div>
             <button
               type="button"
               aria-label="Send refinement"
               disabled={(!copilotInput.trim() && !attached) || isThinking}
               onClick={handleSend}
-              className={`flex items-center justify-center transition-colors ${
+              className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
                 (copilotInput.trim() || attached) && !isThinking
-                  ? 'text-ai-brand hover:opacity-80'
-                  : 'cursor-not-allowed text-text-tertiary'
+                  ? 'text-ai-brand hover:bg-surface-hover'
+                  : 'cursor-not-allowed text-text-tertiary opacity-40'
               }`}
             >
-              <Icon name="send" size={22} />
+              <SendIcon size={24} />
             </button>
           </div>
         </div>
       </div>
+      <MediaLibraryModal
+        open={mediaLibraryOpen}
+        onClose={() => setMediaLibraryOpen(false)}
+        onDone={(selected) => {
+          if (selected.length > 0) setAttached(true)
+        }}
+      />
+      <FilesModal
+        open={filesModalOpen}
+        onClose={() => setFilesModalOpen(false)}
+        onDone={(selected) => {
+          if (selected.length > 0) setAttached(true)
+        }}
+      />
     </div>
   )
 }
@@ -913,7 +945,7 @@ function PendingFeedbackAsk({
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-2xl">
-        <div className="mx-auto flex w-full max-w-[900px] flex-col gap-lg py-xl">
+        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-lg py-xl">
           <AgentRow>
             <Block heading="Reported conversation" variant="neutral" hideBar>
               <div className="flex flex-col gap-md rounded-md border border-border bg-surface-hover/40 p-lg">
@@ -1212,14 +1244,20 @@ function IntroBlockItem({
               ))}
             </Block>
             {onViewProcedure && (
-              <button
-                type="button"
-                onClick={onViewProcedure}
-                className="flex h-9 w-fit items-center gap-xs rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-              >
-                <Icon name="menu_book" size={16} />
-                View Procedure
-              </button>
+              <div className="flex gap-md">
+                <div className="w-px shrink-0" />
+                <button
+                  type="button"
+                  onClick={onViewProcedure}
+                  className="flex min-w-0 flex-1 items-center gap-sm rounded-md border border-border bg-surface px-md py-md text-left hover:bg-surface-hover"
+                >
+                  <Icon name="menu_book" size={18} className="shrink-0 text-text-icon" />
+                  <span className="min-w-0 flex-1 text-body text-text-primary">
+                    {block.label.replace(/^Procedure (updated|created):\s*/, '')}
+                  </span>
+                  <Icon name="chevron_right" size={18} className="shrink-0 text-text-icon" />
+                </button>
+              </div>
             )}
           </div>
         )
@@ -1245,8 +1283,67 @@ function IntroBlockItem({
 function UserTurnBubble({ text, children }: { text: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-end gap-xs">
-      <div className="max-w-[85%] rounded-lg bg-[#f0f0f0] px-md py-sm text-body leading-[1.5] text-text-primary">{text}</div>
+      <div className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">{text}</div>
       {children}
+    </div>
+  )
+}
+
+/** Best-effort plain-text extraction of a revealed turn's blocks, for the copy button — joins
+ *  every block that carries its own `text` (thought/text/section), skipping structural blocks
+ *  (list/divider/collapsible/transcript) that don't reduce cleanly to one string. */
+function introBlocksToCopyText(blocks: IntroBlock[]): string {
+  return blocks
+    .map((b) => ('text' in b ? b.text : undefined))
+    .filter((t): t is string => Boolean(t))
+    .join('\n\n')
+}
+
+// ChatGPT-style action row shown under an agent turn: like / dislike / copy. Hidden until the
+// enclosing turn (a `group`-marked reveal container) is hovered — see `RecommendationMessageActions`
+// call sites, each nested inside a `.group` wrapper for exactly this turn.
+function RecommendationMessageActions({ copyText, className = '' }: { copyText?: string; className?: string }) {
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    if (copyText) void navigator.clipboard?.writeText(copyText)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1500)
+  }
+
+  const btn =
+    'flex size-6 items-center justify-center rounded-sm text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-secondary'
+
+  return (
+    <div className={`mt-xs flex items-center gap-xs opacity-0 transition-opacity group-hover:opacity-100 ${className}`}>
+      <Tooltip content="Good response" variant="brief">
+        <button
+          type="button"
+          aria-label="Good response"
+          aria-pressed={feedback === 'up'}
+          onClick={() => setFeedback((prev) => (prev === 'up' ? null : 'up'))}
+          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-secondary' : ''}`}
+        >
+          <Icon name="thumb_up" size={15} fill={feedback === 'up'} />
+        </button>
+      </Tooltip>
+      <Tooltip content="Bad response" variant="brief">
+        <button
+          type="button"
+          aria-label="Bad response"
+          aria-pressed={feedback === 'down'}
+          onClick={() => setFeedback((prev) => (prev === 'down' ? null : 'down'))}
+          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-secondary' : ''}`}
+        >
+          <Icon name="thumb_down" size={15} fill={feedback === 'down'} />
+        </button>
+      </Tooltip>
+      <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief">
+        <button type="button" aria-label={copied ? 'Copied' : 'Copy'} onClick={handleCopy} className={btn}>
+          <Icon name={copied ? 'check' : 'copy_all'} size={15} />
+        </button>
+      </Tooltip>
     </div>
   )
 }
@@ -1310,7 +1407,7 @@ function ScriptedTurnResponse({
   }, [])
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="group flex flex-col gap-lg">
       {response.introBlocks.map((block, i) => {
         if (revealStep <= i) return null
         const prevKind = i > 0 ? response.introBlocks[i - 1].kind : null
@@ -1361,6 +1458,7 @@ function ScriptedTurnResponse({
                   </button>
                 </div>
               )}
+              <RecommendationMessageActions copyText={introBlocksToCopyText(response.introBlocks)} />
             </div>
           </PromptWrap>
         )
@@ -1610,7 +1708,7 @@ function ResponseBlock({
 
   if (introBlocks) {
     return (
-      <div className="flex flex-col gap-lg">
+      <div className="group flex flex-col gap-lg">
         {introBlocks.map((block, i) => {
           if (revealStep <= i) return null
           const prevKind = i > 0 ? introBlocks[i - 1].kind : null
@@ -1660,10 +1758,16 @@ function ResponseBlock({
                     </button>
                   </div>
                 )}
+                <RecommendationMessageActions copyText={introBlocksToCopyText(introBlocks)} />
               </div>
             </PromptWrap>
           )
         })()}
+        {!introApprovalPrompt && revealStep > introBlocks.length && (
+          <AgentContinuation className="chat-reveal-in">
+            <RecommendationMessageActions copyText={introBlocksToCopyText(introBlocks)} />
+          </AgentContinuation>
+        )}
         {revealStep < totalSteps && (
           <AgentRow>
             <div className="flex items-center px-md py-sm">
@@ -1676,7 +1780,7 @@ function ResponseBlock({
   }
 
   return (
-    <div className="flex items-start gap-md">
+    <div className="group flex items-start gap-md">
       <AgentAvatar />
       <div className="flex min-w-0 flex-1 flex-col gap-xl">
       {revealStep > 0 && (
@@ -1799,6 +1903,10 @@ function ResponseBlock({
         </div>
       )}
 
+      {revealStep >= totalSteps && (
+        <RecommendationMessageActions copyText={[bodyText, ...changes.map((c) => c.description)].filter(Boolean).join('\n\n')} />
+      )}
+
       {revealStep < totalSteps && (
         <div className="flex items-center px-md py-sm">
           <TypingDots />
@@ -1888,7 +1996,7 @@ function RecommendationChatView({
     new Set(manualUpdates.slice(resolvedCount).map((m) => m.relatedType).filter((t): t is GapType => Boolean(t)))
 
   return (
-    <div className="recommendation-chat-body mx-auto flex w-full max-w-[900px] flex-col gap-xl py-xl">
+    <div className="recommendation-chat-body mx-auto flex w-full max-w-[720px] flex-col gap-xl py-xl">
       <style>{`
         @keyframes chat-reveal-in {
           from { opacity: 0; transform: translateY(6px); }
@@ -1952,12 +2060,7 @@ function RecommendationChatView({
         return (
           <div key={turn.id} className="flex flex-col gap-xl">
             <UserTurnBubble text={turn.text}>
-              {turn.attachment && (
-                <div className="flex items-center gap-xs rounded-sm border border-border bg-surface px-sm py-xs">
-                  <Icon name="picture_as_pdf" size={14} className="shrink-0 text-chip-danger-text" />
-                  <span className="text-small text-text-secondary">{turn.attachment}</span>
-                </div>
-              )}
+              {turn.attachment && <RefChip kind="file" label={turn.attachment} />}
             </UserTurnBubble>
             {pending ? (
               <RefinementThinking />
@@ -2014,10 +2117,9 @@ export function RecommendationDetailScreen({
   onBack,
   autoOpenFeedbackPrefill,
   onAutoOpenFeedbackConsumed,
-  hideResetToOriginal = false,
 }: RecommendationDetailScreenProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
-  const { overrides, submitRefinement, setRecommendationStatus, resetOverrides } = useRecommendationOverridesStore()
+  const { overrides, submitRefinement, setRecommendationStatus } = useRecommendationOverridesStore()
   const rec =
     [...RECOMMENDATIONS, ...feedbackRecommendations].find((r) => r.id === recommendationId) ?? RECOMMENDATIONS[0]
 
@@ -2058,6 +2160,7 @@ export function RecommendationDetailScreen({
   // Chat view's back-and-forth is intentionally ephemeral — in-memory only, reset on refresh (or
   // when navigating to a different recommendation), never written to localStorage.
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([])
+  const [isScrolledUp, setIsScrolledUp] = useState(false)
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const stickToBottomRef = useRef(true)
 
@@ -2078,7 +2181,9 @@ export function RecommendationDetailScreen({
     const handleScroll = () => {
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
       stickToBottomRef.current = distanceFromBottom < 120
+      setIsScrolledUp(distanceFromBottom > 40)
     }
+    handleScroll()
     container.addEventListener('scroll', handleScroll)
 
     const observer = new ResizeObserver(() => {
@@ -2103,13 +2208,6 @@ export function RecommendationDetailScreen({
     setRecStatus('rejected')
     setRecommendationStatus(id, 'rejected')
     showToast({ message: 'Recommendation rejected', variant: 'danger' })
-  }
-
-  const handleResetToOriginal = () => {
-    resetOverrides(rec.id)
-    setRecStatus('open')
-    setChatTurns([])
-    showToast({ message: 'Reset to the original recommendation.' })
   }
 
   const handleApproveScripted = () => {
@@ -2141,9 +2239,9 @@ export function RecommendationDetailScreen({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex h-14 shrink-0 items-center justify-between gap-sm border-b border-border px-2xl">
-        <div className="flex min-w-0 items-center gap-sm">
+      {/* Header — flush-centered 720px column, matching the create-agent chat header. */}
+      <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
+        <div className="flex w-full max-w-[720px] items-center gap-sm">
           <button
             type="button"
             aria-label="Back to recommendations"
@@ -2157,26 +2255,14 @@ export function RecommendationDetailScreen({
           ) : (
             <AiAgentIcon size={16} className="shrink-0" />
           )}
-          <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
-          <Chip
-            label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-            variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
-          />
-        </div>
-
-        {!hideResetToOriginal && (
-          <div className="flex shrink-0 items-center gap-sm">
-            <button
-              type="button"
-              aria-label="Reset to original"
-              title="Reset to original"
-              onClick={handleResetToOriginal}
-              className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-            >
-              <Icon name="restart_alt" size={18} />
-            </button>
+          <div className="flex min-w-0 flex-1 items-center gap-sm">
+            <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
+            <Chip
+              label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+              variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
+            />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Body */}
@@ -2188,8 +2274,8 @@ export function RecommendationDetailScreen({
         />
       ) : (
         <>
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-            <div ref={chatScrollRef} className="min-w-0 flex-1 overflow-y-auto px-2xl">
+          <div className="relative flex min-h-0 flex-1 justify-center overflow-hidden">
+            <div ref={chatScrollRef} className="scrollbar-none min-w-0 flex-1 max-w-[720px] overflow-y-auto px-2xl">
               <RecommendationChatView
                 rec={rec}
                 recStatus={recStatus}
@@ -2209,6 +2295,19 @@ export function RecommendationDetailScreen({
               />
             </div>
           </div>
+
+          {isScrolledUp && (
+            <div className="z-10 flex shrink-0 justify-center bg-surface pb-sm pt-md">
+              <button
+                type="button"
+                aria-label="Scroll to latest"
+                onClick={() => chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' })}
+                className="flex size-7 items-center justify-center rounded-full border border-border bg-surface text-text-icon hover:bg-surface-hover"
+              >
+                <Icon name="expand_more" size={18} />
+              </button>
+            </div>
+          )}
 
           <CopilotFooter
             isThinking={isThinking}

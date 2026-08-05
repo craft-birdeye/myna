@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, type MouseEvent } from 'react'
 import {
   Icon,
-  IntegrationsPickerDrawer,
   LanguageFlag,
   LanguageSelectMenu,
   RefChip,
@@ -12,12 +11,6 @@ import {
   type AgentLanguageId,
 } from '../data/agentLanguages'
 import {
-  DEFAULT_AUTO_ACCOUNT_CONNECTED_INTEGRATION_IDS,
-  DEFAULT_AUTO_AGENT_SELECTED_INTEGRATION_ID,
-  getAutomotiveIntegration,
-  AUTOMOTIVE_INTEGRATION_CATALOG,
-} from '../data/automotiveIntegrations'
-import {
   BuildIcon,
   VariableIcon,
 } from '../workflow/Molecules/Inputs/PromptToolbarIcons.jsx'
@@ -26,7 +19,6 @@ import FieldPickerModal from '../workflow/Organisms/Modals/FieldPickerModal/Fiel
 interface AgentSettingsTabProps {
   product?: string
   agentName?: string
-  onOpenIntegrationSettings?: (integrationId: string) => void
 }
 
 const FRONTDESK_SYSTEM_PROMPT = `# Personality
@@ -58,6 +50,10 @@ const DEFAULT_ADDITIONAL_VOICES: AdditionalVoiceChip[] = [
 
 function isFrontDeskAgent(agentName?: string): boolean {
   return (agentName ?? '').startsWith('Front desk agent')
+}
+
+function isReminderAgent(agentName?: string): boolean {
+  return (agentName ?? '').startsWith('Reminder agent')
 }
 
 // ── Toggle ──────────────────────────────────────────────────────
@@ -563,146 +559,6 @@ function ChannelAccordion({
   )
 }
 
-// ── Settings section header with add action ─────────────────────
-function SettingsSectionHeader({
-  title,
-  addAriaLabel,
-  onAdd,
-  addDisabled,
-}: {
-  title: string
-  addAriaLabel: string
-  onAdd: (e: MouseEvent<HTMLButtonElement>) => void
-  addDisabled?: boolean
-}) {
-  return (
-    <div className="mb-md flex items-center gap-xs">
-      <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h2>
-      <button
-        type="button"
-        onClick={onAdd}
-        disabled={addDisabled}
-        aria-label={addAriaLabel}
-        className="flex size-6 shrink-0 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-primary focus:outline-none disabled:cursor-not-allowed disabled:text-text-tertiary"
-      >
-        <Icon name="edit" size={16} />
-      </button>
-    </div>
-  )
-}
-
-// ── Card 3-dot menu (edit / delete) ───────────────────────────
-interface CardMenuProps {
-  itemLabel: string
-  onEdit?: () => void
-  onDelete?: () => void
-  /** When true, skip absolute positioning (for use inside a positioned parent). */
-  inline?: boolean
-}
-
-function CardMenu({ itemLabel, onEdit, onDelete, inline = false }: CardMenuProps) {
-  const [open, setOpen] = useState(false)
-
-  if (!onEdit && !onDelete) return null
-
-  return (
-    <div className={`z-10 ${inline ? 'relative' : 'absolute right-md top-md'}`}>
-      <button
-        type="button"
-        aria-label={`${itemLabel} actions`}
-        aria-expanded={open}
-        onClick={(e) => {
-          e.stopPropagation()
-          setOpen((v) => !v)
-        }}
-        className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-      >
-        <Icon name="more_vert" size={20} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-[105]" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
-            {onEdit && (
-              <button
-                type="button"
-                className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit()
-                  setOpen(false)
-                }}
-              >
-                Edit
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                className="block w-full px-md py-sm text-left text-body text-chip-danger-text hover:bg-surface-hover"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                  setOpen(false)
-                }}
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ── Integration card ─────────────────────────────────────────────
-interface IntegrationCardProps {
-  iconBg: string
-  iconLabel: string
-  name: string
-  description: string
-  connected?: boolean
-  onEdit?: () => void
-  onRemove?: () => void
-}
-
-function IntegrationCard({
-  iconBg,
-  iconLabel,
-  name,
-  description,
-  connected,
-  onEdit,
-  onRemove,
-}: IntegrationCardProps) {
-  return (
-    <div className="group relative flex min-h-[148px] flex-col rounded-sm border border-border-selected bg-surface p-xl transition-colors hover:bg-surface-selected">
-      <div className="absolute right-md top-md z-10 flex items-center gap-sm">
-        {connected && (
-          <div className="flex items-center gap-xs text-small text-text-secondary">
-            <span className="size-2 rounded-full bg-accent-positive" />
-            Connected
-          </div>
-        )}
-        <CardMenu itemLabel={name} onEdit={onEdit} onDelete={onRemove} inline />
-      </div>
-      <div className="mb-md">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface p-[2px]">
-          <div
-            className="flex size-full items-center justify-center rounded-full text-[10px] leading-none text-white"
-            style={{ backgroundColor: iconBg }}
-          >
-            {iconLabel}
-          </div>
-        </div>
-      </div>
-      <h3 className="mb-xs truncate text-body text-text-primary">{name}</h3>
-      <p className="line-clamp-2 text-body text-text-secondary">{description}</p>
-    </div>
-  )
-}
-
 type RecordingMode = 'off' | 'announced'
 
 const VOICE_OPTIONS: VoiceOption[] = [
@@ -723,6 +579,169 @@ const VOICE_OPTIONS: VoiceOption[] = [
     preview: "Hi, I'm Morgan. Clear and neutral, ready to assist you.",
   },
 ]
+
+/** Flat Reminder settings (voice → additional voice → greeting → recording). */
+function ReminderSettings() {
+  const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
+  const [additionalVoices, setAdditionalVoices] =
+    useState<AdditionalVoiceChip[]>(DEFAULT_ADDITIONAL_VOICES)
+  const [greeting, setGreeting] = useState(
+    'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?'
+  )
+  const [recording, setRecording] = useState<RecordingMode>('announced')
+  const [consent, setConsent] = useState(
+    'This call may be recorded for quality and training purposes.'
+  )
+
+  function handleRemoveAdditionalVoice(label: string) {
+    setAdditionalVoices(additionalVoices.filter((v) => v.label !== label))
+  }
+
+  function handleAddAdditionalVoice() {
+    const used = new Set(additionalVoices.map((v) => v.language))
+    const nextLang = AGENT_LANGUAGES.find(
+      (l) => l.id !== 'en' && !used.has(l.id as AgentLanguageId),
+    )
+    if (!nextLang) return
+    const baseName = voice.split(' (')[0] || 'Andrea'
+    setAdditionalVoices([
+      ...additionalVoices,
+      { label: `${baseName}_${nextLang.label}`, language: nextLang.id as AgentLanguageId },
+    ])
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-lg">
+      <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        Voice call settings
+      </h2>
+
+      {/* Info banner */}
+      <div className="flex items-center gap-sm rounded-sm bg-[#eff6ff] px-md py-md">
+        <Icon name="info" size={18} className="shrink-0 text-[#3b82f6]" />
+        <span className="text-body text-text-primary">
+          These settings apply to any voice call configured in this agent
+        </span>
+      </div>
+
+      {/* Default voice */}
+      <div className="flex flex-col gap-xs">
+        <label className="text-small text-text-secondary">
+          Default voice <span className="text-chip-danger-text">*</span>
+        </label>
+        <VoiceSelect value={voice} options={VOICE_OPTIONS} onChange={setVoice} chevron="right" />
+      </div>
+
+      {/* Additional voice */}
+      <div className="flex flex-col gap-xs">
+        {additionalVoices.length > 0 && (
+          <label className="text-small text-text-secondary">Additional voice</label>
+        )}
+        {additionalVoices.length > 0 ? (
+          <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
+            <div className="flex flex-wrap gap-sm">
+              {additionalVoices.map((cfg) => {
+                const lang = getAgentLanguage(cfg.language)
+                return (
+                  <span
+                    key={cfg.label}
+                    className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary"
+                  >
+                    <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
+                    <span className="truncate">{cfg.label}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${cfg.label}`}
+                      onClick={() => handleRemoveAdditionalVoice(cfg.label)}
+                      className="flex size-4 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+                    >
+                      <Icon name="close" size={14} />
+                    </button>
+                  </span>
+                )
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={handleAddAdditionalVoice}
+              className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
+            >
+              <Icon name="add_circle" size={18} className="text-primary" />
+              Add
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleAddAdditionalVoice}
+            className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
+          >
+            <Icon name="add_circle" size={18} className="text-primary" />
+            Add additional voice
+          </button>
+        )}
+      </div>
+
+      {/* Greeting message */}
+      <div className="flex flex-col gap-xs">
+        <label className="text-body text-text-primary">
+          Greeting message <span className="text-chip-danger-text">*</span>
+        </label>
+        <textarea
+          value={greeting}
+          onChange={(e) => setGreeting(e.target.value)}
+          rows={4}
+          className={`${INPUT_CLASS} resize-none py-sm`}
+        />
+      </div>
+
+      {/* Recording */}
+      <div>
+        <p className="text-body text-text-primary">Recording</p>
+        <SettingSubtext tone="tertiary">
+          Configure consent wording in each channel settings below
+        </SettingSubtext>
+        <div className="mt-sm flex flex-col gap-sm">
+          <label className="flex cursor-pointer items-center gap-sm">
+            <input
+              type="radio"
+              name="reminder-recording"
+              checked={recording === 'off'}
+              onChange={() => setRecording('off')}
+              className="accent-primary"
+            />
+            <span className="text-body text-text-primary">Off</span>
+          </label>
+          <div>
+            <label className="flex cursor-pointer items-center gap-sm">
+              <input
+                type="radio"
+                name="reminder-recording"
+                checked={recording === 'announced'}
+                onChange={() => setRecording('announced')}
+                className="accent-primary"
+              />
+              <span className="text-body text-text-primary">Record with announced consent</span>
+            </label>
+            {recording === 'announced' && (
+              <div className="mt-sm pl-2xl">
+                <label className="mb-xs block text-small text-text-secondary">
+                  Consent message
+                </label>
+                <textarea
+                  value={consent}
+                  onChange={(e) => setConsent(e.target.value)}
+                  rows={3}
+                  className={`${INPUT_CLASS} resize-none py-sm`}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /** Flat Front desk settings (system prompt → language → voice → greeting → recording). */
 function FrontDeskSettings() {
@@ -1112,7 +1131,6 @@ function FrontDeskSettings() {
 
 export function AgentSettingsTab({
   agentName,
-  onOpenIntegrationSettings,
 }: AgentSettingsTabProps) {
   const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
   const [greeting, setGreeting] = useState(
@@ -1122,35 +1140,27 @@ export function AgentSettingsTab({
   const [consent, setConsent] = useState(
     'This call may be recorded for quality and training purposes.'
   )
-  const [accountConnectedIntegrationIds, setAccountConnectedIntegrationIds] = useState<string[]>(
-    DEFAULT_AUTO_ACCOUNT_CONNECTED_INTEGRATION_IDS,
-  )
-  const [agentSelectedIntegrationId, setAgentSelectedIntegrationId] = useState<string | null>(
-    DEFAULT_AUTO_AGENT_SELECTED_INTEGRATION_ID,
-  )
   const [voiceCallEnabled, setVoiceCallEnabled] = useState(true)
   const [webChatEnabled, setWebChatEnabled] = useState(true)
   const [textEnabled, setTextEnabled] = useState(true)
-  const [integrationDrawerOpen, setIntegrationDrawerOpen] = useState(false)
-
-  const agentIntegration = agentSelectedIntegrationId
-    ? getAutomotiveIntegration(agentSelectedIntegrationId)
-    : undefined
-
-  const removeAgentIntegration = () => {
-    setAgentSelectedIntegrationId(null)
-  }
-
-  const navigateToIntegrationSettings = (integrationId: string) => {
-    setIntegrationDrawerOpen(false)
-    onOpenIntegrationSettings?.(integrationId)
-  }
 
   if (isFrontDeskAgent(agentName)) {
     return (
       <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
         <div className="flex min-w-0 flex-1 flex-col">
           <FrontDeskSettings />
+        </div>
+        {/* Same right-column width as ProcedureDetailScreen Context panel */}
+        <div className="w-[400px] shrink-0" aria-hidden />
+      </div>
+    )
+  }
+
+  if (isReminderAgent(agentName)) {
+    return (
+      <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <ReminderSettings />
         </div>
         {/* Same right-column width as ProcedureDetailScreen Context panel */}
         <div className="w-[400px] shrink-0" aria-hidden />
@@ -1259,48 +1269,6 @@ export function AgentSettingsTab({
             </ChannelAccordion>
 
           </div>
-        </section>
-
-        {/* Integrations */}
-        <section>
-          <SettingsSectionHeader
-            title="Integrations"
-            addAriaLabel="Edit integrations"
-            onAdd={() => setIntegrationDrawerOpen(true)}
-          />
-          <p className="mb-lg text-body text-text-secondary">
-            Integration connected to this front desk agent.
-          </p>
-          {!agentIntegration ? (
-            <div className="flex h-32 items-center justify-center rounded-sm border border-border-selected bg-surface text-body text-text-tertiary">
-              No integration selected. Use Edit integrations to connect one.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-lg">
-              <IntegrationCard
-                iconBg={agentIntegration.iconBg}
-                iconLabel={agentIntegration.iconLabel}
-                name={agentIntegration.name}
-                description={agentIntegration.description}
-                connected
-                onEdit={() => navigateToIntegrationSettings(agentIntegration.id)}
-                onRemove={removeAgentIntegration}
-              />
-            </div>
-          )}
-          <IntegrationsPickerDrawer
-            open={integrationDrawerOpen}
-            integrations={AUTOMOTIVE_INTEGRATION_CATALOG}
-            connectedIds={accountConnectedIntegrationIds}
-            selectedId={agentSelectedIntegrationId}
-            onClose={() => setIntegrationDrawerOpen(false)}
-            onSave={({ selectedId, connectedIds }) => {
-              setAccountConnectedIntegrationIds(connectedIds)
-              setAgentSelectedIntegrationId(selectedId)
-              setIntegrationDrawerOpen(false)
-            }}
-            onOpenIntegrationSettings={navigateToIntegrationSettings}
-          />
         </section>
 
       </div>

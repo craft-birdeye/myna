@@ -2,6 +2,12 @@
 
 export const ANNETTE_BLACK_CONVERSATION_ID = '2'
 
+/** What the agent should have said once it actually has accurate business hours on file — used
+ *  as the "revised message" half of the knowledge-gap diff preview on the "Update business hours"
+ *  recommendation. */
+export const ANNETTE_BLACK_IMPROVED_HOURS_REPLY =
+  "Thanks for waiting — we're open Monday–Friday 8:00 AM–6:00 PM and Saturday 9:00 AM–1:00 PM. We're closed on Sundays. Would you like me to help you book a visit?"
+
 export type AnnetteChatEvent =
   | { kind: 'date'; id: string; label: string }
   | { kind: 'status'; id: string; text: string; time?: string }
@@ -19,11 +25,6 @@ export type AnnetteChatEvent =
       /** Bot-style attribution with robot icon (agent messages). */
       isBot?: boolean
     }
-
-/** What the agent should have said once it actually has accurate business hours on file —
- *  used as the "revised message" half of the knowledge-gap diff preview. */
-export const ANNETTE_BLACK_IMPROVED_HOURS_REPLY =
-  "Thanks for waiting — we're open Monday–Friday 8:00 AM–6:00 PM and Saturday 9:00 AM–1:00 PM. We're closed on Sundays. Would you like me to help you book a visit?"
 
 export const ANNETTE_BLACK_CHAT_EVENTS: AnnetteChatEvent[] = [
   { kind: 'date', id: 'ab-d1', label: 'Fri • Jul 17' },

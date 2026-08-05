@@ -8,6 +8,8 @@ import styles from './LLMTaskBody.module.css';
 
 const LLM_MODEL_OPTIONS = [
   { value: 'Fast', label: 'Fast' },
+  { value: 'Balanced', label: 'Balanced' },
+  { value: 'Thinking', label: 'Thinking' },
   { value: 'Standard', label: 'Standard' },
   { value: 'Advanced', label: 'Advanced' },
 ];

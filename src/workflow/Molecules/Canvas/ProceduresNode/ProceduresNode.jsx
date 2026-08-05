@@ -20,6 +20,11 @@ export default function ProceduresNode({
   viewOnly = false,
   onToggleChange,
   onDelete,
+  onCopy,
+  onReplace,
+  hasClipboard = false,
+  onPasteBelow = undefined,
+  onPasteReplace = undefined,
   onMoveUp,
   onMoveDown,
   canMoveUp = false,
@@ -92,6 +97,11 @@ export default function ProceduresNode({
         viewOnly={viewOnly}
         onToggleChange={handleToggle}
         onDelete={onDelete}
+        onCopy={onCopy}
+        onReplace={onReplace}
+        hasClipboard={hasClipboard}
+        onPasteBelow={onPasteBelow}
+        onPasteReplace={onPasteReplace}
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
         canMoveUp={canMoveUp}

@@ -22,17 +22,20 @@ import { RecommendationsTab } from './RecommendationsTab'
 import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
-import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 
 interface AgentInstanceScreenProps {
   instanceName: string
+  /** Overrides the header / start-node label (e.g. newly created draft name). */
+  displayName?: string
   status?: string
   onBack: () => void
   onEditAgent?: (agentName: string) => void
-  onOpenIntegrationSettings?: (integrationId: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
+  /** Hide L2 SideNav while a full-bleed view (e.g. View log) is open. */
+  onFullBleedChange?: (active: boolean) => void
   product?: string
+  initialTab?: string
   /** Fires whenever a recommendation detail or log detail screen becomes the active view (or
    *  stops being it) — lets the app-level layout hide the secondary sidebar so that screen can go
    *  full-bleed. */
@@ -88,6 +91,9 @@ const TABS: Tab[] = [
 
 // Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
 const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
+
+// Review response agents hide Settings.
+const REVIEW_RESPONSE_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings')
 
 const METRICS_BY_AGENT: Record<string, Metric[]> = {
   'Front desk agent': [
@@ -317,18 +323,20 @@ const TAGGING_ROUTING_COLUMNS: Column<LocationRow>[] = [
 
 export function AgentInstanceScreen({
   instanceName,
+  displayName,
   status = 'Running',
   onBack,
   onEditAgent,
-  onOpenIntegrationSettings,
   onNavigateToInbox,
+  onFullBleedChange,
   product,
+  initialTab = 'outcomes',
   onFullBleedDetailActiveChange,
   initialRecommendationId,
   onInitialRecommendationConsumed,
   initialFeedbackPrefill,
 }: AgentInstanceScreenProps) {
-  const [activeTab, setActiveTab] = useState('outcomes')
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
@@ -352,6 +360,13 @@ export function AgentInstanceScreen({
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
+  const shownName = displayName ?? instanceName
+  const isReviewResponse = agentName.startsWith('Review response agent')
+
+  useEffect(() => {
+    onFullBleedChange?.(Boolean(selectedRun) && isReviewResponse)
+    return () => onFullBleedChange?.(false)
+  }, [selectedRun, isReviewResponse, onFullBleedChange])
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
   const COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
@@ -365,17 +380,15 @@ export function AgentInstanceScreen({
     : DEFAULT_COLUMNS
   const locations = LOCATIONS_BY_AGENT[agentName] ?? LOCATIONS_BY_AGENT['Front desk agent']
   const isTaggingRouting = agentName === 'Tagging & routing agent'
-  const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : TABS
+  const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : isReviewResponse ? REVIEW_RESPONSE_TABS : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
-  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
-  const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
   // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
   const isDraftInstance = instanceStatus === 'Draft'
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[instanceName] ?? 0
   const showHealthcareLogs =
-    activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || agentName === 'Reminder agent')
+    activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || isReviewResponse)
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && !isDraftInstance && product === 'dental' && Boolean(dentalOutboundLogRows)
@@ -390,6 +403,7 @@ export function AgentInstanceScreen({
             row={selectedRun}
             instanceName={instanceName}
             onBack={() => setSelectedRun(null)}
+            onEditAgent={() => onEditAgent?.(instanceName)}
             onTrackFeedback={(recommendationId) => {
               setSelectedRun(null)
               setActiveTab('recommendation')
@@ -411,7 +425,6 @@ export function AgentInstanceScreen({
             onBack={() => setSelectedRecommendationId(null)}
             autoOpenFeedbackPrefill={pendingFeedbackPrefill}
             onAutoOpenFeedbackConsumed={() => setPendingFeedbackPrefill(null)}
-            hideResetToOriginal={agentName === 'Reminder agent'}
           />
         </div>
       </div>
@@ -422,154 +435,155 @@ export function AgentInstanceScreen({
     <div className="flex h-full flex-col">
       <TopNav initials="S" />
 
-      {/* Header */}
-      <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
-        <div className="flex items-center gap-sm">
-          <button
-            type="button"
-            aria-label="Back"
-            onClick={onBack}
-            className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-          >
-            <BackArrowIcon />
-          </button>
-          <h1 className="text-h3 text-text-primary">{instanceName}</h1>
-          <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
-        </div>
-        <div className="flex items-center gap-sm">
-          {isWorkflowTab && issueCount > 0 && (
-            <span className="flex items-center gap-xs text-small text-text-secondary">
-              <Icon name="error" size={14} className="text-chip-danger-text" />
-              {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
-            </span>
-          )}
-<div className="relative">
-            <button
-              type="button"
-              onClick={() => setActionsOpen((open) => !open)}
-              className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
-            >
-              Actions
-              <Icon
-                name={actionsOpen ? 'expand_less' : 'expand_more'}
-                size={20}
-                className="text-text-icon"
-              />
-            </button>
-            {actionsOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-[105]"
-                  onClick={() => setActionsOpen(false)}
-                  aria-hidden
-                />
-                <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
-                  <button
-                    type="button"
-                    className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                    onClick={() => {
-                      setInstanceStatus('Paused')
-                      setActionsOpen(false)
-                    }}
-                  >
-                    Pause
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                    onClick={() => setActionsOpen(false)}
-                  >
-                    Duplicate
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full px-md py-sm text-left text-body text-chip-danger-text hover:bg-surface-hover"
-                    onClick={() => {
-                      setActionsOpen(false)
-                      onBack()
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
+            <div className="flex items-center gap-sm">
+              <button
+                type="button"
+                aria-label="Back"
+                onClick={onBack}
+                className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              >
+                <BackArrowIcon />
+              </button>
+              <h1 className="text-h3 text-text-primary">{shownName}</h1>
+              <Chip label={instanceStatus} variant={STATUS_VARIANT[instanceStatus] ?? 'neutral'} />
+            </div>
+            <div className="flex items-center gap-sm">
+              {isWorkflowTab && issueCount > 0 && (
+                <span className="flex items-center gap-xs text-small text-text-secondary">
+                  <Icon name="error" size={14} className="text-chip-danger-text" />
+                  {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
+                </span>
+              )}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setActionsOpen((open) => !open)}
+                  className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                >
+                  Actions
+                  <Icon
+                    name={actionsOpen ? 'expand_less' : 'expand_more'}
+                    size={20}
+                    className="text-text-icon"
+                  />
+                </button>
+                {actionsOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-[105]"
+                      onClick={() => setActionsOpen(false)}
+                      aria-hidden
+                    />
+                    <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+                      <button
+                        type="button"
+                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                        onClick={() => {
+                          setInstanceStatus('Paused')
+                          setActionsOpen(false)
+                        }}
+                      >
+                        Pause
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                        onClick={() => setActionsOpen(false)}
+                      >
+                        Duplicate
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full px-md py-sm text-left text-body text-chip-danger-text hover:bg-surface-hover"
+                        onClick={() => {
+                          setActionsOpen(false)
+                          onBack()
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              {activeTab === 'settings' && (
+                <button
+                  type="button"
+                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                >
+                  Save
+                </button>
+              )}
+            </div>
           </div>
-          {activeTab === 'settings' && (
-            <button
-              type="button"
-              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-            >
-              Save
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex shrink-0 items-center justify-between px-2xl">
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-        {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && (
-          <button
-            type="button"
-            onClick={clearAllFeedback}
-            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
-          >
-            Clear human feedback
-          </button>
-        )}
-      </div>
-
-      {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
-      {isWorkflowTab ? (
-        <WorkflowViewerTab
-          instanceName={instanceName}
-          onEdit={() => onEditAgent?.(instanceName)}
-          product={product}
-        />
-      ) : isRecommendationTab ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} isDraft={isDraftInstance} />
-        </div>
-      ) : (
-        <div className="flex-1 overflow-auto">
-          {activeTab === 'outcomes' ? (
-            <>
-              <div className="px-2xl pt-lg">
-                <MetricTiles metrics={metrics} />
-              </div>
-              <div className="px-lg py-lg">
-                <DataTable columns={COLUMNS} data={locations} scrollOnHover />
-              </div>
-            </>
-          ) : showEmptyDraftLogs ? (
-            <div className="flex h-full items-center justify-center px-lg py-lg">
-              <EmptyState
-                title="No logs yet"
-                description="This agent is still in draft and hasn't handled any conversations yet, so there's nothing to log."
-              />
-            </div>
-          ) : showHealthcareLogs ? (
-            <AgentLogsTab
-              agentName={agentName}
-              onNavigateToInbox={onNavigateToInbox}
-              onViewRun={setSelectedRun}
+          {/* Tabs */}
+          <div className="flex shrink-0 items-center justify-between px-2xl">
+            <Tabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={(tabId) => {
+                setActiveTab(tabId)
+              }}
             />
-          ) : showDentalOutboundLogs ? (
-            <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
-          ) : activeTab === 'settings' ? (
-            <AgentSettingsTab
+          </div>
+
+          {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
+          {isWorkflowTab ? (
+            <WorkflowViewerTab
+              instanceName={instanceName}
+              displayName={shownName}
+              onEdit={() => onEditAgent?.(instanceName)}
               product={product}
-              agentName={agentName}
-              onOpenIntegrationSettings={onOpenIntegrationSettings}
             />
+          ) : isRecommendationTab ? (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} isDraft={isDraftInstance} />
+            </div>
           ) : (
-            <div className="flex h-64 items-center justify-center text-body text-text-secondary">
-              No {tabs.find((t) => t.id === activeTab)?.label.toLowerCase()} data yet.
+            <div className="flex-1 overflow-auto">
+              {activeTab === 'outcomes' ? (
+                <>
+                  <div className="px-2xl pt-lg">
+                    <MetricTiles metrics={metrics} />
+                  </div>
+                  <div className="px-lg py-lg">
+                    <DataTable columns={COLUMNS} data={locations} scrollOnHover />
+                  </div>
+                </>
+              ) : showEmptyDraftLogs ? (
+                <div className="flex h-full items-center justify-center px-lg py-lg">
+                  <EmptyState
+                    title="No logs yet"
+                    description="This agent is still in draft and hasn't handled any conversations yet, so there's nothing to log."
+                  />
+                </div>
+              ) : showHealthcareLogs ? (
+                <AgentLogsTab
+                  agentName={agentName}
+                  onNavigateToInbox={onNavigateToInbox}
+                  onViewRun={setSelectedRun}
+                />
+              ) : showDentalOutboundLogs ? (
+                <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
+              ) : activeTab === 'settings' ? (
+                <AgentSettingsTab
+                  product={product}
+                  agentName={agentName}
+                />
+              ) : (
+                <div className="flex h-64 items-center justify-center text-body text-text-secondary">
+                  No {tabs.find((t) => t.id === activeTab)?.label.toLowerCase()} data yet.
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

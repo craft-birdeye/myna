@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type NavSection, type VoiceChatMessage } from '../components'
-import { TrackFeedbackIcon } from '../assets/TrackFeedbackIcon'
-import { TrainAgentIcon } from '../assets/TrainAgentIcon'
+import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection, type VoiceChatMessage } from '../components'
 import voicemailSample from '../assets/voicemail_sample.mp3'
 import {
   FRONT_DESK_CALL_SUMMARY,
@@ -12,6 +10,10 @@ import {
   ANNETTE_BLACK_CHAT_EVENTS,
   ANNETTE_BLACK_CONVERSATION_ID,
 } from '../data/annetteBlackChatConversation'
+import {
+  REMINDER_CONVERSATION_EVENTS,
+  REMINDER_INBOX_CONVERSATION_ID,
+} from '../data/reminderInboxConversation'
 import {
   COACHING_C1_CONVERSATION_ID,
   COACHING_C2_CONVERSATION_ID,
@@ -44,6 +46,16 @@ const CONVERSATIONS: Conversation[] = [
     location: 'Rock Dental Brands',
     assignee: 'Front desk agent - North region',
     date: '5:30 PM',
+    unread: true,
+  },
+  {
+    id: REMINDER_INBOX_CONVERSATION_ID,
+    name: 'Sarah Lauren',
+    verified: true,
+    message: 'Myna: Let me connect you with our front desk team.',
+    location: 'Rock Dental Brands',
+    assignee: 'Reminder agent',
+    date: '09:55 PM',
     unread: true,
   },
   {
@@ -770,6 +782,7 @@ export function InboxScreen({
   // Maps a chat-bubble message id to the recommendation id its feedback landed on, once known —
   // that bubble's "Coach agent" link switches to "Track your feedback" pointing at it.
   const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
   const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -784,11 +797,48 @@ export function InboxScreen({
     setShareFeedbackMessageId(null)
   }
 
+  const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
+    if (value === 'down') {
+      setShareFeedbackMessageId(messageId)
+      return
+    }
+    setMessageFeedback((prev) => ({ ...prev, [messageId]: value }))
+    if (value === 'up') showFeedbackToast('Thanks for the feedback!')
+  }
+
+  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
+    if (shareFeedbackMessageId === messageId) return 'down'
+    return messageFeedback[messageId] ?? null
+  }
+
   const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
     const feedbackMessageId = shareFeedbackMessageId
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    if (isReminderRun) {
+      const flaggedReminderEntry = REMINDER_CONVERSATION_EVENTS.find(
+        (entry) => entry.kind === 'message' && entry.id === feedbackMessageId,
+      )
+      submitFeedback({
+        text: details,
+        agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+        conversation: {
+          name: selectedConvo.name,
+          message: details,
+          channel: 'Voice',
+          date: selectedConvo.date,
+          location: selectedConvo.location,
+        },
+        conversationId: selectedConvo.id,
+        messageId: feedbackMessageId,
+        reportedExcerpt:
+          flaggedReminderEntry?.kind === 'message' ? [{ speaker: 'Myna', text: flaggedReminderEntry.text }] : undefined,
+      })
+      setMessageFeedback((prev) => ({ ...prev, [feedbackMessageId]: 'down' }))
+      return
+    }
 
     const reportedConversation = buildReportedConversation(threadEvents, feedbackMessageId, selectedConvo.name)
     const recId = submitFeedback({
@@ -877,10 +927,11 @@ export function InboxScreen({
   const currentTabSet = TABS_BY_NAV[activeNav] ?? DEFAULT_TAB_SET
   const isFrontDeskCall = selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID
   const isAnnetteChat = selectedConvo.id === ANNETTE_BLACK_CONVERSATION_ID
+  const isReminderRun = selectedConvo.id === REMINDER_INBOX_CONVERSATION_ID
   const coachingCall = COACHING_CALL_CONVERSATIONS[selectedConvo.id]
   const threadEvents: ChatEvent[] = isAnnetteChat
     ? ANNETTE_BLACK_CHAT_EVENTS
-    : isFrontDeskCall || coachingCall
+    : isFrontDeskCall || isReminderRun || coachingCall
       ? []
       : CHAT_EVENTS
 
@@ -1080,6 +1131,18 @@ export function InboxScreen({
                     onCoachAgentDirect={selectedConvo.id === COACHING_C3_CONVERSATION_ID ? handleCoachAgentDirect : undefined}
                   />
                 </>
+              ) : isReminderRun ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">Sun • May 24</span>
+                  </div>
+                  <RunConversationThread
+                    entries={REMINDER_CONVERSATION_EVENTS}
+                    meta="time"
+                    feedbackForMessage={feedbackForMessage}
+                    onFeedbackChange={handleFeedbackChange}
+                  />
+                </>
               ) : !isAnnetteChat ? (
                 <>
                   <div className="flex items-center justify-center">
@@ -1100,7 +1163,7 @@ export function InboxScreen({
                 </>
               ) : null}
 
-              {!isFrontDeskCall && !coachingCall &&
+              {!isFrontDeskCall && !isReminderRun && !coachingCall &&
                 threadEvents.map((event) => {
                   if (event.kind === 'date') {
                     return <ChatSystemLabel key={event.id} text={event.label} />
@@ -1147,19 +1210,19 @@ export function InboxScreen({
                               <button
                                 type="button"
                                 onClick={() => handleTrackFeedback(recId)}
-                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                                className="group flex items-center gap-xs text-small text-text-action"
                               >
-                                <TrackFeedbackIcon size={18} color="currentColor" />
-                                Track your feedback
+                                <Icon name="track_changes" size={16} />
+                                <span className="group-hover:underline">Track your feedback</span>
                               </button>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => setShareFeedbackMessageId(event.id)}
-                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                                className="group flex items-center gap-xs text-small text-text-action"
                               >
-                                <TrainAgentIcon size={18} color="currentColor" />
-                                Coach agent
+                                <Icon name="auto_awesome" size={16} />
+                                <span className="group-hover:underline">Coach agent</span>
                               </button>
                             ))}
                         </div>

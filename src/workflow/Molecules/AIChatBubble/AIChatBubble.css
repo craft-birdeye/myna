@@ -13,10 +13,26 @@
 }
 
 .ai-chat-bubble__avatar {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #F9F7FD;
+}
+
+.ai-chat-bubble__sparkle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ai-chat-bubble__sparkle svg {
+  display: block;
 }
 
 .ai-chat-bubble__body {
@@ -35,6 +51,7 @@
   letter-spacing: -0.28px;
   color: #212121;
   margin: 0;
+  white-space: pre-line;
 }
 
 .ai-chat-bubble__options {

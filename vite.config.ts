@@ -6,4 +6,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ command }) => ({
   base: command === 'build' && !(globalThis as any).process?.env?.VERCEL ? '/myna/' : '/',
   plugins: [react()],
+  server: {
+    allowedHosts: ['.trycloudflare.com'],
+  },
 }))

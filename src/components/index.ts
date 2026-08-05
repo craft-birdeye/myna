@@ -1,3 +1,15 @@
+export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
+export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
+export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
+export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
+export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
+export type {
+  RunConversationEntry,
+  RunDetailsPanelProps,
+  RunLogField,
+  RunLogStep,
+  RunLogStepType,
+} from './RunDetailsPanel/RunDetailsPanel.types'
 export { Chip } from './Chip/Chip'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'
@@ -52,14 +64,17 @@ export type {
   LogTranscriptEntry,
   LogToolCall,
 } from './LogDetailsPanel/LogDetailsPanel.types'
-export { RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
-export type { RunDetailsPanelProps, RunLogField, RunLogStep, RunLogStepType } from './RunDetailsPanel/RunDetailsPanel.types'
 export { Icon } from './Icon/Icon'
 export { IconRail } from './IconRail/IconRail'
 export { SideNav } from './SideNav/SideNav'
 export { TopNav } from './TopNav/TopNav'
 export { PageHeader } from './PageHeader/PageHeader'
 export { RefChip } from './RefChip/RefChip'
+export { ComposerAttachPopover } from './ComposerAttachPopover/ComposerAttachPopover'
+export { AttachMenuPopover } from './AttachMenuPopover/AttachMenuPopover'
+export { PromptComposer } from './PromptComposer/PromptComposer'
+export { MediaLibraryModal } from './MediaLibraryModal/MediaLibraryModal'
+export { FilesModal } from './FilesModal/FilesModal'
 export { SelectMenu } from './SelectMenu/SelectMenu'
 export { LanguageSelectMenu, LanguageFlag } from './LanguageSelectMenu/LanguageSelectMenu'
 export { StatusFilterDropdown } from './StatusFilterDropdown/StatusFilterDropdown'
@@ -141,6 +156,11 @@ export type { SideNavProps, NavSection, NavLeaf } from './SideNav/SideNav.types'
 export type { TopNavProps } from './TopNav/TopNav.types'
 export type { PageHeaderProps, AppointmentView, AppointmentTimescale } from './PageHeader/PageHeader.types'
 export type { RefChipProps } from './RefChip/RefChip.types'
+export type { AttachItem, AttachItemKind, ComposerAttachPopoverProps } from './ComposerAttachPopover/ComposerAttachPopover.types'
+export type { AttachMenuOption, AttachMenuPopoverProps } from './AttachMenuPopover/AttachMenuPopover.types'
+export type { PromptComposerAttachment, PromptComposerProps } from './PromptComposer/PromptComposer.types'
+export type { MediaLibraryFile, MediaLibraryFolder, MediaLibraryModalProps } from './MediaLibraryModal/MediaLibraryModal.types'
+export type { FilesModalFile, FilesModalFileType, FilesModalProps } from './FilesModal/FilesModal.types'
 export type { SelectMenuProps, SelectOption } from './SelectMenu/SelectMenu.types'
 export type { StatusFilterDropdownProps, StatusFilterOption } from './StatusFilterDropdown/StatusFilterDropdown.types'
 export { ALL_STATUS_IDS, STATUS_FILTER_OPTIONS } from './StatusFilterDropdown/StatusFilterDropdown.types'

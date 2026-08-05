@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { TrackFeedbackIcon } from '../../assets/TrackFeedbackIcon'
-import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
@@ -817,19 +815,19 @@ function TranscriptEntry({
               <button
                 type="button"
                 onClick={onTrackFeedback}
-                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                className="group flex items-center gap-xs text-small text-text-action"
               >
-                <TrackFeedbackIcon size={18} color="currentColor" />
-                Track your feedback
+                <Icon name="track_changes" size={16} />
+                <span className="group-hover:underline">Track your feedback</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={onCoachAgent}
-                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                className="group flex items-center gap-xs text-small text-text-action"
               >
-                <TrainAgentIcon size={18} color="currentColor" />
-                Coach agent
+                <Icon name="auto_awesome" size={16} />
+                <span className="group-hover:underline">Coach agent</span>
               </button>
             )}
             {entry.time && (
@@ -966,7 +964,8 @@ export function LogDetailsPanel({
     <>
       <RunDetailsPanel
         steps={steps}
-        callDetails={
+        showHeader={false}
+        callDetailsContent={
           showCallDetails ? (
             <CallDetailsTab
               callerNumber={displayCaller}
@@ -979,7 +978,7 @@ export function LogDetailsPanel({
             />
           ) : undefined
         }
-        conversation={
+        conversationContent={
           isReminder ? (
             <div className="relative flex h-full flex-col">
               <div

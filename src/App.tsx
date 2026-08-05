@@ -4,7 +4,7 @@ import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
-import { Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ManageAppointmentsScreen, buildAppointmentDetailProps, type AppointmentDetailArgs } from './screens/ManageAppointmentsScreen'
 import { SalesPipelineScreen, buildLeadDetailProps, type LeadDetailArgs } from './screens/SalesPipelineScreen'
 import { ServiceRequestsScreen, buildServiceRequestDetailProps, type ServiceRequestDetailArgs } from './screens/ServiceRequestsScreen'
@@ -38,6 +38,7 @@ import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
+import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import { AIOverviewScreen } from './screens/AIOverviewScreen'
 import logoSrc from './assets/birdeye-logo.svg'
@@ -245,6 +246,65 @@ const NAV_SECTIONS_BY_PRODUCT: Record<string, NavSection[]> = {
   dental:      DENTAL_NAV_SECTIONS,
 }
 
+const REVIEWS_NAV_SECTIONS: NavSection[] = [
+  {
+    id: 'human-actions',
+    label: 'Human actions',
+    defaultExpanded: true,
+    items: [
+      { id: 'view-all-reviews',      label: 'View all reviews' },
+      { id: 'respond-to-reviews',    label: 'Respond to reviews' },
+      { id: 'monitor-agent-replies', label: 'Monitor agent replies' },
+    ],
+  },
+  {
+    id: 'agents',
+    label: 'Agents',
+    items: [
+      { id: 'generation-agents', label: 'Generation agents' },
+      { id: 'response-agents',   label: 'Response agents' },
+      { id: 'tagging-agents',    label: 'Tagging agents' },
+      { id: 'marketing-agents',  label: 'Marketing agents' },
+    ],
+  },
+  {
+    id: 'outcomes',
+    label: 'Outcomes',
+    items: [
+      { id: 'review-ratings',       label: 'Review & ratings' },
+      { id: 'response-rate',        label: 'Response rate' },
+      { id: 'reviews-distribution', label: 'Reviews distribution' },
+      { id: 'analyze-competitors',  label: 'Analyze competitors' },
+      { id: 'all-reports',          label: 'All reports', external: true },
+    ],
+  },
+  {
+    id: 'resources',
+    label: 'Resources',
+    items: [
+      { id: 'monitoring-sites',   label: 'Monitoring sites' },
+      { id: 'generation-sites',   label: 'Generation sites' },
+      { id: 'response-templates', label: 'Response templates' },
+      { id: 'auto-reply-rules',   label: 'Auto-reply rules' },
+      { id: 'auto-share-rules',   label: 'Auto-share rules' },
+      { id: 'ratings-display',    label: 'Ratings display' },
+      { id: 'approvals',          label: 'Approvals' },
+      { id: 'qr-codes',           label: 'QR codes' },
+      { id: 'widgets',            label: 'Widgets' },
+      { id: 'ai-prompts',         label: 'AI prompts' },
+    ],
+  },
+]
+
+const REVIEWS_DEFAULT_NAV = 'view-all-reviews'
+
+const REVIEWS_NAV_LABELS: Record<string, string> = Object.fromEntries(
+  REVIEWS_NAV_SECTIONS.flatMap((section) => {
+    if (section.items === undefined) return [[section.id, section.label]]
+    return (section.items ?? []).map((item) => [item.id, item.label])
+  }),
+)
+
 const DEFAULT_NAV_BY_PRODUCT: Record<string, string> = {
   automotive: 'manage-appointments',
   healthcare:  'manage-appointments',
@@ -264,14 +324,16 @@ const PRODUCT_BRAND: Record<string, string> = {
 }
 
 const AGENT_NAMES: Record<string, string> = {
-  'frontdesk-agent':      'Front desk agent',
-  'reminder-agent':       'Reminder agent',
-  'outreach-agent':       'Outreach agent',
-  'waitlist-agent':       'Waitlist agent',
-  'pre-visit-agent':      'Pre-visit agent',
-  'recall-agent':         'Recall agent',
-  'revenue-agent':        'Revenue agent',
-  'treatment-plan-agent': 'Treatment plan agent',
+  'frontdesk-agent':           'Front desk agent',
+  'reminder-agent':            'Reminder agent',
+  'outreach-agent':            'Outreach agent',
+  'waitlist-agent':            'Waitlist agent',
+  'pre-visit-agent':           'Pre-visit agent',
+  'recall-agent':              'Recall agent',
+  'revenue-agent':             'Revenue agent',
+  'treatment-plan-agent':      'Treatment plan agent',
+  'review-response-agents':    'Review response agents',
+  'response-agents':           'Review response agents',
 }
 
 // Reverse of AGENT_NAMES — used to resolve a Recommendation's `agentName` (a full instance
@@ -316,10 +378,14 @@ export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
   const [railActive, setRailActive] = useState('frontdesk')
   const [navActive, setNavActive] = useState(
-    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'manage-appointments',
+    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
   )
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
+  // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
+  // closing the editor) knows which instance + tab to land on instead of its own defaults.
+  const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
+  const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
@@ -329,12 +395,6 @@ export function App() {
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
   const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
-
-  function openIntegrationSettings(integrationId: string) {
-    setRailActive('settings')
-    setSettingsTab('Integrations')
-    setSettingsSubScreen(`integration-${integrationId}`)
-  }
 
   function handleProductChange(id: string) {
     setActiveProduct(id)
@@ -400,28 +460,46 @@ export function App() {
               )
         }
         activeId={railActive}
-        onSelect={setRailActive}
+        onSelect={(id) => {
+          setRailActive(id)
+          setIsAgentSetupActive(false)
+          if (id === 'frontdesk') setNavActive('manage-appointments')
+          if (id === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
+        }}
         products={PRODUCTS}
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
       {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && (
-        <SideNav
-          title="Front desk"
-          sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
-          activeId={navActive}
-          onSelect={(id) => {
-            if (id === 'knowledge-base') {
-              setRailActive('settings')
-              setSettingsTab('Knowledge')
-            } else if (id === 'widgets') {
-              setRailActive('settings')
-              setSettingsTab('Widgets')
-            } else {
-              setNavActive(id)
-            }
-          }}
-        />
+        railActive === 'reviews' ? (
+          <SideNav
+            key="reviews"
+            title="Reviews AI"
+            sections={REVIEWS_NAV_SECTIONS}
+            activeId={navActive}
+            ctaLabel="Send review request"
+            onCtaClick={() => setNavActive(REVIEWS_DEFAULT_NAV)}
+            onSelect={setNavActive}
+          />
+        ) : (
+          <SideNav
+            key="frontdesk"
+            title="Front desk"
+            sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
+            activeId={navActive}
+            onSelect={(id) => {
+              if (id === 'knowledge-base') {
+                setRailActive('settings')
+                setSettingsTab('Knowledge')
+              } else if (id === 'widgets') {
+                setRailActive('settings')
+                setSettingsTab('Widgets')
+              } else {
+                setNavActive(id)
+              }
+            }}
+          />
+        )
       )}
       <main className="flex flex-1 flex-col overflow-hidden">
         {railActive === 'overview' ? (
@@ -474,25 +552,51 @@ export function App() {
             }}
           />
         ) : isEditingWorkflow ? (
-          <>
-            <TopNav title="Front desk" initials="S" />
-            <div className="flex-1 overflow-hidden">
-              <WorkflowEditorScreen
-                agentName={editingAgentName}
-                onClose={() => {
-                  setEditingAgentName(null)
-                  setWizardAgentDraft(null)
-                }}
-                product={activeProduct}
-                wizardDraft={wizardAgentDraft}
-                agentStatus={
-                  editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                    ? 'Draft'
-                    : undefined
-                }
-              />
+          <div className="flex h-full w-full overflow-hidden">
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+              <TopNav title={railActive === 'reviews' ? 'Reviews AI' : 'Front desk'} initials="S" />
+              <div className="flex-1 overflow-hidden">
+                <WorkflowEditorScreen
+                  agentName={editingAgentName}
+                  onClose={() => {
+                    setEditingAgentName(null)
+                    setWizardAgentDraft(null)
+                    setWorkflowAiAssistOpen(false)
+                  }}
+                  product={activeProduct}
+                  wizardDraft={wizardAgentDraft}
+                  agentStatus={
+                    editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
+                      ? 'Draft'
+                      : undefined
+                  }
+                  aiAssistOpen={workflowAiAssistOpen}
+                  onAiAssistOpenChange={setWorkflowAiAssistOpen}
+                />
+              </div>
             </div>
-          </>
+            {workflowAiAssistOpen && (
+              <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
+            )}
+          </div>
+        ) : railActive === 'reviews' ? (
+          navActive === 'view-all-reviews' || navActive === 'all-reviews' ? (
+            <AllReviewsScreen />
+          ) : AGENT_NAMES[navActive] ? (
+            <AgentDetailScreen
+              key={navActive}
+              agentName={AGENT_NAMES[navActive]}
+              onEditAgent={handleEditAgent}
+              onAgentSetupActiveChange={setIsAgentSetupActive}
+              onNavigateToInbox={(conversationId) => {
+                setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
+                setRailActive('inbox')
+              }}
+              product={activeProduct}
+            />
+          ) : (
+            <EmptyResourceScreen label={REVIEWS_NAV_LABELS[navActive] ?? 'Reviews'} />
+          )
         ) : navActive === 'review-waitlist' && waitlistDetail ? (
           <>
             <TopNav title="Contacts" initials="S" />
@@ -631,7 +735,6 @@ export function App() {
             key={navActive}
             agentName={AGENT_NAMES[navActive]}
             onEditAgent={handleEditAgent}
-            onOpenIntegrationSettings={openIntegrationSettings}
             onAgentSetupActiveChange={setIsAgentSetupActive}
             onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
             onNavigateToInbox={(conversationId) => {
@@ -641,6 +744,8 @@ export function App() {
             initialRecommendationFocus={recommendationFocus}
             onInitialRecommendationFocusConsumed={() => setRecommendationFocus(null)}
             product={activeProduct}
+            pendingInstanceView={pendingAgentInstanceView}
+            onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
           />
         ) : appointmentDetail ? (
           <>
