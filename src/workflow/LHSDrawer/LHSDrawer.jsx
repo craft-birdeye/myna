@@ -537,8 +537,6 @@ function TriggerGroup({
   );
 }
 
-const TABS = ['Create with AI', 'Create manually'];
-
 const AI_OPTIONS = [
   'Replying using templates',
   'Replying autonomously',
@@ -798,8 +796,9 @@ export default function LHSDrawer({
   return (
     <div className={`lhs-drawer${expanded ? ' lhs-drawer--expanded' : ''}`} ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
       {expanded ? (
+        // No title here — the canvas's own header already shows the agent name,
+        // status, and Publish action, so repeating it would just duplicate that bar.
         <div className="lhs-drawer__expanded-header">
-          <span className="lhs-drawer__expanded-name">{agentName || 'Untitled agent'}</span>
           <button
             type="button"
             aria-label="Collapse"
@@ -812,54 +811,48 @@ export default function LHSDrawer({
         </div>
       ) : (
         <div className={`lhs-drawer__tabs${showTabs ? ' lhs-drawer__tabs--visible' : ''}`}>
-          {TABS.map((tab) =>
-            tab === 'Create with AI' ? (
-              <div
-                key={tab}
-                className={`group lhs-drawer__tab lhs-drawer__tab--ai${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
-              >
-                <span className="lhs-drawer__tab-label">
-                  <button type="button" className="lhs-drawer__tab-ai-trigger" onClick={() => setActiveTab(tab)}>
-                    Create with AI
-                    <AiAgentIcon size={16} />
-                  </button>
-                  {onExpand && (
-                    <button
-                      type="button"
-                      aria-label="Expand"
-                      title="Expand to full page"
-                      onClick={onExpand}
-                      className="lhs-drawer__expand-btn"
-                    >
-                      <span className="material-symbols-outlined">open_in_full</span>
-                    </button>
-                  )}
-                </span>
-                <span className="lhs-drawer__tab-underline" />
-              </div>
-            ) : (
+          <div className="lhs-drawer__switcher">
+            <button
+              type="button"
+              onClick={() => setActiveTab('Create with AI')}
+              className={`lhs-drawer__switcher-btn${activeTab === 'Create with AI' ? ' lhs-drawer__switcher-btn--active' : ''}`}
+            >
+              AI
+              <AiAgentIcon size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('Create manually')}
+              className={`lhs-drawer__switcher-btn${activeTab === 'Create manually' ? ' lhs-drawer__switcher-btn--active' : ''}`}
+            >
+              Manual
+            </button>
+          </div>
+          <div className="lhs-drawer__tabs-actions">
+            {onExpand && (
               <button
-                key={tab}
-                className={`lhs-drawer__tab${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                <span className="lhs-drawer__tab-label">{tab}</span>
-                <span className="lhs-drawer__tab-underline" />
-              </button>
-            ),
-          )}
-          {showTabs && onCollapse && (
-            <Tooltip text="Collapse editor" position="bottom">
-              <button
-                className="lhs-drawer__collapse-btn"
-                onClick={onCollapse}
                 type="button"
-                aria-label="Collapse editor"
+                aria-label="Expand"
+                title="Expand to full page"
+                onClick={onExpand}
+                className="lhs-drawer__collapse-btn"
               >
-                <span className="material-symbols-outlined">left_panel_close</span>
+                <span className="material-symbols-outlined">open_in_full</span>
               </button>
-            </Tooltip>
-          )}
+            )}
+            {showTabs && onCollapse && (
+              <Tooltip text="Collapse editor" position="bottom">
+                <button
+                  className="lhs-drawer__collapse-btn"
+                  onClick={onCollapse}
+                  type="button"
+                  aria-label="Collapse editor"
+                >
+                  <span className="material-symbols-outlined">left_panel_close</span>
+                </button>
+              </Tooltip>
+            )}
+          </div>
         </div>
       )}
 

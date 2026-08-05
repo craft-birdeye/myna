@@ -6413,52 +6413,46 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              // Reuses LHSDrawer's own tab/collapse-button classes (lhs-drawer__tab*,
+              // Reuses LHSDrawer's own switcher/collapse-button classes (lhs-drawer__switcher*,
               // lhs-drawer__collapse-btn) so this header matches the "edit agent" canvas panel exactly.
-              <div className="flex shrink-0 items-center gap-sm px-2xl pt-lg pb-sm">
-                <div className="lhs-drawer__tabs lhs-drawer__tabs--visible flex-1">
-                  <div className={`group relative lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}>
-                    <span className="lhs-drawer__tab-label">
-                      <span className="relative inline-flex items-center gap-xs">
-                        <button
-                          type="button"
-                          onClick={() => setCreateSideTab('ai')}
-                          className="inline-flex items-center gap-xs"
-                        >
-                          Create with AI
-                          <AiAgentIcon size={16} className="shrink-0" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Expand"
-                          title="Expand to full page"
-                          onClick={closeCreateWorkflow}
-                          className="absolute left-full top-1/2 ml-xs flex size-5 shrink-0 -translate-y-1/2 scale-90 items-center justify-center rounded-sm text-text-icon opacity-0 transition-[opacity,transform] duration-150 ease-out hover:bg-surface-selected group-hover:scale-100 group-hover:opacity-100"
-                        >
-                          <Icon name="open_in_full" size={14} />
-                        </button>
-                      </span>
-                    </span>
-                    <span className="lhs-drawer__tab-underline" />
-                  </div>
+              <div className="flex shrink-0 items-center justify-between gap-sm px-2xl pt-lg pb-sm">
+                <div className="lhs-drawer__switcher">
+                  <button
+                    type="button"
+                    onClick={() => setCreateSideTab('ai')}
+                    className={`lhs-drawer__switcher-btn${createSideTab === 'ai' ? ' lhs-drawer__switcher-btn--active' : ''}`}
+                  >
+                    AI
+                    <AiAgentIcon size={14} className="shrink-0" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setCreateSideTab('manual')}
-                    className={`lhs-drawer__tab${createSideTab === 'manual' ? ' lhs-drawer__tab--active' : ''}`}
+                    className={`lhs-drawer__switcher-btn${createSideTab === 'manual' ? ' lhs-drawer__switcher-btn--active' : ''}`}
                   >
-                    <span className="lhs-drawer__tab-label">Create manually</span>
-                    <span className="lhs-drawer__tab-underline" />
+                    Manual
                   </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Collapse panel"
-                  title="Collapse panel"
-                  onClick={() => setCreateLeftPaneCollapsed(true)}
-                  className="lhs-drawer__collapse-btn shrink-0"
-                >
-                  <Icon name="left_panel_close" size={18} />
-                </button>
+                <div className="flex shrink-0 items-center gap-xs">
+                  <button
+                    type="button"
+                    aria-label="Expand"
+                    title="Expand to full page"
+                    onClick={closeCreateWorkflow}
+                    className="lhs-drawer__collapse-btn"
+                  >
+                    <Icon name="open_in_full" size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Collapse panel"
+                    title="Collapse panel"
+                    onClick={() => setCreateLeftPaneCollapsed(true)}
+                    className="lhs-drawer__collapse-btn"
+                  >
+                    <Icon name="left_panel_close" size={18} />
+                  </button>
+                </div>
               </div>
             ) : createFlowSubmitted ? (
               // Conversation view — header aligns with the 720px chat column below it.

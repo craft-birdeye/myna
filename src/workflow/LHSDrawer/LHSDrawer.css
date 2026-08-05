@@ -50,17 +50,7 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.lhs-drawer__expanded-name {
-  font-size: 20px;
-  line-height: 28px;
-  color: #212121;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  justify-content: flex-end;
 }
 
 /* ─── Custom tabs (hidden until tab switcher is enabled) ─── */
@@ -68,6 +58,7 @@
   display: none;
   width: 100%;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   background: #fff;
 }
@@ -76,13 +67,26 @@
   display: flex;
 }
 
-.lhs-drawer__tab {
-  flex: 1;
+/* ─── AI / Manual switcher (segmented control, replaces the old underline tabs) ─── */
+.lhs-drawer__switcher {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 4px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid #e5e9f0;
+  background: #fff;
+}
+
+.lhs-drawer__switcher-btn {
+  display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px;
+  height: 100%;
+  padding: 0 10px;
+  border-radius: 4px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -91,87 +95,24 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #555;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 }
 
-.lhs-drawer__tab--active {
+.lhs-drawer__switcher-btn:hover {
   color: #212121;
 }
 
-.lhs-drawer__tab-label {
-  position: relative;
+.lhs-drawer__switcher-btn--active {
+  background: #e5e9f0;
+  color: #212121;
+}
+
+.lhs-drawer__tabs-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 4px;
-  height: 32px;
-  padding: 0 8px;
-  white-space: nowrap;
-}
-
-.lhs-drawer__tab-ai-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.lhs-drawer__expand-btn {
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  margin-left: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  transform: translateY(-50%) scale(0.9);
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  color: #757575;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
-}
-
-.lhs-drawer__expand-btn .material-symbols-outlined {
-  font-size: 14px !important;
-  width: 14px;
-  height: 14px;
-}
-
-.group:hover .lhs-drawer__expand-btn {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-}
-
-.lhs-drawer__expand-btn:hover {
-  background: #f2f4f7;
-}
-
-.lhs-drawer__tab-ai-icon {
-  width: 24px;
-  height: 24px;
-  display: block;
   flex-shrink: 0;
-}
-
-.lhs-drawer__tab-underline {
-  display: block;
-  width: 100%;
-  height: 2px;
-  background: transparent;
-}
-
-.lhs-drawer__tab--active .lhs-drawer__tab-underline {
-  background: #1976d2;
 }
 
 .lhs-drawer__body {
