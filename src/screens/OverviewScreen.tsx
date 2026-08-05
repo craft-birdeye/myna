@@ -32,6 +32,8 @@ interface OverviewScreenProps {
   hideTopNav?: boolean
   /** Hides the "Welcome, {userName}" greeting header + download button row. */
   hideWelcomeHeader?: boolean
+  /** Uses a plain white content background instead of the default `surface-l2` grey. */
+  whiteBackground?: boolean
 }
 
 function StatGroup({ stats, columns = stats.length }: { stats: OverviewStat[]; columns?: number }) {
@@ -281,6 +283,7 @@ export function OverviewScreen({
   locationLabel = 'All locations',
   hideTopNav = false,
   hideWelcomeHeader = false,
+  whiteBackground = false,
 }: OverviewScreenProps) {
   return (
     <div className="flex h-full flex-col">
@@ -308,7 +311,7 @@ export function OverviewScreen({
           }
         />
       )}
-      <div className="flex-1 overflow-y-auto bg-surface-l2 px-2xl py-xl">
+      <div className={`flex-1 overflow-y-auto px-2xl py-xl ${whiteBackground ? 'bg-surface' : 'bg-surface-l2'}`}>
         <div className="flex flex-col gap-lg">
           {!hideWelcomeHeader && (
             <div className="flex items-start justify-between">

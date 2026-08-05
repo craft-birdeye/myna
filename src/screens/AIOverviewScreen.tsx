@@ -19,7 +19,7 @@ export function AIOverviewScreen({ product, onOpenAgent }: AIOverviewScreenProps
   return (
     <div className="flex h-full flex-col">
       <TopNav title="Overview" initials="S" />
-      <div className="shrink-0 border-b border-border px-2xl">
+      <div className="shrink-0 px-2xl pt-sm">
         <Tabs tabs={AI_OVERVIEW_TABS} activeTab={activeTab} onChange={setActiveTab} />
       </div>
       <div className="flex-1 overflow-hidden">
@@ -32,7 +32,7 @@ export function AIOverviewScreen({ product, onOpenAgent }: AIOverviewScreenProps
             hideTopNav
           />
         ) : (
-          <OverviewScreen hideTopNav hideWelcomeHeader />
+          <OverviewScreen hideTopNav hideWelcomeHeader whiteBackground />
         )}
       </div>
     </div>
