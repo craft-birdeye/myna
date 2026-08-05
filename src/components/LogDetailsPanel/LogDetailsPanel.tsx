@@ -964,6 +964,7 @@ export function LogDetailsPanel({
     <>
       <RunDetailsPanel
         steps={steps}
+        showHeader={false}
         callDetailsContent={
           showCallDetails ? (
             <CallDetailsTab
