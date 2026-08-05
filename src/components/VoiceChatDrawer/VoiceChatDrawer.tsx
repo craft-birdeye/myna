@@ -84,7 +84,7 @@ export function VoiceChatDrawer({
                           <button
                             type="button"
                             onClick={() => onTrackFeedback?.(recId)}
-                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                            className="flex items-center gap-xs text-small text-text-action"
                           >
                             <Icon name="track_changes" size={16} />
                             Track your feedback
@@ -95,7 +95,7 @@ export function VoiceChatDrawer({
                             onClick={() =>
                               onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
                             }
-                            className="flex items-center gap-xs text-small text-text-action hover:underline"
+                            className="flex items-center gap-xs text-small text-text-action"
                           >
                             <Icon name="auto_awesome" size={16} />
                             Coach agent

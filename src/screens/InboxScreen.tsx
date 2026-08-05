@@ -1210,7 +1210,7 @@ export function InboxScreen({
                               <button
                                 type="button"
                                 onClick={() => handleTrackFeedback(recId)}
-                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                                className="flex items-center gap-xs text-small text-text-action"
                               >
                                 <Icon name="track_changes" size={16} />
                                 Track your feedback
@@ -1219,7 +1219,7 @@ export function InboxScreen({
                               <button
                                 type="button"
                                 onClick={() => setShareFeedbackMessageId(event.id)}
-                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                                className="flex items-center gap-xs text-small text-text-action"
                               >
                                 <Icon name="auto_awesome" size={16} />
                                 Coach agent
