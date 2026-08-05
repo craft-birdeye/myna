@@ -1,16 +1,35 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
+import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
 import { RefChip } from '../RefChip/RefChip'
 import { Tabs } from '../Tabs/Tabs'
+import { Tooltip } from '../Tooltip/Tooltip'
 import type {
   RunConversationEntry,
   RunDetailsPanelProps,
   RunLogField,
   RunLogStep,
 } from './RunDetailsPanel.types'
+
+/** Explains each meta-line abbreviation on hover — LLM/TTS/KB (business bubbles) and STT (user
+ *  bubbles), all part of the same transcript-metrics family. */
+const META_LABEL_TOOLTIPS: Record<string, string> = {
+  LLM: 'Large language model',
+  TTS: 'Text to speech',
+  STT: 'Speech to text',
+  KB: 'Knowledge base',
+}
+
+function MetaLabel({ label }: { label: string }) {
+  return (
+    <Tooltip content={META_LABEL_TOOLTIPS[label]} variant="brief">
+      <span className="cursor-default">{label}</span>
+    </Tooltip>
+  )
+}
 
 const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
@@ -44,7 +63,7 @@ const DEFAULT_STEPS: RunLogStep[] = [
     ],
     inputs: [
       { key: 'patientId', value: 'a764c0d3-fd32-44f0-8c89-79fd12' },
-      { key: 'appointmentType', value: 'Root canal' },
+      { key: 'appointmentType', value: 'Routine checkup' },
     ],
   },
   {
@@ -109,7 +128,7 @@ const DEFAULT_STEPS: RunLogStep[] = [
       name: 'Initiate voice call',
       properties: [
         { key: 'phoneNumber', value: '+1(555)010-1234' },
-        { key: 'callerId', value: 'Henry Schein Dental' },
+        { key: 'callerId', value: 'Rock Dental Brands' },
         { key: 'voice', value: 'Myna' },
       ],
     },
@@ -265,6 +284,39 @@ function LogsTab({ steps }: { steps: RunLogStep[] }) {
   )
 }
 
+function MetaField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="m-0 text-small text-text-tertiary">{label}</p>
+      <p className="m-0 mt-xs text-body text-text-primary">{value}</p>
+    </div>
+  )
+}
+
+function CallDetailsTab({
+  callerNumber,
+  languageDetected,
+  duration,
+  sidNumber,
+  startTime,
+  callEndReason,
+  routedVia,
+}: NonNullable<RunDetailsPanelProps['callDetails']>) {
+  return (
+    <div className="rounded-sm border border-border px-lg py-lg">
+      <div className="grid grid-cols-2 gap-x-lg gap-y-lg">
+        <MetaField label="Caller number" value={callerNumber} />
+        <MetaField label="Language detected" value={languageDetected} />
+        <MetaField label="Duration" value={duration} />
+        <MetaField label="Call SID" value={sidNumber} />
+        <MetaField label="Start time" value={startTime} />
+        <MetaField label="Call end reason" value={callEndReason} />
+        <MetaField label="Routed via" value={routedVia} />
+      </div>
+    </div>
+  )
+}
+
 function initials(name: string): string {
   return name
     .split(' ')
@@ -324,6 +376,43 @@ export interface RunConversationThreadProps {
   meta?: 'diagnostics' | 'time'
   feedbackForMessage?: (id: string) => MessageFeedbackValue
   onFeedbackChange?: (id: string, value: MessageFeedbackValue) => void
+  /** Renders a sticky call-recording waveform right after whichever system entry has
+   *  `insertCallRecordingAfter` set. Default false — Inbox's reuse of this thread doesn't set it. */
+  showCallRecording?: boolean
+  audioUrl?: string
+  durationSecs?: number
+}
+
+/** Diagnostics-mode meta line — "LLM : X • TTS : Y", each label wrapped in an explanatory
+ *  tooltip. Only used in 'diagnostics' mode (run logs); 'time' mode (Inbox) is unaffected. */
+function DiagnosticsMeta({ entry }: { entry: Extract<RunConversationEntry, { kind: 'message' }> }) {
+  if (entry.sender === 'business') {
+    if (!entry.llmResponseTime && !entry.tts) return null
+    return (
+      <span className="text-small text-text-tertiary">
+        {entry.llmResponseTime && (
+          <>
+            <MetaLabel label="LLM" /> {`: ${entry.llmResponseTime}`}
+          </>
+        )}
+        {entry.llmResponseTime && entry.tts && ' • '}
+        {entry.tts && (
+          <>
+            <MetaLabel label="TTS" /> {`: ${entry.tts}`}
+          </>
+        )}
+        {entry.time && ` • ${entry.time}`}
+      </span>
+    )
+  }
+
+  if (!entry.sttLabel) return null
+  return (
+    <span className="text-small text-text-tertiary">
+      <MetaLabel label="STT" /> {`: ${entry.sttLabel}`}
+      {entry.time && ` • ${entry.time}`}
+    </span>
+  )
 }
 
 /** Renders a run conversation thread (system labels, email cards, voice bubbles). Reused by the Inbox deep-link view. */
@@ -332,38 +421,62 @@ export function RunConversationThread({
   meta = 'diagnostics',
   feedbackForMessage,
   onFeedbackChange,
+  showCallRecording = false,
+  audioUrl,
+  durationSecs,
 }: RunConversationThreadProps) {
   return (
     <div className="flex flex-col gap-lg">
-      {entries.map((entry) => {
+      {entries.map((entry, index) => {
         if (entry.kind === 'system') {
-          return <ChatSystemLabel key={entry.id} text={entry.text} />
+          // The sticky block must be a direct sibling within the thread's own flex container
+          // (not nested inside this entry's own short-lived wrapper) — a sticky element can never
+          // stay stuck past the bottom edge of its immediate parent's box, and this wrapper alone
+          // is far too short to keep it pinned once the transcript below has scrolled by.
+          return (
+            <Fragment key={entry.id}>
+              <div className={showCallRecording && index === 0 ? 'pt-lg' : undefined}>
+                <ChatSystemLabel text={entry.text} />
+              </div>
+              {showCallRecording && entry.insertCallRecordingAfter && (
+                <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-lg pt-lg">
+                  <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
+                  <CallRecordingPlayer
+                    audioUrl={audioUrl}
+                    durationSecs={durationSecs}
+                    padded={false}
+                  />
+                </div>
+              )}
+            </Fragment>
+          )
         }
         if (entry.kind === 'card') {
-          return <ConversationCard key={entry.id} entry={entry} />
+          return (
+            <div key={entry.id} className={showCallRecording && index === 0 ? 'pt-lg' : undefined}>
+              <ConversationCard entry={entry} />
+            </div>
+          )
         }
 
-        const metaText =
-          meta === 'time'
-            ? entry.time
-            : entry.sender === 'business'
-              ? `LLM response time : ${entry.llmResponseTime} • TTS ${entry.tts}${entry.time ? ` • ${entry.time}` : ''}`
-              : `STT : ${entry.sttLabel}${entry.time ? ` • ${entry.time}` : ''}`
         const withFeedback = meta === 'time' && entry.sender === 'business'
 
         return (
-          <ChatBubble
-            key={entry.id}
-            sender={entry.sender}
-            text={entry.text}
-            gap="gap-sm"
-            bubbleClassName="max-w-[85%] px-lg py-md"
-            showFeedback={withFeedback}
-            feedback={withFeedback ? feedbackForMessage?.(entry.id) ?? null : undefined}
-            onFeedbackChange={withFeedback ? (value) => onFeedbackChange?.(entry.id, value) : undefined}
-          >
-            {metaText && <span className="text-small text-text-tertiary">{metaText}</span>}
-          </ChatBubble>
+          <div key={entry.id} className={showCallRecording && index === 0 ? 'pt-lg' : undefined}>
+            <ChatBubble
+              sender={entry.sender}
+              text={entry.text}
+              gap="gap-sm"
+              bubbleClassName="max-w-[85%] px-lg py-md"
+              showFeedback={withFeedback}
+              feedback={withFeedback ? feedbackForMessage?.(entry.id) ?? null : undefined}
+              onFeedbackChange={withFeedback ? (value) => onFeedbackChange?.(entry.id, value) : undefined}
+            >
+              {meta === 'time'
+                ? entry.time && <span className="text-small text-text-tertiary">{entry.time}</span>
+                : <DiagnosticsMeta entry={entry} />}
+            </ChatBubble>
+          </div>
         )
       })}
     </div>
@@ -374,38 +487,69 @@ export function RunDetailsPanel({
   onViewConversation,
   steps = DEFAULT_STEPS,
   conversation = DEFAULT_CONVERSATION,
+  conversationContent,
+  showTabs = true,
+  title = 'Run details',
+  showHeader = true,
+  showCallRecording = false,
+  audioUrl,
+  durationSecs,
+  callDetails,
+  callDetailsContent,
 }: RunDetailsPanelProps) {
-  const [tab, setTab] = useState<'logs' | 'conversation'>('logs')
+  const [tab, setTab] = useState<'logs' | 'conversation' | 'call-details'>('logs')
+  // The sticky waveform anchors to `top: 0` of this scroll container's padding edge — any
+  // padding-top here would leave a permanent gap once it's stuck, so that spacing moves onto the
+  // conversation thread's first entry instead (see `RunConversationThread`).
+  const skipContainerTopPadding = showCallRecording && tab === 'conversation'
 
   return (
     <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
-      <div className="flex h-[60px] shrink-0 items-center justify-between px-[15px]">
-        <h2 className="m-0 text-body text-text-primary">Run details</h2>
-        {onViewConversation && (
-          <button
-            type="button"
-            onClick={onViewConversation}
-            className="flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
-          >
-            View conversation
-            <Icon name="open_in_new" size={16} />
-          </button>
+      {showHeader && (
+        <div className="flex h-[60px] shrink-0 items-center justify-between px-[15px]">
+          <h2 className="m-0 text-body text-text-primary">{title}</h2>
+          {onViewConversation && (
+            <button
+              type="button"
+              onClick={onViewConversation}
+              className="flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
+            >
+              View conversation
+              <Icon name="open_in_new" size={16} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {showTabs && (
+        <div className="shrink-0 border-b border-border px-[15px]">
+          <Tabs
+            tabs={[
+              { id: 'logs', label: 'Logs' },
+              { id: 'conversation', label: 'Conversation' },
+              ...(callDetails || callDetailsContent ? [{ id: 'call-details', label: 'Call details' }] : []),
+            ]}
+            activeTab={tab}
+            onChange={(id) => setTab(id as 'logs' | 'conversation' | 'call-details')}
+          />
+        </div>
+      )}
+
+      <div className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-lg ${skipContainerTopPadding ? '' : 'pt-lg'}`}>
+        {(!showTabs || tab === 'logs') ? (
+          <LogsTab steps={steps} />
+        ) : tab === 'call-details' && (callDetails || callDetailsContent) ? (
+          callDetailsContent ?? (callDetails && <CallDetailsTab {...callDetails} />)
+        ) : conversationContent ? (
+          conversationContent
+        ) : (
+          <RunConversationThread
+            entries={conversation}
+            showCallRecording={showCallRecording}
+            audioUrl={audioUrl}
+            durationSecs={durationSecs}
+          />
         )}
-      </div>
-
-      <div className="shrink-0 border-b border-border px-[15px]">
-        <Tabs
-          tabs={[
-            { id: 'logs', label: 'Logs' },
-            { id: 'conversation', label: 'Conversation' },
-          ]}
-          activeTab={tab}
-          onChange={(id) => setTab(id as 'logs' | 'conversation')}
-        />
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-[15px] py-lg">
-        {tab === 'logs' ? <LogsTab steps={steps} /> : <RunConversationThread entries={conversation} />}
       </div>
     </div>
   )

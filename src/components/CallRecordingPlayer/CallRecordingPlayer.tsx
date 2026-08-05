@@ -24,6 +24,8 @@ export function CallRecordingPlayer({
   title,
   padded = true,
   className,
+  onProgress,
+  onPlayingChange,
 }: CallRecordingPlayerProps) {
   const [playing, setPlaying] = useState(false)
   const [elapsed, setElapsed] = useState(0)
@@ -78,6 +80,16 @@ export function CallRecordingPlayer({
   }, [speed])
 
   const total = wsReady && wsRef.current ? wsRef.current.getDuration() : durationSecs
+
+  useEffect(() => {
+    onProgress?.(elapsed, total)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed, total])
+
+  useEffect(() => {
+    onPlayingChange?.(playing)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing])
 
   function handlePlayPause() {
     wsRef.current?.playPause()

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection } from '../components'
+import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection, type VoiceChatMessage } from '../components'
+import { TrackFeedbackIcon } from '../assets/TrackFeedbackIcon'
+import { TrainAgentIcon } from '../assets/TrainAgentIcon'
 import voicemailSample from '../assets/voicemail_sample.mp3'
 import {
   FRONT_DESK_CALL_SUMMARY,
@@ -14,9 +16,16 @@ import {
   REMINDER_CONVERSATION_EVENTS,
   REMINDER_INBOX_CONVERSATION_ID,
 } from '../data/reminderInboxConversation'
-import { addAgentFeedbackRecommendation } from '../data/agentFeedbackRecommendations'
+import {
+  COACHING_C1_CONVERSATION_ID,
+  COACHING_C2_CONVERSATION_ID,
+  COACHING_C3_CONVERSATION_ID,
+  COACHING_C4_CONVERSATION_ID,
+  COACHING_CALL_CONVERSATIONS,
+} from '../data/coachingCallConversations'
 import { AgentDetailScreen } from './AgentDetailScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 
 interface Conversation {
   id: string
@@ -37,7 +46,7 @@ const CONVERSATIONS: Conversation[] = [
     verified: true,
     message: 'I am having a very bad headache. I think it is migraine.',
     location: 'Rock Dental Brands',
-    assignee: 'Front desk agent',
+    assignee: 'Front desk agent - North region',
     date: '5:30 PM',
     unread: true,
   },
@@ -46,27 +55,61 @@ const CONVERSATIONS: Conversation[] = [
     name: 'Sarah Lauren',
     verified: true,
     message: 'Myna: Let me connect you with our front desk team.',
-    location: 'Henry Schein Dental',
+    location: 'Rock Dental Brands',
     assignee: 'Reminder agent',
     date: '09:55 PM',
     unread: true,
   },
-  { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', date: '03:25 PM' },
+  {
+    id: COACHING_C1_CONVERSATION_ID,
+    name: 'Casey Martin',
+    message: "hey can i move my son's appt from thursday to next week",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '3:15 PM',
+    unread: true,
+  },
+  {
+    id: COACHING_C2_CONVERSATION_ID,
+    name: 'Morgan Reyes',
+    message: "hi, hi, I just need to cancel tomorrow's appointment.",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '9:47 PM',
+  },
+  {
+    id: COACHING_C3_CONVERSATION_ID,
+    name: 'Taylor Brooks',
+    message: 'Hi, do you have any Saturday appointments? Weekdays are impossible for us.',
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '11:02 AM',
+  },
+  {
+    id: COACHING_C4_CONVERSATION_ID,
+    name: 'Renee Alvarado',
+    message: "I'm calling about my daughter's breathing test from last week. Can you just tell me the results?",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '4:08 PM',
+    unread: true,
+  },
+  { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', assignee: 'Front desk agent - South region', date: '03:25 PM' },
   {
     id: ANNETTE_BLACK_CONVERSATION_ID,
     name: 'Annette Black',
     verified: true,
-    message: 'That helped!',
+    message: "Seriously? You're a booking assistant and you don't know your own hours?",
     location: 'Rock Dental Brands',
     assignee: 'Front desk agent - North region',
     date: '02:09 PM',
     unread: true,
   },
-  { id: '3', name: 'Wade Warren',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
-  { id: '4', name: 'Floyd Miles',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
-  { id: '5', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
-  { id: '6', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
-  { id: '7', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
+  { id: '3', name: 'Wade Warren',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022', unread: true },
+  { id: '4', name: 'Floyd Miles',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022', unread: true },
+  { id: '5', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
+  { id: '6', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
+  { id: '7', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
 ]
 
 type ChatEvent =
@@ -94,6 +137,53 @@ const CHAT_EVENTS: ChatEvent[] = [
   { kind: 'status',    id: 's4', text: 'Call ended - Call Duration: 57s',           time: '01:36 PM' },
   { kind: 'recording', id: 'r1', time: '01:37 PM' },
 ]
+
+type BubbleEvent = Extract<ChatEvent, { kind: 'bubble' }>
+
+function bubbleLine(event: BubbleEvent, customerName: string): { speaker: string; text: string } {
+  return {
+    speaker: event.sender === 'agent' ? 'Myna' : customerName,
+    text: event.text ?? event.fields?.map((f) => `${f.label}: ${f.value}`).join(' • ') ?? '',
+  }
+}
+
+/** Builds the "Read the reported conversation" screenshot for a generic (non-scripted) Inbox
+ *  feedback submission — just the single flagged message itself (matching the hand-scripted
+ *  coaching examples, which only ever quote the one bad reply), plus the full transcript for the
+ *  "View Transcript" side panel. Returns `null` when the flagged message can't be found (e.g. it's
+ *  not a `bubble` event), so the caller skips attaching a screenshot rather than showing an empty one. */
+function buildReportedConversation(
+  events: ChatEvent[],
+  flaggedMessageId: string,
+  customerName: string,
+): { reportedExcerpt: { speaker: string; text: string }[]; reportedTranscript: { speaker: string; text: string }[] } | null {
+  const bubbles = events.filter((e): e is BubbleEvent => e.kind === 'bubble')
+  const flagged = bubbles.find((e) => e.id === flaggedMessageId)
+  if (!flagged) return null
+
+  return {
+    reportedExcerpt: [bubbleLine(flagged, customerName)],
+    reportedTranscript: bubbles.map((e) => bubbleLine(e, customerName)),
+  }
+}
+
+/** Same as `buildReportedConversation`, but for a voice-call transcript's `VoiceChatMessage[]`
+ *  (system/agent/user turns) instead of Inbox chat `ChatEvent[]`. */
+function buildReportedConversationFromVoiceMessages(
+  messages: VoiceChatMessage[],
+  flaggedMessageId: string,
+  customerName: string,
+): { reportedExcerpt: { speaker: string; text: string }[]; reportedTranscript: { speaker: string; text: string }[] } | null {
+  const turns = messages.filter((m) => m.role !== 'system')
+  const flagged = turns.find((m) => String(m.id) === flaggedMessageId)
+  if (!flagged) return null
+
+  const toLine = (m: VoiceChatMessage) => ({ speaker: m.role === 'agent' ? 'Myna' : customerName, text: m.text })
+  return {
+    reportedExcerpt: [toLine(flagged)],
+    reportedTranscript: turns.map(toLine),
+  }
+}
 
 const INBOX_NAV_SECTIONS: NavSection[] = [
   {
@@ -669,9 +759,15 @@ function InboxSideNav({ activeId, onSelect }: { activeId: string; onSelect: (id:
 export function InboxScreen({
   initialConversationId,
   onInitialConversationConsumed,
+  onNavigateToRecommendation,
 }: {
   initialConversationId?: string | null
   onInitialConversationConsumed?: () => void
+  /** Called when a "Track your feedback" link is clicked in a voice-call transcript drawer —
+   *  the host app navigates to that recommendation's detail page for the given agent instance.
+   *  `feedbackPrefill`, when set, tells the destination detail page to immediately ask for the
+   *  feedback itself (see the Taylor Brooks "Coach agent" direct-navigate flow below). */
+  onNavigateToRecommendation?: (instanceName: string, recommendationId: string, feedbackPrefill?: string) => void
 } = {}) {
   const [activeNav, setActiveNav] = useState('view-all-interactions')
   const [selectedConvo, setSelectedConvo] = useState(() => {
@@ -685,14 +781,22 @@ export function InboxScreen({
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
+  // Maps a chat-bubble message id to the recommendation id its feedback landed on, once known —
+  // that bubble's "Coach agent" link switches to "Track your feedback" pointing at it.
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
   const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
   const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const { submitFeedback } = useFeedbackRecommendationsStore()
 
   const showFeedbackToast = (message: string) => {
     setToastMessage(message)
     setToastVisible(true)
+  }
+
+  const handleShareFeedbackClose = () => {
+    setShareFeedbackMessageId(null)
   }
 
   const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
@@ -704,46 +808,109 @@ export function InboxScreen({
     if (value === 'up') showFeedbackToast('Thanks for the feedback!')
   }
 
-  const handleShareFeedbackClose = () => {
-    setShareFeedbackMessageId(null)
+  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
+    if (shareFeedbackMessageId === messageId) return 'down'
+    return messageFeedback[messageId] ?? null
   }
 
   const handleShareFeedbackSubmit = (details: string) => {
     if (!shareFeedbackMessageId) return
-
-    const flaggedEvent = threadEvents.find(
-      (event) => event.kind === 'bubble' && event.id === shareFeedbackMessageId,
-    )
-    const flaggedReminderEntry = isReminderRun
-      ? REMINDER_CONVERSATION_EVENTS.find(
-          (entry) => entry.kind === 'message' && entry.id === shareFeedbackMessageId,
-        )
-      : undefined
-    const agentResponse =
-      flaggedReminderEntry?.kind === 'message'
-        ? flaggedReminderEntry.text
-        : flaggedEvent?.kind === 'bubble' && typeof flaggedEvent.text === 'string'
-          ? flaggedEvent.text
-          : ''
-
-    addAgentFeedbackRecommendation({
-      messageId: shareFeedbackMessageId,
-      feedback: details,
-      agentResponse,
-      conversationName: selectedConvo.name,
-      conversationLocation: selectedConvo.location,
-      channel: isAnnetteChat ? 'Chat' : isFrontDeskCall || isReminderRun ? 'Voice' : 'Text',
-      agentName: selectedConvo.assignee ?? 'Front desk agent',
-    })
-
-    setMessageFeedback((prev) => ({ ...prev, [shareFeedbackMessageId]: 'down' }))
+    const feedbackMessageId = shareFeedbackMessageId
     setShareFeedbackMessageId(null)
     showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    if (isReminderRun) {
+      const flaggedReminderEntry = REMINDER_CONVERSATION_EVENTS.find(
+        (entry) => entry.kind === 'message' && entry.id === feedbackMessageId,
+      )
+      submitFeedback({
+        text: details,
+        agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+        conversation: {
+          name: selectedConvo.name,
+          message: details,
+          channel: 'Voice',
+          date: selectedConvo.date,
+          location: selectedConvo.location,
+        },
+        conversationId: selectedConvo.id,
+        messageId: feedbackMessageId,
+        reportedExcerpt:
+          flaggedReminderEntry?.kind === 'message' ? [{ speaker: 'Myna', text: flaggedReminderEntry.text }] : undefined,
+      })
+      setMessageFeedback((prev) => ({ ...prev, [feedbackMessageId]: 'down' }))
+      return
+    }
+
+    const reportedConversation = buildReportedConversation(threadEvents, feedbackMessageId, selectedConvo.name)
+    const recId = submitFeedback({
+      text: details,
+      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      conversation: {
+        name: selectedConvo.name,
+        message: details,
+        channel: selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID || COACHING_CALL_CONVERSATIONS[selectedConvo.id] ? 'Voice' : 'Chat',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId: feedbackMessageId,
+      reportedExcerpt: reportedConversation?.reportedExcerpt,
+      reportedTranscript: reportedConversation?.reportedTranscript,
+    })
+    setRecIdByMessage((prev) => ({ ...prev, [feedbackMessageId]: recId }))
   }
 
-  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
-    if (shareFeedbackMessageId === messageId) return 'down'
-    return messageFeedback[messageId] ?? null
+  // Thumbs-down inside a voice-call transcript drawer (Dana Whitfield, the coaching examples,
+  // and the generic voicemail fallback) — records the same Human feedback recommendation as the
+  // regular chat-bubble flow above, tagged to whichever conversation is currently open.
+  const handleVoiceDrawerFeedback = (details: string, messageId: string) => {
+    showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    const voiceMessages = coachingCall?.messages ?? FRONT_DESK_VOICE_MESSAGES
+    const reportedConversation = buildReportedConversationFromVoiceMessages(voiceMessages, messageId, selectedConvo.name)
+
+    return submitFeedback({
+      text: details,
+      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      conversation: {
+        name: selectedConvo.name,
+        message: details,
+        channel: 'Voice',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId,
+      reportedExcerpt: reportedConversation?.reportedExcerpt,
+      reportedTranscript: reportedConversation?.reportedTranscript,
+    })
+  }
+
+  const handleTrackFeedback = (recommendationId: string) => {
+    onNavigateToRecommendation?.(selectedConvo.assignee ?? 'Front desk agent - North region', recommendationId)
+  }
+
+  // Taylor Brooks (coaching-c3, Saturday hours): "Coach agent" skips the in-drawer Share-feedback
+  // modal and jumps straight to the recommendation detail page, which asks for the feedback
+  // itself as soon as it opens — one motion instead of submit-then-separately-click-Track.
+  const handleCoachAgentDirect = (messageId: string) => {
+    const feedbackPrefill = coachingCall?.feedbackGiven ?? ''
+    const agentName = selectedConvo.assignee ?? 'Front desk agent - North region'
+    const recId = submitFeedback({
+      text: feedbackPrefill,
+      agentName,
+      conversation: {
+        name: selectedConvo.name,
+        message: feedbackPrefill,
+        channel: 'Voice',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId,
+    })
+    onNavigateToRecommendation?.(agentName, recId, feedbackPrefill)
   }
 
   useEffect(() => {
@@ -763,9 +930,10 @@ export function InboxScreen({
   const isFrontDeskCall = selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID
   const isAnnetteChat = selectedConvo.id === ANNETTE_BLACK_CONVERSATION_ID
   const isReminderRun = selectedConvo.id === REMINDER_INBOX_CONVERSATION_ID
+  const coachingCall = COACHING_CALL_CONVERSATIONS[selectedConvo.id]
   const threadEvents: ChatEvent[] = isAnnetteChat
     ? ANNETTE_BLACK_CHAT_EVENTS
-    : isFrontDeskCall || isReminderRun
+    : isFrontDeskCall || isReminderRun || coachingCall
       ? []
       : CHAT_EVENTS
 
@@ -940,6 +1108,29 @@ export function InboxScreen({
                     audioUrl={voicemailSample}
                     messages={FRONT_DESK_VOICE_MESSAGES}
                     contactName={selectedConvo.name}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
+                  />
+                </>
+              ) : coachingCall ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">{coachingCall.dateLabel}</span>
+                  </div>
+                  <VoicemailMessage
+                    variant="voice-chat"
+                    transcript=""
+                    summary={coachingCall.summary}
+                    duration={coachingCall.duration}
+                    durationSecs={coachingCall.durationSecs}
+                    time={selectedConvo.date}
+                    audioUrl={voicemailSample}
+                    messages={coachingCall.messages}
+                    contactName={selectedConvo.name}
+                    feedbackPrefill={coachingCall.feedbackGiven}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
+                    onCoachAgentDirect={selectedConvo.id === COACHING_C3_CONVERSATION_ID ? handleCoachAgentDirect : undefined}
                   />
                 </>
               ) : isReminderRun ? (
@@ -968,11 +1159,13 @@ export function InboxScreen({
                     time="10:42 PM"
                     audioUrl={voicemailSample}
                     contactName={selectedConvo.name}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
                   />
                 </>
               ) : null}
 
-              {!isFrontDeskCall && !isReminderRun &&
+              {!isFrontDeskCall && !isReminderRun && !coachingCall &&
                 threadEvents.map((event) => {
                   if (event.kind === 'date') {
                     return <ChatSystemLabel key={event.id} text={event.label} />
@@ -1002,26 +1195,39 @@ export function InboxScreen({
                         event.text ?? ''
                       )
 
+                    const recId = recIdByMessage[event.id]
+
                     return (
-                      <ChatBubble
-                        key={event.id}
-                        sender={isAgent ? 'business' : 'user'}
-                        text={bubbleText}
-                        showFeedback={isAgent}
-                        feedback={isAgent ? feedbackForMessage(event.id) : undefined}
-                        onFeedbackChange={
-                          isAgent
-                            ? (value) => handleFeedbackChange(event.id, value)
-                            : undefined
-                        }
-                      >
-                        <span className="flex items-center gap-xs text-small text-text-tertiary">
-                          {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
-                          {event.time}
-                          {!isAgent && event.showLink && (
-                            <Icon name="link" size={14} className="text-text-tertiary" />
-                          )}
-                        </span>
+                      <ChatBubble key={event.id} sender={isAgent ? 'business' : 'user'} text={bubbleText}>
+                        <div className="flex items-center gap-sm">
+                          <span className="flex items-center gap-xs text-small text-text-tertiary">
+                            {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
+                            {event.time}
+                            {!isAgent && event.showLink && (
+                              <Icon name="link" size={14} className="text-text-tertiary" />
+                            )}
+                          </span>
+                          {isAgent &&
+                            (recId ? (
+                              <button
+                                type="button"
+                                onClick={() => handleTrackFeedback(recId)}
+                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                              >
+                                <TrackFeedbackIcon size={18} color="currentColor" />
+                                Track your feedback
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setShareFeedbackMessageId(event.id)}
+                                className="flex items-center gap-xs text-small text-text-action hover:underline"
+                              >
+                                <TrainAgentIcon size={18} color="currentColor" />
+                                Coach agent
+                              </button>
+                            ))}
+                        </div>
                       </ChatBubble>
                     )
                   }

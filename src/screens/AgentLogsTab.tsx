@@ -3,8 +3,11 @@ import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
   REMINDER_LOGS_ROWS,
+  REVIEW_RESPONSE_LOGS_ROWS,
+  toHealthcareLogRow,
   type HealthcareLogRow,
   type PrevisitLogRow,
+  type ReviewResponseLogRow,
 } from '../data/healthcareAgentLogs'
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -13,8 +16,10 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
   'In progress': 'warning',
 }
 
+const TIMESTAMP_CELL = (v: unknown) => <span className="group-hover/row:text-text-action">{String(v)}</span>
+
 const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -41,6 +46,19 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
 ]
 
+const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 140,
+    sortable: true,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+  },
+  { key: 'contact', label: 'Contact', width: 220, sortable: true },
+  { key: 'source', label: 'Source', width: 180, sortable: true },
+]
+
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
   Complete: 'success',
   Failed: 'danger',
@@ -48,7 +66,7 @@ const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
 }
 
 const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -64,7 +82,7 @@ const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
 ]
 
 const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -98,13 +116,29 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
     )
   }
 
+  if (agentName?.startsWith('Review response agent')) {
+    return (
+      <div className="px-lg py-lg">
+        <DataTable
+          columns={REVIEW_RESPONSE_LOG_COLUMNS}
+          data={REVIEW_RESPONSE_LOGS_ROWS}
+          rowAction={{
+            icon: 'visibility',
+            label: 'View log',
+            onClick: (row) => onViewRun?.(toHealthcareLogRow(row as ReviewResponseLogRow)),
+          }}
+        />
+      </div>
+    )
+  }
+
   if (agentName === 'Pre-visit agent' || agentName === 'Waitlist agent') {
     return (
       <div className="px-lg py-lg">
         <DataTable
           columns={PREVISIT_COLUMNS}
           data={PREVISIT_LOGS_ROWS}
-          rowAction={{ icon: 'visibility', label: 'View run', onClick: () => {} }}
+          rowAction={{ icon: 'visibility', label: 'View log', onClick: () => {} }}
         />
       </div>
     )
@@ -127,10 +161,11 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={LOG_COLUMNS}
-          data={HEALTHCARE_LOGS_ROWS}
+          data={agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS}
+          onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
-            label: 'View run',
+            label: 'View log',
             onClick: (row) => onViewRun?.(row as HealthcareLogRow),
           }}
         />

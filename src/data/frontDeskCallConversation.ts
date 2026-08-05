@@ -9,6 +9,8 @@ export interface FrontDeskVoiceMessage {
   id: string | number
   role: 'system' | 'agent' | 'user'
   text: string
+  /** Shown beside "Coach agent" / "Track your feedback" on agent bubbles (e.g. "5:23 PM"). */
+  time?: string
 }
 
 /** Full call transcript for VoiceChatDrawer / inbox "View transcript". */
@@ -18,6 +20,7 @@ export const FRONT_DESK_VOICE_MESSAGES: FrontDeskVoiceMessage[] = [
     id: 'a1',
     role: 'agent',
     text: 'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?',
+    time: '5:30 PM',
   },
   {
     id: 'c1',
@@ -28,6 +31,7 @@ export const FRONT_DESK_VOICE_MESSAGES: FrontDeskVoiceMessage[] = [
     id: 'a2',
     role: 'agent',
     text: "I'm really sorry you're dealing with that — a bad headache is no fun. Just so I point you in the right direction: is the pain coming from your teeth, jaw, or gums, or is it more of a general head pain?",
+    time: '5:31 PM',
   },
   {
     id: 'c2',
@@ -38,6 +42,7 @@ export const FRONT_DESK_VOICE_MESSAGES: FrontDeskVoiceMessage[] = [
     id: 'a3',
     role: 'agent',
     text: 'Thank you, that helps. Pain that radiates from a tooth can sometimes need prompt attention. Are you having any swelling in your face or jaw, fever, or trouble swallowing or breathing?',
+    time: '5:31 PM',
   },
   {
     id: 'c3',
@@ -48,6 +53,7 @@ export const FRONT_DESK_VOICE_MESSAGES: FrontDeskVoiceMessage[] = [
     id: 'a4',
     role: 'agent',
     text: "Good to know there's no fever. Swelling near a tooth is still worth having a dentist look at soon, so let's get you an appointment rather than wait it out.",
+    time: '5:32 PM',
   },
   { id: 'sys2', role: 'system', text: 'Routed to appointment booking agent' },
   { id: 'sys3', role: 'system', text: 'Procedure switched : Book appointment' },
@@ -55,6 +61,7 @@ export const FRONT_DESK_VOICE_MESSAGES: FrontDeskVoiceMessage[] = [
     id: 'a5',
     role: 'agent',
     text: 'I have an opening this Thursday at 2 PM with Dr. Patel — would that work for you?',
+    time: '5:32 PM',
   },
   {
     id: 'c4',
@@ -65,6 +72,7 @@ export const FRONT_DESK_VOICE_MESSAGES: FrontDeskVoiceMessage[] = [
     id: 'a6',
     role: 'agent',
     text: "You're all set for Thursday at 2 PM with Dr. Patel. Anything else I can help with?",
+    time: '5:33 PM',
   },
   {
     id: 'c5',

@@ -316,6 +316,9 @@ export default function LoopNode({
   onDelete,
   onCopy,
   onReplace,
+  hasClipboard = false,
+  onPasteBelow = undefined,
+  onPasteReplace = undefined,
   onMoveUp,
   onMoveDown,
   canMoveUp = false,
@@ -384,6 +387,9 @@ export default function LoopNode({
           onDelete={onDelete}
           onCopy={onCopy}
           onReplace={onReplace}
+          hasClipboard={hasClipboard}
+          onPasteBelow={onPasteBelow}
+          onPasteReplace={onPasteReplace}
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           canMoveUp={canMoveUp}

@@ -1,5 +1,3 @@
-export { ChatHistoryPanel } from './ChatHistoryPanel/ChatHistoryPanel'
-export type { ChatHistoryItem, ChatHistoryPanelProps } from './ChatHistoryPanel/ChatHistoryPanel.types'
 export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
 export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
@@ -10,8 +8,15 @@ export type {
   RunDetailsPanelProps,
   RunLogField,
   RunLogStep,
+  RunLogStepType,
 } from './RunDetailsPanel/RunDetailsPanel.types'
 export { Chip } from './Chip/Chip'
+export { Block } from './Block/Block'
+export type { BlockProps, BlockVariant } from './Block/Block.types'
+export { ProcedureSidePanel } from './ProcedureSidePanel/ProcedureSidePanel'
+export type { ProcedureSidePanelProps, ProcedureSidePanelStep } from './ProcedureSidePanel/ProcedureSidePanel.types'
+export { TranscriptSidePanel } from './TranscriptSidePanel/TranscriptSidePanel'
+export type { TranscriptSidePanelProps, TranscriptSidePanelLine } from './TranscriptSidePanel/TranscriptSidePanel.types'
 export { ChatBubble, ChatSystemLabel } from './ChatBubble/ChatBubble'
 export type {
   ChatBubbleProps,
@@ -20,12 +25,6 @@ export type {
 } from './ChatBubble/ChatBubble.types'
 export { EmptyState } from './EmptyState/EmptyState'
 export type { EmptyStateProps } from './EmptyState/EmptyState.types'
-export { Block } from './Block/Block'
-export type { BlockProps, BlockVariant } from './Block/Block.types'
-export { ProcedureSidePanel } from './ProcedureSidePanel/ProcedureSidePanel'
-export type { ProcedureSidePanelProps, ProcedureSidePanelStep } from './ProcedureSidePanel/ProcedureSidePanel.types'
-export { TranscriptSidePanel } from './TranscriptSidePanel/TranscriptSidePanel'
-export type { TranscriptSidePanelLine, TranscriptSidePanelProps } from './TranscriptSidePanel/TranscriptSidePanel.types'
 export { InfoTooltip } from './InfoTooltip/InfoTooltip'
 export { Tooltip } from './Tooltip/Tooltip'
 export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'

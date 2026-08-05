@@ -1,4 +1,5 @@
 import type { HealthcareLogRow } from '../../data/healthcareAgentLogs'
+import type { RunLogStep } from '../RunDetailsPanel/RunDetailsPanel.types'
 
 export interface LogDetailsMetric {
   id: string
@@ -41,28 +42,35 @@ export type LogTranscriptEntry =
       id: string
       role: 'agent'
       text: string
-      time?: string
       llmResponseTime?: string
       tts?: string
       knowledgeBase?: string
       toolCall?: LogToolCall
-      reasoning?: string
+      /** Shown at the end of the meta line (e.g. "5:31 PM"). */
+      time?: string
     }
-  | { id: string; role: 'caller'; text: string; time?: string; durationLabel?: string }
+  | { id: string; role: 'caller'; text: string; durationLabel?: string; time?: string }
 
 export interface LogDetailsPanelProps {
   row: HealthcareLogRow
   agentName?: string
   agentBadge?: string
+  metrics?: LogDetailsMetric[]
+  transcript?: LogTranscriptEntry[]
+  /** Logs-tab trigger/task/delay/branch steps — defaults to the Front-desk call's steps. */
+  steps?: RunLogStep[]
+  durationSecs?: number
+  audioUrl?: string
+  /** Called when a "Track your feedback" link is clicked — the host screen navigates to that
+   *  recommendation's detail page. */
+  onTrackFeedback?: (recommendationId: string) => void
+  /** Overrides for the "Call details" tab — fall back to sensible demo defaults. */
   callerNumber?: string
   sidNumber?: string
   languageDetected?: string
   callEndReason?: string
+  /** Defaults to `agentName`. */
   routedVia?: string
-  metrics?: LogDetailsMetric[]
-  summary?: string
-  transcript?: LogTranscriptEntry[]
-  durationSecs?: number
-  audioUrl?: string
-  onViewConversation?: () => void
+  /** Whether to show the "Call details" tab at all — some agents (e.g. Reminder) don't have one. */
+  showCallDetails?: boolean
 }

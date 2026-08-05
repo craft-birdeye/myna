@@ -13,7 +13,9 @@ export interface HealthcareLogRow {
   topic: string
   /** Workflow steps executed during this run — shown with a green border on the log canvas */
   implementedSteps?: LogStepId[]
-  [key: string]: string | LogStepId[] | undefined
+  /** Explicit canvas node ids to highlight; when set, overrides branch-path inference. */
+  executedNodeIds?: string[]
+  [key: string]: string | string[] | LogStepId[] | undefined
 }
 
 export const HEALTHCARE_LOGS_METRICS: Metric[] = [
@@ -139,8 +141,8 @@ export const REMINDER_LOGS_ROWS: HealthcareLogRow[] = [
     status: 'Complete',
     contact: 'Dana Whitfield',
     channel: 'Voice call',
-    duration: '0:53',
-    topic: 'Appointment reminder',
+    duration: '5:32',
+    topic: 'Appointment reminder confirmed',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -148,8 +150,8 @@ export const REMINDER_LOGS_ROWS: HealthcareLogRow[] = [
     status: 'Complete',
     contact: 'Robert Cho',
     channel: 'Voice call',
-    duration: '1:36',
-    topic: 'Appointment reminder',
+    duration: '4:48',
+    topic: 'Appointment reminder confirmed',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -157,7 +159,7 @@ export const REMINDER_LOGS_ROWS: HealthcareLogRow[] = [
     status: 'Failed',
     contact: '+1 (628) 555-0110',
     channel: 'Web chat, Voice call',
-    duration: '1:11',
+    duration: '1:20',
     topic: 'Appointment reminder',
     implementedSteps: ['trigger'],
   },
@@ -166,7 +168,7 @@ export const REMINDER_LOGS_ROWS: HealthcareLogRow[] = [
     status: 'Failed',
     contact: '+1 (310) 555-0190',
     channel: 'Web chat',
-    duration: '1:04',
+    duration: '0:45',
     topic: 'Appointment reminder',
     implementedSteps: ['trigger'],
   },
@@ -175,8 +177,71 @@ export const REMINDER_LOGS_ROWS: HealthcareLogRow[] = [
     status: 'In progress',
     contact: 'Elena Sokolova',
     channel: 'Voice call',
-    duration: '0:18',
+    duration: '2:10',
     topic: 'Appointment reminder',
     implementedSteps: ['trigger'],
   },
 ]
+
+export interface ReviewResponseLogRow {
+  timestamp: string
+  status: LogStatus
+  contact: string
+  source: string
+  implementedSteps?: LogStepId[]
+  executedNodeIds?: string[]
+  [key: string]: string | string[] | LogStepId[] | undefined
+}
+
+export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
+  {
+    timestamp: 'Feb 25, 2024, 5:30 pm',
+    status: 'Complete',
+    contact: 'Dana Whitfield',
+    source: 'Google',
+    implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 09, 2024, 5:30 pm',
+    status: 'Complete',
+    contact: 'Robert Cho',
+    source: 'Yelp',
+    implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 05, 2024, 5:30 pm',
+    status: 'Failed',
+    contact: '+1 (628) 555-0110',
+    source: 'Facebook',
+    implementedSteps: ['trigger'],
+  },
+  {
+    timestamp: 'Jan 25, 2024, 5:30 pm',
+    status: 'Failed',
+    contact: '+1 (310) 555-0190',
+    source: 'Google',
+    implementedSteps: ['trigger'],
+  },
+  {
+    timestamp: 'Jan 18, 2024, 5:30 pm',
+    status: 'In progress',
+    contact: 'Elena Sokolova',
+    source: 'Birdeye',
+    implementedSteps: ['trigger'],
+  },
+]
+
+/** Maps a review-response log row into the shared HealthcareLogRow shape used by RunDetailView. */
+export function toHealthcareLogRow(row: ReviewResponseLogRow): HealthcareLogRow {
+  return {
+    timestamp: row.timestamp,
+    status: row.status,
+    contact: row.contact,
+    channel: row.source,
+    duration: '—',
+    topic: 'Review response',
+    implementedSteps: row.implementedSteps,
+    executedNodeIds: row.executedNodeIds,
+    source: row.source,
+  }
+}
