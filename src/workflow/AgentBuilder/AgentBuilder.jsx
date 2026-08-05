@@ -751,6 +751,8 @@ export default function AgentBuilder({
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  // "Create with AI" expanded to full page — hides the canvas so the chat fills its space.
+  const [aiChatExpanded, setAiChatExpanded] = useState(false);
   const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
   // AI assist panel is controlled by the parent when it needs to render the
   // panel itself (e.g. spanning the full app height, above this editor's own
@@ -2182,7 +2184,18 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          {!hideLhs && (
+          {!hideLhs && aiChatExpanded && (
+            <div className="agent-builder__lhs agent-builder__lhs--expanded">
+              <LHSDrawer
+                expanded
+                agentName={agentName}
+                aiTranscript={aiTranscript}
+                onCollapseExpand={() => setAiChatExpanded(false)}
+              />
+            </div>
+          )}
+
+          {!hideLhs && !aiChatExpanded && (
             <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
               <LHSDrawer
                 defaultTab="Create manually"
@@ -2196,6 +2209,7 @@ export default function AgentBuilder({
                 procedures={procedures}
                 aiTranscript={aiTranscript}
                 onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
+                onExpand={viewOnly ? undefined : () => setAiChatExpanded(true)}
                 onProcedureClick={viewOnly ? undefined : (procedureId) => {
                   setLhsPreviewProcedureId(procedureId);
                   setSelectedNodeId(null);
@@ -2206,7 +2220,7 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {!hideLhs && lhsCollapsed && (
+          {!hideLhs && !aiChatExpanded && lhsCollapsed && (
             <button
               className="ab-lhs-expand-pill"
               onClick={() => setLhsCollapsed(false)}
@@ -2223,40 +2237,42 @@ export default function AgentBuilder({
             />
           )}
 
-          <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
-            <FlowCanvas
-              nodes={nodes}
-              edges={edges}
-              onNodeClick={handleNodeClick}
-              onDropNode={viewOnly ? undefined : handleDropNode}
-              onNodesReorder={viewOnly ? undefined : handleNodesReorder}
-              selectedNodeId={selectedNodeId}
-              orientation="vertical"
-              viewOnly={viewOnly}
-              product={product}
-              agentName={agentName}
-              initialZoom={initialZoom}
-              runDisabled={runDisabled}
-              onEdit={onEdit}
-              onView={onView}
-              onRun={() => {
-                if (isReminderAgent) {
-                  setBookTestModalOpen(true);
-                } else {
-                  setTestAppointment(null);
-                  setPreviewOpen(true);
-                }
-              }}
-            />
-          </div>
+          {!aiChatExpanded && (
+            <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
+              <FlowCanvas
+                nodes={nodes}
+                edges={edges}
+                onNodeClick={handleNodeClick}
+                onDropNode={viewOnly ? undefined : handleDropNode}
+                onNodesReorder={viewOnly ? undefined : handleNodesReorder}
+                selectedNodeId={selectedNodeId}
+                orientation="vertical"
+                viewOnly={viewOnly}
+                product={product}
+                agentName={agentName}
+                initialZoom={initialZoom}
+                runDisabled={runDisabled}
+                onEdit={onEdit}
+                onView={onView}
+                onRun={() => {
+                  if (isReminderAgent) {
+                    setBookTestModalOpen(true);
+                  } else {
+                    setTestAppointment(null);
+                    setPreviewOpen(true);
+                  }
+                }}
+              />
+            </div>
+          )}
 
-          {!aiAssistControlled && aiAssistOpen && (
+          {!aiChatExpanded && !aiAssistControlled && aiAssistOpen && (
             <div className="agent-builder__ai-assist">
               <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
             </div>
           )}
 
-          {drawerOpen && (
+          {!aiChatExpanded && drawerOpen && (
             <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
               <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
@@ -2264,7 +2280,7 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {previewOpen && (
+          {!aiChatExpanded && previewOpen && (
             <div className="agent-builder__preview">
               <PreviewPanel
                 onClose={() => {

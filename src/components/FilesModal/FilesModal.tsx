@@ -13,16 +13,16 @@ const FILE_TYPE_STYLE: Record<FilesModalFileType, { bg: string; icon: string }> 
 }
 
 const DEFAULT_FILES: FilesModalFile[] = [
-  { id: 'file-1', label: 'Service catalog.pdf', type: 'pdf' },
-  { id: 'file-2', label: 'Price list.xls', type: 'xls' },
-  { id: 'file-3', label: 'Sales deck.ppt', type: 'ppt' },
-  { id: 'file-4', label: 'Customer FAQ.pdf', type: 'pdf' },
-  { id: 'file-5', label: 'Inventory report.xls', type: 'xls' },
-  { id: 'file-6', label: 'Onboarding deck.ppt', type: 'ppt' },
-  { id: 'file-7', label: 'Warranty terms.pdf', type: 'pdf' },
-  { id: 'file-8', label: 'Lead tracker.xls', type: 'xls' },
-  { id: 'file-9', label: 'Marketing plan.ppt', type: 'ppt' },
-  { id: 'file-10', label: 'Insurance guide.pdf', type: 'pdf' },
+  { id: 'file-1', label: 'front-desk-SOP.pdf', type: 'pdf' },
+  { id: 'file-2', label: 'appointment-schedule.xls', type: 'xls' },
+  { id: 'file-3', label: 'front-desk-training.ppt', type: 'ppt' },
+  { id: 'file-4', label: 'insurance-faq.pdf', type: 'pdf' },
+  { id: 'file-5', label: 'call-volume-report.xls', type: 'xls' },
+  { id: 'file-6', label: 'staff-onboarding-deck.ppt', type: 'ppt' },
+  { id: 'file-7', label: 'hipaa-consent-form.pdf', type: 'pdf' },
+  { id: 'file-8', label: 'patient-waitlist.xls', type: 'xls' },
+  { id: 'file-9', label: 'clinic-marketing-plan.ppt', type: 'ppt' },
+  { id: 'file-10', label: 'patient-intake-form.pdf', type: 'pdf' },
 ]
 
 function Checkbox({ checked, onChange, ariaLabel }: { checked: boolean; onChange: () => void; ariaLabel?: string }) {

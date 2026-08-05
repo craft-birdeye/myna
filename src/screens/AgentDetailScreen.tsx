@@ -14,6 +14,7 @@ import {
   InfoTooltip,
   MediaLibraryModal,
   MetricTiles,
+  PromptComposer,
   RefChip,
   Tabs,
   Toast,
@@ -3958,106 +3959,64 @@ function HealthcareFrontdeskCreateAgentLive({
             </div>
           )}
 
-          <div className="flex flex-col gap-md rounded-xl border border-border bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap items-center gap-sm">
-                {attachments.map((item) => (
-                  <RefChip key={item.id} kind={item.kind} label={item.label} onRemove={() => removeAttachment(item.id)} />
-                ))}
-              </div>
-            )}
-            <textarea
-              value={followUp}
-              onFocus={() => {
-                // Reminder create flow: after the agent asks about timing, click
-                // the composer to pre-fill the scripted reply, then Enter to send.
-                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                  timingPromptFilledRef.current = true
-                  setFollowUp(REMINDER_TIMING_REPLY)
-                  return
-                }
-                // After no-connect defaults: pre-fill the email tone reply.
-                if (
-                  isReminderFlow &&
-                  handoffFollowDone &&
-                  !connectAnswer &&
-                  !followUp.trim()
-                ) {
-                  emailPromptFilledRef.current = true
-                  setFollowUp(REMINDER_EMAIL_REPLY)
-                  return
-                }
-                // Once the draft review is done, clicking into the box pre-fills
-                // John's next message so the demo can continue in one click.
-                if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
-                  reviewPromptFilledRef.current = true
-                  setFollowUp(FINAL_REVIEW_PROMPT)
-                }
-              }}
-              onClick={() => {
-                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                  timingPromptFilledRef.current = true
-                  setFollowUp(REMINDER_TIMING_REPLY)
-                  return
-                }
-                if (
-                  isReminderFlow &&
-                  handoffFollowDone &&
-                  !connectAnswer &&
-                  !followUp.trim()
-                ) {
-                  emailPromptFilledRef.current = true
-                  setFollowUp(REMINDER_EMAIL_REPLY)
-                }
-              }}
-              onChange={(e) => setFollowUp(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleFollowUpSend()
-                }
-              }}
-              rows={2}
-              disabled={composerLocked}
-              placeholder={composerPlaceholder}
-              className="scrollbar-light min-h-9 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary disabled:cursor-not-allowed"
-            />
-            <div className="flex items-center justify-between align-bottom">
-              <div className="flex items-center gap-xs text-text-icon">
-                <AttachMenuPopover
-                  disabled={composerLocked}
-                  onSelect={(option) => {
-                    if (option === 'upload-image') landingImageInputRef.current?.click()
-                    else if (option === 'media-library') setMediaLibraryOpen(true)
-                    else if (option === 'files') setFilesModalOpen(true)
-                  }}
-                />
-                <Tooltip content="Dictate" variant="brief">
-                  <button
-                    type="button"
-                    aria-label="Dictate"
-                    disabled={composerLocked}
-                    className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Icon name="mic" size={20} />
-                  </button>
-                </Tooltip>
-              </div>
-              <button
-                type="button"
-                aria-label="Send"
-                onClick={handleFollowUpSend}
-                disabled={!canSendFollowUp || composerLocked}
-                className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
-                  canSendFollowUp && !composerLocked
-                    ? 'text-ai-brand hover:bg-surface-hover'
-                    : 'cursor-not-allowed text-text-tertiary opacity-40'
-                }`}
-              >
-                <SendIcon size={24} />
-              </button>
-            </div>
-          </div>
+          <PromptComposer
+            value={followUp}
+            onChange={setFollowUp}
+            onSend={handleFollowUpSend}
+            onFocus={() => {
+              // Reminder create flow: after the agent asks about timing, click
+              // the composer to pre-fill the scripted reply, then Enter to send.
+              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                timingPromptFilledRef.current = true
+                setFollowUp(REMINDER_TIMING_REPLY)
+                return
+              }
+              // After no-connect defaults: pre-fill the email tone reply.
+              if (
+                isReminderFlow &&
+                handoffFollowDone &&
+                !connectAnswer &&
+                !followUp.trim()
+              ) {
+                emailPromptFilledRef.current = true
+                setFollowUp(REMINDER_EMAIL_REPLY)
+                return
+              }
+              // Once the draft review is done, clicking into the box pre-fills
+              // John's next message so the demo can continue in one click.
+              if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
+                reviewPromptFilledRef.current = true
+                setFollowUp(FINAL_REVIEW_PROMPT)
+              }
+            }}
+            onClick={() => {
+              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                timingPromptFilledRef.current = true
+                setFollowUp(REMINDER_TIMING_REPLY)
+                return
+              }
+              if (
+                isReminderFlow &&
+                handoffFollowDone &&
+                !connectAnswer &&
+                !followUp.trim()
+              ) {
+                emailPromptFilledRef.current = true
+                setFollowUp(REMINDER_EMAIL_REPLY)
+              }
+            }}
+            rows={2}
+            disabled={composerLocked}
+            sendDisabled={!canSendFollowUp}
+            placeholder={composerPlaceholder}
+            attachments={attachments}
+            onRemoveAttachment={removeAttachment}
+            onAttach={(option) => {
+              if (option === 'upload-image') landingImageInputRef.current?.click()
+              else if (option === 'media-library') setMediaLibraryOpen(true)
+              else if (option === 'files') setFilesModalOpen(true)
+            }}
+          />
         </div>
         </div>
 
@@ -5374,7 +5333,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             {createWorkflowOpen ? (
               // Reuses LHSDrawer's own tab/collapse-button classes (lhs-drawer__tab*,
               // lhs-drawer__collapse-btn) so this header matches the "edit agent" canvas panel exactly.
-              <div className="flex h-12 shrink-0 items-center gap-sm px-2xl">
+              <div className="flex shrink-0 items-center gap-sm px-2xl pt-lg pb-sm">
                 <div className="lhs-drawer__tabs lhs-drawer__tabs--visible flex-1">
                   <div className={`group relative lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}>
                     <span className="lhs-drawer__tab-label">
@@ -5421,8 +5380,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               </div>
             ) : createFlowSubmitted ? (
               // Conversation view — header aligns with the 720px chat column below it.
-              <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
-                <div className="flex h-full w-full max-w-[1600px] justify-center gap-xl pr-sm">
+              <div className="flex shrink-0 justify-center bg-surface px-lg pt-lg pb-md">
+                <div className="flex w-full max-w-[1600px] justify-center gap-xl pr-sm">
                   {inlineProcedureOpen && (
                     <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
                   )}
@@ -5440,13 +5399,24 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     </button>
                     <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{createTitle}</h1>
                     {(isReminder || isFrontdesk) && createDraftAgentName && !createWorkflowOpen && (
-                      <button
-                        type="button"
-                        onClick={openCreateWorkflow}
-                        className="shrink-0 rounded-sm text-body text-text-action hover:underline"
-                      >
-                        View workflow
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Collapse"
+                          title="Dock next to workflow"
+                          onClick={openCreateWorkflow}
+                          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                        >
+                          <Icon name="close_fullscreen" size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={openCreateWorkflow}
+                          className="shrink-0 rounded-sm text-body text-text-action hover:underline"
+                        >
+                          View workflow
+                        </button>
+                      </>
                     )}
                   </div>
                   {inlineProcedureOpen && (

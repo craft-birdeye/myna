@@ -2119,7 +2119,7 @@ export function RecommendationDetailScreen({
   onAutoOpenFeedbackConsumed,
 }: RecommendationDetailScreenProps) {
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
-  const { overrides, submitRefinement, setRecommendationStatus, resetOverrides } = useRecommendationOverridesStore()
+  const { overrides, submitRefinement, setRecommendationStatus } = useRecommendationOverridesStore()
   const rec =
     [...RECOMMENDATIONS, ...feedbackRecommendations].find((r) => r.id === recommendationId) ?? RECOMMENDATIONS[0]
 
@@ -2210,13 +2210,6 @@ export function RecommendationDetailScreen({
     showToast({ message: 'Recommendation rejected', variant: 'danger' })
   }
 
-  const handleResetToOriginal = () => {
-    resetOverrides(rec.id)
-    setRecStatus('open')
-    setChatTurns([])
-    showToast({ message: 'Reset to the original recommendation.' })
-  }
-
   const handleApproveScripted = () => {
     setRecStatus('accepted')
     setRecommendationStatus(rec.id, 'accepted')
@@ -2267,15 +2260,6 @@ export function RecommendationDetailScreen({
             label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
             variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
           />
-          <button
-            type="button"
-            aria-label="Reset to original"
-            title="Reset to original"
-            onClick={handleResetToOriginal}
-            className="flex size-9 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-          >
-            <Icon name="restart_alt" size={18} />
-          </button>
         </div>
       </div>
 

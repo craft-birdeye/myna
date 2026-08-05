@@ -25,6 +25,12 @@
   pointer-events: none;
 }
 
+.agent-builder__lhs--expanded {
+  flex: 1;
+  width: 100%;
+  padding: 0;
+}
+
 /* ─── Expand pill (floats over canvas when LHS is collapsed) ─── */
 .ab-lhs-expand-pill {
   position: absolute;
