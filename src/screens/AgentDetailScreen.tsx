@@ -3289,7 +3289,7 @@ function FrontdeskBuildingCard({
                   onClick={onViewWorkflow}
                   className="shrink-0 rounded-sm text-body text-text-action hover:underline"
                 >
-                  View workflow
+                  View in agent builder
                 </button>
               )}
             </div>
@@ -4643,7 +4643,7 @@ function HealthcareFrontdeskCreateAgentLive({
                                   onClick={onViewWorkflow}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
-                                  View workflow
+                                  View in agent builder
                                 </button>
                               )}
                             </div>
@@ -4687,7 +4687,7 @@ function HealthcareFrontdeskCreateAgentLive({
                                         onClick={onViewWorkflow}
                                         className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                       >
-                                        View workflow
+                                        View in agent builder
                                       </button>
                                     )}
                                   </div>
@@ -6496,7 +6496,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                           onClick={openCreateWorkflow}
                           className="shrink-0 rounded-sm text-body text-text-action hover:underline"
                         >
-                          View workflow
+                          View in agent builder
                         </button>
                       </>
                     )}

@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { TrackFeedbackIcon } from '../../assets/TrackFeedbackIcon'
-import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
@@ -819,7 +817,7 @@ function TranscriptEntry({
                 onClick={onTrackFeedback}
                 className="flex items-center gap-xs text-small text-text-action hover:underline"
               >
-                <TrackFeedbackIcon size={18} color="currentColor" />
+                <Icon name="track_changes" size={16} />
                 Track your feedback
               </button>
             ) : (
@@ -828,7 +826,7 @@ function TranscriptEntry({
                 onClick={onCoachAgent}
                 className="flex items-center gap-xs text-small text-text-action hover:underline"
               >
-                <TrainAgentIcon size={18} color="currentColor" />
+                <Icon name="auto_awesome" size={16} />
                 Coach agent
               </button>
             )}

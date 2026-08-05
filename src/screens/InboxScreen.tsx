@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection, type VoiceChatMessage } from '../components'
-import { TrackFeedbackIcon } from '../assets/TrackFeedbackIcon'
-import { TrainAgentIcon } from '../assets/TrainAgentIcon'
 import voicemailSample from '../assets/voicemail_sample.mp3'
 import {
   FRONT_DESK_CALL_SUMMARY,
@@ -1214,7 +1212,7 @@ export function InboxScreen({
                                 onClick={() => handleTrackFeedback(recId)}
                                 className="flex items-center gap-xs text-small text-text-action hover:underline"
                               >
-                                <TrackFeedbackIcon size={18} color="currentColor" />
+                                <Icon name="track_changes" size={16} />
                                 Track your feedback
                               </button>
                             ) : (
@@ -1223,7 +1221,7 @@ export function InboxScreen({
                                 onClick={() => setShareFeedbackMessageId(event.id)}
                                 className="flex items-center gap-xs text-small text-text-action hover:underline"
                               >
-                                <TrainAgentIcon size={18} color="currentColor" />
+                                <Icon name="auto_awesome" size={16} />
                                 Coach agent
                               </button>
                             ))}

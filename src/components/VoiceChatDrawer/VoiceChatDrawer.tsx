@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
-import { TrackFeedbackIcon } from '../../assets/TrackFeedbackIcon'
-import { TrainAgentIcon } from '../../assets/TrainAgentIcon'
+import { Icon } from '../Icon/Icon'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import type { VoiceChatDrawerProps } from './VoiceChatDrawer.types'
@@ -87,7 +86,7 @@ export function VoiceChatDrawer({
                             onClick={() => onTrackFeedback?.(recId)}
                             className="flex items-center gap-xs text-small text-text-action hover:underline"
                           >
-                            <TrackFeedbackIcon size={18} color="currentColor" />
+                            <Icon name="track_changes" size={16} />
                             Track your feedback
                           </button>
                         ) : (
@@ -98,7 +97,7 @@ export function VoiceChatDrawer({
                             }
                             className="flex items-center gap-xs text-small text-text-action hover:underline"
                           >
-                            <TrainAgentIcon size={18} color="currentColor" />
+                            <Icon name="auto_awesome" size={16} />
                             Coach agent
                           </button>
                         )}

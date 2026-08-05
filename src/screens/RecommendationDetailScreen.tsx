@@ -2255,11 +2255,13 @@ export function RecommendationDetailScreen({
           ) : (
             <AiAgentIcon size={16} className="shrink-0" />
           )}
-          <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{rec.title}</h1>
-          <Chip
-            label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
-            variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
-          />
+          <div className="flex min-w-0 flex-1 items-center gap-sm">
+            <h1 className="min-w-0 truncate text-h3 text-text-primary">{rec.title}</h1>
+            <Chip
+              label={recStatus === 'open' ? 'Open' : recStatus === 'accepted' ? 'Accepted' : 'Rejected'}
+              variant={recStatus === 'accepted' ? 'success' : recStatus === 'rejected' ? 'danger' : 'info'}
+            />
+          </div>
         </div>
       </div>
 
