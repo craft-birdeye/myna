@@ -5,6 +5,8 @@ export interface PromptComposerAttachment {
   id: string
   kind: RefKind
   label: string
+  /** When set, pill swatch uses the matching canvas node SVG (TaskIcon, etc.). */
+  canvasNodeType?: string
 }
 
 export interface PromptComposerProps {
@@ -21,6 +23,7 @@ export interface PromptComposerProps {
   /** Renders the attach ("+") button as a popover when provided; otherwise a plain non-interactive button. */
   onAttach?: (option: AttachMenuOption) => void
   onFocus?: () => void
+  onBlur?: () => void
   onClick?: () => void
   className?: string
 }

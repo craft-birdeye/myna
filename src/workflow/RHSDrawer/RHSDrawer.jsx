@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FormInput } from '../elemental-stubs';
 import { Button } from '../elemental-stubs';
 import LocationsDrawer from './LocationsDrawer';
@@ -15,23 +16,6 @@ export default function RHSDrawer({
   onChange,
 }) {
   const [showLocations, setShowLocations] = useState(false);
-
-  if (showLocations) {
-    return (
-      <LocationsDrawer
-        selectedIds={locations.map((loc) => loc.id)}
-        onBack={() => setShowLocations(false)}
-        onSave={(selectedLocations) => {
-          // Show first 3 as chips, rest as "+ N more"
-          const chips = selectedLocations.slice(0, 3);
-          const moreCount = Math.max(0, selectedLocations.length - 3);
-          onChange?.('locations', chips);
-          onChange?.('moreLocationsCount', moreCount);
-          setShowLocations(false);
-        }}
-      />
-    );
-  }
 
   return (
     <div className="rhs-drawer">
@@ -116,6 +100,22 @@ export default function RHSDrawer({
           onClick={onSave}
         />
       </div>
+
+      {showLocations &&
+        createPortal(
+          <LocationsDrawer
+            selectedIds={locations.map((loc) => loc.id)}
+            onBack={() => setShowLocations(false)}
+            onSave={(selectedLocations) => {
+              const chips = selectedLocations.slice(0, 3);
+              const moreCount = Math.max(0, selectedLocations.length - 3);
+              onChange?.('locations', chips);
+              onChange?.('moreLocationsCount', moreCount);
+              setShowLocations(false);
+            }}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import LocationsDrawer from '../../../RHSDrawer/LocationsDrawer.jsx';
 import styles from './AgentDetailsBody.module.css';
@@ -36,11 +37,11 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
       typeof l === 'string' ? { id: l, name: l } : l
     );
 
-  const rawLocations = values.locations && values.locations.length > 0
-    ? values.locations
-    : DEFAULT_LOCATIONS;
-
-  const locations = normaliseLocations(rawLocations);
+  // Honor an explicit empty list (e.g. create-from-scratch) — do not fall back
+  // to demo DEFAULT_LOCATIONS when the parent passed `locations: []`.
+  const locations = normaliseLocations(
+    Array.isArray(values.locations) ? values.locations : DEFAULT_LOCATIONS,
+  );
 
   const handleRemoveChip = (id) => {
     updateLocations(locations.filter((l) => l.id !== id));
@@ -63,17 +64,6 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
     updateLocations(selected);
     setShowLocations(false);
   };
-
-  /* LocationsDrawer replaces the whole body when open */
-  if (showLocations) {
-    return (
-      <LocationsDrawer
-        selectedIds={(values.locations || []).map((l) => l.id)}
-        onBack={() => setShowLocations(false)}
-        onSave={handleLocationsSave}
-      />
-    );
-  }
 
   const visibleLocations = showAllChips
     ? locations
@@ -116,7 +106,7 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
         <div className={styles.locationsLabel}>
           <span className={styles.locationsLabelText}>Locations</span>
           <span className={styles.locationsRequired}>*</span>
-          {!viewOnly && (
+          {!viewOnly && locations.length > 0 && (
             <button
               className={styles.locationsEditBtn}
               type="button"
@@ -130,34 +120,59 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
           )}
         </div>
 
-        {/* Location chips — grey pill with name + × remove button */}
-        <div className={styles.chipsRow}>
-          {visibleLocations.map((loc) => (
-            <span key={loc.id} className={styles.locationChip}>
-              <span className={styles.locationChipName}>{loc.name}</span>
-              {!viewOnly && (
-                <button
-                  type="button"
-                  className={styles.locationChipClose}
-                  onClick={() => handleRemoveChip(loc.id)}
-                  title="Remove"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                    close
-                  </span>
-                </button>
-              )}
-            </span>
-          ))}
-        </div>
+        {locations.length === 0 ? (
+          !viewOnly && (
+            <button
+              className={styles.addLink}
+              type="button"
+              onClick={() => setShowLocations(true)}
+            >
+              + Add locations
+            </button>
+          )
+        ) : (
+          <>
+            <div className={styles.chipsRow}>
+              {visibleLocations.map((loc) => (
+                <span key={loc.id} className={styles.locationChip}>
+                  <span className={styles.locationChipName}>{loc.name}</span>
+                  {!viewOnly && (
+                    <button
+                      type="button"
+                      className={styles.locationChipClose}
+                      onClick={() => handleRemoveChip(loc.id)}
+                      title="Remove"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                        close
+                      </span>
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
 
-        {/* "+ N more" link */}
-        {!showAllChips && overflowCount > 0 && (
-          <button className={styles.moreLink} type="button" onClick={() => setShowAllChips(true)}>
-            + {overflowCount} more
-          </button>
+            {!showAllChips && overflowCount > 0 && (
+              <button className={styles.moreLink} type="button" onClick={() => setShowAllChips(true)}>
+                + {overflowCount} more
+              </button>
+            )}
+          </>
         )}
       </div>
+
+      {/* Portal to body so the overlay sits above the LHS (z-index 40), not under it. */}
+      {showLocations &&
+        createPortal(
+          <LocationsDrawer
+            selectedIds={(values.locations || []).map((l) =>
+              typeof l === 'string' ? l : l.id,
+            )}
+            onBack={() => setShowLocations(false)}
+            onSave={handleLocationsSave}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

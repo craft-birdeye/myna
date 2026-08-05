@@ -18,7 +18,7 @@ const KIND_MAP: Record<RefKind, { suffix: string; icon: string | null }> = {
   procedure: { suffix: 'Product', icon: 'menu_book' },
 }
 
-export function RefChip({ kind, label, onRemove, className = '' }: RefChipProps) {
+export function RefChip({ kind, label, onRemove, swatchIcon, className = '' }: RefChipProps) {
   const { suffix, icon } = KIND_MAP[kind]
   const chipClass = [styles.chip, suffix && styles[`chip${suffix}`], className].filter(Boolean).join(' ')
   const swatchClass = [styles.chipSwatch, suffix && styles[`swatch${suffix}`]].filter(Boolean).join(' ')
@@ -26,7 +26,9 @@ export function RefChip({ kind, label, onRemove, className = '' }: RefChipProps)
   return (
     <span className={chipClass} style={{ verticalAlign: 'middle' }}>
       <span className={swatchClass}>
-        {icon ? (
+        {swatchIcon ? (
+          swatchIcon
+        ) : icon ? (
           <span className={`material-symbols-outlined ${styles[`icon${suffix}`] ?? ''}`}>{icon}</span>
         ) : (
           <DataTypeIcon />

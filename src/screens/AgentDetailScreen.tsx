@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   AttachMenuPopover,
   Chip,
+  ComposerAttachPopover,
   CustomizeColumnsDrawer,
   DataTable,
   FilesModal,
@@ -14,7 +15,6 @@ import {
   InfoTooltip,
   MediaLibraryModal,
   MetricTiles,
-  PromptComposer,
   RefChip,
   Tabs,
   Toast,
@@ -39,10 +39,9 @@ import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
-import { AiAgentIcon } from '../assets/AiAgentIcon'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
+import { rememberCreateAgentChat } from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -107,6 +106,9 @@ interface AgentInstance {
   reviewsResponded?: string
   responseRate?: string
   avgResponseTime?: string
+  reviewsReceived?: string
+  contactsReached?: string
+  clickThroughRate?: string
   /** Open issues for this instance — shown next to the status chip and gating Publish in the editor. */
   issues?: number
   [key: string]: string | number | undefined
@@ -169,6 +171,9 @@ interface RegionRow {
   reviewsResponded?: string
   responseRate?: string
   avgResponseTime?: string
+  reviewsReceived?: string
+  contactsReached?: string
+  clickThroughRate?: string
   /** Overrides the default `${agentName} - ${region}` row label. */
   instanceName?: string
 }
@@ -233,6 +238,30 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
     { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
     { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+  ],
+  'Review generation agents': [
+    {
+      region: 'North Region',
+      status: 'Running',
+      channels: 'Email, Text',
+      reviewsReceived: '112',
+      contactsReached: '115',
+      clickThroughRate: '3.4%',
+      timeSaved: '4h 10m',
+      locations: '10',
+      instanceName: 'Review generation agent - North Region',
+    },
+    {
+      region: 'A/B testing',
+      status: 'Running',
+      channels: 'Email, Text',
+      reviewsReceived: '137',
+      contactsReached: '150',
+      clickThroughRate: '5.1%',
+      timeSaved: '5h 8m',
+      locations: '20',
+      instanceName: 'Review generation agent with A/B testing, smart targeting and split campaigns 1',
+    },
   ],
 }
 
@@ -335,6 +364,22 @@ const REVIEW_RESPONSE_CREATE_CARDS = [
   },
 ]
 
+const REVIEW_GENERATION_CREATE_CARDS = [
+  {
+    id: 'reviews-generation-standard',
+    title: 'Review generation agent',
+    description: 'Sends review requests to customers after transactions complete across email and text.',
+  },
+  {
+    id: 'reviews-generation-ab',
+    title: 'Review generation agent with A/B testing',
+    description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
+  },
+]
+
+const REVIEW_GENERATION_CREATE_PROMPT =
+  'Create a review generation agent that sends review request emails and texts after a customer completes a transaction, so we get more reviews across locations.'
+
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
@@ -421,6 +466,18 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       id: 'reviews-response-dashboard-suggestions',
       title: 'Review response agent suggesting replies in dashboard',
       description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
+    },
+  ],
+  'Review generation agents': [
+    {
+      id: 'reviews-generation-standard',
+      title: 'Review generation agent',
+      description: 'Sends review requests to customers after transactions complete across email and text.',
+    },
+    {
+      id: 'reviews-generation-ab',
+      title: 'Review generation agent with A/B testing',
+      description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
     },
   ],
 }
@@ -598,26 +655,58 @@ const JOB_TO_PROCEDURE: Record<string, string> = {
 }
 
 
-// Bouncing-dots "thinking" indicator — matches the Recommendation detail chat's TypingDots.
-function TypingDots() {
+// Bobbing ghost mascot — bluish-gray only, no color — shown for the final
+// "building the agent" step (see the showProgress gate below).
+function GhostLoader() {
   return (
-    <div className="flex items-center gap-[5px]">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="size-[7px] rounded-full bg-[#6b9fd4]"
-          style={{ animation: 'sim-bounce 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }}
-        />
-      ))}
+    <div className="flex flex-col items-start" aria-hidden>
+      <div className="ghost-float text-[#e2e5e9]">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+          <path
+            d="M32 4C18 4 8 14 8 28v20c0 1.5 1.7 2.4 3 1.5l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1 .8 2.4.8 3.4 0l4-3 4 3c1.3.9 3-.1 3-1.5V28C56 14 46 4 32 4z"
+            fill="currentColor"
+          />
+          <circle cx="24" cy="27" r="3" fill="#9ca3af" />
+          <circle cx="40" cy="27" r="3" fill="#9ca3af" />
+        </svg>
+      </div>
+      <div className="ghost-shadow-pulse mt-xs h-[6px] w-8 rounded-full bg-[#d1d5db]" />
     </div>
   )
 }
 
-function AgentBuildLoaderRow() {
+function AgentBuildLoaderRow({
+  label,
+  animKey,
+  showProgress = false,
+  variant = 'spinner',
+}: {
+  label: string
+  animKey?: number | string
+  showProgress?: boolean
+  variant?: 'spinner' | 'sparkle'
+}) {
   return (
-    <div className="agent-build-fade mt-lg flex items-center gap-md">
-      <AiAvatarChatIcon size={24} className="shrink-0" />
-      <TypingDots />
+    <div className="agent-build-fade mt-lg flex flex-col gap-sm" key={animKey}>
+      {showProgress && <GhostLoader />}
+      <div className="flex items-center gap-xs text-small text-text-secondary">
+        {!showProgress && variant === 'sparkle' && (
+          <Icon name="auto_awesome" size={16} className="sparkle-twinkle text-ai-brand" fill />
+        )}
+        {!showProgress && variant === 'spinner' && (
+          <Icon name="progress_activity" size={16} className="animate-spin text-text-icon" />
+        )}
+        <span>{label}</span>
+        <span className="inline-flex items-center gap-px" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="animate-pulse size-1 rounded-full bg-text-secondary"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </span>
+      </div>
     </div>
   )
 }
@@ -642,19 +731,19 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
   }
 
   const btn =
-    'flex size-6 items-center justify-center rounded-sm text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-secondary'
+    'flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary'
 
   return (
-    <div className={`msg-actions-row mt-xs flex items-center gap-xs opacity-0 transition-opacity ${className ?? ''}`}>
+    <div className={`agent-build-fade mt-sm flex items-center gap-xs ${className ?? ''}`}>
       <Tooltip content="Good response" variant="brief">
         <button
           type="button"
           aria-label="Good response"
           aria-pressed={feedback === 'up'}
           onClick={() => setFeedback((prev) => (prev === 'up' ? null : 'up'))}
-          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-secondary' : ''}`}
+          className={`${btn} ${feedback === 'up' ? 'bg-surface-hover text-text-primary' : ''}`}
         >
-          <Icon name="thumb_up" size={15} fill={feedback === 'up'} />
+          <Icon name="thumb_up" size={20} fill={feedback === 'up'} />
         </button>
       </Tooltip>
       <Tooltip content="Bad response" variant="brief">
@@ -663,9 +752,9 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           aria-label="Bad response"
           aria-pressed={feedback === 'down'}
           onClick={() => setFeedback((prev) => (prev === 'down' ? null : 'down'))}
-          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-secondary' : ''}`}
+          className={`${btn} ${feedback === 'down' ? 'bg-surface-hover text-text-primary' : ''}`}
         >
-          <Icon name="thumb_down" size={15} fill={feedback === 'down'} />
+          <Icon name="thumb_down" size={20} fill={feedback === 'down'} />
         </button>
       </Tooltip>
       <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief">
@@ -675,7 +764,7 @@ function MessageActions({ copyText, className }: { copyText?: string; className?
           onClick={handleCopy}
           className={btn}
         >
-          <Icon name={copied ? 'check' : 'copy_all'} size={15} />
+          <Icon name={copied ? 'check' : 'copy_all'} size={20} />
         </button>
       </Tooltip>
     </div>
@@ -691,6 +780,55 @@ const REMINDER_CREATE_PROMPT =
 
 const REVIEW_RESPONSE_CREATE_PROMPT =
   'Create a review response agent that monitors new reviews, analyzes sentiment, and posts thoughtful replies automatically — escalating negative reviews for human approval before publishing.'
+
+export {
+  REVIEW_RESPONSE_CREATE_CARDS,
+  REVIEW_GENERATION_CREATE_CARDS,
+  REVIEW_RESPONSE_CREATE_PROMPT,
+  REVIEW_GENERATION_CREATE_PROMPT,
+}
+
+export function getCreateWithAiSetup(agentName: string): {
+  variant: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
+  pageTitle: string
+  initialPrompt?: string
+  libraryCards?: { id: string; title: string; description: string }[]
+  fromScratchLabel: string
+} {
+  const name = agentName || ''
+  if (/review response/i.test(name)) {
+    return {
+      variant: 'review-response',
+      pageTitle: 'New review response agent',
+      initialPrompt: REVIEW_RESPONSE_CREATE_PROMPT,
+      libraryCards: REVIEW_RESPONSE_CREATE_CARDS,
+      fromScratchLabel: 'Create from scratch',
+    }
+  }
+  if (/review generation/i.test(name)) {
+    return {
+      variant: 'review-generation',
+      pageTitle: 'New review generation agent',
+      initialPrompt: REVIEW_GENERATION_CREATE_PROMPT,
+      libraryCards: REVIEW_GENERATION_CREATE_CARDS,
+      fromScratchLabel: 'Create from scratch',
+    }
+  }
+  if (/reminder/i.test(name)) {
+    return {
+      variant: 'reminder',
+      pageTitle: 'New reminder agent',
+      initialPrompt: REMINDER_CREATE_PROMPT,
+      fromScratchLabel: 'Create from scratch',
+    }
+  }
+  return {
+    variant: 'frontdesk',
+    pageTitle: 'New front desk agent',
+    initialPrompt: JOHN_CREATE_PROMPT,
+    fromScratchLabel: 'Setup manually',
+  }
+}
 
 const REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT = `Inbound review-response agent — not outbound outreach. The product is: new review lands → triage → analyze → draft → publish (or hold).
 
@@ -964,6 +1102,12 @@ const REMINDER_CONNECT_PILLS = ['Yes, correct', 'No, make changes'] as const
 const REMINDER_EMAIL_REPLY =
   "Yes. Oh — and here's the reminder email we send manually today. Keep the same tone."
 
+const REMINDER_EMAIL_FILE: AttachItem = {
+  id: 'lakeside-reminder-email',
+  kind: 'file',
+  label: 'lakeside-reminder-email.docx',
+}
+
 const REMINDER_AFTER_EMAIL_THOUGHTS_TEXT = `A single small document — Extracting: warm, first-name tone; short paragraphs; includes the parking-instructions link and the "reply CONFIRM" convention. I'll reuse that voice and structure for both scheduled reminder messages, and keep their existing CONFIRM keyword as the confirmation mechanism for text.
 
 Everything is now resolved or defaultable. Tool check against the catalog: email + text reminders ✓ (reminder tool), voice calling ✓, handoff to the Front desk agent ✓ (it's live). No missing integrations. Defaults to flag at review: calling window 9am–7pm patient-local (from "no weird hours"), caller ID = clinic main line, stop conditions, booked-inside-window skip rule, English only. Time to build — this one is fast, no need to tell her to leave.`
@@ -1002,6 +1146,13 @@ const FRONTDESK_BUILD_CARD = {
 // Pre-filled into the composer when John clicks the box after the draft review.
 const FINAL_REVIEW_PROMPT =
   'Before I accept — the greeting is too generic. Make it "Thank you for calling Riverside Family Clinic, this is Ava. How can I help?" And let me test the booking flow.'
+
+// The docs John attaches when he responds to the "add your materials" step.
+const JOHN_DOCS_FILES: { id: string; label: string }[] = [
+  { id: 'john-doc-calls', label: 'front-desk-calls-june.zip' },
+  { id: 'john-doc-faq', label: 'insurance-faq.pdf' },
+  { id: 'john-doc-sop', label: 'front-desk-SOP.docx' },
+]
 
 // John's response after the docs prompt: right-aligned attachment chips —
 // same right-side placement as the first user message, proper RefChip attachments.
@@ -1208,14 +1359,24 @@ function CreateAgentThinkingPanel({
   )
 }
 
-// Intro "Thinking" loader — sits in the same slot the Thoughts row (bolt icon + label) takes
-// over once loading finishes.
-function IntroThinkingLoaderRow() {
+// Intro "Thinking" loader — deliberately mirrors the Thoughts header layout
+// (same mt-3xl / gap-sm / size-18 icon / text-body) so the icon and label sit
+// in the exact same spot before and after loading; only the content swaps.
+function IntroThinkingLoaderRow({ label, animKey }: { label: string; animKey?: string }) {
   return (
     <div className="mt-3xl flex flex-col gap-sm">
-      <div className="agent-build-fade flex items-center gap-md">
-        <AiAvatarChatIcon size={24} className="shrink-0" />
-        <TypingDots />
+      <div key={animKey} className="agent-build-fade flex items-center gap-sm">
+        <SparkleLoader size={18} className="shrink-0" />
+        <span className="text-body text-text-secondary">{label}</span>
+        <span className="inline-flex items-center gap-px" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="animate-pulse size-1 rounded-full bg-text-secondary"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </span>
       </div>
     </div>
   )
@@ -1444,15 +1605,21 @@ const CREATE_AGENT_INTRO_PARAGRAPHS = [
 ]
 
 function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
   return (
-    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+    <div className="agent-build-fade mt-3xl flex gap-sm">
       {/* Sparkle avatar, left-aligned to sit in the same column as the Thoughts icon.
           Animates while the reply types, then rests. */}
-      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_INTRO_PARAGRAPHS}
-          onDone={onComplete}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
         />
       </div>
     </div>
@@ -1460,14 +1627,20 @@ function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
 }
 
 function ReminderCreateIntroReply({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
   return (
-    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={REMINDER_CREATE_INTRO_PARAGRAPHS}
-          onDone={onComplete}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
         />
       </div>
     </div>
@@ -2248,14 +2421,20 @@ function ReminderCadenceFollowUp({
 }
 
 function ReminderHandoffFollowUp({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
   return (
-    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
           paragraphs={REMINDER_HANDOFF_REPLY_PARAGRAPHS}
-          onDone={onComplete}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
         />
       </div>
     </div>
@@ -2784,13 +2963,19 @@ const CREATE_AGENT_DOCS_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterDocsReply({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
   return (
-    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_DOCS_REPLY_PARAGRAPHS}
-          onDone={onComplete}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
         />
       </div>
     </div>
@@ -2887,13 +3072,19 @@ const CREATE_AGENT_REFILL_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterRefillReply({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
   return (
-    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS}
-          onDone={onComplete}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
         />
       </div>
     </div>
@@ -2935,13 +3126,19 @@ const CREATE_AGENT_TEST_REPLY_PARAGRAPHS = [
 ]
 
 function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
+  const [done, setDone] = useState(false)
   return (
-    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+    <div className="agent-build-fade mt-3xl flex gap-sm">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={!done} />
+      </span>
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           paragraphs={CREATE_AGENT_TEST_REPLY_PARAGRAPHS}
-          onDone={onComplete}
+          onDone={() => {
+            setDone(true)
+            onComplete?.()
+          }}
         />
       </div>
     </div>
@@ -3475,7 +3672,55 @@ function ProcedurePreviewPanel({
 // Matches the Figma "What would you like to build today?" prompt-box layout.
 // Scoped to Front desk agent + Healthcare product only — every other agent
 // keeps the CreateAgentEmptyState illustration above.
-function HealthcareFrontdeskCreateAgentScreen({
+function CreateFlowPageHeader({
+  onBack,
+  title,
+  centered = false,
+  inlineProcedureOpen = false,
+}: {
+  onBack: () => void
+  title: string
+  centered?: boolean
+  inlineProcedureOpen?: boolean
+}) {
+  const row = (
+    <div className="flex w-full min-w-0 max-w-[720px] items-center gap-xs">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+        aria-label="Back"
+      >
+        <Icon name="arrow_back" size={20} />
+      </button>
+      <h1 className="min-w-0 truncate text-h3 text-text-primary">{title}</h1>
+    </div>
+  )
+
+  if (centered) {
+    return (
+      <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
+        <div className="flex h-full w-full max-w-[1600px] justify-center gap-xl pr-sm">
+          {inlineProcedureOpen && (
+            <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
+          )}
+          {row}
+          {inlineProcedureOpen && (
+            <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+      {row}
+    </div>
+  )
+}
+
+export function HealthcareFrontdeskCreateAgentScreen({
   onCreateFromScratch,
   onSelectFromLibrary,
   onCreateAgent,
@@ -3483,6 +3728,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   onBack,
   onSubmittedChange,
   pageTitle,
+  hideHeaderBack = false,
   libraryCards,
   initialPrompt,
   autoStart = false,
@@ -3503,6 +3749,8 @@ function HealthcareFrontdeskCreateAgentScreen({
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
+  /** Hides the in-column back arrow when the shell header already provides navigation. */
+  hideHeaderBack?: boolean
   libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   /** Auto-sends `initialPrompt` on mount instead of waiting for the user — used to "reopen" a recent chat. */
@@ -3512,7 +3760,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   /** Full transcript for a recent/saved chat — preferred over looking up by id. */
   historyChat?: ChatHistoryTranscript | null
   fromScratchLabel?: string
-  variant?: 'frontdesk' | 'reminder' | 'review-response'
+  variant?: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   workflowVisible?: boolean
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
@@ -3544,6 +3792,7 @@ function HealthcareFrontdeskCreateAgentScreen({
         chat={resolvedHistoryChat}
         onBack={onBack}
         pageTitle={pageTitle}
+        hideHeaderBack={hideHeaderBack}
       />
     )
   }
@@ -3557,6 +3806,7 @@ function HealthcareFrontdeskCreateAgentScreen({
       onBack={onBack}
       onSubmittedChange={onSubmittedChange}
       pageTitle={pageTitle}
+      hideHeaderBack={hideHeaderBack}
       libraryCards={libraryCards}
       initialPrompt={initialPrompt}
       autoStart={autoStart}
@@ -3579,6 +3829,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onBack,
   onSubmittedChange,
   pageTitle,
+  hideHeaderBack = false,
   libraryCards,
   initialPrompt,
   autoStart = false,
@@ -3597,11 +3848,12 @@ function HealthcareFrontdeskCreateAgentLive({
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
+  hideHeaderBack?: boolean
   libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   autoStart?: boolean
   fromScratchLabel?: string
-  variant?: 'frontdesk' | 'reminder' | 'review-response'
+  variant?: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   workflowVisible?: boolean
   onDraftReady?: (name: string | null) => void
   onCanvasProcedureChange?: (name: string | null) => void
@@ -3610,6 +3862,7 @@ function HealthcareFrontdeskCreateAgentLive({
 }) {
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
+  const isReviewGenFlow = variant === 'review-generation'
   const [prompt, setPrompt] = useState('')
   const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
@@ -3667,16 +3920,9 @@ function HealthcareFrontdeskCreateAgentLive({
   const [openProcedureName, setOpenProcedureName] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
 
-  // The header row's spacer (which keeps the 720px chat column centered) needs to
-  // reserve the same width whenever EITHER the inline procedure panel OR the
-  // Test-agent preview panel occupies the RHS slot — they share the same visual slot.
-  useEffect(() => {
-    onInlineProcedureOpenChange?.((Boolean(openProcedureName) || previewOpen) && !workflowVisible)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openProcedureName, previewOpen, workflowVisible])
-
   const handleOpenProcedure = (name: string | null) => {
     setOpenProcedureName(name)
+    onInlineProcedureOpenChange?.(Boolean(name) && !workflowVisible)
     if (!onCanvasProcedureChange) return
     // Full-page conversation → inline procedure panel beside the chat.
     // Workflow canvas open → procedure opens on the canvas RHS instead.
@@ -3718,9 +3964,6 @@ function HealthcareFrontdeskCreateAgentLive({
   const threadRef = useRef<HTMLDivElement | null>(null)
   const threadScrollRef = useRef<HTMLDivElement | null>(null)
   const [threadOverflowing, setThreadOverflowing] = useState(false)
-  // "Scroll to latest" should only show once the user has actually scrolled away
-  // from the bottom — not just whenever the thread is tall enough to overflow.
-  const [isScrolledUp, setIsScrolledUp] = useState(false)
   // When true, the auto-follow ResizeObserver ignores height changes. Set briefly
   // whenever the user manually toggles a Thoughts panel so opening/closing it
   // never moves the page.
@@ -3924,20 +4167,6 @@ function HealthcareFrontdeskCreateAgentLive({
     return () => observer.disconnect()
   }, [submitted])
 
-  // Track whether the user has scrolled away from the bottom, so the chevron only
-  // appears once there's actually somewhere to scroll back down to.
-  useEffect(() => {
-    const scrollEl = threadScrollRef.current
-    if (!scrollEl) return
-    const handleScroll = () => {
-      const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight
-      setIsScrolledUp(distanceFromBottom > 40)
-    }
-    handleScroll()
-    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
-    return () => scrollEl.removeEventListener('scroll', handleScroll)
-  }, [submitted])
-
   // Auto-follow: while the conversation is actively being generated (loaders and
   // typed text keep growing the thread), keep it pinned to the bottom. Manual
   // Thoughts toggles set suppressAutoScrollRef so they never move the page.
@@ -4066,6 +4295,11 @@ function HealthcareFrontdeskCreateAgentLive({
 
   const startConversation = (text: string) => {
     if (!text.trim()) return
+    // Review generation create: landing send opens the agent builder (no scripted chat yet).
+    if (isReviewGenFlow) {
+      onCreateFromScratch()
+      return
+    }
     setPrompt(text)
     setSubmitted(true)
     onSubmittedChange?.(true)
@@ -4133,8 +4367,45 @@ function HealthcareFrontdeskCreateAgentLive({
     advanceWithThinking('ask-confirm-create')
   }
 
+  const handleAttachSelect = (item: AttachItem) => {
+    // "+ Add file" stands in for a real file picker in this prototype.
+    const resolved: AttachItem =
+      item.id === 'add-file'
+        ? { id: `file-${Date.now()}`, kind: 'file', label: 'Front-desk-call-transcripts.pdf' }
+        : item
+    setAttachments((prev) => (prev.some((a) => a.id === resolved.id) ? prev : [...prev, resolved]))
+  }
+
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  const handlePaperclipAttach = () => {
+    // Reminder create flow: plus button attaches the lakeside reminder email sample.
+    if (isReminderFlow && handoffFollowDone && !connectAnswer) {
+      setAttachments((prev) =>
+        prev.some((a) => a.label === REMINDER_EMAIL_FILE.label)
+          ? prev
+          : [...prev, REMINDER_EMAIL_FILE],
+      )
+      return
+    }
+    // During the docs step, the paperclip stands in for John adding his files.
+    const items: AttachItem[] =
+      phase === 'ask-docs'
+        ? JOHN_DOCS_FILES.map((f) => ({ id: f.id, kind: 'file', label: f.label }))
+        : [
+            'Call transcripts. April to July 2026.',
+            'Escalation matrix / triage protocol',
+            'On-call staff directory / routing contacts',
+          ].map((label) => ({ id: `paperclip-${Date.now()}-${label}`, kind: 'file', label }))
+    setAttachments((prev) => {
+      const next = [...prev]
+      items.forEach((item) => {
+        if (!next.some((a) => a.label === item.label)) next.push(item)
+      })
+      return next
+    })
   }
 
   const canSendFollowUp =
@@ -4201,7 +4472,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
   if (submitted) {
     return (
-      <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
+      <div className="relative flex h-full min-h-0 w-full max-w-[1600px] flex-1 justify-center gap-xl self-stretch pr-sm">
         <style>{`
           .agent-build-fade { animation: agent-build-fade-in 0.25s ease-out; }
           @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
@@ -4210,19 +4481,6 @@ function HealthcareFrontdeskCreateAgentLive({
             50%      { transform: scale(1.15) rotate(8deg); opacity: 1; }
           }
           .sparkle-twinkle { animation: sparkle-twinkle 1.1s ease-in-out infinite; }
-          @keyframes sim-bounce {
-            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-            40% { transform: translateY(-5px); opacity: 1; }
-          }
-          /* Like/dislike/copy row stays hidden until its turn (.chat-turn, marking either the
-             message's own row or an ancestor wrapping it) is hovered, or the row itself is
-             hovered/focused — covers both sibling- and nested-actions-row placements. */
-          .chat-turn:hover ~ .msg-actions-row,
-          .chat-turn:hover .msg-actions-row,
-          .msg-actions-row:hover,
-          .msg-actions-row:focus-within {
-            opacity: 1;
-          }
           @keyframes thoughts-caret {
             0%, 49% { opacity: 1; }
             50%, 100% { opacity: 0; }
@@ -4234,7 +4492,7 @@ function HealthcareFrontdeskCreateAgentLive({
             wide screens, but collapses first (shrink-[999]) on narrow ones so the
             chat keeps its width and the panel stays pinned to the right edge.
             When the workflow canvas is open, procedures open on the canvas RHS instead. */}
-        {((openProcedureName || previewOpen) && !workflowVisible) && (
+        {((openProcedureName && !workflowVisible) || previewOpen) && (
           <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
         )}
 
@@ -4244,17 +4502,22 @@ function HealthcareFrontdeskCreateAgentLive({
           className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
         >
         <div ref={threadRef} className="flex flex-col pb-md">
-        {pageTitle && (
+        {pageTitle && !hideHeaderBack && (
           <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-              aria-label="Back"
-            >
-              <Icon name="arrow_back" size={20} />
-            </button>
-            <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
+            {!hideHeaderBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                aria-label="Back"
+              >
+                <Icon name="arrow_back" size={20} />
+              </button>
+            )}
+            <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
+            <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+              Draft
+            </span>
           </div>
         )}
         <div className="flex justify-end pt-md">
@@ -4262,7 +4525,10 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         {introThinking ? (
-          <IntroThinkingLoaderRow />
+          <IntroThinkingLoaderRow
+            label={INTRO_STATUS_LABELS[introStatusIndex] ?? 'Thinking'}
+            animKey={`intro-${introStatusIndex}`}
+          />
         ) : (
           <>
             <CreateAgentThinkingPanel
@@ -4305,6 +4571,12 @@ function HealthcareFrontdeskCreateAgentLive({
               ) : isReminderFlow ? (
                 <>
                   <ReminderCreateIntroReply onComplete={() => setIntroReplyDone(true)} />
+                  {introReplyDone && (
+                    <MessageActions
+                      copyText={REMINDER_CREATE_INTRO_PARAGRAPHS.join('\n\n')}
+                      className="ml-3xl"
+                    />
+                  )}
                   {introReplyDone && !timingAnswer && (
                     <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                       <button
@@ -4315,12 +4587,6 @@ function HealthcareFrontdeskCreateAgentLive({
                         Yes correct
                       </button>
                     </div>
-                  )}
-                  {introReplyDone && (
-                    <MessageActions
-                      copyText={REMINDER_CREATE_INTRO_PARAGRAPHS.join('\n\n')}
-                      className="ml-3xl"
-                    />
                   )}
                   {timingAnswer && <UserBubble>{timingAnswer}</UserBubble>}
                   {timingAnswer && (
@@ -4345,6 +4611,17 @@ function HealthcareFrontdeskCreateAgentLive({
                           onComplete={() => setTimingFollowDone(true)}
                         />
                       )}
+                      {timingFollowDone && (
+                        <MessageActions
+                          className="ml-3xl"
+                          copyText={[
+                            ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
+                            ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS.map((line) =>
+                              line.replace(/^•\s*/, ''),
+                            ),
+                          ].join('\n\n')}
+                        />
+                      )}
                       {timingFollowDone && !rescheduleAnswer && (
                         <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                           {REMINDER_RESCHEDULE_PILLS.map((label) => (
@@ -4358,17 +4635,6 @@ function HealthcareFrontdeskCreateAgentLive({
                             </button>
                           ))}
                         </div>
-                      )}
-                      {timingFollowDone && (
-                        <MessageActions
-                          className="ml-3xl"
-                          copyText={[
-                            ...REMINDER_CADENCE_REPLY_PARAGRAPHS,
-                            ...REMINDER_RESCHEDULE_QUESTION_PARAGRAPHS.map((line) =>
-                              line.replace(/^•\s*/, ''),
-                            ),
-                          ].join('\n\n')}
-                        />
                       )}
                       {rescheduleAnswer && <UserBubble>{rescheduleAnswer}</UserBubble>}
                       {rescheduleAnswer && (
@@ -4411,7 +4677,11 @@ function HealthcareFrontdeskCreateAgentLive({
             ))}
 
             {!isReminderFlow && stepThinkingPhase === 'ask-jobs' && (
-              <AgentBuildLoaderRow />
+              <AgentBuildLoaderRow
+                label={(STEP_THINKING_LABELS['ask-jobs'] ?? [])[stepThinkingIndex] ?? 'Analyzing your documents'}
+                animKey={`ask-jobs-${stepThinkingIndex}`}
+                variant="sparkle"
+              />
             )}
 
             {!isReminderFlow && showStep('ask-jobs') && (
@@ -4454,6 +4724,19 @@ function HealthcareFrontdeskCreateAgentLive({
                     {docsDraftReady && (
                       <GhostwriterDraftReadyReply onComplete={() => setDocsDraftReadyDone(true)} />
                     )}
+                    {docsDraftReadyDone && (
+                      <MessageActions
+                        className="ml-3xl"
+                        copyText={[
+                          ...CREATE_AGENT_DRAFT_READY_INTRO,
+                          'What your callers actually ask for:',
+                          ...CALLER_JOB_BREAKDOWN.map((j) => `• ${j.label} — ${j.pct}`),
+                          ...CREATE_AGENT_DRAFT_READY_CLOSING.map((line) =>
+                            line.replace(/^INDENT:\s*/, ''),
+                          ),
+                        ].join('\n')}
+                      />
+                    )}
                     {docsDraftReadyDone && !refillAnswer && (
                       <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                         <button
@@ -4471,19 +4754,6 @@ function HealthcareFrontdeskCreateAgentLive({
                           Skip refills for now. Let&apos;s keep it to the four
                         </button>
                       </div>
-                    )}
-                    {docsDraftReadyDone && (
-                      <MessageActions
-                        className="ml-3xl"
-                        copyText={[
-                          ...CREATE_AGENT_DRAFT_READY_INTRO,
-                          'What your callers actually ask for:',
-                          ...CALLER_JOB_BREAKDOWN.map((j) => `• ${j.label} — ${j.pct}`),
-                          ...CREATE_AGENT_DRAFT_READY_CLOSING.map((line) =>
-                            line.replace(/^INDENT:\s*/, ''),
-                          ),
-                        ].join('\n')}
-                      />
                     )}
                     {refillAnswer && <UserBubble>{refillAnswer}</UserBubble>}
 
@@ -4512,7 +4782,7 @@ function HealthcareFrontdeskCreateAgentLive({
                         )}
                         {refillProcedureCreated && (
                           <>
-                            <div className="chat-turn ml-3xl flex flex-col gap-sm">
+                            <div className="ml-3xl flex flex-col gap-sm">
                               <p className="text-body leading-6 text-text-primary">
                                 I've added the procedure to your library:
                               </p>
@@ -4545,8 +4815,10 @@ function HealthcareFrontdeskCreateAgentLive({
                               copyText={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS.join('\n')}
                             />
 
-                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+                            <div className="agent-build-fade mt-3xl flex gap-sm">
+                              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                                <SparkleLoader size={14} spinning={false} />
+                              </span>
                               <p className="flex-1 text-body leading-6 text-text-primary">
                                 Now that I've created the procedure, I can go ahead and create the agent draft. Would
                                 you like me to proceed?
@@ -4581,8 +4853,6 @@ function HealthcareFrontdeskCreateAgentLive({
                         <FrontdeskBuildingCard
                           refillAdded={refillAnswer.startsWith('Add procedure')}
                           persisted={draftBuildReady}
-                          onViewWorkflow={onViewWorkflow}
-                          workflowVisible={workflowVisible}
                           openProcedureName={openProcedureName}
                           onOpenProcedure={handleOpenProcedure}
                           onDone={() => {
@@ -4607,8 +4877,10 @@ function HealthcareFrontdeskCreateAgentLive({
                         />
                         {reviewThoughtsDone && (
                           <>
-                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+                            <div className="agent-build-fade mt-3xl flex gap-sm">
+                              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                                <SparkleLoader size={14} spinning={false} />
+                              </span>
                               <p className="flex-1 text-body leading-6 text-text-primary">
                                 I have created a Front desk agent for you to answer inbound calls, book and
                                 reschedule appointments, answer basic insurance questions, and hand off anything
@@ -4637,15 +4909,6 @@ function HealthcareFrontdeskCreateAgentLive({
                               >
                                 Test agent
                               </button>
-                              {!workflowVisible && (
-                                <button
-                                  type="button"
-                                  onClick={onViewWorkflow}
-                                  className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                                >
-                                  View in agent builder
-                                </button>
-                              )}
                             </div>
                             {reviewFollowUpAnswer && (
                               <>
@@ -4681,15 +4944,6 @@ function HealthcareFrontdeskCreateAgentLive({
                                     >
                                       Test agent
                                     </button>
-                                    {!workflowVisible && (
-                                      <button
-                                        type="button"
-                                        onClick={onViewWorkflow}
-                                        className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                                      >
-                                        View in agent builder
-                                      </button>
-                                    )}
                                   </div>
                                 )}
                               </>
@@ -4705,7 +4959,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
                 {!docsProvided && (
                   <>
-                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     {docsProvided
                       ? "I've analyzed the call transcripts you uploaded. Here's what I found across 847 calls from the last 3 months:"
@@ -4728,7 +4982,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   </div>
                 </div>
 
-                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     Based on this analysis, here are a few use cases / jobs to be done that stood out — select the ones that are relevant for your agent.
                   </p>
@@ -4817,7 +5071,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
             {!isReminderFlow && showStep('ask-confirm-create') && (phase === 'ask-confirm-create' || confirmCreateAnswer) && (
               <>
-                <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
+                <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
                   <p className="text-body leading-6 text-text-primary">
                     Can I go ahead and create an agent based on these use cases?
                   </p>
@@ -4852,11 +5106,15 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
 
             {!isReminderFlow && stepThinking && stepThinkingPhase && stepThinkingPhase !== 'ask-jobs' && (
-              <AgentBuildLoaderRow />
+              <AgentBuildLoaderRow
+                label={(STEP_THINKING_LABELS[stepThinkingPhase] ?? [])[stepThinkingIndex] ?? 'Thinking'}
+                animKey={`${stepThinkingPhase}-${stepThinkingIndex}`}
+                variant="sparkle"
+              />
             )}
 
             {!isReminderFlow && phase === 'summary' && (
-              <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-md">
+              <div className="agent-build-fade mt-2xl flex flex-col gap-md">
                 {selectedProcedures.length > 0 && (
                   <div className="flex flex-col gap-sm">
                     <p className="text-body leading-6 text-text-primary">
@@ -4926,9 +5184,11 @@ function HealthcareFrontdeskCreateAgentLive({
             ))}
 
             {!isReminderFlow && showTestFollowUp && (
-              <div className="chat-turn agent-build-fade mt-2xl flex flex-col gap-sm">
+              <div className="agent-build-fade mt-2xl flex flex-col gap-sm">
                 <div className="flex gap-sm">
-                  <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+                  <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                    <SparkleLoader size={14} spinning={false} />
+                  </span>
                   <p className="flex-1 text-body leading-6 text-text-primary">
                     How did your agent perform? Was it able to get you desired test result? What would you like to do
                     next?
@@ -4970,7 +5230,7 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
 
         <div className="z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm pt-md">
-          {threadOverflowing && isScrolledUp && (
+          {threadOverflowing && (
             <div className="flex justify-center">
               <button
                 type="button"
@@ -4983,92 +5243,117 @@ function HealthcareFrontdeskCreateAgentLive({
             </div>
           )}
 
-          <PromptComposer
-            value={followUp}
-            onChange={setFollowUp}
-            onSend={handleFollowUpSend}
-            onFocus={() => {
-              // Reminder create flow: after the agent asks about timing, click
-              // the composer to pre-fill the scripted reply, then Enter to send.
-              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                timingPromptFilledRef.current = true
-                setFollowUp(REMINDER_TIMING_REPLY)
-                return
-              }
-              // After no-connect defaults: pre-fill the email tone reply.
-              if (
-                isReminderFlow &&
-                handoffFollowDone &&
-                !connectAnswer &&
-                !followUp.trim()
-              ) {
-                emailPromptFilledRef.current = true
-                setFollowUp(REMINDER_EMAIL_REPLY)
-                return
-              }
-              // Review response: click composer to pre-fill the current question's reply.
-              if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
-                setFollowUp(reviewComposerFill)
-                return
-              }
-              // Once the draft review is done, clicking into the box pre-fills
-              // John's next message so the demo can continue in one click.
-              if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
-                reviewPromptFilledRef.current = true
-                setFollowUp(FINAL_REVIEW_PROMPT)
-              }
-            }}
-            onClick={() => {
-              if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
-                timingPromptFilledRef.current = true
-                setFollowUp(REMINDER_TIMING_REPLY)
-                return
-              }
-              if (
-                isReminderFlow &&
-                handoffFollowDone &&
-                !connectAnswer &&
-                !followUp.trim()
-              ) {
-                emailPromptFilledRef.current = true
-                setFollowUp(REMINDER_EMAIL_REPLY)
-                return
-              }
-              if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
-                setFollowUp(reviewComposerFill)
-              }
-            }}
-            rows={2}
-            disabled={composerLocked}
-            sendDisabled={!canSendFollowUp}
-            placeholder={composerPlaceholder}
-            attachments={attachments}
-            onRemoveAttachment={removeAttachment}
-            onAttach={(option) => {
-              if (option === 'upload-image') landingImageInputRef.current?.click()
-              else if (option === 'media-library') setMediaLibraryOpen(true)
-              else if (option === 'files') setFilesModalOpen(true)
-            }}
-          />
+          <div className="flex flex-col gap-md rounded-xl border border-border bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap items-center gap-sm">
+                {attachments.map((item) => (
+                  <RefChip key={item.id} kind={item.kind} label={item.label} onRemove={() => removeAttachment(item.id)} />
+                ))}
+              </div>
+            )}
+            <textarea
+              value={followUp}
+              onFocus={() => {
+                // Reminder create flow: after the agent asks about timing, click
+                // the composer to pre-fill the scripted reply, then Enter to send.
+                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                  timingPromptFilledRef.current = true
+                  setFollowUp(REMINDER_TIMING_REPLY)
+                  return
+                }
+                // After no-connect defaults: pre-fill the email tone reply.
+                if (
+                  isReminderFlow &&
+                  handoffFollowDone &&
+                  !connectAnswer &&
+                  !followUp.trim()
+                ) {
+                  emailPromptFilledRef.current = true
+                  setFollowUp(REMINDER_EMAIL_REPLY)
+                  return
+                }
+                // Review response: click composer to pre-fill the current question's reply.
+                if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+                  setFollowUp(reviewComposerFill)
+                  return
+                }
+                // Once the draft review is done, clicking into the box pre-fills
+                // John's next message so the demo can continue in one click.
+                if (reviewThoughtsDone && !followUp && !reviewPromptFilledRef.current) {
+                  reviewPromptFilledRef.current = true
+                  setFollowUp(FINAL_REVIEW_PROMPT)
+                }
+              }}
+              onClick={() => {
+                if (isReminderFlow && introReplyDone && !timingAnswer && !followUp.trim()) {
+                  timingPromptFilledRef.current = true
+                  setFollowUp(REMINDER_TIMING_REPLY)
+                  return
+                }
+                if (
+                  isReminderFlow &&
+                  handoffFollowDone &&
+                  !connectAnswer &&
+                  !followUp.trim()
+                ) {
+                  emailPromptFilledRef.current = true
+                  setFollowUp(REMINDER_EMAIL_REPLY)
+                  return
+                }
+                if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
+                  setFollowUp(reviewComposerFill)
+                }
+              }}
+              onChange={(e) => setFollowUp(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleFollowUpSend()
+                }
+              }}
+              rows={2}
+              disabled={composerLocked}
+              placeholder={composerPlaceholder}
+              className="scrollbar-light min-h-9 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary disabled:cursor-not-allowed"
+            />
+            <div className="flex items-center justify-between align-bottom">
+              <div className="flex items-center gap-sm text-text-icon">
+                <Tooltip content="Add files" variant="brief">
+                  <ComposerAttachPopover
+                    onSelect={handleAttachSelect}
+                    onAddClick={handlePaperclipAttach}
+                    disabled={composerLocked}
+                  />
+                </Tooltip>
+                <Tooltip content="Dictate" variant="brief">
+                  <button type="button" aria-label="Dictate" className="hover:text-text-primary" disabled={composerLocked}>
+                    <Icon name="mic" size={18} />
+                  </button>
+                </Tooltip>
+              </div>
+              <button
+                type="button"
+                aria-label="Send"
+                onClick={handleFollowUpSend}
+                disabled={!canSendFollowUp || composerLocked}
+                className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
+                  canSendFollowUp && !composerLocked
+                    ? 'text-ai-brand hover:bg-surface-hover'
+                    : 'cursor-not-allowed text-text-tertiary opacity-40'
+                }`}
+              >
+                <SendIcon size={24} />
+              </button>
+            </div>
+          </div>
         </div>
         </div>
 
-        {/* Matches the panel's own width now that it's absolutely positioned (out of
-            flex flow) — keeps the chat column centered exactly as it was when the
-            panel still participated in this row's layout. */}
-        {((openProcedureName || previewOpen) && !workflowVisible) && (
-          <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
-        )}
-
-        {((openProcedureName || previewOpen) && !workflowVisible) && (
-          <div
-            className={`absolute -top-10 bottom-2xl right-sm hidden w-[500px] overflow-hidden rounded-lg lg:block ${
-              previewOpen ? 'border border-border bg-surface shadow-card' : ''
-            }`}
-          >
+        {((openProcedureName && !workflowVisible) || previewOpen) && (
+          <div className="sticky top-0 -bottom-lg hidden w-[500px] shrink-0 self-start overflow-hidden rounded-lg lg:block">
             {previewOpen ? (
-              <div className="h-full">
-                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full [&_.preview-panel]:!rounded-none [&_.preview-panel]:!border-0 [&_.preview-panel]:!shadow-none [&_.preview-panel__header]:!h-[64px] [&_.preview-panel__header]:!px-xl [&_.preview-panel__header]:!py-0 [&_.preview-panel__title]:!text-[16px] [&_.preview-panel__title]:!font-normal [&_.preview-panel__title]:!leading-6 [&_.preview-panel__title]:![letter-spacing:-0.32px] [&_.preview-panel__title]:!text-[#212121] [&_.preview-panel__close-btn_.material-symbols-outlined]:![font-size:24px] [&_.preview-panel__close-btn]:!text-[#303030] [&_.preview-panel__body--outbound]:!p-xl">
+              <div className="h-[calc(100vh-168px)]">
+                <div className="preview-panel-float-wrap !h-full !w-full !p-0 [&_.preview-panel]:!w-full">
                   <PreviewPanel
                     key={previewKey}
                     onClose={handlePreviewClose}
@@ -5089,7 +5374,7 @@ function HealthcareFrontdeskCreateAgentLive({
                     : HC_PROCEDURES.find((p) => p.name === openProcedureName)
                 if (!procedure) return null
                 return (
-                  <div className="h-full">
+                  <div className="h-[calc(100vh-152px)]">
                     <ProcedurePreviewPanel procedure={procedure} onClose={() => handleOpenProcedure(null)} />
                   </div>
                 )
@@ -5097,109 +5382,128 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
           </div>
         )}
-
-        <input
-          ref={landingImageInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) {
-              setAttachments((prev) => [...prev, { id: `image-${Date.now()}`, kind: 'file', label: file.name }])
-            }
-            e.target.value = ''
-          }}
-        />
-        <MediaLibraryModal
-          open={mediaLibraryOpen}
-          onClose={() => setMediaLibraryOpen(false)}
-          onDone={(selected) =>
-            setAttachments((prev) => [
-              ...prev,
-              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
-            ])
-          }
-        />
-        <FilesModal
-          open={filesModalOpen}
-          onClose={() => setFilesModalOpen(false)}
-          onDone={(selected) =>
-            setAttachments((prev) => [
-              ...prev,
-              ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
-            ])
-          }
-        />
       </div>
     )
   }
 
-  // Compact greeting + suggestion pills — only for the Create with AI side panel.
+  // Compact greeting + suggestion pills — Create with AI side panel / fullscreen expand.
   // The full-page create landing keeps the older "Build your agent" layout below.
   if (workflowVisible) {
-    const quickStarts = isReminderFlow
-      ? [
-          { label: 'Appointment confirmation reminder', prompt: REMINDER_CREATE_PROMPT },
-          {
-            label: 'No-show risk agent',
-            prompt:
-              'Create an agent that identifies patients at high risk of missing appointments and uses additional reminders and a confirmation call.',
-          },
-          {
-            label: 'Pre-visit reminder agent',
-            prompt:
-              'Create an agent that reminds patients about forms, fasting instructions, insurance cards, and other preparation before their visit.',
-          },
-          {
-            label: 'Medication reminder agent',
-            prompt:
-              'Create an agent that sends recurring medication reminders and follows up when a patient misses or does not acknowledge a dose.',
-          },
-        ]
-      : [
-          { label: 'Appointment booking agent', prompt: JOHN_CREATE_PROMPT },
-          {
-            label: 'Routing & triage agent',
-            prompt:
-              'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
-          },
-          {
-            label: 'New patient intake agent',
-            prompt:
-              'Create a Front desk agent that guides new patients through intake, verifies insurance, and books the right appointment.',
-          },
-          {
-            label: 'Patient scheduling agent',
-            prompt:
-              'Create a Front desk agent that finds patient records and books, reschedules, or cancels appointments.',
-          },
-        ]
+    const reviewQuickStarts = [
+      {
+        label: 'Replying using templates',
+        prompt:
+          'Create a review response agent that replies to new reviews using approved response templates.',
+      },
+      {
+        label: 'Replying autonomously',
+        prompt:
+          'Create a review response agent that drafts and posts replies to new reviews autonomously.',
+      },
+      {
+        label: 'Replying after human approval',
+        prompt:
+          'Create a review response agent that drafts replies to new reviews and waits for human approval before posting.',
+      },
+      {
+        label: 'Suggesting replies in dashboard',
+        prompt:
+          'Create a review response agent that suggests reply drafts in the dashboard for the team to send.',
+      },
+    ]
+    const reminderQuickStarts = [
+      { label: 'Appointment confirmation reminder', prompt: REMINDER_CREATE_PROMPT },
+      {
+        label: 'No-show risk agent',
+        prompt:
+          'Create an agent that identifies patients at high risk of missing appointments and uses additional reminders and a confirmation call.',
+      },
+      {
+        label: 'Pre-visit reminder agent',
+        prompt:
+          'Create an agent that reminds patients about forms, fasting instructions, insurance cards, and other preparation before their visit.',
+      },
+      {
+        label: 'Medication reminder agent',
+        prompt:
+          'Create an agent that sends recurring medication reminders and follows up when a patient misses or does not acknowledge a dose.',
+      },
+    ]
+    const frontdeskQuickStarts = [
+      {
+        label: 'Routing and triage',
+        prompt:
+          'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
+      },
+      {
+        label: 'New patient intake',
+        prompt:
+          'Create a Front desk agent that guides new patients through intake, verifies insurance, and books the right appointment.',
+      },
+      {
+        label: 'Patient scheduling',
+        prompt:
+          'Create a Front desk agent that finds patient records and books, reschedules, or cancels appointments.',
+      },
+    ]
+    const quickStarts = isReviewFlow || isReviewGenFlow
+      ? reviewQuickStarts
+      : isReminderFlow
+        ? reminderQuickStarts
+        : frontdeskQuickStarts
+    const agentLabel = isReviewGenFlow
+      ? 'Review generation'
+      : isReviewFlow
+        ? 'Review response'
+        : isReminderFlow
+          ? 'Reminder'
+          : 'Front desk'
+    const greeting = isReviewFlow || isReviewGenFlow
+      ? `Hi! I'm here to help you build your ${agentLabel} agent. Tell me what you'd like to build`
+      : `Hi John! I'm here to help you build your ${agentLabel} agent. How can I help you today?`
 
     return (
-      <div className="flex h-full w-full flex-col overflow-hidden pb-md">
-        <div className="flex min-h-0 flex-1 flex-col justify-center gap-md overflow-hidden">
-          <div className="flex translate-y-lg items-start justify-start gap-md">
-            <AiAvatarChatIcon size={40} className="mt-1 shrink-0" />
-            <div className="flex min-w-0 flex-col items-start gap-md">
-              <p className="text-h3 leading-8 text-text-primary">
-                Hi! I’m here to help you build your {isReminderFlow ? 'Reminder' : 'Front desk'} agent. Tell me what you’d like to build
-              </p>
-              <div className="flex flex-col items-start gap-sm">
-                {quickStarts.map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => startConversation(option.prompt)}
-                    className="min-h-10 rounded-sm border border-border-selected bg-surface px-lg py-sm text-left text-body text-text-primary hover:bg-surface-l2"
-                  >
-                    {option.label}
-                  </button>
-                ))}
+      <div className="flex h-full w-full flex-col items-center overflow-hidden">
+        {pageTitle && !hideHeaderBack && (
+          <div className="flex h-16 w-full max-w-[720px] shrink-0 items-center gap-sm">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              aria-label="Back"
+            >
+              <Icon name="arrow_back" size={20} />
+            </button>
+            <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
+            <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+              Draft
+            </span>
+          </div>
+        )}
+
+        <div className="flex min-h-0 w-full max-w-[720px] flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden pb-md">
+            <div className="flex items-start gap-md">
+              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                <SparkleLoader size={14} spinning={false} />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-md">
+                <p className="text-body leading-6 text-text-primary">{greeting}</p>
+                <div className="flex flex-col items-start gap-sm">
+                  {quickStarts.map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => startConversation(option.prompt)}
+                      className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
         <div className="flex min-h-40 shrink-0 flex-col gap-md rounded-lg border border-border-selected bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
           {landingAttachments.length > 0 && (
@@ -5239,16 +5543,6 @@ function HealthcareFrontdeskCreateAgentLive({
               <Tooltip content="Dictate" variant="brief">
                 <button type="button" aria-label="Dictate" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
                   <Icon name="mic" size={20} />
-                </button>
-              </Tooltip>
-              <Tooltip content="Add context" variant="brief">
-                <button type="button" aria-label="Add context" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="data_object" size={20} />
-                </button>
-              </Tooltip>
-              <Tooltip content="More options" variant="brief">
-                <button type="button" aria-label="More options" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="more_horiz" size={22} />
                 </button>
               </Tooltip>
             </div>
@@ -5304,22 +5598,31 @@ function HealthcareFrontdeskCreateAgentLive({
             ])
           }
         />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`mt-3xl flex w-full flex-col items-center gap-2xl self-start py-lg ${(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4 ? 'max-w-[1280px]' : 'max-w-[1000px]'}`}>
+    <div className={`mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
+      (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
+        ? 'max-w-[1280px]'
+        : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
+          ? 'max-w-[720px]'
+          : 'max-w-[1000px]'
+    }`}>
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-            aria-label="Back"
-          >
-            <Icon name="arrow_back" size={20} />
-          </button>
+          {!hideHeaderBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              aria-label="Back"
+            >
+              <Icon name="arrow_back" size={20} />
+            </button>
+          )}
           <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
         </div>
       )}
@@ -5370,28 +5673,8 @@ function HealthcareFrontdeskCreateAgentLive({
                   else if (option === 'files') setFilesModalOpen(true)
                 }}
               />
-              <input
-                ref={landingImageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    setLandingAttachments((prev) => [
-                      ...prev,
-                      { id: `image-${Date.now()}`, kind: 'file', label: file.name },
-                    ])
-                  }
-                  e.target.value = ''
-                }}
-              />
               <Tooltip content="Dictate" variant="brief">
-                <button
-                  type="button"
-                  aria-label="Dictate"
-                  className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-text-primary"
-                >
+                <button type="button" aria-label="Dictate" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
                   <Icon name="mic" size={20} />
                 </button>
               </Tooltip>
@@ -5408,27 +5691,6 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
       </div>
 
-      <MediaLibraryModal
-        open={mediaLibraryOpen}
-        onClose={() => setMediaLibraryOpen(false)}
-        onDone={(selected) =>
-          setLandingAttachments((prev) => [
-            ...prev,
-            ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
-          ])
-        }
-      />
-      <FilesModal
-        open={filesModalOpen}
-        onClose={() => setFilesModalOpen(false)}
-        onDone={(selected) =>
-          setLandingAttachments((prev) => [
-            ...prev,
-            ...selected.map((f) => ({ id: f.id, kind: 'file' as const, label: f.label })),
-          ])
-        }
-      />
-
       <p className="m-0 mt-3xl text-center text-body text-text-secondary">
         <button
           type="button"
@@ -5444,7 +5706,13 @@ function HealthcareFrontdeskCreateAgentLive({
       </p>
 
       <div className="@container w-full">
-        <div className={`grid w-full gap-md ${(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4 ? 'grid-cols-1 min-[500px]:grid-cols-4' : 'grid-cols-3'}`}>
+        <div className={`grid w-full gap-md ${
+          (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
+            ? 'grid-cols-1 min-[500px]:grid-cols-4'
+            : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
+              ? 'grid-cols-1 min-[500px]:grid-cols-2'
+              : 'grid-cols-3'
+        }`}>
           {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
             <div
               key={tpl.id}
@@ -5455,7 +5723,7 @@ function HealthcareFrontdeskCreateAgentLive({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
               className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
             >
-              <h3 className="line-clamp-2 shrink-0 text-body text-text-primary">{tpl.title}</h3>
+              <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
               <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
               <div className={INFO_CARD_LAYOUT.ctaWrap}>
                 <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
@@ -5826,10 +6094,12 @@ function HistoryChatReplay({
   chat,
   onBack,
   pageTitle,
+  hideHeaderBack = false,
 }: {
   chat: ChatHistoryTranscript
   onBack?: () => void
   pageTitle?: string
+  hideHeaderBack?: boolean
 }) {
   const trail = chat.trail
   return (
@@ -5837,7 +6107,7 @@ function HistoryChatReplay({
       <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col pb-md">
-            {pageTitle && (
+            {pageTitle && !hideHeaderBack && (
               <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
                 <button
                   type="button"
@@ -5886,8 +6156,10 @@ function HistoryChatReplay({
                 if (turn.kind === 'agent') {
                   return (
                     <div key={i}>
-                      <div className="chat-turn mt-3xl flex gap-sm">
-                        <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+                      <div className="mt-3xl flex gap-sm">
+                        <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                          <SparkleLoader size={14} spinning={false} />
+                        </span>
                         <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
                           <TypedParagraphs paragraphs={turn.paragraphs} instant />
                         </div>
@@ -5938,8 +6210,10 @@ function HistoryChatReplay({
 
                 {chat.replies.map((paragraphs, replyIndex) => (
                   <div key={replyIndex}>
-                    <div className="chat-turn mt-3xl flex gap-sm">
-                      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+                    <div className="mt-3xl flex gap-sm">
+                      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                        <SparkleLoader size={14} spinning={false} />
+                      </span>
                       <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
                         <TypedParagraphs paragraphs={paragraphs} instant />
                       </div>
@@ -6003,7 +6277,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false)
   const [createWorkflowMounted, setCreateWorkflowMounted] = useState(false)
-  const [createLeftPaneCollapsed, setCreateLeftPaneCollapsed] = useState(false)
+  const [createAiFullscreen, setCreateAiFullscreen] = useState(false)
   const [createSideTab, setCreateSideTab] = useState<'ai' | 'manual'>('ai')
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
@@ -6012,14 +6286,6 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [inlineProcedureOpen, setInlineProcedureOpen] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
-  /** Recent-chats rail shown alongside the create-agent flow — null = "All chats" (fresh). */
-  const [chatHistorySelectedId, setChatHistorySelectedId] = useState<string | null>(null)
-  /** Chats saved via "Save agent" from the full-page co-pilot — prepended to the recent list. */
-  const [savedCreateChats, setSavedCreateChats] = useState<ChatHistoryTranscript[]>(() =>
-    (['frontdesk', 'reminder'] as const)
-      .map((v) => getLastSavedCreateChat(v))
-      .filter((c): c is ChatHistoryTranscript => Boolean(c)),
-  )
   const { procedures: procedureLibrary } = useProcedureStore()
 
   const openCreateFlow = () => {
@@ -6027,6 +6293,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setShowSetupWizard(false)
     setCreateWorkflowOpen(false)
     setCreateWorkflowMounted(false)
+    setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateFlowSubmitted(false)
     setCreateDraftAgentName(null)
@@ -6035,38 +6302,27 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setShowCreateFlow(true)
   }
 
-  const selectAllChats = () => {
-    setChatHistorySelectedId(null)
-    setCreateFlowKey((k) => k + 1)
-    setShowSetupWizard(false)
-    setCreateWorkflowOpen(false)
-    setCreateWorkflowMounted(false)
-    setCreateFlowSubmitted(false)
-    setCreateDraftAgentName(null)
-    setCanvasProcedureId(null)
-    setInlineProcedureOpen(false)
-  }
-
   const openCreateWorkflow = () => {
+    setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
-    setCreateLeftPaneCollapsed(false)
-    setCanvasProcedureId(null)
-    setInlineProcedureOpen(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
   }
 
   const closeCreateWorkflow = () => {
     setCreateWorkflowOpen(false)
     setCreateSideTab('ai')
-    setCreateLeftPaneCollapsed(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
   }
 
+  const expandCreateAiFullscreen = () => {
+    setCreateAiFullscreen(true)
+    closeCreateWorkflow()
+  }
+
   const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
     if (options?.chat) {
-      setSavedCreateChats((prev) => [options.chat!, ...prev.filter((c) => c.id !== options.chat!.id)])
       rememberCreateAgentChat(isReminder ? 'reminder' : 'frontdesk', options.chat)
     }
     setShowCreateFlow(false)
@@ -6143,6 +6399,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
       { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
     ],
+    'Review generation agents': [
+      { id: 'reviewsReceived', value: '249', label: 'Reviews received', delta: '16.4%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+      { id: 'contactsReached', value: '265', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+      { id: 'clickThroughRate', value: '4.9%', label: 'Click-through rate', delta: '0.3%', trend: 'down', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+      { id: 'timeSaved', value: '9h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+    ],
   }
 
   const DEFAULT_METRICS: Metric[] = [
@@ -6192,6 +6454,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     reviewsResponded: r.reviewsResponded,
     responseRate: r.responseRate,
     avgResponseTime: r.avgResponseTime,
+    reviewsReceived: r.reviewsReceived,
+    contactsReached: r.contactsReached,
+    clickThroughRate: r.clickThroughRate,
     issues: r.issues,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
 
@@ -6216,25 +6481,26 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
   const isReviewResponse  = agentName === 'Review response agents'
-  const hideChannels      = isTaggingRouting || isReviewResponse
+  const isReviewGeneration = agentName === 'Review generation agents'
+  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration
 
-  // `AgentInstanceScreen` reports its own full-page states (e.g. an open recommendation) via
-  // `instanceSetupActive` — merged here so it and the create-flow/setup-wizard state below don't
-  // race to overwrite the same `onAgentSetupActiveChange` callback from App.tsx.
-  const [instanceSetupActive, setInstanceSetupActive] = useState(false)
+  useEffect(() => {
+    if (!showCreateFlow) setCreateAiFullscreen(false)
+  }, [showCreateFlow])
 
   useEffect(() => {
     // Instance screen owns full-bleed signaling (e.g. View log) while drilled in.
     if (selectedInstance) return
-    // Setup wizard is full-bleed (no SideNav). Review response create landing
-    // also hides L2 while the create flow is open.
-    const isAgentSetupActive =
-      ((isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)) ||
-      (isReviewResponse && showCreateFlow) ||
-      instanceSetupActive
-    onAgentSetupActiveChange?.(isAgentSetupActive)
+    // Create-agent landing / conversation and the setup wizard are full-bleed (no L2 SideNav).
+    const hideSideNav =
+      ((isFrontdesk || isReminder) && showSetupWizard) ||
+      ((isFrontdesk || isReminder || isReviewResponse || isReviewGeneration) && showCreateFlow)
+    onAgentSetupActiveChange?.(hideSideNav)
+  }, [isFrontdesk, isReminder, isReviewResponse, isReviewGeneration, showSetupWizard, showCreateFlow, selectedInstance, onAgentSetupActiveChange])
+
+  useEffect(() => {
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, isReminder, isReviewResponse, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
+  }, [onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     { key: 'name', label: 'Agent name', width: 230, sortable: true, locked: true },
     {
@@ -6304,6 +6570,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { key: 'responseRate' as keyof AgentInstance, label: 'Response rate', width: 130, sortable: true },
       { key: 'avgResponseTime' as keyof AgentInstance, label: 'Average response time', width: 170, sortable: true },
       { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
+    ] : isReviewGeneration ? [
+      { key: 'reviewsReceived' as keyof AgentInstance, label: 'Reviews received', width: 150, sortable: true },
+      { key: 'contactsReached' as keyof AgentInstance, label: 'Contacts reached', width: 150, sortable: true },
+      { key: 'clickThroughRate' as keyof AgentInstance, label: 'Click-through rate', width: 150, sortable: true },
+      { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
     ] : [
       { key: 'interactions' as keyof AgentInstance, label: 'Interactions handled', width: 200, sortable: true },
       { key: 'fcr' as keyof AgentInstance, label: 'First contact resolution rate', width: 220, sortable: true },
@@ -6319,7 +6590,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   // are shown by default. Agents with more metrics (Recall, Revenue, Treatment plan, etc.)
   // still default to the first two, with the rest available via Customize columns.
   const metricKeys = COLUMN_DEFS.slice(hideChannels ? 2 : 3, -1).map((c) => String(c.key))
-  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse
+  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse || isReviewGeneration
   const DEFAULT_VISIBLE = ['name', 'status', ...(hideChannels ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
@@ -6374,138 +6645,145 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }
 
 
-  if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse)) {
+  if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration)) {
     const isHealthcareFrontdesk = product === 'healthcare'
-    const chatHistoryTitle = 'Front desk'
-    const createVariant = isReminder ? 'reminder' : 'frontdesk'
-    const staticChatHistory = isFrontdesk ? FRONTDESK_CHAT_HISTORY : REMINDER_CHAT_HISTORY
-    const chatHistoryItems = [
-      ...savedCreateChats.filter((c) => !c.variant || c.variant === createVariant),
-      ...staticChatHistory,
-    ]
-    const historyChat = chatHistorySelectedId
-      ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
-      : null
-    const createTitle = historyChat?.draftTitle
-      ?? createDraftAgentName
-      ?? (isFrontdesk ? 'New front desk agent' : isReminder ? 'New reminder agent' : 'New review response agent')
+    const createTitle = createDraftAgentName
+      ?? (isFrontdesk
+        ? 'New front desk agent'
+        : isReminder
+          ? 'New reminder agent'
+          : isReviewGeneration
+            ? 'New review generation agent'
+            : 'New review response agent')
     const createWorkflowAgentName = createDraftAgentName
       ?? (isReviewResponse
         ? REVIEW_RESPONSE_BUILD_CARD.title
-        : isReminder
-          ? REMINDER_BUILD_CARD.title
-          : FRONTDESK_BUILD_CARD.title)
+        : isReviewGeneration
+          ? 'Review generation agent'
+          : isReminder
+            ? REMINDER_BUILD_CARD.title
+            : FRONTDESK_BUILD_CARD.title)
+    const isReviewsCreateFlow = isReviewResponse || isReviewGeneration
+    const reviewsCreateInnerTitle = isReviewResponse
+      ? 'Review response agent 1'
+      : isReviewGeneration
+        ? 'Review generation agent 1'
+        : null
+    const showReviewsCreateInnerTitle =
+      isReviewsCreateFlow && (createFlowSubmitted || createWorkflowOpen)
 
     return (
       <div className="flex h-full">
         <div className="flex h-full min-w-0 flex-1 flex-col">
-        <TopNav title={chatHistoryTitle} initials="S" />
+        <TopNav title={(isReviewResponse || isReviewGeneration) ? 'Reviews AI' : undefined} initials="S" />
         <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
           <section
-            className={`z-10 flex shrink-0 flex-col overflow-hidden bg-surface transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
+            className={`z-10 flex shrink-0 flex-col overflow-hidden bg-surface transition-[width,top] duration-300 ease-in-out motion-reduce:transition-none ${
               createWorkflowOpen
-                ? `absolute bottom-sm left-sm top-[calc(52px+theme(spacing.sm))] w-96 rounded-lg border border-border shadow-card ${
-                    createLeftPaneCollapsed ? 'pointer-events-none -translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
-                  }`
+                ? 'absolute bottom-sm left-sm top-[calc(52px+theme(spacing.sm))] w-96 rounded-lg border border-border shadow-card'
                 : 'relative w-full'
             }`}
             aria-label={createWorkflowOpen ? 'Create with AI conversation' : undefined}
-            aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              // Reuses LHSDrawer's own tab/collapse-button classes (lhs-drawer__tab*,
-              // lhs-drawer__collapse-btn) so this header matches the "edit agent" canvas panel exactly.
-              <div className="flex shrink-0 items-center gap-sm px-2xl pt-lg pb-sm">
-                <div className="lhs-drawer__tabs lhs-drawer__tabs--visible flex-1">
-                  <div className={`group relative lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}>
-                    <span className="lhs-drawer__tab-label">
-                      <span className="relative inline-flex items-center gap-xs">
-                        <button
-                          type="button"
-                          onClick={() => setCreateSideTab('ai')}
-                          className="inline-flex items-center gap-xs"
-                        >
-                          Create with AI
-                          <AiAgentIcon size={16} className="shrink-0" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Expand"
-                          title="Expand to full page"
-                          onClick={closeCreateWorkflow}
-                          className="absolute left-full top-1/2 ml-xs flex size-5 shrink-0 -translate-y-1/2 scale-90 items-center justify-center rounded-sm text-text-icon opacity-0 transition-[opacity,transform] duration-150 ease-out hover:bg-surface-selected group-hover:scale-100 group-hover:opacity-100"
-                        >
-                          <Icon name="open_in_full" size={14} />
-                        </button>
-                      </span>
-                    </span>
-                    <span className="lhs-drawer__tab-underline" />
-                  </div>
+              <div className="flex h-14 shrink-0 items-end justify-between gap-xl px-lg">
+                <div className="flex items-end gap-xl">
+                  <button
+                    type="button"
+                    onClick={() => setCreateSideTab('ai')}
+                    className={`h-10 border-b-2 px-sm text-body ${
+                      createSideTab === 'ai'
+                        ? 'border-primary text-text-primary'
+                        : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    Create with AI
+                  </button>
                   <button
                     type="button"
                     onClick={() => setCreateSideTab('manual')}
-                    className={`lhs-drawer__tab${createSideTab === 'manual' ? ' lhs-drawer__tab--active' : ''}`}
+                    className={`h-10 border-b-2 px-sm text-body ${
+                      createSideTab === 'manual'
+                        ? 'border-primary text-text-primary'
+                        : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
                   >
-                    <span className="lhs-drawer__tab-label">Create manually</span>
-                    <span className="lhs-drawer__tab-underline" />
+                    Create manually
                   </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Collapse panel"
-                  title="Collapse panel"
-                  onClick={() => setCreateLeftPaneCollapsed(true)}
-                  className="lhs-drawer__collapse-btn shrink-0"
-                >
-                  <Icon name="left_panel_close" size={18} />
-                </button>
+                {createSideTab === 'ai' && (
+                  <button
+                    type="button"
+                    onClick={expandCreateAiFullscreen}
+                    className="mb-xs flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                    aria-label="Full screen"
+                    title="Full screen"
+                  >
+                    <Icon name="open_in_full" size={20} />
+                  </button>
+                )}
               </div>
-            ) : createFlowSubmitted ? (
+            ) : (createFlowSubmitted || createAiFullscreen) ? (
+              isReviewsCreateFlow ? (
+                <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+                  <div className="flex w-full items-center justify-between gap-md">
+                    <div className="flex min-w-0 max-w-[720px] items-center gap-xs">
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateFlow(false)}
+                        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                        aria-label="Back"
+                      >
+                        <Icon name="arrow_back" size={20} />
+                      </button>
+                      <h1 className="min-w-0 truncate text-h3 text-text-primary">
+                        {reviewsCreateInnerTitle ?? createWorkflowAgentName}
+                      </h1>
+                      {createDraftAgentName && (
+                        <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                          Draft
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openCreateWorkflow}
+                      disabled={!createDraftAgentName && !createAiFullscreen}
+                      className="flex h-9 shrink-0 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
+                    >
+                      View agent builder
+                    </button>
+                  </div>
+                </div>
+              ) : (
               // Conversation view — header aligns with the 720px chat column below it.
-              <div className="flex shrink-0 justify-center bg-surface px-lg pt-lg pb-md">
-                <div className="flex w-full max-w-[1600px] justify-center gap-xl pr-sm">
+              <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
+                <div className="flex h-full w-full max-w-[1600px] justify-center gap-xl pr-sm">
                   {inlineProcedureOpen && (
                     <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
                   )}
                   <div className="flex w-full min-w-0 max-w-[720px] items-center gap-sm">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (chatHistorySelectedId) selectAllChats()
-                        else setShowCreateFlow(false)
-                      }}
+                      onClick={() => setShowCreateFlow(false)}
                       className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
                       aria-label="Back"
                     >
                       <Icon name="arrow_back" size={20} />
                     </button>
-                    <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{createTitle}</h1>
-                    {(isReminder || isFrontdesk) && createDraftAgentName && !createWorkflowOpen && (
-                      <>
-                        <button
-                          type="button"
-                          aria-label="Collapse"
-                          title="Dock next to workflow"
-                          onClick={openCreateWorkflow}
-                          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                        >
-                          <Icon name="close_fullscreen" size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={openCreateWorkflow}
-                          className="shrink-0 rounded-sm text-body text-text-action hover:underline"
-                        >
-                          View in agent builder
-                        </button>
-                      </>
-                    )}
+                    <h1 className="text-h3 text-text-primary">{createTitle}</h1>
                   </div>
                   {inlineProcedureOpen && (
                     <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
                   )}
                 </div>
               </div>
+              )
+            ) : isReviewsCreateFlow ? (
+              <CreateFlowPageHeader
+                onBack={() => setShowCreateFlow(false)}
+                title="Back"
+              />
             ) : (
               // Landing view — standard flush-left page header.
               <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
@@ -6517,18 +6795,24 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 >
                   <Icon name="arrow_back" size={20} />
                 </button>
-                <h1 className="text-h3 text-text-primary text-left">Create agent</h1>
+                <h1 className="text-h3 text-text-primary">{createTitle}</h1>
               </div>
             )}
             <div
-              className={`scrollbar-subtle flex min-h-0 flex-1 justify-center ${
-                createFlowSubmitted || createWorkflowOpen
-                  ? 'items-stretch overflow-visible'
+              className={`scrollbar-subtle flex min-h-0 flex-1 pt-0 ${
+                createFlowSubmitted || createWorkflowOpen || createAiFullscreen
+                  ? 'items-stretch overflow-hidden'
                   : 'items-start overflow-auto pb-lg'
-              } ${createWorkflowOpen ? 'px-2xl pt-lg' : 'px-lg pt-0'}`}
+              } ${
+                createWorkflowOpen
+                  ? createSideTab === 'manual'
+                    ? 'px-0 py-0'
+                    : 'px-md'
+                  : 'justify-center px-lg'
+              }`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
-                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer\_\_body]:!p-0">
+                <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer__body]:!px-md [&_.lhs-drawer__body]:!pt-0">
                   <LHSDrawer
                     defaultTab="Create manually"
                     defaultOpenSection="Tasks"
@@ -6538,7 +6822,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   />
                 </div>
               )}
-              {(isReviewResponse || isReminder || (isFrontdesk && isHealthcareFrontdesk)) ? (
+              {(isReviewResponse || isReviewGeneration || isReminder || (isFrontdesk && isHealthcareFrontdesk)) ? (
                 <div
                   className={
                     createWorkflowOpen && createSideTab === 'manual'
@@ -6548,15 +6832,23 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 >
                   <HealthcareFrontdeskCreateAgentScreen
                     key={createFlowKey}
-                    onBack={() => {
-                      if (chatHistorySelectedId) selectAllChats()
-                      else setShowCreateFlow(false)
-                    }}
+                    onBack={() => setShowCreateFlow(false)}
                     onSubmittedChange={setCreateFlowSubmitted}
+                    pageTitle={
+                      showReviewsCreateInnerTitle && !createAiFullscreen
+                        ? reviewsCreateInnerTitle ?? undefined
+                        : undefined
+                    }
+                    hideHeaderBack={isReviewsCreateFlow || createAiFullscreen}
                     onCreateFromScratch={() => {
                       if (isReviewResponse) {
                         setShowCreateFlow(false)
-                        onEditAgent?.('Review response agent replying autonomously')
+                        onEditAgent?.('Review response agent 1')
+                        return
+                      }
+                      if (isReviewGeneration) {
+                        setShowCreateFlow(false)
+                        onEditAgent?.('Review generation agent 1')
                         return
                       }
                       setShowSetupWizard(true)
@@ -6568,38 +6860,47 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                         onEditAgent?.(card?.title ?? 'Review response agent')
                         return
                       }
+                      if (isReviewGeneration) {
+                        const card = REVIEW_GENERATION_CREATE_CARDS.find((c) => c.id === templateId)
+                        setShowCreateFlow(false)
+                        onEditAgent?.(card?.title ?? 'Review generation agent')
+                        return
+                      }
                       setShowCreateFlow(false)
                       onEditAgent?.('')
                     }}
                     onCreateAgent={handleCreateAgentSuccess}
-                    onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse) ? openCreateWorkflow : undefined}
+                    onViewWorkflow={(isReminder || isReviewResponse) ? openCreateWorkflow : undefined}
                     libraryCards={
                       isReminder
                         ? REMINDER_CREATE_CARDS
                         : isReviewResponse
                           ? REVIEW_RESPONSE_CREATE_CARDS
-                          : undefined
+                          : isReviewGeneration
+                            ? REVIEW_GENERATION_CREATE_CARDS
+                            : undefined
                     }
                     initialPrompt={
-                      historyChat?.prompt
-                      ?? (isReminder
+                      isReminder
                         ? REMINDER_CREATE_PROMPT
                         : isReviewResponse
                           ? REVIEW_RESPONSE_CREATE_PROMPT
-                          : undefined)
+                          : isReviewGeneration
+                            ? REVIEW_GENERATION_CREATE_PROMPT
+                            : undefined
                     }
                     autoStart={false}
-                    historyChatId={chatHistorySelectedId}
-                    historyChat={historyChat}
-                    fromScratchLabel={(isReminder || isReviewResponse) ? 'Create from scratch' : 'Setup manually'}
+                    fromScratchLabel={(isReminder || isReviewResponse || isReviewGeneration) ? 'Create from scratch' : 'Setup manually'}
                     variant={
                       isReminder
                         ? 'reminder'
                         : isReviewResponse
                           ? 'review-response'
-                          : 'frontdesk'
+                          : isReviewGeneration
+                            ? 'review-generation'
+                            : 'frontdesk'
                     }
-                    workflowVisible={createWorkflowOpen}
+                    workflowVisible={createWorkflowOpen || createAiFullscreen}
                     onDraftReady={setCreateDraftAgentName}
                     onCanvasProcedureChange={isReminder ? setCanvasProcedureId : undefined}
                     onInlineProcedureOpenChange={setInlineProcedureOpen}
@@ -6616,19 +6917,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             </div>
           </section>
 
-          {createWorkflowOpen && createLeftPaneCollapsed && (
-            <button
-              type="button"
-              aria-label="Expand panel"
-              title="Expand panel"
-              onClick={() => setCreateLeftPaneCollapsed(false)}
-              className="absolute left-sm top-[calc(52px+theme(spacing.sm))] z-10 flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon shadow-card hover:bg-surface-l2"
-            >
-              <Icon name="left_panel_open" size={20} />
-            </button>
-          )}
-
-          {createWorkflowMounted && (isReminder || isFrontdesk || isReviewResponse) && (
+          {createWorkflowMounted && (isReminder || isReviewResponse) && (
             <section
               className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out motion-reduce:transition-none ${
                 createWorkflowOpen
@@ -6641,16 +6930,15 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 agentName={
                   isReviewResponse
                     ? 'Review response agent - North Region'
-                    : isReminder
-                      ? 'Reminder agent - North region'
-                      : 'Front desk agent - North region'
+                    : 'Reminder agent - North region'
                 }
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
                 hideLhs
-                createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
+                createAiPanelOpen={createWorkflowOpen}
+                onOpenAiFullscreen={expandCreateAiFullscreen}
                 previewProcedureId={isReminder ? canvasProcedureId : null}
                 previewProcedureDetail={
                   isReminder
@@ -6689,7 +6977,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
-          onFullBleedChange={setInstanceSetupActive}
+          onFullBleedChange={onAgentSetupActiveChange}
           onFullBleedDetailActiveChange={onFullBleedDetailActiveChange}
           initialRecommendationId={
             initialRecommendationFocus?.instanceName === selectedInstance ? initialRecommendationFocus.recommendationId : null
@@ -6724,7 +7012,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 <>
                   <button
                     type="button"
-                    onClick={() => (isFrontdesk || isReminder || isReviewResponse) ? openCreateFlow() : onEditAgent?.('')}
+                    onClick={() => (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration) ? openCreateFlow() : onEditAgent?.('')}
                     className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                   >
                     Create agent
@@ -6810,7 +7098,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               </div>
             </>
           ) : libraryView === 'grid' ? (
-            <div className="grid grid-cols-1 gap-lg px-2xl py-lg md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
               {visibleLibraryCards.map((card) => (
                 <InfoCard key={card.title} {...card} />
               ))}
