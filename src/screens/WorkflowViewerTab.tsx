@@ -71,9 +71,12 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
         .wf-viewer .ab-view-banner        { display: none !important; }
         .wf-viewer .faq-ab-embedded       { height: 100% !important; }
         .wf-viewer .agent-builder-wrapper { background-color: #f8f9fb !important; background-image: radial-gradient(circle, #c8cdd8 1px, transparent 1px) !important; background-size: 28px 28px !important; margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
-        /* Viewer: canvas rounded, no extra containers */
-        .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; }
+        /* Viewer: canvas rounded, no extra containers — padding comes from wrapper margin */
+        .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; padding: 0 !important; gap: 0 !important; }
         .wf-viewer .flow-canvas           { border-radius: 12px !important; }
+        .wf-viewer .flow-canvas__toolbar-anchor { top: 16px !important; }
+        /* Hide orientation toggle (↓ →) in view-only mode only */
+        .wf-viewer .graph-controls__toggle { display: none !important; }
       `}</style>
 
       <div className="wf-viewer" style={{ height: '100%' }}>

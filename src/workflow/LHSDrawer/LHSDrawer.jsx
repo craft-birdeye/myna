@@ -3,6 +3,11 @@ import { FormInput, Tooltip } from '../elemental-stubs';
 import NodeType from '../Organisms/Accordion/NodeType/NodeType';
 import AIChatBubble from '../Molecules/AIChatBubble/AIChatBubble';
 import { PromptComposer } from '../../components';
+import { setFlowDragData } from '../flowDragData';
+import {
+  appendCreateAiDraftTurn,
+  getCreateAiDraftSession,
+} from '../../data/createAgentChatStore';
 
 // Uploaded procedure.svg icon — used for all procedure category cards
 const ProcedureSvgIcon = () => (
@@ -40,16 +45,28 @@ const TRIGGER_SUB_ITEMS = {
     ],
   },
   Reviews: {
-    title: 'Review event',
+    title: 'Reviews',
     items: [
-      'When a new review is received',
-      'When a review is updated',
-      'When a review is responded',
-      'When a new review is received or updated',
+      {
+        label: 'When a new review is received',
+        description: 'Fires when a customer leaves a new review on any connected source or location.',
+      },
+      {
+        label: 'When a review is updated',
+        description: 'Fires when an existing review is edited, including rating or comment changes.',
+      },
+      {
+        label: 'When a review is responded',
+        description: 'Fires when a response is posted to a review, by your agent or a team member.',
+      },
+      {
+        label: 'When a new review is received or updated',
+        description: 'Fires on both new reviews and updates so one workflow can cover either event.',
+      },
     ],
   },
   Inbox: {
-    title: 'Inbox event',
+    title: 'Inbox',
     items: [
       'When a new message is received',
       'When a conversation is assigned',
@@ -57,7 +74,7 @@ const TRIGGER_SUB_ITEMS = {
     ],
   },
   Listings: {
-    title: 'Listing event',
+    title: 'Listings',
     items: [
       'When a listing is updated',
       'When a new listing is added',
@@ -65,7 +82,7 @@ const TRIGGER_SUB_ITEMS = {
     ],
   },
   Social: {
-    title: 'Social event',
+    title: 'Social',
     items: [
       'When a new post is published',
       'When a comment is received',
@@ -73,7 +90,7 @@ const TRIGGER_SUB_ITEMS = {
     ],
   },
   Surveys: {
-    title: 'Survey event',
+    title: 'Surveys',
     items: [
       'When a survey response is received',
       'When a survey is completed',
@@ -81,7 +98,7 @@ const TRIGGER_SUB_ITEMS = {
     ],
   },
   Ticketing: {
-    title: 'Ticketing event',
+    title: 'Ticketing',
     items: [
       'When a new ticket is created',
       'When a ticket is updated',
@@ -89,7 +106,7 @@ const TRIGGER_SUB_ITEMS = {
     ],
   },
   'External apps': {
-    title: 'External app event',
+    title: 'External apps',
     items: [
       'When webhook is triggered',
       'When external data is synced',
@@ -132,6 +149,29 @@ export const HEALTHCARE_TRIGGER_GROUP = {
 /** Flat list kept for backward-compat exports / search helpers */
 export const HEALTHCARE_TRIGGER_CARDS = [
   ...HEALTHCARE_EVENT_BASED_TRIGGER_CARDS,
+  ...HEALTHCARE_TRIGGER_STANDALONE_CARDS,
+];
+
+// Reviews AI — event-based triggers nested under "Event based" (Review response /
+// Review generation agents only; matches the Reviews AI "Create from scratch" mock).
+export const REVIEWS_EVENT_BASED_TRIGGER_CARDS = [
+  { label: 'Reviews',       icon: 'grade',                action: 'chevron' },
+  { label: 'Inbox',         icon: 'sms',                  action: 'chevron' },
+  { label: 'Listings',      icon: 'location_on',          action: 'chevron' },
+  { label: 'Social',        icon: 'workspaces',           action: 'chevron' },
+  { label: 'Surveys',       icon: 'assignment_turned_in', action: 'chevron' },
+  { label: 'Ticketing',     icon: 'shapes',               action: 'chevron' },
+  { label: 'External apps', icon: 'grid_view',            action: 'chevron' },
+];
+
+export const REVIEWS_TRIGGER_GROUP = {
+  label: 'Event based',
+  icon: 'graph_2',
+  cards: REVIEWS_EVENT_BASED_TRIGGER_CARDS,
+};
+
+export const REVIEWS_TRIGGER_CARDS = [
+  ...REVIEWS_EVENT_BASED_TRIGGER_CARDS,
   ...HEALTHCARE_TRIGGER_STANDALONE_CARDS,
 ];
 
@@ -211,6 +251,118 @@ export const HEALTHCARE_TASK_SUB_ITEMS = {
   },
 };
 
+/** Reviews AI task flyouts — title + description (2-line clamp + tooltip). */
+export const REVIEWS_TASK_SUB_ITEMS = {
+  Review: {
+    title: 'Review',
+    items: [
+      {
+        label: 'Triage review',
+        ai: true,
+        description:
+          'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+      },
+      {
+        label: 'Review details extraction',
+        description:
+          'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+      },
+      {
+        label: 'Review responder',
+        ai: true,
+        description: 'Reply to the review using the generated response',
+      },
+      {
+        label: 'Response generation',
+        description:
+          'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+      },
+      {
+        label: 'Message assembly',
+        description:
+          'Combine the crafted approach, extracted insights, and brand voice to create the final reply.',
+      },
+    ],
+  },
+  Ticketing: {
+    title: 'Ticketing',
+    items: [
+      {
+        label: 'Create ticket',
+        description: 'Open a support ticket from the review so the right team can follow up.',
+      },
+      {
+        label: 'Update ticket',
+        description: 'Update an existing ticket with the latest review context and status.',
+      },
+    ],
+  },
+  Contact: {
+    title: 'Contact',
+    items: [
+      {
+        label: 'Update contact property',
+        description: 'Write review-derived attributes back to the contact record.',
+      },
+      {
+        label: 'Add contact to list',
+        description: 'Add the reviewer to a list for follow-up campaigns or outreach.',
+      },
+    ],
+  },
+  Campaign: {
+    title: 'Campaign',
+    items: [
+      {
+        label: 'Enroll in campaign',
+        description: 'Add the contact to a review or recovery campaign sequence.',
+      },
+    ],
+  },
+  Referral: {
+    title: 'Referral',
+    items: [
+      {
+        label: 'Send referral invite',
+        description: 'Invite happy reviewers to refer friends or leave additional feedback.',
+      },
+    ],
+  },
+  Surveys: {
+    title: 'Surveys',
+    items: [
+      {
+        label: 'Send survey',
+        description: 'Send a follow-up survey after a review to capture more structured feedback.',
+      },
+    ],
+  },
+  'External apps-task': {
+    title: 'External app tasks',
+    items: [
+      {
+        label: 'Send data to external app',
+        description: 'Push review data to a connected external system or webhook.',
+      },
+      {
+        label: 'Fetch data from external app',
+        description: 'Pull supporting data from a connected app before responding.',
+      },
+    ],
+  },
+};
+
+export const REVIEWS_TASK_CARDS = [
+  { label: 'Custom', icon: 'dashboard_customize', action: 'drag' },
+  { label: 'Review', icon: 'grade', action: 'chevron', subKey: 'Review' },
+  { label: 'Ticketing', icon: 'shapes', action: 'chevron', subKey: 'Ticketing' },
+  { label: 'Contact', icon: 'person', action: 'chevron', subKey: 'Contact' },
+  { label: 'Campaign', icon: 'campaign', action: 'chevron', subKey: 'Campaign' },
+  { label: 'Referral', icon: 'featured_seasonal_and_gifts', action: 'chevron', subKey: 'Referral' },
+  { label: 'Surveys', icon: 'assignment_turned_in', action: 'chevron', subKey: 'Surveys' },
+  { label: 'External apps', icon: 'grid_view', action: 'chevron', subKey: 'External apps-task' },
+];
+
 export { AUTOMOTIVE_TASK_SUB_ITEMS };
 
 export const INITIATE_VOICE_CALL_TASK = 'Initiate voice call';
@@ -224,7 +376,10 @@ export function isFrontDeskAgent(agentName = '') {
 /** Remove task sub-items unavailable for the current agent. */
 export function filterTaskItemsForAgent(items = [], agentName = '') {
   if (!isFrontDeskAgent(agentName)) return items;
-  return items.filter((item) => item !== INITIATE_VOICE_CALL_TASK);
+  return items.filter((item) => {
+    const label = typeof item === 'string' ? item : item?.label;
+    return label !== INITIATE_VOICE_CALL_TASK;
+  });
 }
 
 function filterTaskSubItemsMap(subItemsMap, agentName = '') {
@@ -240,8 +395,17 @@ function filterTaskSubItemsMap(subItemsMap, agentName = '') {
   );
 }
 
-const READONLY_TRIGGER_SUBMENUS = new Set(['Contact-trigger', 'Appointment-trigger']);
-const READONLY_TASK_SUBMENUS = new Set(['Conversation', 'Contact', 'Appointment']);
+const READONLY_TRIGGER_SUBMENUS = new Set(['Contact-trigger', 'Appointment-trigger', 'Reviews']);
+const READONLY_TASK_SUBMENUS = new Set([
+  'Conversation',
+  'Contact',
+  'Appointment',
+  'Review',
+  'Ticketing',
+  'Campaign',
+  'Referral',
+  'Surveys',
+]);
 const DISABLED_TASK_SUB_ITEMS = new Set(['In call text']);
 const PROCEDURE_COLLAPSE_LIMIT = 7;
 
@@ -418,14 +582,20 @@ export const CONTROL_CARDS = [
 /** Sub-items for the canvas add-step menu, keyed by product. */
 export function getTaskSubItems(product = 'automotive', agentName = '') {
   const isHC = product === 'healthcare' || product === 'dental';
-  const base = isHC ? HEALTHCARE_TASK_SUB_ITEMS : AUTOMOTIVE_TASK_SUB_ITEMS;
+  const isReviews = /review (response|generation) agent/i.test(agentName || '');
+  const base = isReviews
+    ? { ...HEALTHCARE_TASK_SUB_ITEMS, ...REVIEWS_TASK_SUB_ITEMS }
+    : isHC
+      ? HEALTHCARE_TASK_SUB_ITEMS
+      : AUTOMOTIVE_TASK_SUB_ITEMS;
   return filterTaskSubItemsMap(base, agentName);
 }
 
 /** Task cards for the canvas add-step menu (excludes External apps for a cleaner popover). */
-export function getAddStepTaskCards(product = 'automotive') {
+export function getAddStepTaskCards(product = 'automotive', agentName = '') {
   const isHC = product === 'healthcare' || product === 'dental';
-  const cards = isHC ? HEALTHCARE_TASK_CARDS : AUTOMOTIVE_TASK_CARDS;
+  const isReviews = /review (response|generation) agent/i.test(agentName || '');
+  const cards = isReviews ? REVIEWS_TASK_CARDS : isHC ? HEALTHCARE_TASK_CARDS : AUTOMOTIVE_TASK_CARDS;
   return cards.filter((c) => c.subKey !== 'External apps-task');
 }
 
@@ -435,8 +605,12 @@ export function getAddStepControlCards() {
 }
 
 /* ─── Trigger + task sub-items (mutable state; procedures are derived dynamically) ─── */
-function buildInitialSubItems(isHC) {
-  const taskSubItems = isHC ? HEALTHCARE_TASK_SUB_ITEMS : AUTOMOTIVE_TASK_SUB_ITEMS;
+function buildInitialSubItems(isHC, isReviews = false) {
+  const taskSubItems = isReviews
+    ? { ...HEALTHCARE_TASK_SUB_ITEMS, ...REVIEWS_TASK_SUB_ITEMS }
+    : isHC
+      ? HEALTHCARE_TASK_SUB_ITEMS
+      : AUTOMOTIVE_TASK_SUB_ITEMS;
   return { ...TRIGGER_SUB_ITEMS, ...taskSubItems };
 }
 
@@ -457,12 +631,13 @@ export function CardRow({
   disabled = false,
 }) {
   const handleDragStart = (e) => {
-    e.dataTransfer.setData('application/reactflow-type', nodeType);
-    // For procedure cards, use the procedureId as the label so AgentBuilder
-    // can seed the first procedureIds entry correctly
-    e.dataTransfer.setData('application/reactflow-label', procedureId || dragLabel || label);
-    e.dataTransfer.setData('application/reactflow-description', label);
-    e.dataTransfer.effectAllowed = 'copy';
+    setFlowDragData(e.dataTransfer, {
+      type: nodeType,
+      // For procedure cards, use the procedureId as the label so AgentBuilder
+      // can seed the first procedureIds entry correctly
+      label: procedureId || dragLabel || label,
+      description: label,
+    });
   };
 
   const isDraggable = action === 'drag' && !viewOnly && !disabled;
@@ -565,13 +740,29 @@ export default function LHSDrawer({
   /** Renders full-bleed with a name + collapse header instead of the tab bar. */
   expanded = false,
   onCollapseExpand = null,
+  /** External full-screen takeover of the Create with AI chat (Reviews AI create flow). */
+  aiFullscreen = false,
+  onAiFullscreenChange = null,
+  onOpenAiFullscreen = null,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
+  // Review response / Review generation agents get their own "Event based" trigger
+  // grouping regardless of `product` (Reviews AI isn't a distinct product value —
+  // see LHSDrawer plan notes) so the picker matches the Reviews AI create-from-scratch mock.
+  const isReviewsAgent = /review (response|generation) agent/i.test(agentName || '');
 
-  const activeTriggerCards = isHC ? HEALTHCARE_TRIGGER_CARDS : AUTOMOTIVE_TRIGGER_CARDS;
-  const activeTriggerGroup = isHC ? HEALTHCARE_TRIGGER_GROUP : null;
-  const activeTriggerStandaloneCards = isHC ? HEALTHCARE_TRIGGER_STANDALONE_CARDS : [];
-  const activeTaskCards = isHC ? HEALTHCARE_TASK_CARDS : AUTOMOTIVE_TASK_CARDS;
+  const activeTriggerCards = isReviewsAgent
+    ? REVIEWS_TRIGGER_CARDS
+    : isHC
+      ? HEALTHCARE_TRIGGER_CARDS
+      : AUTOMOTIVE_TRIGGER_CARDS;
+  const activeTriggerGroup = isReviewsAgent ? REVIEWS_TRIGGER_GROUP : (isHC ? HEALTHCARE_TRIGGER_GROUP : null);
+  const activeTriggerStandaloneCards = (isReviewsAgent || isHC) ? HEALTHCARE_TRIGGER_STANDALONE_CARDS : [];
+  const activeTaskCards = isReviewsAgent
+    ? REVIEWS_TASK_CARDS
+    : isHC
+      ? HEALTHCARE_TASK_CARDS
+      : AUTOMOTIVE_TASK_CARDS;
 
   // Derive procedure cards + sub-items from the live library when the prop is provided;
   // fall back to the static hardcoded lists for backward-compat.
@@ -591,11 +782,54 @@ export default function LHSDrawer({
   );
   const [aiInputValue, setAiInputValue] = useState('');
   const showAiBody = expanded || activeTab === 'Create with AI';
+  const [aiTrail, setAiTrail] = useState(() => {
+    const draft = getCreateAiDraftSession(agentName || '');
+    if (draft?.trail?.length) return draft.trail;
+    if (aiTranscript?.trail?.length) return aiTranscript.trail;
+    return [];
+  });
 
   // A transcript can resolve after mount (e.g. saved during this session).
   useEffect(() => {
     if (aiTranscript) setActiveTab('Create with AI');
   }, [aiTranscript]);
+
+  useEffect(() => {
+    const draft = getCreateAiDraftSession(agentName || '');
+    if (draft?.trail?.length) {
+      setAiTrail(draft.trail);
+      return;
+    }
+    if (aiTranscript?.trail?.length) {
+      setAiTrail(aiTranscript.trail);
+      return;
+    }
+    if (aiTranscript?.prompt) {
+      setAiTrail([
+        { kind: 'user', text: aiTranscript.prompt },
+        ...(aiTranscript.replies ?? []).map((paragraphs) => ({
+          kind: 'agent',
+          paragraphs: Array.isArray(paragraphs) ? paragraphs : [String(paragraphs)],
+        })),
+      ]);
+      return;
+    }
+    setAiTrail([]);
+  }, [agentName, aiTranscript]);
+
+  const handleAiSend = (text) => {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return;
+    const key = agentName || 'agent';
+    appendCreateAiDraftTurn(key, { kind: 'user', text: trimmed });
+    const next = appendCreateAiDraftTurn(key, {
+      kind: 'agent',
+      paragraphs: [
+        'Got it — I can help you build that. Expand to full screen to continue the conversation.',
+      ],
+    });
+    setAiTrail(next.trail);
+  };
   const [openSection, setOpenSection] = useState(defaultOpenSection);
   const toggleSection = (section) =>
     setOpenSection((prev) => (prev === section ? null : section));
@@ -612,11 +846,13 @@ export default function LHSDrawer({
   const [expandedCard, setExpandedCard] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
   const [dropdownTop, setDropdownTop] = useState(0);
-  const [subItems, setSubItems] = useState(() => buildInitialSubItems(isHC));
+  const [subItems, setSubItems] = useState(() => buildInitialSubItems(isHC, isReviewsAgent));
   const panelRef = useRef(null);
   const cardRefs = useRef({});
   const closeDropdownTimerRef = useRef(null);
   const hoverDropdownRef = useRef(false);
+  const draggingFromFlyoutRef = useRef(false);
+  const [flyoutDragging, setFlyoutDragging] = useState(false);
 
   useEffect(() => () => cancelCloseDropdown(), []);
 
@@ -772,27 +1008,54 @@ export default function LHSDrawer({
 
   const closeDropdown = () => {
     cancelCloseDropdown();
+    hoverDropdownRef.current = false;
+    draggingFromFlyoutRef.current = false;
+    setFlyoutDragging(false);
     setExpandedCard(null);
     setExpandedSection(null);
   };
 
   const scheduleCloseDropdown = () => {
+    if (draggingFromFlyoutRef.current) return;
     cancelCloseDropdown();
     closeDropdownTimerRef.current = setTimeout(() => {
-      if (!hoverDropdownRef.current) {
+      if (!hoverDropdownRef.current && !draggingFromFlyoutRef.current) {
         closeDropdown();
       }
     }, 120);
   };
 
   const handleDropdownMouseEnter = () => {
+    if (draggingFromFlyoutRef.current) return;
     hoverDropdownRef.current = true;
     cancelCloseDropdown();
   };
 
   const handleDropdownMouseLeave = () => {
+    if (draggingFromFlyoutRef.current) return;
     hoverDropdownRef.current = false;
     scheduleCloseDropdown();
+  };
+
+  // Hide the flyout visually while dragging, but keep it mounted so HTML5 DnD
+  // is not cancelled by unmounting the drag source mid-gesture.
+  const handleFlyoutItemDragStart = () => {
+    draggingFromFlyoutRef.current = true;
+    hoverDropdownRef.current = true;
+    cancelCloseDropdown();
+    // Defer hide until after the browser has captured the drag source.
+    requestAnimationFrame(() => {
+      if (draggingFromFlyoutRef.current) setFlyoutDragging(true);
+    });
+
+    const finish = () => {
+      window.removeEventListener('dragend', finish);
+      if (!draggingFromFlyoutRef.current) return;
+      draggingFromFlyoutRef.current = false;
+      setFlyoutDragging(false);
+      closeDropdown();
+    };
+    window.addEventListener('dragend', finish);
   };
 
   return (
@@ -811,54 +1074,90 @@ export default function LHSDrawer({
           </button>
         </div>
       ) : (
-        <div className={`lhs-drawer__tabs${showTabs ? ' lhs-drawer__tabs--visible' : ''}`}>
-          {TABS.map((tab) =>
-            tab === 'Create with AI' ? (
-              <div
-                key={tab}
-                className={`group lhs-drawer__tab lhs-drawer__tab--ai${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
-              >
-                <span className="lhs-drawer__tab-label">
-                  <button type="button" className="lhs-drawer__tab-ai-trigger" onClick={() => setActiveTab(tab)}>
-                    Create with AI
-                    <AiAgentIcon size={16} />
+        <div className={`lhs-drawer__tabs${showTabs || onCollapse ? ' lhs-drawer__tabs--visible' : ''}`}>
+          {showTabs && (
+            <div className="lhs-drawer__tabs-list">
+              {TABS.map((tab) =>
+                tab === 'Create with AI' ? (
+                  <div
+                    key={tab}
+                    className={`group lhs-drawer__tab lhs-drawer__tab--ai${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
+                  >
+                    <span className="lhs-drawer__tab-label">
+                      <button type="button" className="lhs-drawer__tab-ai-trigger" onClick={() => setActiveTab(tab)}>
+                        Create with AI
+                        <AiAgentIcon size={16} />
+                      </button>
+                      {onExpand && (
+                        <button
+                          type="button"
+                          aria-label="Expand"
+                          title="Expand to full page"
+                          onClick={onExpand}
+                          className="lhs-drawer__expand-btn"
+                        >
+                          <span className="material-symbols-outlined">open_in_full</span>
+                        </button>
+                      )}
+                    </span>
+                    <span className="lhs-drawer__tab-underline" />
+                  </div>
+                ) : (
+                  <button
+                    key={tab}
+                    className={`lhs-drawer__tab${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
+                    onClick={() => {
+                      if (tab !== 'Create with AI' && aiFullscreen) {
+                        onAiFullscreenChange?.(false);
+                      }
+                      setActiveTab(tab);
+                    }}
+                  >
+                    <span className="lhs-drawer__tab-label">{tab}</span>
+                    <span className="lhs-drawer__tab-underline" />
                   </button>
-                  {onExpand && (
-                    <button
-                      type="button"
-                      aria-label="Expand"
-                      title="Expand to full page"
-                      onClick={onExpand}
-                      className="lhs-drawer__expand-btn"
-                    >
-                      <span className="material-symbols-outlined">open_in_full</span>
-                    </button>
-                  )}
-                </span>
-                <span className="lhs-drawer__tab-underline" />
-              </div>
-            ) : (
-              <button
-                key={tab}
-                className={`lhs-drawer__tab${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                <span className="lhs-drawer__tab-label">{tab}</span>
-                <span className="lhs-drawer__tab-underline" />
-              </button>
-            ),
+                ),
+              )}
+            </div>
           )}
-          {showTabs && onCollapse && (
-            <Tooltip text="Collapse editor" position="bottom">
-              <button
-                className="lhs-drawer__collapse-btn"
-                onClick={onCollapse}
-                type="button"
-                aria-label="Collapse editor"
-              >
-                <span className="material-symbols-outlined">left_panel_close</span>
-              </button>
-            </Tooltip>
+          {(onCollapse || (activeTab === 'Create with AI' && (onOpenAiFullscreen || onAiFullscreenChange))) && (
+            <div className="lhs-drawer__tab-actions">
+              {activeTab === 'Create with AI' && (onOpenAiFullscreen || onAiFullscreenChange) && (
+                <Tooltip text={aiFullscreen ? 'Exit full screen' : 'Full screen'} position="bottom">
+                  <button
+                    className="lhs-drawer__collapse-btn"
+                    onClick={() => {
+                      if (onOpenAiFullscreen) {
+                        onOpenAiFullscreen();
+                        return;
+                      }
+                      onAiFullscreenChange?.(!aiFullscreen);
+                    }}
+                    type="button"
+                    aria-label={aiFullscreen ? 'Exit full screen' : 'Full screen'}
+                  >
+                    <span className="material-symbols-outlined">
+                      {aiFullscreen ? 'close_fullscreen' : 'open_in_full'}
+                    </span>
+                  </button>
+                </Tooltip>
+              )}
+              {onCollapse && (
+                <Tooltip text="Collapse editor" position="bottom">
+                  <button
+                    className="lhs-drawer__collapse-btn"
+                    onClick={() => {
+                      if (aiFullscreen) onAiFullscreenChange?.(false);
+                      onCollapse();
+                    }}
+                    type="button"
+                    aria-label="Collapse editor"
+                  >
+                    <span className="material-symbols-outlined">left_panel_close</span>
+                  </button>
+                </Tooltip>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -895,10 +1194,14 @@ export default function LHSDrawer({
       ) : (
         <div className="lhs-drawer__ai-body">
           <div className="lhs-drawer__ai-chat-area">
-            {aiTranscript?.trail?.length || aiTranscript?.prompt ? (
+            {aiTrail.length > 0 || aiTranscript?.trail?.length || aiTranscript?.prompt ? (
               <div className="lhs-drawer__ai-transcript">
-                {aiTranscript.trail?.length
-                  ? aiTranscript.trail.map((turn, i) => {
+                {(aiTrail.length > 0
+                  ? aiTrail
+                  : aiTranscript?.trail?.length
+                    ? aiTranscript.trail
+                    : null
+                )?.map((turn, i) => {
                       if (turn.kind === 'user') {
                         return (
                           <div key={i} className="lhs-drawer__ai-user-msg">
@@ -955,7 +1258,7 @@ export default function LHSDrawer({
                       }
                       return null
                     })
-                  : (
+                  ?? (
                     <>
                       <div className="lhs-drawer__ai-user-msg">{aiTranscript.prompt}</div>
                       {(aiTranscript.replies ?? []).map((paragraphs, replyIndex) => (
@@ -982,13 +1285,17 @@ export default function LHSDrawer({
               <AIChatBubble
                 message={`Hi! I'm here to help you build your ${agentName || 'Review response'} agent. Tell me what you'd like to build`}
                 options={AI_OPTIONS}
+                onOptionSelect={handleAiSend}
               />
             )}
           </div>
           <PromptComposer
             value={aiInputValue}
             onChange={setAiInputValue}
-            onSend={() => setAiInputValue('')}
+            onSend={() => {
+              handleAiSend(aiInputValue);
+              setAiInputValue('');
+            }}
             placeholder="What would you like to build? For example: Review response agent replying autonomously."
             rows={2}
           />
@@ -997,7 +1304,7 @@ export default function LHSDrawer({
 
       {(visibleSubItems || showExternalAppsDropdown) && (
         <div
-          className="lhs-drawer__dropdown-zone"
+          className={`lhs-drawer__dropdown-zone${flyoutDragging ? ' lhs-drawer__dropdown-zone--dragging' : ''}`}
           style={{ top: dropdownTop }}
           onMouseEnter={handleDropdownMouseEnter}
           onMouseLeave={handleDropdownMouseLeave}
@@ -1008,6 +1315,7 @@ export default function LHSDrawer({
               nodeType={expandedSection === 'trigger' ? 'trigger' : 'task'}
               parentLabel="External apps"
               viewOnly={viewOnly}
+              onDragStartItem={handleFlyoutItemDragStart}
             />
           ) : (
             <LHSEntityGroup
@@ -1016,6 +1324,7 @@ export default function LHSDrawer({
               nodeType={expandedSection === 'trigger' ? 'trigger' : expandedSection === 'procedures' ? 'procedures' : 'task'}
               parentLabel={expandedCard}
               onItemsChange={(newItems) => handleSubItemsChange(expandedCard, newItems)}
+              onDragStartItem={handleFlyoutItemDragStart}
               viewOnly={viewOnly}
               readOnly={
                 (expandedSection === 'trigger' && READONLY_TRIGGER_SUBMENUS.has(expandedCard))

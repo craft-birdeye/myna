@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import GraphControlTooltip from './GraphControlTooltip';
 import './GraphControls.css';
 
-const ZOOM_PRESETS = [50, 75, 100, 125, 150, 200];
+const ZOOM_PRESETS = [200, 175, 150, 125, 100, 50, 25, 10];
 
 export default function GraphControls({
   orientation = 'vertical',
@@ -13,11 +13,21 @@ export default function GraphControls({
   zoom = 100,
   onZoomSelect,
   onFitView,
+  onFillView = null,
   viewOnly = false,
   runDisabled = false,
+  agentName = '',
+  onUndo = () => {},
+  onRedo = () => {},
+  canUndo = false,
+  canRedo = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  /** Sticky footer selection: 'fill' | 'fit' | null (percentage active). */
+  const [zoomMode, setZoomMode] = useState(null);
   const dropdownRef = useRef(null);
+  // Reviews AI only, per product decision — other agents keep today's toolbar unchanged.
+  const isReviewsAgent = /review (response|generation) agent/i.test(agentName || '');
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -30,31 +40,90 @@ export default function GraphControls({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
+  function renderCheck(active) {
+    if (!active) return <span className="graph-controls__zoom-check" aria-hidden />;
+    return (
+      <span className="material-symbols-outlined graph-controls__zoom-check" aria-hidden>
+        check
+      </span>
+    );
+  }
+
   return (
     <div className="graph-controls">
-      <div className="graph-controls__toggle">
-        <GraphControlTooltip text="Vertical layout">
-          <button
-            className={`graph-controls__toggle-btn${orientation === 'vertical' ? ' graph-controls__toggle-btn--active' : ''}`}
-            onClick={() => onOrientationChange?.('vertical')}
-            type="button"
-          >
-            <span className="material-symbols-outlined">arrow_downward</span>
-          </button>
-        </GraphControlTooltip>
-        <GraphControlTooltip text="Horizontal layout">
-          <button
-            className={`graph-controls__toggle-btn${orientation === 'horizontal' ? ' graph-controls__toggle-btn--active' : ''}`}
-            onClick={() => onOrientationChange?.('horizontal')}
-            type="button"
-          >
-            <span className="material-symbols-outlined">arrow_forward</span>
-          </button>
-        </GraphControlTooltip>
-      </div>
+      {isReviewsAgent ? (
+        !viewOnly && (
+          <GraphControlTooltip text="Orientation" above>
+            <div className="graph-controls__toggle">
+              <button
+                className={`graph-controls__toggle-btn${orientation === 'vertical' ? ' graph-controls__toggle-btn--active' : ''}`}
+                onClick={() => onOrientationChange?.('vertical')}
+                type="button"
+              >
+                <span className="material-symbols-outlined">arrow_downward</span>
+              </button>
+              <button
+                className={`graph-controls__toggle-btn${orientation === 'horizontal' ? ' graph-controls__toggle-btn--active' : ''}`}
+                onClick={() => onOrientationChange?.('horizontal')}
+                type="button"
+              >
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </button>
+            </div>
+          </GraphControlTooltip>
+        )
+      ) : (
+        <div className="graph-controls__toggle">
+          <GraphControlTooltip text="Vertical layout">
+            <button
+              className={`graph-controls__toggle-btn${orientation === 'vertical' ? ' graph-controls__toggle-btn--active' : ''}`}
+              onClick={() => onOrientationChange?.('vertical')}
+              type="button"
+            >
+              <span className="material-symbols-outlined">arrow_downward</span>
+            </button>
+          </GraphControlTooltip>
+          <GraphControlTooltip text="Horizontal layout">
+            <button
+              className={`graph-controls__toggle-btn${orientation === 'horizontal' ? ' graph-controls__toggle-btn--active' : ''}`}
+              onClick={() => onOrientationChange?.('horizontal')}
+              type="button"
+            >
+              <span className="material-symbols-outlined">arrow_forward</span>
+            </button>
+          </GraphControlTooltip>
+        </div>
+      )}
+
+      {!viewOnly && isReviewsAgent && (
+        <div className="graph-controls__toggle">
+          <GraphControlTooltip text="Undo" above>
+            <button
+              className="graph-controls__toggle-btn"
+              onClick={onUndo}
+              disabled={!canUndo}
+              aria-disabled={!canUndo}
+              type="button"
+            >
+              <span className="material-symbols-outlined">undo</span>
+            </button>
+          </GraphControlTooltip>
+          <GraphControlTooltip text="Redo" above>
+            <button
+              className="graph-controls__toggle-btn"
+              onClick={onRedo}
+              disabled={!canRedo}
+              aria-disabled={!canRedo}
+              type="button"
+            >
+              <span className="material-symbols-outlined">redo</span>
+            </button>
+          </GraphControlTooltip>
+        </div>
+      )}
 
       <div className="graph-controls__zoom" ref={dropdownRef}>
-        <GraphControlTooltip text="Zoom">
+        <GraphControlTooltip text="Zoom" above={isReviewsAgent}>
           <button
             className="graph-controls__zoom-btn"
             onClick={() => setDropdownOpen((v) => !v)}
@@ -66,32 +135,53 @@ export default function GraphControls({
         </GraphControlTooltip>
         {dropdownOpen && (
           <div className="graph-controls__zoom-dropdown">
-            {ZOOM_PRESETS.map((preset) => (
+            <div className="graph-controls__zoom-list">
+              {ZOOM_PRESETS.map((preset) => {
+                const active = zoomMode === null && Math.round(zoom) === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`graph-controls__zoom-option${active ? ' graph-controls__zoom-option--active' : ''}`}
+                    onClick={() => {
+                      setZoomMode(null);
+                      onZoomSelect?.(preset / 100);
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    <span>{preset}%</span>
+                    {renderCheck(active)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="graph-controls__zoom-sticky">
+              <div className="graph-controls__zoom-divider" />
               <button
-                key={preset}
-                className={`graph-controls__zoom-option${Math.round(zoom) === preset ? ' graph-controls__zoom-option--active' : ''}`}
+                type="button"
+                className={`graph-controls__zoom-option${zoomMode === 'fill' ? ' graph-controls__zoom-option--active' : ''}`}
                 onClick={() => {
-                  onZoomSelect?.(preset / 100);
+                  setZoomMode('fill');
+                  (onFillView ?? onFitView)?.();
                   setDropdownOpen(false);
                 }}
               >
-                {preset}%
+                <span>Fill</span>
+                {renderCheck(zoomMode === 'fill')}
               </button>
-            ))}
-            {onFitView && (
-              <>
-                <div className="graph-controls__zoom-divider" />
-                <button
-                  className="graph-controls__zoom-option"
-                  onClick={() => {
-                    onFitView();
-                    setDropdownOpen(false);
-                  }}
-                >
-                  Fit view
-                </button>
-              </>
-            )}
+              <button
+                type="button"
+                className={`graph-controls__zoom-option${zoomMode === 'fit' ? ' graph-controls__zoom-option--active' : ''}`}
+                onClick={() => {
+                  setZoomMode('fit');
+                  onFitView?.();
+                  setDropdownOpen(false);
+                }}
+              >
+                <span>Fit</span>
+                {renderCheck(zoomMode === 'fit')}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -123,7 +213,7 @@ export default function GraphControls({
         </div>
       )}
 
-      <GraphControlTooltip text="Preview">
+      <GraphControlTooltip text={isReviewsAgent ? 'Run preview' : 'Preview'} above={isReviewsAgent}>
         <button
           className="graph-controls__run"
           onClick={onRun}

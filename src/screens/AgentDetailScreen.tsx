@@ -107,6 +107,9 @@ interface AgentInstance {
   reviewsResponded?: string
   responseRate?: string
   avgResponseTime?: string
+  reviewsReceived?: string
+  contactsReached?: string
+  clickThroughRate?: string
   /** Open issues for this instance — shown next to the status chip and gating Publish in the editor. */
   issues?: number
   [key: string]: string | number | undefined
@@ -169,6 +172,9 @@ interface RegionRow {
   reviewsResponded?: string
   responseRate?: string
   avgResponseTime?: string
+  reviewsReceived?: string
+  contactsReached?: string
+  clickThroughRate?: string
   /** Overrides the default `${agentName} - ${region}` row label. */
   instanceName?: string
 }
@@ -233,6 +239,30 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
     { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
     { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+  ],
+  'Review generation agents': [
+    {
+      region: 'North Region',
+      status: 'Running',
+      channels: 'Email, Text',
+      reviewsReceived: '112',
+      contactsReached: '115',
+      clickThroughRate: '3.4%',
+      timeSaved: '4h 10m',
+      locations: '10',
+      instanceName: 'Review generation agent - North Region',
+    },
+    {
+      region: 'A/B testing',
+      status: 'Running',
+      channels: 'Email, Text',
+      reviewsReceived: '137',
+      contactsReached: '150',
+      clickThroughRate: '5.1%',
+      timeSaved: '5h 8m',
+      locations: '20',
+      instanceName: 'Review generation agent with A/B testing, smart targeting and split campaigns 1',
+    },
   ],
 }
 
@@ -335,6 +365,22 @@ const REVIEW_RESPONSE_CREATE_CARDS = [
   },
 ]
 
+const REVIEW_GENERATION_CREATE_CARDS = [
+  {
+    id: 'reviews-generation-standard',
+    title: 'Review generation agent',
+    description: 'Sends review requests to customers after transactions complete across email and text.',
+  },
+  {
+    id: 'reviews-generation-ab',
+    title: 'Review generation agent with A/B testing',
+    description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
+  },
+]
+
+const REVIEW_GENERATION_CREATE_PROMPT =
+  'Create a review generation agent that sends review request emails and texts after a customer completes a transaction, so we get more reviews across locations.'
+
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
@@ -421,6 +467,18 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       id: 'reviews-response-dashboard-suggestions',
       title: 'Review response agent suggesting replies in dashboard',
       description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
+    },
+  ],
+  'Review generation agents': [
+    {
+      id: 'reviews-generation-standard',
+      title: 'Review generation agent',
+      description: 'Sends review requests to customers after transactions complete across email and text.',
+    },
+    {
+      id: 'reviews-generation-ab',
+      title: 'Review generation agent with A/B testing',
+      description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
     },
   ],
 }
@@ -691,6 +749,55 @@ const REMINDER_CREATE_PROMPT =
 
 const REVIEW_RESPONSE_CREATE_PROMPT =
   'Create a review response agent that monitors new reviews, analyzes sentiment, and posts thoughtful replies automatically — escalating negative reviews for human approval before publishing.'
+
+export {
+  REVIEW_RESPONSE_CREATE_CARDS,
+  REVIEW_GENERATION_CREATE_CARDS,
+  REVIEW_RESPONSE_CREATE_PROMPT,
+  REVIEW_GENERATION_CREATE_PROMPT,
+}
+
+export function getCreateWithAiSetup(agentName: string): {
+  variant: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
+  pageTitle: string
+  initialPrompt?: string
+  libraryCards?: { id: string; title: string; description: string }[]
+  fromScratchLabel: string
+} {
+  const name = agentName || ''
+  if (/review response/i.test(name)) {
+    return {
+      variant: 'review-response',
+      pageTitle: 'New review response agent',
+      initialPrompt: REVIEW_RESPONSE_CREATE_PROMPT,
+      libraryCards: REVIEW_RESPONSE_CREATE_CARDS,
+      fromScratchLabel: 'Create from scratch',
+    }
+  }
+  if (/review generation/i.test(name)) {
+    return {
+      variant: 'review-generation',
+      pageTitle: 'New review generation agent',
+      initialPrompt: REVIEW_GENERATION_CREATE_PROMPT,
+      libraryCards: REVIEW_GENERATION_CREATE_CARDS,
+      fromScratchLabel: 'Create from scratch',
+    }
+  }
+  if (/reminder/i.test(name)) {
+    return {
+      variant: 'reminder',
+      pageTitle: 'New reminder agent',
+      initialPrompt: REMINDER_CREATE_PROMPT,
+      fromScratchLabel: 'Create from scratch',
+    }
+  }
+  return {
+    variant: 'frontdesk',
+    pageTitle: 'New front desk agent',
+    initialPrompt: JOHN_CREATE_PROMPT,
+    fromScratchLabel: 'Setup manually',
+  }
+}
 
 const REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT = `Inbound review-response agent — not outbound outreach. The product is: new review lands → triage → analyze → draft → publish (or hold).
 
@@ -3475,7 +3582,55 @@ function ProcedurePreviewPanel({
 // Matches the Figma "What would you like to build today?" prompt-box layout.
 // Scoped to Front desk agent + Healthcare product only — every other agent
 // keeps the CreateAgentEmptyState illustration above.
-function HealthcareFrontdeskCreateAgentScreen({
+function CreateFlowPageHeader({
+  onBack,
+  title,
+  centered = false,
+  inlineProcedureOpen = false,
+}: {
+  onBack: () => void
+  title: string
+  centered?: boolean
+  inlineProcedureOpen?: boolean
+}) {
+  const row = (
+    <div className="flex w-full min-w-0 max-w-[720px] items-center gap-xs">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+        aria-label="Back"
+      >
+        <Icon name="arrow_back" size={20} />
+      </button>
+      <h1 className="min-w-0 truncate text-h3 text-text-primary">{title}</h1>
+    </div>
+  )
+
+  if (centered) {
+    return (
+      <div className="flex h-16 shrink-0 justify-center bg-surface px-lg">
+        <div className="flex h-full w-full max-w-[1600px] justify-center gap-xl pr-sm">
+          {inlineProcedureOpen && (
+            <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
+          )}
+          {row}
+          {inlineProcedureOpen && (
+            <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+      {row}
+    </div>
+  )
+}
+
+export function HealthcareFrontdeskCreateAgentScreen({
   onCreateFromScratch,
   onSelectFromLibrary,
   onCreateAgent,
@@ -3483,6 +3638,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   onBack,
   onSubmittedChange,
   pageTitle,
+  hideHeaderBack = false,
   libraryCards,
   initialPrompt,
   autoStart = false,
@@ -3503,6 +3659,8 @@ function HealthcareFrontdeskCreateAgentScreen({
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
+  /** Hides the in-column back arrow when the shell header already provides navigation. */
+  hideHeaderBack?: boolean
   libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   /** Auto-sends `initialPrompt` on mount instead of waiting for the user — used to "reopen" a recent chat. */
@@ -3512,7 +3670,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   /** Full transcript for a recent/saved chat — preferred over looking up by id. */
   historyChat?: ChatHistoryTranscript | null
   fromScratchLabel?: string
-  variant?: 'frontdesk' | 'reminder' | 'review-response'
+  variant?: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   workflowVisible?: boolean
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
@@ -3544,6 +3702,7 @@ function HealthcareFrontdeskCreateAgentScreen({
         chat={resolvedHistoryChat}
         onBack={onBack}
         pageTitle={pageTitle}
+        hideHeaderBack={hideHeaderBack}
       />
     )
   }
@@ -3557,6 +3716,7 @@ function HealthcareFrontdeskCreateAgentScreen({
       onBack={onBack}
       onSubmittedChange={onSubmittedChange}
       pageTitle={pageTitle}
+      hideHeaderBack={hideHeaderBack}
       libraryCards={libraryCards}
       initialPrompt={initialPrompt}
       autoStart={autoStart}
@@ -3579,6 +3739,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onBack,
   onSubmittedChange,
   pageTitle,
+  hideHeaderBack = false,
   libraryCards,
   initialPrompt,
   autoStart = false,
@@ -3597,11 +3758,12 @@ function HealthcareFrontdeskCreateAgentLive({
   onBack?: () => void
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
+  hideHeaderBack?: boolean
   libraryCards?: { id: string; title: string; description: string }[]
   initialPrompt?: string
   autoStart?: boolean
   fromScratchLabel?: string
-  variant?: 'frontdesk' | 'reminder' | 'review-response'
+  variant?: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   workflowVisible?: boolean
   onDraftReady?: (name: string | null) => void
   onCanvasProcedureChange?: (name: string | null) => void
@@ -3610,6 +3772,7 @@ function HealthcareFrontdeskCreateAgentLive({
 }) {
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
+  const isReviewGenFlow = variant === 'review-generation'
   const [prompt, setPrompt] = useState('')
   const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
@@ -4066,6 +4229,11 @@ function HealthcareFrontdeskCreateAgentLive({
 
   const startConversation = (text: string) => {
     if (!text.trim()) return
+    // Review generation create: landing send opens the agent builder (no scripted chat yet).
+    if (isReviewGenFlow) {
+      onCreateFromScratch()
+      return
+    }
     setPrompt(text)
     setSubmitted(true)
     onSubmittedChange?.(true)
@@ -4244,17 +4412,22 @@ function HealthcareFrontdeskCreateAgentLive({
           className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
         >
         <div ref={threadRef} className="flex flex-col pb-md">
-        {pageTitle && (
+        {pageTitle && !hideHeaderBack && (
           <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-              aria-label="Back"
-            >
-              <Icon name="arrow_back" size={20} />
-            </button>
-            <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
+            {!hideHeaderBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                aria-label="Back"
+              >
+                <Icon name="arrow_back" size={20} />
+              </button>
+            )}
+            <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
+            <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+              Draft
+            </span>
           </div>
         )}
         <div className="flex justify-end pt-md">
@@ -5135,56 +5308,107 @@ function HealthcareFrontdeskCreateAgentLive({
     )
   }
 
-  // Compact greeting + suggestion pills — only for the Create with AI side panel.
+  // Compact greeting + suggestion pills — Create with AI side panel / fullscreen expand.
   // The full-page create landing keeps the older "Build your agent" layout below.
   if (workflowVisible) {
-    const quickStarts = isReminderFlow
-      ? [
-          { label: 'Appointment confirmation reminder', prompt: REMINDER_CREATE_PROMPT },
-          {
-            label: 'No-show risk agent',
-            prompt:
-              'Create an agent that identifies patients at high risk of missing appointments and uses additional reminders and a confirmation call.',
-          },
-          {
-            label: 'Pre-visit reminder agent',
-            prompt:
-              'Create an agent that reminds patients about forms, fasting instructions, insurance cards, and other preparation before their visit.',
-          },
-          {
-            label: 'Medication reminder agent',
-            prompt:
-              'Create an agent that sends recurring medication reminders and follows up when a patient misses or does not acknowledge a dose.',
-          },
-        ]
-      : [
-          { label: 'Appointment booking agent', prompt: JOHN_CREATE_PROMPT },
-          {
-            label: 'Routing & triage agent',
-            prompt:
-              'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
-          },
-          {
-            label: 'New patient intake agent',
-            prompt:
-              'Create a Front desk agent that guides new patients through intake, verifies insurance, and books the right appointment.',
-          },
-          {
-            label: 'Patient scheduling agent',
-            prompt:
-              'Create a Front desk agent that finds patient records and books, reschedules, or cancels appointments.',
-          },
-        ]
+    const reviewQuickStarts = [
+      {
+        label: 'Replying using templates',
+        prompt:
+          'Create a review response agent that replies to new reviews using approved response templates.',
+      },
+      {
+        label: 'Replying autonomously',
+        prompt:
+          'Create a review response agent that drafts and posts replies to new reviews autonomously.',
+      },
+      {
+        label: 'Replying after human approval',
+        prompt:
+          'Create a review response agent that drafts replies to new reviews and waits for human approval before posting.',
+      },
+      {
+        label: 'Suggesting replies in dashboard',
+        prompt:
+          'Create a review response agent that suggests reply drafts in the dashboard for the team to send.',
+      },
+    ]
+    const reminderQuickStarts = [
+      { label: 'Appointment confirmation reminder', prompt: REMINDER_CREATE_PROMPT },
+      {
+        label: 'No-show risk agent',
+        prompt:
+          'Create an agent that identifies patients at high risk of missing appointments and uses additional reminders and a confirmation call.',
+      },
+      {
+        label: 'Pre-visit reminder agent',
+        prompt:
+          'Create an agent that reminds patients about forms, fasting instructions, insurance cards, and other preparation before their visit.',
+      },
+      {
+        label: 'Medication reminder agent',
+        prompt:
+          'Create an agent that sends recurring medication reminders and follows up when a patient misses or does not acknowledge a dose.',
+      },
+    ]
+    const frontdeskQuickStarts = [
+      {
+        label: 'Routing and triage',
+        prompt:
+          'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
+      },
+      {
+        label: 'New patient intake',
+        prompt:
+          'Create a Front desk agent that guides new patients through intake, verifies insurance, and books the right appointment.',
+      },
+      {
+        label: 'Patient scheduling',
+        prompt:
+          'Create a Front desk agent that finds patient records and books, reschedules, or cancels appointments.',
+      },
+    ]
+    const quickStarts = isReviewFlow || isReviewGenFlow
+      ? reviewQuickStarts
+      : isReminderFlow
+        ? reminderQuickStarts
+        : frontdeskQuickStarts
+    const agentLabel = isReviewGenFlow
+      ? 'Review generation'
+      : isReviewFlow
+        ? 'Review response'
+        : isReminderFlow
+          ? 'Reminder'
+          : 'Front desk'
+    const greeting = isReviewFlow || isReviewGenFlow
+      ? `Hi! I'm here to help you build your ${agentLabel} agent. Tell me what you'd like to build`
+      : `Hi John! I'm here to help you build your ${agentLabel} agent. How can I help you today?`
 
     return (
       <div className="flex h-full w-full flex-col overflow-hidden pb-md">
+        {pageTitle && (
+          <div className="flex h-16 w-full shrink-0 items-center gap-sm">
+            {!hideHeaderBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                aria-label="Back"
+              >
+                <Icon name="arrow_back" size={20} />
+              </button>
+            )}
+            <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
+            <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+              Draft
+            </span>
+          </div>
+        )}
         <div className="flex min-h-0 flex-1 flex-col justify-center gap-md overflow-hidden">
           <div className="flex translate-y-lg items-start justify-start gap-md">
             <AiAvatarChatIcon size={40} className="mt-1 shrink-0" />
             <div className="flex min-w-0 flex-col items-start gap-md">
-              <p className="text-h3 leading-8 text-text-primary">
-                Hi! I’m here to help you build your {isReminderFlow ? 'Reminder' : 'Front desk'} agent. Tell me what you’d like to build
-              </p>
+              <p className="text-h3 leading-8 text-text-primary">{greeting}</p>
               <div className="flex flex-col items-start gap-sm">
                 {quickStarts.map((option) => (
                   <button
@@ -5224,7 +5448,11 @@ function HealthcareFrontdeskCreateAgentLive({
               }
             }}
             rows={3}
-            placeholder="What would you like to build?"
+            placeholder={
+              isReviewFlow || isReviewGenFlow
+                ? 'What would you like to build? For example: Review response agent replying'
+                : 'What would you like to build?'
+            }
             className="scrollbar-none min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="mt-auto flex items-center justify-between">
@@ -5309,17 +5537,25 @@ function HealthcareFrontdeskCreateAgentLive({
   }
 
   return (
-    <div className={`mt-3xl flex w-full flex-col items-center gap-2xl self-start py-lg ${(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4 ? 'max-w-[1280px]' : 'max-w-[1000px]'}`}>
+    <div className={`mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
+      (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
+        ? 'max-w-[1280px]'
+        : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
+          ? 'max-w-[720px]'
+          : 'max-w-[1000px]'
+    }`}>
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-            aria-label="Back"
-          >
-            <Icon name="arrow_back" size={20} />
-          </button>
+          {!hideHeaderBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              aria-label="Back"
+            >
+              <Icon name="arrow_back" size={20} />
+            </button>
+          )}
           <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
         </div>
       )}
@@ -5444,7 +5680,13 @@ function HealthcareFrontdeskCreateAgentLive({
       </p>
 
       <div className="@container w-full">
-        <div className={`grid w-full gap-md ${(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4 ? 'grid-cols-1 min-[500px]:grid-cols-4' : 'grid-cols-3'}`}>
+        <div className={`grid w-full gap-md ${
+          (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
+            ? 'grid-cols-1 min-[500px]:grid-cols-4'
+            : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
+              ? 'grid-cols-1 min-[500px]:grid-cols-2'
+              : 'grid-cols-3'
+        }`}>
           {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
             <div
               key={tpl.id}
@@ -5455,7 +5697,7 @@ function HealthcareFrontdeskCreateAgentLive({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
               className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
             >
-              <h3 className="line-clamp-2 shrink-0 text-body text-text-primary">{tpl.title}</h3>
+              <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
               <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
               <div className={INFO_CARD_LAYOUT.ctaWrap}>
                 <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
@@ -5826,10 +6068,12 @@ function HistoryChatReplay({
   chat,
   onBack,
   pageTitle,
+  hideHeaderBack = false,
 }: {
   chat: ChatHistoryTranscript
   onBack?: () => void
   pageTitle?: string
+  hideHeaderBack?: boolean
 }) {
   const trail = chat.trail
   return (
@@ -5839,15 +6083,20 @@ function HistoryChatReplay({
           <div className="flex flex-col pb-md">
             {pageTitle && (
               <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                  aria-label="Back"
-                >
-                  <Icon name="arrow_back" size={20} />
-                </button>
-                <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
+                {!hideHeaderBack && (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                    aria-label="Back"
+                  >
+                    <Icon name="arrow_back" size={20} />
+                  </button>
+                )}
+                <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
+                <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                  Draft
+                </span>
               </div>
             )}
 
@@ -6004,6 +6253,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false)
   const [createWorkflowMounted, setCreateWorkflowMounted] = useState(false)
   const [createLeftPaneCollapsed, setCreateLeftPaneCollapsed] = useState(false)
+  const [createAiFullscreen, setCreateAiFullscreen] = useState(false)
   const [createSideTab, setCreateSideTab] = useState<'ai' | 'manual'>('ai')
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
@@ -6027,6 +6277,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setShowSetupWizard(false)
     setCreateWorkflowOpen(false)
     setCreateWorkflowMounted(false)
+    setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateFlowSubmitted(false)
     setCreateDraftAgentName(null)
@@ -6048,6 +6299,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }
 
   const openCreateWorkflow = () => {
+    setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
     setCreateLeftPaneCollapsed(false)
@@ -6062,6 +6314,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setCreateLeftPaneCollapsed(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
+  }
+
+  const expandCreateAiFullscreen = () => {
+    setCreateAiFullscreen(true)
+    closeCreateWorkflow()
   }
 
   const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
@@ -6143,6 +6400,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
       { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
     ],
+    'Review generation agents': [
+      { id: 'reviewsReceived', value: '249', label: 'Reviews received', delta: '16.4%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+      { id: 'contactsReached', value: '265', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+      { id: 'clickThroughRate', value: '4.9%', label: 'Click-through rate', delta: '0.3%', trend: 'down', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+      { id: 'timeSaved', value: '9h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+    ],
   }
 
   const DEFAULT_METRICS: Metric[] = [
@@ -6192,6 +6455,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     reviewsResponded: r.reviewsResponded,
     responseRate: r.responseRate,
     avgResponseTime: r.avgResponseTime,
+    reviewsReceived: r.reviewsReceived,
+    contactsReached: r.contactsReached,
+    clickThroughRate: r.clickThroughRate,
     issues: r.issues,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
 
@@ -6216,7 +6482,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
   const isReviewResponse  = agentName === 'Review response agents'
-  const hideChannels      = isTaggingRouting || isReviewResponse
+  const isReviewGeneration = agentName === 'Review generation agents'
+  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration
+
+  useEffect(() => {
+    if (!showCreateFlow) setCreateAiFullscreen(false)
+  }, [showCreateFlow])
 
   // `AgentInstanceScreen` reports its own full-page states (e.g. an open recommendation) via
   // `instanceSetupActive` — merged here so it and the create-flow/setup-wizard state below don't
@@ -6226,15 +6497,15 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   useEffect(() => {
     // Instance screen owns full-bleed signaling (e.g. View log) while drilled in.
     if (selectedInstance) return
-    // Setup wizard is full-bleed (no SideNav). Review response create landing
-    // also hides L2 while the create flow is open.
+    // Setup wizard is full-bleed (no SideNav). Review response / review generation create
+    // landings also hide L2 while the create flow is open.
     const isAgentSetupActive =
       ((isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)) ||
-      (isReviewResponse && showCreateFlow) ||
+      ((isReviewResponse || isReviewGeneration) && showCreateFlow) ||
       instanceSetupActive
     onAgentSetupActiveChange?.(isAgentSetupActive)
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, isReminder, isReviewResponse, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
+  }, [isFrontdesk, isReminder, isReviewResponse, isReviewGeneration, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     {
       key: 'name',
@@ -6311,6 +6582,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { key: 'responseRate' as keyof AgentInstance, label: 'Response rate', width: 130, sortable: true },
       { key: 'avgResponseTime' as keyof AgentInstance, label: 'Average response time', width: 170, sortable: true },
       { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
+    ] : isReviewGeneration ? [
+      { key: 'reviewsReceived' as keyof AgentInstance, label: 'Reviews received', width: 150, sortable: true },
+      { key: 'contactsReached' as keyof AgentInstance, label: 'Contacts reached', width: 150, sortable: true },
+      { key: 'clickThroughRate' as keyof AgentInstance, label: 'Click-through rate', width: 150, sortable: true },
+      { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
     ] : [
       { key: 'interactions' as keyof AgentInstance, label: 'Interactions handled', width: 200, sortable: true },
       { key: 'fcr' as keyof AgentInstance, label: 'First contact resolution rate', width: 220, sortable: true },
@@ -6326,7 +6602,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   // are shown by default. Agents with more metrics (Recall, Revenue, Treatment plan, etc.)
   // still default to the first two, with the rest available via Customize columns.
   const metricKeys = COLUMN_DEFS.slice(hideChannels ? 2 : 3, -1).map((c) => String(c.key))
-  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse
+  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse || isReviewGeneration
   const DEFAULT_VISIBLE = ['name', 'status', ...(hideChannels ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
@@ -6381,9 +6657,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }
 
 
-  if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse)) {
+  if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration)) {
     const isHealthcareFrontdesk = product === 'healthcare'
-    const chatHistoryTitle = 'Front desk'
+    const chatHistoryTitle = (isReviewResponse || isReviewGeneration) ? 'Reviews AI' : isReminder ? 'Reminder' : 'Front desk'
     const createVariant = isReminder ? 'reminder' : 'frontdesk'
     const staticChatHistory = isFrontdesk ? FRONTDESK_CHAT_HISTORY : REMINDER_CHAT_HISTORY
     const chatHistoryItems = [
@@ -6395,13 +6671,29 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       : null
     const createTitle = historyChat?.draftTitle
       ?? createDraftAgentName
-      ?? (isFrontdesk ? 'New front desk agent' : isReminder ? 'New reminder agent' : 'New review response agent')
+      ?? (isFrontdesk
+        ? 'New front desk agent'
+        : isReminder
+          ? 'New reminder agent'
+          : isReviewGeneration
+            ? 'New review generation agent'
+            : 'New review response agent')
     const createWorkflowAgentName = createDraftAgentName
       ?? (isReviewResponse
         ? REVIEW_RESPONSE_BUILD_CARD.title
-        : isReminder
-          ? REMINDER_BUILD_CARD.title
-          : FRONTDESK_BUILD_CARD.title)
+        : isReviewGeneration
+          ? 'Review generation agent'
+          : isReminder
+            ? REMINDER_BUILD_CARD.title
+            : FRONTDESK_BUILD_CARD.title)
+    const isReviewsCreateFlow = isReviewResponse || isReviewGeneration
+    const reviewsCreateInnerTitle = isReviewResponse
+      ? 'Review response agent 1'
+      : isReviewGeneration
+        ? 'Review generation agent 1'
+        : null
+    const showReviewsCreateInnerTitle =
+      isReviewsCreateFlow && (createFlowSubmitted || createWorkflowOpen)
 
     return (
       <div className="flex h-full">
@@ -6457,6 +6749,17 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     <span className="lhs-drawer__tab-underline" />
                   </button>
                 </div>
+                {createSideTab === 'ai' && (
+                  <button
+                    type="button"
+                    onClick={expandCreateAiFullscreen}
+                    className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                    aria-label="Full screen"
+                    title="Full screen"
+                  >
+                    <Icon name="open_in_full" size={18} />
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label="Collapse panel"
@@ -6468,6 +6771,36 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 </button>
               </div>
             ) : createFlowSubmitted ? (
+              isReviewsCreateFlow ? (
+                <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+                  <div className="flex w-full items-center justify-between gap-md">
+                    <div className="flex min-w-0 max-w-[720px] items-center gap-xs">
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateFlow(false)}
+                        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                        aria-label="Back"
+                      >
+                        <Icon name="arrow_back" size={20} />
+                      </button>
+                      <h1 className="min-w-0 truncate text-h3 text-text-primary">
+                        {reviewsCreateInnerTitle ?? createWorkflowAgentName}
+                      </h1>
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+                        Draft
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openCreateWorkflow}
+                      disabled={!createDraftAgentName}
+                      className="flex h-9 shrink-0 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
+                    >
+                      View agent builder
+                    </button>
+                  </div>
+                </div>
+              ) : (
               // Conversation view — header aligns with the 720px chat column below it.
               <div className="flex shrink-0 justify-center bg-surface px-lg pt-lg pb-md">
                 <div className="flex w-full max-w-[1600px] justify-center gap-xl pr-sm">
@@ -6513,6 +6846,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   )}
                 </div>
               </div>
+              )
+            ) : isReviewsCreateFlow ? (
+              <CreateFlowPageHeader
+                onBack={() => setShowCreateFlow(false)}
+                title="Back"
+              />
             ) : (
               // Landing view — standard flush-left page header.
               <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
@@ -6528,11 +6867,17 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               </div>
             )}
             <div
-              className={`scrollbar-subtle flex min-h-0 flex-1 justify-center ${
+              className={`scrollbar-subtle flex min-h-0 flex-1 pt-0 ${
                 createFlowSubmitted || createWorkflowOpen
                   ? 'items-stretch overflow-visible'
                   : 'items-start overflow-auto pb-lg'
-              } ${createWorkflowOpen ? 'px-2xl pt-lg' : 'px-lg pt-0'}`}
+              } ${
+                createWorkflowOpen
+                  ? createSideTab === 'manual'
+                    ? 'px-0 py-0'
+                    : 'px-md'
+                  : 'justify-center px-lg'
+              }`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
                 <div className="h-full w-full min-h-0 [&_.lhs-drawer]:!h-full [&_.lhs-drawer]:!w-full [&_.lhs-drawer]:!max-w-none [&_.lhs-drawer]:!gap-0 [&_.lhs-drawer]:!overflow-hidden [&_.lhs-drawer]:!rounded-none [&_.lhs-drawer]:!border-0 [&_.lhs-drawer]:!bg-transparent [&_.lhs-drawer]:!shadow-none [&_.lhs-drawer]:!p-0 [&_.lhs-drawer\_\_body]:!p-0">
@@ -6545,7 +6890,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   />
                 </div>
               )}
-              {(isReviewResponse || isReminder || (isFrontdesk && isHealthcareFrontdesk)) ? (
+              {(isReviewResponse || isReviewGeneration || isReminder || (isFrontdesk && isHealthcareFrontdesk)) ? (
                 <div
                   className={
                     createWorkflowOpen && createSideTab === 'manual'
@@ -6560,10 +6905,17 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       else setShowCreateFlow(false)
                     }}
                     onSubmittedChange={setCreateFlowSubmitted}
+                    pageTitle={showReviewsCreateInnerTitle ? reviewsCreateInnerTitle ?? undefined : undefined}
+                    hideHeaderBack={isReviewsCreateFlow}
                     onCreateFromScratch={() => {
                       if (isReviewResponse) {
                         setShowCreateFlow(false)
-                        onEditAgent?.('Review response agent replying autonomously')
+                        onEditAgent?.('Review response agent 1')
+                        return
+                      }
+                      if (isReviewGeneration) {
+                        setShowCreateFlow(false)
+                        onEditAgent?.('Review generation agent 1')
                         return
                       }
                       setShowSetupWizard(true)
@@ -6573,6 +6925,12 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                         const card = REVIEW_RESPONSE_CREATE_CARDS.find((c) => c.id === templateId)
                         setShowCreateFlow(false)
                         onEditAgent?.(card?.title ?? 'Review response agent')
+                        return
+                      }
+                      if (isReviewGeneration) {
+                        const card = REVIEW_GENERATION_CREATE_CARDS.find((c) => c.id === templateId)
+                        setShowCreateFlow(false)
+                        onEditAgent?.(card?.title ?? 'Review generation agent')
                         return
                       }
                       setShowCreateFlow(false)
@@ -6585,7 +6943,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                         ? REMINDER_CREATE_CARDS
                         : isReviewResponse
                           ? REVIEW_RESPONSE_CREATE_CARDS
-                          : undefined
+                          : isReviewGeneration
+                            ? REVIEW_GENERATION_CREATE_CARDS
+                            : undefined
                     }
                     initialPrompt={
                       historyChat?.prompt
@@ -6593,20 +6953,24 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                         ? REMINDER_CREATE_PROMPT
                         : isReviewResponse
                           ? REVIEW_RESPONSE_CREATE_PROMPT
-                          : undefined)
+                          : isReviewGeneration
+                            ? REVIEW_GENERATION_CREATE_PROMPT
+                            : undefined)
                     }
                     autoStart={false}
                     historyChatId={chatHistorySelectedId}
                     historyChat={historyChat}
-                    fromScratchLabel={(isReminder || isReviewResponse) ? 'Create from scratch' : 'Setup manually'}
+                    fromScratchLabel={(isReminder || isReviewResponse || isReviewGeneration) ? 'Create from scratch' : 'Setup manually'}
                     variant={
                       isReminder
                         ? 'reminder'
                         : isReviewResponse
                           ? 'review-response'
-                          : 'frontdesk'
+                          : isReviewGeneration
+                            ? 'review-generation'
+                            : 'frontdesk'
                     }
-                    workflowVisible={createWorkflowOpen}
+                    workflowVisible={createWorkflowOpen || createAiFullscreen}
                     onDraftReady={setCreateDraftAgentName}
                     onCanvasProcedureChange={isReminder ? setCanvasProcedureId : undefined}
                     onInlineProcedureOpenChange={setInlineProcedureOpen}
@@ -6658,6 +7022,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 onClose={closeCreateWorkflow}
                 hideLhs
                 createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
+                onOpenAiFullscreen={expandCreateAiFullscreen}
                 previewProcedureId={isReminder ? canvasProcedureId : null}
                 previewProcedureDetail={
                   isReminder
@@ -6731,7 +7096,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 <>
                   <button
                     type="button"
-                    onClick={() => (isFrontdesk || isReminder || isReviewResponse) ? openCreateFlow() : onEditAgent?.('')}
+                    onClick={() => (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration) ? openCreateFlow() : onEditAgent?.('')}
                     className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                   >
                     Create agent
@@ -6817,7 +7182,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               </div>
             </>
           ) : libraryView === 'grid' ? (
-            <div className="grid grid-cols-1 gap-lg px-2xl py-lg md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
               {visibleLibraryCards.map((card) => (
                 <InfoCard key={card.title} {...card} />
               ))}

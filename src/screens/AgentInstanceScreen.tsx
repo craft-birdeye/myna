@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
   Chip,
+  CoachAgentPanel,
   DataTable,
   EmptyState,
   Icon,
   MetricTiles,
   Tabs,
+  Tooltip,
   TopNav,
   type ChipVariant,
   type Column,
@@ -22,6 +24,7 @@ import { RecommendationsTab } from './RecommendationsTab'
 import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 
 interface AgentInstanceScreenProps {
@@ -150,6 +153,18 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'conversationsManaged', value: '95%', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Share of conversations tagged and routed end-to-end at this location.' },
     { id: 'timeSaved', value: '32m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing at this location.' },
   ],
+  'Review generation agents': [
+    { id: 'reviewsReceived', value: '137', label: 'Reviews received', delta: '1.3%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+    { id: 'contactsReached', value: '150', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+    { id: 'clickThroughRate', value: '5.1%', label: 'Click-through rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+    { id: 'timeSaved', value: '5h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+  ],
+  'Review generation agent': [
+    { id: 'reviewsReceived', value: '137', label: 'Reviews received', delta: '1.3%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
+    { id: 'contactsReached', value: '150', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
+    { id: 'clickThroughRate', value: '5.1%', label: 'Click-through rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
+    { id: 'timeSaved', value: '5h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+  ],
 }
 
 const DEFAULT_METRICS: Metric[] = [
@@ -213,6 +228,15 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Chicago, IL',     count: '250', statusUpdated: '400', conversationsAssigned: '200', conversationsManaged: '92%', timeSaved: '5m'  },
     { location: 'Los Angeles, CA', count: '200', statusUpdated: '50',  conversationsAssigned: '200', conversationsManaged: '88%', timeSaved: '10m' },
     { location: 'Stamford, CT',    count: '100', statusUpdated: '50',  conversationsAssigned: '100', conversationsManaged: '88%', timeSaved: '2m'  },
+  ],
+  'Review generation agent': [
+    { location: 'Atlanta, GA',      count: '1', reviewsReceived: '30', contactsReached: '30', clickThroughRate: '4.9%', timeSaved: '1h' },
+    { location: 'Stamford, CT',     count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '4.8%', timeSaved: '1h' },
+    { location: 'Los Angeles, CA',  count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '5.3%', timeSaved: '1h' },
+    { location: 'New York City, NY', count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '5.4%', timeSaved: '1h' },
+    { location: 'San Diego, CA',    count: '1', reviewsReceived: '20', contactsReached: '20', clickThroughRate: '5.1%', timeSaved: '20m' },
+    { location: 'Las Vegas, NV',    count: '1', reviewsReceived: '20', contactsReached: '10', clickThroughRate: '4.7%', timeSaved: '20m' },
+    { location: 'Chicago, IL',      count: '1', reviewsReceived: '7',  contactsReached: '10', clickThroughRate: '4.8%', timeSaved: '20m' },
   ],
 }
 
@@ -321,6 +345,14 @@ const TAGGING_ROUTING_COLUMNS: Column<LocationRow>[] = [
   { key: 'timeSaved',             label: 'Time saved',             width: 140, sortable: true },
 ]
 
+const REVIEW_GENERATION_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location', label: 'Location', width: 220, sortable: true },
+  { key: 'reviewsReceived', label: 'Reviews received', width: 160, sortable: true },
+  { key: 'contactsReached', label: 'Contacts reached', width: 160, sortable: true },
+  { key: 'clickThroughRate', label: 'Click-through rate', width: 160, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
+]
+
 export function AgentInstanceScreen({
   instanceName,
   displayName,
@@ -341,6 +373,7 @@ export function AgentInstanceScreen({
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
+  const [coachOpen, setCoachOpen] = useState(false)
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
 
   useEffect(() => {
@@ -361,13 +394,19 @@ export function AgentInstanceScreen({
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
   const shownName = displayName ?? instanceName
-  const isReviewResponse = agentName.startsWith('Review response agent')
+  const isReviewResponse = /review response agent/i.test(agentName)
+  const isReviewGeneration = /review generation agent/i.test(agentName)
+  const reviewGenerationKey = 'Review generation agent'
 
   useEffect(() => {
-    onFullBleedChange?.(Boolean(selectedRun) && isReviewResponse)
+    onFullBleedChange?.(Boolean(selectedRun) && (isReviewResponse || isReviewGeneration))
     return () => onFullBleedChange?.(false)
-  }, [selectedRun, isReviewResponse, onFullBleedChange])
-  const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
+  }, [selectedRun, isReviewResponse, isReviewGeneration, onFullBleedChange])
+  const metrics: Metric[] = (
+    isReviewGeneration
+      ? METRICS_BY_AGENT[reviewGenerationKey]
+      : METRICS_BY_AGENT[agentName]
+  ) ?? DEFAULT_METRICS
   const COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
     : agentName === 'Front desk agent'    ? FRONTDESK_COLUMNS
@@ -377,18 +416,35 @@ export function AgentInstanceScreen({
     : agentName === 'Revenue agent'       ? REVENUE_COLUMNS
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
+    : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
     : DEFAULT_COLUMNS
-  const locations = LOCATIONS_BY_AGENT[agentName] ?? LOCATIONS_BY_AGENT['Front desk agent']
+  const locations = (
+    isReviewGeneration
+      ? LOCATIONS_BY_AGENT[reviewGenerationKey]
+      : LOCATIONS_BY_AGENT[agentName]
+  ) ?? LOCATIONS_BY_AGENT['Front desk agent']
   const isTaggingRouting = agentName === 'Tagging & routing agent'
-  const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : isReviewResponse ? REVIEW_RESPONSE_TABS : TABS
+  const tabs = isTaggingRouting
+    ? TAGGING_ROUTING_TABS
+    : isReviewResponse || isReviewGeneration
+      ? REVIEW_RESPONSE_TABS
+      : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
+  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
+  const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
+  const hideRecommendations = isReviewResponse || isReviewGeneration
   // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
   const isDraftInstance = instanceStatus === 'Draft'
+  const isFullBleedDetail = selectedRecommendationId !== null || selectedRun !== null
+  // TopNav product title only when L2 SideNav is hidden (full-bleed run / recommendation).
+  const topNavTitle = isFullBleedDetail
+    ? (hideRecommendations ? 'Reviews AI' : 'Front desk')
+    : undefined
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[instanceName] ?? 0
   const showHealthcareLogs =
-    activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || isReviewResponse)
+    activeTab === 'logs' && !isDraftInstance && product === 'healthcare' && (agentName === 'Front desk agent' || agentName === 'Reminder agent' || agentName === 'Pre-visit agent' || agentName === 'Waitlist agent' || agentName === 'Tagging & routing agent' || isReviewResponse || isReviewGeneration)
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && !isDraftInstance && product === 'dental' && Boolean(dentalOutboundLogRows)
@@ -397,7 +453,7 @@ export function AgentInstanceScreen({
   if (selectedRun) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav title="Front desk" initials="S" />
+        <TopNav title={topNavTitle} initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
           <RunDetailView
             row={selectedRun}
@@ -418,7 +474,7 @@ export function AgentInstanceScreen({
   if (selectedRecommendationId) {
     return (
       <div className="flex h-full flex-col">
-        <TopNav title="Front desk" initials="S" />
+        <TopNav title={topNavTitle} initials="S" />
         <div className="min-h-0 flex-1 overflow-hidden">
           <RecommendationDetailScreen
             recommendationId={selectedRecommendationId}
@@ -433,7 +489,7 @@ export function AgentInstanceScreen({
 
   return (
     <div className="flex h-full flex-col">
-      <TopNav initials="S" />
+      <TopNav title={topNavTitle} initials="S" />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -458,6 +514,21 @@ export function AgentInstanceScreen({
                   {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                 </span>
               )}
+              {isRecommendationTab && !isDraftInstance && !hideRecommendations && (
+                <Tooltip content="Coach agent" variant="brief">
+                  <button
+                    type="button"
+                    aria-label="Coach agent"
+                    aria-pressed={coachOpen}
+                    onClick={() => setCoachOpen((open) => !open)}
+                    className={`flex size-9 items-center justify-center rounded-sm border border-border-selected text-text-icon hover:bg-surface-l2 ${
+                      coachOpen ? 'bg-surface-selected' : 'bg-surface'
+                    }`}
+                  >
+                    <Icon name="auto_awesome" size={20} />
+                  </button>
+                </Tooltip>
+              )}
               <div className="relative">
                 <button
                   type="button"
@@ -479,6 +550,16 @@ export function AgentInstanceScreen({
                       aria-hidden
                     />
                     <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+                      <button
+                        type="button"
+                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                        onClick={() => {
+                          setActionsOpen(false)
+                          onEditAgent?.(instanceName)
+                        }}
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
@@ -530,6 +611,15 @@ export function AgentInstanceScreen({
                 setActiveTab(tabId)
               }}
             />
+            {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && !hideRecommendations && (
+              <button
+                type="button"
+                onClick={clearAllFeedback}
+                className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+              >
+                Clear human feedback
+              </button>
+            )}
           </div>
 
           {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -542,7 +632,12 @@ export function AgentInstanceScreen({
             />
           ) : isRecommendationTab ? (
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <RecommendationsTab agentName={instanceName} onSelect={setSelectedRecommendationId} isDraft={isDraftInstance} />
+              <RecommendationsTab
+                agentName={instanceName}
+                onSelect={setSelectedRecommendationId}
+                isDraft={isDraftInstance}
+                empty={hideRecommendations}
+              />
             </div>
           ) : (
             <div className="flex-1 overflow-auto">
@@ -583,6 +678,13 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
+
+        {coachOpen && isRecommendationTab && (
+          <CoachAgentPanel
+            agentName={instanceName}
+            onClose={() => setCoachOpen(false)}
+          />
+        )}
       </div>
     </div>
   )

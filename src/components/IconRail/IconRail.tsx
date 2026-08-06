@@ -34,8 +34,8 @@ function NavTab({
       </span>
 
       {item.badge && (
-        <span className="flex h-5 shrink-0 items-center justify-center rounded-sm bg-accent-positive px-sm text-[10px] leading-[18px] text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          {item.badge}
+        <span className="ai-gradient-badge flex shrink-0 items-center justify-center px-sm text-[10px] leading-[14px] opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          <span className="ai-gradient-badge-text">{item.badge}</span>
         </span>
       )}
     </button>
