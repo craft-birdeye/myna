@@ -101,6 +101,34 @@ export const PROCEDURES = [
 
   // ── Healthcare Frontdesk ─────────────────────────────────────────────────────
   {
+    id: 'Greet and open conversation',
+    name: 'Greet and open conversation',
+    category: 'Healthcare Frontdesk',
+    whenToUse: 'Every inbound call or chat begins — identifies the patient, screens for urgency, and routes them to the right procedure.',
+    tools: ['intent_classifier', 'agent_turn'],
+    steps: [
+      'Greet the patient warmly and state the practice name.',
+      'Ask how you can help them today.',
+      'Screen the response for any urgent or emergency language.',
+      'Route to the matching procedure based on detected intent.',
+    ],
+    escalation: 'If intent cannot be determined after 2 attempts, hand off to Handle unclear message.',
+  },
+  {
+    id: 'Appointment confirmation',
+    name: 'Appointment confirmation',
+    category: 'Healthcare Frontdesk',
+    whenToUse: 'Use when the patient wants to book a new appointment or schedule a visit with a provider',
+    tools: ['appointment_management_agent', 'send-confirmation'],
+    steps: [
+      'Confirm the patient, provider, and preferred date/time for the visit.',
+      'Check availability and offer the closest matching slots.',
+      'Book the appointment and read back the confirmed details.',
+      'Send a confirmation message with the appointment details.',
+    ],
+    escalation: 'If no suitable slot is available, offer the waitlist or a callback from front desk staff.',
+  },
+  {
     id: 'Handle general inquiry',
     name: 'Handle general inquiry',
     category: 'Healthcare Frontdesk',
@@ -216,6 +244,8 @@ export const PROCEDURE_PANEL_DISPLAY = { ...FRONTDESK_PROCEDURE_PANEL };
 
 /** RHS Procedures pane — healthcare / dental panel copy (IDs = display names, no overrides needed) */
 export const PROCEDURE_PANEL_DISPLAY_HC = {
+  'Greet and open conversation':        { name: 'Greet and open conversation',        whenToUse: 'Identifies the patient, screens for urgency, and routes them to the right procedure.' },
+  'Appointment confirmation':           { name: 'Appointment confirmation',           whenToUse: 'Use when the patient wants to book a new appointment or schedule a visit with a provider.' },
   'Handle general inquiry':             { name: 'Handle general inquiry',             whenToUse: 'Patient asks a general query related to the hospital or anything answerable from the knowledge base.' },
   'Handle emergency or urgent concern': { name: 'Handle emergency or urgent concern', whenToUse: "Patient describes worsening symptoms or a time-sensitive medical issue." },
   'Handle unclear message':             { name: 'Handle unclear message',             whenToUse: "Patient's message is too vague or out-of-scope." },

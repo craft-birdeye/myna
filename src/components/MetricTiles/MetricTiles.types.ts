@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export interface Metric {
   id: string
   value: number | string
@@ -17,4 +19,6 @@ export interface Metric {
 
 export interface MetricTilesProps {
   metrics: Metric[]
+  /** Optional per-tile action rendered in the tile's top-right corner (e.g. a configure icon button). */
+  renderTileAction?: (metric: Metric) => ReactNode
 }

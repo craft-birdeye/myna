@@ -1,14 +1,17 @@
 import { Icon } from '../Icon/Icon'
 import { MetricTilesProps } from './MetricTiles.types'
 
-export function MetricTiles({ metrics }: MetricTilesProps) {
+export function MetricTiles({ metrics, renderTileAction }: MetricTilesProps) {
   return (
     <div className="flex gap-md">
       {metrics.map((metric) => (
         <div
           key={metric.id}
-          className="flex flex-1 flex-col items-start rounded-md border border-border px-xl pb-xl pt-lg transition-colors hover:bg-surface-hover"
+          className="relative flex flex-1 flex-col items-start rounded-md border border-border px-xl pb-xl pt-lg transition-colors hover:bg-surface-hover"
         >
+          {renderTileAction && (
+            <div className="absolute right-md top-lg">{renderTileAction(metric)}</div>
+          )}
           <div className="flex items-baseline gap-sm">
             <span className={`text-display ${metric.valueColorClassName ?? 'text-text-primary'}`}>{metric.value}</span>
             {metric.delta && (

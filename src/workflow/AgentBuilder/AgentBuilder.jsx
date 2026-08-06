@@ -2580,10 +2580,10 @@ export default function AgentBuilder({
       )}
 
       {/* ─── Reminder tool drawer ─── */}
-      <ReminderToolDrawer isOpen={reminderToolOpen} onClose={() => setReminderToolOpen(false)} />
+      <ReminderToolDrawer isOpen={reminderToolOpen} onClose={() => setReminderToolOpen(false)} initialValues={currentDetails} onFieldChange={activeFieldChange} />
 
       {/* ─── Voice call tool drawer ─── */}
-      <VoiceCallToolDrawer isOpen={voiceCallToolOpen} onClose={() => setVoiceCallToolOpen(false)} initialValues={currentDetails} product={product} />
+      <VoiceCallToolDrawer isOpen={voiceCallToolOpen} onClose={() => setVoiceCallToolOpen(false)} initialValues={currentDetails} product={product} onFieldChange={activeFieldChange} />
 
       {/* ─── Transfer tool drawer ─── */}
       <TransferToolDrawer isOpen={transferToolOpen} onClose={() => setTransferToolOpen(false)} />
