@@ -52,12 +52,11 @@ const REVIEW_GENERATION: AgentDirectoryEntry = {
   category: 'Reviews AI',
   persona: 'marketing',
   description: 'Sends review requests to customers after transactions complete.',
-  running: 2,
-  outcome: { value: '249', label: 'Reviews received' },
-  timeSaved: '9h',
+  running: 1,
+  outcome: { value: '868', label: 'New reviews' },
+  timeSaved: '41h',
   costSaved: '$2.9K',
   tasksOngoing: 9,
-  navId: 'generation-agents',
 }
 
 const SOCIAL_PUBLISHING: AgentDirectoryEntry = {

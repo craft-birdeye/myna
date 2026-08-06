@@ -12,7 +12,6 @@ import GraphControls from '../Modules/FlowCanvas/GraphControls/GraphControls';
 import '@xyflow/react/dist/style.css';
 import StartNode from '../Molecules/Canvas/StartNode/StartNode';
 import EndNode from '../Molecules/Canvas/EndNode/EndNode';
-import TriggerPlaceholderNode from '../Molecules/Canvas/TriggerPlaceholderNode/TriggerPlaceholderNode';
 import CanvasNode from '../Molecules/Canvas/CanvasNode/CanvasNode';
 import ProceduresNode from '../Molecules/Canvas/ProceduresNode/ProceduresNode';
 import LoopNode, { computeLoopBodyHeight } from '../Molecules/Canvas/LoopNode/LoopNode';
@@ -20,7 +19,6 @@ import AddStepButton from './AddStepButton';
 import './FlowCanvas.css';
 import branchStyles from './BranchPath.module.css';
 import { FLOW_CONNECTOR_GAP } from '../flowLayoutConstants';
-import { getDraggingFlowKind, getFlowDragPayload, isDraggingFlowKind } from '../flowDragData';
 
 /* ─── Custom Node Wrappers ─── */
 function StartNodeWrapper({ id, data }) {
@@ -40,64 +38,10 @@ function StartNodeWrapper({ id, data }) {
 
 function TriggerNodeWrapper({ id, data }) {
   const isSelected = id === data.selectedNodeId;
-  const [isDropTarget, setIsDropTarget] = useState(false);
-  const viewOnly = data?.viewOnly;
-
-  const handleDragOver = useCallback((e) => {
-    if (viewOnly || !data?.onDropTriggerReplace) return;
-    if (!isDraggingFlowKind(e.dataTransfer, 'trigger')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'copy';
-    setIsDropTarget(true);
-  }, [viewOnly, data?.onDropTriggerReplace]);
-
-  const handleDragLeave = useCallback(() => {
-    setIsDropTarget(false);
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDropTarget(false);
-    if (viewOnly || !data?.onDropTriggerReplace) return;
-    const { type, label, description } = getFlowDragPayload(e.dataTransfer);
-    if (type === 'trigger') {
-      data.onDropTriggerReplace(type, label, description);
-    }
-  }, [viewOnly, data]);
-
   return (
-    <div
-      className="flow-canvas__node-center"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
+    <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode
-        nodeType="trigger"
-        label={data.headerLabel || (data.subtype === 'Schedule-based' ? 'Schedule-based trigger' : 'Trigger')}
-        stepNumber={data.stepNumber}
-        title={data.title}
-        description={data.subtitle}
-        titlePlaceholder={data.titlePlaceholder}
-        descriptionPlaceholder={data.descriptionPlaceholder}
-        hasToggle={false}
-        toggleEnabled={data.toggleEnabled}
-        toggleDisabled={data.viewOnly}
-        viewOnly={data.viewOnly}
-        state={isDropTarget ? 'drop-target' : (isSelected ? 'selected' : 'default')}
-        onDelete={data.onDelete}
-        onCopy={data.onCopy}
-        hasClipboard={data.hasClipboard}
-        onPasteBelow={data.onPasteBelow}
-        onPasteReplace={data.onPasteReplace}
-        onMoveUp={data.onMoveUp}
-        onMoveDown={data.onMoveDown}
-        canMoveUp={data.canMoveUp}
-        canMoveDown={data.canMoveDown}
-      />
+      <CanvasNode nodeType="trigger" label={data.headerLabel || (data.subtype === 'Schedule-based' ? 'Schedule-based trigger' : 'Trigger')} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasToggle={false} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} state={isSelected ? 'selected' : 'default'} onReplace={data.onReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -337,21 +281,6 @@ function EndNodeWrapper({ id, data }) {
   );
 }
 
-function TriggerPlaceholderWrapper({ data }) {
-  return (
-    <div className="flow-canvas__node-center">
-      <Handle type="target" position={Position.Top} />
-      <TriggerPlaceholderNode
-        isDraggingTrigger={data.isDraggingFromLHS}
-        onDropTrigger={data.onDropTrigger}
-        product={data.product}
-        agentName={data.agentName}
-      />
-      <Handle type="source" position={Position.Bottom} />
-    </div>
-  );
-}
-
 function BranchEndNodeWrapper() {
   return (
     <div className="flow-canvas__branch-end-wrapper">
@@ -366,13 +295,12 @@ function BranchEndNodeWrapper() {
 /* ─── Custom Edge: main connector with + button ─── */
 function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY, style, data }) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const isDraggingFromLHS = data?.isDraggingFromLHS && data?.draggingLhsKind !== 'trigger';
+  const isDraggingFromLHS = data?.isDraggingFromLHS;
   const viewOnly = data?.viewOnly;
 
   const [edgePath, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY });
 
   const handleDragOver = useCallback((e) => {
-    if (isDraggingFlowKind(e.dataTransfer, 'trigger')) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
@@ -387,15 +315,15 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    const { type, label, description } = getFlowDragPayload(e.dataTransfer);
-    if (!type || type === 'trigger') return;
-    if (data?.onDropOnEdge) {
+    const type = e.dataTransfer.getData('application/reactflow-type');
+    const label = e.dataTransfer.getData('application/reactflow-label');
+    const description = e.dataTransfer.getData('application/reactflow-description');
+    if (type && data?.onDropOnEdge) {
       data.onDropOnEdge(type, label, description);
     }
   }, [data]);
 
   const handleSelect = useCallback(({ type, label, description }) => {
-    if (type === 'trigger') return;
     data?.onDropOnEdge?.(type, label, description);
   }, [data]);
 
@@ -470,7 +398,6 @@ const NODE_TYPES = {
   procedures: ProceduresNodeWrapper,
   branchPath: BranchPathNodeWrapper,
   branchEnd: BranchEndNodeWrapper,
-  triggerPlaceholder: TriggerPlaceholderWrapper,
   end: EndNodeWrapper,
 };
 
@@ -501,15 +428,10 @@ function FlowCanvasInner({
   runDisabled = false,
   hasClipboard = false,
   onPasteAtConnector,
-  onUndo,
-  onRedo,
-  canUndo = false,
-  canRedo = false,
 }) {
   const { zoomTo, fitView, setCenter, setViewport, getViewport, getNodes } = useReactFlow();
   const [zoom, setZoom] = useState(Math.round(initialZoom * 100));
   const [isDraggingFromLHS, setIsDraggingFromLHS] = useState(false);
-  const [draggingLhsKind, setDraggingLhsKind] = useState(null);
   const canvasRef = useRef(null);
   const initialPositioned = useRef(false);
 
@@ -533,41 +455,13 @@ function FlowCanvasInner({
         ...n.data,
         selectedNodeId,
         viewOnly,
-        // The trigger placeholder pulses only for trigger drags; every other node (incl. the
-        // End "+") pulses only for non-trigger step drags.
-        isDraggingFromLHS: n.type === 'triggerPlaceholder'
-          ? (isDraggingFromLHS && draggingLhsKind === 'trigger')
-          : (isDraggingFromLHS && draggingLhsKind !== 'trigger'),
+        isDraggingFromLHS,
         product,
         agentName,
         // Inject click handler for inline nodes rendered inside loop containers.
         ...(n.type === 'loop' ? {
           onChildClick: (childId) => onNodeClick?.({ id: childId, type: 'task', data: {} }),
         } : {}),
-        ...(n.type === 'triggerPlaceholder' && !viewOnly
-          ? {
-              onDropTrigger: (type, label, description) => {
-                onDropNodeRef.current?.({
-                  type,
-                  label,
-                  description,
-                  afterNodeId: '__start__',
-                });
-              },
-            }
-          : {}),
-        ...(n.type === 'trigger' && !viewOnly
-          ? {
-              onDropTriggerReplace: (type, label, description) => {
-                onDropNodeRef.current?.({
-                  type,
-                  label,
-                  description,
-                  replaceTrigger: true,
-                });
-              },
-            }
-          : {}),
         ...(n.id === '__end__' && !viewOnly && !n.data?.hideAddBeforeEnd
           ? {
               onDropBeforeEnd: (type, label, description) => {
@@ -591,7 +485,7 @@ function FlowCanvasInner({
         ...(n.id === '__end__' ? { hideAdd: !!n.data?.hideAddBeforeEnd } : {}),
       },
     })),
-    [nodes, selectedNodeId, viewOnly, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName]
+    [nodes, selectedNodeId, viewOnly, isDraggingFromLHS, endEdgeSourceId, onNodeClick, product, agentName]
   );
 
   // Pin start node 24px below the controls bar, horizontally centered, at the
@@ -654,13 +548,9 @@ function FlowCanvasInner({
     const onDragStart = (e) => {
       if (e.dataTransfer?.types?.includes('application/reactflow-type')) {
         setIsDraggingFromLHS(true);
-        setDraggingLhsKind(getDraggingFlowKind(e.dataTransfer));
       }
     };
-    const onDragEnd = () => {
-      setIsDraggingFromLHS(false);
-      setDraggingLhsKind(null);
-    };
+    const onDragEnd = () => setIsDraggingFromLHS(false);
     document.addEventListener('dragstart', onDragStart);
     document.addEventListener('dragend', onDragEnd);
     return () => {
@@ -692,7 +582,6 @@ function FlowCanvasInner({
   );
 
   const handleDragOver = useCallback((event) => {
-    if (isDraggingFlowKind(event.dataTransfer, 'trigger')) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
   }, []);
@@ -705,7 +594,7 @@ function FlowCanvasInner({
       const type = event.dataTransfer.getData('application/reactflow-type');
       const label = event.dataTransfer.getData('application/reactflow-label');
       const description = event.dataTransfer.getData('application/reactflow-description');
-      if (!type || type === 'trigger') return;
+      if (!type) return;
 
       const dropY = event.clientY; // screen Y — no coordinate conversion needed
 
@@ -760,13 +649,11 @@ function FlowCanvasInner({
         data: {
           ...edge.data,
           isDraggingFromLHS,
-          draggingLhsKind,
           viewOnly,
           product,
           agentName,
           hasClipboard,
           onDropOnEdge: viewOnly ? undefined : (type, label, description) => {
-            if (type === 'trigger') return;
             onDropNodeRef.current?.({
               type,
               label,
@@ -780,7 +667,7 @@ function FlowCanvasInner({
           },
         },
       })),
-    [edges, isDraggingFromLHS, draggingLhsKind, viewOnly, product, agentName, hasClipboard]
+    [edges, isDraggingFromLHS, viewOnly, product, agentName, hasClipboard]
   );
 
   const handleViewportChange = useCallback(({ zoom: z }) => {
@@ -791,9 +678,7 @@ function FlowCanvasInner({
     <div
       ref={canvasRef}
       className={`flow-canvas${isDraggingFromLHS ? ' flow-canvas--lhs-dragging' : ''}`}
-      style={{
-        '--flow-connector-gap': `${FLOW_CONNECTOR_GAP}px`,
-      }}
+      style={{ '--flow-connector-gap': `${FLOW_CONNECTOR_GAP}px` }}
       onDragOver={viewOnly ? undefined : handleDragOver}
       onDrop={viewOnly ? undefined : handleDrop}
     >
@@ -806,15 +691,9 @@ function FlowCanvasInner({
           onView={onView}
           zoom={zoom}
           onZoomSelect={(z) => zoomTo(z, { duration: 200 })}
-          onFillView={() => { fitView({ padding: 0.08, duration: 200 }); }}
           onFitView={() => { positionToStart(); }}
           viewOnly={viewOnly}
           runDisabled={runDisabled}
-          agentName={agentName}
-          onUndo={onUndo}
-          onRedo={onRedo}
-          canUndo={canUndo}
-          canRedo={canRedo}
         />
       </div>
 

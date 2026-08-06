@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import AddStepButton from '../../../FlowCanvas/AddStepButton';
-import { getFlowDragPayload, isDraggingFlowKind } from '../../../flowDragData';
 import './EndNode.css';
 
 export default function EndNode({
@@ -15,27 +14,27 @@ export default function EndNode({
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // The "+" above End adds steps (tasks/branches/etc.) — never a trigger. Triggers only land
-  // on the dedicated trigger placeholder slot at the top of the flow.
-  const handleAddSlotDragOver = useCallback((e) => {
-    if (isDraggingFlowKind(e.dataTransfer, 'trigger')) return;
+  const handleDragOver = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
     setIsDragOver(true);
   }, []);
 
-  const handleAddSlotDragLeave = useCallback(() => {
+  const handleDragLeave = useCallback(() => {
     setIsDragOver(false);
   }, []);
 
-  const handleAddSlotDrop = useCallback((e) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    const { type, label, description } = getFlowDragPayload(e.dataTransfer);
-    if (!type || type === 'trigger') return;
-    onDropBeforeEnd?.(type, label, description);
+    const type = e.dataTransfer.getData('application/reactflow-type');
+    const label = e.dataTransfer.getData('application/reactflow-label');
+    const description = e.dataTransfer.getData('application/reactflow-description');
+    if (type && onDropBeforeEnd) {
+      onDropBeforeEnd(type, label, description);
+    }
   }, [onDropBeforeEnd]);
 
   return (
@@ -45,9 +44,9 @@ export default function EndNode({
         {!viewOnly && !hideAdd && (
           <div
             className="end-node__add-slot"
-            onDragOver={handleAddSlotDragOver}
-            onDragLeave={handleAddSlotDragLeave}
-            onDrop={handleAddSlotDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
             <AddStepButton
               isDraggingFromLHS={isDraggingFromLHS}
@@ -55,13 +54,12 @@ export default function EndNode({
               product={product}
               agentName={agentName}
               onSelect={(payload) => {
-                if (payload?.type === 'trigger') return;
                 if (onAddStep) onAddStep(payload);
                 else onDropBeforeEnd?.(payload.type, payload.label, payload.description);
               }}
-              onDragOver={handleAddSlotDragOver}
-              onDragLeave={handleAddSlotDragLeave}
-              onDrop={handleAddSlotDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             />
           </div>
         )}

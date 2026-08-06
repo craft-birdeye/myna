@@ -79,7 +79,7 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
             </button>
             <span className="loc-title">Locations</span>
           </div>
-          <Button theme="primary" label="Add" onClick={handleSave} />
+          <Button theme="primary" label="Save" onClick={handleSave} />
         </div>
 
         {/* Body */}
