@@ -61,6 +61,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: 'home' },
+      { id: 'overview-2', label: 'Overview (mixed)', icon: 'home' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
       { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'New' },
     ],
@@ -470,7 +471,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && railActive !== 'overview-2' && (
         railActive === 'reviews' ? (
           <SideNav
             key="reviews"
@@ -503,6 +504,8 @@ export function App() {
       )}
       <main className="flex flex-1 flex-col overflow-hidden">
         {railActive === 'overview' ? (
+          <OverviewScreen />
+        ) : railActive === 'overview-2' ? (
           <OverviewScreen />
         ) : railActive === 'settings' ? (
           settingsSubScreen?.startsWith('integration-') ? (
