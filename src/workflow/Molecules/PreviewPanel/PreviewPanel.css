@@ -38,6 +38,25 @@
   pointer-events: auto;
 }
 
+/* Wider float wrap for healthcare log-details panel — overlays canvas like agent-builder RHS */
+.preview-panel-float-wrap--log-details {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 550px; /* 530px panel + 10px padding each side */
+  min-width: 380px; /* 360px panel + 10px padding each side */
+  z-index: 10;
+}
+
+.preview-panel-float-wrap--log-details .log-details-panel,
+.preview-panel-float-wrap--log-details .preview-panel {
+  width: 530px !important;
+  min-width: 360px;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
 /* ── Header ── */
 .preview-panel__header {
   display: flex;
@@ -531,7 +550,7 @@
 
 .pp-user-bubble {
   margin: 0;
-  background: #f0f0f0;
+  background: #f2f4f7;
   color: #212121;
   font-size: 13px;
   line-height: 1.6;
@@ -1069,8 +1088,8 @@
 }
 
 .pp-player__play-btn {
-  width: 40px;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #1976d2;
   border: none;
@@ -1086,9 +1105,9 @@
 .pp-player__play-btn:hover { background: #1565c0; }
 
 .pp-player__play-btn .material-symbols-outlined {
-  font-size: 22px;
-  width: 22px;
-  height: 22px;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
   line-height: 1;
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
@@ -1207,10 +1226,10 @@
 .preview-panel__restart-btn {
   flex: 1;
   height: 36px;
-  background: #1976d2;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: #fff;
+  color: #212121;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
   font-weight: 400;
@@ -1222,7 +1241,7 @@
 }
 
 .preview-panel__restart-btn:hover {
-  background: #1565c0;
+  background: #f2f4f7;
 }
 
 .preview-panel__details-btn {

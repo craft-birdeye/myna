@@ -117,6 +117,110 @@ export function deserializeIntoTyped(el, value, onDelete, resolveType) {
   });
 }
 
+/* ── Rich text (bold / italic / underline / links) on top of chip tokens ──
+ * Adds `**bold**`, `*italic*`, `~underline~` and `[label](url)` markup to the
+ * plain-text serialization used by chip-aware contentEditable fields. Kept as
+ * separate exports (rather than changing serializeFrom/deserializeIntoTyped)
+ * so existing prompt inputs that don't want rich text are unaffected.
+ * Italic uses `*` rather than `_` because step text is full of snake_case
+ * tool/variable names (e.g. `verify_patient_identity`) that `_..._` would
+ * misparse as italic markup. */
+const RICH_TOKEN_SOURCE = '(\\{\\{[^}]+\\}\\})|(\\[[^\\]]+\\]\\([^)]+\\))|(\\*\\*[^*]+\\*\\*)|(~[^~]+~)|(\\*[^*]+\\*)';
+
+function appendPlainText(el, text) {
+  const lines = text.split('\n');
+  lines.forEach((line, i) => {
+    if (line) el.appendChild(document.createTextNode(line));
+    if (i < lines.length - 1) el.appendChild(document.createElement('br'));
+  });
+}
+
+function appendRichNodes(el, value, onDelete, resolveType) {
+  if (!value) return;
+  let lastIndex = 0;
+  let m;
+  // A fresh RegExp per call (rather than a shared module-level one) so that
+  // recursive calls building nested marks don't clobber the outer call's
+  // lastIndex — a shared `g`-flagged regex resets to 0 whenever an inner
+  // exec() run completes, which desyncs the outer loop and spins forever.
+  const richTokenRe = new RegExp(RICH_TOKEN_SOURCE, 'g');
+  while ((m = richTokenRe.exec(value))) {
+    if (m.index > lastIndex) appendPlainText(el, value.slice(lastIndex, m.index));
+    if (m[1]) {
+      const name = m[1].slice(2, -2);
+      const type = resolveType ? resolveType(name) : 'variable';
+      const chip = document.createElement('span');
+      chip.contentEditable = 'false';
+      buildViewChipContents(chip, name, onDelete, type);
+      el.appendChild(chip);
+    } else if (m[2]) {
+      const linkMatch = m[2].match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      const a = document.createElement('a');
+      a.href = linkMatch[2];
+      a.className = 'prompt-rich-link';
+      appendRichNodes(a, linkMatch[1], onDelete, resolveType);
+      el.appendChild(a);
+    } else if (m[3]) {
+      const b = document.createElement('b');
+      appendRichNodes(b, m[3].slice(2, -2), onDelete, resolveType);
+      el.appendChild(b);
+    } else if (m[4]) {
+      const u = document.createElement('u');
+      appendRichNodes(u, m[4].slice(1, -1), onDelete, resolveType);
+      el.appendChild(u);
+    } else if (m[5]) {
+      const em = document.createElement('em');
+      appendRichNodes(em, m[5].slice(1, -1), onDelete, resolveType);
+      el.appendChild(em);
+    }
+    lastIndex = richTokenRe.lastIndex;
+  }
+  if (lastIndex < value.length) appendPlainText(el, value.slice(lastIndex));
+}
+
+/** Like deserializeIntoTyped but also parses **bold**, *italic*, ~underline~, [label](url). */
+export function deserializeRichInto(el, value, onDelete, resolveType) {
+  el.innerHTML = '';
+  appendRichNodes(el, value, onDelete, resolveType);
+}
+
+/** Like serializeFrom but also emits **bold**, *italic*, ~underline~, [label](url) for the tags deserializeRichInto understands. */
+export function serializeRichFrom(el) {
+  if (!el) return '';
+  let text = '';
+  el.childNodes.forEach((node) => {
+    if (node.nodeType === 3) {
+      text += node.textContent;
+    } else if (node.nodeName === 'BR') {
+      text += '\n';
+    } else if (node.nodeType === 1 && node.dataset.chip !== undefined) {
+      text += `{{${node.dataset.chip}}}`;
+    } else if (node.nodeType === 1) {
+      const inner = serializeRichFrom(node);
+      if (!inner) return;
+      switch (node.nodeName) {
+        case 'B':
+        case 'STRONG':
+          text += `**${inner}**`;
+          break;
+        case 'U':
+          text += `~${inner}~`;
+          break;
+        case 'I':
+        case 'EM':
+          text += `_${inner}_`;
+          break;
+        case 'A':
+          text += `[${inner}](${node.getAttribute('href') || ''})`;
+          break;
+        default:
+          text += inner;
+      }
+    }
+  });
+  return text;
+}
+
 export function insertChipAt(el, range, onFinalize, type = 'variable', initialValue = null) {
   const cfg = CHIP_TYPE_MAP[type] || CHIP_TYPE_MAP.variable;
 

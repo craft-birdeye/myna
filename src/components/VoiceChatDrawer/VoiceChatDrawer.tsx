@@ -1,153 +1,61 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import WaveSurfer from 'wavesurfer.js'
+
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
+import { Icon } from '../Icon/Icon'
+import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
+import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import type { VoiceChatDrawerProps } from './VoiceChatDrawer.types'
-
-const SPEEDS = [1, 1.5, 2] as const
-type Speed = typeof SPEEDS[number]
-
-function fmtTime(secs: number): string {
-  const m = Math.floor(secs / 60)
-  const s = Math.floor(secs % 60)
-  return `${m}.${String(s).padStart(2, '0')}`
-}
-
-function speedLabel(s: Speed): string {
-  return s === 1 ? '1 x' : s === 1.5 ? '1.5 x' : '2 x'
-}
 
 export function VoiceChatDrawer({
   open,
   messages,
   summary,
-  audioUrl,
-  durationSecs = 0,
+  feedbackPrefill,
+  onSubmitFeedback,
+  onTrackFeedback,
+  onCoachAgentDirect,
   mode = 'voice',
+  title,
   onClose,
 }: VoiceChatDrawerProps) {
   const isChat = mode === 'chat'
-  const [playing, setPlaying] = useState(false)
-  const [elapsed, setElapsed] = useState(0)
-  const [wsReady, setWsReady] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(true)
-  const [speed, setSpeed] = useState<Speed>(1.5)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const wsRef = useRef<WaveSurfer | null>(null)
+  // Once a message's feedback is submitted, its "Coach agent" link becomes a "Track your
+  // feedback" link pointing at the recommendation the feedback landed on.
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
+  const [shareFeedbackId, setShareFeedbackId] = useState<string | null>(null)
+  const headerTitle = title ?? (isChat ? 'Chat with Myna' : 'Call with Myna')
 
-  useEffect(() => {
-    if (!open) {
-      wsRef.current?.pause()
-      setPlaying(false)
-      setElapsed(0)
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (!open || !audioUrl || !containerRef.current) return
-
-    const ws = WaveSurfer.create({
-      container: containerRef.current,
-      waveColor: '#d8dde6',
-      progressColor: '#1976d2',
-      cursorWidth: 0,
-      barWidth: 2,
-      barGap: 2,
-      barRadius: 2,
-      height: 56,
-      normalize: true,
-      interact: true,
-    })
-    ws.setMuted(true)
-
-    ws.load(audioUrl)
-    ws.on('ready', () => setWsReady(true))
-    ws.on('audioprocess', (t: number) => setElapsed(Math.floor(t)))
-    ws.on('finish', () => { setPlaying(false); setElapsed(0) })
-    ws.on('seeking', (t: number) => setElapsed(Math.floor(t)))
-
-    wsRef.current = ws
-    return () => { ws.destroy(); wsRef.current = null; setWsReady(false) }
-  }, [open, audioUrl, isChat])
-
-  // Apply playback rate whenever speed changes
-  useEffect(() => {
-    wsRef.current?.setPlaybackRate(speed)
-  }, [speed])
+  const handleShareFeedbackSubmit = (details: string) => {
+    if (shareFeedbackId === null) return
+    const recId = onSubmitFeedback?.(details, shareFeedbackId)
+    if (recId) setRecIdByMessage((prev) => ({ ...prev, [shareFeedbackId]: recId }))
+    setShareFeedbackId(null)
+  }
 
   if (!open) return null
 
-  const total = wsReady && wsRef.current ? wsRef.current.getDuration() : durationSecs
-
-  function handlePlayPause() {
-    wsRef.current?.playPause()
-    setPlaying(v => !v)
-  }
-
-  function handleNextSpeed() {
-    const idx = SPEEDS.indexOf(speed)
-    setSpeed(SPEEDS[(idx + 1) % SPEEDS.length])
-  }
-
   return createPortal(
     <div className="pp-details-overlay" onClick={onClose}>
-      <div className="pp-details-drawer" onClick={e => e.stopPropagation()}>
+      <div className="pp-details-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="pp-details">
-
           {/* Header */}
           <div className="pp-details__header">
             <button className="pp-details__back-btn" type="button" onClick={onClose} aria-label="Back">
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
-            <span className="pp-details__title">{isChat ? 'Chat with Myna' : 'Call with Myna'}</span>
+            <span className="pp-details__title">{headerTitle}</span>
           </div>
 
           <div className="pp-details__body">
-
-            {/* WaveSurfer player */}
-            {!isChat && (
-            <div className="pp-details__player-wrap">
-              <div
-                ref={containerRef}
-                className="cursor-pointer"
-                style={{ marginBottom: 14, minHeight: 56, opacity: wsReady ? 1 : 0.3 }}
-              />
-              <div className="pp-player">
-                <button
-                  className="pp-player__play-btn"
-                  type="button"
-                  onClick={handlePlayPause}
-                  disabled={!wsReady}
-                  aria-label={playing ? 'Pause' : 'Play'}
-                >
-                  <span className="material-symbols-outlined">
-                    {playing ? 'pause' : 'play_arrow'}
-                  </span>
-                </button>
-                <button
-                  className="pp-player__speed"
-                  type="button"
-                  onClick={handleNextSpeed}
-                >
-                  {speedLabel(speed)}
-                </button>
-                <span className="pp-player__spacer" />
-                <span className="pp-player__time">
-                  <span style={{ color: '#1976d2' }}>{fmtTime(elapsed)}</span>
-                  {' / '}
-                  {fmtTime(total)}
-                </span>
-              </div>
-            </div>
-            )}
-
             {/* Summary card */}
             {summary && (
               <div className="pp-summary-card">
                 <button
                   className="pp-summary-card__header"
                   type="button"
-                  onClick={() => setSummaryOpen(v => !v)}
+                  onClick={() => setSummaryOpen((v) => !v)}
                 >
                   <span className="pp-summary-card__icon-wrap" aria-hidden>
                     <span className="material-symbols-outlined">auto_awesome</span>
@@ -157,40 +65,68 @@ export function VoiceChatDrawer({
                     {summaryOpen ? 'expand_less' : 'expand_more'}
                   </span>
                 </button>
-                {summaryOpen && (
-                  <p className="pp-summary-card__body">{summary}</p>
-                )}
+                {summaryOpen && <p className="pp-summary-card__body">{summary}</p>}
               </div>
             )}
 
-            {/* Transcript */}
+            {/* Transcript — same bubble template as inbox; side padding matches summary card */}
             <div className="pp-details__transcript">
-              {messages.map(m => {
+              {messages.map((m) => {
                 if (m.role === 'system') {
-                  return <div key={m.id} className="pp-system">{m.text}</div>
+                  return <ChatSystemLabel key={m.id} text={m.text} />
                 }
                 if (m.role === 'agent') {
+                  const recId = recIdByMessage[String(m.id)]
                   return (
-                    <div key={m.id} className="pp-agent-row">
-                      <div className="pp-agent-avatar">
-                        <span className="material-symbols-outlined">auto_awesome</span>
+                    <ChatBubble key={m.id} sender="business" text={m.text}>
+                      <div className="flex items-center gap-xs">
+                        {recId ? (
+                          <button
+                            type="button"
+                            onClick={() => onTrackFeedback?.(recId)}
+                            className="group flex items-center gap-xs text-small text-text-action"
+                          >
+                            <Icon name="track_changes" size={16} />
+                            <span className="group-hover:underline">Track your feedback</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onCoachAgentDirect ? onCoachAgentDirect(String(m.id)) : setShareFeedbackId(String(m.id))
+                            }
+                            className="group flex items-center gap-xs text-small text-text-action"
+                          >
+                            <Icon name="auto_awesome" size={16} />
+                            <span className="group-hover:underline">Coach agent</span>
+                          </button>
+                        )}
+                        {m.time && (
+                          <>
+                            <span className="text-small text-text-tertiary">•</span>
+                            <span className="text-small text-text-tertiary">{m.time}</span>
+                          </>
+                        )}
                       </div>
-                      <p className="pp-agent-text">{m.text}</p>
-                    </div>
+                    </ChatBubble>
                   )
                 }
                 return (
-                  <div key={m.id} className="pp-user-row">
-                    <p className="pp-user-bubble">{m.text}</p>
-                  </div>
+                  <ChatBubble key={m.id} sender="user" text={m.text} />
                 )
               })}
             </div>
-
           </div>
         </div>
       </div>
+
+      <ShareFeedbackModal
+        open={shareFeedbackId !== null}
+        onClose={() => setShareFeedbackId(null)}
+        onSubmit={handleShareFeedbackSubmit}
+        initialDetails={feedbackPrefill}
+      />
     </div>,
-    document.body
+    document.body,
   )
 }

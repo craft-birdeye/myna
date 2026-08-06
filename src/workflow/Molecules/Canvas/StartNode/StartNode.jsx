@@ -1,4 +1,5 @@
 import React from 'react';
+import { AiSparkleGlyphIcon } from '../../../../assets/AiSparkleGlyphIcon';
 import './StartNode.css';
 
 export default function StartNode({
@@ -10,7 +11,7 @@ export default function StartNode({
   return (
     <div className={`start-node${selected ? ' start-node--selected' : ''}`}>
       <div className="start-node__icon">
-        <span className="material-symbols-outlined">auto_awesome</span>
+        <AiSparkleGlyphIcon size={22} />
       </div>
       <div className="start-node__content">
         <span className="start-node__title">{title}</span>

@@ -14,3 +14,4 @@ vite.config.d.ts
 .claude
 vite.config.js.timestamp-*.mjs
 dummy/
+.vercel

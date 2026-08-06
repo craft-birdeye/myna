@@ -31,6 +31,72 @@
   background-color: rgba(0,0,0,0.25);
 }
 
+/* Light grey vertical scrollbar for composer textareas */
+.scrollbar-light {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+.scrollbar-light::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-light::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-light::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+/* Subtle scrollbar — hidden by default, very light grey while scrolling/hovering */
+.scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scrollbar-subtle:hover,
+.scrollbar-subtle.is-scrolling {
+  scrollbar-color: #e8e8e8 transparent;
+}
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.scrollbar-subtle::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+}
+.scrollbar-subtle:hover::-webkit-scrollbar-thumb,
+.scrollbar-subtle.is-scrolling::-webkit-scrollbar-thumb {
+  background-color: #e8e8e8;
+}
+
+/* Hidden scrollbar — scroll still works */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animated gradient "AI" sparkle — loading indicator while the agent responds */
+.sparkle-loader {
+  display: inline-flex;
+  line-height: 0;
+}
+.sparkle-loader svg {
+  filter: drop-shadow(0 0 2px rgba(104, 52, 183, 0.35));
+}
+.sparkle-loader.is-spinning {
+  animation: sparkle-loader-spin 1.8s ease-in-out infinite;
+}
+@keyframes sparkle-loader-spin {
+  0%   { transform: rotate(0deg) scale(0.82); opacity: 0.75; }
+  50%  { transform: rotate(180deg) scale(1.08); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0.82); opacity: 0.75; }
+}
+
 @layer components {
   .ai-summary-panel {
     @apply rounded-sm border px-lg py-md;
@@ -39,10 +105,48 @@
   }
 }
 
+/* Animated pink/purple/violet gradient border — AI prompt composers */
+.ai-gradient-border {
+  position: relative;
+  background: linear-gradient(90deg, #f472b6, #c084fc, #a78bfa, #f472b6);
+  background-size: 300% 100%;
+  animation: ai-gradient-flow 6s ease infinite;
+}
+@keyframes ai-gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Blue-to-violet gradient text — headline accent word */
+.ai-gradient-text {
+  background: linear-gradient(90deg, theme('colors.primary.DEFAULT'), theme('colors.ai.brand'));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Bobbing ghost — "building" loader mascot (bluish-gray, no color) */
+.ghost-float {
+  animation: ghost-bob 2.6s ease-in-out infinite;
+}
+@keyframes ghost-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.ghost-shadow-pulse {
+  animation: ghost-shadow-pulse 2.6s ease-in-out infinite;
+}
+@keyframes ghost-shadow-pulse {
+  0%, 100% { transform: scaleX(1); opacity: 0.35; }
+  50% { transform: scaleX(0.65); opacity: 0.16; }
+}
+
 html,
 body,
 #root {
   height: 100%;
+  overflow: hidden;
 }
 
 /* ── Ask BirdGPT TopBar button animations (ported from contenthub 2.0) ── */

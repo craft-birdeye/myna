@@ -1,5 +1,6 @@
 import React from 'react';
 import RHSSidePanelHeader from '../../../Molecules/RHS/RHSHeader/RHSHeader';
+import RHSPanelFooter from '../../../Molecules/RHS/RHSFooter/RHSFooter';
 import AgentDetailsBody from './AgentDetailsBody';
 import LLMTaskBody from './LLMTaskBody';
 import EntityTaskBody from './EntityTaskBody';
@@ -15,6 +16,7 @@ import ConversationTriggerBody from './ConversationTriggerBody';
 import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
+import SendResponseTaskBody from './SendResponseTaskBody';
 
 const VARIANTS = {
   start: {
@@ -39,6 +41,11 @@ const VARIANTS = {
   },
   voiceCallTask: {
     body: VoiceCallTaskBody,
+    showActions: true,
+    showPromptStrength: false,
+  },
+  sendResponseTask: {
+    body: SendResponseTaskBody,
     showActions: true,
     showPromptStrength: false,
   },
@@ -116,9 +123,9 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
         width: panelWidth,
         height: '100%',
         background: '#ffffff',
-        borderRadius: 8,
+        borderRadius: 12,
         boxShadow: '0px 2px 12px 0px rgba(33, 33, 33, 0.06)',
-        border: '2px solid transparent',
+        border: '1px solid #e5e9f0',
         overflow: 'hidden',
         fontFamily: '"Roboto", arial, sans-serif',
       }}>
@@ -146,6 +153,9 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           </div>
         </div>
 
+        {!viewOnly && variant === 'createCustomProcedure' && (
+          <RHSPanelFooter onSave={onSave} saveLabel="Save" />
+        )}
       </div>
   );
 }

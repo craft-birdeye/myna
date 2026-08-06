@@ -15,6 +15,15 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
     return unsub;
   }, []);
 
+  // Re-sync from the parent when the underlying node data changes externally — e.g. a tool
+  // drawer (Reminder tool, Initiate voice call) saving its own edits, which regenerates this
+  // node's description without going through this panel's own onChange handlers.
+  useEffect(() => {
+    setTaskName(initialValues.taskName ?? '');
+    setDescription(initialValues.description ?? '');
+    setSelectedTools(initialValues.selectedTools ?? []);
+  }, [initialValues]);
+
   const handleTaskName = (e) => {
     const val = e.target.value;
     setTaskName(val);

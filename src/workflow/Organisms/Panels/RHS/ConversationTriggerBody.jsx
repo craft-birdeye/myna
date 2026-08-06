@@ -152,14 +152,20 @@ function ChannelSection({ icon, title, conditionsLabel, conditionOptions, rows, 
 export default function ConversationTriggerBody({ initialValues = {}, onFieldChange, viewOnly = false }) {
   const [triggerName, setTriggerName] = useState(initialValues.triggerName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
+  // A wizard-built trigger explicitly sets voiceRows/webChatRows — to an empty
+  // array when that channel wasn't selected during onboarding. Respect that as
+  // given. Only fall back to a single default row when the node carries no
+  // seeded rows at all, e.g. a trigger added manually on the canvas.
+  const hasSeededChannelRows =
+    initialValues.voiceRows !== undefined || initialValues.webChatRows !== undefined;
   const [voiceRows, setVoiceRows] = useState(
-    initialValues.voiceRows?.length
-      ? initialValues.voiceRows
+    hasSeededChannelRows
+      ? initialValues.voiceRows ?? []
       : [makeRow(VOICE_OPTIONS[0].value, TIME_OPTIONS[0].value)]
   );
   const [webChatRows, setWebChatRows] = useState(
-    initialValues.webChatRows?.length
-      ? initialValues.webChatRows
+    hasSeededChannelRows
+      ? initialValues.webChatRows ?? []
       : [makeRow(WEBCHAT_OPTIONS[0].value, TIME_OPTIONS[0].value)]
   );
 
@@ -216,29 +222,33 @@ export default function ConversationTriggerBody({ initialValues = {}, onFieldCha
         readOnly={viewOnly}
       />
 
-      <ChannelSection
-        icon="call"
-        title="Voice call"
-        conditionsLabel="Trigger conditions for voice"
-        conditionOptions={VOICE_OPTIONS}
-        rows={voiceRows}
-        onRowChange={(id, key, val) => updateRows(setVoiceRows, 'voiceRows', voiceRows, id, key, val)}
-        onAddRow={() => addRow(setVoiceRows, 'voiceRows', voiceRows, VOICE_OPTIONS)}
-        onRemoveRow={(id) => removeRow(setVoiceRows, 'voiceRows', voiceRows, id)}
-        viewOnly={viewOnly}
-      />
+      {voiceRows.length > 0 && (
+        <ChannelSection
+          icon="call"
+          title="Voice call"
+          conditionsLabel="Trigger conditions for voice"
+          conditionOptions={VOICE_OPTIONS}
+          rows={voiceRows}
+          onRowChange={(id, key, val) => updateRows(setVoiceRows, 'voiceRows', voiceRows, id, key, val)}
+          onAddRow={() => addRow(setVoiceRows, 'voiceRows', voiceRows, VOICE_OPTIONS)}
+          onRemoveRow={(id) => removeRow(setVoiceRows, 'voiceRows', voiceRows, id)}
+          viewOnly={viewOnly}
+        />
+      )}
 
-      <ChannelSection
-        icon="chat"
-        title="Web chat"
-        conditionsLabel="Trigger conditions for web chat"
-        conditionOptions={WEBCHAT_OPTIONS}
-        rows={webChatRows}
-        onRowChange={(id, key, val) => updateRows(setWebChatRows, 'webChatRows', webChatRows, id, key, val)}
-        onAddRow={() => addRow(setWebChatRows, 'webChatRows', webChatRows, WEBCHAT_OPTIONS)}
-        onRemoveRow={(id) => removeRow(setWebChatRows, 'webChatRows', webChatRows, id)}
-        viewOnly={viewOnly}
-      />
+      {webChatRows.length > 0 && (
+        <ChannelSection
+          icon="chat"
+          title="Web chat"
+          conditionsLabel="Trigger conditions for web chat"
+          conditionOptions={WEBCHAT_OPTIONS}
+          rows={webChatRows}
+          onRowChange={(id, key, val) => updateRows(setWebChatRows, 'webChatRows', webChatRows, id, key, val)}
+          onAddRow={() => addRow(setWebChatRows, 'webChatRows', webChatRows, WEBCHAT_OPTIONS)}
+          onRemoveRow={(id) => removeRow(setWebChatRows, 'webChatRows', webChatRows, id)}
+          viewOnly={viewOnly}
+        />
+      )}
     </div>
   );
 }

@@ -27,6 +27,10 @@ export type Token = string | Ref
 
 export interface Bullet {
   tokens: Token[]
+  /** Nesting level for sub-lists (0-2). Defaults to 0. */
+  indent?: number
+  /** Numbered (true) vs bulleted (false/undefined) marker. */
+  ordered?: boolean
 }
 
 export interface ProcedureStep {
@@ -53,6 +57,8 @@ export interface Procedure {
   lastEdited: string
   /** Trigger description shown in the "When to use this procedure?" field. */
   whenToUse: string
+  /** Completion condition shown in the "When to exit this procedure?" field. */
+  whenToExit?: string
   steps: ProcedureStep[]
   tools: string[]
   context: ContextItem[]
@@ -1620,6 +1626,7 @@ export const HC_PROCEDURE_ORDER = [
   'Handle emergency or urgent concern',
   'Handle unclear message',
   'Form not filled',
+  'Handle prescription refill request',
 ] as const
 
 function sortProceduresByOrder(procedures: Procedure[], order: readonly string[]): Procedure[] {
@@ -2726,6 +2733,64 @@ HC_PROCEDURES_UNSORTED.push(
     context: HC_WAITLIST_CONTEXT,
   }
 )
+
+// Built live in the create-agent conversation when John opts to add a refill
+// procedure. Requires a pharmacy/e-prescribe integration that isn't connected
+// yet, so the agent flags it and always hands refill approval to the prescriber.
+HC_PROCEDURES_UNSORTED.push({
+  id: 'hc-fd-14',
+  name: 'Handle prescription refill request',
+  category: 'Healthcare Frontdesk',
+  queue: 'Inbound',
+  channels: ['Voice call'],
+  description:
+    'Identifies the patient, pulls the prescription from the EHR, confirms medication and pharmacy, and routes the refill to the prescriber for approval. The agent never approves a refill itself.',
+  lastEdited: 'Just now',
+  whenToUse:
+    'A patient calls or messages asking to refill an existing prescription (e.g. "I need a refill on my lisinopril").',
+  whenToExit:
+    'The refill request has been sent to the prescriber for approval, or the caller has been escalated to a human.',
+  steps: [
+    {
+      title: 'Identify the patient',
+      bullets: [
+        { tokens: ['Confirm you are speaking with the patient, then verify identity with date of birth via ', ref('tool', 'verify_patient_identity'), '.'] },
+        { tokens: ['Never discuss any medication or record details before identity is confirmed (HIPAA).'] },
+      ],
+    },
+    {
+      title: 'Look up the prescription',
+      bullets: [
+        { tokens: ['Pull the patient\'s active medications from the ', ref('tool', 'EHR lookup'), '.'] },
+        { tokens: ['Read back the medication name and the dosage on file — do not guess or infer a dosage the record does not show.'] },
+        { tokens: ['If the medication is not found on file, do not invent it — hand off to a human via ', ref('tool', 'Escalate_to_staff'), '.'] },
+      ],
+    },
+    {
+      title: 'Confirm medication and pharmacy',
+      bullets: [
+        { tokens: ['Confirm the exact medication and the patient\'s preferred pharmacy on file.'] },
+        { tokens: ['If the pharmacy has changed, capture the new pharmacy name and location.'] },
+      ],
+    },
+    {
+      title: 'Route to the prescriber for approval',
+      bullets: [
+        { tokens: ['Send the refill request to the prescriber for approval using ', ref('tool', 'Pharmacy / e-prescribe'), '. The agent never approves a refill itself.'] },
+        { tokens: ['Tell the patient the request has been sent to their provider and they\'ll be notified once it\'s approved and sent to the pharmacy.'] },
+      ],
+    },
+    {
+      title: 'Escalate when required',
+      bullets: [
+        { tokens: ['Controlled substances, early refills, or anything unusual → escalate to a human via ', ref('tool', 'Escalate_to_staff'), ' instead of routing automatically.'] },
+        { tokens: ['Never provide dosage changes, medical advice, or clinical opinions — state you are a health assistant, not a medical professional.'] },
+      ],
+    },
+  ],
+  tools: ['verify_patient_identity', 'EHR lookup', 'Pharmacy / e-prescribe', 'Escalate_to_staff'],
+  context: HC_CONTEXT,
+})
 
 export const HC_PROCEDURES = sortProceduresByOrder(HC_PROCEDURES_UNSORTED, HC_PROCEDURE_ORDER)
 

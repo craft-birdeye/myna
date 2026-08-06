@@ -1,14 +1,41 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import '../prompt-chip.css';
 import { serializeFrom, deserializeInto, deserializeIntoTyped, insertChipAt } from '../promptChipHelpers.js';
-import { VariableIcon, BuildIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
-import { CHIP_TYPES, DataTypeIcon } from '../VariableChip/VariableChip.jsx';
+import { VariableIcon, BuildIcon, ProcedureIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
+import ToolbarButton from '../ToolbarButton.jsx';
+import { ToolSlashMenu, getCaretAnchor } from '../ToolSlashMenu/ToolSlashMenu';
 import styles from './UserPromptInput.module.css';
 
-const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+/** Nearest scrollable ancestor (e.g. the drawer's own scroll container), or null. */
+function findScrollParent(el) {
+  let node = el?.parentElement;
+  while (node && node !== document.body) {
+    const style = window.getComputedStyle(node);
+    if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
 
-export default function UserPromptInput({ value, onChange, required, hideLabel = false, readOnly = false, autoHeight = false, minEditorHeight, placeholder = 'Enter prompt', resolveType = null, onOpenToolDrawer, onOpenTool }) {
+export default function UserPromptInput({
+  value,
+  onChange,
+  required,
+  hideLabel = false,
+  readOnly = false,
+  autoHeight = false,
+  minEditorHeight,
+  placeholder = 'Enter prompt',
+  resolveType = null,
+  onOpenToolDrawer,
+  onOpenTool,
+  showProcedureButton = false,
+  enableToolSlash = true,
+  showTriggerFields = false,
+}) {
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -18,7 +45,16 @@ export default function UserPromptInput({ value, onChange, required, hideLabel =
   const pickerContainerRef = useRef(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashAnchor, setSlashAnchor] = useState(null);
+  // Tracks the scroll container the menu was opened against, so we can shift
+  // the (already-computed) anchor by the scroll delta instead of re-deriving
+  // it from the live caret on every scroll tick — getCaretAnchor can mutate
+  // the DOM (temporary marker node) as a fallback, which is unsafe to run at
+  // scroll-event frequency.
+  const slashScrollRef = useRef({ parent: null, initialTop: 0, initialAnchor: null });
   const [isEmpty, setIsEmpty] = useState(!(value ?? '').trim());
+  const fieldsBtnRef = useRef(null);
 
   const syncEmpty = useCallback(() => {
     const el = editorRef.current;
@@ -67,21 +103,16 @@ export default function UserPromptInput({ value, onChange, required, hideLabel =
     }
   }, []);
 
-  const handleOpenPicker = useCallback(() => {
-    saveRange();
-    setPickerOpen((p) => !p);
-  }, [saveRange]);
-
   const handleOpenFieldModal = useCallback(() => {
     saveRange();
     setFieldModalOpen(true);
   }, [saveRange]);
 
-  const handleTypeSelect = useCallback((type) => {
-    setPickerOpen(false);
-    insertChipAt(editorRef.current, savedRangeRef.current, emitChange, type);
+  const handleInsertProcedure = useCallback(() => {
+    saveRange();
+    insertChipAt(editorRef.current, savedRangeRef.current, emitChange, 'product');
     savedRangeRef.current = null;
-  }, [emitChange]);
+  }, [saveRange, emitChange]);
 
   const handleFieldSelect = useCallback((fieldValue) => {
     setFieldModalOpen(false);
@@ -89,14 +120,68 @@ export default function UserPromptInput({ value, onChange, required, hideLabel =
     savedRangeRef.current = null;
   }, [emitChange]);
 
-  // @ mention: open field picker
+  const closeSlashMenu = useCallback(() => {
+    setSlashOpen(false);
+    setSlashAnchor(null);
+    requestAnimationFrame(() => editorRef.current?.focus());
+  }, []);
+
+  const openSlashMenu = useCallback((anchorFn) => {
+    saveRange();
+    const anchor = anchorFn();
+    const scrollParent = findScrollParent(editorRef.current);
+    slashScrollRef.current = {
+      parent: scrollParent,
+      initialTop: scrollParent ? scrollParent.scrollTop : (window.scrollY || window.pageYOffset || 0),
+      initialAnchor: anchor,
+    };
+    setSlashAnchor(anchor);
+    setSlashOpen(true);
+  }, [saveRange]);
+
+  // Keep the slash menu glued to its anchor while the drawer/page scrolls,
+  // instead of leaving it stuck at its original position. This shifts the
+  // anchor captured at open time by the scroll delta — it deliberately does
+  // NOT re-derive the anchor via getCaretAnchor() on every scroll tick, since
+  // that function mutates the DOM (inserts/removes a temporary marker node)
+  // as a fallback, which is unsafe to run at scroll-event frequency and was
+  // causing the menu to vanish mid-scroll.
+  useEffect(() => {
+    if (!slashOpen) return;
+    const reposition = () => {
+      const { parent, initialTop, initialAnchor } = slashScrollRef.current;
+      if (!initialAnchor) return;
+      const currentTop = parent ? parent.scrollTop : (window.scrollY || window.pageYOffset || 0);
+      const delta = currentTop - initialTop;
+      setSlashAnchor({ top: initialAnchor.top - delta, left: initialAnchor.left });
+    };
+    document.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      document.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [slashOpen]);
+
+  const handleToolSlashSelect = useCallback((tool) => {
+    setSlashOpen(false);
+    setSlashAnchor(null);
+    insertChipAt(editorRef.current, savedRangeRef.current, emitChange, 'tool', tool.name);
+    savedRangeRef.current = null;
+    requestAnimationFrame(() => editorRef.current?.focus());
+  }, [emitChange]);
+
+  // @ mention → field picker; / → tool slash menu
   const handleKeyDown = useCallback((e) => {
     if (e.key === '@') {
-      saveRange();
-      // Let the character type, then open the picker on next tick
-      setTimeout(() => setFieldModalOpen(true), 0);
+      handleOpenFieldModal();
+      return;
     }
-  }, [saveRange]);
+    if (enableToolSlash && e.key === '/') {
+      e.preventDefault();
+      openSlashMenu(() => getCaretAnchor(editorRef.current));
+    }
+  }, [handleOpenFieldModal, enableToolSlash, openSlashMenu]);
 
   return (
     <>
@@ -131,32 +216,40 @@ export default function UserPromptInput({ value, onChange, required, hideLabel =
           />
           {!readOnly && (
           <div className={styles.toolbar} ref={pickerContainerRef}>
-            <button
-              type="button"
-              className={`${styles.toolbarBtn} ${fieldModalOpen ? styles.toolbarBtnActive : ''}`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleOpenFieldModal}
-              title="Insert variable"
-            >
-              <VariableIcon />
-            </button>
-            <button
-              type="button"
-              className={styles.toolbarBtn}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={onOpenToolDrawer}
-              title="Tools"
-            >
-              <BuildIcon />
-            </button>
-            <button
-              type="button"
-              className={styles.toolbarBtn}
-              onMouseDown={(e) => e.preventDefault()}
-              title="Expand"
-            >
-              <ExpandIcon />
-            </button>
+            <div ref={fieldsBtnRef}>
+              <ToolbarButton
+                icon={<VariableIcon />}
+                tooltip="Fields"
+                active={fieldModalOpen}
+                onClick={handleOpenFieldModal}
+              />
+            </div>
+            <ToolbarButton
+              icon={<BuildIcon />}
+              tooltip="Tools"
+              onClick={() => {
+                if (enableToolSlash) {
+                  openSlashMenu(() => {
+                    const rect = editorRef.current?.getBoundingClientRect();
+                    return rect ? { top: rect.bottom - 8, left: rect.left + 12 } : null;
+                  });
+                  return;
+                }
+                onOpenToolDrawer?.();
+              }}
+            />
+            {showProcedureButton && (
+              <ToolbarButton
+                icon={<ProcedureIcon />}
+                tooltip="Procedures"
+                onClick={handleInsertProcedure}
+              />
+            )}
+            <ToolbarButton
+              icon={<ExpandIcon />}
+              tooltip="Rephrase"
+              disabled={isEmpty}
+            />
           </div>
           )}
         </div>
@@ -165,8 +258,16 @@ export default function UserPromptInput({ value, onChange, required, hideLabel =
         <FieldPickerModal
           onClose={() => setFieldModalOpen(false)}
           onSelectField={handleFieldSelect}
+          anchorEl={fieldsBtnRef.current}
+          showTriggerFields={showTriggerFields}
         />
       )}
+      <ToolSlashMenu
+        open={slashOpen}
+        anchor={slashAnchor}
+        onClose={closeSlashMenu}
+        onSelect={handleToolSlashSelect}
+      />
     </>
   );
 }

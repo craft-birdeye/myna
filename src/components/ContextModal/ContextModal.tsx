@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from '../Icon/Icon'
 import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
 import { Check, ChevronRight, ChevronDown, Search, X, PlusCircle, Link } from 'lucide-react'
@@ -44,32 +45,57 @@ function CheckBox({
 function ModalTabs({
   activeTab,
   onChange,
+  search,
+  onSearchChange,
+  showSearch,
 }: {
   activeTab: ContextModalTab
   onChange: (tab: ContextModalTab) => void
+  search: string
+  onSearchChange: (value: string) => void
+  showSearch: boolean
 }) {
   return (
-    <div className="flex shrink-0 gap-xs border-b border-border px-2xl">
-      {TABS.map((tab) => {
-        const active = tab === activeTab
-        return (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => onChange(tab)}
-            className="flex flex-col items-stretch"
-          >
-            <span
-              className={`flex h-10 items-center rounded-sm px-sm text-body transition-colors ${
-                active ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
-              }`}
+    <div className="flex shrink-0 items-center justify-between gap-md px-2xl">
+      <div className="flex items-end gap-xs">
+        {TABS.map((tab) => {
+          const active = tab === activeTab
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => onChange(tab)}
+              className="flex flex-col items-stretch"
             >
-              {tab}
-            </span>
-            <span className={`h-[2px] w-full rounded-t-sm ${active ? 'bg-primary' : 'bg-transparent'}`} />
-          </button>
-        )
-      })}
+              <span
+                className={`flex h-9 items-center rounded-sm px-sm text-body transition-colors ${
+                  active ? 'text-text-primary' : 'text-text-secondary hover:bg-surface-hover'
+                }`}
+              >
+                {tab}
+              </span>
+              <span className={`h-[2px] w-full ${active ? 'bg-primary' : 'bg-transparent'}`} />
+            </button>
+          )
+        })}
+      </div>
+      {showSearch && (
+        <div className="flex h-[34px] w-[240px] shrink-0 items-center gap-sm rounded-md border border-border-input bg-surface px-md">
+          <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search fields"
+            className="min-w-0 flex-1 bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
+          />
+          {search && (
+            <button type="button" onClick={() => onSearchChange('')} aria-label="Clear search">
+              <X className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -137,12 +163,12 @@ function FieldGroup({
 function FieldsTab({
   fields,
   setFields,
+  search,
 }: {
   fields: ContextField[]
   setFields: React.Dispatch<React.SetStateAction<ContextField[]>>
+  search: string
 }) {
-  const [search, setSearch] = useState('')
-
   const filtered = useMemo(
     () =>
       fields.filter(
@@ -169,25 +195,7 @@ function FieldsTab({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="shrink-0 px-2xl py-sm">
-        <div className="flex h-[34px] items-center gap-sm rounded-md border border-border-input bg-surface px-md">
-          <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search fields"
-            className="min-w-0 flex-1 bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
-          />
-          {search && (
-            <button type="button" onClick={() => setSearch('')} aria-label="Clear search">
-              <X className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto pt-lg">
         <div className="sticky top-0 z-10 flex items-center border-b border-border bg-surface px-2xl py-sm">
           <div className="w-12 shrink-0" />
           <div className="flex min-w-0 flex-1 items-center gap-xs pr-md text-small text-text-secondary">
@@ -372,14 +380,15 @@ function IndustryTab({
         type="button"
         role="switch"
         aria-checked={enabled}
+        aria-label="Industry context"
         onClick={() => setEnabled(!enabled)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-          enabled ? 'bg-primary' : 'bg-control-border'
+        className={`relative h-[16px] w-[32px] shrink-0 cursor-pointer rounded-full transition-colors focus:outline-none ${
+          enabled ? 'bg-primary' : 'bg-surface-selected'
         }`}
       >
         <span
-          className={`absolute top-0.5 size-5 rounded-full bg-surface shadow-dropdown transition-transform ${
-            enabled ? 'translate-x-[22px]' : 'translate-x-0.5'
+          className={`absolute top-[2px] size-3 rounded-full bg-white shadow-sm transition-[left] ${
+            enabled ? 'left-[18px]' : 'left-[2px]'
           }`}
         />
       </button>
@@ -390,6 +399,7 @@ function IndustryTab({
 
 export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: ContextModalProps) {
   const [activeTab, setActiveTab] = useState<ContextModalTab>('Fields')
+  const [fieldsSearch, setFieldsSearch] = useState('')
   const [fields, setFields] = useState<ContextField[]>(DEFAULT_CONTEXT_FIELDS)
   const [knowledge, setKnowledge] = useState(DEFAULT_CONTEXT_KNOWLEDGE)
   const [brandItems, setBrandItems] = useState<ContextBrandItem[]>(DEFAULT_CONTEXT_BRAND)
@@ -414,7 +424,7 @@ export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: Con
     onClose()
   }
 
-  return (
+  return createPortal(
     <div
       className={`fixed inset-0 flex items-center justify-center ${open ? '' : 'pointer-events-none'}`}
       style={{ zIndex: overlayZIndex }}
@@ -454,17 +464,25 @@ export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: Con
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="flex size-9 items-center justify-center text-text-icon hover:bg-surface-hover"
+              className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
             >
               <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
         </div>
 
-        <ModalTabs activeTab={activeTab} onChange={setActiveTab} />
+        <ModalTabs
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          search={fieldsSearch}
+          onSearchChange={setFieldsSearch}
+          showSearch={activeTab === 'Fields'}
+        />
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {activeTab === 'Fields' && <FieldsTab fields={fields} setFields={setFields} />}
+          {activeTab === 'Fields' && (
+            <FieldsTab fields={fields} setFields={setFields} search={fieldsSearch} />
+          )}
           {activeTab === 'Knowledge' && (
             <KnowledgeTab
               files={knowledge.files}
@@ -495,6 +513,7 @@ export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: Con
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

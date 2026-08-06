@@ -1,22 +1,25 @@
-import { useState } from 'react'
-import { Chip, DataTable, MetricTiles, type ChipVariant, type Column } from '../components'
+import { Chip, DataTable, type ChipVariant, type Column } from '../components'
 import {
-  HEALTHCARE_LOGS_METRICS,
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
+  REMINDER_LOGS_ROWS,
+  REVIEW_RESPONSE_LOGS_ROWS,
+  toHealthcareLogRow,
   type HealthcareLogRow,
   type PrevisitLogRow,
+  type ReviewResponseLogRow,
 } from '../data/healthcareAgentLogs'
-import { RunDetailView } from './RunDetailView'
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
-  Resolved: 'success',
-  Abandoned: 'danger',
-  Transferred: 'warning',
+  Complete: 'success',
+  Failed: 'danger',
+  'In progress': 'warning',
 }
 
+const TIMESTAMP_CELL = (v: unknown) => <span className="group-hover/row:text-text-action">{String(v)}</span>
+
 const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -30,28 +33,56 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'topic', label: 'Topic', width: 220, sortable: true },
 ]
 
-const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
-  Complete:      'success',
-  Failed:        'danger',
-  'In progress': 'warning',
-}
+const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 140,
+    sortable: true,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+  },
+  { key: 'contact', label: 'Contact', width: 220, sortable: true },
+  { key: 'channel', label: 'Channel', width: 180, sortable: true },
+]
 
-const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
+const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
   {
     key: 'status',
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
   },
-  { key: 'contact',  label: 'Contact',  width: 200, sortable: true },
-  { key: 'channel',  label: 'Channel',  width: 120, sortable: true },
+  { key: 'contact', label: 'Contact', width: 220, sortable: true },
+  { key: 'source', label: 'Source', width: 180, sortable: true },
+]
+
+const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
+  Complete: 'success',
+  Failed: 'danger',
+  'In progress': 'warning',
+}
+
+const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 140,
+    sortable: true,
+    render: (v) => (
+      <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />
+    ),
+  },
+  { key: 'contact', label: 'Contact', width: 200, sortable: true },
+  { key: 'channel', label: 'Channel', width: 120, sortable: true },
   { key: 'duration', label: 'Duration', width: 110, sortable: true },
 ]
 
 const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true },
+  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -64,13 +95,42 @@ const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
 
 interface AgentLogsTabProps {
   agentName?: string
+  onNavigateToInbox?: (conversationId?: string) => void
+  onViewRun?: (row: HealthcareLogRow) => void
 }
 
-export function AgentLogsTab({ agentName }: AgentLogsTabProps) {
-  const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
+export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
+  if (agentName === 'Reminder agent') {
+    return (
+      <div className="px-lg py-lg">
+        <DataTable
+          columns={REMINDER_LOG_COLUMNS}
+          data={REMINDER_LOGS_ROWS}
+          onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
+          rowAction={{
+            icon: 'visibility',
+            label: 'View run',
+            onClick: (row) => onViewRun?.(row as HealthcareLogRow),
+          }}
+        />
+      </div>
+    )
+  }
 
-  if (selectedRun) {
-    return <RunDetailView row={selectedRun} onBack={() => setSelectedRun(null)} />
+  if (agentName?.startsWith('Review response agent')) {
+    return (
+      <div className="px-lg py-lg">
+        <DataTable
+          columns={REVIEW_RESPONSE_LOG_COLUMNS}
+          data={REVIEW_RESPONSE_LOGS_ROWS}
+          rowAction={{
+            icon: 'visibility',
+            label: 'View log',
+            onClick: (row) => onViewRun?.(toHealthcareLogRow(row as ReviewResponseLogRow)),
+          }}
+        />
+      </div>
+    )
   }
 
   if (agentName === 'Pre-visit agent' || agentName === 'Waitlist agent') {
@@ -79,7 +139,7 @@ export function AgentLogsTab({ agentName }: AgentLogsTabProps) {
         <DataTable
           columns={PREVISIT_COLUMNS}
           data={PREVISIT_LOGS_ROWS}
-          rowAction={{ icon: 'visibility', label: 'View run', onClick: () => {} }}
+          rowAction={{ icon: 'visibility', label: 'View log', onClick: () => {} }}
         />
       </div>
     )
@@ -99,17 +159,15 @@ export function AgentLogsTab({ agentName }: AgentLogsTabProps) {
 
   return (
     <>
-      <div className="px-2xl pt-lg">
-        <MetricTiles metrics={HEALTHCARE_LOGS_METRICS} />
-      </div>
       <div className="px-lg py-lg">
         <DataTable
           columns={LOG_COLUMNS}
-          data={HEALTHCARE_LOGS_ROWS}
+          data={agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS}
+          onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
-            label: 'View run',
-            onClick: (row) => setSelectedRun(row as HealthcareLogRow),
+            label: 'View log',
+            onClick: (row) => onViewRun?.(row as HealthcareLogRow),
           }}
         />
       </div>

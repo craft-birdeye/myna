@@ -11,11 +11,11 @@ export function Toast({ message, visible, onClose }: ToastProps) {
 
   return (
     <div
-      className={`fixed left-1/2 top-6 z-[200] flex -translate-x-1/2 items-center gap-sm rounded-lg border border-border bg-surface px-lg py-md shadow-modal transition-all duration-300 ${
+      className={`fixed left-1/2 top-6 z-[1300] flex -translate-x-1/2 items-center gap-sm rounded-lg border border-border bg-surface px-lg py-md shadow-modal transition-all duration-300 ${
         visible ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-2'
       }`}
     >
-      <Check className="size-5 shrink-0 text-success" strokeWidth={1.6} absoluteStrokeWidth />
+      <Check className="size-5 shrink-0 text-accent-positive" strokeWidth={1.6} absoluteStrokeWidth />
       <span className="whitespace-nowrap text-body text-text-primary">{message}</span>
       <button
         type="button"

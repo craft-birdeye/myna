@@ -30,6 +30,19 @@
   height: 36px;
 }
 
+/* Separate selector from .graph-controls__toggle (the orientation group) so the
+   view-only mode override that hides orientation controls doesn't also hide this. */
+.graph-controls__mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  padding: 4px;
+  height: 36px;
+}
+
 .graph-controls__toggle-btn {
   width: 24px;
   height: 24px;
@@ -148,6 +161,34 @@
 
 .graph-controls__run:hover {
   background: #f2f4f7;
+}
+
+.graph-controls__run:disabled,
+.graph-controls__run[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.graph-controls__run:disabled:hover,
+.graph-controls__run[aria-disabled='true']:hover {
+  background: #fff;
+}
+
+.graph-controls__ai-assist {
+  color: #6834b7;
+}
+
+.graph-controls__ai-assist:hover {
+  background: #f2f4f7;
+}
+
+.graph-controls__ai-assist--active {
+  background: #e5e9f0;
+}
+
+.graph-controls__ai-assist-icon {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
 }
 
 .graph-control-tooltip {

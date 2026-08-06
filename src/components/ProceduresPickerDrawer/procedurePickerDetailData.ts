@@ -9,6 +9,7 @@ export interface ProcedureDetailDraft {
   id: string
   name: string
   whenToUse: string
+  whenToExit: string
   contextChips: { value: string; type: string }[]
   moreContextCount: number
   stepsText: string
@@ -23,6 +24,7 @@ export function createNewProcedureDraft(): ProcedureDetailDraft {
     id: NEW_PROCEDURE_ID,
     name: '',
     whenToUse: '',
+    whenToExit: '',
     contextChips: [],
     moreContextCount: 0,
     stepsText: '',
@@ -415,6 +417,7 @@ export function buildProcedureDetailDraft(catalogId: string, displayTitle: strin
     id: catalogId,
     name: overrides.name ?? displayTitle,
     whenToUse: overrides.whenToUse ?? hc?.whenToUse ?? base.whenToUse ?? '',
+    whenToExit: overrides.whenToExit ?? hc?.whenToExit ?? base.whenToExit ?? '',
     contextChips: hcContext.length ? hcContext : (base.contextChips ?? []) as { value: string; type: string }[],
     moreContextCount: hcContext.length ? 0 : (base.moreContextCount ?? 0),
     stepsText: overrides.stepsText ?? resolveStepsText(catalogId, displayTitle),

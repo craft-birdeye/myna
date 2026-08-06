@@ -10,6 +10,11 @@ export interface UserPromptInputProps {
   minEditorHeight?: number
   placeholder?: string
   resolveType?: (label: string) => string
+  onOpenToolDrawer?: () => void
+  onOpenTool?: (label: string) => void
+  showProcedureButton?: boolean
+  enableToolSlash?: boolean
+  showTriggerFields?: boolean
 }
 
 declare const UserPromptInput: FC<UserPromptInputProps>

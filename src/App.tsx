@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
+import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
+import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
-import { Icon, IconRail, Link, RecordDetailScreen, SideNav, type NavSection, type RailGroup, type Product } from './components'
+import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
 import { SearchAIL2NavPanel } from './search-ai/SearchAIL2NavPanel'
@@ -46,6 +49,8 @@ import { IntegrationDetailScreen } from './screens/IntegrationDetailScreen'
 import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
+import { AllReviewsScreen } from './screens/AllReviewsScreen'
+import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import { Monitor } from 'lucide-react'
 import {
@@ -65,6 +70,14 @@ import {
   FigmaIconContacts,
   FigmaIconRecommendations,
 } from './components/l1Icons'
+
+function EmptyResourceScreen({ label }: { label: string }) {
+  return (
+    <div className="flex flex-1 items-center justify-center text-body text-text-secondary">
+      No {label.toLowerCase()} data yet.
+    </div>
+  )
+}
 
 // ─── L1 rail config ────────────────────────────────────────────────────────
 
@@ -261,6 +274,65 @@ const NAV_SECTIONS_BY_PRODUCT: Record<string, NavSection[]> = {
   dental:      DENTAL_NAV_SECTIONS,
 }
 
+const REVIEWS_NAV_SECTIONS: NavSection[] = [
+  {
+    id: 'human-actions',
+    label: 'Human actions',
+    defaultExpanded: true,
+    items: [
+      { id: 'view-all-reviews',      label: 'View all reviews' },
+      { id: 'respond-to-reviews',    label: 'Respond to reviews' },
+      { id: 'monitor-agent-replies', label: 'Monitor agent replies' },
+    ],
+  },
+  {
+    id: 'agents',
+    label: 'Agents',
+    items: [
+      { id: 'generation-agents', label: 'Generation agents' },
+      { id: 'response-agents',   label: 'Response agents' },
+      { id: 'tagging-agents',    label: 'Tagging agents' },
+      { id: 'marketing-agents',  label: 'Marketing agents' },
+    ],
+  },
+  {
+    id: 'outcomes',
+    label: 'Outcomes',
+    items: [
+      { id: 'review-ratings',       label: 'Review & ratings' },
+      { id: 'response-rate',        label: 'Response rate' },
+      { id: 'reviews-distribution', label: 'Reviews distribution' },
+      { id: 'analyze-competitors',  label: 'Analyze competitors' },
+      { id: 'all-reports',          label: 'All reports', external: true },
+    ],
+  },
+  {
+    id: 'resources',
+    label: 'Resources',
+    items: [
+      { id: 'monitoring-sites',   label: 'Monitoring sites' },
+      { id: 'generation-sites',   label: 'Generation sites' },
+      { id: 'response-templates', label: 'Response templates' },
+      { id: 'auto-reply-rules',   label: 'Auto-reply rules' },
+      { id: 'auto-share-rules',   label: 'Auto-share rules' },
+      { id: 'ratings-display',    label: 'Ratings display' },
+      { id: 'approvals',          label: 'Approvals' },
+      { id: 'qr-codes',           label: 'QR codes' },
+      { id: 'widgets',            label: 'Widgets' },
+      { id: 'ai-prompts',         label: 'AI prompts' },
+    ],
+  },
+]
+
+const REVIEWS_DEFAULT_NAV = 'view-all-reviews'
+
+const REVIEWS_NAV_LABELS: Record<string, string> = Object.fromEntries(
+  REVIEWS_NAV_SECTIONS.flatMap((section) => {
+    if (section.items === undefined) return [[section.id, section.label]]
+    return (section.items ?? []).map((item) => [item.id, item.label])
+  }),
+)
+
 const DEFAULT_NAV_BY_PRODUCT: Record<string, string> = {
   automotive: 'manage-appointments',
   healthcare:  'manage-appointments',
@@ -280,14 +352,16 @@ const PRODUCT_BRAND: Record<string, string> = {
 }
 
 const AGENT_NAMES: Record<string, string> = {
-  'frontdesk-agent':      'Front desk agent',
-  'reminder-agent':       'Reminder agent',
-  'outreach-agent':       'Outreach agent',
-  'waitlist-agent':       'Waitlist agent',
-  'pre-visit-agent':      'Pre-visit agent',
-  'recall-agent':         'Recall agent',
-  'revenue-agent':        'Revenue agent',
-  'treatment-plan-agent': 'Treatment plan agent',
+  'frontdesk-agent':           'Front desk agent',
+  'reminder-agent':            'Reminder agent',
+  'outreach-agent':            'Outreach agent',
+  'waitlist-agent':            'Waitlist agent',
+  'pre-visit-agent':           'Pre-visit agent',
+  'recall-agent':              'Recall agent',
+  'revenue-agent':             'Revenue agent',
+  'treatment-plan-agent':      'Treatment plan agent',
+  'review-response-agents':    'Review response agents',
+  'response-agents':           'Review response agents',
 }
 
 // Map railActive → module title shown in the global TopBar
@@ -310,6 +384,12 @@ const RAIL_TITLE: Record<string, string> = {
   reports:               'Reports',
   patients:              'Patients',
 }
+
+// Reverse of AGENT_NAMES — used to resolve a Recommendation's `agentName` (a full instance
+// name like "Front desk agent - North region") back to the navActive id that opens it.
+const AGENT_NAV_ID_BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(AGENT_NAMES).map(([id, name]) => [name, id]),
+)
 
 // ─── "View details" deep links ─────────────────────────────────────────────
 // Detail views open in a new browser tab. Since this prototype has no URL
@@ -348,14 +428,19 @@ export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
   const [railActive, setRailActive] = useState('frontdesk')
   const [navActive, setNavActive] = useState(
-    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'manage-appointments',
+    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
   )
   const [expandOnHover, setExpandOnHover] = useState(true)
   const [searchAIL2Active, setSearchAIL2Active] = useState(SEARCH_AI_L2_DEFAULT_ACTIVE)
   const [socialL2Active, setSocialL2Active] = useState('Publish/Calendar')
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
+  // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
+  // closing the editor) knows which instance + tab to land on instead of its own defaults.
+  const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
+  const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
+  const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
   const [settingsSubScreen, setSettingsSubScreen] = useState<string | null>(null)
@@ -366,6 +451,10 @@ export function App() {
   // Blog create page state — mirrors contenthub 2.0's createViewStartAtBlogCanvas pattern
   const [createBlogPageOpen, setCreateBlogPageOpen] = useState(false)
   const [createBlogFlowData, setCreateBlogFlowData] = useState<BlogFlowData | null>(null)
+  const [agentToastMessage, setAgentToastMessage] = useState('')
+  const [agentToastVisible, setAgentToastVisible] = useState(false)
+  const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
+  const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')
@@ -389,6 +478,10 @@ export function App() {
   function handleEditAgent(name: string, draft?: WizardAgentDraft) {
     setWizardAgentDraft(draft ?? null)
     setEditingAgentName(name)
+    if (draft) {
+      setAgentToastMessage(`${draft.agentName} created successfully`)
+      setAgentToastVisible(true)
+    }
   }
 
   const [intakeDetail, setIntakeDetail] = useState<IntakeDetailArgs | null>(
@@ -421,8 +514,10 @@ export function App() {
     !isEditingWorkflow &&
     !isViewingDetail &&
     !isAgentSetupActive &&
+    !isViewingFullBleedDetail &&
     railActive !== 'settings' &&
     railActive !== 'inbox' &&
+    railActive !== 'agents' &&
     railActive !== 'content-hub' &&
     railActive !== 'search' &&
     railActive !== 'social'
@@ -440,15 +535,30 @@ export function App() {
                 - L2 SideNav (bg-surface-l2 = #f0f1f5)
                 - <main> (bg-surface = #fff)
       */}
+      <FeedbackRecommendationsStoreProvider>
+      <RecommendationOverridesStoreProvider>
       <div className="h-screen w-screen flex overflow-hidden bg-surface-shell text-text-primary">
 
         {/* ── L1 Icon rail ── */}
         <IconRail
           logoSrc={logoSrc}
           brand={PRODUCT_BRAND[activeProduct]}
-          groups={RAIL_GROUPS}
+          groups={
+            activeProduct === 'healthcare'
+              ? RAIL_GROUPS
+              : RAIL_GROUPS.map((g) =>
+                  g.id === 'main'
+                    ? { ...g, items: g.items.map((i) => (i.id === 'agents' ? { ...i, label: 'Agents' } : i)) }
+                    : g,
+                )
+          }
           activeId={railActive}
-          onSelect={setRailActive}
+          onSelect={(id) => {
+            setRailActive(id)
+            setIsAgentSetupActive(false)
+            if (id === 'frontdesk') setNavActive('manage-appointments')
+            if (id === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
+          }}
           products={PRODUCTS}
           activeProduct={activeProduct}
           onProductChange={handleProductChange}
@@ -525,24 +635,37 @@ export function App() {
             {/* ── White rounded card (L2 nav + main content) ── */}
             <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden rounded-lg border border-border">
 
-              {/* L2 SideNav — frontdesk modules */}
+              {/* L2 SideNav — frontdesk modules, or Reviews AI's own section list */}
               {showL2 && (
-                <SideNav
-                  title="Front desk"
-                  sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
-                  activeId={navActive}
-                  onSelect={(id) => {
-                    if (id === 'knowledge-base') {
-                      setRailActive('settings')
-                      setSettingsTab('Knowledge')
-                    } else if (id === 'widgets') {
-                      setRailActive('settings')
-                      setSettingsTab('Widgets')
-                    } else {
-                      setNavActive(id)
-                    }
-                  }}
-                />
+                railActive === 'reviews' ? (
+                  <SideNav
+                    key="reviews"
+                    title="Reviews AI"
+                    sections={REVIEWS_NAV_SECTIONS}
+                    activeId={navActive}
+                    ctaLabel="Send review request"
+                    onCtaClick={() => setNavActive(REVIEWS_DEFAULT_NAV)}
+                    onSelect={setNavActive}
+                  />
+                ) : (
+                  <SideNav
+                    key="frontdesk"
+                    title="Front desk"
+                    sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
+                    activeId={navActive}
+                    onSelect={(id) => {
+                      if (id === 'knowledge-base') {
+                        setRailActive('settings')
+                        setSettingsTab('Knowledge')
+                      } else if (id === 'widgets') {
+                        setRailActive('settings')
+                        setSettingsTab('Widgets')
+                      } else {
+                        setNavActive(id)
+                      }
+                    }}
+                  />
+                )
               )}
 
               {/* Search AI L2 nav panel */}
@@ -649,22 +772,70 @@ export function App() {
                     />
                   )
                 ) : railActive === 'inbox' ? (
-                  <InboxScreen />
-                ) : isEditingWorkflow ? (
-                  <WorkflowEditorScreen
-                    agentName={editingAgentName}
-                    onClose={() => {
-                      setEditingAgentName(null)
-                      setWizardAgentDraft(null)
+                  <InboxScreen
+                    initialConversationId={inboxFocusId}
+                    onInitialConversationConsumed={() => setInboxFocusId(null)}
+                    onNavigateToRecommendation={(instanceName, recommendationId, feedbackPrefill) => {
+                      const baseName = instanceName.replace(/ - .+$/, '')
+                      const navId = AGENT_NAV_ID_BY_NAME[baseName]
+                      if (!navId) return
+                      setRecommendationFocus({ instanceName, recommendationId, feedbackPrefill })
+                      setNavActive(navId)
+                      setRailActive('frontdesk')
                     }}
-                    product={activeProduct}
-                    wizardDraft={wizardAgentDraft}
-                    agentStatus={
-                      editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                        ? 'Draft'
-                        : undefined
-                    }
                   />
+                ) : railActive === 'agents' ? (
+                  <AgentDirectoryScreen
+                    key={activeProduct}
+                    product={activeProduct}
+                    onOpenAgent={(navId) => {
+                      setRailActive('frontdesk')
+                      setNavActive(navId)
+                    }}
+                  />
+                ) : isEditingWorkflow ? (
+                  <div className="flex h-full w-full overflow-hidden">
+                    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                      <WorkflowEditorScreen
+                        agentName={editingAgentName}
+                        onClose={() => {
+                          setEditingAgentName(null)
+                          setWizardAgentDraft(null)
+                          setWorkflowAiAssistOpen(false)
+                        }}
+                        product={activeProduct}
+                        wizardDraft={wizardAgentDraft}
+                        agentStatus={
+                          editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
+                            ? 'Draft'
+                            : undefined
+                        }
+                        aiAssistOpen={workflowAiAssistOpen}
+                        onAiAssistOpenChange={setWorkflowAiAssistOpen}
+                      />
+                    </div>
+                    {workflowAiAssistOpen && (
+                      <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
+                    )}
+                  </div>
+                ) : railActive === 'reviews' ? (
+                  navActive === 'view-all-reviews' || navActive === 'all-reviews' ? (
+                    <AllReviewsScreen />
+                  ) : AGENT_NAMES[navActive] ? (
+                    <AgentDetailScreen
+                      key={navActive}
+                      agentName={AGENT_NAMES[navActive]}
+                      onEditAgent={handleEditAgent}
+                      onAgentSetupActiveChange={setIsAgentSetupActive}
+                      onNavigateToInbox={(conversationId) => {
+                        setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
+                        setRailActive('inbox')
+                      }}
+                      product={activeProduct}
+                    />
+                  ) : (
+                    <EmptyResourceScreen label={REVIEWS_NAV_LABELS[navActive] ?? 'Reviews'} />
+                  )
                 ) : navActive === 'review-waitlist' && waitlistDetail ? (
                   <>
                     <div className="flex shrink-0 items-center gap-xs border-b border-border px-2xl py-md">
@@ -780,7 +951,16 @@ export function App() {
                     onEditAgent={handleEditAgent}
                     onOpenIntegrationSettings={openIntegrationSettings}
                     onAgentSetupActiveChange={setIsAgentSetupActive}
+                    onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
+                    onNavigateToInbox={(conversationId) => {
+                      setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
+                      setRailActive('inbox')
+                    }}
+                    initialRecommendationFocus={recommendationFocus}
+                    onInitialRecommendationFocusConsumed={() => setRecommendationFocus(null)}
                     product={activeProduct}
+                    pendingInstanceView={pendingAgentInstanceView}
+                    onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
                   />
                 ) : appointmentDetail ? (
                   <>
@@ -802,9 +982,16 @@ export function App() {
 
             </div>{/* end white card */}
           </div>{/* end gutter row */}
+
+          <Toast
+            message={agentToastMessage}
+            visible={agentToastVisible}
+            onClose={() => setAgentToastVisible(false)}
+          />
         </div>{/* end right column */}
       </div>
-
+      </RecommendationOverridesStoreProvider>
+      </FeedbackRecommendationsStoreProvider>
     </ProcedureStoreProvider>
   )
 }

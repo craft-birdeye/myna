@@ -1,0 +1,264 @@
+.popover {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid #e5e9f0;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  box-sizing: border-box;
+  height: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #e5e9f0;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  flex-shrink: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  width: 240px;
+  max-width: 100%;
+  padding: 0 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 4px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.search:focus-within {
+  border-color: #1976d2;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+  background: transparent;
+}
+
+.searchInput::placeholder {
+  color: #8f8f8f;
+}
+
+.closeBtn {
+  display: flex;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px;
+  box-sizing: border-box;
+  gap: 0;
+  overflow: hidden;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 180px;
+  flex-shrink: 0;
+  padding-right: 8px;
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+}
+
+.divider {
+  width: 1px;
+  flex-shrink: 0;
+  margin-right: 12px;
+  background: #e9e9eb;
+  align-self: stretch;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-self: stretch;
+}
+
+.card {
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.catBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  width: 100%;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.catBtnSelected {
+  background: #f2f4f7;
+}
+
+.catLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #555555;
+}
+
+.catBtnSelected .catLabel {
+  color: #212121;
+}
+
+.catMeta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.catCount {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: #8f8f8f;
+}
+
+.section {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.sectionBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.sectionLabel {
+  margin-bottom: 10px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: #8f8f8f;
+}
+
+.fieldList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 1px 4px 1px 0;
+  background: #fff;
+  border: 1px solid #d1e5f9;
+  border-radius: 4px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.chipSwatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 24px;
+  flex-shrink: 0;
+  background: #ecf5fd;
+  border-right: 1px solid #d1e5f9;
+  font-family: monospace;
+  font-size: 11px;
+  color: #1976d2;
+}
+
+.chipLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  color: #555555;
+  white-space: nowrap;
+}
+
+.sample {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: #8f8f8f;
+}

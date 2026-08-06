@@ -3,7 +3,7 @@ import type { Config } from 'tailwindcss'
 // Design tokens extracted from Figma (MYNA — Automotive · Frontdesk)
 // via get_variable_defs. Do not hardcode raw hex/px in components — use these.
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: ['./index.html', './src/**/*.{ts,tsx,js,jsx}'],
   // Use class-based dark mode — prevents system dark mode from activating
   // contenthub dark: variants on components (fixes black inputs/dropdowns on dark-mode Macs)
   darkMode: 'class',
@@ -36,6 +36,7 @@ export default {
         },
         border: {
           DEFAULT: '#e5e9f0', // borders/primary/1
+          strong: '#cccccc', // slightly darker divider (dashed card dividers, hover borders)
           selected: '#e5e9f0', // Selected - NEW
           'chart-btn': '#cccccc', // chart card action button stroke
           input: '#e5e9f0', // text field / select / dropdown border
@@ -52,6 +53,7 @@ export default {
           success: { bg: '#f1faf0', text: '#377e2c' }, // Green/20 · positive
           danger: { bg: '#fef6f5', text: '#de1b0c' }, // Red/10 · negative
           neutral: { bg: '#eaeaea', text: '#555555' }, // Gray/40 · Gray/300
+          info: { bg: '#e8f1fc', text: '#1976d2' }, // Blue/10 · informational (matches text/action primary)
         },
         tooltip: { DEFAULT: '#252525' }, // Gray/800 — Tooltip / Web (Aero DS, node 2180:72)
         // ── Contenthub 2.0 shadcn tokens (for copied contenthub UI components) ──
@@ -98,6 +100,8 @@ export default {
         lg: '16px', // Spacing/lg
         xl: '20px', // Spacing/xl
         '2xl': '24px', // Spacing/2xl
+        '3xl': '32px', // Spacing/3xl — section rhythm
+        '4xl': '40px', // Spacing/4xl — page section gaps
       },
       borderRadius: {
         sm: '4px', // Corner Radius/sm (Default-Web)

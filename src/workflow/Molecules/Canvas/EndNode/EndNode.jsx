@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import AddStepButton from '../../../FlowCanvas/AddStepButton';
 import './EndNode.css';
 
 export default function EndNode({
@@ -6,6 +7,9 @@ export default function EndNode({
   viewOnly = false,
   isDraggingFromLHS = false,
   onDropBeforeEnd,
+  onAddStep = undefined,
+  product = 'healthcare',
+  agentName = '',
   hideAdd = false,
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -33,26 +37,31 @@ export default function EndNode({
     }
   }, [onDropBeforeEnd]);
 
-  const btnClass = [
-    'end-node__add',
-    isDraggingFromLHS ? 'end-node__add--lhs-drag' : '',
-    isDragOver ? 'end-node__add--drop-target' : '',
-  ].filter(Boolean).join(' ');
-
   return (
     <div className="end-node-stack">
       <div className="end-node-connector-line" aria-hidden />
       <div className={`end-node-connector${hideAdd ? ' end-node-connector--compact' : ''}`}>
         {!viewOnly && !hideAdd && (
-          <button
-            type="button"
-            className={btnClass}
+          <div
+            className="end-node__add-slot"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <span className="material-symbols-outlined">add</span>
-          </button>
+            <AddStepButton
+              isDraggingFromLHS={isDraggingFromLHS}
+              isDragOver={isDragOver}
+              product={product}
+              agentName={agentName}
+              onSelect={(payload) => {
+                if (onAddStep) onAddStep(payload);
+                else onDropBeforeEnd?.(payload.type, payload.label, payload.description);
+              }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            />
+          </div>
         )}
       </div>
       <div className={`end-node${selected ? ' end-node--selected' : ''}`}>End</div>

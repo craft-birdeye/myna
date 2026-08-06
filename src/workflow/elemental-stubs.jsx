@@ -325,6 +325,7 @@ export function Toggle({ name, checked, onChange, roundedToggle, disabled }) {
   const width = 32;
   const height = 16;
   const knobSize = 12;
+  const knobTop = (height - knobSize) / 2;
   const on = !!checked;
 
   return (
@@ -332,9 +333,11 @@ export function Toggle({ name, checked, onChange, roundedToggle, disabled }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        position: 'relative',
         cursor: disabled ? 'not-allowed' : 'pointer',
         userSelect: 'none',
         flexShrink: 0,
+        lineHeight: 0,
       }}
       title={on ? 'Enabled' : 'Disabled'}
     >
@@ -344,7 +347,7 @@ export function Toggle({ name, checked, onChange, roundedToggle, disabled }) {
         checked={on}
         disabled={disabled}
         onChange={handleChange}
-        style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+        style={{ position: 'absolute', opacity: 0, width: 0, height: 0, margin: 0 }}
       />
       {/* Track */}
       <span
@@ -365,6 +368,7 @@ export function Toggle({ name, checked, onChange, roundedToggle, disabled }) {
         <span
           style={{
             position: 'absolute',
+            top: knobTop,
             left: on ? width - knobSize - 2 : 2,
             width: knobSize,
             height: knobSize,
@@ -483,21 +487,35 @@ export function TabHeader({ content = [], activeTab, clickTab, isAeroDesign }) {
 /* ─── Tooltip ───────────────────────────────────────────────────────────── */
 export function Tooltip({ text, children, position = 'top', display = 'inline-flex' }) {
   const [visible, setVisible] = React.useState(false);
+  const [coords, setCoords] = React.useState(null);
+  const ref = React.useRef(null);
+
+  function show() {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    setCoords({
+      x: r.left + r.width / 2,
+      y: position === 'bottom' ? r.bottom + 6 : r.top - 6,
+    });
+    setVisible(true);
+  }
+
   return (
     <span
+      ref={ref}
       style={{ position: 'relative', display }}
-      onMouseEnter={() => setVisible(true)}
+      onMouseEnter={show}
       onMouseLeave={() => setVisible(false)}
     >
       {children}
-      {visible && (
+      {visible && coords && (
         <span
+          role="tooltip"
           style={{
-            position: 'absolute',
-            bottom: position === 'top' ? 'calc(100% + 6px)' : 'auto',
-            top: position === 'bottom' ? 'calc(100% + 6px)' : 'auto',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            position: 'fixed',
+            left: coords.x,
+            top: coords.y,
+            transform: position === 'bottom' ? 'translateX(-50%)' : 'translate(-50%, -100%)',
             background: '#212121',
             color: '#fff',
             fontSize: 12,
@@ -505,9 +523,9 @@ export function Tooltip({ text, children, position = 'top', display = 'inline-fl
             padding: '4px 8px',
             borderRadius: 4,
             whiteSpace: 'nowrap',
-            zIndex: 9999,
+            zIndex: 10000,
             pointerEvents: 'none',
-            fontFamily: '"Inter", sans-serif',
+            fontFamily: '"Roboto", arial, sans-serif',
           }}
         >
           {text}

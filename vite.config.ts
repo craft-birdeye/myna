@@ -12,4 +12,7 @@ export default defineConfig(({ command }) => ({
       { find: /^@\//, replacement: path.resolve(__dirname, './src') + '/' },
     ],
   },
+  server: {
+    allowedHosts: ['.trycloudflare.com'],
+  },
 }))

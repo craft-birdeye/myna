@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import LHSDrawer from '../LHSDrawer/LHSDrawer';
+import LHSDrawer, { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK } from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
 import RHS from '../Organisms/Panels/RHS/RHS';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
@@ -10,6 +10,7 @@ import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomToo
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
+import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -142,6 +143,7 @@ function makeNodeDetails(type, label) {
 const TASK_DROP_DEFAULTS = {
   'Initiate voice call': { description: 'Call the customer' },
   'In-call SMS': { description: 'Send a text message to the caller during the active call', selectedTools: ['in-call-sms'] },
+  'Send response': { selectedTools: ['send-response'] },
   'Schedule appointment': { description: 'Book a new appointment for the customer' },
   'Reschedule appointment': { description: 'Change an existing appointment date or time' },
   'Cancel appointment': { description: 'Cancel a scheduled appointment' },
@@ -340,7 +342,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             ...item.data,
             stepNumber: topLevelStep,
             title: 'Based on conditions',
-            subtitle: 'Build condition-specific flows',
+            subtitle: nodeDetails[nodeId]?.description || 'Build condition-specific flows',
           }
         : item.data?.subtype === 'Schedule-based'
           ? {
@@ -417,7 +419,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       source: prevId,
       target: nodeId,
       type: 'addButton',
-      ...(prevIsProcedures ? { data: { hideAddButton: true } } : {}),
+      data: { betweenCards: true, ...(prevIsProcedures ? { hideAddButton: true } : {}) },
     });
 
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
@@ -464,7 +466,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
               vcChildData = { ...vcChildData, title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title, subtitle: vcChildDet.description ?? vcChildData.subtitle };
             }
             nodes.push({ id: vcChildId, type: vcChild.flowType, position: { x: vcBranchX, y: vcNodeStartY + vcIdx * 250 }, data: vcChildData });
-            edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId } });
+            edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId, betweenCards: vcPrevId !== vcBranch.id } });
             vcPrevId = vcChildId;
           });
           const vcEndId = `${vcBranch.id}-end`;
@@ -498,7 +500,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
           }
           const childY = branchNodeStartY + childYOffset;
           nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
-          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
+          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
           previousId = childNode.id;
           previousChildFlowType = childNode.flowType;
           childYOffset += 250;
@@ -535,7 +537,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                 }
                 const innerChildY = innerNodeStartY + innerYOff;
                 nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
-                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId } });
+                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
                 innerPrevId = innerChildId;
                 innerYOff += 250;
                 if (innerChild.flowType === 'voiceCall') {
@@ -596,6 +598,78 @@ function nextId() {
   return `node-${nodeIdCounter}`;
 }
 
+/** Find where a node lives — the top-level trunk, or a branch/loop container's `nodes` array. */
+function locateNodeContainer(nodeId, nodeList, nodeDetails) {
+  const rootIdx = nodeList.findIndex((n) => n.id === nodeId);
+  if (rootIdx !== -1) return { containerId: null, index: rootIdx };
+  for (const [key, details] of Object.entries(nodeDetails)) {
+    if (Array.isArray(details?.nodes)) {
+      const idx = details.nodes.findIndex((n) => n.id === nodeId);
+      if (idx !== -1) return { containerId: key, index: idx };
+    }
+  }
+  return null;
+}
+
+/** Recursively snapshot a node's nodeDetails entry plus every entry it references (branch paths, loop children). */
+function collectDetailsSnapshot(nodeId, nodeDetails, out = {}) {
+  if (out[nodeId]) return out;
+  const details = nodeDetails[nodeId];
+  if (!details) return out;
+  out[nodeId] = JSON.parse(JSON.stringify(details));
+  (details.nodes || []).forEach((child) => collectDetailsSnapshot(child.id, nodeDetails, out));
+  (details.branches || []).forEach((b) => collectDetailsSnapshot(b.id, nodeDetails, out));
+  return out;
+}
+
+/** Recursively collect a node's own id plus every id it references (branch paths, loop children). */
+function collectAllIds(nodeId, nodeDetails, out = []) {
+  if (out.includes(nodeId)) return out;
+  out.push(nodeId);
+  const details = nodeDetails[nodeId];
+  if (!details) return out;
+  (details.nodes || []).forEach((child) => collectAllIds(child.id, nodeDetails, out));
+  (details.branches || []).forEach((b) => collectAllIds(b.id, nodeDetails, out));
+  return out;
+}
+
+/**
+ * Clone a node (and, recursively, any branch/loop children it references) with fresh ids,
+ * reading source data from a `detailsSnapshot` map rather than live nodeDetails. Fills
+ * `extraOut` with `{ [newId]: clonedDetails }` for the node itself and every cloned descendant.
+ */
+function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
+  const newId = nextId();
+  const clonedEntry = { ...nodeEntry, id: newId, data: { ...nodeEntry.data } };
+  const sourceDetails = detailsSnapshot[nodeEntry.id] || {};
+  const clonedDetails = JSON.parse(JSON.stringify(sourceDetails));
+
+  if (Array.isArray(clonedDetails.nodes)) {
+    clonedDetails.nodes = clonedDetails.nodes.map((child) =>
+      cloneSubtreeForPaste(child, detailsSnapshot, extraOut));
+  }
+
+  if (Array.isArray(clonedDetails.branches)) {
+    clonedDetails.branches = clonedDetails.branches.map((branch) => {
+      const branchSource = detailsSnapshot[branch.id];
+      const newBranchId = `${newId}-path-${nextId()}`;
+      if (branchSource) {
+        const clonedBranch = JSON.parse(JSON.stringify(branchSource));
+        clonedBranch.parentId = newId;
+        if (Array.isArray(clonedBranch.nodes)) {
+          clonedBranch.nodes = clonedBranch.nodes.map((child) =>
+            cloneSubtreeForPaste(child, detailsSnapshot, extraOut));
+        }
+        extraOut[newBranchId] = clonedBranch;
+      }
+      return { ...branch, id: newBranchId };
+    });
+  }
+
+  extraOut[newId] = clonedDetails;
+  return clonedEntry;
+}
+
 export default function AgentBuilder({
   agentId: propAgentId,
   agentSlug: propAgentSlug,
@@ -616,12 +690,27 @@ export default function AgentBuilder({
   onSaveTemplate,
   onClose,
   onEdit,
+  onView,
   viewOnly = false,
   product = 'automotive',
   procedures = null,
   onAddProcedure,
   publishDisabled = false,
+  issueCount = 0,
   defaultOpenSection = 'Tasks',
+  initialZoom = 1,
+  runDisabled = false,
+  aiAssistOpen: aiAssistOpenProp,
+  onAiAssistOpenChange,
+  hideLhs = false,
+  createAiPanelOpen = false,
+  /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
+  previewProcedureId = null,
+  /** Optional full RHS detail payload — used when the procedure isn't in the live library. */
+  previewProcedureDetail = null,
+  onPreviewProcedureIdChange,
+  /** Saved co-pilot transcript for the Create with AI tab. */
+  aiTranscript = null,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -644,9 +733,29 @@ export default function AgentBuilder({
   const [navId, setNavId] = useState(activeNavId);
   const [nodeList, setNodeList] = useState(() => initialNodes || []);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  // Canvas node clipboard — holds a copied node's entry + a snapshot of its (and any referenced branch/loop) details
+  const [clipboard, setClipboard] = useState(null);
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
+  const externalPreviewRef = useRef(null);
+
+  /* Sync external Create-with-AI procedure clicks into the canvas RHS. */
+  useEffect(() => {
+    if (previewProcedureId) {
+      externalPreviewRef.current = previewProcedureId;
+      setLhsPreviewProcedureId(previewProcedureId);
+      setSelectedNodeId(null);
+      setActiveProcedureId(null);
+      setDrawerOpen(true);
+      return;
+    }
+    if (externalPreviewRef.current) {
+      externalPreviewRef.current = null;
+      setLhsPreviewProcedureId(null);
+      setDrawerOpen(false);
+    }
+  }, [previewProcedureId]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [bookTestModalOpen, setBookTestModalOpen] = useState(false);
   const [testAppointment, setTestAppointment] = useState(null);
@@ -663,6 +772,17 @@ export default function AgentBuilder({
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  // "Create with AI" expanded to full page — hides the canvas so the chat fills its space.
+  const [aiChatExpanded, setAiChatExpanded] = useState(false);
+  const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
+  // AI assist panel is controlled by the parent when it needs to render the
+  // panel itself (e.g. spanning the full app height, above this editor's own
+  // header) — falls back to internal state otherwise.
+  const aiAssistControlled = onAiAssistOpenChange != null;
+  const aiAssistOpen = aiAssistControlled ? aiAssistOpenProp : aiAssistOpenInternal;
+  const setAiAssistOpen = aiAssistControlled ? onAiAssistOpenChange : setAiAssistOpenInternal;
+  const [lhsForceOpenSection, setLhsForceOpenSection] = useState(null);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];
@@ -687,6 +807,11 @@ export default function AgentBuilder({
   useEffect(() => {
     setLiveProcedures(procedures);
   }, [procedures]);
+
+  /* ─── Close AI assist when another right-side panel (node details / preview) opens ─── */
+  useEffect(() => {
+    if (drawerOpen || previewOpen) setAiAssistOpen(false);
+  }, [drawerOpen, previewOpen]);
 
   /* ─── View-only: keep canvas state in sync when workflow props change ─── */
   useEffect(() => {
@@ -811,6 +936,7 @@ export default function AgentBuilder({
   /* ─── Agent name is derived from nodeDetails (single source of truth) ─── */
   const agentName = nodeDetails[START_NODE_ID]?.agentName || (typeof pageTitle === 'string' ? pageTitle : '') || '';
   const isReminderAgent = /reminder/i.test(agentName);
+  const isReviewResponseAgent = /review response/i.test(agentName);
   const [agentDesc] = useState(initialDescription || '');
   // isTemplateMode uses state so it correctly activates after applyAgent loads templateId from Firestore
   const isTemplateMode = !!agentTemplateId && agentStatus !== 'Running';
@@ -1067,6 +1193,8 @@ export default function AgentBuilder({
 
   const handleDeleteNode = useCallback((nodeId) => {
     setNodeList((prev) => {
+      const target = prev.find((n) => n.id === nodeId);
+      if (!target || target.flowType === 'trigger') return prev;
       const updated = prev.filter((n) => n.id !== nodeId);
       return updated.map((n, i) => ({
         ...n,
@@ -1092,6 +1220,98 @@ export default function AgentBuilder({
       setDrawerOpen(false);
     }
   }, [selectedNodeId]);
+
+  const handleCopyNode = useCallback((nodeId) => {
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const nodeEntry = located.containerId
+      ? nodeDetails[located.containerId]?.nodes?.[located.index]
+      : nodeList[located.index];
+    if (!nodeEntry) return;
+    setClipboard({
+      nodeEntry: JSON.parse(JSON.stringify(nodeEntry)),
+      detailsSnapshot: collectDetailsSnapshot(nodeId, nodeDetails),
+    });
+  }, [nodeList, nodeDetails]);
+
+  const handleReplaceTrigger = useCallback(() => {
+    setLhsCollapsed(false);
+    setLhsForceOpenSection('Trigger');
+  }, []);
+
+  const handlePasteBelow = useCallback((afterNodeId) => {
+    if (!clipboard) return;
+    const located = locateNodeContainer(afterNodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const extraOut = {};
+    const newEntry = cloneSubtreeForPaste(clipboard.nodeEntry, clipboard.detailsSnapshot, extraOut);
+
+    if (located.containerId) {
+      setNodeDetails((prev) => {
+        const container = prev[located.containerId] || {};
+        const existingNodes = container.nodes || [];
+        const nextNodes = [
+          ...existingNodes.slice(0, located.index + 1),
+          newEntry,
+          ...existingNodes.slice(located.index + 1),
+        ].map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+        return {
+          ...prev,
+          ...extraOut,
+          [located.containerId]: { ...container, nodes: nextNodes },
+        };
+      });
+    } else {
+      setNodeList((prev) => {
+        const next = [
+          ...prev.slice(0, located.index + 1),
+          newEntry,
+          ...prev.slice(located.index + 1),
+        ];
+        return next.map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+      });
+      setNodeDetails((prev) => ({ ...prev, ...extraOut }));
+    }
+  }, [clipboard, nodeList, nodeDetails]);
+
+  const handlePasteReplace = useCallback((nodeId) => {
+    if (!clipboard) return;
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (!located) return;
+    const extraOut = {};
+    const newEntry = cloneSubtreeForPaste(clipboard.nodeEntry, clipboard.detailsSnapshot, extraOut);
+    const oldIds = collectAllIds(nodeId, nodeDetails);
+
+    if (located.containerId) {
+      setNodeDetails((prev) => {
+        const parentContainer = prev[located.containerId] || {};
+        const nodes = (parentContainer.nodes || []).map((n, i) => {
+          const updated = n.id === nodeId ? newEntry : n;
+          return { ...updated, data: { ...updated.data, stepNumber: i + 1 } };
+        });
+        const copy = { ...prev };
+        oldIds.forEach((id) => { delete copy[id]; });
+        Object.assign(copy, extraOut);
+        copy[located.containerId] = { ...parentContainer, nodes };
+        return copy;
+      });
+    } else {
+      setNodeList((prev) => prev.map((n, i) => {
+        const updated = n.id === nodeId ? newEntry : n;
+        return { ...updated, data: { ...updated.data, stepNumber: i + 1 } };
+      }));
+      setNodeDetails((prev) => {
+        const copy = { ...prev };
+        oldIds.forEach((id) => { delete copy[id]; });
+        Object.assign(copy, extraOut);
+        return copy;
+      });
+    }
+    if (oldIds.includes(selectedNodeId)) {
+      setSelectedNodeId(null);
+      setDrawerOpen(false);
+    }
+  }, [clipboard, nodeList, nodeDetails, selectedNodeId]);
 
   const handleAddBranchPath = useCallback((branchNodeId) => {
     const newPathId = `${branchNodeId}-path-${Date.now()}`;
@@ -1203,11 +1423,21 @@ export default function AgentBuilder({
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
       onDelete: () => handleDeleteNode(n.id),
+      onCopy: () => handleCopyNode(n.id),
+      hasClipboard: !!clipboard,
+      onPasteBelow: () => handlePasteBelow(n.id),
+      onPasteReplace: () => handlePasteReplace(n.id),
       onMoveUp: () => handleMoveNode(n.id, 'up'),
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
     };
+    if (n.type === 'trigger') {
+      extra.onReplace = () => handleReplaceTrigger();
+    } else {
+      extra.onDelete = () => handleDeleteNode(n.id);
+      extra.onCopy = () => handleCopyNode(n.id);
+    }
     if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
       extra.onToggleChange = (enabled) => handleNodeToggleChange(n.id, enabled);
@@ -1292,7 +1522,14 @@ export default function AgentBuilder({
     // Nothing can be inserted above the first trigger — start node is always the entry point
     if (insertAtBeginning || afterNodeId === START_NODE_ID) return;
 
-    const isVoiceCallDrop = type === 'task' && (description === 'Initiate voice call' || label === 'Initiate voice call');
+    if (
+      isFrontDeskAgent(agentName)
+      && (description === INITIATE_VOICE_CALL_TASK || label === INITIATE_VOICE_CALL_TASK)
+    ) {
+      return;
+    }
+
+    const isVoiceCallDrop = type === 'task' && (description === INITIATE_VOICE_CALL_TASK || label === INITIATE_VOICE_CALL_TASK);
     const effectiveType = isVoiceCallDrop ? 'voiceCall' : type;
 
     const id = nextId();
@@ -1315,6 +1552,36 @@ export default function AgentBuilder({
       };
     }
 
+    if (effectiveType === 'trigger' && !branchPathId) {
+      const currentList = latestRef.current.nodeList || [];
+      const triggerIdx = currentList.findIndex((n) => n.flowType === 'trigger');
+      const oldTriggerId = triggerIdx !== -1 ? currentList[triggerIdx].id : null;
+
+      setNodeList((prev) => {
+        const idx = prev.findIndex((n) => n.flowType === 'trigger');
+        let updated;
+        if (idx !== -1) {
+          updated = [...prev];
+          updated[idx] = newNode;
+        } else {
+          updated = [newNode, ...prev];
+        }
+        return updated.map((n, i) => ({ ...n, data: { ...n.data, stepNumber: i + 1 } }));
+      });
+
+      setNodeDetails((prev) => {
+        const copy = { ...prev };
+        if (oldTriggerId) delete copy[oldTriggerId];
+        return { ...copy, [id]: details };
+      });
+
+      setSelectedNodeId(id);
+      setDrawerOpen(true);
+      setActiveProcedureId(null);
+      setLhsForceOpenSection(null);
+      return;
+    }
+
     if (branchPathId) {
       setNodeDetails((prev) => {
         const branchPath = prev[branchPathId] || {};
@@ -1335,11 +1602,9 @@ export default function AgentBuilder({
           [id]: details,
         };
       });
-      if (type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID) {
-        setSelectedNodeId(id);
-        setDrawerOpen(true);
-        setActiveProcedureId(CUSTOM_PROCEDURE_ID);
-      }
+      setSelectedNodeId(id);
+      setDrawerOpen(true);
+      setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
       return;
     }
 
@@ -1381,19 +1646,18 @@ export default function AgentBuilder({
 
     if (type === 'branch') {
       const path1Id = `${id}-path-1`;
-      const path2Id = `${id}-path-2`;
       const fallbackId = `${id}-path-fallback`;
       Object.assign(details, {
         basedOn: 'conditions',
+        description: 'Build condition-specific flows',
+        mergeBranches: true,
         branches: [
           { id: path1Id, name: 'Branch 1' },
-          { id: path2Id, name: 'Branch 2' },
           { id: fallbackId, name: 'No conditions met', isFallback: true },
         ],
       });
       extraDetails = {
         [path1Id]: { branchName: 'Branch 1', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
-        [path2Id]: { branchName: 'Branch 2', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
         [fallbackId]: { branchName: 'No conditions met', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
       };
     }
@@ -1429,12 +1693,10 @@ export default function AgentBuilder({
       ...extraDetails,
     }));
 
-    if (type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID) {
-      setSelectedNodeId(id);
-      setDrawerOpen(true);
-      setActiveProcedureId(CUSTOM_PROCEDURE_ID);
-    }
-  }, []);
+    setSelectedNodeId(id);
+    setDrawerOpen(true);
+    setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
+  }, [agentName, product]);
 
   const handleNodeClick = useCallback((node) => {
     if (node.type === 'end' || node.type === 'branchEnd') return;
@@ -1538,7 +1800,19 @@ export default function AgentBuilder({
 
   const renderRHSPanel = () => {
     if (lhsPreviewProcedureId) {
-      const mergedProc = getProcedureDetailContent(lhsPreviewProcedureId, {}, product);
+      const closeLhsPreview = () => {
+        const wasExternal = externalPreviewRef.current === lhsPreviewProcedureId;
+        externalPreviewRef.current = null;
+        setLhsPreviewProcedureId(null);
+        setDrawerOpen(false);
+        if (wasExternal) onPreviewProcedureIdChange?.(null);
+      };
+      const mergedProc =
+        previewProcedureDetail &&
+        (previewProcedureDetail.id === lhsPreviewProcedureId ||
+          previewProcedureDetail.name === lhsPreviewProcedureId)
+          ? previewProcedureDetail
+          : getProcedureDetailContent(lhsPreviewProcedureId, {}, product);
       return (
         <RHS
           key={`lhs-preview-${lhsPreviewProcedureId}`}
@@ -1546,14 +1820,14 @@ export default function AgentBuilder({
           title={mergedProc.name}
           viewOnly={viewOnly}
           product={product}
-          onBack={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
+          onBack={closeLhsPreview}
           bodyProps={{
             initialValues: mergedProc,
             onFieldChange: () => {},
             onOpenToolDrawer: () => setToolPickerOpen(true),
           }}
-          onClose={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
-          onSave={() => { setLhsPreviewProcedureId(null); setDrawerOpen(false); }}
+          onClose={closeLhsPreview}
+          onSave={closeLhsPreview}
         />
       );
     }
@@ -1616,7 +1890,7 @@ export default function AgentBuilder({
             }));
             handleCloseDrawer();
           }}
-          onPreview={() => setPreviewOpen((v) => !v)}
+          onPreview={isReviewResponseAgent ? undefined : () => setPreviewOpen((v) => !v)}
           previewOpen={previewOpen}
           previewActive={previewActive}
           onExpand={() => {}}
@@ -1662,15 +1936,25 @@ export default function AgentBuilder({
     }
 
     if (flowType === 'branch') {
+      const pathDetails = Object.fromEntries(
+        (currentDetails.branches || []).map((b) => [b.id, nodeDetails[b.id] || {}]),
+      );
       return (
         <RHS
           variant="controlBranch"
-          title="Branch details"
+          title="Branch"
           viewOnly={viewOnly}
           product={product}
           bodyProps={{
-            initialValues: { ...currentDetails, branchNodeId: selectedNodeId },
+            initialValues: {
+              ...currentDetails,
+              description: currentDetails.description ?? selectedNode?.data?.descriptionPlaceholder ?? '',
+              mergeBranches: currentDetails.mergeBranches ?? true,
+              branchNodeId: selectedNodeId,
+              pathDetails,
+            },
             onFieldChange: activeFieldChange,
+            onPathFieldChange: (pathId, field, value) => handleNodeFieldChange(pathId, field, value),
             onDeleteBranch: (branchId) => handleDeleteBranchPath(branchId),
           }}
           onClose={handleCloseDrawer}
@@ -1755,6 +2039,7 @@ export default function AgentBuilder({
                 showTitle: true,
                 showLibraryCheckbox: true,
                 contextEditable: true,
+                isNewProcedure: true,
                 onFieldChange: (field, value) => {
                   const overridesNext = {
                     ...(currentDetails.procedureOverrides || {}),
@@ -1814,11 +2099,11 @@ export default function AgentBuilder({
       );
     }
 
-    if (data.hasAiIcon) {
+    if (data.hasAiIcon || data.subtype === 'Custom') {
       return (
         <RHS
           variant="llmTask"
-          title="LLM Task"
+          title="Task"
           viewOnly={viewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, onOpenToolDrawer: () => setToolPickerOpen(true), onOpenTool: openToolByName }}
@@ -1846,6 +2131,23 @@ export default function AgentBuilder({
               });
             },
             onSwapTool: () => setToolPickerOpen(true),
+          }}
+          onClose={handleCloseDrawer}
+          onSave={handleCloseDrawer}
+        />
+      );
+    }
+
+    if (flowType === 'task' && (currentDetails.selectedTools || []).includes('send-response')) {
+      return (
+        <RHS
+          variant="sendResponseTask"
+          title="Task"
+          viewOnly={viewOnly}
+          product={product}
+          bodyProps={{
+            initialValues: currentDetails,
+            onFieldChange: activeFieldChange,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -1887,6 +2189,12 @@ export default function AgentBuilder({
     </div>
   ) : (
     <div className="ab-header-actions">
+      {issueCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555', fontSize: 13 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, lineHeight: 1, color: '#de1b0c' }}>error</span>
+          Resolve issues ({issueCount})
+        </div>
+      )}
       {/* Cloud save icon — matches Figma 41-43635 */}
       <button
         type="button"
@@ -1901,7 +2209,7 @@ export default function AgentBuilder({
         theme="primary"
         label={isTemplateMode ? 'Save template' : 'Publish'}
         onClick={isTemplateMode ? handleSaveTemplate : handlePublish}
-        disabled={!isTemplateMode && publishDisabled}
+        disabled={!isTemplateMode && (publishDisabled || issueCount > 0)}
       />
     </div>
   );
@@ -1966,7 +2274,10 @@ export default function AgentBuilder({
       </div>
 
       {/* ─── Builder body ─── */}
-      <div className="agent-builder-wrapper" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}>
+      <div
+        className="agent-builder-wrapper"
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
+      >
         {viewOnly && (
           <div className="ab-view-banner">
             <span className="material-symbols-outlined">visibility</span>
@@ -1981,53 +2292,106 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          <div className="agent-builder__lhs">
-            <LHSDrawer
-              defaultTab="Create manually"
-              defaultOpenSection={defaultOpenSection}
-              viewOnly={viewOnly}
-              product={product}
-              procedures={procedures}
-              onProcedureClick={viewOnly ? undefined : (procedureId) => {
-                setLhsPreviewProcedureId(procedureId);
-                setSelectedNodeId(null);
-                setActiveProcedureId(null);
-                setDrawerOpen(true);
-              }}
-            />
-          </div>
+          {!hideLhs && aiChatExpanded && (
+            <div className="agent-builder__lhs agent-builder__lhs--expanded">
+              <LHSDrawer
+                expanded
+                agentName={agentName}
+                aiTranscript={aiTranscript}
+                onCollapseExpand={() => setAiChatExpanded(false)}
+              />
+            </div>
+          )}
 
-          <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
-            <FlowCanvas
-              nodes={nodes}
-              edges={edges}
-              onNodeClick={handleNodeClick}
-              onDropNode={viewOnly ? undefined : handleDropNode}
-              onNodesReorder={viewOnly ? undefined : handleNodesReorder}
-              selectedNodeId={selectedNodeId}
-              orientation="vertical"
-              viewOnly={viewOnly}
-              onEdit={viewOnly ? onEdit : undefined}
-              onRun={() => {
-                if (isReminderAgent) {
-                  setBookTestModalOpen(true);
-                } else {
-                  setTestAppointment(null);
-                  setPreviewOpen(true);
-                }
-              }}
-            />
-          </div>
+          {!hideLhs && !aiChatExpanded && (
+            <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
+              <LHSDrawer
+                defaultTab="Create manually"
+                showTabs={!viewOnly}
+                defaultOpenSection={defaultOpenSection}
+                forceOpenSection={lhsForceOpenSection}
+                onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
+                viewOnly={viewOnly}
+                product={product}
+                agentName={agentName}
+                procedures={procedures}
+                aiTranscript={aiTranscript}
+                onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
+                onExpand={viewOnly ? undefined : () => setAiChatExpanded(true)}
+                onProcedureClick={viewOnly ? undefined : (procedureId) => {
+                  setLhsPreviewProcedureId(procedureId);
+                  setSelectedNodeId(null);
+                  setActiveProcedureId(null);
+                  setDrawerOpen(true);
+                }}
+              />
+            </div>
+          )}
 
-          {drawerOpen && (
-            <div key={selectedNodeId} className="agent-builder__rhs">
-              <RHSErrorBoundary key={selectedNodeId}>
+          {!hideLhs && !aiChatExpanded && lhsCollapsed && (
+            <button
+              className="ab-lhs-expand-pill"
+              onClick={() => setLhsCollapsed(false)}
+            >
+              <span className="material-symbols-outlined">left_panel_open</span>
+              <span className="ab-lhs-expand-pill__label">Editor</span>
+            </button>
+          )}
+
+          {hideLhs && (
+            <div
+              className={`agent-builder__ai-panel-spacer${createAiPanelOpen ? ' agent-builder__ai-panel-spacer--open' : ''}`}
+              aria-hidden
+            />
+          )}
+
+          {!aiChatExpanded && (
+            <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
+              <FlowCanvas
+                nodes={nodes}
+                edges={edges}
+                onNodeClick={handleNodeClick}
+                onDropNode={viewOnly ? undefined : handleDropNode}
+                onNodesReorder={viewOnly ? undefined : handleNodesReorder}
+                hasClipboard={!viewOnly && !!clipboard}
+                onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
+                selectedNodeId={selectedNodeId}
+                orientation="vertical"
+                viewOnly={viewOnly}
+                product={product}
+                agentName={agentName}
+                initialZoom={initialZoom}
+                runDisabled={runDisabled}
+                onEdit={onEdit}
+                onView={onView}
+                onRun={() => {
+                  if (isReviewResponseAgent) return;
+                  if (isReminderAgent) {
+                    setBookTestModalOpen(true);
+                  } else {
+                    setTestAppointment(null);
+                    setPreviewOpen(true);
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {!aiChatExpanded && !aiAssistControlled && aiAssistOpen && (
+            <div className="agent-builder__ai-assist">
+              <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
+            </div>
+          )}
+
+          {!aiChatExpanded && drawerOpen && (
+            <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
+              <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
               </RHSErrorBoundary>
             </div>
           )}
 
-          {previewOpen && (
+          {!aiChatExpanded && previewOpen && !isReviewResponseAgent && (
             <div className="agent-builder__preview">
               <PreviewPanel
                 onClose={() => {
@@ -2069,10 +2433,10 @@ export default function AgentBuilder({
       )}
 
       {/* ─── Reminder tool drawer ─── */}
-      <ReminderToolDrawer isOpen={reminderToolOpen} onClose={() => setReminderToolOpen(false)} />
+      <ReminderToolDrawer isOpen={reminderToolOpen} onClose={() => setReminderToolOpen(false)} initialValues={currentDetails} onFieldChange={activeFieldChange} />
 
       {/* ─── Voice call tool drawer ─── */}
-      <VoiceCallToolDrawer isOpen={voiceCallToolOpen} onClose={() => setVoiceCallToolOpen(false)} initialValues={currentDetails} product={product} />
+      <VoiceCallToolDrawer isOpen={voiceCallToolOpen} onClose={() => setVoiceCallToolOpen(false)} initialValues={currentDetails} product={product} onFieldChange={activeFieldChange} />
 
       {/* ─── Transfer tool drawer ─── */}
       <TransferToolDrawer isOpen={transferToolOpen} onClose={() => setTransferToolOpen(false)} />

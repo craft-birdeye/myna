@@ -1,7 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChartCard, DataTable, SankeyChart, StackedBarChart, SummaryStats, TopNav, VoicemailMessage, type Column, type NavSection } from '../components'
-import { Calendar, ChevronDown, ChevronUp, DollarSign, ExternalLink, Flame, LayoutList, ListFilter, MoreVertical, Paperclip, Play, Plus, Search, SlidersHorizontal, ArrowUpDown, Smile, Users } from 'lucide-react'
+import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection, type VoiceChatMessage } from '../components'
 import voicemailSample from '../assets/voicemail_sample.mp3'
+import {
+  FRONT_DESK_CALL_SUMMARY,
+  FRONT_DESK_INBOX_CONVERSATION_ID,
+  FRONT_DESK_VOICE_MESSAGES,
+} from '../data/frontDeskCallConversation'
+import {
+  ANNETTE_BLACK_CHAT_EVENTS,
+  ANNETTE_BLACK_CONVERSATION_ID,
+} from '../data/annetteBlackChatConversation'
+import {
+  REMINDER_CONVERSATION_EVENTS,
+  REMINDER_INBOX_CONVERSATION_ID,
+} from '../data/reminderInboxConversation'
+import {
+  COACHING_C1_CONVERSATION_ID,
+  COACHING_C2_CONVERSATION_ID,
+  COACHING_C3_CONVERSATION_ID,
+  COACHING_C4_CONVERSATION_ID,
+  COACHING_CALL_CONVERSATIONS,
+} from '../data/coachingCallConversations'
+import { AgentDetailScreen } from './AgentDetailScreen'
+import { WorkflowEditorScreen } from './WorkflowEditorScreen'
+import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 
 interface Conversation {
   id: string
@@ -16,19 +38,92 @@ interface Conversation {
 }
 
 const CONVERSATIONS: Conversation[] = [
-  { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', date: '03:25 PM' },
-  { id: '2', name: 'Annette Black',      verified: true, message: 'Kelsy Hiltz: yes',                                   location: 'San Francisco', assignee: 'Kelsy Hiltz', date: 'Dec 31, 2022', unread: true },
-  { id: '3', name: 'Wade Warren',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
-  { id: '4', name: 'Floyd Miles',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022', unread: true },
-  { id: '5', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
-  { id: '6', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
-  { id: '7', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'USA - Sales', date: 'Dec 11, 2022' },
+  {
+    id: FRONT_DESK_INBOX_CONVERSATION_ID,
+    name: 'Dana Whitfield',
+    verified: true,
+    message: 'I am having a very bad headache. I think it is migraine.',
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '5:30 PM',
+    unread: true,
+  },
+  {
+    id: REMINDER_INBOX_CONVERSATION_ID,
+    name: 'Sarah Lauren',
+    verified: true,
+    message: 'Myna: Let me connect you with our front desk team.',
+    location: 'Rock Dental Brands',
+    assignee: 'Reminder agent',
+    date: '09:55 PM',
+    unread: true,
+  },
+  {
+    id: COACHING_C1_CONVERSATION_ID,
+    name: 'Casey Martin',
+    message: "hey can i move my son's appt from thursday to next week",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '3:15 PM',
+    unread: true,
+  },
+  {
+    id: COACHING_C2_CONVERSATION_ID,
+    name: 'Morgan Reyes',
+    message: "hi, hi, I just need to cancel tomorrow's appointment.",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '9:47 PM',
+  },
+  {
+    id: COACHING_C3_CONVERSATION_ID,
+    name: 'Taylor Brooks',
+    message: 'Hi, do you have any Saturday appointments? Weekdays are impossible for us.',
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '11:02 AM',
+  },
+  {
+    id: COACHING_C4_CONVERSATION_ID,
+    name: 'Renee Alvarado',
+    message: "I'm calling about my daughter's breathing test from last week. Can you just tell me the results?",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '4:08 PM',
+    unread: true,
+  },
+  { id: '1', name: 'Cameron Williamson', verified: true, message: 'You can find more details here: https://birdeye.com', location: 'Austin', sublocation: 'Savannah', assignee: 'Front desk agent - South region', date: '03:25 PM' },
+  {
+    id: ANNETTE_BLACK_CONVERSATION_ID,
+    name: 'Annette Black',
+    verified: true,
+    message: "Seriously? You're a booking assistant and you don't know your own hours?",
+    location: 'Rock Dental Brands',
+    assignee: 'Front desk agent - North region',
+    date: '02:09 PM',
+    unread: true,
+  },
+  { id: '3', name: 'Wade Warren',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022', unread: true },
+  { id: '4', name: 'Floyd Miles',                        message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022', unread: true },
+  { id: '5', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
+  { id: '6', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
+  { id: '7', name: 'Brooklyn Simmons',                   message: 'Robin: Was your question answered?',                  location: 'San Francisco', assignee: 'Reminder agent - West region', date: 'Dec 11, 2022' },
 ]
 
 type ChatEvent =
   | { kind: 'date';      id: string; label: string }
-  | { kind: 'status';    id: string; text: string; time: string }
-  | { kind: 'bubble';    id: string; sender: 'customer' | 'agent'; text: string; attribution?: string; time: string }
+  | { kind: 'status';    id: string; text: string; time?: string }
+  | {
+      kind: 'bubble'
+      id: string
+      sender: 'customer' | 'agent'
+      text?: string
+      fields?: { label: string; value: string }[]
+      attribution?: string
+      time: string
+      showLink?: boolean
+      isBot?: boolean
+    }
   | { kind: 'recording'; id: string; time: string }
 
 const CHAT_EVENTS: ChatEvent[] = [
@@ -40,6 +135,53 @@ const CHAT_EVENTS: ChatEvent[] = [
   { kind: 'status',    id: 's4', text: 'Call ended - Call Duration: 57s',           time: '01:36 PM' },
   { kind: 'recording', id: 'r1', time: '01:37 PM' },
 ]
+
+type BubbleEvent = Extract<ChatEvent, { kind: 'bubble' }>
+
+function bubbleLine(event: BubbleEvent, customerName: string): { speaker: string; text: string } {
+  return {
+    speaker: event.sender === 'agent' ? 'Myna' : customerName,
+    text: event.text ?? event.fields?.map((f) => `${f.label}: ${f.value}`).join(' • ') ?? '',
+  }
+}
+
+/** Builds the "Read the reported conversation" screenshot for a generic (non-scripted) Inbox
+ *  feedback submission — just the single flagged message itself (matching the hand-scripted
+ *  coaching examples, which only ever quote the one bad reply), plus the full transcript for the
+ *  "View Transcript" side panel. Returns `null` when the flagged message can't be found (e.g. it's
+ *  not a `bubble` event), so the caller skips attaching a screenshot rather than showing an empty one. */
+function buildReportedConversation(
+  events: ChatEvent[],
+  flaggedMessageId: string,
+  customerName: string,
+): { reportedExcerpt: { speaker: string; text: string }[]; reportedTranscript: { speaker: string; text: string }[] } | null {
+  const bubbles = events.filter((e): e is BubbleEvent => e.kind === 'bubble')
+  const flagged = bubbles.find((e) => e.id === flaggedMessageId)
+  if (!flagged) return null
+
+  return {
+    reportedExcerpt: [bubbleLine(flagged, customerName)],
+    reportedTranscript: bubbles.map((e) => bubbleLine(e, customerName)),
+  }
+}
+
+/** Same as `buildReportedConversation`, but for a voice-call transcript's `VoiceChatMessage[]`
+ *  (system/agent/user turns) instead of Inbox chat `ChatEvent[]`. */
+function buildReportedConversationFromVoiceMessages(
+  messages: VoiceChatMessage[],
+  flaggedMessageId: string,
+  customerName: string,
+): { reportedExcerpt: { speaker: string; text: string }[]; reportedTranscript: { speaker: string; text: string }[] } | null {
+  const turns = messages.filter((m) => m.role !== 'system')
+  const flagged = turns.find((m) => String(m.id) === flaggedMessageId)
+  if (!flagged) return null
+
+  const toLine = (m: VoiceChatMessage) => ({ speaker: m.role === 'agent' ? 'Myna' : customerName, text: m.text })
+  return {
+    reportedExcerpt: [toLine(flagged)],
+    reportedTranscript: turns.map(toLine),
+  }
+}
 
 const INBOX_NAV_SECTIONS: NavSection[] = [
   {
@@ -63,16 +205,16 @@ const INBOX_NAV_SECTIONS: NavSection[] = [
       { id: 'tagging-routing-agent', label: 'Tagging & routing agent' },
     ],
   },
-  {
-    id: 'outcomes',
-    label: 'Outcomes',
-    defaultExpanded: true,
-    items: [
-      // { id: 'responses',              label: 'Responses' },
-      { id: 'conversation-managed',   label: 'Conversation managed' },
-      { id: 'all-reports',            label: 'All reports', external: true },
-    ],
-  },
+  // 'Outcomes' section (Conversation managed / All reports) hidden for now — keep for future re-enablement.
+  // {
+  //   id: 'outcomes',
+  //   label: 'Outcomes',
+  //   defaultExpanded: true,
+  //   items: [
+  //     { id: 'conversation-managed',   label: 'Conversation managed' },
+  //     { id: 'all-reports',            label: 'All reports', external: true },
+  //   ],
+  // },
 ]
 
 interface TabSet {
@@ -194,7 +336,7 @@ function InboxTabs({ tabSet, activeTab, onSelect }: { tabSet: TabSet; activeTab:
             className="flex shrink-0 flex-col items-stretch"
           >
             <span
-              className={`flex h-[34px] items-center gap-xs whitespace-nowrap rounded-sm px-sm text-body transition-colors ${
+              className={`flex h-9 items-center gap-xs whitespace-nowrap rounded-sm px-sm text-body transition-colors ${
                 active ? 'text-text-primary' : 'text-text-secondary hover:bg-surface-selected'
               }`}
             >
@@ -212,9 +354,9 @@ function InboxTabs({ tabSet, activeTab, onSelect }: { tabSet: TabSet; activeTab:
             onClick={() => setMoreOpen((o) => !o)}
             className="flex flex-col items-stretch"
           >
-            <span className="flex h-[34px] items-center gap-xs whitespace-nowrap rounded-sm px-sm text-body text-text-secondary transition-colors hover:bg-surface-selected">
+            <span className="flex h-9 items-center gap-xs whitespace-nowrap rounded-sm px-sm text-body text-text-secondary transition-colors hover:bg-surface-selected">
               More
-              <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+              <Icon name="expand_more" size={14} />
             </span>
             <span className="h-[2px] w-full bg-transparent" />
           </button>
@@ -326,18 +468,18 @@ function InboxTabs({ tabSet, activeTab, onSelect }: { tabSet: TabSet; activeTab:
 //           <p className="mt-xs text-body text-text-secondary">Customer response handling and resolution outcomes across channels and locations</p>
 //         </div>
 //         <div className="flex items-center gap-sm">
-//           <button type="button" className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
-//             <Calendar className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+//           <button type="button" className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
+//             <Icon name="calendar_today" size={16} className="text-text-icon" />
 //             Last 3 months
 //           </button>
-//           <button type="button" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-//             <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+//           <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+//             <Icon name="filter_list" size={20} />
 //           </button>
 //         </div>
 //       </div>
 //       <div className="flex flex-col gap-lg px-2xl pb-2xl">
 //         <SummaryStats title="Summary" stats={SUMMARY_STATS} />
-//         <ChartCard title="Performance funnel" showActions={false} toolbar={<button type="button" aria-label="More" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>}>
+//         <ChartCard title="Performance funnel" showActions={false} toolbar={<button type="button" aria-label="More" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><Icon name="more_vert" size={20} /></button>}>
 //           <div className="relative mb-sm h-5 text-small text-text-secondary">
 //             <span className="absolute left-0">Channel</span>
 //             <span className="absolute" style={{ left: '50%', transform: 'translateX(-50%)' }}>Handler</span>
@@ -345,14 +487,14 @@ function InboxTabs({ tabSet, activeTab, onSelect }: { tabSet: TabSet; activeTab:
 //           </div>
 //           <SankeyChart nodes={SANKEY_NODES} links={SANKEY_LINKS} height={520} />
 //         </ChartCard>
-//         <ChartCard title="Conversations overtime" className="h-[556px]">
+//         <ChartCard title="Conversations over time" className="h-[556px]">
 //           <StackedBarChart data={OVERTIME_DATA} series={OVERTIME_SERIES} xKey="month" height={430} showBarLabels />
 //         </ChartCard>
-//         <ChartCard title="Conversation by channel" className="h-[556px]" showActions={false} toolbar={<div className="flex items-center gap-xs text-text-icon"><button type="button" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><Icon name="tune" size={20} /></button><button type="button" aria-label="More" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button></div>}>
+//         <ChartCard title="Conversation by channel" className="h-[556px]" showActions={false} toolbar={<div className="flex items-center gap-xs text-text-icon"><button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><Icon name="tune" size={20} /></button><button type="button" aria-label="More" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><Icon name="more_vert" size={20} /></button></div>}>
 //           <div className="mb-lg flex items-center gap-2xl">{CHANNEL_STATS.map((s) => (<div key={s.id} className="flex flex-col"><div className="flex items-center gap-xs"><span className="text-h3 text-text-primary">{s.value}</span>{s.delta && (<span className={`text-small ${s.trend === 'up' ? 'text-success' : 'text-chip-danger-text'}`}>{s.delta}</span>)}</div><span className="text-small text-text-secondary">{s.label}</span></div>))}</div>
 //           <DonutChart data={DONUT_DATA} centerValue="10.3k" centerLabel="Total conversations" height={380} />
 //         </ChartCard>
-//         <ChartCard title="Conversation across locations" showActions={false} toolbar={<button type="button" aria-label="More" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>}>
+//         <ChartCard title="Conversation across locations" showActions={false} toolbar={<button type="button" aria-label="More" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"><Icon name="more_vert" size={20} /></button>}>
 //           <DataTable columns={LOCATION_COLUMNS} data={LOCATION_DATA} />
 //         </ChartCard>
 //       </div>
@@ -477,12 +619,12 @@ function ConversationManagedPanel() {
           <p className="mt-xs text-body text-text-secondary">Insights into conversation management outcomes across different channels and locations</p>
         </div>
         <div className="flex items-center gap-sm">
-          <button type="button" className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
-            <Calendar className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+          <button type="button" className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
+            <Icon name="calendar_today" size={16} className="text-text-icon" />
             Last 3 months
           </button>
-          <button type="button" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-            <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+          <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+            <Icon name="filter_list" size={20} />
           </button>
         </div>
       </div>
@@ -496,8 +638,8 @@ function ConversationManagedPanel() {
           title="Performance funnel"
           showActions={false}
           toolbar={
-            <button type="button" aria-label="More" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-              <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+            <button type="button" aria-label="More" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+              <Icon name="more_vert" size={20} />
             </button>
           }
         >
@@ -542,8 +684,8 @@ function ConversationManagedPanel() {
           title="Conversation across locations"
           showActions={false}
           toolbar={
-            <button type="button" aria-label="More" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-              <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+            <button type="button" aria-label="More" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+              <Icon name="more_vert" size={20} />
             </button>
           }
         >
@@ -564,11 +706,15 @@ function InboxSideNav({ activeId, onSelect }: { activeId: string; onSelect: (id:
 
   return (
     <aside className="flex h-full w-[222px] shrink-0 flex-col border-r border-border bg-surface-l2">
+      <div className="flex h-[52px] shrink-0 flex-col justify-center px-2xl">
+        <h1 className="text-h3 text-text-primary">Inbox</h1>
+      </div>
+
       {/* New message row */}
-      <div className="flex items-center justify-between px-2xl pt-lg pb-sm">
+      <div className="flex items-center justify-between px-2xl py-sm">
         <span className="text-body text-text-primary">New message</span>
-        <button type="button" className="flex size-5 items-center justify-center rounded-full bg-primary text-white">
-          <Plus className="size-3" strokeWidth={1.6} absoluteStrokeWidth />
+        <button type="button" className="flex size-6 items-center justify-center rounded-full bg-primary text-white">
+          <Icon name="add" size={16} />
         </button>
       </div>
 
@@ -583,7 +729,7 @@ function InboxSideNav({ activeId, onSelect }: { activeId: string; onSelect: (id:
                 className="flex h-7 w-full items-center justify-between gap-sm rounded-sm px-sm py-[6px] hover:bg-surface-selected"
               >
                 <span className="text-body text-text-primary">{section.label}</span>
-                {expanded ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
+                <Icon name={expanded ? 'expand_less' : 'expand_more'} size={20} className="text-text-icon" />
               </button>
               {expanded && section.items?.map((leaf) => (
                 <button
@@ -597,7 +743,7 @@ function InboxSideNav({ activeId, onSelect }: { activeId: string; onSelect: (id:
                   <span className="min-w-0 flex-1 truncate text-body font-light text-text-primary">
                     {leaf.label}
                   </span>
-                  {leaf.external && <ExternalLink className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
+                  {leaf.external && <Icon name="open_in_new" size={16} className="shrink-0 text-text-icon" />}
                 </button>
               ))}
             </div>
@@ -608,14 +754,193 @@ function InboxSideNav({ activeId, onSelect }: { activeId: string; onSelect: (id:
   )
 }
 
-export function InboxScreen() {
+export function InboxScreen({
+  initialConversationId,
+  onInitialConversationConsumed,
+  onNavigateToRecommendation,
+}: {
+  initialConversationId?: string | null
+  onInitialConversationConsumed?: () => void
+  /** Called when a "Track your feedback" link is clicked in a voice-call transcript drawer —
+   *  the host app navigates to that recommendation's detail page for the given agent instance.
+   *  `feedbackPrefill`, when set, tells the destination detail page to immediately ask for the
+   *  feedback itself (see the Taylor Brooks "Coach agent" direct-navigate flow below). */
+  onNavigateToRecommendation?: (instanceName: string, recommendationId: string, feedbackPrefill?: string) => void
+} = {}) {
   const [activeNav, setActiveNav] = useState('view-all-interactions')
-  const [selectedConvo, setSelectedConvo] = useState(CONVERSATIONS[0])
+  const [selectedConvo, setSelectedConvo] = useState(() => {
+    if (initialConversationId) {
+      return CONVERSATIONS.find((c) => c.id === initialConversationId) ?? CONVERSATIONS[0]
+    }
+    return CONVERSATIONS[0]
+  })
   const [activeTab, setActiveTab] = useState('all')
   const [message, setMessage] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
+  // Maps a chat-bubble message id to the recommendation id its feedback landed on, once known —
+  // that bubble's "Coach agent" link switches to "Track your feedback" pointing at it.
+  const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, MessageFeedbackValue>>({})
+  const [shareFeedbackMessageId, setShareFeedbackMessageId] = useState<string | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const { submitFeedback } = useFeedbackRecommendationsStore()
+
+  const showFeedbackToast = (message: string) => {
+    setToastMessage(message)
+    setToastVisible(true)
+  }
+
+  const handleShareFeedbackClose = () => {
+    setShareFeedbackMessageId(null)
+  }
+
+  const handleFeedbackChange = (messageId: string, value: MessageFeedbackValue) => {
+    if (value === 'down') {
+      setShareFeedbackMessageId(messageId)
+      return
+    }
+    setMessageFeedback((prev) => ({ ...prev, [messageId]: value }))
+    if (value === 'up') showFeedbackToast('Thanks for the feedback!')
+  }
+
+  const feedbackForMessage = (messageId: string): MessageFeedbackValue => {
+    if (shareFeedbackMessageId === messageId) return 'down'
+    return messageFeedback[messageId] ?? null
+  }
+
+  const handleShareFeedbackSubmit = (details: string) => {
+    if (!shareFeedbackMessageId) return
+    const feedbackMessageId = shareFeedbackMessageId
+    setShareFeedbackMessageId(null)
+    showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    if (isReminderRun) {
+      const flaggedReminderEntry = REMINDER_CONVERSATION_EVENTS.find(
+        (entry) => entry.kind === 'message' && entry.id === feedbackMessageId,
+      )
+      submitFeedback({
+        text: details,
+        agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+        conversation: {
+          name: selectedConvo.name,
+          message: details,
+          channel: 'Voice',
+          date: selectedConvo.date,
+          location: selectedConvo.location,
+        },
+        conversationId: selectedConvo.id,
+        messageId: feedbackMessageId,
+        reportedExcerpt:
+          flaggedReminderEntry?.kind === 'message' ? [{ speaker: 'Myna', text: flaggedReminderEntry.text }] : undefined,
+      })
+      setMessageFeedback((prev) => ({ ...prev, [feedbackMessageId]: 'down' }))
+      return
+    }
+
+    const reportedConversation = buildReportedConversation(threadEvents, feedbackMessageId, selectedConvo.name)
+    const recId = submitFeedback({
+      text: details,
+      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      conversation: {
+        name: selectedConvo.name,
+        message: details,
+        channel: selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID || COACHING_CALL_CONVERSATIONS[selectedConvo.id] ? 'Voice' : 'Chat',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId: feedbackMessageId,
+      reportedExcerpt: reportedConversation?.reportedExcerpt,
+      reportedTranscript: reportedConversation?.reportedTranscript,
+    })
+    setRecIdByMessage((prev) => ({ ...prev, [feedbackMessageId]: recId }))
+  }
+
+  // Thumbs-down inside a voice-call transcript drawer (Dana Whitfield, the coaching examples,
+  // and the generic voicemail fallback) — records the same Human feedback recommendation as the
+  // regular chat-bubble flow above, tagged to whichever conversation is currently open.
+  const handleVoiceDrawerFeedback = (details: string, messageId: string) => {
+    showFeedbackToast('Feedback submitted! The agent will be trained on your input.')
+
+    const voiceMessages = coachingCall?.messages ?? FRONT_DESK_VOICE_MESSAGES
+    const reportedConversation = buildReportedConversationFromVoiceMessages(voiceMessages, messageId, selectedConvo.name)
+
+    return submitFeedback({
+      text: details,
+      agentName: selectedConvo.assignee ?? 'Front desk agent - North region',
+      conversation: {
+        name: selectedConvo.name,
+        message: details,
+        channel: 'Voice',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId,
+      reportedExcerpt: reportedConversation?.reportedExcerpt,
+      reportedTranscript: reportedConversation?.reportedTranscript,
+    })
+  }
+
+  const handleTrackFeedback = (recommendationId: string) => {
+    onNavigateToRecommendation?.(selectedConvo.assignee ?? 'Front desk agent - North region', recommendationId)
+  }
+
+  // Taylor Brooks (coaching-c3, Saturday hours): "Coach agent" skips the in-drawer Share-feedback
+  // modal and jumps straight to the recommendation detail page, which asks for the feedback
+  // itself as soon as it opens — one motion instead of submit-then-separately-click-Track.
+  const handleCoachAgentDirect = (messageId: string) => {
+    const feedbackPrefill = coachingCall?.feedbackGiven ?? ''
+    const agentName = selectedConvo.assignee ?? 'Front desk agent - North region'
+    const recId = submitFeedback({
+      text: feedbackPrefill,
+      agentName,
+      conversation: {
+        name: selectedConvo.name,
+        message: feedbackPrefill,
+        channel: 'Voice',
+        date: selectedConvo.date,
+        location: selectedConvo.location,
+      },
+      conversationId: selectedConvo.id,
+      messageId,
+    })
+    onNavigateToRecommendation?.(agentName, recId, feedbackPrefill)
+  }
+
+  useEffect(() => {
+    if (!initialConversationId) return
+    const match = CONVERSATIONS.find((c) => c.id === initialConversationId)
+    if (match) {
+      setSelectedConvo(match)
+      setActiveNav('view-all-interactions')
+    }
+    onInitialConversationConsumed?.()
+    // Only react to deep-link id changes; consume callback is intentionally unstable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConversationId])
 
   const isInternalChat = activeNav === 'chat-internal-team'
   const currentTabSet = TABS_BY_NAV[activeNav] ?? DEFAULT_TAB_SET
+  const isFrontDeskCall = selectedConvo.id === FRONT_DESK_INBOX_CONVERSATION_ID
+  const isAnnetteChat = selectedConvo.id === ANNETTE_BLACK_CONVERSATION_ID
+  const isReminderRun = selectedConvo.id === REMINDER_INBOX_CONVERSATION_ID
+  const coachingCall = COACHING_CALL_CONVERSATIONS[selectedConvo.id]
+  const threadEvents: ChatEvent[] = isAnnetteChat
+    ? ANNETTE_BLACK_CHAT_EVENTS
+    : isFrontDeskCall || isReminderRun || coachingCall
+      ? []
+      : CHAT_EVENTS
+
+  const searchQ = searchQuery.trim().toLowerCase()
+  const visibleConversations = searchQ
+    ? CONVERSATIONS.filter(
+        (c) => c.name.toLowerCase().includes(searchQ) || c.message.toLowerCase().includes(searchQ),
+      )
+    : CONVERSATIONS
 
   function handleNavSelect(id: string) {
     setActiveNav(id)
@@ -624,12 +949,23 @@ export function InboxScreen() {
   }
 
   return (
+    <>
     <div className="flex h-full">
-      {/* L2 Nav — full height */}
-      <InboxSideNav activeId={activeNav} onSelect={handleNavSelect} />
+      {/* L2 Nav — full height; collapsed while the agent workflow editor is open */}
+      {!editingAgentName && <InboxSideNav activeId={activeNav} onSelect={handleNavSelect} />}
 
       {/* Right side: TopNav on top, then conversation list + chat below */}
       <div className="flex flex-1 flex-col overflow-hidden">
+        {editingAgentName ? (
+          <WorkflowEditorScreen
+            agentName={editingAgentName}
+            product="healthcare"
+            onClose={() => setEditingAgentName(null)}
+          />
+        ) : activeNav === 'tagging-routing-agent' ? (
+          <AgentDetailScreen agentName="Tagging & routing agent" product="healthcare" onEditAgent={setEditingAgentName} />
+        ) : (
+        <>
         <TopNav initials="S" />
 
         {activeNav === 'conversation-managed' ? (
@@ -638,55 +974,82 @@ export function InboxScreen() {
         <div className="flex flex-1 overflow-hidden">
           {/* Middle panel — conversation list */}
           <div className="flex w-[370px] shrink-0 flex-col border-r border-border">
-            {isInternalChat ? (
-              <div className="flex items-center justify-end gap-sm px-lg pt-lg">
-                <button type="button" className="flex size-8 items-center justify-center text-text-icon hover:text-text-primary"><Search className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                <button type="button" className="flex h-8 items-center rounded-md bg-[#4CAE3D] px-lg text-body text-white hover:opacity-90">
-                  New
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="px-lg pt-lg">
-                  <div className="flex items-start justify-between">
-                    <div className="flex flex-col gap-xs">
-                      <div className="flex items-center gap-xs">
-                        <span className="text-body text-text-primary">OPEN</span>
-                        <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-                      </div>
-                      <span className="text-small text-text-secondary">192 total messages • 2 unread</span>
+            <div className="shrink-0 border-b border-border bg-surface px-lg pt-lg pb-md transition-colors focus-within:border-primary">
+              {isInternalChat ? (
+                <div className="flex items-center justify-end gap-sm">
+                  <button type="button" aria-label="Search" className="flex size-9 items-center justify-center text-text-icon hover:text-text-primary">
+                    <Icon name="search" size={20} />
+                  </button>
+                  <button type="button" className="flex h-9 items-center rounded-sm bg-[#4CAE3D] px-lg text-body text-white hover:opacity-90">
+                    New
+                  </button>
+                </div>
+              ) : searchOpen ? (
+                <div className="flex h-9 items-center gap-xs">
+                  <Icon name="search" size={20} className="shrink-0 text-text-icon" />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="min-w-0 flex-1 bg-transparent text-body text-text-primary caret-primary outline-none placeholder:text-text-tertiary"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setSearchOpen(false)
+                      setSearchQuery('')
+                    }}
+                    className="shrink-0 text-text-icon hover:text-text-primary"
+                  >
+                    <Icon name="close" size={20} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex w-full items-start justify-between gap-sm">
+                  <div className="flex min-w-0 flex-col gap-xs">
+                    <div className="flex items-center gap-xs">
+                      <span className="text-body text-text-primary">OPEN</span>
+                      <Icon name="expand_more" size={16} className="text-text-icon" />
                     </div>
-                    <div className="flex items-center gap-md">
-                      <button type="button" className="text-text-icon hover:text-text-primary"><Search className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                      <button type="button" className="text-text-icon hover:text-text-primary"><ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                      <button type="button" className="text-text-icon hover:text-text-primary"><ArrowUpDown className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                      <button type="button" className="text-text-icon hover:text-text-primary"><MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                    </div>
+                    <span className="text-small text-text-secondary">192 total messages • 2 unread</span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-md">
+                    <button type="button" aria-label="Search" onClick={() => setSearchOpen(true)} className="text-text-icon hover:text-text-primary">
+                      <Icon name="search" size={20} />
+                    </button>
+                    <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="filter_list" size={20} /></button>
+                    <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="swap_vert" size={20} /></button>
+                    <button type="button" className="text-text-icon hover:text-text-primary"><Icon name="more_vert" size={20} /></button>
                   </div>
                 </div>
+              )}
+            </div>
 
-                <div className="px-lg">
-                  <InboxTabs tabSet={currentTabSet} activeTab={activeTab} onSelect={setActiveTab} />
-                </div>
-              </>
+            {!isInternalChat && (
+              <div className="px-lg">
+                <InboxTabs tabSet={currentTabSet} activeTab={activeTab} onSelect={setActiveTab} />
+              </div>
             )}
 
             {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto px-sm py-sm">
-              {CONVERSATIONS.map((convo) => (
+            <div className="flex-1 overflow-y-auto px-lg pt-md pb-sm">
+              {visibleConversations.map((convo) => (
                 <button
                   key={convo.id}
                   type="button"
                   onClick={() => setSelectedConvo(convo)}
                   className={`flex w-full flex-col gap-xs rounded-md px-md py-md text-left transition-colors ${
-                    selectedConvo.id === convo.id ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                    selectedConvo.id === convo.id ? 'bg-[#dbeafe]' : 'hover:bg-surface-hover'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-xs">
                       {convo.unread && <span className="size-[6px] rounded-full bg-primary" />}
                       <span className="text-body text-text-primary">{convo.name}</span>
-                      {convo.verified && <Flame className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
+                      {convo.verified && <Icon name="mode_heat" size={14} className="text-text-icon" />}
                     </div>
                     <span className="text-small text-text-secondary">{convo.date}</span>
                   </div>
@@ -702,7 +1065,7 @@ export function InboxScreen() {
                     {convo.assignee && (
                       <>
                         <span>•</span>
-                        <Users className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+                        <Icon name="group" size={12} />
                         <span>{convo.assignee}</span>
                       </>
                     )}
@@ -718,20 +1081,18 @@ export function InboxScreen() {
             <div className="flex items-center justify-between px-2xl py-md">
               <div className="flex items-center gap-sm">
                 <span className="text-h3 text-text-primary">{selectedConvo.name}</span>
-                {selectedConvo.verified && <Flame className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
+                {selectedConvo.verified && <Icon name="mode_heat" size={16} className="text-text-icon" />}
               </div>
               <div className="flex items-center gap-md">
                 <button type="button" className="flex items-center gap-sm">
-                  <img
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=32&h=32&fit=crop&crop=face"
-                    alt=""
-                    className="size-7 rounded-full object-cover"
-                  />
-                  <span className="text-body text-text-primary">{selectedConvo.sublocation ?? 'Savannah'}</span>
-                  <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                    <Icon name="smart_toy" size={16} className="text-ai-brand" />
+                  </span>
+                  <span className="text-body text-text-primary">{selectedConvo.assignee ?? 'Front desk agent - North region'}</span>
+                  <Icon name="expand_more" size={14} className="text-text-icon" />
                 </button>
                 <button type="button" className="flex size-7 items-center justify-center text-text-icon hover:text-text-primary">
-                  <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                  <Icon name="more_vert" size={20} />
                 </button>
               </div>
             </div>
@@ -739,77 +1100,166 @@ export function InboxScreen() {
             {/* Chat messages */}
             <div className="flex flex-1 flex-col gap-md overflow-y-auto px-2xl py-lg">
 
-              {/* Date separator */}
-              <div className="flex items-center justify-center">
-                <span className="text-small text-text-tertiary">Fri • Jun 12</span>
-              </div>
+              {isFrontDeskCall ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">Tue • Feb 25</span>
+                  </div>
+                  <VoicemailMessage
+                    variant="voice-chat"
+                    transcript=""
+                    summary={FRONT_DESK_CALL_SUMMARY}
+                    duration="00:53"
+                    durationSecs={53}
+                    time="5:30 PM"
+                    audioUrl={voicemailSample}
+                    messages={FRONT_DESK_VOICE_MESSAGES}
+                    contactName={selectedConvo.name}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
+                  />
+                </>
+              ) : coachingCall ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">{coachingCall.dateLabel}</span>
+                  </div>
+                  <VoicemailMessage
+                    variant="voice-chat"
+                    transcript=""
+                    summary={coachingCall.summary}
+                    duration={coachingCall.duration}
+                    durationSecs={coachingCall.durationSecs}
+                    time={selectedConvo.date}
+                    audioUrl={voicemailSample}
+                    messages={coachingCall.messages}
+                    contactName={selectedConvo.name}
+                    feedbackPrefill={coachingCall.feedbackGiven}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
+                    onCoachAgentDirect={selectedConvo.id === COACHING_C3_CONVERSATION_ID ? handleCoachAgentDirect : undefined}
+                  />
+                </>
+              ) : isReminderRun ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">Sun • May 24</span>
+                  </div>
+                  <RunConversationThread
+                    entries={REMINDER_CONVERSATION_EVENTS}
+                    meta="time"
+                    feedbackForMessage={feedbackForMessage}
+                    onFeedbackChange={handleFeedbackChange}
+                  />
+                </>
+              ) : !isAnnetteChat ? (
+                <>
+                  <div className="flex items-center justify-center">
+                    <span className="text-small text-text-tertiary">Fri • Jun 12</span>
+                  </div>
+                  <VoicemailMessage
+                    variant="voice-chat"
+                    transcript="Hello. I was trying to get a hold of Joanne about her rental. She can call me back at 5807437121. Thank you."
+                    summary="Patient reported tooth-origin pain with mild swelling (no fever or breathing issues). Myna screened symptoms and offered an urgent appointment, but the patient ended the call."
+                    duration="00:11"
+                    durationSecs={11}
+                    time="10:42 PM"
+                    audioUrl={voicemailSample}
+                    contactName={selectedConvo.name}
+                    onSubmitFeedback={handleVoiceDrawerFeedback}
+                    onTrackFeedback={handleTrackFeedback}
+                  />
+                </>
+              ) : null}
 
-              {/* Voicemail bubble */}
-              <VoicemailMessage
-                variant="voice-chat"
-                transcript="Hello. I was trying to get a hold of Joanne about her rental. She can call me back at 5807437121. Thank you."
-                summary="Patient reported tooth-origin pain with mild swelling (no fever or breathing issues). Myna screened symptoms and offered an urgent appointment, but the patient ended the call."
-                duration="00:11"
-                durationSecs={11}
-                time="10:42 PM"
-                audioUrl={voicemailSample}
-              />
+              {!isFrontDeskCall && !isReminderRun && !coachingCall &&
+                threadEvents.map((event) => {
+                  if (event.kind === 'date') {
+                    return <ChatSystemLabel key={event.id} text={event.label} />
+                  }
 
-              {/* Subsequent events */}
-              {CHAT_EVENTS.map(event => {
-                if (event.kind === 'date') {
-                  return (
-                    <div key={event.id} className="flex items-center justify-center">
-                      <span className="text-small text-text-tertiary">{event.label}</span>
-                    </div>
-                  )
-                }
+                  if (event.kind === 'status') {
+                    const label =
+                      event.time != null && event.time !== ''
+                        ? `${event.text} • ${event.time}`
+                        : event.text
+                    return <ChatSystemLabel key={event.id} text={label} />
+                  }
 
-                if (event.kind === 'status') {
-                  return (
-                    <div key={event.id} className="flex items-center justify-center">
-                      <span className="text-small text-text-tertiary">
-                        {event.text} • {event.time}
-                      </span>
-                    </div>
-                  )
-                }
-
-                if (event.kind === 'bubble') {
-                  const isAgent = event.sender === 'agent'
-                  return (
-                    <div key={event.id} className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'}`}>
-                      <div className={`max-w-[70%] rounded-lg px-md py-sm text-body text-text-primary ${isAgent ? 'bg-surface-selected' : 'bg-surface-l2'}`}>
-                        {event.text}
-                      </div>
-                      <span className="mt-xs text-small text-text-tertiary">
-                        {event.attribution ? `${event.attribution} • ` : ''}{event.time}
-                      </span>
-                    </div>
-                  )
-                }
-
-                if (event.kind === 'recording') {
-                  return (
-                    <div key={event.id} className="flex flex-col items-end">
-                      <div className="flex w-[220px] flex-col gap-sm rounded-lg border border-border bg-surface-selected px-md py-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-body text-text-primary">Call recording</span>
-                          <span className="text-small text-text-secondary">{event.time}</span>
+                  if (event.kind === 'bubble') {
+                    const isAgent = event.sender === 'agent'
+                    const bubbleText =
+                      event.fields && event.fields.length > 0 ? (
+                        <div className="flex flex-col gap-md">
+                          {event.fields.map((field) => (
+                            <div key={field.label}>
+                              <p className="m-0 text-small text-text-secondary">{field.label}</p>
+                              <p className="m-0 text-body text-text-primary">{field.value}</p>
+                            </div>
+                          ))}
                         </div>
-                        <button type="button" className="flex items-center gap-sm">
-                          <div className="flex size-[34px] items-center justify-center rounded-full bg-[#1f1f1f]">
-                            <Play className="size-5 text-white" strokeWidth={1.6} absoluteStrokeWidth />
-                          </div>
-                          <span className="text-body text-text-primary">Play recording</span>
-                        </button>
-                      </div>
-                    </div>
-                  )
-                }
+                      ) : (
+                        event.text ?? ''
+                      )
 
-                return null
-              })}
+                    const recId = recIdByMessage[event.id]
+
+                    return (
+                      <ChatBubble key={event.id} sender={isAgent ? 'business' : 'user'} text={bubbleText}>
+                        <div className="flex items-center gap-sm">
+                          <span className="flex items-center gap-xs text-small text-text-tertiary">
+                            {!event.isBot && event.attribution ? `${event.attribution} • ` : ''}
+                            {event.time}
+                            {!isAgent && event.showLink && (
+                              <Icon name="link" size={14} className="text-text-tertiary" />
+                            )}
+                          </span>
+                          {isAgent &&
+                            (recId ? (
+                              <button
+                                type="button"
+                                onClick={() => handleTrackFeedback(recId)}
+                                className="group flex items-center gap-xs text-small text-text-action"
+                              >
+                                <Icon name="track_changes" size={16} />
+                                <span className="group-hover:underline">Track your feedback</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setShareFeedbackMessageId(event.id)}
+                                className="group flex items-center gap-xs text-small text-text-action"
+                              >
+                                <Icon name="auto_awesome" size={16} />
+                                <span className="group-hover:underline">Coach agent</span>
+                              </button>
+                            ))}
+                        </div>
+                      </ChatBubble>
+                    )
+                  }
+
+                  if (event.kind === 'recording') {
+                    return (
+                      <div key={event.id} className="flex flex-col items-end">
+                        <div className="flex w-[220px] flex-col gap-sm rounded-lg border border-border bg-[#dbeafe] px-md py-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-body text-text-primary">Call recording</span>
+                            <span className="text-small text-text-secondary">{event.time}</span>
+                          </div>
+                          <button type="button" className="flex items-center gap-sm">
+                            <div className="flex size-9 items-center justify-center rounded-full bg-[#1f1f1f]">
+                              <Icon name="play_arrow" size={20} fill className="text-white" />
+                            </div>
+                            <span className="text-body text-text-primary">Play recording</span>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return null
+                })}
             </div>
 
             {/* Compose box */}
@@ -817,7 +1267,7 @@ export function InboxScreen() {
               <div className="rounded-md border border-border p-md">
                 <button type="button" className="mb-sm flex items-center gap-xs text-body text-text-action">
                   Text
-                  <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+                  <Icon name="expand_more" size={16} />
                 </button>
 
                 <div className="mb-md min-h-[48px]">
@@ -832,10 +1282,10 @@ export function InboxScreen() {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-md text-text-icon">
-                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><LayoutList className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><DollarSign className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Paperclip className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
-                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Smile className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="table_rows" size={20} /></button>
+                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="attach_money" size={20} /></button>
+                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="attach_file" size={20} /></button>
+                    <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="sentiment_satisfied" size={20} /></button>
                     <button type="button" className="flex size-5 items-center justify-center hover:opacity-80">
                       <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M6.51931 10.0887H4.57118L4.24883 11.0207H3.2187L4.97763 6.12236H6.11988L7.8788 11.0207H6.84167L6.51931 10.0887ZM6.25302 9.30384L5.54525 7.25761L4.83747 9.30384H6.25302Z" fill="#6834B7"/>
@@ -847,16 +1297,16 @@ export function InboxScreen() {
                     </button>
                   </div>
                   {isInternalChat ? (
-                    <button type="button" className="flex h-[34px] items-center rounded-md bg-[#4CAE3D] px-lg text-body text-white hover:opacity-90">
+                    <button type="button" className="flex h-9 items-center rounded-sm bg-[#4CAE3D] px-lg text-body text-white hover:opacity-90">
                       Send
                     </button>
                   ) : (
                     <div className="flex items-center">
-                      <button type="button" className="flex h-[34px] items-center rounded-l-sm bg-primary px-lg text-body text-white hover:bg-primary-hover">
+                      <button type="button" className="flex h-9 items-center rounded-l-sm bg-primary px-lg text-body text-white hover:bg-primary-hover">
                         Send
                       </button>
-                      <button type="button" className="flex h-[34px] items-center justify-center rounded-r-sm border-l border-white/30 bg-primary px-sm text-white hover:bg-primary-hover">
-                        <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+                      <button type="button" className="flex h-9 items-center justify-center rounded-r-sm border-l border-white/30 bg-primary px-sm text-white hover:bg-primary-hover">
+                        <Icon name="expand_more" size={16} />
                       </button>
                     </div>
                   )}
@@ -866,7 +1316,21 @@ export function InboxScreen() {
           </div>
         </div>
         )}
+        </>
+        )}
       </div>
     </div>
+
+    <ShareFeedbackModal
+      open={shareFeedbackMessageId !== null}
+      onClose={handleShareFeedbackClose}
+      onSubmit={handleShareFeedbackSubmit}
+    />
+    <Toast
+      message={toastMessage}
+      visible={toastVisible}
+      onClose={() => setToastVisible(false)}
+    />
+    </>
   )
 }

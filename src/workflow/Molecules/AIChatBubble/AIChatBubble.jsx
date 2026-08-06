@@ -1,13 +1,32 @@
 import React from 'react';
-// ai-avatar SVG stub — @birdeye/elemental not available in MYNA
-const aiAvatar = 'data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 24 24%22%3E%3Ccircle cx%3D%2212%22 cy%3D%2212%22 r%3D%2212%22 fill%3D%22%231976d2%22%2F%3E%3C%2Fsvg%3E';
 import './AIChatBubble.css';
+
+function SparkleAvatar({ size = 14 }) {
+  const gradId = 'ai-chat-bubble-sparkle-grad';
+  return (
+    <span className="ai-chat-bubble__sparkle" aria-hidden style={{ width: size, height: size }}>
+      <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
+        <defs>
+          <linearGradient id={gradId} x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#9b6cf0" />
+            <stop offset="55%" stopColor="#6834b7" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M12 2 Q12 12 22 12 Q12 12 12 22 Q12 12 2 12 Q12 12 12 2 Z"
+          fill={`url(#${gradId})`}
+        />
+      </svg>
+    </span>
+  );
+}
 
 export default function AIChatBubble({ message, options = [], onOptionSelect }) {
   return (
     <div className="ai-chat-bubble">
       <div className="ai-chat-bubble__avatar">
-        <img src={aiAvatar} alt="" width={20} height={20} />
+        <SparkleAvatar size={14} />
       </div>
       <div className="ai-chat-bubble__body">
         <p className="ai-chat-bubble__message">{message}</p>

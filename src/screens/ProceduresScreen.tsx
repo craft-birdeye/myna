@@ -61,7 +61,7 @@ function ThreeDotMenu({ onDuplicate, onDelete }: { onDuplicate: () => void; onDe
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { type Procedure } from '../data/procedureData'
 import { ProcedureDetailScreen } from './ProcedureDetailScreen'
-import { DataTable, FilterPanel } from '../components'
+import { DataTable, FilterPanel, Toast } from '../components'
 import type { Column } from '../components/DataTable/DataTable.types'
 
 type ViewMode = 'grid' | 'list'
@@ -84,12 +84,18 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
   const [filterSelections, setFilterSelections] = useState<Record<string, string[]>>({})
   // null = list view; a Procedure = editing existing; 'new' = create flow.
   const [editing, setEditing] = useState<Procedure | 'new' | null>(null)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastVisible, setToastVisible] = useState(false)
 
   if (editing) {
     return (
       <ProcedureDetailScreen
         procedure={editing === 'new' ? null : editing}
         onBack={() => setEditing(null)}
+        onSaved={(isNew) => {
+          setToastMessage(isNew ? 'Procedure created' : 'Procedure updated')
+          setToastVisible(true)
+        }}
         product={product}
       />
     )
@@ -230,6 +236,12 @@ export function ProceduresScreen({ product = 'automotive' }: { product?: string 
         onClose={() => setFilterOpen(false)}
       />
       </div>
+
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
+      />
     </div>
   )
 }
