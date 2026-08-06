@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { Icon } from '../Icon/Icon'
 import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
-
-const FIELD_BORDER_CLASS =
-  'rounded-sm border border-border-input transition-colors focus:border-primary focus:outline-none focus-visible:border-primary'
-
-const INPUT_CLASS = `w-full bg-surface px-md text-body text-text-primary ${FIELD_BORDER_CLASS}`
+import {
+  DEFAULT_AGENT_VOICE,
+  DefaultVoiceDrawer,
+} from '../VoiceSettingsDrawers/VoiceSettingsDrawers'
 
 const STT_MODELS = ['Deepgram_flux', 'Deepgram', 'AssemblyAI']
 const TTS_MODELS = ['Cartesia', 'ElevenLabs', 'OpenAI']
 const FAILOVER_POLICIES = ['Automatic', 'Manual', 'Disabled']
+const STT_FAILOVER_MODELS = ['Assembly AI', 'Deepgram', 'Google STT']
+const TTS_FAILOVER_MODELS = ['ElevenLabs', 'OpenAI', 'Cartesia']
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -88,27 +89,24 @@ function SettingsSelect({
   )
 }
 
-/** STT / TTS engine controls shown above Default voice in voice call settings. */
+/** STT / TTS engine model pickers shown above Default voice in voice call settings. */
 export function VoiceCallEngineSettings() {
   const [sttModel, setSttModel] = useState('Deepgram_flux')
-  const [sttFailover, setSttFailover] = useState('Automatic')
+  const [sttFailover, setSttFailover] = useState('Manual')
+  const [sttFailoverModel, setSttFailoverModel] = useState('Assembly AI')
   const [ttsModel, setTtsModel] = useState('Cartesia')
-  const [ttsFailover, setTtsFailover] = useState('Automatic')
-  const [interruptions, setInterruptions] = useState(true)
-  const [ttft, setTtft] = useState('800')
-  const [ttfb, setTtfb] = useState('1200')
 
   return (
-    <div className="flex flex-col gap-lg">
+    <div className="flex flex-col">
       <div className="flex flex-col gap-md">
-        <h3 className="text-body text-text-primary">Speech-to-text (STT)</h3>
+        <h3 className="text-body font-medium text-text-primary">Speech-to-text (STT)</h3>
+        <div className="flex flex-col gap-xs">
+          <label className="text-small text-text-secondary">
+            Model <span className="text-chip-danger-text">*</span>
+          </label>
+          <SettingsSelect value={sttModel} options={STT_MODELS} onChange={setSttModel} />
+        </div>
         <div className="grid grid-cols-2 gap-md">
-          <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">
-              Model <span className="text-chip-danger-text">*</span>
-            </label>
-            <SettingsSelect value={sttModel} options={STT_MODELS} onChange={setSttModel} />
-          </div>
           <div className="flex flex-col gap-xs">
             <label className="flex items-center gap-xs text-small text-text-secondary">
               Failover policy
@@ -116,60 +114,109 @@ export function VoiceCallEngineSettings() {
             </label>
             <SettingsSelect value={sttFailover} options={FAILOVER_POLICIES} onChange={setSttFailover} />
           </div>
+          {sttFailover === 'Manual' && (
+            <div className="flex flex-col gap-xs">
+              <label className="text-small text-text-secondary">
+                Model <span className="text-chip-danger-text">*</span>
+              </label>
+              <SettingsSelect
+                value={sttFailoverModel}
+                options={STT_FAILOVER_MODELS}
+                onChange={setSttFailoverModel}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-md">
-        <h3 className="text-body text-text-primary">Text-to-speech (TTS)</h3>
-        <div className="grid grid-cols-2 gap-md">
+      <div className="flex flex-col gap-md pt-2xl">
+        <h3 className="text-body font-medium text-text-primary">Text-to-speech (TTS)</h3>
+        <div className="flex flex-col gap-xs">
+          <label className="text-small text-text-secondary">
+            Model <span className="text-chip-danger-text">*</span>
+          </label>
+          <SettingsSelect value={ttsModel} options={TTS_MODELS} onChange={setTtsModel} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** TTS failover policy + interruption toggle, shown after Default voice / Add additional voice. */
+export function VoiceCallInterruptionSettings() {
+  const [ttsFailover, setTtsFailover] = useState('Automatic')
+  const [ttsFailoverModel, setTtsFailoverModel] = useState(TTS_FAILOVER_MODELS[0])
+  const [ttsFailoverVoice, setTtsFailoverVoice] = useState(DEFAULT_AGENT_VOICE)
+  const [ttsFailoverVoiceSpeed, setTtsFailoverVoiceSpeed] = useState(1)
+  const [failoverVoiceDrawerOpen, setFailoverVoiceDrawerOpen] = useState(false)
+  const [interruptions, setInterruptions] = useState(true)
+
+  return (
+    <div className="flex flex-col gap-md">
+      <div className="grid grid-cols-2 gap-md">
+        <div className="flex flex-col gap-xs">
+          <label className="flex items-center gap-xs text-small text-text-secondary">
+            Failover policy
+            <InfoTooltip text="What happens if the primary text-to-speech model is unavailable." variant="brief" />
+          </label>
+          <SettingsSelect value={ttsFailover} options={FAILOVER_POLICIES} onChange={setTtsFailover} />
+        </div>
+        {ttsFailover === 'Manual' && (
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">
               Model <span className="text-chip-danger-text">*</span>
             </label>
-            <SettingsSelect value={ttsModel} options={TTS_MODELS} onChange={setTtsModel} />
-          </div>
-          <div className="flex flex-col gap-xs">
-            <label className="flex items-center gap-xs text-small text-text-secondary">
-              Failover policy
-              <InfoTooltip text="What happens if the primary text-to-speech model is unavailable." variant="brief" />
-            </label>
-            <SettingsSelect value={ttsFailover} options={FAILOVER_POLICIES} onChange={setTtsFailover} />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-sm">
-          <label className="flex items-center gap-xs text-body text-text-primary">
-            Enable interruptions
-            <InfoTooltip
-              text="Allow users to interrupt the agent while the first message is being delivered."
-              variant="detail"
+            <SettingsSelect
+              value={ttsFailoverModel}
+              options={TTS_FAILOVER_MODELS}
+              onChange={setTtsFailoverModel}
             />
+          </div>
+        )}
+      </div>
+
+      {ttsFailover === 'Manual' && (
+        <div className="flex flex-col gap-xs">
+          <label className="text-small text-text-secondary">
+            Voice <span className="text-chip-danger-text">*</span>
           </label>
-          <Toggle checked={interruptions} onChange={setInterruptions} />
+          <button
+            type="button"
+            onClick={() => setFailoverVoiceDrawerOpen(true)}
+            className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
+          >
+            <span
+              className={`min-w-0 flex-1 truncate text-left text-body ${
+                ttsFailoverVoice ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {ttsFailoverVoice || 'Select'}
+            </span>
+            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+          </button>
+          <DefaultVoiceDrawer
+            open={failoverVoiceDrawerOpen}
+            voice={ttsFailoverVoice}
+            speed={ttsFailoverVoiceSpeed}
+            onClose={() => setFailoverVoiceDrawerOpen(false)}
+            onSave={(next) => {
+              setTtsFailoverVoice(next.voice)
+              setTtsFailoverVoiceSpeed(next.speed)
+              setFailoverVoiceDrawerOpen(false)
+            }}
+          />
         </div>
+      )}
 
-        <div className="grid grid-cols-2 gap-md">
-          <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Latency budget TTFT (ms)</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={ttft}
-              onChange={(e) => setTtft(e.target.value.replace(/[^\d]/g, ''))}
-              className={`${INPUT_CLASS} h-9`}
-            />
-          </div>
-          <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Latency budget TTFB (ms)</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={ttfb}
-              onChange={(e) => setTtfb(e.target.value.replace(/[^\d]/g, ''))}
-              className={`${INPUT_CLASS} h-9`}
-            />
-          </div>
-        </div>
+      <div className="flex items-center gap-sm py-sm">
+        <label className="flex items-center gap-xs text-body text-text-primary">
+          Enable interruptions
+          <InfoTooltip
+            text="Allow users to interrupt the agent while the first message is being delivered."
+            variant="detail"
+          />
+        </label>
+        <Toggle checked={interruptions} onChange={setInterruptions} />
       </div>
     </div>
   )

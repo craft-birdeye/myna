@@ -28,7 +28,10 @@ export type { EmptyStateProps } from './EmptyState/EmptyState.types'
 export { InfoTooltip } from './InfoTooltip/InfoTooltip'
 export { Tooltip } from './Tooltip/Tooltip'
 export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'
-export { VoiceCallEngineSettings } from './VoiceCallEngineSettings/VoiceCallEngineSettings'
+export {
+  VoiceCallEngineSettings,
+  VoiceCallInterruptionSettings,
+} from './VoiceCallEngineSettings/VoiceCallEngineSettings'
 export {
   AdditionalVoiceDrawer,
   AGENT_VOICE_OPTIONS,

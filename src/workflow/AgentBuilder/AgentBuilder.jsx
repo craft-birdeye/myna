@@ -357,6 +357,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       title: startData.title,
       subtitle: startData.subtitle,
       subtitleIsLink: startData.subtitleIsLink,
+      onSubtitleClick: startData.onSubtitleClick,
     },
   });
   y += FLOW_START_GAP;
@@ -767,6 +768,8 @@ export default function AgentBuilder({
   createAiPanelOpen = false,
   /** Opens the full-page Create with AI experience (parent-owned navigation). */
   onOpenAiFullscreen = null,
+  /** Initial LHS drawer tab. */
+  lhsDefaultTab = 'Create manually',
   /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
   previewProcedureId = null,
   /** Optional full RHS detail payload — used when the procedure isn't in the live library. */
@@ -774,6 +777,8 @@ export default function AgentBuilder({
   onPreviewProcedureIdChange,
   /** Saved co-pilot transcript for the Create with AI tab. */
   aiTranscript = null,
+  /** Editing an already-built agent (Create with AI uses help copy, not build copy). */
+  existingAgent = false,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -836,8 +841,6 @@ export default function AgentBuilder({
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
-  // "Create with AI" expanded to full page — hides the canvas so the chat fills its space.
-  const [aiChatExpanded, setAiChatExpanded] = useState(false);
   const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
   // AI assist panel is controlled by the parent when it needs to render the
   // panel itself (e.g. spanning the full app height, above this editor's own
@@ -846,6 +849,12 @@ export default function AgentBuilder({
   const aiAssistOpen = aiAssistControlled ? aiAssistOpenProp : aiAssistOpenInternal;
   const setAiAssistOpen = aiAssistControlled ? onAiAssistOpenChange : setAiAssistOpenInternal;
   const [lhsForceOpenSection, setLhsForceOpenSection] = useState(null);
+  // Node most recently clicked on the canvas — surfaced as a removable pill in the
+  // "Create with AI" composer so a follow-up message can reference it directly.
+  const [aiNodeContext, setAiNodeContext] = useState(null);
+  // Bumped each time the start node's "Add locations" link is clicked, so the agent-details
+  // RHS panel knows to jump straight to its Locations picker (even if already open).
+  const [startLocationsOpenToken, setStartLocationsOpenToken] = useState(0);
   const [nodeDetails, setNodeDetails] = useState(() => {
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];
@@ -1516,6 +1525,14 @@ export default function AgentBuilder({
     }
   }, [selectedNodeId]);
 
+  // "Add locations" link on the start node — opens the agent-details RHS panel straight
+  // into its Locations picker, whether or not that panel is already open.
+  const handleAddLocationsFromCanvas = () => {
+    setSelectedNodeId(START_NODE_ID);
+    setDrawerOpen(true);
+    setStartLocationsOpenToken((t) => t + 1);
+  };
+
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
   const locationCount = startLocations.length;
@@ -1528,6 +1545,7 @@ export default function AgentBuilder({
     title: startAgentName,
     subtitle: startSubtitle,
     subtitleIsLink: locationCount === 0,
+    onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
   };
   const { nodes: rawNodes, edges } = buildFlow(nodeList, startData, nodeDetails, product);
 
@@ -1831,6 +1849,9 @@ export default function AgentBuilder({
     if (node.data?.isVoiceCallBranch) return;
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
+    if (node.data?.title) {
+      setAiNodeContext({ id: node.id, type: node.type, title: node.data.title });
+    }
   }, []);
 
   const handleCloseDrawer = useCallback(() => {
@@ -1992,6 +2013,7 @@ export default function AgentBuilder({
                 [START_NODE_ID]: { ...(prev[START_NODE_ID] || startDetails), [field]: value },
               }));
             },
+            autoOpenLocationsToken: startLocationsOpenToken,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -2429,21 +2451,10 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          {!hideLhs && aiChatExpanded && (
-            <div className="agent-builder__lhs agent-builder__lhs--expanded">
-              <LHSDrawer
-                expanded
-                agentName={agentName}
-                aiTranscript={aiTranscript}
-                onCollapseExpand={() => setAiChatExpanded(false)}
-              />
-            </div>
-          )}
-
-          {!hideLhs && !aiChatExpanded && (
+          {!hideLhs && (
             <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
               <LHSDrawer
-                defaultTab="Create manually"
+                defaultTab={lhsDefaultTab}
                 showTabs={!viewOnly}
                 defaultOpenSection={defaultOpenSection}
                 forceOpenSection={lhsForceOpenSection}
@@ -2453,9 +2464,12 @@ export default function AgentBuilder({
                 agentName={agentName}
                 procedures={procedures}
                 aiTranscript={aiTranscript}
+                existingAgent={existingAgent}
                 onOpenAiFullscreen={viewOnly ? undefined : onOpenAiFullscreen}
                 onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
-                onExpand={viewOnly ? undefined : () => setAiChatExpanded(true)}
+                onDropNode={viewOnly ? undefined : handleDropNode}
+                nodeContext={aiNodeContext}
+                onClearNodeContext={() => setAiNodeContext(null)}
                 onProcedureClick={viewOnly ? undefined : (procedureId) => {
                   setLhsPreviewProcedureId(procedureId);
                   setSelectedNodeId(null);
@@ -2466,7 +2480,7 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {!hideLhs && !aiChatExpanded && lhsCollapsed && (
+          {!hideLhs && lhsCollapsed && (
             <button
               type="button"
               className="ab-lhs-expand-pill"
@@ -2488,49 +2502,47 @@ export default function AgentBuilder({
             />
           )}
 
-          {!aiChatExpanded && (
-            <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
-              <FlowCanvas
-                nodes={nodes}
-                edges={edges}
-                onNodeClick={handleNodeClick}
-                onDropNode={viewOnly ? undefined : handleDropNode}
-                onNodesReorder={viewOnly ? undefined : handleNodesReorder}
-                hasClipboard={!viewOnly && !!clipboard}
-                onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
-                selectedNodeId={selectedNodeId}
-                orientation="vertical"
-                viewOnly={viewOnly}
-                product={product}
-                agentName={agentName}
-                initialZoom={initialZoom}
-                runDisabled={runDisabled}
-                onEdit={onEdit}
-                onView={onView}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                canUndo={historyPast.length > 0}
-                canRedo={historyFuture.length > 0}
-                onRun={() => {
-                  if (isReviewResponseAgent) return;
-                  if (isReminderAgent) {
-                    setBookTestModalOpen(true);
-                  } else {
-                    setTestAppointment(null);
-                    setPreviewOpen(true);
-                  }
-                }}
-              />
-            </div>
-          )}
+          <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
+            <FlowCanvas
+              nodes={nodes}
+              edges={edges}
+              onNodeClick={handleNodeClick}
+              onDropNode={viewOnly ? undefined : handleDropNode}
+              onNodesReorder={viewOnly ? undefined : handleNodesReorder}
+              hasClipboard={!viewOnly && !!clipboard}
+              onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
+              selectedNodeId={selectedNodeId}
+              orientation="vertical"
+              viewOnly={viewOnly}
+              product={product}
+              agentName={agentName}
+              initialZoom={initialZoom}
+              runDisabled={runDisabled}
+              onEdit={onEdit}
+              onView={onView}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={historyPast.length > 0}
+              canRedo={historyFuture.length > 0}
+              onRun={() => {
+                if (isReviewResponseAgent) return;
+                if (isReminderAgent) {
+                  setBookTestModalOpen(true);
+                } else {
+                  setTestAppointment(null);
+                  setPreviewOpen(true);
+                }
+              }}
+            />
+          </div>
 
-          {!aiChatExpanded && !aiAssistControlled && aiAssistOpen && (
+          {!aiAssistControlled && aiAssistOpen && (
             <div className="agent-builder__ai-assist">
               <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
             </div>
           )}
 
-          {!aiChatExpanded && drawerOpen && (
+          {drawerOpen && (
             <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
               <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
@@ -2538,7 +2550,7 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {!aiChatExpanded && previewOpen && !isReviewResponseAgent && (
+          {previewOpen && !isReviewResponseAgent && (
             <div className="agent-builder__preview">
               <PreviewPanel
                 onClose={() => {

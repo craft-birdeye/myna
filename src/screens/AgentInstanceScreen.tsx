@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import {
   Chip,
-  CoachAgentPanel,
   DataTable,
   EmptyState,
   EstimateSavingsModal,
   Icon,
   MetricTiles,
   Tabs,
-  Tooltip,
   TopNav,
   type ChipVariant,
   type Column,
@@ -26,7 +24,6 @@ import { RecommendationsTab } from './RecommendationsTab'
 import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
-import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 
 interface AgentInstanceScreenProps {
@@ -375,7 +372,6 @@ export function AgentInstanceScreen({
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
-  const [coachOpen, setCoachOpen] = useState(false)
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
 
   useEffect(() => {
@@ -456,8 +452,6 @@ export function AgentInstanceScreen({
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
-  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
-  const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
   const hideRecommendations = isReviewResponse || isReviewGeneration
   // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
   const isDraftInstance = instanceStatus === 'Draft'
@@ -538,21 +532,6 @@ export function AgentInstanceScreen({
                   {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                 </span>
               )}
-              {isRecommendationTab && !isDraftInstance && !hideRecommendations && (
-                <Tooltip content="Coach agent" variant="brief">
-                  <button
-                    type="button"
-                    aria-label="Coach agent"
-                    aria-pressed={coachOpen}
-                    onClick={() => setCoachOpen((open) => !open)}
-                    className={`flex size-9 items-center justify-center rounded-sm border border-border-selected text-text-icon hover:bg-surface-l2 ${
-                      coachOpen ? 'bg-surface-selected' : 'bg-surface'
-                    }`}
-                  >
-                    <Icon name="auto_awesome" size={20} />
-                  </button>
-                </Tooltip>
-              )}
               <div className="relative">
                 <button
                   type="button"
@@ -574,16 +553,6 @@ export function AgentInstanceScreen({
                       aria-hidden
                     />
                     <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
-                      <button
-                        type="button"
-                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                        onClick={() => {
-                          setActionsOpen(false)
-                          onEditAgent?.(instanceName)
-                        }}
-                      >
-                        Edit
-                      </button>
                       <button
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
@@ -635,15 +604,6 @@ export function AgentInstanceScreen({
                 setActiveTab(tabId)
               }}
             />
-            {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && !hideRecommendations && (
-              <button
-                type="button"
-                onClick={clearAllFeedback}
-                className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
-              >
-                Clear human feedback
-              </button>
-            )}
           </div>
 
           {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -728,13 +688,6 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
-
-        {coachOpen && isRecommendationTab && (
-          <CoachAgentPanel
-            agentName={instanceName}
-            onClose={() => setCoachOpen(false)}
-          />
-        )}
       </div>
     </div>
   )

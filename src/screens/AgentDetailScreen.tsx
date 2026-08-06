@@ -3584,6 +3584,52 @@ function ProcedurePreviewPanel({
 // Matches the Figma "What would you like to build today?" prompt-box layout.
 // Scoped to Front desk agent + Healthcare product only — every other agent
 // keeps the CreateAgentEmptyState illustration above.
+export function CreateAiGhostwriterShellHeader({
+  title,
+  onBack,
+  onViewAgentBuilder,
+  viewAgentBuilderDisabled = false,
+  showDraftBadge = true,
+}: {
+  title: string
+  onBack: () => void
+  onViewAgentBuilder: () => void
+  viewAgentBuilderDisabled?: boolean
+  /** Hide until a draft agent has been created in the co-pilot flow. */
+  showDraftBadge?: boolean
+}) {
+  return (
+    <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+      <div className="flex w-full items-center justify-between gap-md">
+        <div className="flex min-w-0 max-w-[720px] items-center gap-xs">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            aria-label="Back"
+          >
+            <Icon name="arrow_back" size={20} />
+          </button>
+          <h1 className="min-w-0 truncate text-h3 text-text-primary">{title}</h1>
+          {showDraftBadge && (
+            <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
+              Draft
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onViewAgentBuilder}
+          disabled={viewAgentBuilderDisabled}
+          className="flex h-9 shrink-0 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
+        >
+          View agent builder
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function CreateFlowPageHeader({
   onBack,
   title,
@@ -3649,6 +3695,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   fromScratchLabel = 'Setup manually',
   variant = 'frontdesk',
   workflowVisible = false,
+  compactGreeting = false,
+  existingAgent = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -3674,6 +3722,10 @@ export function HealthcareFrontdeskCreateAgentScreen({
   fromScratchLabel?: string
   variant?: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   workflowVisible?: boolean
+  /** Docked panel / pre-submit fullscreen — greeting + quick-start pills instead of library landing. */
+  compactGreeting?: boolean
+  /** Already-built agent — help-oriented greeting + contextual follow-ups. */
+  existingAgent?: boolean
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
   /** When the workflow canvas is open, procedure clicks open the canvas RHS instead of an inline preview. */
@@ -3725,6 +3777,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
       fromScratchLabel={fromScratchLabel}
       variant={variant}
       workflowVisible={workflowVisible}
+      compactGreeting={compactGreeting}
+      existingAgent={existingAgent}
       onDraftReady={onDraftReady}
       onCanvasProcedureChange={onCanvasProcedureChange}
       onInlineProcedureOpenChange={onInlineProcedureOpenChange}
@@ -3748,6 +3802,8 @@ function HealthcareFrontdeskCreateAgentLive({
   fromScratchLabel = 'Setup manually',
   variant = 'frontdesk',
   workflowVisible = false,
+  compactGreeting = false,
+  existingAgent = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -3767,6 +3823,8 @@ function HealthcareFrontdeskCreateAgentLive({
   fromScratchLabel?: string
   variant?: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   workflowVisible?: boolean
+  compactGreeting?: boolean
+  existingAgent?: boolean
   onDraftReady?: (name: string | null) => void
   onCanvasProcedureChange?: (name: string | null) => void
   onInlineProcedureOpenChange?: (open: boolean) => void
@@ -5312,7 +5370,7 @@ function HealthcareFrontdeskCreateAgentLive({
 
   // Compact greeting + suggestion pills — Create with AI side panel / fullscreen expand.
   // The full-page create landing keeps the older "Build your agent" layout below.
-  if (workflowVisible) {
+  if (compactGreeting) {
     const reviewQuickStarts = [
       {
         label: 'Replying using templates',
@@ -5370,11 +5428,43 @@ function HealthcareFrontdeskCreateAgentLive({
           'Create a Front desk agent that finds patient records and books, reschedules, or cancels appointments.',
       },
     ]
-    const quickStarts = isReviewFlow || isReviewGenFlow
+    const existingReviewQuickStarts = [
+      { label: 'Change reply tone', prompt: 'Change the reply tone for this review response agent.' },
+      { label: 'Update escalation for negative reviews', prompt: 'Update how negative reviews are escalated for human approval.' },
+      { label: 'Adjust which sources to watch', prompt: 'Adjust which review sources this agent should watch.' },
+      { label: 'Add another location', prompt: 'Add another location to this review response agent.' },
+    ]
+    const existingReviewGenQuickStarts = [
+      { label: 'Change request tone', prompt: 'Change the tone of review requests this agent sends.' },
+      { label: 'Update send timing', prompt: 'Update when this agent sends review requests.' },
+      { label: 'Adjust who receives requests', prompt: 'Adjust who receives review generation requests.' },
+      { label: 'Add a follow-up nudge', prompt: 'Add a follow-up nudge when patients do not leave a review.' },
+    ]
+    const existingReminderQuickStarts = [
+      { label: 'Change reminder timing', prompt: 'Change the reminder timing for this agent.' },
+      { label: 'Update email, text, or call channels', prompt: 'Update which channels this reminder agent uses.' },
+      { label: 'Adjust confirmation follow-up', prompt: 'Adjust how confirmation follow-up works for this reminder agent.' },
+      { label: 'Skip reminders for certain visits', prompt: 'Skip reminders for certain visit types.' },
+    ]
+    const existingFrontdeskQuickStarts = [
+      { label: 'Update call routing', prompt: 'Update call routing for this front desk agent.' },
+      { label: 'Change the greeting', prompt: 'Change the greeting for this front desk agent.' },
+      { label: 'Add a booking rule', prompt: 'Add a booking rule to this front desk agent.' },
+      { label: 'Escalate more intents to a human', prompt: 'Escalate more intents to a human for this front desk agent.' },
+    ]
+    const buildQuickStarts = isReviewFlow || isReviewGenFlow
       ? reviewQuickStarts
       : isReminderFlow
         ? reminderQuickStarts
         : frontdeskQuickStarts
+    const existingQuickStarts = isReviewGenFlow
+      ? existingReviewGenQuickStarts
+      : isReviewFlow
+        ? existingReviewQuickStarts
+        : isReminderFlow
+          ? existingReminderQuickStarts
+          : existingFrontdeskQuickStarts
+    const quickStarts = existingAgent ? existingQuickStarts : buildQuickStarts
     const agentLabel = isReviewGenFlow
       ? 'Review generation'
       : isReviewFlow
@@ -5382,119 +5472,55 @@ function HealthcareFrontdeskCreateAgentLive({
         : isReminderFlow
           ? 'Reminder'
           : 'Front desk'
-    const greeting = isReviewFlow || isReviewGenFlow
-      ? `Hi! I'm here to help you build your ${agentLabel} agent. Tell me what you'd like to build`
-      : `Hi John! I'm here to help you build your ${agentLabel} agent. How can I help you today?`
+    const greetingName = pageTitle?.trim() || `${agentLabel} agent`
+    const greeting = existingAgent
+      ? "Hi! I'm here to help you. Tell me what you'd like to do"
+      : `Hi! I'm here to help you build your ${greetingName}. Tell me what you'd like to build`
 
     return (
-      <div className="flex h-full w-full flex-col overflow-hidden pb-md">
-        {pageTitle && (
-          <div className="flex h-16 w-full shrink-0 items-center gap-sm">
-            {!hideHeaderBack && (
-              <button
-                type="button"
-                onClick={onBack}
-                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                aria-label="Back"
-              >
-                <Icon name="arrow_back" size={20} />
-              </button>
-            )}
-            <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
-            <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
-              Draft
-            </span>
-          </div>
-        )}
-        <div className="flex min-h-0 flex-1 flex-col justify-center gap-md overflow-hidden">
-          <div className="flex translate-y-lg items-start justify-start gap-md">
-            <AiAvatarChatIcon size={40} className="mt-1 shrink-0" />
-            <div className="flex min-w-0 flex-col items-start gap-md">
-              <p className="text-h3 leading-8 text-text-primary">{greeting}</p>
-              <div className="flex flex-col items-start gap-sm">
-                {quickStarts.map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => startConversation(option.prompt)}
-                    className="min-h-10 rounded-sm border border-border-selected bg-surface px-lg py-sm text-left text-body text-text-primary hover:bg-surface-l2"
-                  >
-                    {option.label}
-                  </button>
-                ))}
+      <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
+        <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
+          <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden pb-md">
+            <div className="flex items-start gap-sm">
+              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                <SparkleLoader size={14} spinning={false} />
+              </span>
+              <div className="flex min-w-0 flex-col items-start gap-md">
+                <p className="text-body leading-6 text-text-primary">{greeting}</p>
+                <div className="flex flex-col items-start gap-sm">
+                  {quickStarts.map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => startConversation(option.prompt)}
+                      className="flex h-8 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-body text-text-primary hover:bg-surface-l2"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex min-h-40 shrink-0 flex-col gap-md rounded-lg border border-border-selected bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
-          {landingAttachments.length > 0 && (
-            <div className="flex flex-wrap items-center gap-sm">
-              {landingAttachments.map((item) => (
-                <RefChip
-                  key={item.id}
-                  kind={item.kind}
-                  label={item.label}
-                  onRemove={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
-                />
-              ))}
-            </div>
-          )}
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
+          <div className="z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm pt-md">
+            <PromptComposer
+              value={prompt}
+              onChange={setPrompt}
+              onSend={handleSend}
+              placeholder={
+                existingAgent
+                  ? 'What would you like to do?'
+                  : isReviewFlow || isReviewGenFlow
+                    ? 'What would you like to build? For example: Review response agent replying autonomously.'
+                    : 'What would you like to build?'
               }
-            }}
-            rows={3}
-            placeholder={
-              isReviewFlow || isReviewGenFlow
-                ? 'What would you like to build? For example: Review response agent replying'
-                : 'What would you like to build?'
-            }
-            className="scrollbar-none min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
-          />
-          <div className="mt-auto flex items-center justify-between">
-            <div className="flex items-center gap-xs text-text-icon">
-              <AttachMenuPopover
-                onSelect={(option) => {
-                  if (option === 'upload-image') landingImageInputRef.current?.click()
-                  else if (option === 'media-library') setMediaLibraryOpen(true)
-                  else if (option === 'files') setFilesModalOpen(true)
-                }}
-              />
-              <Tooltip content="Dictate" variant="brief">
-                <button type="button" aria-label="Dictate" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="mic" size={20} />
-                </button>
-              </Tooltip>
-              <Tooltip content="Add context" variant="brief">
-                <button type="button" aria-label="Add context" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="data_object" size={20} />
-                </button>
-              </Tooltip>
-              <Tooltip content="More options" variant="brief">
-                <button type="button" aria-label="More options" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="more_horiz" size={22} />
-                </button>
-              </Tooltip>
-            </div>
-            <button
-              type="button"
-              aria-label="Send"
-              onClick={handleSend}
-              disabled={!prompt.trim()}
-              className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
-                prompt.trim()
-                  ? 'text-ai-brand hover:bg-surface-hover'
-                  : 'cursor-not-allowed text-text-tertiary opacity-40'
-              }`}
-            >
-              <SendIcon size={24} />
-            </button>
+              onAttach={(option) => {
+                if (option === 'upload-image') landingImageInputRef.current?.click()
+                else if (option === 'media-library') setMediaLibraryOpen(true)
+                else if (option === 'files') setFilesModalOpen(true)
+              }}
+            />
           </div>
         </div>
 
@@ -6083,18 +6109,16 @@ function HistoryChatReplay({
       <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col pb-md">
-            {pageTitle && (
+            {pageTitle && !hideHeaderBack && (
               <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
-                {!hideHeaderBack && (
-                  <button
-                    type="button"
-                    onClick={onBack}
-                    className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                    aria-label="Back"
-                  >
-                    <Icon name="arrow_back" size={20} />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                  aria-label="Back"
+                >
+                  <Icon name="arrow_back" size={20} />
+                </button>
                 <h1 className="min-w-0 truncate text-h3 text-text-primary">{pageTitle}</h1>
                 <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
                   Draft
@@ -6261,7 +6285,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
   const [createDraftAgentName, setCreateDraftAgentName] = useState<string | null>(null)
   const [canvasProcedureId, setCanvasProcedureId] = useState<string | null>(null)
-  const [inlineProcedureOpen, setInlineProcedureOpen] = useState(false)
+  const [, setInlineProcedureOpen] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   /** Recent-chats rail shown alongside the create-agent flow — null = "All chats" (fresh). */
@@ -6694,15 +6718,6 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     const historyChat = chatHistorySelectedId
       ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
       : null
-    const createTitle = historyChat?.draftTitle
-      ?? createDraftAgentName
-      ?? (isFrontdesk
-        ? 'New front desk agent'
-        : isReminder
-          ? 'New reminder agent'
-          : isReviewGeneration
-            ? 'New review generation agent'
-            : 'New review response agent')
     const createWorkflowAgentName = createDraftAgentName
       ?? (isReviewResponse
         ? REVIEW_RESPONSE_BUILD_CARD.title
@@ -6719,6 +6734,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
         : null
     const showReviewsCreateInnerTitle =
       isReviewsCreateFlow && (createFlowSubmitted || createWorkflowOpen)
+    const showGhostwriterShellHeader =
+      (createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen
+    const ghostwriterShellTitle = isReviewsCreateFlow
+      ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
+      : createWorkflowAgentName
 
     return (
       <div className="flex h-full">
@@ -6795,83 +6815,23 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   <Icon name="left_panel_close" size={18} />
                 </button>
               </div>
-            ) : createFlowSubmitted ? (
-              isReviewsCreateFlow ? (
-                <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
-                  <div className="flex w-full items-center justify-between gap-md">
-                    <div className="flex min-w-0 max-w-[720px] items-center gap-xs">
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateFlow(false)}
-                        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                        aria-label="Back"
-                      >
-                        <Icon name="arrow_back" size={20} />
-                      </button>
-                      <h1 className="min-w-0 truncate text-h3 text-text-primary">
-                        {reviewsCreateInnerTitle ?? createWorkflowAgentName}
-                      </h1>
-                      <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
-                        Draft
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={openCreateWorkflow}
-                      disabled={!createDraftAgentName}
-                      className="flex h-9 shrink-0 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
-                    >
-                      View agent builder
-                    </button>
-                  </div>
-                </div>
-              ) : (
-              // Conversation view — header aligns with the 720px chat column below it.
-              <div className="flex shrink-0 justify-center bg-surface px-lg pt-lg pb-md">
-                <div className="flex w-full max-w-[1600px] justify-center gap-xl pr-sm">
-                  {inlineProcedureOpen && (
-                    <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
-                  )}
-                  <div className="flex w-full min-w-0 max-w-[720px] items-center gap-sm">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (chatHistorySelectedId) selectAllChats()
-                        else setShowCreateFlow(false)
-                      }}
-                      className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                      aria-label="Back"
-                    >
-                      <Icon name="arrow_back" size={20} />
-                    </button>
-                    <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{createTitle}</h1>
-                    {(isReminder || isFrontdesk) && createDraftAgentName && !createWorkflowOpen && (
-                      <>
-                        <button
-                          type="button"
-                          aria-label="Collapse"
-                          title="Dock next to workflow"
-                          onClick={openCreateWorkflow}
-                          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                        >
-                          <Icon name="close_fullscreen" size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={openCreateWorkflow}
-                          className="shrink-0 rounded-sm text-body text-text-action hover:underline"
-                        >
-                          View in agent builder
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  {inlineProcedureOpen && (
-                    <div className="hidden w-[500px] shrink-0 lg:block" aria-hidden />
-                  )}
-                </div>
-              </div>
-              )
+            ) : showGhostwriterShellHeader ? (
+              <CreateAiGhostwriterShellHeader
+                title={ghostwriterShellTitle}
+                onBack={() => {
+                  if (createAiFullscreen) {
+                    setCreateAiFullscreen(false)
+                    if (createWorkflowMounted) openCreateWorkflow()
+                    else setShowCreateFlow(false)
+                    return
+                  }
+                  if (chatHistorySelectedId) selectAllChats()
+                  else setShowCreateFlow(false)
+                }}
+                onViewAgentBuilder={openCreateWorkflow}
+                showDraftBadge={Boolean(createDraftAgentName)}
+                viewAgentBuilderDisabled={!createDraftAgentName}
+              />
             ) : isReviewsCreateFlow ? (
               <CreateFlowPageHeader
                 onBack={() => setShowCreateFlow(false)}
@@ -6893,7 +6853,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             )}
             <div
               className={`scrollbar-subtle flex min-h-0 flex-1 pt-0 ${
-                createFlowSubmitted || createWorkflowOpen
+                createFlowSubmitted || createWorkflowOpen || createAiFullscreen
                   ? 'items-stretch overflow-visible'
                   : 'items-start overflow-auto pb-lg'
               } ${
@@ -6930,8 +6890,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       else setShowCreateFlow(false)
                     }}
                     onSubmittedChange={setCreateFlowSubmitted}
-                    pageTitle={showReviewsCreateInnerTitle ? reviewsCreateInnerTitle ?? undefined : undefined}
-                    hideHeaderBack={isReviewsCreateFlow}
+                    pageTitle={
+                      showGhostwriterShellHeader
+                        ? undefined
+                        : showReviewsCreateInnerTitle
+                          ? reviewsCreateInnerTitle ?? undefined
+                          : undefined
+                    }
+                    hideHeaderBack={showGhostwriterShellHeader || isReviewsCreateFlow}
                     onCreateFromScratch={() => {
                       if (isReviewResponse) {
                         setShowCreateFlow(false)
@@ -6980,7 +6946,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                           ? REVIEW_RESPONSE_CREATE_PROMPT
                           : isReviewGeneration
                             ? REVIEW_GENERATION_CREATE_PROMPT
-                            : undefined)
+                            : JOHN_CREATE_PROMPT)
                     }
                     autoStart={false}
                     historyChatId={chatHistorySelectedId}
@@ -6995,7 +6961,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                             ? 'review-generation'
                             : 'frontdesk'
                     }
-                    workflowVisible={createWorkflowOpen || createAiFullscreen}
+                    workflowVisible={createWorkflowOpen}
+                    compactGreeting={(createWorkflowOpen || createAiFullscreen) && !createFlowSubmitted}
                     onDraftReady={setCreateDraftAgentName}
                     onCanvasProcedureChange={isReminder ? setCanvasProcedureId : undefined}
                     onInlineProcedureOpenChange={setInlineProcedureOpen}
@@ -7046,6 +7013,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
                 hideLhs
+                existingAgent={false}
                 createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 previewProcedureId={isReminder ? canvasProcedureId : null}

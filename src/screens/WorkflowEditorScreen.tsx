@@ -84,8 +84,12 @@ interface WorkflowEditorScreenProps {
   onPreviewProcedureIdChange?: (id: string | null) => void
   /** Opens the full-page Create with AI experience. */
   onOpenAiFullscreen?: () => void
+  /** Initial LHS tab when the editor mounts. */
+  lhsDefaultTab?: 'Create with AI' | 'Create manually'
   /** Saved co-pilot transcript shown in the Create with AI tab after Save agent. */
   aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
+  /** When true, Create with AI uses help-oriented copy for an already-built agent. */
+  existingAgent?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -103,7 +107,9 @@ export function WorkflowEditorScreen({
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
   onOpenAiFullscreen,
+  lhsDefaultTab = 'Create manually',
   aiTranscript = null,
+  existingAgent,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -136,6 +142,7 @@ export function WorkflowEditorScreen({
                                AUTOMOTIVE_AGENT_WORKFLOWS
   const baseWorkflow = workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
   const isEmptyScratch = !wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0
+  const resolvedExistingAgent = existingAgent ?? (!isEmptyScratch && !wizardDraft)
   const reviewScratchStart = /review response/i.test(shownName)
     ? REVIEW_RESPONSE_SCRATCH_START
     : /review generation/i.test(shownName)
@@ -259,7 +266,9 @@ export function WorkflowEditorScreen({
           previewProcedureDetail={previewProcedureDetail}
           onPreviewProcedureIdChange={onPreviewProcedureIdChange}
           onOpenAiFullscreen={onOpenAiFullscreen}
+          lhsDefaultTab={lhsDefaultTab}
           aiTranscript={resolvedAiTranscript}
+          existingAgent={resolvedExistingAgent}
         />
       </Suspense>
     </div>

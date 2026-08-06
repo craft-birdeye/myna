@@ -11,11 +11,10 @@ import {
 
 // Uploaded procedure.svg icon — used for all procedure category cards
 const ProcedureSvgIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
     <path d="M19.7996 6.30078H14.3996C13.9339 6.30078 13.4745 6.40922 13.058 6.6175C12.6414 6.82578 12.279 7.12819 11.9996 7.50078C11.7202 7.12819 11.3578 6.82578 10.9412 6.6175C10.5247 6.40922 10.0653 6.30078 9.59961 6.30078H4.19961C4.04048 6.30078 3.88787 6.364 3.77535 6.47652C3.66282 6.58904 3.59961 6.74165 3.59961 6.90078V17.7008C3.59961 17.8599 3.66282 18.0125 3.77535 18.125C3.88787 18.2376 4.04048 18.3008 4.19961 18.3008H9.59961C10.077 18.3008 10.5348 18.4904 10.8724 18.828C11.21 19.1656 11.3996 19.6234 11.3996 20.1008C11.3996 20.2599 11.4628 20.4125 11.5753 20.525C11.6879 20.6376 11.8405 20.7008 11.9996 20.7008C12.1587 20.7008 12.3114 20.6376 12.4239 20.525C12.5364 20.4125 12.5996 20.2599 12.5996 20.1008C12.5996 19.6234 12.7893 19.1656 13.1268 18.828C13.4644 18.4904 13.9222 18.3008 14.3996 18.3008H19.7996C19.9587 18.3008 20.1114 18.2376 20.2239 18.125C20.3364 18.0125 20.3996 17.8599 20.3996 17.7008V6.90078C20.3996 6.74165 20.3364 6.58904 20.2239 6.47652C20.1114 6.364 19.9587 6.30078 19.7996 6.30078ZM9.59961 17.1008H4.79961V7.50078H9.59961C10.077 7.50078 10.5348 7.69042 10.8724 8.02799C11.21 8.36555 11.3996 8.82339 11.3996 9.30078V17.7008C10.8808 17.3104 10.2489 17.0997 9.59961 17.1008ZM19.1996 17.1008H14.3996C13.7503 17.0997 13.1184 17.3104 12.5996 17.7008V9.30078C12.5996 8.82339 12.7893 8.36555 13.1268 8.02799C13.4644 7.69042 13.9222 7.50078 14.3996 7.50078H19.1996V17.1008Z" fill="currentColor"/>
   </svg>
 );
-import { AiAgentIcon } from '../../assets/AiAgentIcon';
 import LHSEntityGroup from '../Molecules/LHS/LHSEntityGroup/LHSEntityGroup';
 import LHSExternalAppsGroup from '../Molecules/LHS/LHSExternalAppsGroup/LHSExternalAppsGroup';
 import './LHSDrawer.css';
@@ -714,11 +713,66 @@ function TriggerGroup({
 
 const TABS = ['Create with AI', 'Create manually'];
 
-const AI_OPTIONS = [
+/** Quickstarts when creating a new agent from scratch. */
+const BUILD_AI_OPTIONS = [
   'Replying using templates',
   'Replying autonomously',
   'Replying after human approval',
   'Suggesting replies in dashboard',
+];
+
+/** Contextual follow-ups when editing an already-built agent. */
+function getExistingAgentAiOptions(agentName = '') {
+  const name = String(agentName).toLowerCase();
+  if (name.includes('review generation')) {
+    return [
+      'Change request tone',
+      'Update send timing',
+      'Adjust who receives requests',
+      'Add a follow-up nudge',
+    ];
+  }
+  if (name.includes('review response') || name.includes('review')) {
+    return [
+      'Change reply tone',
+      'Update escalation for negative reviews',
+      'Adjust which sources to watch',
+      'Add another location',
+    ];
+  }
+  if (name.includes('reminder')) {
+    return [
+      'Change reminder timing',
+      'Update email, text, or call channels',
+      'Adjust confirmation follow-up',
+      'Skip reminders for certain visits',
+    ];
+  }
+  if (name.includes('front desk') || name.includes('frontdesk')) {
+    return [
+      'Update call routing',
+      'Change the greeting',
+      'Add a booking rule',
+      'Escalate more intents to a human',
+    ];
+  }
+  return [
+    'Update a workflow step',
+    'Change a trigger condition',
+    'Add a task or procedure',
+    'Adjust escalation rules',
+  ];
+}
+
+/** @deprecated use BUILD_AI_OPTIONS — kept for any external imports */
+const AI_OPTIONS = BUILD_AI_OPTIONS;
+
+/** First trigger + task the "Create with AI" quickstarts seed onto an empty Reviews AI
+ *  canvas — same drop payload shape `onDropNode` (FlowCanvas drag-drop) expects, so the
+ *  AI-picked node ends up identical to one dragged in by hand from "Create manually". */
+const REVIEWS_AI_QUICKSTART_SEED_NODES = [
+  { type: 'trigger', label: 'Reviews', description: 'When a new review is received', afterNodeId: '__start__' },
+  { type: 'task', label: 'Review', description: 'Triage review' },
 ];
 
 export default function LHSDrawer({
@@ -735,15 +789,19 @@ export default function LHSDrawer({
   showTabs = false,
   /** When set, Create with AI shows this saved co-pilot transcript instead of the empty welcome. */
   aiTranscript = null,
-  /** Shows a hover "expand" affordance on the Create with AI tab; called on click. */
-  onExpand = null,
-  /** Renders full-bleed with a name + collapse header instead of the tab bar. */
-  expanded = false,
-  onCollapseExpand = null,
   /** External full-screen takeover of the Create with AI chat (Reviews AI create flow). */
   aiFullscreen = false,
   onAiFullscreenChange = null,
   onOpenAiFullscreen = null,
+  /** True when editing an already-built agent (not create-from-scratch). */
+  existingAgent = false,
+  /** Adds a node to the canvas (same handler FlowCanvas drag-drop uses) — lets the
+   *  Create with AI quickstarts seed the trigger/task nodes shown in the mock. */
+  onDropNode = null,
+  /** The canvas node most recently clicked ({id, type, title}) — shown as a removable
+   *  pill in the Create with AI composer so a follow-up message can reference it. */
+  nodeContext = null,
+  onClearNodeContext = null,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
   // Review response / Review generation agents get their own "Event based" trigger
@@ -781,7 +839,7 @@ export default function LHSDrawer({
     aiTranscript ? 'Create with AI' : defaultTab,
   );
   const [aiInputValue, setAiInputValue] = useState('');
-  const showAiBody = expanded || activeTab === 'Create with AI';
+  const showAiBody = activeTab === 'Create with AI';
   const [aiTrail, setAiTrail] = useState(() => {
     const draft = getCreateAiDraftSession(agentName || '');
     if (draft?.trail?.length) return draft.trail;
@@ -793,6 +851,11 @@ export default function LHSDrawer({
   useEffect(() => {
     if (aiTranscript) setActiveTab('Create with AI');
   }, [aiTranscript]);
+
+  // Parent can request Create with AI after exiting fullscreen expand.
+  useEffect(() => {
+    if (defaultTab) setActiveTab(defaultTab);
+  }, [defaultTab]);
 
   useEffect(() => {
     const draft = getCreateAiDraftSession(agentName || '');
@@ -822,10 +885,45 @@ export default function LHSDrawer({
     if (!trimmed) return;
     const key = agentName || 'agent';
     appendCreateAiDraftTurn(key, { kind: 'user', text: trimmed });
+
+    // First message on a fresh Reviews AI canvas, picked from the quickstarts: seed the
+    // trigger + task nodes (same as dragging them in from "Create manually") instead of
+    // the generic "expand to full screen" placeholder reply.
+    const isQuickstartPick = BUILD_AI_OPTIONS.includes(trimmed);
+    if (
+      !existingAgent &&
+      isReviewsAgent &&
+      isQuickstartPick &&
+      aiTrail.length === 0 &&
+      onDropNode
+    ) {
+      REVIEWS_AI_QUICKSTART_SEED_NODES.forEach((seed) => onDropNode(seed));
+      appendCreateAiDraftTurn(key, {
+        kind: 'draft',
+        title: '1. When a new review is received',
+        description: 'Trigger added',
+      });
+      appendCreateAiDraftTurn(key, {
+        kind: 'draft',
+        title: '2. Triage review',
+        description: 'Task added',
+      });
+      const next = appendCreateAiDraftTurn(key, {
+        kind: 'agent',
+        paragraphs: [
+          "I've started your workflow with a trigger and a first task — click either node to fine-tune it, or keep describing what you'd like to build next.",
+        ],
+      });
+      setAiTrail(next.trail);
+      return;
+    }
+
     const next = appendCreateAiDraftTurn(key, {
       kind: 'agent',
       paragraphs: [
-        'Got it — I can help you build that. Expand to full screen to continue the conversation.',
+        existingAgent
+          ? 'Got it — I can help with that. Expand to full screen to continue the conversation.'
+          : 'Got it — I can help you build that. Expand to full screen to continue the conversation.',
       ],
     });
     setAiTrail(next.trail);
@@ -1059,65 +1157,25 @@ export default function LHSDrawer({
   };
 
   return (
-    <div className={`lhs-drawer${expanded ? ' lhs-drawer--expanded' : ''}`} ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
-      {expanded ? (
-        <div className="lhs-drawer__expanded-header">
-          <span className="lhs-drawer__expanded-name">{agentName || 'Untitled agent'}</span>
-          <button
-            type="button"
-            aria-label="Collapse"
-            title="Dock next to workflow"
-            onClick={onCollapseExpand}
-            className="lhs-drawer__collapse-btn"
-          >
-            <span className="material-symbols-outlined">close_fullscreen</span>
-          </button>
-        </div>
-      ) : (
+    <div className="lhs-drawer" ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
         <div className={`lhs-drawer__tabs${showTabs || onCollapse ? ' lhs-drawer__tabs--visible' : ''}`}>
           {showTabs && (
             <div className="lhs-drawer__tabs-list">
-              {TABS.map((tab) =>
-                tab === 'Create with AI' ? (
-                  <div
-                    key={tab}
-                    className={`group lhs-drawer__tab lhs-drawer__tab--ai${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
-                  >
-                    <span className="lhs-drawer__tab-label">
-                      <button type="button" className="lhs-drawer__tab-ai-trigger" onClick={() => setActiveTab(tab)}>
-                        Create with AI
-                        <AiAgentIcon size={16} />
-                      </button>
-                      {onExpand && (
-                        <button
-                          type="button"
-                          aria-label="Expand"
-                          title="Expand to full page"
-                          onClick={onExpand}
-                          className="lhs-drawer__expand-btn"
-                        >
-                          <span className="material-symbols-outlined">open_in_full</span>
-                        </button>
-                      )}
-                    </span>
-                    <span className="lhs-drawer__tab-underline" />
-                  </div>
-                ) : (
-                  <button
-                    key={tab}
-                    className={`lhs-drawer__tab${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
-                    onClick={() => {
-                      if (tab !== 'Create with AI' && aiFullscreen) {
-                        onAiFullscreenChange?.(false);
-                      }
-                      setActiveTab(tab);
-                    }}
-                  >
-                    <span className="lhs-drawer__tab-label">{tab}</span>
-                    <span className="lhs-drawer__tab-underline" />
-                  </button>
-                ),
-              )}
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  className={`lhs-drawer__tab${activeTab === tab ? ' lhs-drawer__tab--active' : ''}`}
+                  onClick={() => {
+                    if (tab !== 'Create with AI' && aiFullscreen) {
+                      onAiFullscreenChange?.(false);
+                    }
+                    setActiveTab(tab);
+                  }}
+                >
+                  <span className="lhs-drawer__tab-label">{tab}</span>
+                  <span className="lhs-drawer__tab-underline" />
+                </button>
+              ))}
             </div>
           )}
           {(onCollapse || (activeTab === 'Create with AI' && (onOpenAiFullscreen || onAiFullscreenChange))) && (
@@ -1160,7 +1218,6 @@ export default function LHSDrawer({
             </div>
           )}
         </div>
-      )}
 
       {!showAiBody ? (
         <div className="lhs-drawer__body">
@@ -1179,15 +1236,17 @@ export default function LHSDrawer({
           <div className="lhs-drawer__sections">
             <NodeType title="Trigger" content={triggerContent} isOpen={openSection === 'Trigger'} onToggle={() => toggleSection('Trigger')} />
             <NodeType title="Tasks" content={tasksContent} isOpen={openSection === 'Tasks'} onToggle={() => toggleSection('Tasks')} />
-            <NodeType
-              title="Procedures"
-              content={proceduresContent}
-              isOpen={openSection === 'Procedures'}
-              onToggle={() => {
-                if (openSection === 'Procedures') setProceduresExpanded(false);
-                toggleSection('Procedures');
-              }}
-            />
+            {!isReviewsAgent && (
+              <NodeType
+                title="Procedures"
+                content={proceduresContent}
+                isOpen={openSection === 'Procedures'}
+                onToggle={() => {
+                  if (openSection === 'Procedures') setProceduresExpanded(false);
+                  toggleSection('Procedures');
+                }}
+              />
+            )}
             <NodeType title="Controls" content={controlsContent} isOpen={openSection === 'Controls'} onToggle={() => toggleSection('Controls')} />
           </div>
         </div>
@@ -1283,8 +1342,12 @@ export default function LHSDrawer({
               </div>
             ) : (
               <AIChatBubble
-                message={`Hi! I'm here to help you build your ${agentName || 'Review response'} agent. Tell me what you'd like to build`}
-                options={AI_OPTIONS}
+                message={
+                  existingAgent
+                    ? "Hi! I'm here to help you. Tell me what you'd like to do"
+                    : `Hi! I'm here to help you build your ${agentName || 'Review response'} agent. Tell me what you'd like to build`
+                }
+                options={existingAgent ? getExistingAgentAiOptions(agentName) : BUILD_AI_OPTIONS}
                 onOptionSelect={handleAiSend}
               />
             )}
@@ -1295,8 +1358,17 @@ export default function LHSDrawer({
             onSend={() => {
               handleAiSend(aiInputValue);
               setAiInputValue('');
+              onClearNodeContext?.();
             }}
-            placeholder="What would you like to build? For example: Review response agent replying autonomously."
+            placeholder={
+              nodeContext
+                ? `What would you like to modify in this ${nodeContext.type === 'trigger' ? 'trigger' : nodeContext.type === 'task' ? 'task' : 'step'}?`
+                : existingAgent
+                  ? 'What would you like to do?'
+                  : 'What would you like to build? For example: Review response agent replying autonomously.'
+            }
+            attachments={nodeContext ? [{ id: nodeContext.id, kind: 'context', label: nodeContext.title }] : []}
+            onRemoveAttachment={() => onClearNodeContext?.()}
             rows={2}
           />
         </div>

@@ -8,6 +8,7 @@ import {
   LanguageSelectMenu,
   RefChip,
   VoiceCallEngineSettings,
+  VoiceCallInterruptionSettings,
   type AdditionalVoiceConfig,
 } from '../components'
 import {
@@ -612,7 +613,7 @@ function ReminderSettings() {
   const [greeting, setGreeting] = useState(
     'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?'
   )
-  const [recording, setRecording] = useState<RecordingMode>('announced')
+  const [recording, setRecording] = useState<RecordingMode>('off')
   const [consent, setConsent] = useState(
     'This call may be recorded for quality and training purposes.'
   )
@@ -767,6 +768,8 @@ function ReminderSettings() {
         />
       </div>
 
+      <VoiceCallInterruptionSettings />
+
       <div className="flex flex-col gap-xs">
         <label className="text-body text-text-primary">Greeting message</label>
         <textarea
@@ -777,7 +780,7 @@ function ReminderSettings() {
         />
       </div>
 
-      <div>
+      <div className="pt-sm">
         <p className="text-body text-text-primary">Recording</p>
         <div className="mt-sm flex flex-col gap-sm">
           <label className="flex cursor-pointer items-center gap-sm">
@@ -840,7 +843,7 @@ function FrontDeskSettings() {
   const [editingAdditionalVoice, setEditingAdditionalVoice] =
     useState<AdditionalVoiceConfig | null>(null)
   const [greeting, setGreeting] = useState(FRONTDESK_GREETING)
-  const [recording, setRecording] = useState<RecordingMode>('announced')
+  const [recording, setRecording] = useState<RecordingMode>('off')
   const [consent, setConsent] = useState(FRONTDESK_CONSENT)
 
   const promptRef = useRef<HTMLTextAreaElement>(null)
@@ -1007,7 +1010,7 @@ function FrontDeskSettings() {
       </div>
 
       {/* Language */}
-      <div className="flex flex-col gap-md">
+      <div className="flex flex-col gap-md pt-sm">
         <div className="flex flex-col gap-sm">
           <div>
             <label className="text-body text-text-primary">Language</label>
@@ -1113,7 +1116,7 @@ function FrontDeskSettings() {
 
       {/* Voice call settings */}
       <div className="flex flex-col gap-md pt-3xl">
-        <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <h2 className="text-[16px] font-medium leading-6 tracking-[-0.32px] text-text-primary">
           Voice call settings
         </h2>
 
@@ -1216,6 +1219,8 @@ function FrontDeskSettings() {
             onSave={handleSaveAdditionalVoice}
           />
         </div>
+
+        <VoiceCallInterruptionSettings />
       </div>
 
       {/* Greeting message */}
@@ -1230,7 +1235,7 @@ function FrontDeskSettings() {
       </div>
 
       {/* Recording */}
-      <div>
+      <div className="pt-sm">
         <p className="text-body text-text-primary">Recording</p>
         <div className="mt-sm flex flex-col gap-sm">
           <label className="flex cursor-pointer items-center gap-sm">
@@ -1279,7 +1284,7 @@ export function AgentSettingsTab({
   const [greeting, setGreeting] = useState(
     'Thank you for calling — my name is Myna, your virtual assistant. How can I help you today?'
   )
-  const [recording, setRecording] = useState<RecordingMode>('announced')
+  const [recording, setRecording] = useState<RecordingMode>('off')
   const [consent, setConsent] = useState(
     'This call may be recorded for quality and training purposes.'
   )
@@ -1345,7 +1350,7 @@ export function AgentSettingsTab({
                   />
                 </div>
 
-                <div>
+                <div className="pt-sm">
                   <p className="text-small text-text-secondary">Recording</p>
                   <SettingSubtext tone="tertiary">
                     Applies to voice calls only

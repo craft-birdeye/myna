@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import LocationsDrawer from '../../../RHSDrawer/LocationsDrawer.jsx';
 import styles from './AgentDetailsBody.module.css';
@@ -18,7 +18,13 @@ const DEFAULT_LOCATIONS = [
 
 const VISIBLE_COUNT = 4;
 
-export default function AgentDetailsBody({ values: externalValues, onChange, viewOnly = false }) {
+export default function AgentDetailsBody({
+  values: externalValues,
+  onChange,
+  viewOnly = false,
+  /** Bumped by the canvas's "Add locations" link to jump straight to the Locations picker. */
+  autoOpenLocationsToken = 0,
+}) {
   const [internalValues, setInternalValues] = useState({
     agentName: '',
     goals: '',
@@ -27,6 +33,10 @@ export default function AgentDetailsBody({ values: externalValues, onChange, vie
   });
   const [showLocations, setShowLocations] = useState(false);
   const [showAllChips, setShowAllChips] = useState(false);
+
+  useEffect(() => {
+    if (autoOpenLocationsToken) setShowLocations(true);
+  }, [autoOpenLocationsToken]);
 
   const values = externalValues ?? internalValues;
 

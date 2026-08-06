@@ -30,12 +30,6 @@
   pointer-events: none;
 }
 
-.agent-builder__lhs--expanded {
-  flex: 1;
-  width: 100%;
-  padding: 0;
-}
-
 /* ─── Expand pill (floats over canvas when LHS is collapsed) ─── */
 /* top/left match .agent-builder padding so the pill sits in the shared inset.
    Height matches .graph-controls chrome (padding 8 + inner 36 ≈ 54px, no shadow). */

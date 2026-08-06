@@ -24,8 +24,7 @@ import { HCWaitlistFilledScreen } from './screens/HCWaitlistFilledScreen'
 import { HCIntakesCompletedScreen } from './screens/HCIntakesCompletedScreen'
 import { DentalRevenueScreen } from './screens/DentalRevenueScreen'
 import { ManageTreatmentPlansScreen } from './screens/ManageTreatmentPlansScreen'
-import { AgentDetailScreen, HealthcareFrontdeskCreateAgentScreen, getCreateWithAiSetup } from './screens/AgentDetailScreen'
-import { getRetainedCreateAiChat } from './data/createAgentChatStore'
+import { AgentDetailScreen, HealthcareFrontdeskCreateAgentScreen, getCreateWithAiSetup, CreateAiGhostwriterShellHeader } from './screens/AgentDetailScreen'
 import { WorkflowEditorScreen } from './screens/WorkflowEditorScreen'
 import { ProceduresScreen } from './screens/ProceduresScreen'
 import { ReviewWaitlistScreen, buildWaitlistDetailProps, type WaitlistDetailArgs } from './screens/ReviewWaitlistScreen'
@@ -260,8 +259,8 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
-      { id: 'generation-agents', label: 'Generation agents' },
       { id: 'response-agents',   label: 'Response agents' },
+      { id: 'generation-agents', label: 'Generation agents' },
     ],
   },
   {
@@ -385,6 +384,8 @@ export function App() {
   const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
   const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [workflowAiCreateFullscreen, setWorkflowAiCreateFullscreen] = useState(false)
+  /** After exiting Create with AI fullscreen, reopen the canvas LHS on that tab. */
+  const [workflowLhsPreferAiTab, setWorkflowLhsPreferAiTab] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
@@ -542,39 +543,66 @@ export function App() {
             }}
           />
         ) : isEditingWorkflow ? (
+          workflowAiCreateFullscreen && editingAgentName ? (
+            (() => {
+              const setup = getCreateWithAiSetup(editingAgentName)
+              const exitToAgentBuilder = () => {
+                setWorkflowAiCreateFullscreen(false)
+                setWorkflowLhsPreferAiTab(true)
+              }
+              const topNavTitle =
+                setup.variant === 'review-response' || setup.variant === 'review-generation'
+                  ? 'Reviews AI'
+                  : setup.variant === 'reminder'
+                    ? 'Reminder'
+                    : 'Front desk'
+              // Shell title matches create-flow naming (drop region suffix when present).
+              const shellTitle = editingAgentName.replace(/ - .+$/, '') || editingAgentName
+              return (
+                <div className="flex h-full w-full overflow-hidden">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <TopNav title={topNavTitle} initials="S" />
+                    <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
+                      <section className="relative z-10 flex w-full shrink-0 flex-col overflow-hidden bg-surface">
+                        <CreateAiGhostwriterShellHeader
+                          title={shellTitle}
+                          onBack={exitToAgentBuilder}
+                          onViewAgentBuilder={exitToAgentBuilder}
+                        />
+                        <div className="scrollbar-subtle flex min-h-0 flex-1 items-stretch justify-center overflow-visible px-lg pt-0">
+                          <div className="flex h-full min-h-0 w-full min-w-0 justify-center">
+                            <HealthcareFrontdeskCreateAgentScreen
+                              key={`fullscreen-create::${editingAgentName}::welcome`}
+                              onBack={exitToAgentBuilder}
+                              onCreateFromScratch={exitToAgentBuilder}
+                              onSelectFromLibrary={exitToAgentBuilder}
+                              onViewWorkflow={exitToAgentBuilder}
+                              onCreateAgent={exitToAgentBuilder}
+                              pageTitle={editingAgentName}
+                              hideHeaderBack
+                              variant={setup.variant}
+                              initialPrompt={setup.initialPrompt}
+                              libraryCards={setup.libraryCards}
+                              fromScratchLabel={setup.fromScratchLabel}
+                              // Existing agent → expand shows welcome + pills, not a resumed thread.
+                              autoStart={false}
+                              workflowVisible={false}
+                              compactGreeting
+                              existingAgent
+                            />
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()
+          ) : (
           <div className="flex h-full w-full overflow-hidden">
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
               <TopNav title={railActive === 'reviews' ? 'Reviews AI' : 'Front desk'} initials="S" />
               <div className="flex-1 overflow-hidden">
-                {workflowAiCreateFullscreen && editingAgentName ? (
-                  (() => {
-                    const setup = getCreateWithAiSetup(editingAgentName)
-                    const retainedChat = getRetainedCreateAiChat(editingAgentName)
-                    const hasRetainedThread = Boolean(
-                      retainedChat?.trail?.length || retainedChat?.prompt,
-                    )
-                    return (
-                      <div className="flex h-full min-h-0 flex-col items-center overflow-hidden bg-surface px-lg">
-                        <HealthcareFrontdeskCreateAgentScreen
-                          key={`fullscreen-create::${editingAgentName}::${retainedChat?.id ?? 'fresh'}`}
-                          onBack={() => setWorkflowAiCreateFullscreen(false)}
-                          onCreateFromScratch={() => setWorkflowAiCreateFullscreen(false)}
-                          onSelectFromLibrary={() => setWorkflowAiCreateFullscreen(false)}
-                          onViewWorkflow={() => setWorkflowAiCreateFullscreen(false)}
-                          onCreateAgent={() => setWorkflowAiCreateFullscreen(false)}
-                          pageTitle={editingAgentName}
-                          variant={setup.variant}
-                          initialPrompt={setup.initialPrompt}
-                          libraryCards={setup.libraryCards}
-                          fromScratchLabel={setup.fromScratchLabel}
-                          autoStart={false}
-                          workflowVisible={!hasRetainedThread}
-                          historyChat={hasRetainedThread ? retainedChat : null}
-                        />
-                      </div>
-                    )
-                  })()
-                ) : (
                   <WorkflowEditorScreen
                     agentName={editingAgentName}
                     onClose={() => {
@@ -582,6 +610,7 @@ export function App() {
                       setWizardAgentDraft(null)
                       setWorkflowAiAssistOpen(false)
                       setWorkflowAiCreateFullscreen(false)
+                      setWorkflowLhsPreferAiTab(false)
                     }}
                     product={activeProduct}
                     wizardDraft={wizardAgentDraft}
@@ -593,14 +622,15 @@ export function App() {
                     aiAssistOpen={workflowAiAssistOpen}
                     onAiAssistOpenChange={setWorkflowAiAssistOpen}
                     onOpenAiFullscreen={() => setWorkflowAiCreateFullscreen(true)}
+                    lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
                   />
-                )}
               </div>
             </div>
-            {workflowAiAssistOpen && !workflowAiCreateFullscreen && (
+            {workflowAiAssistOpen && (
               <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
             )}
           </div>
+          )
         ) : railActive === 'reviews' ? (
           navActive === 'view-all-reviews' || navActive === 'all-reviews' ? (
             <AllReviewsScreen />

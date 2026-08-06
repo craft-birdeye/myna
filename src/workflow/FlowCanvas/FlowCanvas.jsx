@@ -32,6 +32,7 @@ function StartNodeWrapper({ id, data }) {
         subtitle={data.subtitle}
         subtitleIsLink={data.subtitleIsLink}
         selected={isSelected}
+        onSubtitleClick={data.onSubtitleClick}
       />
       <Handle type="source" position={Position.Bottom} />
     </div>
