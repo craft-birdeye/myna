@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FormInput, Tooltip } from '../elemental-stubs';
 import NodeType from '../Organisms/Accordion/NodeType/NodeType';
-import AIChatBubble from '../Molecules/AIChatBubble/AIChatBubble';
-import { PromptComposer } from '../../components';
+import { AgentAiChatPanel } from '../../components';
 
 // Uploaded procedure.svg icon — used for all procedure category cards
 const ProcedureSvgIcon = () => (
@@ -539,13 +538,6 @@ function TriggerGroup({
 
 const TABS = ['Create with AI', 'Create manually'];
 
-const AI_OPTIONS = [
-  'Replying using templates',
-  'Replying autonomously',
-  'Replying after human approval',
-  'Suggesting replies in dashboard',
-];
-
 export default function LHSDrawer({
   defaultTab = 'Create manually',
   defaultOpenSection = 'Tasks',
@@ -562,7 +554,9 @@ export default function LHSDrawer({
   aiTranscript = null,
   /** Shows a hover "expand" affordance on the Create with AI tab; called on click. */
   onExpand = null,
-  /** Renders full-bleed with a name + collapse header instead of the tab bar. */
+  /** Renders full-bleed with a name + collapse header instead of the tab bar — the AI chat
+   *  (`AgentAiChatPanel`) stays mounted as the same child either way, so its conversation state
+   *  survives the dock/expand toggle instead of being lost to a remount. */
   expanded = false,
   onCollapseExpand = null,
 }) {
@@ -589,7 +583,6 @@ export default function LHSDrawer({
   const [activeTab, setActiveTab] = useState(
     aiTranscript ? 'Create with AI' : defaultTab,
   );
-  const [aiInputValue, setAiInputValue] = useState('');
   const showAiBody = expanded || activeTab === 'Create with AI';
 
   // A transcript can resolve after mount (e.g. saved during this session).
@@ -798,17 +791,35 @@ export default function LHSDrawer({
   return (
     <div className={`lhs-drawer${expanded ? ' lhs-drawer--expanded' : ''}`} ref={panelRef} onMouseLeave={scheduleCloseDropdown}>
       {expanded ? (
-        <div className="lhs-drawer__expanded-header">
-          <span className="lhs-drawer__expanded-name">{agentName || 'Untitled agent'}</span>
-          <button
-            type="button"
-            aria-label="Collapse"
-            title="Dock next to workflow"
-            onClick={onCollapseExpand}
-            className="lhs-drawer__collapse-btn"
-          >
-            <span className="material-symbols-outlined">close_fullscreen</span>
-          </button>
+        <div className="flex w-full shrink-0 justify-center">
+          <div className="flex w-full max-w-[720px] items-center gap-sm">
+            <button
+              type="button"
+              aria-label="Back"
+              title="Back"
+              onClick={onCollapseExpand}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+            </button>
+            <h1 className="min-w-0 flex-1 truncate text-h3 text-text-primary">{agentName || 'Untitled agent'}</h1>
+            <button
+              type="button"
+              aria-label="Collapse"
+              title="Dock next to workflow"
+              onClick={onCollapseExpand}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close_fullscreen</span>
+            </button>
+            <button
+              type="button"
+              onClick={onCollapseExpand}
+              className="shrink-0 rounded-sm text-body text-text-action hover:underline"
+            >
+              View in agent builder
+            </button>
+          </div>
         </div>
       ) : (
         <div className={`lhs-drawer__tabs${showTabs ? ' lhs-drawer__tabs--visible' : ''}`}>
@@ -893,106 +904,7 @@ export default function LHSDrawer({
           </div>
         </div>
       ) : (
-        <div className="lhs-drawer__ai-body">
-          <div className="lhs-drawer__ai-chat-area">
-            {aiTranscript?.trail?.length || aiTranscript?.prompt ? (
-              <div className="lhs-drawer__ai-transcript">
-                {aiTranscript.trail?.length
-                  ? aiTranscript.trail.map((turn, i) => {
-                      if (turn.kind === 'user') {
-                        return (
-                          <div key={i} className="lhs-drawer__ai-user-msg">
-                            {turn.text}
-                          </div>
-                        )
-                      }
-                      if (turn.kind === 'user-files') {
-                        return (
-                          <div key={i} className="lhs-drawer__ai-user-files">
-                            {turn.labels.map((label) => (
-                              <span key={label} className="lhs-drawer__ai-file-chip">
-                                {label}
-                              </span>
-                            ))}
-                          </div>
-                        )
-                      }
-                      if (turn.kind === 'thoughts') {
-                        return (
-                          <details key={i} className="lhs-drawer__ai-thoughts">
-                            <summary>{turn.label || 'Thoughts'}</summary>
-                            <pre className="lhs-drawer__ai-thoughts-body">{turn.text}</pre>
-                          </details>
-                        )
-                      }
-                      if (turn.kind === 'agent') {
-                        return (
-                          <AIChatBubble
-                            key={i}
-                            message={(turn.paragraphs || []).join('\n')}
-                          />
-                        )
-                      }
-                      if (turn.kind === 'status') {
-                        return (
-                          <div key={i} className="lhs-drawer__ai-status">
-                            {turn.text}
-                          </div>
-                        )
-                      }
-                      if (turn.kind === 'draft') {
-                        return (
-                          <div key={i} className="lhs-drawer__ai-draft-card">
-                            <span className="material-symbols-outlined">account_tree</span>
-                            <div>
-                              <div className="lhs-drawer__ai-draft-title">{turn.title}</div>
-                              {turn.description && (
-                                <div className="lhs-drawer__ai-draft-desc">{turn.description}</div>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      }
-                      return null
-                    })
-                  : (
-                    <>
-                      <div className="lhs-drawer__ai-user-msg">{aiTranscript.prompt}</div>
-                      {(aiTranscript.replies ?? []).map((paragraphs, replyIndex) => (
-                        <AIChatBubble
-                          key={replyIndex}
-                          message={Array.isArray(paragraphs) ? paragraphs.join('\n') : String(paragraphs)}
-                        />
-                      ))}
-                      {aiTranscript.draftTitle && (
-                        <div className="lhs-drawer__ai-draft-card">
-                          <span className="material-symbols-outlined">account_tree</span>
-                          <div>
-                            <div className="lhs-drawer__ai-draft-title">{aiTranscript.draftTitle}</div>
-                            {aiTranscript.draftDescription && (
-                              <div className="lhs-drawer__ai-draft-desc">{aiTranscript.draftDescription}</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-              </div>
-            ) : (
-              <AIChatBubble
-                message={`Hi! I'm here to help you build your ${agentName || 'Review response'} agent. Tell me what you'd like to build`}
-                options={AI_OPTIONS}
-              />
-            )}
-          </div>
-          <PromptComposer
-            value={aiInputValue}
-            onChange={setAiInputValue}
-            onSend={() => setAiInputValue('')}
-            placeholder="What would you like to build? For example: Review response agent replying autonomously."
-            rows={2}
-          />
-        </div>
+        <AgentAiChatPanel agentName={agentName} expanded={expanded} onCollapse={onCollapseExpand} />
       )}
 
       {(visibleSubItems || showExternalAppsDropdown) && (

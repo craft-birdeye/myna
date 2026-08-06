@@ -45,24 +45,6 @@
   box-shadow: none;
 }
 
-.lhs-drawer__expanded-header {
-  width: 100%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.lhs-drawer__expanded-name {
-  font-size: 20px;
-  line-height: 28px;
-  color: #212121;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ─── Custom tabs (hidden until tab switcher is enabled) ─── */
 .lhs-drawer__tabs {
   display: none;
@@ -78,6 +60,10 @@
 
 .lhs-drawer__tab {
   flex: 1;
+  /* Flex items default to a min-width equal to their own content, which — combined with the
+     nowrap label text below — kept these tabs from ever shrinking, so the fixed-size collapse
+     button after them got pushed past the card's own right edge in a narrow docked panel. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -121,17 +107,17 @@
   cursor: pointer;
 }
 
+/* Static flex child right after the trigger button (not absolutely positioned) so it stays
+   glued to the "Create with AI" label regardless of the tab's overall width — an absolute
+   position relative to the (centered, content-sized) label used to leave it drifting in the
+   whitespace between the two tabs instead of visually belonging to "Create with AI". */
 .lhs-drawer__expand-btn {
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  margin-left: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 20px;
   height: 20px;
-  transform: translateY(-50%) scale(0.9);
+  transform: scale(0.9);
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -149,7 +135,7 @@
 
 .group:hover .lhs-drawer__expand-btn {
   opacity: 1;
-  transform: translateY(-50%) scale(1);
+  transform: scale(1);
 }
 
 .lhs-drawer__expand-btn:hover {
@@ -679,184 +665,3 @@
   color: #212121 !important;
 }
 
-/* ─── AI tab content ─── */
-.lhs-drawer__ai-body {
-  width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-height: 0;
-  box-sizing: border-box;
-}
-
-.lhs-drawer__ai-chat-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  /* Centers the plain welcome bubble in the available space instead of
-     leaving it pinned to the top with a dead gap above the composer. A real
-     transcript overrides this via its own margin-top: auto (below), which
-     still bottom-anchors it as the thread grows. */
-  justify-content: center;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: #ccd5e4 transparent;
-}
-
-/* `justify-content: flex-end` clips the top of an overflowing scroll container,
-   so bottom-align via auto margin instead. */
-/* Bottom-anchors a real transcript (chat history hugs the bottom); the plain
-   welcome bubble has nothing to anchor against and should sit near the top. */
-.lhs-drawer__ai-chat-area > .lhs-drawer__ai-transcript:first-child {
-  margin-top: auto;
-}
-
-.lhs-drawer__ai-chat-area::-webkit-scrollbar {
-  width: 6px;
-}
-
-.lhs-drawer__ai-chat-area::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.lhs-drawer__ai-chat-area::-webkit-scrollbar-thumb {
-  background: #ccd5e4;
-  border-radius: 3px;
-}
-
-.lhs-drawer__ai-transcript {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-bottom: 8px;
-}
-
-.lhs-drawer__ai-user-msg {
-  align-self: flex-end;
-  max-width: 90%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--color-surface-hover, #f0f0f0);
-  color: var(--color-text-primary, #252525);
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.lhs-drawer__ai-user-files {
-  align-self: flex-end;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-  max-width: 90%;
-}
-
-.lhs-drawer__ai-file-chip {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  padding: 4px 8px;
-  border: 1px solid #e5e9f0;
-  border-radius: 4px;
-  background: #fff;
-  font-size: 12px;
-  line-height: 16px;
-  color: #212121;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lhs-drawer__ai-thoughts {
-  display: block;
-  padding: 8px 0;
-  background: #fff;
-}
-
-.lhs-drawer__ai-thoughts summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 20px;
-  color: #555;
-  list-style: none;
-}
-
-.lhs-drawer__ai-thoughts summary::-webkit-details-marker {
-  display: none;
-}
-
-.lhs-drawer__ai-thoughts summary::before {
-  content: 'bolt';
-  font-family: 'Material Symbols Outlined';
-  font-size: 18px;
-  line-height: 18px;
-  color: #6b7280;
-}
-
-.lhs-drawer__ai-thoughts summary::after {
-  content: 'expand_less';
-  font-family: 'Material Symbols Outlined';
-  font-size: 18px;
-  line-height: 18px;
-  color: #6b7280;
-}
-
-.lhs-drawer__ai-thoughts:not([open]) summary::after {
-  content: 'expand_more';
-}
-
-.lhs-drawer__ai-thoughts-body {
-  margin: 16px 0 0 9px;
-  padding: 0 0 0 16px;
-  border-left: 1px solid #e5e9f0;
-  background: #fff;
-  color: #757575;
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-  line-height: 24px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.lhs-drawer__ai-status {
-  font-size: 12px;
-  line-height: 18px;
-  color: #6b7280;
-  padding: 4px 0;
-}
-
-.lhs-drawer__ai-draft-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  background: var(--color-surface, #fff);
-}
-
-.lhs-drawer__ai-draft-card .material-symbols-outlined {
-  font-size: 20px;
-  color: var(--color-text-icon, #6b7280);
-}
-
-.lhs-drawer__ai-draft-title {
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--color-text-primary, #252525);
-}
-
-.lhs-drawer__ai-draft-desc {
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--color-text-secondary, #6b7280);
-}

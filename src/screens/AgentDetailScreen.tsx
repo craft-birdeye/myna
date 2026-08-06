@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   AttachMenuPopover,
   Chip,
+  CreateAgentLanding,
   CustomizeColumnsDrawer,
   DataTable,
   FilesModal,
@@ -3475,7 +3476,7 @@ function ProcedurePreviewPanel({
 // Matches the Figma "What would you like to build today?" prompt-box layout.
 // Scoped to Front desk agent + Healthcare product only — every other agent
 // keeps the CreateAgentEmptyState illustration above.
-function HealthcareFrontdeskCreateAgentScreen({
+export function HealthcareFrontdeskCreateAgentScreen({
   onCreateFromScratch,
   onSelectFromLibrary,
   onCreateAgent,
@@ -3495,6 +3496,7 @@ function HealthcareFrontdeskCreateAgentScreen({
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
   canvasProcedureId = null,
+  compactLanding = false,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -3522,6 +3524,10 @@ function HealthcareFrontdeskCreateAgentScreen({
   onInlineProcedureOpenChange?: (open: boolean) => void
   /** Mirrors the canvas RHS procedure so closing the panel clears the chat pressed state. */
   canvasProcedureId?: string | null
+  /** Renders the `workflowVisible` landing's greeting/composer like a regular conversation turn
+   *  instead of the bigger first-time "build something" hero — for surfaces (like editing an
+   *  already-existing agent) where a returning-user utility tone fits better than an onboarding one. */
+  compactLanding?: boolean
 }) {
   const isReminderFlow = variant === 'reminder'
   const resolvedHistoryChat =
@@ -3567,6 +3573,7 @@ function HealthcareFrontdeskCreateAgentScreen({
       onCanvasProcedureChange={onCanvasProcedureChange}
       onInlineProcedureOpenChange={onInlineProcedureOpenChange}
       canvasProcedureId={canvasProcedureId}
+      compactLanding={compactLanding}
     />
   )
 }
@@ -3589,6 +3596,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
   canvasProcedureId = null,
+  compactLanding = false,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -3607,6 +3615,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onCanvasProcedureChange?: (name: string | null) => void
   onInlineProcedureOpenChange?: (open: boolean) => void
   canvasProcedureId?: string | null
+  compactLanding?: boolean
 }) {
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
@@ -5177,96 +5186,23 @@ function HealthcareFrontdeskCreateAgentLive({
         ]
 
     return (
-      <div className="flex h-full w-full flex-col overflow-hidden pb-md">
-        <div className="flex min-h-0 flex-1 flex-col justify-center gap-md overflow-hidden">
-          <div className="flex translate-y-lg items-start justify-start gap-md">
-            <AiAvatarChatIcon size={40} className="mt-1 shrink-0" />
-            <div className="flex min-w-0 flex-col items-start gap-md">
-              <p className="text-h3 leading-8 text-text-primary">
-                Hi! I’m here to help you build your {isReminderFlow ? 'Reminder' : 'Front desk'} agent. Tell me what you’d like to build
-              </p>
-              <div className="flex flex-col items-start gap-sm">
-                {quickStarts.map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => startConversation(option.prompt)}
-                    className="min-h-10 rounded-sm border border-border-selected bg-surface px-lg py-sm text-left text-body text-text-primary hover:bg-surface-l2"
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex min-h-40 shrink-0 flex-col gap-md rounded-lg border border-border-selected bg-surface px-lg py-md shadow-card focus-within:border-ai-brand">
-          {landingAttachments.length > 0 && (
-            <div className="flex flex-wrap items-center gap-sm">
-              {landingAttachments.map((item) => (
-                <RefChip
-                  key={item.id}
-                  kind={item.kind}
-                  label={item.label}
-                  onRemove={() => setLandingAttachments((prev) => prev.filter((a) => a.id !== item.id))}
-                />
-              ))}
-            </div>
-          )}
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            rows={3}
-            placeholder="What would you like to build?"
-            className="scrollbar-none min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
-          />
-          <div className="mt-auto flex items-center justify-between">
-            <div className="flex items-center gap-xs text-text-icon">
-              <AttachMenuPopover
-                onSelect={(option) => {
-                  if (option === 'upload-image') landingImageInputRef.current?.click()
-                  else if (option === 'media-library') setMediaLibraryOpen(true)
-                  else if (option === 'files') setFilesModalOpen(true)
-                }}
-              />
-              <Tooltip content="Dictate" variant="brief">
-                <button type="button" aria-label="Dictate" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="mic" size={20} />
-                </button>
-              </Tooltip>
-              <Tooltip content="Add context" variant="brief">
-                <button type="button" aria-label="Add context" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="data_object" size={20} />
-                </button>
-              </Tooltip>
-              <Tooltip content="More options" variant="brief">
-                <button type="button" aria-label="More options" className="flex size-8 items-center justify-center rounded-sm hover:bg-surface-hover hover:text-text-primary">
-                  <Icon name="more_horiz" size={22} />
-                </button>
-              </Tooltip>
-            </div>
-            <button
-              type="button"
-              aria-label="Send"
-              onClick={handleSend}
-              disabled={!prompt.trim()}
-              className={`flex size-9 items-center justify-center rounded-sm transition-colors ${
-                prompt.trim()
-                  ? 'text-ai-brand hover:bg-surface-hover'
-                  : 'cursor-not-allowed text-text-tertiary opacity-40'
-              }`}
-            >
-              <SendIcon size={24} />
-            </button>
-          </div>
-        </div>
+      <>
+        <CreateAgentLanding
+          greeting={`Hi! I’m here to help you build your ${isReminderFlow ? 'Reminder' : 'Front desk'} agent. Tell me what you’d like to build`}
+          options={quickStarts.map((option) => ({ label: option.label, onSelect: () => startConversation(option.prompt) }))}
+          value={prompt}
+          onChange={setPrompt}
+          onSend={handleSend}
+          placeholder={compactLanding ? 'Ask me anything' : undefined}
+          attachments={landingAttachments}
+          onRemoveAttachment={(id) => setLandingAttachments((prev) => prev.filter((a) => a.id !== id))}
+          onAttach={(option) => {
+            if (option === 'upload-image') landingImageInputRef.current?.click()
+            else if (option === 'media-library') setMediaLibraryOpen(true)
+            else if (option === 'files') setFilesModalOpen(true)
+          }}
+          compact={compactLanding}
+        />
 
         <input
           ref={landingImageInputRef}
@@ -5304,7 +5240,7 @@ function HealthcareFrontdeskCreateAgentLive({
             ])
           }
         />
-      </div>
+      </>
     )
   }
 

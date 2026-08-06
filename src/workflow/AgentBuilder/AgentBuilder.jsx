@@ -11,6 +11,7 @@ import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolVi
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
+import { AgentAiChatPanel } from '../../components/AgentAiChatPanel/AgentAiChatPanel';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -2242,36 +2243,40 @@ export default function AgentBuilder({
   return (
     <div className="faq-ab-embedded" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'transparent' }}>
       {/* ─── Embedded builder header ─── */}
-      <div className="faq-ab-header" style={{
-        height: 52,
-        borderBottom: '1px solid #e9e9eb',
-        background: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        flexShrink: 0,
-        gap: 8,
-      }}>
-        <div className="ab-header-left">
-          {onClose && (
-            <button
-              type="button"
-              className="ab-header-back-btn"
-              onClick={onClose}
-              title="Back to agents"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-                <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
-              </svg>
-            </button>
-          )}
-          <span className="ab-header-title">{agentName || 'Untitled agent'}</span>
-          <span className={`ab-header-status ${statusBadgeClass}`}>{agentStatus}</span>
+      {/* Hidden while the AI chat panel is expanded — matches the create-flow's undocked
+          full-page chat, which never shows this workflow chrome either. */}
+      {!aiChatExpanded && (
+        <div className="faq-ab-header" style={{
+          height: 52,
+          borderBottom: '1px solid #e9e9eb',
+          background: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          flexShrink: 0,
+          gap: 8,
+        }}>
+          <div className="ab-header-left">
+            {onClose && (
+              <button
+                type="button"
+                className="ab-header-back-btn"
+                onClick={onClose}
+                title="Back to agents"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
+                </svg>
+              </button>
+            )}
+            <span className="ab-header-title">{agentName || 'Untitled agent'}</span>
+            <span className={`ab-header-status ${statusBadgeClass}`}>{agentStatus}</span>
+          </div>
+          <div className="ab-header-spacer" aria-hidden />
+          {headerActions}
         </div>
-        <div className="ab-header-spacer" aria-hidden />
-        {headerActions}
-      </div>
+      )}
 
       {/* ─── Builder body ─── */}
       <div
@@ -2292,21 +2297,17 @@ export default function AgentBuilder({
         )}
 
         <div className="agent-builder">
-          {!hideLhs && aiChatExpanded && (
-            <div className="agent-builder__lhs agent-builder__lhs--expanded">
+          {/* Single, always-mounted LHSDrawer instance — docked vs. expanded is purely a prop/CSS
+              difference on this one subtree, never two different mount points. AgentAiChatPanel
+              lives inside it either way, so its conversation state survives the toggle instead of
+              being wiped by a remount (which is what happens if the AI panel is ever portaled or
+              conditionally swapped between two different parents). */}
+          {!hideLhs && (
+            <div
+              className={`agent-builder__lhs${aiChatExpanded ? ' agent-builder__lhs--expanded' : (lhsCollapsed ? ' agent-builder__lhs--collapsed' : '')}`}
+            >
               <LHSDrawer
-                expanded
-                agentName={agentName}
-                aiTranscript={aiTranscript}
-                onCollapseExpand={() => setAiChatExpanded(false)}
-              />
-            </div>
-          )}
-
-          {!hideLhs && !aiChatExpanded && (
-            <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
-              <LHSDrawer
-                defaultTab="Create manually"
+                defaultTab="Create with AI"
                 showTabs={!viewOnly}
                 defaultOpenSection={defaultOpenSection}
                 forceOpenSection={lhsForceOpenSection}
@@ -2316,8 +2317,10 @@ export default function AgentBuilder({
                 agentName={agentName}
                 procedures={procedures}
                 aiTranscript={aiTranscript}
+                expanded={aiChatExpanded}
                 onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
                 onExpand={viewOnly ? undefined : () => setAiChatExpanded(true)}
+                onCollapseExpand={() => setAiChatExpanded(false)}
                 onProcedureClick={viewOnly ? undefined : (procedureId) => {
                   setLhsPreviewProcedureId(procedureId);
                   setSelectedNodeId(null);

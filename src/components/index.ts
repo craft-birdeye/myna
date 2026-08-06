@@ -2,6 +2,10 @@ export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
 export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
 export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
+export { AgentAiChatPanel } from './AgentAiChatPanel/AgentAiChatPanel'
+export type { AgentAiChatPanelProps } from './AgentAiChatPanel/AgentAiChatPanel.types'
+export { CreateAgentLanding } from './CreateAgentLanding/CreateAgentLanding'
+export type { CreateAgentLandingProps, CreateAgentLandingOption } from './CreateAgentLanding/CreateAgentLanding.types'
 export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
 export type {
   RunConversationEntry,
