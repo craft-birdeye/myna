@@ -36,15 +36,12 @@ import {
   FLOW_STANDARD_NODE_HEIGHT,
   FLOW_CONNECTOR_GAP,
   FLOW_START_NODE_HEIGHT,
-  FLOW_TRIGGER_PLACEHOLDER_HEIGHT,
 } from '../flowLayoutConstants';
 import { computeLoopCanvasHeight, computeLoopBodyHeight } from '../Molecules/Canvas/LoopNode/LoopNode';
 import './AgentBuilder.css';
 
 const START_NODE_ID = '__start__';
 const END_NODE_ID = '__end__';
-// Synthetic node (not part of nodeList) that reserves step 1 for the trigger while none exists.
-const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
 
 /* ─── Error boundary for RHS panel — prevents blank screen on render error ─── */
 class RHSErrorBoundary extends React.Component {
@@ -84,16 +81,6 @@ class RHSErrorBoundary extends React.Component {
   }
 }
 
-// Canonical name/description shown immediately when a Reviews "Event based" leaf item
-// is dropped as a trigger (Review response / Review generation agents only — see
-// handleDropNode). The last entry matches REVIEW_RESPONSE_WORKFLOW's rr-1 node verbatim.
-const REVIEWS_TRIGGER_LEAF_COPY = {
-  'When a new review is received': 'Agent triggers when a new review is received across all sources and locations.',
-  'When a review is updated': 'Agent triggers when an existing review is updated across all sources and locations.',
-  'When a review is responded': 'Agent triggers when a review receives a response across all sources and locations.',
-  'When a new review is received or updated': 'Agent triggers on new or updated reviews across all sources and locations.',
-};
-
 function makeNodeDetails(type, label) {
   if (type === 'trigger' && label === 'Schedule-based') {
     return {
@@ -109,7 +96,9 @@ function makeNodeDetails(type, label) {
       triggerName: '',
       description: '',
       conditions: [
-        { id: 1, fieldValue: '', operatorValue: '', valueValue: '' },
+        { field: '', operator: '', value: '' },
+        { field: '', operator: '', value: '' },
+        { field: '', operator: '', value: '' },
       ],
     };
   }
@@ -166,28 +155,6 @@ const TASK_DROP_DEFAULTS = {
   'Send data to external app': { description: 'Push data to a connected external application' },
   'Fetch data from external app': { description: 'Retrieve data from a connected external application' },
   'Trigger external webhook': { description: 'Fire a webhook to an external system' },
-  'Triage review': {
-    description:
-      'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
-  },
-  'Review details extraction': {
-    description:
-      'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
-  },
-  'Review responder': { description: 'Reply to the review using the generated response' },
-  'Response generation': {
-    description:
-      'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
-  },
-  'Message assembly': {
-    description:
-      'Combine the crafted approach, extracted insights, and brand voice to create the final reply.',
-  },
-  'Create ticket': { description: 'Open a support ticket from the review so the right team can follow up.' },
-  'Update ticket': { description: 'Update an existing ticket with the latest review context and status.' },
-  'Enroll in campaign': { description: 'Add the contact to a review or recovery campaign sequence.' },
-  'Send referral invite': { description: 'Invite happy reviewers to refer friends or leave additional feedback.' },
-  'Send survey': { description: 'Send a follow-up survey after a review to capture more structured feedback.' },
 };
 
 function makeNodeConfig(id, type, label, description) {
@@ -238,7 +205,7 @@ function makeNodeConfig(id, type, label, description) {
       titlePlaceholder,
       descriptionPlaceholder,
       hasAiIcon,
-      hasToggle: type !== 'trigger',
+      hasToggle: true,
       toggleEnabled: true,
     },
   };
@@ -342,12 +309,8 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   let y = 0;
   const nodes = [];
   const edges = [];
-  // The trigger always owns step 1. When no trigger exists yet, render a placeholder slot
-  // in its place and start numbering real nodes (tasks etc.) from 2 — a task can never be
-  // step 1.
-  const hasTrigger = nodeList.some((n) => n.flowType === 'trigger');
   // Shared sequential step counter — incremented for every rendered content node
-  let stepCounter = hasTrigger ? 0 : 1;
+  let stepCounter = 0;
 
   nodes.push({
     id: START_NODE_ID,
@@ -364,30 +327,9 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   let lastNodeY = 0;
   let lastNodeBlockHeight = FLOW_START_NODE_HEIGHT;
 
-  // Trigger placeholder — sits at step 1's position, above any tasks, until a trigger lands.
-  if (!hasTrigger) {
-    nodes.push({
-      id: TRIGGER_PLACEHOLDER_ID,
-      type: 'triggerPlaceholder',
-      position: { x: 0, y },
-      data: {},
-    });
-    edges.push({
-      id: `e-${START_NODE_ID}-${TRIGGER_PLACEHOLDER_ID}`,
-      source: START_NODE_ID,
-      target: TRIGGER_PLACEHOLDER_ID,
-      type: 'addButton',
-    });
-    lastNodeY = y;
-    lastNodeBlockHeight = FLOW_TRIGGER_PLACEHOLDER_HEIGHT;
-    y += FLOW_TRIGGER_PLACEHOLDER_HEIGHT + FLOW_CONNECTOR_GAP;
-  }
-
-  const entryId = hasTrigger ? START_NODE_ID : TRIGGER_PLACEHOLDER_ID;
-
   nodeList.forEach((item, i) => {
     const nodeId = item.id;
-    const prevId = i === 0 ? entryId : nodeList[i - 1].id;
+    const prevId = i === 0 ? START_NODE_ID : nodeList[i - 1].id;
     lastNodeY = y;
     lastNodeBlockHeight = getNodeBlockHeight(item, nodeId, nodeDetails, product);
     const topLevelStep = ++stepCounter;
@@ -472,15 +414,12 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                 },
     });
     const prevIsProcedures = i > 0 && nodeList[i - 1].flowType === 'procedures';
-    // No "+" between the trigger placeholder and the first task — that slot is reserved for
-    // the trigger, so nothing may be inserted above the first real node there.
-    const fromPlaceholder = i === 0 && prevId === TRIGGER_PLACEHOLDER_ID;
     edges.push({
       id: `e-${prevId}-${nodeId}`,
       source: prevId,
       target: nodeId,
       type: 'addButton',
-      data: { betweenCards: true, ...((prevIsProcedures || fromPlaceholder) ? { hideAddButton: true } : {}) },
+      data: { betweenCards: true, ...(prevIsProcedures ? { hideAddButton: true } : {}) },
     });
 
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
@@ -526,12 +465,12 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             if (vcChild.flowType !== 'delay' && vcChild.flowType !== 'branch') {
               vcChildData = { ...vcChildData, title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title, subtitle: vcChildDet.description ?? vcChildData.subtitle };
             }
-            nodes.push({ id: vcChildId, type: vcChild.flowType, position: { x: vcBranchX, y: vcNodeStartY + vcIdx * FLOW_NODE_STEP }, data: vcChildData });
+            nodes.push({ id: vcChildId, type: vcChild.flowType, position: { x: vcBranchX, y: vcNodeStartY + vcIdx * 250 }, data: vcChildData });
             edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId, betweenCards: vcPrevId !== vcBranch.id } });
             vcPrevId = vcChildId;
           });
           const vcEndId = `${vcBranch.id}-end`;
-          nodes.push({ id: vcEndId, type: 'branchEnd', position: { x: vcBranchX, y: vcNodeStartY + vcBranchNodes.length * FLOW_NODE_STEP }, data: { parentId: vcBranch.id } });
+          nodes.push({ id: vcEndId, type: 'branchEnd', position: { x: vcBranchX, y: vcNodeStartY + vcBranchNodes.length * 250 }, data: { parentId: vcBranch.id } });
           edges.push({ id: `e-${vcPrevId}-${vcEndId}`, source: vcPrevId, target: vcEndId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId } });
         });
       };
@@ -564,7 +503,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
           edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
           previousId = childNode.id;
           previousChildFlowType = childNode.flowType;
-          childYOffset += FLOW_NODE_STEP;
+          childYOffset += 250;
 
           // Fan out voiceCall sub-branches when voiceCall is nested inside a branch path
           if (childNode.flowType === 'voiceCall') {
@@ -600,7 +539,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                 nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
                 edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
                 innerPrevId = innerChildId;
-                innerYOff += FLOW_NODE_STEP;
+                innerYOff += 250;
                 if (innerChild.flowType === 'voiceCall') {
                   renderVoiceCallBranches(innerChildId, innerBranchX, innerChildY);
                 }
@@ -630,7 +569,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
     y += getFlowVerticalStep(item, nodeId, nodeDetails, product);
   });
 
-  const lastId = nodeList.length > 0 ? nodeList[nodeList.length - 1].id : entryId;
+  const lastId = nodeList.length > 0 ? nodeList[nodeList.length - 1].id : START_NODE_ID;
   const lastNodeIsProcedures = nodeList.length > 0 && nodeList[nodeList.length - 1].flowType === 'procedures';
   const lastFlowType = nodeList.length > 0 ? nodeList[nodeList.length - 1].flowType : null;
   if (!nodeList.length || (lastFlowType !== 'branch' && lastFlowType !== 'voiceCall')) {
@@ -765,8 +704,6 @@ export default function AgentBuilder({
   onAiAssistOpenChange,
   hideLhs = false,
   createAiPanelOpen = false,
-  /** Opens the full-page Create with AI experience (parent-owned navigation). */
-  onOpenAiFullscreen = null,
   /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
   previewProcedureId = null,
   /** Optional full RHS detail payload — used when the procedure isn't in the live library. */
@@ -802,38 +739,6 @@ export default function AgentBuilder({
   const [activeProcedureId, setActiveProcedureId] = useState(null);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
   const externalPreviewRef = useRef(null);
-  // Create-with-AI composer: when focused, canvas node clicks attach as pills instead of opening RHS.
-  const [aiComposerAttachments, setAiComposerAttachments] = useState([]);
-  const aiComposerArmedRef = useRef(false);
-  const aiComposerBlurTimerRef = useRef(null);
-
-  const armAiComposer = useCallback(() => {
-    if (aiComposerBlurTimerRef.current) {
-      clearTimeout(aiComposerBlurTimerRef.current);
-      aiComposerBlurTimerRef.current = null;
-    }
-    aiComposerArmedRef.current = true;
-  }, []);
-
-  const disarmAiComposerSoon = useCallback(() => {
-    if (aiComposerBlurTimerRef.current) clearTimeout(aiComposerBlurTimerRef.current);
-    aiComposerBlurTimerRef.current = setTimeout(() => {
-      aiComposerArmedRef.current = false;
-      aiComposerBlurTimerRef.current = null;
-    }, 250);
-  }, []);
-
-  const handleRemoveComposerAttachment = useCallback((id) => {
-    setAiComposerAttachments((prev) => prev.filter((a) => a.id !== id));
-  }, []);
-
-  const handleClearComposerAttachments = useCallback(() => {
-    setAiComposerAttachments([]);
-  }, []);
-
-  useEffect(() => () => {
-    if (aiComposerBlurTimerRef.current) clearTimeout(aiComposerBlurTimerRef.current);
-  }, []);
 
   /* Sync external Create-with-AI procedure clicks into the canvas RHS. */
   useEffect(() => {
@@ -1032,54 +937,6 @@ export default function AgentBuilder({
   const agentName = nodeDetails[START_NODE_ID]?.agentName || (typeof pageTitle === 'string' ? pageTitle : '') || '';
   const isReminderAgent = /reminder/i.test(agentName);
   const isReviewResponseAgent = /review response/i.test(agentName);
-  const isReviewGenerationAgent = /review generation/i.test(agentName);
-  const isReviewsAgent = isReviewResponseAgent || isReviewGenerationAgent;
-
-  // Undo/redo history for the canvas (nodeList + nodeDetails) — Reviews AI only,
-  // per product decision; other agents keep today's (inert) toolbar unchanged.
-  const [historyPast, setHistoryPast] = useState([]);
-  const [historyFuture, setHistoryFuture] = useState([]);
-  const historySnapshotRef = useRef(null);
-  const isApplyingHistoryRef = useRef(false);
-
-  useEffect(() => {
-    if (!isReviewsAgent) return;
-    if (isApplyingHistoryRef.current) {
-      isApplyingHistoryRef.current = false;
-      historySnapshotRef.current = { nodeList, nodeDetails };
-      return;
-    }
-    if (historySnapshotRef.current) {
-      setHistoryPast((prev) => [...prev, historySnapshotRef.current].slice(-50));
-      setHistoryFuture([]);
-    }
-    historySnapshotRef.current = { nodeList, nodeDetails };
-  }, [nodeList, nodeDetails, isReviewsAgent]);
-
-  const handleUndo = useCallback(() => {
-    setHistoryPast((prev) => {
-      if (!prev.length) return prev;
-      const previous = prev[prev.length - 1];
-      setHistoryFuture((future) => [{ nodeList, nodeDetails }, ...future]);
-      isApplyingHistoryRef.current = true;
-      setNodeList(previous.nodeList);
-      setNodeDetails(previous.nodeDetails);
-      return prev.slice(0, -1);
-    });
-  }, [nodeList, nodeDetails]);
-
-  const handleRedo = useCallback(() => {
-    setHistoryFuture((future) => {
-      if (!future.length) return future;
-      const next = future[0];
-      setHistoryPast((past) => [...past, { nodeList, nodeDetails }]);
-      isApplyingHistoryRef.current = true;
-      setNodeList(next.nodeList);
-      setNodeDetails(next.nodeDetails);
-      return future.slice(1);
-    });
-  }, [nodeList, nodeDetails]);
-
   const [agentDesc] = useState(initialDescription || '');
   // isTemplateMode uses state so it correctly activates after applyAgent loads templateId from Firestore
   const isTemplateMode = !!agentTemplateId && agentStatus !== 'Running';
@@ -1335,12 +1192,9 @@ export default function AgentBuilder({
   /* ─── Node management ─── */
 
   const handleDeleteNode = useCallback((nodeId) => {
-    const target = (latestRef.current.nodeList || []).find((n) => n.id === nodeId);
-    const wasTrigger = target?.flowType === 'trigger';
-
     setNodeList((prev) => {
-      const found = prev.find((n) => n.id === nodeId);
-      if (!found) return prev;
+      const target = prev.find((n) => n.id === nodeId);
+      if (!target || target.flowType === 'trigger') return prev;
       const updated = prev.filter((n) => n.id !== nodeId);
       return updated.map((n, i) => ({
         ...n,
@@ -1365,14 +1219,6 @@ export default function AgentBuilder({
       setSelectedNodeId(null);
       setDrawerOpen(false);
     }
-    // Deleting the trigger removes only the trigger — the steps below stay. buildFlow then
-    // brings the "Add a trigger" placeholder back at slot 1 and renumbers steps from 2.
-    // Re-open the LHS Trigger section to invite adding a new one.
-    if (wasTrigger) {
-      setActiveProcedureId(null);
-      setLhsCollapsed(false);
-      setLhsForceOpenSection('Trigger');
-    }
   }, [selectedNodeId]);
 
   const handleCopyNode = useCallback((nodeId) => {
@@ -1387,6 +1233,11 @@ export default function AgentBuilder({
       detailsSnapshot: collectDetailsSnapshot(nodeId, nodeDetails),
     });
   }, [nodeList, nodeDetails]);
+
+  const handleReplaceTrigger = useCallback(() => {
+    setLhsCollapsed(false);
+    setLhsForceOpenSection('Trigger');
+  }, []);
 
   const handlePasteBelow = useCallback((afterNodeId) => {
     if (!clipboard) return;
@@ -1581,6 +1432,12 @@ export default function AgentBuilder({
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
     };
+    if (n.type === 'trigger') {
+      extra.onReplace = () => handleReplaceTrigger();
+    } else {
+      extra.onDelete = () => handleDeleteNode(n.id);
+      extra.onCopy = () => handleCopyNode(n.id);
+    }
     if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
       extra.onToggleChange = (enabled) => handleNodeToggleChange(n.id, enabled);
@@ -1661,20 +1518,9 @@ export default function AgentBuilder({
     });
   }, []);
 
-  const handleDropNode = useCallback(({ type, label, description, afterNodeId, branchPathId, position, insertAtBeginning, replaceTrigger }) => {
-    // Nothing may be inserted above the entry point. When a trigger already exists it IS the
-    // entry point, so block any top / START-targeted insertion. When there's no trigger yet,
-    // a START-targeted drop is exactly how the first node — trigger OR task — gets added
-    // (the empty-canvas trigger box and the "+" above End both target START), so allow it.
-    const hasExistingTrigger = (latestRef.current.nodeList || []).some((n) => n.flowType === 'trigger');
-    if ((insertAtBeginning || afterNodeId === START_NODE_ID) && hasExistingTrigger) return;
-
-    // Triggers may only land on the empty trigger slot or replace the existing trigger node —
-    // never mid-flow + / end + / free canvas.
-    if (type === 'trigger' && !branchPathId) {
-      const fromEmptyTriggerSlot = !hasExistingTrigger && afterNodeId === START_NODE_ID;
-      if (!replaceTrigger && !fromEmptyTriggerSlot) return;
-    }
+  const handleDropNode = useCallback(({ type, label, description, afterNodeId, branchPathId, position, insertAtBeginning }) => {
+    // Nothing can be inserted above the first trigger — start node is always the entry point
+    if (insertAtBeginning || afterNodeId === START_NODE_ID) return;
 
     if (
       isFrontDeskAgent(agentName)
@@ -1696,9 +1542,6 @@ export default function AgentBuilder({
         : (description || label))
       : label;
     let details = makeNodeDetails(effectiveType, effectiveType === 'procedures' ? procedureSeed : label);
-    if (effectiveType === 'trigger' && label === 'Reviews' && REVIEWS_TRIGGER_LEAF_COPY[description]) {
-      details = { ...details, triggerName: description, description: REVIEWS_TRIGGER_LEAF_COPY[description] };
-    }
     if (effectiveType === 'task' && description && label !== 'Custom') {
       const taskDefaults = TASK_DROP_DEFAULTS[description] || {};
       details = {
@@ -1735,9 +1578,7 @@ export default function AgentBuilder({
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(null);
-      // After the first (or replaced) trigger lands, open Tasks so the next step is ready to drag.
-      setLhsCollapsed(false);
-      setLhsForceOpenSection('Tasks');
+      setLhsForceOpenSection(null);
       return;
     }
 
@@ -1858,37 +1699,12 @@ export default function AgentBuilder({
   }, [agentName, product]);
 
   const handleNodeClick = useCallback((node) => {
-    if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder') return;
+    if (node.type === 'end' || node.type === 'branchEnd') return;
     // Voice call branches are hard-coded and non-editable — block RHS open
     if (node.data?.isVoiceCallBranch) return;
-
-    // Create-with-AI composer is focused → also attach the node as a pill (RHS still opens).
-    if (aiComposerArmedRef.current) {
-      const details = nodeDetails[node.id] || {};
-      const label =
-        details.taskName ||
-        details.triggerName ||
-        details.name ||
-        details.loopName ||
-        details.agentName ||
-        node.data?.title ||
-        node.data?.headerLabel ||
-        (node.type === 'start' ? agentName || 'Start' : null) ||
-        'Node';
-      // Chip chrome; swatch SVG comes from canvasNodeType (TaskIcon, TriggerIcon, etc.).
-      const kind =
-        node.type === 'trigger' || node.type === 'start' ? 'tool' : 'procedure';
-      const canvasNodeType = node.type || 'task';
-      const attachmentId = `canvas-${node.id}`;
-      setAiComposerAttachments((prev) => {
-        if (prev.some((a) => a.id === attachmentId)) return prev;
-        return [...prev, { id: attachmentId, kind, label, canvasNodeType }];
-      });
-    }
-
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
-  }, [agentName, nodeDetails]);
+  }, []);
 
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
@@ -2019,20 +1835,10 @@ export default function AgentBuilder({
     if (!selectedNodeId) return null;
 
     if (selectedNodeId === START_NODE_ID) {
-      const isReviewGeneration = /review generation/i.test(pageTitle || '');
-      const isReviewResponse = /review response/i.test(pageTitle || '');
       const startDetails = nodeDetails[START_NODE_ID] || {
         agentName: pageTitle,
-        goals: isReviewGeneration
-          ? 'Request reviews from customers after a completed transaction, using email and text to maximize response rates.'
-          : isReviewResponse
-            ? 'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review'
-            : 'Respond to customer reviews promptly and professionally, maintaining brand voice and addressing specific customer feedback.',
-        outcomes: isReviewGeneration
-          ? 'Increase review volume across locations while saving staff time on manual follow-up.'
-          : isReviewResponse
-            ? 'Ensure safe, effortless engagement by relying exclusively on your pre-approved templates. Eliminate manual effort and operational overhead by autonomously responding across platforms'
-            : 'Improved customer satisfaction scores, faster response times, and consistent brand messaging across all review platforms.',
+        goals: 'Respond to customer reviews promptly and professionally, maintaining brand voice and addressing specific customer feedback.',
+        outcomes: 'Improved customer satisfaction scores, faster response times, and consistent brand messaging across all review platforms.',
         locations: [],
       };
       return (
@@ -2118,7 +1924,7 @@ export default function AgentBuilder({
     if (flowType === 'trigger') {
       return (
         <RHS
-          variant={(isReviewResponseAgent || isReviewGenerationAgent) ? 'reviewTrigger' : 'entityTrigger'}
+          variant="entityTrigger"
           title="Trigger"
           viewOnly={viewOnly}
           product={product}
@@ -2493,11 +2299,6 @@ export default function AgentBuilder({
                 agentName={agentName}
                 aiTranscript={aiTranscript}
                 onCollapseExpand={() => setAiChatExpanded(false)}
-                composerAttachments={aiComposerAttachments}
-                onRemoveComposerAttachment={handleRemoveComposerAttachment}
-                onComposerFocus={armAiComposer}
-                onComposerBlur={disarmAiComposerSoon}
-                onClearComposerAttachments={handleClearComposerAttachments}
               />
             </div>
           )}
@@ -2515,10 +2316,7 @@ export default function AgentBuilder({
                 agentName={agentName}
                 procedures={procedures}
                 aiTranscript={aiTranscript}
-                onOpenAiFullscreen={viewOnly ? undefined : onOpenAiFullscreen}
-                onCollapse={viewOnly ? undefined : () => {
-                  setLhsCollapsed(true);
-                }}
+                onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
                 onExpand={viewOnly ? undefined : () => setAiChatExpanded(true)}
                 onProcedureClick={viewOnly ? undefined : (procedureId) => {
                   setLhsPreviewProcedureId(procedureId);
@@ -2526,26 +2324,16 @@ export default function AgentBuilder({
                   setActiveProcedureId(null);
                   setDrawerOpen(true);
                 }}
-                composerAttachments={aiComposerAttachments}
-                onRemoveComposerAttachment={handleRemoveComposerAttachment}
-                onComposerFocus={armAiComposer}
-                onComposerBlur={disarmAiComposerSoon}
-                onClearComposerAttachments={handleClearComposerAttachments}
               />
             </div>
           )}
 
           {!hideLhs && !aiChatExpanded && lhsCollapsed && (
             <button
-              type="button"
               className="ab-lhs-expand-pill"
               onClick={() => setLhsCollapsed(false)}
-              aria-label="Open editor"
-              title="Open editor"
             >
-              <span className="material-symbols-outlined" aria-hidden>
-                left_panel_open
-              </span>
+              <span className="material-symbols-outlined">left_panel_open</span>
               <span className="ab-lhs-expand-pill__label">Editor</span>
             </button>
           )}
@@ -2574,12 +2362,8 @@ export default function AgentBuilder({
                 agentName={agentName}
                 initialZoom={initialZoom}
                 runDisabled={runDisabled}
-                onEdit={viewOnly ? onEdit : undefined}
+                onEdit={onEdit}
                 onView={onView}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                canUndo={historyPast.length > 0}
-                canRedo={historyFuture.length > 0}
                 onRun={() => {
                   if (isReviewResponseAgent) return;
                   if (isReminderAgent) {

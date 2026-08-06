@@ -105,14 +105,7 @@ function Section({
         onClick={onHeaderClick}
         className="flex h-7 w-full items-center justify-between gap-sm rounded-sm px-sm py-[6px] hover:bg-surface-selected"
       >
-        <span className="flex min-w-0 items-center gap-sm">
-          <span className="truncate text-body text-text-primary">{section.label}</span>
-          {section.badge && (
-            <span className="ai-gradient-badge flex shrink-0 items-center justify-center px-sm text-[11px] leading-[14px]">
-              <span className="ai-gradient-badge-text">{section.badge}</span>
-            </span>
-          )}
-        </span>
+        <span className="text-body text-text-primary">{section.label}</span>
         <Icon name={expanded ? 'expand_less' : 'expand_more'} size={20} className="text-text-icon" />
       </button>
 

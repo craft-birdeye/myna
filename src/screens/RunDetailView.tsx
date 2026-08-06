@@ -233,128 +233,6 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
   ]
 }
 
-function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
-  const firstName = row.contact.split(' ')[0] || row.contact
-  const trigger: RunLogStep = {
-    id: 'rg-log-1',
-    type: 'trigger',
-    stepNumber: 1,
-    title: 'When a transaction is completed',
-    output: [
-      { key: 'Customer', value: row.contact },
-      { key: 'Location', value: 'North Region' },
-      { key: 'Completed at', value: row.timestamp },
-    ],
-    inputs: [
-      { key: 'transaction_status', value: 'completed' },
-      { key: 'location', value: 'North Region' },
-    ],
-  }
-
-  if (row.status === 'In progress') {
-    return [
-      trigger,
-      {
-        id: 'rg-log-2',
-        type: 'task',
-        stepNumber: 2,
-        title: 'Send review request email',
-        note: 'In progress — composing and sending the review request email.',
-      },
-    ]
-  }
-
-  if (row.status === 'Failed') {
-    return [
-      trigger,
-      {
-        id: 'rg-log-2',
-        type: 'task',
-        stepNumber: 2,
-        title: 'Send review request email',
-        output: [{ key: 'Status', value: 'Failed to send email' }],
-        tool: {
-          name: 'Send email',
-          properties: [
-            { key: 'to', value: `${firstName.toLowerCase()}@email.com` },
-            { key: 'subject', value: 'How was your visit?' },
-          ],
-        },
-        inputs: [
-          { key: 'customer', value: row.contact },
-          { key: 'reviewLink', value: 'https://reviews.example.com/r/abc123' },
-        ],
-      },
-      {
-        id: 'rg-log-3',
-        type: 'task',
-        stepNumber: 3,
-        title: 'Send review request text',
-        output: [{ key: 'Status', value: 'Skipped — email failed' }],
-        tool: {
-          name: 'Send SMS',
-          properties: [
-            { key: 'to', value: '+1 (555) 010-2000' },
-            { key: 'body', value: `Hi ${firstName}, thanks for visiting — leave us a review:` },
-          ],
-        },
-        inputs: [
-          { key: 'customer', value: row.contact },
-          { key: 'reviewLink', value: 'https://reviews.example.com/r/abc123' },
-        ],
-      },
-    ]
-  }
-
-  return [
-    trigger,
-    {
-      id: 'rg-log-2',
-      type: 'task',
-      stepNumber: 2,
-      title: 'Send review request email',
-      output: [
-        { key: 'Status', value: 'Sent' },
-        { key: 'Delivered to', value: `${firstName.toLowerCase()}@email.com` },
-      ],
-      tool: {
-        name: 'Send email',
-        properties: [
-          { key: 'to', value: `${firstName.toLowerCase()}@email.com` },
-          { key: 'subject', value: 'How was your visit?' },
-        ],
-      },
-      inputs: [
-        { key: 'customer', value: row.contact },
-        { key: 'reviewLink', value: 'https://reviews.example.com/r/abc123' },
-        { key: 'location', value: 'North Region' },
-      ],
-    },
-    {
-      id: 'rg-log-3',
-      type: 'task',
-      stepNumber: 3,
-      title: 'Send review request text',
-      output: [
-        { key: 'Status', value: 'Sent' },
-        { key: 'Delivered to', value: '+1 (555) 010-2000' },
-      ],
-      tool: {
-        name: 'Send SMS',
-        properties: [
-          { key: 'to', value: '+1 (555) 010-2000' },
-          { key: 'body', value: `Hi ${firstName}, thanks for visiting — leave us a review:` },
-        ],
-      },
-      inputs: [
-        { key: 'customer', value: row.contact },
-        { key: 'reviewLink', value: 'https://reviews.example.com/r/abc123' },
-        { key: 'location', value: 'North Region' },
-      ],
-    },
-  ]
-}
-
 /* ── generic workflow node shape (from agentWorkflows seeds) ── */
 interface WorkflowNodeSeed {
   id: string
@@ -445,8 +323,6 @@ function AgentWorkflowRunCanvas({
         .run-wf-viewer .ab-view-banner        { display: none !important; }
         .run-wf-viewer .faq-ab-embedded       { height: 100% !important; }
         .run-wf-viewer .agent-builder-wrapper { background: transparent !important; background-image: none !important; }
-        .run-wf-viewer .agent-builder         { padding: 0 !important; gap: 0 !important; }
-        .run-wf-viewer .flow-canvas__toolbar-anchor { top: 16px !important; }
         /* Hide orientation toggle — view-only run context */
         .run-wf-viewer .graph-controls__toggle { display: none !important; }
         /* No add-step buttons on edges — run views are read-only history */
@@ -569,9 +445,7 @@ function WorkflowCanvas({
 export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackFeedback }: RunDetailViewProps) {
   const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
-  const isReviewResponse = /review response agent/i.test(agentName)
-  const isReviewGeneration = /review generation agent/i.test(agentName)
-  const isReviewAgent = isReviewResponse || isReviewGeneration
+  const isReviewResponse = agentName.startsWith('Review response agent')
   const isReminder = agentName === 'Reminder agent'
   const hasVoiceCall = row.channel.toLowerCase().includes('voice')
   const totalSecs = parseDurationSecs(row.duration)
@@ -583,7 +457,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         : undefined
   const statusVariant =
     row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
-  const useRunDetailsPanel = isReminder || isReviewAgent
+  const useRunDetailsPanel = isReminder || isReviewResponse
 
   return (
     <div className="relative flex h-full flex-col bg-surface">
@@ -625,16 +499,10 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
           {useRunDetailsPanel ? (
             <RunDetailsPanel
-              steps={
-                isReviewResponse
-                  ? buildReviewResponseRunSteps(row)
-                  : isReviewGeneration
-                    ? buildReviewGenerationRunSteps(row)
-                    : undefined
-              }
-              showTabs={!isReviewAgent}
-              title={isReviewAgent ? 'Log details' : undefined}
-              showHeader={isReviewAgent}
+              steps={isReviewResponse ? buildReviewResponseRunSteps(row) : undefined}
+              showTabs={!isReviewResponse}
+              title={isReviewResponse ? 'Log details' : undefined}
+              showHeader={isReviewResponse}
               showCallRecording={isReminder && hasVoiceCall}
               audioUrl={isReminder ? voicemailSample : undefined}
               durationSecs={isReminder ? totalSecs : undefined}

@@ -1,5 +1,4 @@
 import React from 'react';
-import { setFlowDragData } from '../../../flowDragData';
 import './LHSExternalAppsGroup.css';
 
 export const EXTERNAL_APPS_TASK_ITEMS = [
@@ -63,15 +62,12 @@ export default function LHSExternalAppsGroup({
   nodeType = 'task',
   parentLabel = 'External apps',
   viewOnly = false,
-  onDragStartItem,
 }) {
   const handleDragStart = (e, app) => {
-    setFlowDragData(e.dataTransfer, {
-      type: nodeType,
-      label: parentLabel,
-      description: app.name,
-    });
-    onDragStartItem?.(app);
+    e.dataTransfer.setData('application/reactflow-type', nodeType);
+    e.dataTransfer.setData('application/reactflow-label', parentLabel);
+    e.dataTransfer.setData('application/reactflow-description', app.name);
+    e.dataTransfer.effectAllowed = 'copy';
   };
 
   return (

@@ -65,13 +65,6 @@
   background: #e5e9f0;
 }
 
-.graph-controls__toggle-btn:disabled,
-.graph-controls__toggle-btn[aria-disabled='true'] {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
 .graph-controls__toggle-btn .material-symbols-outlined {
   font-size: 16px !important;
   width: 16px;
@@ -114,32 +107,17 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  display: flex;
-  flex-direction: column;
   background: #fff;
   border: 1px solid #e5e9f0;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 100;
-  min-width: 120px;
+  min-width: 100%;
   padding: 4px;
 }
 
-.graph-controls__zoom-list {
-  max-height: 160px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.graph-controls__zoom-sticky {
-  flex-shrink: 0;
-}
-
 .graph-controls__zoom-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: block;
   width: 100%;
   text-align: left;
   padding: 6px 12px;
@@ -150,7 +128,6 @@
   font-size: 13px;
   color: #333;
   font-family: 'Roboto', sans-serif;
-  font-weight: 400;
 }
 
 .graph-controls__zoom-option:hover {
@@ -158,16 +135,8 @@
 }
 
 .graph-controls__zoom-option--active {
-  background: #e8f1fc;
-}
-
-.graph-controls__zoom-check {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  font-size: 16px !important;
-  line-height: 1;
-  color: #212121;
+  background: #e5e9f0;
+  font-weight: 500;
 }
 
 .graph-controls__zoom-divider {
@@ -253,18 +222,4 @@
 .graph-control-tooltip:focus-within .graph-control-tooltip__label {
   opacity: 1;
   visibility: visible;
-}
-
-/* Above placement — rendered in a body portal (fixed) so it escapes the canvas's
-   overflow:hidden ancestor. Positioned at the trigger's top-center; shifted up and
-   centered here. Always visible once mounted (mount is gated by hover in JS). */
-.graph-control-tooltip__label--floating {
-  position: fixed;
-  z-index: 10060;
-  opacity: 1;
-  visibility: visible;
-}
-
-.graph-control-tooltip__label--above {
-  transform: translate(-50%, -100%);
 }

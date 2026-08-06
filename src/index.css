@@ -112,45 +112,6 @@
   background-size: 300% 100%;
   animation: ai-gradient-flow 6s ease infinite;
 }
-/* Outlined "New" badge — solid white fill, animated AI gradient stroke + text */
-.ai-gradient-badge {
-  position: relative;
-  isolation: isolate;
-  height: 18px;
-  border-radius: theme('borderRadius.sm');
-  background-color: #ffffff;
-}
-.ai-gradient-badge::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(90deg, #ec4899, #a855f7, #6366f1, #a855f7, #ec4899);
-  background-size: 300% 100%;
-  animation: ai-gradient-flow 4s ease infinite;
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-.ai-gradient-badge-text {
-  position: relative;
-  z-index: 1;
-  background: linear-gradient(90deg, #ec4899, #a855f7, #6366f1, #a855f7, #ec4899);
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 500;
-  animation: ai-gradient-flow 4s ease infinite;
-}
 @keyframes ai-gradient-flow {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
