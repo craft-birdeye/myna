@@ -30,7 +30,7 @@ import {
   type Metric,
   type Tab,
 } from '../components'
-import { ArrowLeft, Columns2, LayoutGrid, LayoutList, ListFilter } from 'lucide-react'
+import { ArrowLeft, Columns3, LayoutGrid, LayoutList, ListFilter } from 'lucide-react'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
@@ -6767,7 +6767,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     Create agent
                   </button>
                   <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                    <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                    <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                   <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                     <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />

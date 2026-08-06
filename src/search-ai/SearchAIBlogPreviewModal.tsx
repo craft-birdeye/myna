@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check } from 'lucide-react';
 import type { SearchAIRecommendation } from '@/search-ai/SearchAIRecommendationsPanel';
+import { ContentScoreInfoTooltip } from '@/content-hub/shared/ContentScoreInfoTooltip';
 
 // ── AEO sub-scores (mocked) ───────────────────────────────────────────────────
 
@@ -93,9 +94,7 @@ export function SearchAIBlogPreviewModal({ rec, open, onClose }: SearchAIBlogPre
               {/* Label */}
               <div className="flex items-center gap-1.5 -mt-2">
                 <span className="text-[14px] text-muted-foreground">AEO Content score</span>
-                <div className="flex size-4 shrink-0 items-center justify-center rounded-full border border-muted-foreground/40">
-                  <span className="text-[10px] text-muted-foreground leading-none">?</span>
-                </div>
+                <ContentScoreInfoTooltip side="bottom" sideOffset={6} />
               </div>
               {/* Progress bar */}
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">

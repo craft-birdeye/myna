@@ -354,7 +354,7 @@ export function AutoProvidersScreen() {
           </div>
           <div className="flex items-center gap-sm">
             <div
-              className={`flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface transition-all ${
+              className={`flex h-9 shrink-0 items-center gap-sm rounded-md border border-border-selected bg-surface transition-all ${
                 searchOpen ? 'w-56 px-md' : 'w-9 justify-center'
               }`}
             >

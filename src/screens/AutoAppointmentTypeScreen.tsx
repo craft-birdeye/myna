@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ChevronDown, ChevronUp, Columns2, Info, ListFilter, RefreshCw, X } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, Columns3, Info, ListFilter, RefreshCw, X } from 'lucide-react'
 import { CustomizeColumnsDrawer, DataTable, FilterPanel, Icon, SelectMenu, Toast, TopNav, type Column, type FilterField, type SelectOption } from '../components'
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
@@ -480,7 +480,7 @@ export function AutoAppointmentTypeScreen() {
           </div>
           <div className="flex items-center gap-sm">
             <div
-              className={`flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface transition-all ${
+              className={`flex h-9 shrink-0 items-center gap-sm rounded-md border border-border-selected bg-surface transition-all ${
                 searchOpen ? 'w-56 px-md' : 'w-9 justify-center'
               }`}
             >
@@ -547,7 +547,7 @@ export function AutoAppointmentTypeScreen() {
               Create new
             </button>
             <button type="button" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-              <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+              <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <button type="button" onClick={() => setFilterOpen(o => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
               <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />

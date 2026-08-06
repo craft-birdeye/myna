@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Columns2, ListFilter } from 'lucide-react'
+import { Columns3, ListFilter } from 'lucide-react'
 import {
   // Chip,
   CustomizeColumnsDrawer,
@@ -258,7 +258,7 @@ export function ServiceRequestsScreen({ onViewDetail }: { onViewDetail?: (args: 
                 onClick={() => setCustomizeOpen(true)}
                 className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button
                 type="button"

@@ -121,7 +121,7 @@ export function AllReviewsScreen() {
           />
           <button
             type="button"
-            className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+            className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
           >
             Recent reviews
             <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -129,14 +129,14 @@ export function AllReviewsScreen() {
           <button
             type="button"
             aria-label="More options"
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
             <Icon name="more_vert" size={20} />
           </button>
           <button
             type="button"
             aria-label="Filters"
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
             <Icon name="filter_list" size={20} />
           </button>

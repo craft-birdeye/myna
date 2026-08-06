@@ -120,10 +120,6 @@ export function ContentHubL2NavPanel({
 
       <DropdownMenuContent side="right" align="start" className="w-[220px] p-2">
 
-        <DropdownMenuLabel className="px-2 pb-1 pt-0 text-[11px] text-muted-foreground font-normal">
-          Content
-        </DropdownMenuLabel>
-
         {CREATE_ITEMS.map((opt) => (
           <DropdownMenuItem
             key={opt.label}

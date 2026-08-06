@@ -97,7 +97,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       {showViewControls && (
         <div className="flex items-center gap-2">
           <div
-            className="flex h-[36px] items-center gap-1 rounded border border-border px-2 py-[6px]"
+            className="flex h-[36px] items-center gap-1 rounded-md border border-border px-2 py-[6px]"
             aria-label="Calendar view"
           >
             {VIEW_ORDER.map(v => (

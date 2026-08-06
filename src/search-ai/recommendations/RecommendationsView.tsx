@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import {
   CircleCheck, CircleX,
-  ChevronDown, Columns2, ListFilter,
+  ChevronDown, Columns3, ListFilter,
 } from 'lucide-react'
 import { APP_MAIN_CONTENT_SHELL_CLASS } from '@/contenthub-ui/appShellClasses'
 import { MAIN_VIEW_PRIMARY_HEADING_CLASS } from '@/contenthub-ui/mainViewTitleClasses'
@@ -334,7 +334,7 @@ export function RecommendationsView({ onNavigateToContentHub, onNavigateToBlogCa
                 onClick={() => setColumnSheetOpen(true)}
                 className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button
                 type="button"

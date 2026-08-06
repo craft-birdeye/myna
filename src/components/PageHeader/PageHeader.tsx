@@ -1,6 +1,6 @@
 import { DateChange } from '../DateChange/DateChange'
 import { AppointmentTimescale, AppointmentView, PageHeaderProps } from './PageHeader.types'
-import { CalendarDays, ChevronDown, Columns2, ListFilter, Rows3 } from 'lucide-react'
+import { CalendarDays, ChevronDown, Columns3, ListFilter, Rows3 } from 'lucide-react'
 
 function ViewToggle({
   view,
@@ -123,7 +123,7 @@ export function PageHeader({
             onClick={onCustomizeColumns}
             className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
-            <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+            <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         )}
 

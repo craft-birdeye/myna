@@ -378,7 +378,7 @@ export function AppointmentTypeScreen() {
           </div>
           <div className="flex items-center gap-sm">
             <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
-            <select className="h-9 rounded-sm border border-border-selected bg-surface pl-md pr-2xl text-body text-text-primary hover:bg-surface-l2 focus:outline-none">
+            <select className="h-9 rounded-md border border-border-selected bg-surface pl-md pr-2xl text-body text-text-primary hover:bg-surface-l2 focus:outline-none">
               <option>All locations</option>
             </select>
             <button

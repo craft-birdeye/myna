@@ -19,7 +19,7 @@ import {
   type FilterField,
   type PatientDetail,
 } from '../components'
-import { Columns2, ListFilter } from 'lucide-react'
+import { Columns3, ListFilter } from 'lucide-react'
 import iconInbox from '../assets/icon-inbox.svg'
 import iconMail from '../assets/icon-mail.svg'
 
@@ -385,7 +385,7 @@ export function IntakeScreen({ onViewDetail: _onViewDetail }: { onViewDetail?: (
                 onClick={() => setCustomizeOpen(true)}
                 className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button
                 type="button"

@@ -619,11 +619,11 @@ function ConversationManagedPanel() {
           <p className="mt-xs text-body text-text-secondary">Insights into conversation management outcomes across different channels and locations</p>
         </div>
         <div className="flex items-center gap-sm">
-          <button type="button" className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
+          <button type="button" className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
             <Icon name="calendar_today" size={16} className="text-text-icon" />
             Last 3 months
           </button>
-          <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+          <button type="button" className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
             <Icon name="filter_list" size={20} />
           </button>
         </div>

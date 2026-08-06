@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chip, CustomizeColumnsDrawer, FilterPanel, InfoTooltip, Tabs, TopNav, type ChipVariant, type ColumnOption, type FilterField } from '../components'
-import { ArrowLeft, Check, ChevronDown, ChevronUp, Columns2, ListFilter, MoreVertical, Search, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Columns3, ListFilter, MoreVertical, Search, X } from 'lucide-react'
 
 type ProcedureStatus = 'Diagnosed' | 'Accepted' | 'Rejected' | 'Completed'
 
@@ -395,7 +395,7 @@ export function ManageTreatmentPlansScreen() {
                 <Search className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button type="button" onClick={() => setColumnsOpen(true)} className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
 <button type="button" onClick={() => setFilterOpen(true)} className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                 <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />

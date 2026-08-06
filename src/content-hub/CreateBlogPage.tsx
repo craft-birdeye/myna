@@ -551,7 +551,9 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
 
               {/* Attachments */}
               <div className="space-y-1.5">
-                <label className="text-[13px] font-medium text-foreground">Attachments</label>
+                <ContentFlowInfoLabel tooltip="The agent will refer to these attachments when generating content. If an attachment is relevant to the topic, the agent will prioritize and draw from it directly.">
+                  Attachments
+                </ContentFlowInfoLabel>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -771,12 +773,12 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
 
       {/* Header — matches ContentEditorShell setup-phase header */}
       <div className="w-full bg-background flex items-center justify-between px-6 py-[9px] flex-shrink-0">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onCancel}
             aria-label="Go back"
-            className="flex items-center justify-center w-8 h-8 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors flex-none"
+            className="flex items-center justify-center size-[34px] rounded hover:bg-surface-hover/60 text-muted-foreground hover:text-foreground transition-colors flex-none"
           >
             <ArrowLeft size={16} strokeWidth={1.6} absoluteStrokeWidth />
           </button>
@@ -826,7 +828,7 @@ export function CreateBlogPage({ onCancel, onGenerate }: CreateBlogPageProps) {
         {/* Right content — same scrollable card shell as BlogInlineCreationFlow */}
         <div className="flex-1 min-w-0 min-h-0 bg-background">
           <div className="h-full overflow-hidden py-4 pl-4 pr-6">
-            <div className="h-full overflow-y-auto rounded-lg border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
+            <div className="h-full overflow-y-auto rounded-md border border-border bg-background px-[30px] pb-[30px] pt-[30px]">
               <div className="w-1/2 min-w-[520px] max-w-[720px]">
                 {step === 0 ? renderStep2() : renderStep1()}
               </div>

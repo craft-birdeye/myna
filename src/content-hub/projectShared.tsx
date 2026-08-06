@@ -8,6 +8,11 @@
 
 import React from 'react';
 import { Globe, FileText, Mail, HelpCircle, Eye, MoreHorizontal, Copy, BookMarked, Trash2, Pencil } from 'lucide-react';
+import thumbBlogAnnouncement from '@/assets/thumbnails/blog-announcement.png';
+import thumbBlogWelcome from '@/assets/thumbnails/blog-welcome.png';
+import thumbBlogNewDish from '@/assets/thumbnails/blog-new-dish.png';
+import thumbBlogSurvey from '@/assets/thumbnails/blog-survey.png';
+import thumbFaq from '@/assets/thumbnails/faq.png';
 import { Badge } from '@/contenthub-ui/badge';
 import {
   DropdownMenu,
@@ -19,7 +24,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type ProjectStatus = 'Drafts' | 'Scheduled' | 'Published';
+export type ProjectStatus = 'Draft' | 'Published';
 
 export type ChannelId =
   | 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'youtube'
@@ -39,44 +44,92 @@ export interface ProjectRow {
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
-export const STATUS_VARIANT: Record<ProjectStatus, 'outline' | 'success' | 'warning' | 'secondary'> = {
-  Drafts:    'secondary',
-  Scheduled: 'warning',
-  Published: 'success',
-};
-
-export function StatusCell({ status }: { status: ProjectStatus }) {
-  if (status === 'Drafts') {
-    return <Badge className="bg-muted text-muted-foreground">{status}</Badge>;
+export function StatusBadge({ status }: { status: ProjectStatus }) {
+  if (status === 'Draft') {
+    return <Badge className="bg-muted text-muted-foreground">Draft</Badge>;
   }
-  return <Badge variant={STATUS_VARIANT[status]}>{status}</Badge>;
+  return <Badge variant="success">Published</Badge>;
+}
+
+/** Clickable status cell — shows current status and a 2-item dropdown to switch. */
+export function StatusCell({
+  status,
+  onChange,
+}: {
+  status: ProjectStatus;
+  onChange?: (s: ProjectStatus) => void;
+}) {
+  if (!onChange) return <StatusBadge status={status} />;
+
+  const other: ProjectStatus = status === 'Draft' ? 'Published' : 'Draft';
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="cursor-pointer focus:outline-none">
+          <StatusBadge status={status} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[140px]">
+        <DropdownMenuItem
+          className="flex items-center gap-2"
+          onSelect={() => onChange(status)}
+        >
+          <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: status === 'Published' ? '#4cae3d' : '#9ca3af' }} />
+          {status}
+          <span className="ml-auto text-primary text-xs">✓</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="flex items-center gap-2"
+          onSelect={() => onChange(other)}
+        >
+          <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: other === 'Published' ? '#4cae3d' : '#9ca3af' }} />
+          {other}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 // ── Thumbnail ─────────────────────────────────────────────────────────────────
 
-export function ProjectThumbnail({ hue: _hue }: { hue: number }) {
+// Cycle blog images deterministically based on row id
+const BLOG_THUMBS = [thumbBlogAnnouncement, thumbBlogWelcome, thumbBlogNewDish, thumbBlogSurvey];
+
+export function ProjectThumbnail({ hue, channels, id }: { hue: number; channels?: ChannelId[]; id?: number }) {
+  const ch = channels ?? [];
+  const isFaq    = ch.includes('faq');
+  const isBlog   = ch.includes('blog') && !isFaq;
+  const hasSocial = ch.some(c => ['facebook','instagram','twitter','linkedin','youtube'].includes(c));
+
+  let src: string | null = null;
+  if (isFaq) {
+    src = thumbFaq;
+  } else if (isBlog) {
+    src = BLOG_THUMBS[(id ?? hue) % BLOG_THUMBS.length];
+  } else if (hasSocial) {
+    src = BLOG_THUMBS[(id ?? hue) % BLOG_THUMBS.length];
+  }
+
   return (
-    <div className="w-[80px] h-[60px] rounded-lg flex-shrink-0 overflow-hidden border border-black/[0.07] bg-surface-hover p-[5px] flex">
-      <div className="w-full h-full bg-white rounded-[4px] overflow-hidden flex flex-col border border-zinc-200">
-        {/* Card header row */}
-        <div className="flex items-center gap-[3px] px-[4px] py-[2.5px] border-b border-zinc-100">
-          <div className="w-[7px] h-[7px] rounded-[1.5px] bg-surface-hover border border-zinc-200 shrink-0" />
-          <div className="h-[2px] w-[22px] bg-border rounded-full" />
-          <div className="ml-auto h-[2.5px] w-[10px] rounded-full" style={{ backgroundColor: '#1D9E75' }} />
+    <div className="w-[80px] h-[60px] rounded-lg flex-shrink-0 border border-black/[0.07] bg-[#E5E9F0] p-[5px]">
+      {src ? (
+        <img src={src} alt="" draggable={false} className="w-full h-full object-cover object-top rounded-[4px]" />
+      ) : (
+        /* fallback: generic document mini-preview */
+        <div className="w-full h-full bg-white flex flex-col border border-zinc-200 rounded-[4px] overflow-hidden">
+          <div className="flex items-center gap-[3px] px-[4px] py-[2.5px] border-b border-zinc-100">
+            <div className="w-[7px] h-[7px] rounded-[1.5px] bg-surface-hover border border-zinc-200 shrink-0" />
+            <div className="h-[2px] w-[22px] bg-border rounded-full" />
+            <div className="ml-auto h-[2.5px] w-[10px] rounded-full" style={{ backgroundColor: '#1D9E75' }} />
+          </div>
+          <div className="px-[4px] pt-[2px] flex flex-col gap-[2px] flex-1">
+            <div className="h-[2px] w-full bg-border rounded-full" />
+            <div className="h-[2px] bg-surface-hover rounded-full" style={{ width: '80%' }} />
+            <div className="h-[2px] w-full bg-border rounded-full" />
+          </div>
         </div>
-        {/* Section bar */}
-        <div className="px-[4px] py-[1.5px] bg-surface-hover border-b border-zinc-100">
-          <div className="h-[2px] w-[16px] bg-border rounded-full" />
-        </div>
-        {/* Content lines */}
-        <div className="px-[4px] pt-[2px] flex flex-col gap-[2px] flex-1">
-          <div className="h-[2px] w-full bg-border rounded-full" />
-          <div className="h-[2px] bg-surface-hover rounded-full" style={{ width: '90%' }} />
-          <div className="h-[2px] w-full bg-border rounded-full" />
-          <div className="h-[2px] bg-surface-hover rounded-full" style={{ width: '80%' }} />
-          <div className="h-[2px] w-full bg-border rounded-full" />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

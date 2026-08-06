@@ -143,13 +143,6 @@ const DOC_FILES: DocFile[] = [
   { id: 'doc-docx-1', name: 'Brand guidelines.DOCX', ext: 'DOCX', size: '3.8 MB' },
 ];
 
-const RECENT_UPLOADS: StagedFile[] = [
-  { id: 'rec-1', name: 'cheese_burst_pizza.mp4',  kind: 'video', thumbUrl: img('pizza7', 200, 200) },
-  { id: 'rec-2', name: 'cheese_burst_pizza.jpg',   kind: 'image', thumbUrl: img('pizza8', 200, 200) },
-  { id: 'rec-3', name: 'Product list.PDF',          kind: 'doc',  ext: 'PDF' },
-  { id: 'rec-4', name: 'Product list.PPT',          kind: 'doc',  ext: 'PPT' },
-  { id: 'rec-5', name: 'Product list.XLS',          kind: 'doc',  ext: 'XLS' },
-];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -638,56 +631,31 @@ function UploadTab({ onFilesAdded }: { onFilesAdded: (names: string[]) => void }
       {staged.length > 0 && (
         <div className="flex flex-col gap-xs">
           <p className="text-small text-text-secondary">Just uploaded</p>
-          {staged.map(file => (
-            <div
-              key={file.id}
-              className={cn(
-                'flex items-center gap-md px-md py-sm rounded-md border transition-colors',
-                file.uploading ? 'border-border bg-surface-muted' : 'border-primary/20 bg-primary/5',
-              )}
-            >
-              {file.kind === 'image' && file.thumbUrl ? (
-                <img src={file.thumbUrl} alt={file.name} className="size-8 rounded object-cover flex-shrink-0" />
-              ) : file.kind === 'video' ? (
-                <div className="size-8 rounded bg-surface-muted flex items-center justify-center flex-shrink-0">
-                  <Film size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-text-secondary" />
-                </div>
-              ) : (
-                <ExtBadge ext={file.ext ?? 'FILE'} size={32} />
-              )}
-              <span className="flex-1 text-body text-text-primary truncate">{file.name}</span>
-              {file.uploading
-                ? <div className="size-3 rounded-full border-2 border-primary/40 border-t-primary animate-spin flex-shrink-0" />
-                : <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-primary flex-shrink-0" />
-              }
-            </div>
-          ))}
+          <div className="flex flex-col">
+            {staged.map(file => (
+              <div
+                key={file.id}
+                className="flex items-center gap-md py-sm border-b border-[#eaeaea] transition-colors"
+              >
+                {file.kind === 'image' && file.thumbUrl ? (
+                  <img src={file.thumbUrl} alt={file.name} className="size-[50px] rounded-[4px] object-cover flex-shrink-0 border border-[#e5e9f0]" />
+                ) : file.kind === 'video' ? (
+                  <div className="size-[50px] rounded-[4px] bg-surface-muted flex items-center justify-center flex-shrink-0 border border-[#e5e9f0]">
+                    <Film size={16} strokeWidth={1.6} absoluteStrokeWidth className="text-text-secondary" />
+                  </div>
+                ) : (
+                  <ExtBadge ext={file.ext ?? 'FILE'} size={50} />
+                )}
+                <span className="flex-1 text-body text-text-primary truncate">{file.name}</span>
+                {file.uploading
+                  ? <div className="size-3 rounded-full border-2 border-primary/40 border-t-primary animate-spin flex-shrink-0" />
+                  : <Check size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-primary flex-shrink-0" />
+                }
+              </div>
+            ))}
+          </div>
         </div>
       )}
-
-      {/* Recent uploads — no checkboxes */}
-      <div className="flex flex-col gap-xs">
-        <p className="text-small text-text-secondary">Recent uploads</p>
-        <div className="flex flex-col">
-          {RECENT_UPLOADS.map(file => (
-            <div key={file.id} className="flex items-center gap-md py-sm border-b border-[#eaeaea]">
-              {file.kind === 'image' && file.thumbUrl ? (
-                <img src={file.thumbUrl} alt={file.name} className="size-[50px] rounded-[4px] object-cover flex-shrink-0 border border-[#e5e9f0]" />
-              ) : file.kind === 'video' && file.thumbUrl ? (
-                <div className="relative size-[50px] rounded-[4px] overflow-hidden flex-shrink-0 border border-[#e5e9f0]">
-                  <img src={file.thumbUrl} alt={file.name} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <Play size={14} strokeWidth={1.6} absoluteStrokeWidth className="text-white fill-white" />
-                  </div>
-                </div>
-              ) : (
-                <ExtBadge ext={file.ext ?? 'FILE'} size={50} />
-              )}
-              <span className="text-body text-text-primary truncate">{file.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

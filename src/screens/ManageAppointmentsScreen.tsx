@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { List, CalendarDays, ChevronDown, Columns2, ListFilter } from 'lucide-react'
+import { List, CalendarDays, ChevronDown, Columns3, ListFilter } from 'lucide-react'
 import {
   ALL_STATUS_IDS,
   Chip,
@@ -419,7 +419,7 @@ export function ManageAppointmentsScreen({ product = 'healthcare', onViewDetail 
                   onClick={() => setCustomizeOpen(true)}
                   className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                 >
-                  <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                  <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               )}
 

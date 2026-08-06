@@ -103,7 +103,7 @@ function TopBarDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
       >
         {value}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -194,7 +194,7 @@ function SortDropdown({
           setOpen((o) => !o)
           setPersonaOpen(false)
         }}
-        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
       >
         {label}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -324,7 +324,7 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
       >
         {value}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -600,7 +600,7 @@ export function AgentDirectoryScreen({
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
               <button
                 type="button"
-                className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
               >
                 Create agent
               </button>

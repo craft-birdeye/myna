@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { type LucideIcon, Columns2, ListFilter, MessageSquare, Phone } from 'lucide-react'
+import { type LucideIcon, Columns3, ListFilter, MessageSquare, Phone } from 'lucide-react'
 import { Chip, CustomizeColumnsDrawer, DataTable, FilterPanel, FormDrawer, HeaderSearchField, Icon, MessageDrawer, PatientCell, QuickSendModal, QuickViewDrawer, Tabs, Toast, TopNav, ViewActivityDrawer, type ChipVariant, type Column, type ColumnOption, type FilterField, type PatientDetail, type QuickViewWaitlist, type RecordDetailScreenProps } from '../components'
 
 type WaitlistStatus = 'Waitlisted' | 'Slot offered' | 'Slot filled'
@@ -361,7 +361,7 @@ export function ReviewWaitlistScreen({ onViewDetail }: { onViewDetail?: (args: W
               onClick={() => setCustomizeOpen(true)}
               className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
             >
-              <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+              <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <button
               type="button"

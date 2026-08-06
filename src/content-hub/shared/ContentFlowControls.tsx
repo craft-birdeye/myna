@@ -56,7 +56,7 @@ export function ContentFlowInfoLabel({
   const labelText = typeof children === 'string' ? children : 'Field';
 
   return (
-    <div className={cn('flex items-center gap-1.5 text-[13px] text-foreground', className)}>
+    <div className={cn('flex items-center gap-1.5 text-[13px] font-medium text-foreground', className)}>
       <span>{children}</span>
       {required && <span className="text-destructive">*</span>}
       {tooltip && (
@@ -66,9 +66,9 @@ export function ContentFlowInfoLabel({
               <button
                 type="button"
                 aria-label={`${labelText} information`}
-                className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-surface-hover hover:text-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Info size={13} strokeWidth={1.6} absoluteStrokeWidth />
+                <Info size={14} strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </TooltipTrigger>
             <TooltipContent side="top" align="start" className="max-w-[260px] text-[12px] leading-snug">

@@ -23,16 +23,27 @@ function _computeRaw(groups: RailGroup[], budget: number) {
 
   for (let gi = 0; gi < groups.length; gi++) {
     const group = groups[gi]
-    if (gi > 0) rem -= 20   // separator: my-xs (8px * 2) + h-px (1) + gap (~3) ≈ 20
-    if (group.header) rem -= 28  // section header line + gap
+    const overhead = (gi > 0 ? 21 : 0) + (group.header ? 6 : 0)
+    // separator: my-xs box (9) + its own gap-slot (6) + outer group gap (6) ≈ 21
+    // header: collapses to ~0 height until hover (grid-rows-[0fr]) — only its gap-slot (6) counts
 
     const visible: RailNavItem[] = []
-    for (const item of group.items) {
-      if (!hasOverflow && rem >= 34) {
-        rem -= 34  // h-7 (28) + gap-[6px] (6)
-        visible.push(item)
-      } else {
-        hasOverflow = true
+    if (!hasOverflow && rem - overhead >= 42) {
+      // Only pay for the separator/header once we know at least one item will actually fit —
+      // otherwise we'd burn budget on chrome for a group that ends up entirely in overflow.
+      rem -= overhead
+      for (const item of group.items) {
+        if (!hasOverflow && rem >= 42) {
+          rem -= 42  // h-9 (36) + gap-[6px] (6)
+          visible.push(item)
+        } else {
+          hasOverflow = true
+          overflow.push({ item, groupLabel: group.header })
+        }
+      }
+    } else {
+      hasOverflow = true
+      for (const item of group.items) {
         overflow.push({ item, groupLabel: group.header })
       }
     }
@@ -49,8 +60,8 @@ function computeLayout(groups: RailGroup[], containerHeight: number) {
   // First pass: try without reserving space for ... button
   const first = _computeRaw(groups, containerHeight - padding)
   if (!first.hasOverflow) return first
-  // Second pass: reserve 34px for the ... button
-  return _computeRaw(groups, containerHeight - padding - 34)
+  // Second pass: reserve 42px for the ... button
+  return _computeRaw(groups, containerHeight - padding - 42)
 }
 
 // ─── NavTab ───────────────────────────────────────────────────────────────────
@@ -73,16 +84,16 @@ function NavTab({
       aria-label={item.label}
       onClick={() => onSelect?.(item.id)}
       style={{ paddingLeft: grouped ? 12 : RAIL_ICON_PX, paddingRight: grouped ? 12 : RAIL_ICON_PX }}
-      className={`relative flex h-7 w-full items-center rounded-sm transition-colors ${
+      className={`relative flex h-9 w-full items-center rounded-sm transition-colors ${
         active ? '' : 'hover:bg-black/[0.04]'
       }`}
     >
-      {/* Expanded-state row highlight — inset 4px each side, fades in on group hover */}
+      {/* Expanded-state row highlight — inset 8px each side, fades in on group hover */}
       {active && (
-        <span className="pointer-events-none absolute inset-y-0 left-1 right-1 rounded-sm bg-surface-selected-l1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+        <span className="pointer-events-none absolute inset-y-0 left-2 right-2 rounded-sm bg-surface-selected-l1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
       )}
-      {/* Icon — 24px pill in collapsed state */}
-      <span className={`relative flex size-6 shrink-0 items-center justify-center rounded-sm transition-colors text-text-icon ${
+      {/* Icon — 28px pill in collapsed state */}
+      <span className={`relative flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors text-text-icon ${
         active ? 'bg-surface-selected-l1 group-hover:bg-transparent' : ''
       }`}>
         {item.kind === 'element' ? (
@@ -126,15 +137,15 @@ function BottomIconButton({
       aria-label={label}
       onClick={onClick}
       style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
-      className={`flex h-7 w-full items-center rounded-sm transition-colors ${
+      className={`flex h-9 w-full items-center rounded-sm transition-colors ${
         active ? '' : 'hover:bg-black/[0.04]'
       }`}
     >
-      <span className={`relative flex size-6 shrink-0 items-center justify-center rounded-sm transition-colors text-text-icon ${
+      <span className={`relative flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors text-text-icon ${
         active ? 'bg-surface-selected-l1 group-hover:bg-transparent' : ''
       }`}>
         {active && (
-          <span className="pointer-events-none absolute inset-y-0 left-1 right-1 rounded-sm bg-surface-selected-l1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+          <span className="pointer-events-none absolute inset-y-0 left-2 right-2 rounded-sm bg-surface-selected-l1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
         )}
         {children}
       </span>
@@ -421,8 +432,8 @@ export function IconRail({
   return (
     <div className={`icon-rail-outer ${isExpanding ? 'group' : ''} relative h-full w-[52px] shrink-0 overflow-visible`}>
       <nav
-        className={`absolute inset-y-0 left-0 z-[40] flex flex-col overflow-hidden bg-surface-shell transition-[width] duration-200 ${
-          isExpanding ? 'w-[52px] hover:w-[260px]' : 'w-[52px]'
+        className={`absolute inset-y-0 left-0 z-[40] flex flex-col overflow-hidden bg-surface-shell transition-[left,width,background-color,box-shadow] duration-200 ${
+          isExpanding ? 'w-[52px] hover:left-2 hover:w-[260px] hover:rounded-lg hover:bg-surface hover:shadow-dropdown' : 'w-[52px]'
         }`}
       >
         {/* ── Logo / product switcher ── */}
@@ -507,7 +518,7 @@ export function IconRail({
               aria-label="More modules"
               onClick={handleDotsClick}
               style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
-              className="flex h-7 w-full items-center gap-[10px] rounded-sm transition-colors hover:bg-black/[0.04]"
+              className="flex h-9 w-full items-center gap-[10px] rounded-sm transition-colors hover:bg-black/[0.04]"
             >
               <span className="flex size-6 shrink-0 items-center justify-center text-text-icon">
                 <Icon name="more_horiz" size={18} />
@@ -520,7 +531,7 @@ export function IconRail({
         </div>
 
         {/* ── Bottom — Settings, Help, Profile ── */}
-        <div className="l1-rail-nav flex shrink-0 flex-col gap-[6px] border-t border-black/10 py-[6px]">
+        <div className="l1-rail-nav flex shrink-0 flex-col gap-[6px] py-[6px]">
           <BottomIconButton
             label="Settings"
             active={activeId === 'settings'}

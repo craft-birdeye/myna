@@ -49,7 +49,8 @@ export function ContentScoreInfoTooltip({
       <TooltipContent
         side={side}
         sideOffset={sideOffset}
-        className="w-[280px] rounded-[6px] border-0 bg-white p-3 text-[#212121] shadow-[0px_4px_8px_0px_rgba(33,33,33,0.18)] [&>svg]:hidden"
+        hideArrow
+        className="z-[200] w-[280px] rounded-[6px] border-0 bg-white p-3 text-[#212121] shadow-[0px_4px_8px_0px_rgba(33,33,33,0.18)]"
       >
         <div className="flex flex-col gap-3">
 

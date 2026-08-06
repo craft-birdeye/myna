@@ -1,12 +1,13 @@
 import { type KeyboardEvent, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  BookMarked, CalendarDays, ChevronRight, Columns2, Copy, Eye, LayoutGrid, List, ListFilter, MoreVertical, Pencil, Search,
+  BookMarked, CalendarDays, ChevronRight, Columns3, Copy, Eye, LayoutGrid, List, ListFilter, MoreVertical, Pencil, Search,
   FileText, Share2, Mail, MessageSquare, Monitor, Megaphone, MessageCircle, X, Check,
 } from 'lucide-react';
 import { cn } from '@/contenthub-ui/utils';
 import { Badge } from '@/contenthub-ui/badge';
 import { Input } from '@/contenthub-ui/input';
+import { ContentScoreInfoTooltip } from './shared/ContentScoreInfoTooltip';
 import {
   type ProjectRow,
   type ProjectStatus,
@@ -18,21 +19,21 @@ import {
 } from './projectShared';
 import { TEMPLATES, type ContentType, type TemplateItem, TemplateThumbnail, TYPE_THUMB_BG, FAQ_DATA, BLOG_DATA } from './TemplateGallery';
 import { CalendarView as ContentHubCalendarView } from './CalendarView';
-import { DataTable, FilterPanel, CustomizeColumnsDrawer, Tabs, type Column as MYNAColumn, type ColumnOption, type FilterField, type SelectOption } from '../components';
+import { DataTable, FilterPanel, CustomizeColumnsDrawer, HeaderSearchField, Tabs, type Column as MYNAColumn, type ColumnOption, type FilterField, type SelectOption } from '../components';
 import type { Tab } from '../components';
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
-const PROJECTS: ProjectRow[] = [
+const INITIAL_PROJECTS: ProjectRow[] = [
   { id: 11, name: 'Lawn care FAQ',                     status: 'Published', channels: ['faq'],                                                        locations: 500, updated: 'Nov 07, 2025', createdBy: 'Noah P',    hue: 50  },
-  { id: 12, name: 'Service & pricing FAQ',             status: 'Drafts',    channels: ['faq'],                                                        locations: 500, updated: 'Nov 07, 2025', createdBy: 'Olivia R',  hue: 300 },
+  { id: 12, name: 'Service & pricing FAQ',             status: 'Draft',     channels: ['faq'],                                                        locations: 500, updated: 'Nov 07, 2025', createdBy: 'Olivia R',  hue: 300 },
   { id: 13, name: 'How to overseed your lawn',         status: 'Published', channels: ['blog'],                                                       locations: 500, updated: 'Nov 06, 2025', createdBy: 'Liam G',    hue: 110 },
-  { id: 14, name: 'Native plant guide',                status: 'Scheduled', channels: ['blog'],                                                       locations: 500, updated: 'Nov 06, 2025', createdBy: 'Sophia L',  hue: 230 },
-  { id: 1,  name: 'Spring garden cleanup',             status: 'Drafts',    channels: ['facebook','instagram','twitter','linkedin','youtube','web'],  locations: 500, updated: 'Nov 05, 2025', createdBy: 'Elijah M',  hue: 160 },
-  { id: 2,  name: 'Sustainable lawn care launch 🌱',   status: 'Scheduled', channels: ['web','blog','email'],                                          locations: 500, updated: 'Nov 04, 2025', createdBy: 'Jacob K',   hue: 210 },
-  { id: 3,  name: 'Before & after showcase',           status: 'Scheduled', channels: ['facebook','instagram','twitter','linkedin','youtube','email'], locations: 500, updated: 'Nov 03, 2025', createdBy: 'Ava T',     hue: 280 },
-  { id: 4,  name: 'Summer backyard bliss ☀️',          status: 'Scheduled', channels: ['web','blog','email'],                                          locations: 500, updated: 'Nov 01, 2025', createdBy: 'Emily S',   hue: 40  },
-  { id: 5,  name: 'Customer testimonial campaign',     status: 'Drafts',    channels: ['facebook','instagram','twitter','linkedin','youtube','web'],   locations: 500, updated: 'Sep 05, 2025', createdBy: 'William S', hue: 20  },
+  { id: 14, name: 'Native plant guide',                status: 'Draft',     channels: ['blog'],                                                       locations: 500, updated: 'Nov 06, 2025', createdBy: 'Sophia L',  hue: 230 },
+  { id: 1,  name: 'Spring garden cleanup',             status: 'Draft',     channels: ['facebook','instagram','twitter','linkedin','youtube','web'],  locations: 500, updated: 'Nov 05, 2025', createdBy: 'Elijah M',  hue: 160 },
+  { id: 2,  name: 'Sustainable lawn care launch 🌱',   status: 'Draft',     channels: ['web','blog','email'],                                          locations: 500, updated: 'Nov 04, 2025', createdBy: 'Jacob K',   hue: 210 },
+  { id: 3,  name: 'Before & after showcase',           status: 'Draft',     channels: ['facebook','instagram','twitter','linkedin','youtube','email'], locations: 500, updated: 'Nov 03, 2025', createdBy: 'Ava T',     hue: 280 },
+  { id: 4,  name: 'Summer backyard bliss ☀️',          status: 'Draft',     channels: ['web','blog','email'],                                          locations: 500, updated: 'Nov 01, 2025', createdBy: 'Emily S',   hue: 40  },
+  { id: 5,  name: 'Customer testimonial campaign',     status: 'Draft',     channels: ['facebook','instagram','twitter','linkedin','youtube','web'],   locations: 500, updated: 'Sep 05, 2025', createdBy: 'William S', hue: 20  },
   { id: 6,  name: 'Fall planting season',              status: 'Published', channels: ['web','blog','email'],                                          locations: 500, updated: 'Sep 05, 2025', createdBy: 'James K',   hue: 90  },
   { id: 7,  name: 'Holiday outdoor lighting',          status: 'Published', channels: ['facebook','instagram','twitter','linkedin','youtube','email'], locations: 500, updated: 'Sep 05, 2025', createdBy: 'Emma W',    hue: 320 },
   { id: 8,  name: 'Local business partnership',        status: 'Published', channels: ['web','blog','email'],                                          locations: 500, updated: 'Sep 05, 2025', createdBy: 'Mia S',     hue: 190 },
@@ -50,11 +51,8 @@ const BRAND_BY_ID: Record<number, string> = {
 };
 
 function getChannelType(channels: ChannelId[]): string {
-  if (channels.includes('faq'))  return 'FAQ';
-  if (channels.includes('blog')) return 'Blog';
-  const social = ['facebook','instagram','twitter','linkedin','youtube'];
-  if (channels.some(c => social.includes(c))) return 'Social';
-  return 'Landing page';
+  if (channels.includes('faq')) return 'FAQ';
+  return 'Blog';
 }
 
 function getTemplateCreator(templateId: string) {
@@ -158,10 +156,14 @@ const TYPE_THUMB: Record<ContentType, { iconBg: string; iconColor: string; Icon:
 
 const CONTENT_TYPE_OPTIONS = ['All', ...Object.values(TYPE_LABEL)];
 const PROJECT_CHANNEL_OPTIONS = ['All channels', 'Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'YouTube', 'Web', 'Blog', 'Email'];
-const PROJECT_CREATOR_OPTIONS = ['All creators', ...Array.from(new Set(PROJECTS.map(project => project.createdBy)))];
+const PROJECT_CREATOR_OPTIONS = ['All creators', ...Array.from(new Set(INITIAL_PROJECTS.map(project => project.createdBy)))];
 const PROJECT_STATUS_OPTIONS = ['All statuses', 'Drafts', 'Scheduled', 'Published'];
 const TEMPLATE_TAG_OPTIONS = ['All tags', ...Array.from(new Set(TEMPLATES.flatMap(template => template.useCases))).sort()];
 const TEMPLATE_CREATOR_OPTIONS = ['All creators', ...TEMPLATE_CREATORS];
+const LIBRARY_BRAND_OPTIONS = ['All brands', 'Aspen dental', 'Oakwood Services', 'Olive Garden'];
+const LIBRARY_CONTENT_TYPE_OPTIONS = ['All', 'FAQ', 'Blog'];
+const LIBRARY_CREATOR_OPTIONS = ['All creators', 'Birdeye'];
+const TIME_PERIOD_OPTIONS = ['All time', 'Last 7 days', 'Last 30 days', 'Last 3 months', 'Last year'];
 
 function toSelectOptions(options: string[]): SelectOption[] {
   return options.map(o => ({ value: o, label: o }));
@@ -175,10 +177,10 @@ const SAVED_FILTER_FIELDS: FilterField[] = [
 ];
 
 const LIBRARY_FILTER_FIELDS: FilterField[] = [
-  { id: 'contentType', label: 'Content type', options: toSelectOptions(CONTENT_TYPE_OPTIONS),    multi: false },
-  { id: 'tag',         label: 'Tags',          options: toSelectOptions(TEMPLATE_TAG_OPTIONS),    multi: false },
-  { id: 'creator',     label: 'Creator',       options: toSelectOptions(TEMPLATE_CREATOR_OPTIONS), multi: false },
-  { id: 'goal',        label: 'Goal',          options: toSelectOptions(['Any goal', 'Search visibility', 'Customer education', 'Promotion', 'Retention', 'Reputation']), multi: false },
+  { id: 'contentType',   label: 'Content type',   options: toSelectOptions(LIBRARY_CONTENT_TYPE_OPTIONS), multi: false },
+  { id: 'brandIdentity', label: 'Brand identity', options: toSelectOptions(LIBRARY_BRAND_OPTIONS),       multi: false },
+  { id: 'creator',       label: 'Creator',        options: toSelectOptions(TEMPLATE_CREATOR_OPTIONS),    multi: false },
+  { id: 'timePeriod',    label: 'Time period',    options: toSelectOptions(TIME_PERIOD_OPTIONS),    multi: false },
 ];
 
 // ── Template preview modal ────────────────────────────────────────────────────
@@ -341,9 +343,7 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
               {/* Label */}
               <div className="flex items-center gap-1.5 -mt-2">
                 <span className="text-[14px] text-muted-foreground">AEO Content score</span>
-                <div className="flex size-4 shrink-0 items-center justify-center rounded-full border border-muted-foreground/40">
-                  <span className="text-[10px] text-muted-foreground leading-none">?</span>
-                </div>
+                <ContentScoreInfoTooltip side="bottom" sideOffset={6} />
               </div>
               {/* Progress bar */}
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -375,7 +375,7 @@ function TemplatePreviewModal({ tmpl, onClose, onUse }: { tmpl: TemplateItem | n
                 ))}
               </div>
               {/* Metadata */}
-              <div className="flex flex-col gap-4 pt-1 border-t border-border">
+              <div className="flex flex-col gap-4">
                 <div>
                   <p className="text-[11px] text-muted-foreground mb-1">Topic</p>
                   <p className="text-[13px] text-foreground leading-relaxed">{tmpl.description}</p>
@@ -571,8 +571,7 @@ function getProjectContentType(project: ProjectRow): ContentType {
 }
 
 const SAVED_STATUS_VARIANT: Record<ProjectStatus, 'secondary' | 'outline' | 'success'> = {
-  Drafts:    'secondary',
-  Scheduled: 'outline',
+  Draft:     'secondary',
   Published: 'success',
 };
 
@@ -674,47 +673,13 @@ function isAllFilter(value: string | undefined, allLabel: string) {
 const ALL_COL_OPTIONS: ColumnOption[] = [
   { key: 'name',      label: 'Name',         locked: true },
   { key: 'status',    label: 'Status'   },
-  { key: 'channels',  label: 'Channel type' },
+  { key: 'channels',  label: 'Content type' },
   { key: 'hue',       label: 'Brand identity' },
   { key: 'updated',   label: 'Last updated' },
   { key: 'createdBy', label: 'Created by' },
 ];
 
-const ALL_COLUMNS: MYNAColumn<ProjectRow>[] = [
-  {
-    key: 'name', label: 'Name', width: 300, sortable: true,
-    render: (_, row) => (
-      <div className="flex items-center gap-2 min-w-0">
-        <ProjectThumbnail hue={row.hue} />
-        <span className="truncate text-body text-text-primary group-hover/row:text-primary transition-colors">
-          {row.name}
-        </span>
-      </div>
-    ),
-  },
-  {
-    key: 'status', label: 'Status', width: 120, sortable: true,
-    render: (_, row) => <StatusCell status={row.status as ProjectStatus} />,
-  },
-  {
-    key: 'channels', label: 'Channel type', width: 130, sortable: true,
-    render: (_, row) => (
-      <span className="text-body text-text-primary">{getChannelType(row.channels)}</span>
-    ),
-  },
-  {
-    key: 'hue', label: 'Brand identity', width: 160, sortable: false,
-    render: (_, row) => <span className="text-body text-text-primary">{BRAND_BY_ID[row.id] ?? '—'}</span>,
-  },
-  {
-    key: 'updated', label: 'Last updated', width: 150, sortable: true,
-    render: (_, row) => <span className="text-body text-text-primary">{row.updated}</span>,
-  },
-  {
-    key: 'createdBy', label: 'Created by', width: 160, sortable: true,
-    render: (_, row) => <span className="text-body text-text-primary">{row.createdBy}</span>,
-  },
-];
+// ALL_COLUMNS is built inside ProjectsView (below) so it can close over handleStatusChange.
 
 // ── View ──────────────────────────────────────────────────────────────────────
 
@@ -727,8 +692,56 @@ export const ProjectsView = ({
   initialViewMode?: ViewMode;
   onNavigate: (view: 'content-hub-create') => void;
 }) => {
+  const [projects, setProjects] = useState<ProjectRow[]>(INITIAL_PROJECTS);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [libQuery, setLibQuery] = useState('');
+
+  function handleStatusChange(id: number, status: ProjectStatus) {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+  }
+
+  const ALL_COLUMNS: MYNAColumn<ProjectRow>[] = [
+    {
+      key: 'name', label: 'Name', width: 300, sortable: true,
+      render: (_, row) => (
+        <div className="flex items-center gap-2 min-w-0">
+          <ProjectThumbnail hue={row.hue} channels={row.channels} id={row.id} />
+          <span className="truncate text-body text-text-primary group-hover/row:text-primary transition-colors">
+            {row.name}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'status', label: 'Status', width: 120, sortable: true,
+      render: (_, row) => (
+        <StatusCell
+          status={row.status as ProjectStatus}
+          onChange={(s) => handleStatusChange(row.id, s)}
+        />
+      ),
+    },
+    {
+      key: 'channels', label: 'Content type', width: 130, sortable: true,
+      render: (_, row) => (
+        <span className="text-body text-text-primary">{getChannelType(row.channels)}</span>
+      ),
+    },
+    {
+      key: 'hue', label: 'Brand identity', width: 160, sortable: false,
+      render: (_, row) => <span className="text-body text-text-primary">{BRAND_BY_ID[row.id] ?? '—'}</span>,
+    },
+    {
+      key: 'updated', label: 'Last updated', width: 150, sortable: true,
+      render: (_, row) => <span className="text-body text-text-primary">{row.updated}</span>,
+    },
+    {
+      key: 'createdBy', label: 'Created by', width: 160, sortable: true,
+      render: (_, row) => <span className="text-body text-text-primary">{row.createdBy}</span>,
+    },
+  ];
+  const [savedSearchOpen, setSavedSearchOpen] = useState(false);
+  const [savedQuery, setSavedQuery] = useState('');
   const [libSearchOpen, setLibSearchOpen] = useState(false);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [savedSelections, setSavedSelections] = useState<Record<string, string[]>>({});
@@ -744,7 +757,9 @@ export const ProjectsView = ({
     const channel   = savedSelections['channel']?.[0];
     const creator   = savedSelections['creator']?.[0];
     const locations = savedSelections['locations']?.[0];
-    return PROJECTS.filter(project => {
+    const q = savedQuery.trim().toLowerCase();
+    return projects.filter(project => {
+      const matchesQuery     = !q || project.name.toLowerCase().includes(q);
       const matchesStatus    = isAllFilter(status, 'All statuses')  || project.status === status;
       const matchesChannel   = isAllFilter(channel, 'All channels') || project.channels.includes(channel!.toLowerCase() as ProjectRow['channels'][number]);
       const matchesCreator   = isAllFilter(creator, 'All creators') || project.createdBy === creator;
@@ -753,16 +768,15 @@ export const ProjectsView = ({
         (locations === '1-100'   && project.locations <= 100) ||
         (locations === '101-500' && project.locations > 100 && project.locations <= 500) ||
         (locations === '500+' && project.locations > 500);
-      return matchesStatus && matchesChannel && matchesCreator && matchesLocations;
+      return matchesQuery && matchesStatus && matchesChannel && matchesCreator && matchesLocations;
     });
-  }, [savedSelections]);
+  }, [savedSelections, savedQuery]);
 
   const filteredTemplates = useMemo(() => {
-    const q = libQuery.toLowerCase();
-    const contentType = librarySelections['contentType']?.[0];
-    const tag         = librarySelections['tag']?.[0];
-    const creator     = librarySelections['creator']?.[0];
-    const goal        = librarySelections['goal']?.[0];
+    const q             = libQuery.toLowerCase();
+    const contentType   = librarySelections['contentType']?.[0];
+    const brandIdentity = librarySelections['brandIdentity']?.[0];
+    const creator       = librarySelections['creator']?.[0];
 
     return TEMPLATES.filter(t => {
       // Library tab only shows blog and FAQ types
@@ -771,16 +785,17 @@ export const ProjectsView = ({
       const matchesQ = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
       const matchesType =
         isAllFilter(contentType, 'All') ||
-        isAllFilter(contentType, 'All content types') ||
-        TYPE_LABEL[t.type] === contentType;
-      const matchesTag = isAllFilter(tag, 'All tags') || t.useCases.includes(tag!);
-      const matchesCreator = isAllFilter(creator, 'All creators') || getTemplateCreator(t.id) === creator;
-      const matchesGoal =
-        isAllFilter(goal, 'Any goal') ||
-        t.useCases.some(useCase => useCase.toLowerCase().includes(goal!.split(' ')[0].toLowerCase())) ||
-        t.description.toLowerCase().includes(goal!.split(' ')[0].toLowerCase());
+        (contentType === 'FAQ'  && t.type === 'faq') ||
+        (contentType === 'Blog' && t.type === 'blog');
 
-      return matchesQ && matchesType && matchesTag && matchesCreator && matchesGoal;
+      // brand is deterministic per template — derive the same way libraryRows does
+      const seed = t.id.split('').reduce((s, c) => (s * 31 + c.charCodeAt(0)) & 0xffff, 0);
+      const rowBrand = ['Aspen dental', 'Oakwood Services', 'Olive Garden'][seed % 3];
+      const matchesBrand = isAllFilter(brandIdentity, 'All brands') || rowBrand === brandIdentity;
+
+      const matchesCreator = isAllFilter(creator, 'All creators') || getTemplateCreator(t.id) === creator;
+
+      return matchesQ && matchesType && matchesBrand && matchesCreator;
     });
   }, [libQuery, librarySelections]);
 
@@ -814,9 +829,13 @@ export const ProjectsView = ({
         <div className="flex items-center gap-sm">
           {activeTab === 'saved' && (
             <>
-              <button type="button" aria-label="Search contents" className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Search className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-              </button>
+              <HeaderSearchField
+                open={savedSearchOpen}
+                value={savedQuery}
+                onOpenChange={setSavedSearchOpen}
+                onChange={setSavedQuery}
+                placeholder="Search contents"
+              />
               <div className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-sm">
                 {([
                   { value: 'list'     as ViewMode, label: 'List view',      LI: List        },
@@ -836,7 +855,7 @@ export const ProjectsView = ({
                 ))}
               </div>
               <button type="button" aria-label="Customize columns" onClick={() => setColumnSheetOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button type="button" aria-label="Filters" onClick={() => setFilterPanelOpen(o => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                 <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
@@ -889,7 +908,7 @@ export const ProjectsView = ({
               </div>
               {libViewMode === 'list' && (
                 <button type="button" aria-label="Customize columns" onClick={() => setColumnSheetOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                  <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                  <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               )}
               <button type="button" aria-label="Filters" onClick={() => setFilterPanelOpen(o => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">

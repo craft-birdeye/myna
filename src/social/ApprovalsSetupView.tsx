@@ -473,11 +473,11 @@ function WorkflowEditor({ workflow, onBack }: { workflow: Workflow; onBack: () =
             )}
             <button
               onClick={handleSave}
-              className="h-[36px] px-[20px] rounded-[4px] bg-[#1976d2] text-[14px] text-white hover:bg-primary/90 transition-colors"
+              className="h-[36px] px-[20px] rounded-md bg-[#1976d2] text-[14px] text-white hover:bg-primary/90 transition-colors"
             >
               {showCoverageWarning ? 'Save anyway' : 'Save'}
             </button>
-            <button className="h-[36px] w-[36px] flex items-center justify-center rounded-[4px] border border-border bg-background hover:bg-muted">
+            <button className="h-[36px] w-[36px] flex items-center justify-center rounded-md border border-border bg-background hover:bg-muted">
               <MoreVertical size={16} className="text-muted-foreground" />
             </button>
           </div>
@@ -566,19 +566,19 @@ function WorkflowList({ onEdit, onCreate }: { onEdit: (wf: Workflow) => void; on
           {workflows.length} Approvals
         </h1>
         <div className="flex items-center gap-[8px]">
-          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-[4px] hover:bg-muted">
+          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-md hover:bg-muted">
             <Search size={18} className="text-muted-foreground" />
           </button>
           <button
             onClick={onCreate}
-            className="h-[36px] px-[16px] flex items-center gap-[6px] rounded-[4px] bg-[#1976d2] text-[14px] text-white hover:bg-primary/90 transition-colors"
+            className="h-[36px] px-[16px] flex items-center gap-[6px] rounded-md bg-[#1976d2] text-[14px] text-white hover:bg-primary/90 transition-colors"
           >
             Create approval
           </button>
-          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-[4px] hover:bg-muted">
+          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-md hover:bg-muted">
             <MoreVertical size={18} className="text-muted-foreground" />
           </button>
-          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-[4px] hover:bg-muted">
+          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-md hover:bg-muted">
             <SlidersHorizontal size={18} className="text-muted-foreground" />
           </button>
         </div>

@@ -404,7 +404,7 @@ export function CalendarView({ onPostClick, onActivityClick, onViewExpiredPosts,
               <div className="content-stretch flex flex-col gap-[4px] items-start justify-center relative shrink-0">
                 <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
                   {/* chevron_left */}
-                  <div className="content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0 size-[32px] cursor-pointer">
+                  <div className="content-stretch flex items-center justify-center p-[8px] relative rounded-md shrink-0 size-[32px] cursor-pointer">
                     <div className="relative shrink-0 size-[20px]">
                       <div className="absolute inset-[27.44%_37.11%_27.42%_37.8%] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-7.561px_-5.488px] mask-size-[20px_20px]" style={{ maskImage: `url('${imgHelp}')` }}>
                         <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 5.0176 9.02811">
@@ -417,7 +417,7 @@ export function CalendarView({ onPostClick, onActivityClick, onViewExpiredPosts,
                     March 2026
                   </p>
                   {/* chevron_right */}
-                  <div className="content-stretch flex h-[32px] items-center justify-center p-[8px] relative rounded-[4px] shrink-0 w-[33px] cursor-pointer">
+                  <div className="content-stretch flex h-[32px] items-center justify-center p-[8px] relative rounded-md shrink-0 w-[33px] cursor-pointer">
                     <div className="relative shrink-0 size-[20px]">
                       <div className="absolute inset-[27.42%_37.8%_27.49%_37.13%] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-7.425px_-5.484px] mask-size-[20px_20px]" style={{ maskImage: `url('${imgHelp}')` }}>
                         <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 5.01367 9.01782">
@@ -427,7 +427,7 @@ export function CalendarView({ onPostClick, onActivityClick, onViewExpiredPosts,
                     </div>
                   </div>
                   {/* Today */}
-                  <div className="content-stretch flex gap-[8px] h-[36px] items-center justify-center px-[12px] py-[8px] relative rounded-[4px] shrink-0 cursor-pointer">
+                  <div className="content-stretch flex gap-[8px] h-[36px] items-center justify-center px-[12px] py-[8px] relative rounded-md shrink-0 cursor-pointer">
                     <p className="font-normal leading-[20px] relative shrink-0 text-primary text-[14px] tracking-[-0.28px] whitespace-nowrap">
                       Today
                     </p>
@@ -439,8 +439,8 @@ export function CalendarView({ onPostClick, onActivityClick, onViewExpiredPosts,
             {/* Right: Controls */}
             <div className="content-stretch flex gap-[8px] items-center relative shrink-0">
               {/* List/Week/Month toggle */}
-              <div className="content-stretch flex gap-[4px] h-[36px] items-center px-[8px] py-[6px] relative rounded-[4px] shrink-0">
-                <div aria-hidden="true" className="absolute border-border border-[0.943px] border-solid inset-0 pointer-events-none rounded-[4px]" />
+              <div className="content-stretch flex gap-[4px] h-[36px] items-center px-[8px] py-[6px] relative rounded-md shrink-0">
+                <div aria-hidden="true" className="absolute border-border border-[0.943px] border-solid inset-0 pointer-events-none rounded-md" />
                 <div className="content-stretch flex h-[24px] items-center justify-center px-[8px] relative rounded-[4px] shrink-0 cursor-pointer">
                   <p className="font-normal leading-[20px] relative shrink-0 text-foreground text-[14px] tracking-[-0.28px] whitespace-nowrap">
                     List
@@ -459,8 +459,8 @@ export function CalendarView({ onPostClick, onActivityClick, onViewExpiredPosts,
               </div>
 
               {/* AI button */}
-              <div className="content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0 size-[36px] cursor-pointer">
-                <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded-[4px]" />
+              <div className="content-stretch flex items-center justify-center p-[8px] relative rounded-md shrink-0 size-[36px] cursor-pointer">
+                <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded-md" />
                 <div className="relative shrink-0 size-[20px]">
                   <div className="absolute inset-[0_-0.15%_25.87%_16.67%]">
                     <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16.6975 14.8252">
@@ -476,10 +476,10 @@ export function CalendarView({ onPostClick, onActivityClick, onViewExpiredPosts,
               {/* More (dots) button — with dropdown */}
               <div className="relative" ref={calMoreRef}>
                 <div
-                  className={`content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0 size-[36px] cursor-pointer ${calMoreOpen ? 'bg-muted' : ''}`}
+                  className={`content-stretch flex items-center justify-center p-[8px] relative rounded-md shrink-0 size-[36px] cursor-pointer ${calMoreOpen ? 'bg-muted' : ''}`}
                   onClick={() => setCalMoreOpen(v => !v)}
                 >
-                  <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded-[4px]" />
+                  <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded-md" />
                   <div className="relative shrink-0 size-[20px]">
                     <div className="absolute inset-[23.05%_44.58%] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-8.917px_-4.609px] mask-size-[20px_20px]" style={{ maskImage: `url('${imgHelp}')` }}>
                       <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 2.16663 10.782">
@@ -513,8 +513,8 @@ export function CalendarView({ onPostClick, onActivityClick, onViewExpiredPosts,
 
               {/* Filter button */}
               <div className="content-stretch flex items-start relative shrink-0">
-                <div className="content-stretch flex items-center justify-center p-[8px] relative rounded-[4px] shrink-0 size-[36px] cursor-pointer">
-                  <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded-[4px]" />
+                <div className="content-stretch flex items-center justify-center p-[8px] relative rounded-md shrink-0 size-[36px] cursor-pointer">
+                  <div aria-hidden="true" className="absolute border border-border border-solid inset-0 pointer-events-none rounded-md" />
                   <div className="relative shrink-0 size-[20px]">
                     <div className="absolute inset-[27.08%_14.58%] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-2.917px_-5.417px] mask-size-[20px_20px]" style={{ maskImage: `url('${imgHelp}')` }}>
                       <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 14.1667 9.16667">

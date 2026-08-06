@@ -958,6 +958,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
     initialTitle ?? (mode === 'project' ? 'New project' : `New ${config.label.toLowerCase()}`)
   );
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [canvasStatus, setCanvasStatus] = useState<'Draft' | 'Published'>('Draft');
 
   // ── Left panel tab state
   const [leftTab, setLeftTab] = useState<'ai' | 'manual'>('ai');
@@ -1584,7 +1585,7 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
       >
 
           {/* Left cluster: back + title */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={isEditingSettings ? () => setSetupPhase('done') : onBack}
@@ -1634,7 +1635,35 @@ export function ContentEditorShell({ mode, level = 'project', onBack, skipSetupP
                         <Edit2 size={14} strokeWidth={1.6} absoluteStrokeWidth />
                       </button>
                     )}
-                    {mode !== 'faq' && <Badge variant="secondary">Draft</Badge>}
+                    {mode !== 'faq' && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="focus:outline-none cursor-pointer">
+                            <Badge className={canvasStatus === 'Published' ? 'bg-[#e9f7e7] text-[#2d7a22]' : 'bg-muted text-muted-foreground'}>
+                              {canvasStatus}
+                            </Badge>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="min-w-[140px]">
+                          <DropdownMenuItem
+                            className="flex items-center gap-2"
+                            onSelect={() => setCanvasStatus('Draft')}
+                          >
+                            <span className="size-2 rounded-full shrink-0 bg-[#9ca3af]" />
+                            Draft
+                            {canvasStatus === 'Draft' && <span className="ml-auto text-primary text-xs">✓</span>}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="flex items-center gap-2"
+                            onSelect={() => setCanvasStatus('Published')}
+                          >
+                            <span className="size-2 rounded-full shrink-0 bg-[#4cae3d]" />
+                            Published
+                            {canvasStatus === 'Published' && <span className="ml-auto text-primary text-xs">✓</span>}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                   {!hideHeaderContext && (
                     <button

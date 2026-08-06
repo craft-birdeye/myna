@@ -264,13 +264,13 @@ export function RejectedPostsView({ onOpenDetails, onOpenActivity }: RejectedPos
               placeholder="Search posts..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="h-[36px] pl-[32px] pr-[12px] rounded-[4px] border border-border bg-background text-[14px] text-foreground outline-none focus:border-primary dark:focus:border-[#5b9cf6] w-[200px] placeholder:text-[#aaa] dark:placeholder:text-[#6b7a94]"
+              className="h-[36px] pl-[32px] pr-[12px] rounded-md border border-border bg-background text-[14px] text-foreground outline-none focus:border-primary dark:focus:border-[#5b9cf6] w-[200px] placeholder:text-[#aaa] dark:placeholder:text-[#6b7a94]"
             />
           </div>
-          <button className="h-[36px] px-[12px] flex items-center gap-[6px] rounded-[4px] border border-border bg-background text-[14px] text-foreground hover:bg-muted">
+          <button className="h-[36px] px-[12px] flex items-center gap-[6px] rounded-md border border-border bg-background text-[14px] text-foreground hover:bg-muted">
             Newest <ChevronDown size={16} />
           </button>
-          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-[4px] border border-border bg-background hover:bg-muted">
+          <button className="h-[36px] w-[36px] flex items-center justify-center rounded-md border border-border bg-background hover:bg-muted">
             <MoreVertical size={16} className="text-muted-foreground" />
           </button>
         </div>

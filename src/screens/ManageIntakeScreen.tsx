@@ -16,7 +16,7 @@ import {
   type IntakePreviewPatient,
   type Tab,
 } from '../components'
-import { type LucideIcon, Columns2, ListFilter, Mail, MessageSquare } from 'lucide-react'
+import { type LucideIcon, Columns3, ListFilter, Mail, MessageSquare } from 'lucide-react'
 
 type IntakeStatus = 'Overdue' | 'Not started' | 'In progress' | 'Completed'
 type SentVia = 'chat' | 'email'
@@ -195,7 +195,7 @@ export function ManageIntakeScreen() {
                 onClick={() => setCustomizeOpen(true)}
                 className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button
                 type="button"

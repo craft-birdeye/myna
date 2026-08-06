@@ -201,7 +201,7 @@ export const FAQPublishModal = ({ open, onClose }: FAQPublishModalProps) => {
                         : 'border-border/70 bg-background hover:border-primary/30 hover:bg-surface-hover',
                     )}
                   >
-                    <ProjectThumbnail hue={page.hue} />
+                    <ProjectThumbnail hue={page.hue} channels={['faq']} />
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] text-foreground truncate">{page.title}</p>
                       <p className="mt-1 text-[12px] text-muted-foreground">{page.type} · {page.updatedAt}</p>

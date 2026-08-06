@@ -88,7 +88,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
-      { id: 'agents',   label: 'Agents',   icon: <FigmaIconBirdAI size={ICON_SIZE} />,   kind: 'element', badge: 'New' },
+      { id: 'agents',   label: 'Co-workers',   icon: <FigmaIconBirdAI size={ICON_SIZE} />,   kind: 'element', badge: 'New' },
     ],
   },
   {

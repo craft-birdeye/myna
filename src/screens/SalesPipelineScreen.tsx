@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { type LucideIcon, Columns2, ListFilter, Mail, MessageSquare, Phone } from 'lucide-react'
+import { type LucideIcon, Columns3, ListFilter, Mail, MessageSquare, Phone } from 'lucide-react'
 import {
   // Chip,
   CustomizeColumnsDrawer,
@@ -248,7 +248,7 @@ export function SalesPipelineScreen({ onViewDetail }: { onViewDetail?: (args: Le
                 onClick={() => setCustomizeOpen(true)}
                 className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Columns2 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button
                 type="button"
