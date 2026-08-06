@@ -69,6 +69,10 @@ export default {
         full: '9999px',
       },
       boxShadow: {
+        // Was referenced as `shadow-card` in 7+ files but never actually defined here, so it
+        // silently rendered no shadow at all everywhere it was used (including the create-flow's
+        // own docked AI panel). Adding it fixes every one of those call sites at once.
+        card: '0 1px 3px rgba(0,0,0,0.1)',
         dropdown: '0 4px 16px rgba(0,0,0,0.12)',
         modal: '0 8px 40px rgba(0,0,0,0.22)',
         tooltip: '0px 4px 8px rgba(33,33,33,0.18)', // Shadow/sm — Tooltip / Web (Aero DS, node 2180:72)

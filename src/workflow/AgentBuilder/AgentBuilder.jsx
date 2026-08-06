@@ -2341,9 +2341,14 @@ export default function AgentBuilder({
             </button>
           )}
 
-          {hideLhs && (
+          {/* Reserves canvas space for whichever docked panel is currently showing — the
+              absolutely-positioned `.agent-builder__lhs` above (edit-pencil canvas) when
+              `!hideLhs`, or the create-flow's own externally-rendered docked panel when
+              `hideLhs`. Same mechanism either way, since both panels are taken out of normal
+              flex flow to float over the canvas. */}
+          {!aiChatExpanded && (
             <div
-              className={`agent-builder__ai-panel-spacer${createAiPanelOpen ? ' agent-builder__ai-panel-spacer--open' : ''}`}
+              className={`agent-builder__ai-panel-spacer${(hideLhs ? createAiPanelOpen : !lhsCollapsed) ? ' agent-builder__ai-panel-spacer--open' : ''}`}
               aria-hidden
             />
           )}

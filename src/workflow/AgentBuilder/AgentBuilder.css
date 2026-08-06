@@ -6,29 +6,39 @@
   position: relative;
 }
 
+/* Absolutely positioned overlay — matches the create-flow's own docked panel
+   (AgentDetailScreen.tsx: `absolute bottom-sm left-sm ... w-96`) exactly, rather than a
+   separate in-flow flex sibling with its own width/shadow values. The `.lhs-drawer` child
+   supplies the actual card look (radius/border/shadow); this wrapper is purely positioning,
+   so it doesn't double up on visual chrome. `.agent-builder__ai-panel-spacer` (below) is what
+   actually reserves canvas space, same mechanism already used for the `hideLhs` case. */
 .agent-builder__lhs {
-  padding: 16px;
-  flex-shrink: 0;
-  overflow: visible;
-  position: relative;
+  position: absolute;
   z-index: 40;
-  width: 392px;
-  transition: width 0.28s cubic-bezier(0.4,0,0.2,1), padding 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
+  top: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: 384px;
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease, width 0.28s cubic-bezier(0.4,0,0.2,1), top 0.2s ease, bottom 0.2s ease, left 0.2s ease;
   opacity: 1;
+  transform: translateX(0);
+}
+
+.agent-builder__lhs .lhs-drawer {
+  width: 100%;
 }
 
 .agent-builder__lhs--collapsed {
-  width: 0;
-  padding: 0;
-  overflow: hidden;
   opacity: 0;
   pointer-events: none;
+  transform: translateX(-120%);
 }
 
 .agent-builder__lhs--expanded {
-  flex: 1;
+  top: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
-  padding: 0;
 }
 
 /* ─── Expand pill (floats over canvas when LHS is collapsed) ─── */
