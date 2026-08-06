@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import {
   Chip,
-  CoachAgentPanel,
   DataTable,
   EmptyState,
+  EstimateSavingsModal,
   Icon,
   MetricTiles,
   Tabs,
-  Tooltip,
   TopNav,
   type ChipVariant,
   type Column,
+  type EstimateSavingsValues,
   type Metric,
   type Tab,
 } from '../components'
@@ -24,7 +24,6 @@ import { RecommendationsTab } from './RecommendationsTab'
 import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
-import { useFeedbackRecommendationsStore } from '../data/FeedbackRecommendationsStoreContext'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 
 interface AgentInstanceScreenProps {
@@ -344,7 +343,6 @@ export function AgentInstanceScreen({
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
-  const [coachOpen, setCoachOpen] = useState(false)
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
 
   useEffect(() => {
@@ -362,6 +360,14 @@ export function AgentInstanceScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialRecommendationId])
 
+  const [savingsModalOpen, setSavingsModalOpen] = useState(false)
+  const [savingsSettings, setSavingsSettings] = useState<EstimateSavingsValues>({
+    mode: 'time',
+    minutesPerResolution: 5,
+    wageCurrency: 'USD',
+    hourlyWage: 40,
+  })
+
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
   const shownName = displayName ?? instanceName
@@ -372,6 +378,20 @@ export function AgentInstanceScreen({
     return () => onFullBleedChange?.(false)
   }, [selectedRun, isReviewResponse, onFullBleedChange])
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
+  const isFrontdeskAgent = agentName === 'Front desk agent'
+  const displayMetrics: Metric[] = isFrontdeskAgent
+    ? metrics.map((m) => {
+        if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
+        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const cost = hours * savingsSettings.hourlyWage
+        const formattedCost = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: savingsSettings.wageCurrency,
+          maximumFractionDigits: 0,
+        }).format(cost)
+        return { ...m, value: formattedCost, label: 'Cost saved' }
+      })
+    : metrics
   const COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
     : agentName === 'Front desk agent'    ? FRONTDESK_COLUMNS
@@ -388,8 +408,6 @@ export function AgentInstanceScreen({
 
   const isWorkflowTab = activeTab === 'workflow'
   const isRecommendationTab = activeTab === 'recommendation'
-  const { feedbackRecommendations, clearAllFeedback } = useFeedbackRecommendationsStore()
-  const hasFeedbackForAgent = feedbackRecommendations.some((rec) => rec.agentName === instanceName)
   // A Draft instance hasn't handled any real conversations yet, so there's nothing to log.
   const isDraftInstance = instanceStatus === 'Draft'
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[instanceName] ?? 0
@@ -464,21 +482,6 @@ export function AgentInstanceScreen({
                   {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                 </span>
               )}
-              {isRecommendationTab && !isDraftInstance && (
-                <Tooltip content="Coach agent" variant="brief">
-                  <button
-                    type="button"
-                    aria-label="Coach agent"
-                    aria-pressed={coachOpen}
-                    onClick={() => setCoachOpen((open) => !open)}
-                    className={`flex size-9 items-center justify-center rounded-sm border border-border-selected text-text-icon hover:bg-surface-l2 ${
-                      coachOpen ? 'bg-surface-selected' : 'bg-surface'
-                    }`}
-                  >
-                    <Icon name="auto_awesome" size={20} />
-                  </button>
-                </Tooltip>
-              )}
               <div className="relative">
                 <button
                   type="button"
@@ -549,18 +552,8 @@ export function AgentInstanceScreen({
               activeTab={activeTab}
               onChange={(tabId) => {
                 setActiveTab(tabId)
-                if (tabId !== 'recommendation') setCoachOpen(false)
               }}
             />
-            {isRecommendationTab && hasFeedbackForAgent && !isDraftInstance && (
-              <button
-                type="button"
-                onClick={clearAllFeedback}
-                className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
-              >
-                Clear human feedback
-              </button>
-            )}
           </div>
 
           {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -580,8 +573,34 @@ export function AgentInstanceScreen({
               {activeTab === 'outcomes' ? (
                 <>
                   <div className="px-2xl pt-lg">
-                    <MetricTiles metrics={metrics} />
+                    <MetricTiles
+                      metrics={displayMetrics}
+                      renderTileAction={
+                        isFrontdeskAgent
+                          ? (metric) =>
+                              metric.id === 'timeSaved' ? (
+                                <button
+                                  type="button"
+                                  aria-label="Estimate savings"
+                                  onClick={() => setSavingsModalOpen(true)}
+                                  className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                >
+                                  <Icon name="tune" size={18} />
+                                </button>
+                              ) : null
+                          : undefined
+                      }
+                    />
                   </div>
+                  <EstimateSavingsModal
+                    open={savingsModalOpen}
+                    onClose={() => setSavingsModalOpen(false)}
+                    initialValues={savingsSettings}
+                    onSave={(values) => {
+                      setSavingsSettings(values)
+                      setSavingsModalOpen(false)
+                    }}
+                  />
                   <div className="px-lg py-lg">
                     <DataTable columns={COLUMNS} data={locations} scrollOnHover />
                   </div>
@@ -614,13 +633,6 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
-
-        {coachOpen && isRecommendationTab && (
-          <CoachAgentPanel
-            agentName={instanceName}
-            onClose={() => setCoachOpen(false)}
-          />
-        )}
       </div>
     </div>
   )

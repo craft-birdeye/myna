@@ -69,23 +69,6 @@ function parseDurationSecs(duration: string): number {
   return Number.isFinite(secsOnly) ? secsOnly : 332
 }
 
-function formatDurationLabel(secs: number): string {
-  const mins = Math.floor(secs / 60)
-  const rem = secs % 60
-  return `${mins}m ${String(rem).padStart(2, '0')}s`
-}
-
-function startTimeLabel(timestamp: string): string {
-  const match = timestamp.match(/(\d{1,2}:\d{2}\s*[ap]m)/i)
-  return match?.[1] ?? timestamp
-}
-
-/** Reminder agent's log rows never carry a real caller-facing phone number in `contact` (it's
- *  often a name), so this mirrors the Front-desk "Call details" fallback. */
-function displayCallerNumber(row: HealthcareLogRow): string {
-  return row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : '(032) 902 9023'
-}
-
 function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
   const source = String(row.source ?? row.channel ?? 'Google')
   const trigger: RunLogStep = {
@@ -479,7 +462,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
   return (
     <div className="relative flex h-full flex-col bg-surface">
       {/* Header — title + status chip with agent name subtitle (matches recommendation detail) */}
-      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-lg">
+      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
         <button
           type="button"
           aria-label="Back to logs"
@@ -490,7 +473,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-sm">
-            <h1 className="text-h2 text-text-primary">Run - {row.timestamp}</h1>
+            <h1 className="text-h3 text-text-primary">Log - {row.timestamp}</h1>
             <Chip label={row.status} variant={statusVariant} />
           </div>
           <p className="mt-xs text-small text-text-secondary">{instanceName}</p>
@@ -523,19 +506,8 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
               showCallRecording={isReminder && hasVoiceCall}
               audioUrl={isReminder ? voicemailSample : undefined}
               durationSecs={isReminder ? totalSecs : undefined}
-              callDetails={
-                isReminder
-                  ? {
-                      callerNumber: displayCallerNumber(row),
-                      languageDetected: 'English',
-                      duration: formatDurationLabel(totalSecs),
-                      sidNumber: 'CA45 T78 932',
-                      startTime: startTimeLabel(row.timestamp),
-                      callEndReason: 'User ended the conversation',
-                      routedVia: instanceName,
-                    }
-                  : undefined
-              }
+              agentName={isReminder ? instanceName : undefined}
+              onTrackFeedback={isReminder ? onTrackFeedback : undefined}
             />
           ) : (
             <LogDetailsPanel row={row} agentName={instanceName} onTrackFeedback={onTrackFeedback} />
