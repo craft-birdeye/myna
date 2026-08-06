@@ -3,12 +3,14 @@ import {
   Chip,
   DataTable,
   EmptyState,
+  EstimateSavingsModal,
   Icon,
   MetricTiles,
   Tabs,
   TopNav,
   type ChipVariant,
   type Column,
+  type EstimateSavingsValues,
   type Metric,
   type Tab,
 } from '../components'
@@ -358,6 +360,14 @@ export function AgentInstanceScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialRecommendationId])
 
+  const [savingsModalOpen, setSavingsModalOpen] = useState(false)
+  const [savingsSettings, setSavingsSettings] = useState<EstimateSavingsValues>({
+    mode: 'time',
+    minutesPerResolution: 5,
+    wageCurrency: 'USD',
+    hourlyWage: 40,
+  })
+
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
   const shownName = displayName ?? instanceName
@@ -368,6 +378,20 @@ export function AgentInstanceScreen({
     return () => onFullBleedChange?.(false)
   }, [selectedRun, isReviewResponse, onFullBleedChange])
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
+  const isFrontdeskAgent = agentName === 'Front desk agent'
+  const displayMetrics: Metric[] = isFrontdeskAgent
+    ? metrics.map((m) => {
+        if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
+        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const cost = hours * savingsSettings.hourlyWage
+        const formattedCost = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: savingsSettings.wageCurrency,
+          maximumFractionDigits: 0,
+        }).format(cost)
+        return { ...m, value: formattedCost, label: 'Cost saved' }
+      })
+    : metrics
   const COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
     : agentName === 'Front desk agent'    ? FRONTDESK_COLUMNS
@@ -549,8 +573,34 @@ export function AgentInstanceScreen({
               {activeTab === 'outcomes' ? (
                 <>
                   <div className="px-2xl pt-lg">
-                    <MetricTiles metrics={metrics} />
+                    <MetricTiles
+                      metrics={displayMetrics}
+                      renderTileAction={
+                        isFrontdeskAgent
+                          ? (metric) =>
+                              metric.id === 'timeSaved' ? (
+                                <button
+                                  type="button"
+                                  aria-label="Estimate savings"
+                                  onClick={() => setSavingsModalOpen(true)}
+                                  className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                >
+                                  <Icon name="tune" size={18} />
+                                </button>
+                              ) : null
+                          : undefined
+                      }
+                    />
                   </div>
+                  <EstimateSavingsModal
+                    open={savingsModalOpen}
+                    onClose={() => setSavingsModalOpen(false)}
+                    initialValues={savingsSettings}
+                    onSave={(values) => {
+                      setSavingsSettings(values)
+                      setSavingsModalOpen(false)
+                    }}
+                  />
                   <div className="px-lg py-lg">
                     <DataTable columns={COLUMNS} data={locations} scrollOnHover />
                   </div>

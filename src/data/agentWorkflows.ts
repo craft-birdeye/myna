@@ -375,6 +375,12 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
     taskName: 'Initiate voice call',
     description: 'Call the patient for their upcoming appointment.',
     toolId: 'initiate-voice-call',
+    startingProcedure: 'Appointment confirmation (Copy)',
+    routeToFrontdesk: false,
+    retrySettings: { noAnswer: true, callRejected: false, voiceMail: false },
+    maxAttempts: '2',
+    retryInterval: '24',
+    retryIntervalUnit: 'Hours',
     branches: [
       { id: 'hcr-5-vc-completed', name: 'Call answered', isVoiceCallBranch: true, isFallback: false },
       { id: 'hcr-5-vc-rejected',  name: 'Call rejected',  isVoiceCallBranch: true, isFallback: false },

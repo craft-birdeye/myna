@@ -4,6 +4,7 @@ import {
   Chip,
   CustomizeColumnsDrawer,
   DataTable,
+  EstimateSavingsModal,
   FilesModal,
   FilterPanel,
   HeaderSearchField,
@@ -24,6 +25,7 @@ import {
   type ChipVariant,
   type Column,
   type ColumnOption,
+  type EstimateSavingsValues,
   type FilterField,
   type Metric,
   type Tab,
@@ -6082,6 +6084,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setToastVisible(true)
   }
 
+  const [savingsModalOpen, setSavingsModalOpen] = useState(false)
+  const [savingsSettings, setSavingsSettings] = useState<EstimateSavingsValues>({
+    mode: 'time',
+    minutesPerResolution: 5,
+    wageCurrency: 'USD',
+    hourlyWage: 40,
+  })
+
   const METRICS_BY_AGENT: Record<string, Metric[]> = {
     'Front desk agent': [
       { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
@@ -6153,6 +6163,21 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   ]
 
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
+
+  const isFrontdeskAgent = agentName === 'Front desk agent'
+  const displayMetrics: Metric[] = isFrontdeskAgent
+    ? metrics.map((m) => {
+        if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
+        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const cost = hours * savingsSettings.hourlyWage
+        const formattedCost = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: savingsSettings.wageCurrency,
+          maximumFractionDigits: 0,
+        }).format(cost)
+        return { ...m, value: formattedCost, label: 'Cost saved' }
+      })
+    : metrics
 
   const regions = REGIONS_BY_AGENT[agentName] ?? DEFAULT_REGIONS
   const data: AgentInstance[] = regions.map((r) => ({
@@ -6785,8 +6810,34 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           {activeTab === 'agents' ? (
             <>
               <div className="px-2xl pt-lg">
-                <MetricTiles metrics={metrics} />
+                <MetricTiles
+                  metrics={displayMetrics}
+                  renderTileAction={
+                    isFrontdesk
+                      ? (metric) =>
+                          metric.id === 'timeSaved' ? (
+                            <button
+                              type="button"
+                              aria-label="Estimate savings"
+                              onClick={() => setSavingsModalOpen(true)}
+                              className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                            >
+                              <Icon name="tune" size={18} />
+                            </button>
+                          ) : null
+                      : undefined
+                  }
+                />
               </div>
+              <EstimateSavingsModal
+                open={savingsModalOpen}
+                onClose={() => setSavingsModalOpen(false)}
+                initialValues={savingsSettings}
+                onSave={(values) => {
+                  setSavingsSettings(values)
+                  setSavingsModalOpen(false)
+                }}
+              />
               <div className="px-lg py-lg">
                 <DataTable
                   columns={columns}
