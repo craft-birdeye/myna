@@ -9,14 +9,18 @@ import {
   InfoCard,
   InfoCardListItem,
   MetricTiles,
+  NOUN_FORMS,
+  scaleForViewMode,
   Tabs,
   TopNav,
+  ViewModeToggle,
   type ChipVariant,
   type Column,
   type ColumnOption,
   type FilterField,
   type Metric,
   type Tab,
+  type ViewMode,
 } from '../components'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
@@ -368,6 +372,11 @@ function CreateAgentEmptyState({
 }
 
 export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSettings, onAgentSetupActiveChange, onNavigateToInbox, product }: AgentDetailScreenProps) {
+  // Healthcare's Front desk agent only — switches "Conversations responded/resolved" (and the
+  // per-region "Conversations responded" column) to session-level counts, which run higher than
+  // conversation counts since one conversation can hold several sessions.
+  const [viewMode, setViewMode] = useState<ViewMode>('sessions')
+  const forms = NOUN_FORMS[viewMode]
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -378,12 +387,15 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
 
+  // Healthcare's Front desk agent renders these off the conversations/sessions toggle; every
+  // other product still sees the original static "Conversations" wording, unaffected.
+  const isHealthcareFrontdesk = agentName === 'Front desk agent' && product === 'healthcare'
   const METRICS_BY_AGENT: Record<string, Metric[]> = {
     'Front desk agent': [
-      { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
-      { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
-      { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
-      { id: 'timeSaved', value: '40h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved based on average handle time for equivalent human-handled conversations.' },
+      { id: 'responded', value: scaleForViewMode(18420, isHealthcareFrontdesk ? viewMode : 'conversations').toLocaleString(), label: `${isHealthcareFrontdesk ? forms.capPlural : 'Conversations'} responded`, delta: '1.3%', trend: 'up', info: true, tooltip: `Total inbound ${isHealthcareFrontdesk ? forms.lowPlural : 'conversations'} handled by the agent across all channels in the selected period.` },
+      { id: 'resolved', value: scaleForViewMode(16230, isHealthcareFrontdesk ? viewMode : 'conversations').toLocaleString(), label: `${isHealthcareFrontdesk ? forms.capPlural : 'Conversations'} resolved`, delta: '2.1%', trend: 'up', info: true, tooltip: `${isHealthcareFrontdesk ? forms.capPlural : 'Conversations'} closed without requiring human escalation.` },
+      { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: `Percentage of ${isHealthcareFrontdesk ? forms.lowPlural : 'conversations'} fully resolved by the agent. Calculated as resolved ÷ responded.` },
+      { id: 'timeSaved', value: '40h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: `Estimated staff hours saved based on average handle time for equivalent human-handled ${isHealthcareFrontdesk ? forms.lowPlural : 'conversations'}.` },
     ],
     'Reminder agent': [
       { id: 'bookings', value: '450', label: 'Total bookings', delta: '20%', trend: 'up', info: true, tooltip: 'Total appointments booked across all locations in the selected period.' },
@@ -444,13 +456,20 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
 
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
 
+  // Front desk's "interactions"/"fcr" fields hold responded/resolved counts (not rates) — scale
+  // them the same way the metric tiles above do when Healthcare's session view is active.
+  const scaleCountStr = (s?: string) => {
+    if (!isHealthcareFrontdesk || !s) return s
+    const n = Number(s.replace(/,/g, ''))
+    return Number.isFinite(n) ? scaleForViewMode(n, viewMode).toLocaleString() : s
+  }
   const regions = REGIONS_BY_AGENT[agentName] ?? DEFAULT_REGIONS
   const data: AgentInstance[] = regions.map((r) => ({
     name: `${agentName} - ${r.region}`,
     status: r.status,
     channels: r.channels,
-    interactions: r.interactions,
-    fcr: r.fcr,
+    interactions: scaleCountStr(r.interactions),
+    fcr: scaleCountStr(r.fcr),
     aht: r.aht,
     escalation: r.escalation,
     locations: r.locations,
@@ -532,8 +551,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
       { key: 'aht' as keyof AgentInstance,          label: 'Completion rate',    width: 110, sortable: true },
       { key: 'escalation' as keyof AgentInstance,   label: 'Time saved',         width: 90, sortable: true },
     ] : isFrontdesk ? [
-      { key: 'interactions' as keyof AgentInstance, label: 'Conversations responded', width: 145, sortable: true },
-      { key: 'fcr' as keyof AgentInstance, label: 'Conversations resolved', width: 145, sortable: true },
+      { key: 'interactions' as keyof AgentInstance, label: `${isHealthcareFrontdesk ? forms.capPlural : 'Conversations'} responded`, width: 145, sortable: true },
+      { key: 'fcr' as keyof AgentInstance, label: `${isHealthcareFrontdesk ? forms.capPlural : 'Conversations'} resolved`, width: 145, sortable: true },
       { key: 'aht' as keyof AgentInstance, label: 'Resolution rate', width: 105, sortable: true },
       { key: 'escalation' as keyof AgentInstance, label: 'Time saved', width: 90, sortable: true },
     ] : isRecall ? [
@@ -683,6 +702,9 @@ export function AgentDetailScreen({ agentName, onEditAgent, onOpenIntegrationSet
           <div className="flex h-16 items-center justify-between bg-surface px-2xl">
             <h1 className="text-h3 text-text-primary">{agentName}</h1>
             <div className="flex items-center gap-sm">
+              {activeTab === 'agents' && isHealthcareFrontdesk && (
+                <ViewModeToggle value={viewMode} onChange={setViewMode} />
+              )}
               <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
               {activeTab === 'agents' ? (
                 <>

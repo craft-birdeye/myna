@@ -4,12 +4,16 @@ import {
   DataTable,
   Icon,
   MetricTiles,
+  NOUN_FORMS,
+  scaleForViewMode,
   Tabs,
   TopNav,
+  ViewModeToggle,
   type ChipVariant,
   type Column,
   type Metric,
   type Tab,
+  type ViewMode,
 } from '../components'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { AgentLogsTab } from './AgentLogsTab'
@@ -316,11 +320,27 @@ export function AgentInstanceScreen({
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('sessions')
 
   // Derive agent name from instance name (e.g. "Front desk agent - North region" → "Front desk agent")
   const agentName = instanceName.replace(/ - .+$/, '')
-  const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
-  const COLUMNS =
+  const isHealthcare = product === 'healthcare'
+  const isHealthcareFrontdesk = agentName === 'Front desk agent' && isHealthcare
+  const forms = NOUN_FORMS[viewMode]
+  const scaleCountStr = (s?: string) => {
+    if (!isHealthcareFrontdesk || !s) return s
+    const n = Number(s.replace(/,/g, ''))
+    return Number.isFinite(n) ? scaleForViewMode(n, viewMode).toLocaleString() : s
+  }
+  const metrics: Metric[] = isHealthcareFrontdesk
+    ? [
+        { id: 'responded', value: scaleForViewMode(8200, viewMode).toLocaleString(), label: `${forms.capPlural} responded`, delta: '1.3%', trend: 'up', info: true, tooltip: `Total inbound ${forms.lowPlural} handled by this location in the selected period.` },
+        { id: 'resolved', value: scaleForViewMode(7380, viewMode).toLocaleString(), label: `${forms.capPlural} resolved`, delta: '2.1%', trend: 'up', info: true, tooltip: `${forms.capPlural} closed without requiring human escalation at this location.` },
+        { id: 'resolutionRate', value: '90%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: `Percentage of ${forms.lowPlural} fully resolved by the agent. Calculated as resolved ÷ responded.` },
+        { id: 'timeSaved', value: '18h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: `Estimated staff hours saved based on average handle time for equivalent human-handled ${forms.lowPlural}.` },
+      ]
+    : METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
+  const BASE_COLUMNS =
     agentName === 'Reminder agent'        ? REMINDER_COLUMNS
     : agentName === 'Front desk agent'    ? FRONTDESK_COLUMNS
     : agentName === 'Waitlist agent'      ? WAITLIST_COLUMNS
@@ -330,7 +350,17 @@ export function AgentInstanceScreen({
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
     : DEFAULT_COLUMNS
-  const locations = LOCATIONS_BY_AGENT[agentName] ?? LOCATIONS_BY_AGENT['Front desk agent']
+  const COLUMNS: Column<LocationRow>[] = isHealthcareFrontdesk
+    ? BASE_COLUMNS.map((c) =>
+        c.key === 'interactions' ? { ...c, label: `${forms.capPlural} responded` }
+        : c.key === 'fcr' ? { ...c, label: `${forms.capPlural} resolved` }
+        : c
+      )
+    : BASE_COLUMNS
+  const BASE_LOCATIONS = LOCATIONS_BY_AGENT[agentName] ?? LOCATIONS_BY_AGENT['Front desk agent']
+  const locations = isHealthcareFrontdesk
+    ? BASE_LOCATIONS.map((loc) => ({ ...loc, interactions: scaleCountStr(loc.interactions), fcr: scaleCountStr(loc.fcr) }))
+    : BASE_LOCATIONS
   const isTaggingRouting = agentName === 'Tagging & routing agent'
   const tabs = isTaggingRouting ? TAGGING_ROUTING_TABS : TABS
 
@@ -382,6 +412,9 @@ export function AgentInstanceScreen({
               <Icon name="error" size={14} className="text-chip-danger-text" />
               {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
             </span>
+          )}
+          {activeTab === 'outcomes' && isHealthcare && (
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
           )}
 <div className="relative">
             <button

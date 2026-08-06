@@ -8,56 +8,21 @@ import {
   FilterPanel,
   Icon,
   InfoTooltip,
+  NOUN_FORMS,
   ReportHeader,
   SankeyChart,
   SelectMenu,
   StackedBarChart,
   SummaryStats,
   TopNav,
+  ViewModeToggle,
   type Column,
   type FilterField,
+  type NounForms,
   type SankeyLink,
   type SankeyNode,
+  type ViewMode,
 } from '../components'
-
-// ─── Conversations vs. sessions terminology switcher ──────────────────────────
-// A conversation is the full back-and-forth thread with a patient, possibly spanning multiple
-// visits over time. A session is just one exchange within that thread — from an agent's first
-// message to that agent's resolution. This page's copy is written generically against whichever
-// noun is currently selected; only the label changes, not the underlying data.
-
-type ViewMode = 'conversations' | 'sessions'
-
-interface NounForms {
-  capPlural: string
-  capSingular: string
-  lowPlural: string
-  lowSingular: string
-}
-
-const NOUN_FORMS: Record<ViewMode, NounForms> = {
-  conversations: { capPlural: 'Conversations', capSingular: 'Conversation', lowPlural: 'conversations', lowSingular: 'conversation' },
-  sessions:      { capPlural: 'Sessions',      capSingular: 'Session',      lowPlural: 'sessions',      lowSingular: 'session' },
-}
-
-function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange: (mode: ViewMode) => void }) {
-  return (
-    <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface p-[2px]">
-      {(['conversations', 'sessions'] as const).map((mode) => (
-        <button
-          key={mode}
-          type="button"
-          onClick={() => onChange(mode)}
-          className={`rounded-sm px-md py-xs text-body capitalize transition-colors ${
-            value === mode ? 'bg-surface-selected text-text-primary' : 'text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          {mode}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 // ─── Conversation data per funnel node ────────────────────────────────────────
 
@@ -90,12 +55,12 @@ const CONVERSATIONS_BY_NODE: Record<string, FunnelConversation[]> = {
     { id: 'ch-text-5', name: 'Sofia Kim',   verified: true,   message: 'Texted a photo of her insurance card.',                               location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
     { id: 'ch-text-6', name: 'Robert Hail',                    message: 'Texted to cancel his 3pm appointment.',                              location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 7, 2025', unread: true },
   ],
-  'Email': [
-    { id: 'ch-email-1', name: 'Helen Cho',                    message: 'Emailed requesting a copy of the visit summary.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: '11:00 AM', unread: true },
-    { id: 'ch-email-2', name: 'Victor Reyes',                  message: 'Emailed about insurance documentation needed before the visit.',     location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
-    { id: 'ch-email-3', name: 'Lauren Diaz',                   message: 'Emailed to reschedule due to a work conflict.',                      location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
-    { id: 'ch-email-4', name: 'Grace Liu',                     message: 'Emailed to request records be sent to a specialist.',                location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
-    { id: 'ch-email-5', name: 'Tomás Rivera',                  message: 'Emailed asking about payment plan options.',                         location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 7, 2025', unread: true },
+  'Webchat': [
+    { id: 'ch-email-1', name: 'Helen Cho',                    message: 'Messaged requesting a copy of the visit summary.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: '11:00 AM', unread: true },
+    { id: 'ch-email-2', name: 'Victor Reyes',                  message: 'Messaged about insurance documentation needed before the visit.',     location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'ch-email-3', name: 'Lauren Diaz',                   message: 'Messaged to reschedule due to a work conflict.',                      location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
+    { id: 'ch-email-4', name: 'Grace Liu',                     message: 'Messaged to request records be sent to a specialist.',                location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+    { id: 'ch-email-5', name: 'Tomás Rivera',                  message: 'Messaged asking about payment plan options.',                         location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 7, 2025', unread: true },
   ],
   'AI agents involved': [
     { id: 'inv-myna-1', name: 'Grace Liu',                   message: 'AI confirmed appointment details and answered an insurance question.', location: 'North Clinic',    assignee: 'Front desk AI', date: '09:14 AM', unread: true },
@@ -192,7 +157,7 @@ const CHAT_BY_CONVO: Record<string, ChatMsg[]> = {
   ],
   'ch-email-1': [
     { id: '1', sender: 'customer', text: "Could you send me a copy of my visit summary from last week?",               time: '10:50 AM' },
-    { id: '2', sender: 'agent',    text: "Of course — I've attached your visit summary to this email.",                time: '10:58 AM' },
+    { id: '2', sender: 'agent',    text: "Of course — I've attached your visit summary here.",                          time: '10:58 AM' },
     { id: '3', sender: 'customer', text: "Perfect, thank you!",                                                        time: '11:00 AM' },
   ],
   'inv-myna-1': [
@@ -373,24 +338,17 @@ function formatChannelSelectionLabel(selected: string[], options: { value: strin
 }
 
 const FILTER_FIELDS: FilterField[] = [
-  { id: 'channel', label: 'Channels', options: opts('Call', 'Text', 'Email'), multi: true, formatSelectionLabel: formatChannelSelectionLabel },
-  { id: 'region',          label: 'Region',              options: opts('Northeast', 'Southeast', 'Midwest', 'Southwest', 'West Coast', 'Pacific Northwest') },
-  { id: 'division',        label: 'Division',            options: opts('Division A', 'Division B', 'Division C', 'Division D', 'Division E') },
-  { id: 'city',            label: 'City',                options: opts('Austin', 'San Francisco', 'Phoenix', 'Denver', 'Seattle', 'Dallas', 'Houston', 'Chicago') },
-  { id: 'zip',             label: 'Zip',                 options: opts('78701', '78702', '94102', '85001', '80201', '98101', '75201', '60601') },
-  { id: 'outcome',         label: 'Outcome',             options: opts('Resolved', 'Transferred', 'Missed') },
-  { id: 'content-manager', label: 'Content manager',     options: opts('Kelsy Hiltz', 'Marcus Webb', 'Priya Nair', 'Sofia Mendez', 'Derek Okafor') },
-  { id: 'social-manager',  label: 'Social manager',      options: opts('Tasha Winters', 'Omar Farouk', 'Brianna Cole', 'Nathan Cruz', 'Linda Hargrove') },
-  { id: 'area-code',       label: 'Area code',           options: opts('512', '415', '602', '303', '206', '214', '713', '312') },
-  { id: 'region-manager',  label: 'Region manager',      options: opts('James Whitfield', 'Ray Castellano', 'Ana Reyes', 'David Park', 'Michelle Torres') },
-  { id: 'room-custom',     label: 'Room custom',         options: opts('Exam Room 1', 'Exam Room 2', 'Consultation A', 'Consultation B', 'Waiting Bay') },
-  { id: 'new-alpha-beta',  label: 'New alpha beta test', options: opts('Alpha Group', 'Beta Group', 'Control Group', 'Pilot A', 'Pilot B') },
-  { id: 'custom-test',     label: 'Custom test',         options: opts('Test Group A', 'Test Group B', 'Cohort 1', 'Cohort 2', 'Cohort 3') },
-  { id: 'location',              label: 'Location',                        options: opts('North Austin', 'South Austin', 'San Francisco', 'Phoenix, AZ', 'Denver, CO', 'Seattle, WA') },
-  { id: 'call-status',           label: 'Call status',                     options: opts('Resolved', 'Transferred', 'Missed', 'Pending') },
-  { id: 'answered-by',           label: 'Answered by',                     options: opts('AI agents', 'Human agent', 'Not answered') },
-  { id: 'time-period',           label: 'Time period',                     options: opts('Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Last 3 months', 'Last 6 months', 'Last 12 months') },
-  { id: 'call-timing',           label: 'Call timing',                     options: opts('Office hours', 'After hours') },
+  { id: 'state',                  label: 'State',                  options: opts('Texas', 'California', 'Arizona', 'Colorado', 'Washington', 'Illinois') },
+  { id: 'brand',                  label: 'Brand',                  options: opts('Willowbrook Health', 'Riverside Medical Group', 'Evercare Clinics', 'Northgate Health Partners') },
+  { id: 'location',               label: 'Location',               options: opts('North Clinic', 'South Clinic', 'Downtown Clinic') },
+  { id: 'channel',                label: 'Channel',                 options: opts('Call', 'Text', 'Webchat'), formatSelectionLabel: formatChannelSelectionLabel },
+  { id: 'outcome',                label: 'Outcome',                options: opts('Resolved', 'Transferred', 'Missed') },
+  { id: 'sub-outcomes',           label: 'Sub-outcomes',           options: opts('Answered', 'Pending', 'Bookings', 'Rescheduled', 'Cancellations') },
+  { id: 'agents',                 label: 'Agents',                 options: opts('Front desk agent - North region', 'Front desk agent - East region', 'Front desk agent - South region', 'Front desk agent - West region') },
+  { id: 'involvement',            label: 'Involvement',            options: opts('AI agents involved', 'Human involved', 'Not answered') },
+  { id: 'call-timing',            label: 'Call timing',            options: opts('Office hours', 'After hours') },
+  { id: 'last-incoming-message',  label: 'Last incoming message',  options: opts('Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Last 3 months') },
+  { id: 'intents',                label: 'Intents',                options: opts('General inquiry', 'Scheduling', 'Reschedule', 'Cancellation', 'Prescription', 'Lab results', 'Other') },
 ]
 
 // Healthcare chart card — uses the tune icon for the left action button
@@ -420,17 +378,17 @@ function getSummaryStats(forms: NounForms, grandTotal: number, resolvedTotal: nu
 // period. The monthly total still moves up and down rather than climbing in a straight
 // line; only "Not answered" wobbles a little, since it isn't part of the handoff story.
 const CHANNEL_TREND_DATA = [
-  { month: 'Feb', call: 492, text: 246, email: 82  },
-  { month: 'Mar', call: 534, text: 267, email: 89  },
-  { month: 'Apr', call: 510, text: 255, email: 85  },
-  { month: 'May', call: 558, text: 279, email: 93  },
-  { month: 'Jun', call: 528, text: 264, email: 88  },
-  { month: 'Jul', call: 600, text: 300, email: 100 },
+  { month: 'Feb', call: 492, text: 246, webchat: 82  },
+  { month: 'Mar', call: 534, text: 267, webchat: 89  },
+  { month: 'Apr', call: 510, text: 255, webchat: 85  },
+  { month: 'May', call: 558, text: 279, webchat: 93  },
+  { month: 'Jun', call: 528, text: 264, webchat: 88  },
+  { month: 'Jul', call: 600, text: 300, webchat: 100 },
 ]
 const CHANNEL_TREND_SERIES = [
-  { key: 'call',  label: 'Call',  color: '#1976d2' },
-  { key: 'text',  label: 'Text',  color: '#3f51b5' },
-  { key: 'email', label: 'Email', color: '#9c27b0' },
+  { key: 'call',    label: 'Call',    color: '#1976d2' },
+  { key: 'text',    label: 'Text',    color: '#3f51b5' },
+  { key: 'webchat', label: 'Webchat', color: '#9c27b0' },
 ]
 
 const INVOLVEMENT_TREND_DATA = [
@@ -475,7 +433,7 @@ const TIMING_TREND_SERIES = [
   { key: 'after',  label: 'After hours',  color: '#c4b1f7' },
 ]
 
-// Interactions by channel (Call/Text/Email) → Involvement → Outcome → Sub-outcome
+// Interactions by channel (Call/Text/Webchat) → Involvement → Outcome → Sub-outcome
 // 0-2: channels, 3-5: involvement, 6-8: outcome, 9-13: sub-outcome.
 // Nodes are ordered largest-first within each column so the dominant flow stays flush
 // along the top of the diagram instead of sweeping diagonally between columns.
@@ -490,9 +448,9 @@ const FUNNEL_LINKS: SankeyLink[] = [
   { source: 1, target: 3, value: 192 }, // Text    → AI agents involved
   { source: 1, target: 4, value: 100 }, // Text    → Human involved
   { source: 1, target: 5, value: 8   }, // Text    → Not answered
-  { source: 2, target: 3, value: 38  }, // Email   → AI agents involved
-  { source: 2, target: 4, value: 60  }, // Email   → Human involved
-  { source: 2, target: 5, value: 2   }, // Email   → Not answered
+  { source: 2, target: 3, value: 38  }, // Webchat → AI agents involved
+  { source: 2, target: 4, value: 60  }, // Webchat → Human involved
+  { source: 2, target: 5, value: 2   }, // Webchat → Not answered
   // involvement → outcome — human involvement resolves, but never "transfers" (it's already a human);
   // not-answered interactions land in Missed instead of dropping out of the diagram.
   { source: 3, target: 6, value: 560 }, // AI agents involved  → Resolved
@@ -518,18 +476,18 @@ const FUNNEL_NODE_COLORS: Record<number, string> = {
 
 // ─── Channel filter ───────────────────────────────────────────────────────────
 // Every chart on this page is driven off the channel split established by the funnel
-// (Call 600 / Text 300 / Email 100 of 1,000). Deselecting a channel in the "Channels" filter
+// (Call 600 / Text 300 / Webchat 100 of 1,000). Deselecting a channel in the "Channels" filter
 // re-derives the whole page from there: the funnel is recomputed exactly (each downstream node
 // rescaled by how much of its inflow survived the filter, preserving flow conservation column to
 // column), and every other chart — which only has aggregate, not per-channel, data — scales by
 // the resulting ratio of filtered-to-total volume. Only "Interaction/Conversation/Session trend
 // by channel" and "Conversations by channel" are true per-channel data, so those filter exactly
 // instead of scaling.
-const CHANNEL_KEYS = ['call', 'text', 'email'] as const
+const CHANNEL_KEYS = ['call', 'text', 'webchat'] as const
 type ChannelKey = typeof CHANNEL_KEYS[number]
-const CHANNEL_NODE_INDEX: Record<ChannelKey, number> = { call: 0, text: 1, email: 2 }
+const CHANNEL_NODE_INDEX: Record<ChannelKey, number> = { call: 0, text: 1, webchat: 2 }
 const FUNNEL_NODE_BASE_NAMES = [
-  'Call', 'Text', 'Email',
+  'Call', 'Text', 'Webchat',
   'AI agents involved', 'Human involved', 'Not answered',
   'Resolved', 'Transferred', 'Missed',
   'Answered', 'Pending', 'Bookings', 'Rescheduled', 'Cancellations',
@@ -662,12 +620,6 @@ function getIntentColumns(forms: NounForms): Column<IntentRow>[] {
 
 // ─── Copied from Front desk overview ─────────────────────────────────────────
 
-const SOURCE_DONUT = [
-  { name: 'Link', value: 41.2, color: '#9c27b0' },
-  { name: 'FAQ',  value: 32.5, color: '#f59e0b' },
-  { name: 'File', value: 26.3, color: '#4cae3d' },
-]
-
 
 const INSURANCE_DATA = [
   { month: 'Dec', verified: 464 },
@@ -754,18 +706,11 @@ function getInsuranceData(ratio: number) {
   return scaleRows(INSURANCE_DATA, ['verified'], ratio)
 }
 const scaleK = (value: number, ratio: number, suffix: 'K' | 'k' = 'K') => `${(value * ratio).toFixed(1)}${suffix}`
-function getSourceStats(ratio: number) {
-  return [
-    { value: scaleK(4.4, ratio), label: 'Link' },
-    { value: scaleK(2.4, ratio), label: 'FAQ'  },
-    { value: scaleK(1.6, ratio), label: 'File' },
-  ]
-}
 
 // Real per-channel totals, unlike everything above — a channel filter here is exact, not scaled.
-const CHANNEL_TOTALS: Record<ChannelKey, number> = { call: 600, text: 300, email: 100 }
-const CHANNEL_LABELS: Record<ChannelKey, string> = { call: 'Call', text: 'Text', email: 'Email' }
-const CHANNEL_COLORS: Record<ChannelKey, string> = { call: '#1976d2', text: '#3f51b5', email: '#9c27b0' }
+const CHANNEL_TOTALS: Record<ChannelKey, number> = { call: 600, text: 300, webchat: 100 }
+const CHANNEL_LABELS: Record<ChannelKey, string> = { call: 'Call', text: 'Text', webchat: 'Webchat' }
+const CHANNEL_COLORS: Record<ChannelKey, string> = { call: '#1976d2', text: '#3f51b5', webchat: '#9c27b0' }
 const formatCompact = (n: number) => (n >= 1000 ? `${parseFloat((n / 1000).toFixed(1))}K` : `${n}`)
 function getChannelStats(selectedChannels: ChannelKey[]) {
   const selected = new Set(selectedChannels)
@@ -848,13 +793,13 @@ function sumField<T extends Record<string, number>>(breakdown: Record<string, T>
   return members.reduce((sum, m) => sum + (breakdown[m]?.[field] ?? 0), 0)
 }
 
-const LOCATION_CHANNEL_BREAKDOWN: Record<string, { call: number; text: number; email: number }> = {
-  'North Clinic':    { call: 132, text: 66, email: 22 },
-  'South Clinic':    { call: 114, text: 57, email: 19 },
-  'Downtown Clinic': { call: 102, text: 51, email: 17 },
-  'East Clinic':     { call: 90,  text: 45, email: 15 },
-  'West Clinic':     { call: 84,  text: 42, email: 14 },
-  'Uptown Clinic':   { call: 78,  text: 39, email: 13 },
+const LOCATION_CHANNEL_BREAKDOWN: Record<string, { call: number; text: number; webchat: number }> = {
+  'North Clinic':    { call: 132, text: 66, webchat: 22 },
+  'South Clinic':    { call: 114, text: 57, webchat: 19 },
+  'Downtown Clinic': { call: 102, text: 51, webchat: 17 },
+  'East Clinic':     { call: 90,  text: 45, webchat: 15 },
+  'West Clinic':     { call: 84,  text: 42, webchat: 14 },
+  'Uptown Clinic':   { call: 78,  text: 39, webchat: 13 },
 }
 
 const LOCATION_OUTCOME_BREAKDOWN: Record<string, { resolved: number; transferred: number; missed: number }> = {
@@ -1121,9 +1066,9 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
     columns = [
       LOCATION_COLUMN,
       TOTAL_INTERACTIONS_COLUMN,
-      { key: 'call',  label: 'Call',  width: 120, sortable: true },
-      { key: 'text',  label: 'Text',  width: 120, sortable: true },
-      { key: 'email', label: 'Email', width: 120, sortable: true },
+      { key: 'call',    label: 'Call',    width: 120, sortable: true },
+      { key: 'text',    label: 'Text',    width: 120, sortable: true },
+      { key: 'webchat', label: 'Webchat', width: 120, sortable: true },
       RESOLUTION_RATE_COLUMN,
     ]
     const isSelected = new Set(selectedChannels)
@@ -1132,7 +1077,7 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
       totalInteractions: r.totalInteractions,
       call: isSelected.has('call') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'call') : 0,
       text: isSelected.has('text') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'text') : 0,
-      email: isSelected.has('email') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'email') : 0,
+      webchat: isSelected.has('webchat') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'webchat') : 0,
       resolutionRate: r.resolutionRate,
     }))
   }
@@ -1157,12 +1102,43 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
   )
 }
 
+// Full-page skeleton shown for a beat while filters reshape every chart on the page at once.
+const SKELETON_BLOCK_HEIGHTS = [440, 280, 280, 280, 280, 340, 300, 260, 320, 260, 300]
+function PageSkeleton() {
+  return (
+    <div className="flex flex-col gap-lg p-2xl">
+      <div className="grid grid-cols-4 gap-lg">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-20 animate-pulse rounded-sm bg-surface-selected" style={{ animationDelay: `${i * 40}ms` }} />
+        ))}
+      </div>
+      {SKELETON_BLOCK_HEIGHTS.map((h, i) => (
+        <div key={i} className="animate-pulse rounded-sm bg-surface-selected" style={{ height: h, animationDelay: `${i * 40}ms` }} />
+      ))}
+    </div>
+  )
+}
+
 export function HCFrontdeskOverview2Screen() {
-  const [viewMode, setViewMode] = useState<ViewMode>('conversations')
+  const [viewMode, setViewMode] = useState<ViewMode>('sessions')
   const forms = NOUN_FORMS[viewMode]
   const [dateRange, setDateRange] = useState('Last 6 months')
   const [filterOpen, setFilterOpen] = useState(false)
   const [filterSelections, setFilterSelections] = useState<Record<string, string[]>>({})
+  const [filtersLoading, setFiltersLoading] = useState(false)
+  const isFirstFilterRender = useRef(true)
+
+  // Simulate a fresh fetch of the whole page whenever a filter selection changes.
+  useEffect(() => {
+    if (isFirstFilterRender.current) {
+      isFirstFilterRender.current = false
+      return
+    }
+    setFiltersLoading(true)
+    const t = setTimeout(() => setFiltersLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [filterSelections])
+
   // Empty selection reads as "no filter" (show every channel) rather than "show nothing".
   const selectedChannels = ((filterSelections.channel?.length ? filterSelections.channel : CHANNEL_KEYS) as ChannelKey[])
   const filteredFunnel = computeFilteredFunnel(selectedChannels)
@@ -1238,7 +1214,7 @@ export function HCFrontdeskOverview2Screen() {
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
           title="Front desk overview 2"
-          subtitle="Front desk agent outcomes across patient inquiries, appointments, and cost savings."
+          subtitle={`${filteredFunnel.grandTotal.toLocaleString()} ${forms.lowPlural} across patient inquiries, appointments, and cost savings.`}
           rightSlot={
             <div className="flex items-center gap-sm">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
@@ -1259,6 +1235,9 @@ export function HCFrontdeskOverview2Screen() {
           }
         />
 
+        {filtersLoading ? (
+          <PageSkeleton />
+        ) : (
         <div className="flex flex-col gap-lg p-2xl">
 
           <SummaryStats stats={getSummaryStats(forms, filteredFunnel.grandTotal, filteredFunnel.resolvedTotal, channelRatio)} />
@@ -1275,6 +1254,7 @@ export function HCFrontdeskOverview2Screen() {
               // scale close enough to the others that all four read as equally full.
               nodePadding={4}
               columnHeaders={[`${forms.capPlural} by channel`, 'Involvement', 'Outcome', 'Sub-outcome']}
+              columnHeaderTooltips={{ 1: `Outcomes for Human involved ${forms.lowPlural} are tracked across Text and Webchat only — voice call outcomes aren't included.` }}
               onNodeClick={(name) => { if (CONVERSATIONS_BY_NODE[name]) setNodeDrawer(name) }}
             />
           </HCCard>
@@ -1333,17 +1313,10 @@ export function HCFrontdeskOverview2Screen() {
             <DataTable columns={getIntentColumns(forms)} data={getIntentTableData(channelRatio)} stickyFirstColumn />
           </HCCard>
 
-          <div className="grid grid-cols-2 gap-lg">
-            <HCCard title="Answers from source" tooltip={`The last source used to respond in each unique ${forms.lowSingular}, broken down by source type`}>
-              <ChartStatRow stats={getSourceStats(channelRatio)} />
-              <DonutChart data={SOURCE_DONUT} centerValue={scaleK(6.8, channelRatio, 'k')} centerLabel="Total responses" />
-            </HCCard>
-
-            <HCCard title={`${forms.capPlural} by channel`} tooltip={`How ${forms.lowPlural} are distributed across call, text, and email`}>
-              <ChartStatRow stats={getChannelStats(selectedChannels)} />
-              <DonutChart data={getChannelDonut(selectedChannels)} centerValue={formatCompact(filteredFunnel.grandTotal)} centerLabel={`Total ${forms.lowPlural}`} />
-            </HCCard>
-          </div>
+          <HCCard title={`${forms.capPlural} by channel`} tooltip={`How ${forms.lowPlural} are distributed across call, text, and webchat`}>
+            <ChartStatRow stats={getChannelStats(selectedChannels)} />
+            <DonutChart data={getChannelDonut(selectedChannels)} centerValue={formatCompact(filteredFunnel.grandTotal)} centerLabel={`Total ${forms.lowPlural}`} />
+          </HCCard>
 
           <HCCard title="Insurances verified" tooltip={`Monthly count of unique ${forms.lowPlural} where the agent verified the patient's insurance`}>
             <ChartStatRow stats={[
@@ -1363,6 +1336,7 @@ export function HCFrontdeskOverview2Screen() {
           <InteractionsByDimensionCard forms={forms} selectedChannels={selectedChannels} />
 
         </div>
+        )}
       </div>
       <FilterPanel
         open={filterOpen}
