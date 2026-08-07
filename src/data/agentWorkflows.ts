@@ -1453,6 +1453,98 @@ export const REVIEW_RESPONSE_WORKFLOW: AgentWorkflow = {
   nodeDetails: REVIEW_RESPONSE_NODE_DETAILS,
 }
 
+// ─── Review generation agent ─────────────────────────────────────────────────
+// Workflow: transaction complete → send review request email → send review request text
+
+const REVIEW_GENERATION_NODES = [
+  {
+    id: 'rg-1',
+    flowType: 'trigger' as const,
+    data: {
+      title: 'When a transaction is completed',
+      subtype: 'Entity trigger',
+      headerLabel: 'Trigger',
+      hasToggle: false,
+      hasAiIcon: false,
+      titlePlaceholder: 'Enter trigger name',
+      descriptionPlaceholder: 'Enter description',
+    },
+  },
+  {
+    id: 'rg-2',
+    flowType: 'task' as const,
+    data: {
+      title: 'Send review request email',
+      subtype: 'Integration',
+      hasToggle: false,
+      hasAiIcon: false,
+      titlePlaceholder: 'Enter task name',
+      descriptionPlaceholder: 'Enter description',
+    },
+  },
+  {
+    id: 'rg-3',
+    flowType: 'task' as const,
+    data: {
+      title: 'Send review request text',
+      subtype: 'Integration',
+      hasToggle: false,
+      hasAiIcon: false,
+      titlePlaceholder: 'Enter task name',
+      descriptionPlaceholder: 'Enter description',
+    },
+  },
+]
+
+const REVIEW_GENERATION_NODE_DETAILS: Record<string, any> = {
+  '__start__': {
+    agentName: 'Review generation agent',
+    goals:
+      'Request reviews from customers after a completed transaction, using email and text to maximize response rates.',
+    outcomes:
+      'Increase review volume across locations while saving staff time on manual follow-up.',
+    locations: [
+      { id: 'loc-1', name: 'North Region' },
+      { id: 'loc-2', name: 'A/B testing cohort' },
+    ],
+  },
+  'rg-1': {
+    triggerName: 'When a transaction is completed',
+    description: 'Agent triggers when a customer completes a qualifying transaction at an enabled location.',
+    conditions: [
+      { id: 1, fieldValue: 'transaction_status', operatorValue: 'equals', valueValue: 'completed' },
+    ],
+    conditionOptions: {
+      field: [
+        { value: 'transaction_status', label: 'Transaction status' },
+        { value: 'location', label: 'Location' },
+      ],
+      operator: [
+        { value: 'equals', label: 'Equals' },
+        { value: 'not_equals', label: 'Does not equal' },
+      ],
+      value: [
+        { value: 'completed', label: 'Completed' },
+      ],
+    },
+  },
+  'rg-2': {
+    taskName: 'Send review request email',
+    description: 'Sends a branded email asking the customer to leave a review on their preferred review site.',
+    selectedTools: ['send-email'],
+  },
+  'rg-3': {
+    taskName: 'Send review request text',
+    description: 'Follows up with a short text message containing a review request link.',
+    selectedTools: ['send-sms'],
+  },
+}
+
+export const REVIEW_GENERATION_WORKFLOW: AgentWorkflow = {
+  nodes: REVIEW_GENERATION_NODES,
+  nodeDetails: REVIEW_GENERATION_NODE_DETAILS,
+}
+
 export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,             nodeDetails: FRONTDESK_HC_NODE_DETAILS          },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
@@ -1467,6 +1559,9 @@ export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Review response agent replying after human approval': REVIEW_RESPONSE_WORKFLOW,
   'Review response agent suggesting replies in dashboard': REVIEW_RESPONSE_WORKFLOW,
   'Review response agents': REVIEW_RESPONSE_WORKFLOW,
+  'Review generation agent': REVIEW_GENERATION_WORKFLOW,
+  'Review generation agent with A/B testing': REVIEW_GENERATION_WORKFLOW,
+  'Review generation agents': REVIEW_GENERATION_WORKFLOW,
 }
 
 // ─── Shared voice-call conditionOptions (reused across all three dental agents) ─

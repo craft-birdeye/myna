@@ -5,6 +5,7 @@ import AgentDetailsBody from './AgentDetailsBody';
 import LLMTaskBody from './LLMTaskBody';
 import EntityTaskBody from './EntityTaskBody';
 import EntityTriggerBody from './EntityTriggerBody';
+import ReviewTriggerBody from './ReviewTriggerBody';
 import BranchBody from './BranchBody';
 import DelayBody from './DelayBody';
 import ParallelBody from './ParallelBody';
@@ -52,6 +53,11 @@ const VARIANTS = {
   entityTrigger: {
     body: EntityTriggerBody,
     showActions: true,
+    showPromptStrength: false,
+  },
+  reviewTrigger: {
+    body: ReviewTriggerBody,
+    showActions: false,
     showPromptStrength: false,
   },
   branch: {
@@ -149,11 +155,19 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
             pointerEvents: viewOnly ? 'none' : undefined,
             userSelect: viewOnly ? 'text' : undefined,
           }}>
-            <Body {...(bodyProps || {})} viewOnly={viewOnly} product={product} />
+            <Body
+              {...(bodyProps || {})}
+              viewOnly={viewOnly}
+              product={product}
+              allowStepsExpand={
+                bodyProps?.allowStepsExpand
+                ?? (variant === 'procedureDetail' || variant === 'createCustomProcedure')
+              }
+            />
           </div>
         </div>
 
-        {!viewOnly && variant === 'createCustomProcedure' && (
+        {!viewOnly && (variant === 'createCustomProcedure' || variant === 'reviewTrigger') && (
           <RHSPanelFooter onSave={onSave} saveLabel="Save" />
         )}
       </div>

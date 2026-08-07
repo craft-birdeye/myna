@@ -160,15 +160,22 @@ export default function CanvasNodeHeader({
         {hasAddButton && (
           <Button type="link" customIcon={<AddIcon />} onClick={onAddClick} noHover aria-label="Add" />
         )}
-        {!viewOnly && (
-          <div className="cnh__more-wrapper" ref={menuRef}>
-            <Button type="link" customIcon={<MoreIcon />} onClick={handleMoreClick} noHover aria-label="More options" />
-            {menuOpen && (
+        <div className="cnh__more-wrapper" ref={menuRef}>
+          <button
+            type="button"
+            className="cnh__more-btn"
+            onClick={viewOnly ? (e) => e.stopPropagation() : handleMoreClick}
+            onMouseDown={(e) => e.stopPropagation()}
+            aria-label="More options"
+          >
+            <MoreIcon />
+          </button>
+          {!viewOnly && menuOpen && (
               <div className="cnh__context-menu">
                 {isTrigger ? (
-                  <button className="cnh__context-menu-item" onClick={handleReplace}>
-                    <ReplaceIcon />
-                    <span>Replace</span>
+                  <button className="cnh__context-menu-item cnh__context-menu-item--delete" onClick={handleDelete}>
+                    <DeleteIcon />
+                    <span>Delete</span>
                   </button>
                 ) : (
                   <>
@@ -196,8 +203,7 @@ export default function CanvasNodeHeader({
                 )}
               </div>
             )}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
