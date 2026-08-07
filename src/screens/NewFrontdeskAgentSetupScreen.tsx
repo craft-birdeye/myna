@@ -540,7 +540,7 @@ function VoiceChannelSettings({
       </div>
 
       <div>
-        <p className="text-small text-text-secondary">Recording</p>
+        <p className="text-small text-text-secondary">Call recording</p>
         <div className="mt-sm flex flex-col gap-sm">
           <label className="flex cursor-pointer items-center gap-sm">
             <input
@@ -561,7 +561,7 @@ function VoiceChannelSettings({
                 onChange={() => onRecordingChange('announced')}
                 className="accent-primary"
               />
-              <span className="text-body text-text-primary">Record with announced consent</span>
+              <span className="text-body text-text-primary">Record only after obtaining consent</span>
             </label>
             {recording === 'announced' && (
               <div className="mt-sm pl-2xl">
@@ -597,7 +597,7 @@ function ChannelAccordion({
   const isOpen = collapsible ? open : true
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-surface-l2">
+    <div className="overflow-hidden rounded-md border border-border bg-surface">
       {collapsible ? (
         <button
           type="button"
@@ -1297,7 +1297,7 @@ export function NewFrontdeskAgentSetupScreen({
   const [additionalVoices, setAdditionalVoices] = useState<string[]>([])
   const [additionalVoiceConfigs, setAdditionalVoiceConfigs] = useState<AdditionalVoiceConfig[]>([])
   const [greeting, setGreeting] = useState('')
-  const [recording, setRecording] = useState<RecordingMode>('off')
+  const [recording, setRecording] = useState<RecordingMode>('announced')
   const [consent, setConsent] = useState('')
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([])
   const [procedureCatalog, setProcedureCatalog] = useState<HealthcareProcedureCatalogItem[]>(

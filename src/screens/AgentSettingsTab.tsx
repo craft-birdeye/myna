@@ -613,7 +613,7 @@ function ReminderSettings() {
   const [greeting, setGreeting] = useState(
     'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?'
   )
-  const [recording, setRecording] = useState<RecordingMode>('off')
+  const [recording, setRecording] = useState<RecordingMode>('announced')
   const [consent, setConsent] = useState(
     'This call may be recorded for quality and training purposes.'
   )
@@ -781,7 +781,7 @@ function ReminderSettings() {
       </div>
 
       <div className="pt-sm">
-        <p className="text-body text-text-primary">Recording</p>
+        <p className="text-body text-text-primary">Call recording</p>
         <div className="mt-sm flex flex-col gap-sm">
           <label className="flex cursor-pointer items-center gap-sm">
             <input
@@ -802,7 +802,7 @@ function ReminderSettings() {
                 onChange={() => setRecording('announced')}
                 className="accent-primary"
               />
-              <span className="text-body text-text-primary">Record with announced consent</span>
+              <span className="text-body text-text-primary">Record only after obtaining consent</span>
             </label>
             {recording === 'announced' && (
               <div className="mt-sm pl-2xl">
@@ -843,7 +843,7 @@ function FrontDeskSettings() {
   const [editingAdditionalVoice, setEditingAdditionalVoice] =
     useState<AdditionalVoiceConfig | null>(null)
   const [greeting, setGreeting] = useState(FRONTDESK_GREETING)
-  const [recording, setRecording] = useState<RecordingMode>('off')
+  const [recording, setRecording] = useState<RecordingMode>('announced')
   const [consent, setConsent] = useState(FRONTDESK_CONSENT)
 
   const promptRef = useRef<HTMLTextAreaElement>(null)
@@ -1236,7 +1236,7 @@ function FrontDeskSettings() {
 
       {/* Recording */}
       <div className="pt-sm">
-        <p className="text-body text-text-primary">Recording</p>
+        <p className="text-body text-text-primary">Call recording</p>
         <div className="mt-sm flex flex-col gap-sm">
           <label className="flex cursor-pointer items-center gap-sm">
             <input
@@ -1257,7 +1257,7 @@ function FrontDeskSettings() {
                 onChange={() => setRecording('announced')}
                 className="accent-primary"
               />
-              <span className="text-body text-text-primary">Record with announced consent</span>
+              <span className="text-body text-text-primary">Record only after obtaining consent</span>
             </label>
             {recording === 'announced' && (
               <div className="mt-sm pl-2xl">
@@ -1284,7 +1284,7 @@ export function AgentSettingsTab({
   const [greeting, setGreeting] = useState(
     'Thank you for calling — my name is Myna, your virtual assistant. How can I help you today?'
   )
-  const [recording, setRecording] = useState<RecordingMode>('off')
+  const [recording, setRecording] = useState<RecordingMode>('announced')
   const [consent, setConsent] = useState(
     'This call may be recorded for quality and training purposes.'
   )
@@ -1351,7 +1351,7 @@ export function AgentSettingsTab({
                 </div>
 
                 <div className="pt-sm">
-                  <p className="text-small text-text-secondary">Recording</p>
+                  <p className="text-small text-text-secondary">Call recording</p>
                   <SettingSubtext tone="tertiary">
                     Applies to voice calls only
                   </SettingSubtext>
@@ -1377,7 +1377,7 @@ export function AgentSettingsTab({
                           onChange={() => setRecording('announced')}
                           className="accent-primary"
                         />
-                        <span className="text-body text-text-primary">Record with announced consent</span>
+                        <span className="text-body text-text-primary">Record only after obtaining consent</span>
                       </label>
                       {recording === 'announced' && (
                         <div className="mt-sm pl-2xl">

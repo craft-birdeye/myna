@@ -92,9 +92,10 @@ function SettingsSelect({
 /** STT / TTS engine model pickers shown above Default voice in voice call settings. */
 export function VoiceCallEngineSettings() {
   const [sttModel, setSttModel] = useState('Deepgram_flux')
-  const [sttFailover, setSttFailover] = useState('Manual')
+  const [sttFailover, setSttFailover] = useState('Automatic')
   const [sttFailoverModel, setSttFailoverModel] = useState('Assembly AI')
   const [ttsModel, setTtsModel] = useState('Cartesia')
+  const [interruptions, setInterruptions] = useState(true)
 
   return (
     <div className="flex flex-col">
@@ -102,7 +103,7 @@ export function VoiceCallEngineSettings() {
         <h3 className="text-body font-medium text-text-primary">Speech-to-text (STT)</h3>
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
-            Model <span className="text-chip-danger-text">*</span>
+            Primary model <span className="text-chip-danger-text">*</span>
           </label>
           <SettingsSelect value={sttModel} options={STT_MODELS} onChange={setSttModel} />
         </div>
@@ -117,7 +118,7 @@ export function VoiceCallEngineSettings() {
           {sttFailover === 'Manual' && (
             <div className="flex flex-col gap-xs">
               <label className="text-small text-text-secondary">
-                Model <span className="text-chip-danger-text">*</span>
+                Failover model <span className="text-chip-danger-text">*</span>
               </label>
               <SettingsSelect
                 value={sttFailoverModel}
@@ -129,11 +130,22 @@ export function VoiceCallEngineSettings() {
         </div>
       </div>
 
+      <div className="flex items-center gap-sm py-sm mt-[12px]">
+        <label className="flex items-center gap-xs text-body text-text-primary">
+          Enable interruptions
+          <InfoTooltip
+            text="Allow users to interrupt the agent while the first message is being delivered."
+            variant="detail"
+          />
+        </label>
+        <Toggle checked={interruptions} onChange={setInterruptions} />
+      </div>
+
       <div className="flex flex-col gap-md pt-2xl">
         <h3 className="text-body font-medium text-text-primary">Text-to-speech (TTS)</h3>
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
-            Model <span className="text-chip-danger-text">*</span>
+            Primary model <span className="text-chip-danger-text">*</span>
           </label>
           <SettingsSelect value={ttsModel} options={TTS_MODELS} onChange={setTtsModel} />
         </div>
@@ -142,14 +154,13 @@ export function VoiceCallEngineSettings() {
   )
 }
 
-/** TTS failover policy + interruption toggle, shown after Default voice / Add additional voice. */
+/** TTS failover policy, shown after Default voice / Add additional voice. */
 export function VoiceCallInterruptionSettings() {
   const [ttsFailover, setTtsFailover] = useState('Automatic')
   const [ttsFailoverModel, setTtsFailoverModel] = useState(TTS_FAILOVER_MODELS[0])
   const [ttsFailoverVoice, setTtsFailoverVoice] = useState(DEFAULT_AGENT_VOICE)
   const [ttsFailoverVoiceSpeed, setTtsFailoverVoiceSpeed] = useState(1)
   const [failoverVoiceDrawerOpen, setFailoverVoiceDrawerOpen] = useState(false)
-  const [interruptions, setInterruptions] = useState(true)
 
   return (
     <div className="flex flex-col gap-md">
@@ -164,7 +175,7 @@ export function VoiceCallInterruptionSettings() {
         {ttsFailover === 'Manual' && (
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">
-              Model <span className="text-chip-danger-text">*</span>
+              Failover model <span className="text-chip-danger-text">*</span>
             </label>
             <SettingsSelect
               value={ttsFailoverModel}
@@ -207,17 +218,6 @@ export function VoiceCallInterruptionSettings() {
           />
         </div>
       )}
-
-      <div className="flex items-center gap-sm py-sm">
-        <label className="flex items-center gap-xs text-body text-text-primary">
-          Enable interruptions
-          <InfoTooltip
-            text="Allow users to interrupt the agent while the first message is being delivered."
-            variant="detail"
-          />
-        </label>
-        <Toggle checked={interruptions} onChange={setInterruptions} />
-      </div>
     </div>
   )
 }
