@@ -82,18 +82,6 @@ function formatNumber(n: number): string {
   return String(Math.round(n))
 }
 
-function OutcomeRow({ label, agentName, value }: { label: string; agentName: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-md border-t border-border py-lg first:border-t-0">
-      <div className="min-w-0">
-        <p className="m-0 text-body text-text-primary">{label}</p>
-        <p className="m-0 mt-xs text-small text-text-tertiary">{agentName}</p>
-      </div>
-      <span className="shrink-0 text-h3 text-text-primary">{value}</span>
-    </div>
-  )
-}
-
 // Illustrative share of each outcome's volume driven by the agent's own automated actions
 // (vs. human-assisted) — keyed by agentDirectoryData.ts's agent id.
 const AGENT_CONTRIBUTION_PCT: Record<string, string> = {
@@ -229,29 +217,34 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
 
   // Reviews responded / New reviews (Reviews AI category only — Posts published/Comments
   // handled belong to the Social card) promoted upfront, alongside Requests sent/Reviews
-  // received — same treatment as Myna's outcomes on the Inbox card.
+  // received — same treatment as Myna's outcomes on the Inbox card. Left to right: Requests
+  // sent, Reviews received, New reviews, Reviews responded.
   const requestsSent = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'requests-sent')!
   const reviewsReceived = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'reviews-received')!
   const sideReviewStats = OVERVIEW_REVIEWS_STATS.filter((s) => s.id !== 'requests-sent' && s.id !== 'reviews-received')
+  const reviewsAgentOutcomes: OutcomeKpi[] = jayAgents
+    .filter((a) => a.id === 'review-generation' || a.id === 'review-response')
+    .sort((a) => (a.id === 'review-generation' ? -1 : 1))
+    .map((a) => ({
+      id: a.id,
+      value: formatK(a.outcome.value),
+      label: a.outcome.label,
+      agentName: a.name,
+      agentPct: AGENT_CONTRIBUTION_PCT[a.id],
+    }))
   const topReviewStats: OutcomeKpi[] = [
-    ...jayAgents
-      .filter((a) => a.id === 'review-response' || a.id === 'review-generation')
-      .map((a) => ({
-        id: a.id,
-        value: formatK(a.outcome.value),
-        label: a.outcome.label,
-        agentName: a.name,
-        agentPct: AGENT_CONTRIBUTION_PCT[a.id],
-      })),
     { id: requestsSent.id, value: requestsSent.value, label: requestsSent.label, agentName: '' },
     { id: reviewsReceived.id, value: reviewsReceived.value, label: reviewsReceived.label, agentName: '' },
+    ...reviewsAgentOutcomes,
   ]
+  // Same stat rows share the same column count so they line up vertically — matching Inbox.
+  const gridColumns = Math.max(topReviewStats.length, jayKpiStats.length)
 
   return (
     <ChartCard title="Reviews">
       {showJayPerformance && (
         <div className="mb-2xl">
-          <OutcomeKpiGroup stats={topReviewStats} columns={topReviewStats.length} />
+          <OutcomeKpiGroup stats={topReviewStats} columns={gridColumns} />
         </div>
       )}
 
@@ -318,12 +311,7 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
         <>
           <div className="my-2xl border-t border-border" />
           <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Jay performance</h3>
-          <StatGroup stats={jayKpiStats} columns={3} big />
-          <div className="mt-2xl">
-            {jayAgents.map((a) => (
-              <OutcomeRow key={a.id} label={a.outcome.label} agentName={a.name} value={formatK(a.outcome.value)} />
-            ))}
-          </div>
+          <StatGroup stats={jayKpiStats} columns={gridColumns} big />
         </>
       )}
     </ChartCard>
@@ -388,13 +376,38 @@ function InboxActivityCard({ big = false }: { big?: boolean }) {
   )
 }
 
-function SocialCard({ big = false }: { big?: boolean }) {
+interface SocialCardProps {
+  big?: boolean
+  /** Adds Posts published / Comments handled (Social AI agents) alongside New followers. */
+  showJayOutcomes?: boolean
+}
+
+// Social AI half of Jay (Marketing) — Reviews AI half (Reviews responded/New reviews) lives on
+// the Reviews card instead. See PERSONA_GROUPS in agentDirectoryData.ts.
+function SocialCard({ big = false, showJayOutcomes = false }: SocialCardProps) {
+  const socialAgentOutcomes: OutcomeKpi[] = showJayOutcomes
+    ? getAgentDirectory('healthcare')
+        .filter((a) => a.id === 'social-publishing' || a.id === 'social-engagement')
+        .map((a) => ({
+          id: a.id,
+          value: formatK(a.outcome.value),
+          label: a.outcome.label,
+          agentName: a.name,
+          agentPct: AGENT_CONTRIBUTION_PCT[a.id],
+        }))
+    : []
+  const followersStat: OutcomeKpi = { id: 'new-followers', value: OVERVIEW_SOCIAL_NEW_FOLLOWERS, label: 'New followers', agentName: '' }
+
   return (
     <ChartCard title="Social">
-      <div>
-        <p className={`m-0 ${big ? 'text-display' : 'text-h3'} text-text-primary`}>{OVERVIEW_SOCIAL_NEW_FOLLOWERS}</p>
-        <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">New followers</p>
-      </div>
+      {showJayOutcomes ? (
+        <OutcomeKpiGroup stats={[followersStat, ...socialAgentOutcomes]} columns={1 + socialAgentOutcomes.length} />
+      ) : (
+        <div>
+          <p className={`m-0 ${big ? 'text-display' : 'text-h3'} text-text-primary`}>{OVERVIEW_SOCIAL_NEW_FOLLOWERS}</p>
+          <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">New followers</p>
+        </div>
+      )}
       <div className="mt-2xl">
         <StackedBarChart data={OVERVIEW_SOCIAL_DATA} series={OVERVIEW_SOCIAL_SERIES} xKey="month" height={280} grouped />
       </div>
@@ -546,7 +559,7 @@ export function OverviewScreen({
           <ReferralsCard big={showCoworkerPerformance} />
           <AppointmentsCard big={showCoworkerPerformance} />
           <InboxActivityCard big={showCoworkerPerformance} />
-          <SocialCard big={showCoworkerPerformance} />
+          <SocialCard big={showCoworkerPerformance} showJayOutcomes={showCoworkerPerformance} />
           <InsightsAiCard />
         </div>
       </div>

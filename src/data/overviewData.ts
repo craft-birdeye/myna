@@ -39,7 +39,7 @@ export const OVERVIEW_REVIEW_SOURCES: OverviewReviewSource[] = [
 
 export const OVERVIEW_REVIEWS_STATS: OverviewStat[] = [
   { id: 'requests-sent', value: '385K', label: 'Requests sent' },
-  { id: 'reviews-received', value: '1.3M', label: 'Reviews received' },
+  { id: 'reviews-received', value: '290K', label: 'Reviews received' },
   { id: '3-star-or-less', value: '197K', label: '3 star or less', danger: true },
   { id: 'havent-replied', value: '1M', label: "Haven't replied" },
 ]
