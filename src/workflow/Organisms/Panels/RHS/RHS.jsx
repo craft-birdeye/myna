@@ -155,7 +155,15 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
             pointerEvents: viewOnly ? 'none' : undefined,
             userSelect: viewOnly ? 'text' : undefined,
           }}>
-            <Body {...(bodyProps || {})} viewOnly={viewOnly} product={product} />
+            <Body
+              {...(bodyProps || {})}
+              viewOnly={viewOnly}
+              product={product}
+              allowStepsExpand={
+                bodyProps?.allowStepsExpand
+                ?? (variant === 'procedureDetail' || variant === 'createCustomProcedure')
+              }
+            />
           </div>
         </div>
 

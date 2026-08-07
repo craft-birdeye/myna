@@ -827,6 +827,8 @@ export default function ProcedureDetailBody({
   onAddContext,
   hideContext = false,
   isNewProcedure = false,
+  /** Expand-steps overlay — canvas RHS only; off for full-page create/edit. */
+  allowStepsExpand = false,
 }) {
   const [title, setTitle] = useState(initialValues.name ?? '');
   const [whenToUse, setWhenToUse] = useState(initialValues.whenToUse ?? '');
@@ -1046,24 +1048,33 @@ export default function ProcedureDetailBody({
       )}
 
       <div className={styles.section}>
-        <div className={styles.sectionLabelRow}>
+        {allowStepsExpand ? (
+          <div className={styles.sectionLabelRow}>
+            <div className={etStyles.sectionLabelWrapper}>
+              <span className={etStyles.sectionLabelText}>
+                Steps<span className={styles.required}> *</span>
+              </span>
+              <SectionInfoIcon tooltip="Information your agent can refer to during a conversation, like your location details, knowledge base, and connected files" />
+            </div>
+            <button
+              type="button"
+              className={styles.stepsExpandBtn}
+              onClick={() => setStepsExpanded(true)}
+              aria-label="Expand steps"
+              title="Expand steps"
+            >
+              <Icon name="open_in_full" size={18} />
+            </button>
+          </div>
+        ) : (
           <div className={etStyles.sectionLabelWrapper}>
             <span className={etStyles.sectionLabelText}>
               Steps<span className={styles.required}> *</span>
             </span>
             <SectionInfoIcon tooltip="Information your agent can refer to during a conversation, like your location details, knowledge base, and connected files" />
           </div>
-          <button
-            type="button"
-            className={styles.stepsExpandBtn}
-            onClick={() => setStepsExpanded(true)}
-            aria-label="Expand steps"
-            title="Expand steps"
-          >
-            <Icon name="open_in_full" size={18} />
-          </button>
-        </div>
-        {stepsExpanded ? (
+        )}
+        {allowStepsExpand && stepsExpanded ? (
           <button
             type="button"
             className={styles.stepsExpandedPlaceholder}
@@ -1074,7 +1085,7 @@ export default function ProcedureDetailBody({
         ) : (
           stepsField
         )}
-        {stepsExpanded && createPortal(
+        {allowStepsExpand && stepsExpanded && createPortal(
           <div
             className={styles.stepsOverlay}
             onClick={() => setStepsExpanded(false)}
