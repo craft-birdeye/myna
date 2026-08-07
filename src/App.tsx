@@ -506,7 +506,7 @@ export function App() {
         {railActive === 'overview' ? (
           <OverviewScreen />
         ) : railActive === 'overview-2' ? (
-          <OverviewScreen showMynaPerformance />
+          <OverviewScreen showCoworkerPerformance />
         ) : railActive === 'settings' ? (
           settingsSubScreen?.startsWith('integration-') ? (
             <IntegrationDetailScreen

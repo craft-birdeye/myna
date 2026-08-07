@@ -35,8 +35,9 @@ interface OverviewScreenProps {
   hideWelcomeHeader?: boolean
   /** Uses a plain white content background instead of the default `surface-l2` grey. */
   whiteBackground?: boolean
-  /** Shows the "Myna performance" section (Operations co-worker KPIs + outcomes) below Inbox. */
-  showMynaPerformance?: boolean
+  /** Shows the "Myna performance" section (below Inbox) and "Jay performance" section (below
+   *  Reviews) — each co-worker's KPIs + outcomes, sourced from agentDirectoryData.ts. */
+  showCoworkerPerformance?: boolean
 }
 
 function StatGroup({ stats, columns = stats.length }: { stats: OverviewStat[]; columns?: number }) {
@@ -52,15 +53,6 @@ function StatGroup({ stats, columns = stats.length }: { stats: OverviewStat[]; c
   )
 }
 
-function InboxAlertCard() {
-  return (
-    <div className="rounded-md border border-border bg-surface p-2xl">
-      <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
-      <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={4} />
-    </div>
-  )
-}
-
 // 16,230 → "16.2K". Already-compact values ("1.9K", "434") pass through untouched.
 function formatK(raw: string): string {
   const numeric = parseFloat(raw.replace(/,/g, ''))
@@ -68,64 +60,55 @@ function formatK(raw: string): string {
   return raw
 }
 
-interface MynaOutcomeRow {
-  id: string
-  outcomeLabel: string
-  agentName: string
-  count: string
-  timeSaved: string
-  costSaved: string
-  [key: string]: string
+function OutcomeRow({ label, agentName, value }: { label: string; agentName: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-md border-t border-border py-lg first:border-t-0">
+      <div className="min-w-0">
+        <p className="m-0 text-body text-text-primary">{label}</p>
+        <p className="m-0 mt-xs text-small text-text-tertiary">{agentName}</p>
+      </div>
+      <span className="shrink-0 text-h3 text-text-primary">{value}</span>
+    </div>
+  )
 }
 
-const MYNA_OUTCOME_COLUMNS: Column<MynaOutcomeRow>[] = [
-  {
-    key: 'outcomeLabel',
-    label: 'Outcomes',
-    width: 260,
-    sortable: true,
-    render: (_, row) => (
-      <div className="min-w-0">
-        <p className="m-0 truncate text-body text-text-primary">{row.outcomeLabel}</p>
-        <p className="m-0 truncate text-small text-text-tertiary">{row.agentName}</p>
-      </div>
-    ),
-  },
-  { key: 'count', label: 'Count', width: 140, sortable: true },
-  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
-  { key: 'costSaved', label: 'Cost saved', width: 140, sortable: true },
-]
+interface InboxAlertCardProps {
+  /** Adds the "Myna performance" KPIs + outcomes list below Inbox, in the same box. */
+  showMynaPerformance?: boolean
+}
 
 // Myna = the Operations co-worker (Inbox + Front desk family agents) — see PERSONA_GROUPS
 // in agentDirectoryData.ts, same grouping shown on the AI overview page's "Myna" tab.
-function MynaPerformanceCard() {
-  const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
+function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
+  const mynaAgents = showMynaPerformance ? getAgentDirectory('healthcare').filter((a) => a.persona === 'operations') : []
   const runningCount = mynaAgents.filter((a) => a.running > 0).length
   const totalTimeSavedHrs = mynaAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const totalCostSavedK = mynaAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
 
-  const kpiStats: OverviewStat[] = [
+  const mynaKpiStats: OverviewStat[] = [
     { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
     { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved' },
     { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved' },
   ]
 
-  const outcomeRows: MynaOutcomeRow[] = mynaAgents.map((a) => ({
-    id: a.id,
-    outcomeLabel: a.outcome.label,
-    agentName: a.name,
-    count: formatK(a.outcome.value),
-    timeSaved: a.timeSaved,
-    costSaved: a.costSaved,
-  }))
-
   return (
-    <ChartCard title="Myna performance">
-      <StatGroup stats={kpiStats} columns={3} />
-      <div className="mt-2xl">
-        <DataTable columns={MYNA_OUTCOME_COLUMNS} data={outcomeRows} />
-      </div>
-    </ChartCard>
+    <div className="rounded-md border border-border bg-surface p-2xl">
+      <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+      <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={4} />
+
+      {showMynaPerformance && (
+        <>
+          <div className="my-2xl border-t border-border" />
+          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Myna performance</h3>
+          <StatGroup stats={mynaKpiStats} columns={3} />
+          <div className="mt-2xl">
+            {mynaAgents.map((a) => (
+              <OutcomeRow key={a.id} label={a.outcome.label} agentName={a.name} value={formatK(a.outcome.value)} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -134,8 +117,25 @@ const REVIEW_SOURCE_LOGOS: Record<string, string> = {
   'google-play': iconGooglePlay,
 }
 
-function ReviewsCard() {
+interface ReviewsCardProps {
+  /** Adds the "Jay performance" KPIs + outcomes list below Reviews, in the same box. */
+  showJayPerformance?: boolean
+}
+
+// Jay = the Marketing co-worker (Reviews AI + Social AI agents) — see PERSONA_GROUPS in
+// agentDirectoryData.ts, same grouping shown on the AI overview page's "Jay" tab.
+function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
   const maxCount = Math.max(...OVERVIEW_REVIEWS_BREAKDOWN.map((b) => b.count))
+  const jayAgents = showJayPerformance ? getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing') : []
+  const jayRunningCount = jayAgents.filter((a) => a.running > 0).length
+  const jayTimeSavedHrs = jayAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const jayCostSavedK = jayAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+  const jayKpiStats: OverviewStat[] = [
+    { id: 'agents-running', value: String(jayRunningCount), label: 'Agents running' },
+    { id: 'time-saved', value: `${jayTimeSavedHrs}h`, label: 'Time saved' },
+    { id: 'cost-saved', value: `$${jayCostSavedK.toFixed(1)}K`, label: 'Cost saved' },
+  ]
+
   return (
     <ChartCard title="Reviews">
       <div className="flex flex-wrap items-start gap-3xl">
@@ -196,6 +196,19 @@ function ReviewsCard() {
         <Icon name="info" size={18} className="shrink-0 text-text-action" />
         Monitor more reviews by updating 7126 review sites. <a href="#" className="text-text-action hover:underline">See all</a>
       </div>
+
+      {showJayPerformance && (
+        <>
+          <div className="my-2xl border-t border-border" />
+          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Jay performance</h3>
+          <StatGroup stats={jayKpiStats} columns={3} />
+          <div className="mt-2xl">
+            {jayAgents.map((a) => (
+              <OutcomeRow key={a.id} label={a.outcome.label} agentName={a.name} value={formatK(a.outcome.value)} />
+            ))}
+          </div>
+        </>
+      )}
     </ChartCard>
   )
 }
@@ -355,7 +368,7 @@ export function OverviewScreen({
   hideTopNav = false,
   hideWelcomeHeader = false,
   whiteBackground = false,
-  showMynaPerformance = false,
+  showCoworkerPerformance = false,
 }: OverviewScreenProps) {
   return (
     <div className="flex h-full flex-col">
@@ -401,9 +414,7 @@ export function OverviewScreen({
             </div>
           )}
 
-          <InboxAlertCard />
-
-          {showMynaPerformance && <MynaPerformanceCard />}
+          <InboxAlertCard showMynaPerformance={showCoworkerPerformance} />
 
           <div className="flex items-center gap-md">
             <p className="m-0 shrink-0 text-small text-text-tertiary">
@@ -412,7 +423,7 @@ export function OverviewScreen({
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          <ReviewsCard />
+          <ReviewsCard showJayPerformance={showCoworkerPerformance} />
           <PaymentsCard />
           <ListingsCard />
           <ReferralsCard />
