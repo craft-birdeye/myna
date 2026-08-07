@@ -834,6 +834,7 @@ export default function ProcedureDetailBody({
   const [contextChips, setContextChips] = useState(normalizeChips(initialValues.contextChips ?? []));
   const [stepsText, setStepsText] = useState(initialValues.stepsText ?? '');
   const [addToLibrary, setAddToLibrary] = useState(initialValues.addToLibrary ?? false);
+  const [stepsExpanded, setStepsExpanded] = useState(false);
   const procedureType = initialValues.procedureType ?? 'Inbound';
   const moreContextCount = initialValues.moreContextCount ?? 0;
   const whenToUseRef = useRef(null);
@@ -861,6 +862,42 @@ export default function ProcedureDetailBody({
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }, [whenToExit]);
+
+  useEffect(() => {
+    if (!stepsExpanded) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setStepsExpanded(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [stepsExpanded]);
+
+  const handleStepsChange = useCallback((val) => {
+    setStepsText(val);
+    onFieldChange?.('stepsText', val);
+  }, [onFieldChange]);
+
+  const stepsField = viewOnly ? (
+    <div className={`${styles.readOnlyField} ${styles.readOnlySteps}`}>
+      <StepsRenderer text={stepsText} />
+    </div>
+  ) : isNewProcedure ? (
+    <CreateStepsField
+      text={stepsText}
+      onOpenToolDrawer={onOpenToolDrawer}
+      onChange={handleStepsChange}
+    />
+  ) : (
+    <EditableStepsRenderer
+      text={stepsText}
+      onChange={handleStepsChange}
+    />
+  );
 
   return (
     <div
@@ -1009,27 +1046,67 @@ export default function ProcedureDetailBody({
       )}
 
       <div className={styles.section}>
-        <div className={etStyles.sectionLabelWrapper}>
-          <span className={etStyles.sectionLabelText}>
-            Steps<span className={styles.required}> *</span>
-          </span>
-          <SectionInfoIcon tooltip="Information your agent can refer to during a conversation, like your location details, knowledge base, and connected files" />
-        </div>
-        {viewOnly ? (
-          <div className={`${styles.readOnlyField} ${styles.readOnlySteps}`}>
-            <StepsRenderer text={stepsText} />
+        <div className={styles.sectionLabelRow}>
+          <div className={etStyles.sectionLabelWrapper}>
+            <span className={etStyles.sectionLabelText}>
+              Steps<span className={styles.required}> *</span>
+            </span>
+            <SectionInfoIcon tooltip="Information your agent can refer to during a conversation, like your location details, knowledge base, and connected files" />
           </div>
-        ) : isNewProcedure ? (
-          <CreateStepsField
-            text={stepsText}
-            onOpenToolDrawer={onOpenToolDrawer}
-            onChange={(val) => { setStepsText(val); onFieldChange?.('stepsText', val); }}
-          />
+          <button
+            type="button"
+            className={styles.stepsExpandBtn}
+            onClick={() => setStepsExpanded(true)}
+            aria-label="Expand steps"
+            title="Expand steps"
+          >
+            <Icon name="open_in_full" size={18} />
+          </button>
+        </div>
+        {stepsExpanded ? (
+          <button
+            type="button"
+            className={styles.stepsExpandedPlaceholder}
+            onClick={() => setStepsExpanded(true)}
+          >
+            Steps are open in expanded view
+          </button>
         ) : (
-          <EditableStepsRenderer
-            text={stepsText}
-            onChange={(val) => { setStepsText(val); onFieldChange?.('stepsText', val); }}
-          />
+          stepsField
+        )}
+        {stepsExpanded && createPortal(
+          <div
+            className={styles.stepsOverlay}
+            onClick={() => setStepsExpanded(false)}
+            role="presentation"
+          >
+            <div
+              className={styles.stepsOverlayPanel}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Steps"
+            >
+              <div className={styles.stepsOverlayHeader}>
+                <span className={styles.stepsOverlayTitle}>
+                  Steps<span className={styles.required}> *</span>
+                </span>
+                <button
+                  type="button"
+                  className={styles.stepsExpandBtn}
+                  onClick={() => setStepsExpanded(false)}
+                  aria-label="Exit expanded steps"
+                  title="Exit expanded steps"
+                >
+                  <Icon name="close_fullscreen" size={18} />
+                </button>
+              </div>
+              <div className={styles.stepsOverlayBody}>
+                {stepsField}
+              </div>
+            </div>
+          </div>,
+          document.body,
         )}
       </div>
 
@@ -1066,7 +1143,7 @@ export default function ProcedureDetailBody({
           >
             <textarea
               ref={whenToExitRef}
-              className="min-h-[80px] w-full resize-none overflow-hidden bg-transparent p-md text-body leading-relaxed text-text-primary outline-none"
+              className="min-h-[140px] w-full resize-none overflow-hidden bg-transparent p-md text-body leading-relaxed text-text-primary outline-none"
               value={whenToExit}
               rows={1}
               onChange={(e) => {
@@ -1080,12 +1157,12 @@ export default function ProcedureDetailBody({
           <EmptyHintField
             hint={EXIT_EDIT_PLACEHOLDER}
             isEmpty={!whenToExit.trim()}
-            className={TITLE_SHELL}
+            className={`h-[64px] ${FIELD_SHELL}`}
             hintClassName="flex items-center px-md"
           >
             <input
               type="text"
-              className="h-10 w-full bg-transparent px-md text-body text-text-primary outline-none"
+              className="h-[64px] w-full bg-transparent px-md text-body text-text-primary outline-none"
               value={whenToExit}
               onChange={(e) => {
                 const val = e.target.value;
