@@ -1,4 +1,5 @@
-import { Chip, ChartCard, DataTable, Icon, InfoTooltip, StackedBarChart, TopNav, TrendLineChart, type Column } from '../components'
+import { Chip, ChartCard, DataTable, Icon, InfoTooltip, StackedBarChart, Tooltip, TopNav, TrendLineChart, type Column } from '../components'
+import { AiAgentIcon } from '../assets/AiAgentIcon'
 import iconGoogle from '../assets/icon-google.svg'
 import iconGooglePlay from '../assets/icon-google-play.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
@@ -60,6 +61,18 @@ function formatK(raw: string): string {
   return raw
 }
 
+// "16,230" → 16230, "7.9K" → 7900 — agentDirectoryData.ts mixes both formats.
+function parseOutcomeNumber(raw: string): number {
+  const trimmed = raw.trim()
+  if (trimmed.toUpperCase().endsWith('K')) return parseFloat(trimmed) * 1000
+  return parseFloat(trimmed.replace(/,/g, ''))
+}
+
+function formatNumber(n: number): string {
+  if (n >= 1000) return `${parseFloat((n / 1000).toFixed(1))}K`
+  return String(Math.round(n))
+}
+
 function OutcomeRow({ label, agentName, value }: { label: string; agentName: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-md border-t border-border py-lg first:border-t-0">
@@ -68,6 +81,60 @@ function OutcomeRow({ label, agentName, value }: { label: string; agentName: str
         <p className="m-0 mt-xs text-small text-text-tertiary">{agentName}</p>
       </div>
       <span className="shrink-0 text-h3 text-text-primary">{value}</span>
+    </div>
+  )
+}
+
+// Illustrative share of each outcome's volume driven by the agent's own automated actions
+// (vs. human-assisted) — keyed by agentDirectoryData.ts's agent id.
+const AGENT_CONTRIBUTION_PCT: Record<string, string> = {
+  'front-desk': '82%',
+  waitlist: '76%',
+  'pre-visit': '90%',
+  reminder: '85%',
+  'tagging-routing': '95%',
+  'review-response': '88%',
+  'review-generation': '93%',
+  'social-publishing': '97%',
+  'social-engagement': '80%',
+}
+
+interface OutcomeKpi {
+  id: string
+  value: string
+  label: string
+  agentName: string
+  agentPct?: string
+}
+
+// Same tile shape as StatGroup, with a small violet agent-contribution badge next to the value —
+// hovering it explains which agent and how much of the total that share represents.
+function OutcomeKpiGroup({ stats, columns }: { stats: OutcomeKpi[]; columns: number }) {
+  return (
+    <div className="grid gap-lg" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+      {stats.map((s) => {
+        const pctNum = s.agentPct ? parseFloat(s.agentPct) : null
+        const contribution = pctNum != null ? formatNumber((parseOutcomeNumber(s.value) * pctNum) / 100) : null
+        return (
+          <div key={s.id}>
+            <p className="m-0 flex items-center gap-xs text-h3 text-text-primary">
+              {s.value}
+              {s.agentPct && (
+                <Tooltip
+                  variant="detail"
+                  content={`${s.agentName} handled ${contribution} of ${s.value} ${s.label.toLowerCase()}.`}
+                >
+                  <span className="flex items-center gap-[2px] text-[12px] leading-none text-ai-brand">
+                    <AiAgentIcon size={12} />
+                    {s.agentPct}
+                  </span>
+                </Tooltip>
+              )}
+            </p>
+            <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -85,16 +152,24 @@ function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
   const totalTimeSavedHrs = mynaAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const totalCostSavedK = mynaAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
 
-  const outcomeStats: OverviewStat[] = mynaAgents.map((a) => ({
+  const outcomeStats: OutcomeKpi[] = mynaAgents.map((a) => ({
     id: a.id,
     value: formatK(a.outcome.value),
     label: a.outcome.label,
+    agentName: a.name,
+    agentPct: AGENT_CONTRIBUTION_PCT[a.id],
   }))
   const mynaKpiStats: OverviewStat[] = [
     { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
     { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved' },
     { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved' },
   ]
+  // When the Myna section is shown, every stat row in this box shares the same column count as
+  // the widest row (outcomes) so values line up vertically underneath each other. Otherwise this
+  // is just the plain Inbox card, unchanged from before.
+  const gridColumns = showMynaPerformance
+    ? Math.max(outcomeStats.length, OVERVIEW_INBOX_ALERT_STATS.length, mynaKpiStats.length)
+    : 4
 
   return (
     <div className="rounded-md border border-border bg-surface p-2xl">
@@ -102,17 +177,17 @@ function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
 
       {showMynaPerformance && (
         <div className="mb-2xl">
-          <StatGroup stats={outcomeStats} columns={outcomeStats.length} />
+          <OutcomeKpiGroup stats={outcomeStats} columns={gridColumns} />
         </div>
       )}
 
-      <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={4} />
+      <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={gridColumns} />
 
       {showMynaPerformance && (
         <>
           <div className="my-2xl border-t border-border" />
           <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Myna performance</h3>
-          <StatGroup stats={mynaKpiStats} columns={3} />
+          <StatGroup stats={mynaKpiStats} columns={gridColumns} />
         </>
       )}
     </div>
