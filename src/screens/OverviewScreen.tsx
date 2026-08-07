@@ -41,12 +41,21 @@ interface OverviewScreenProps {
   showCoworkerPerformance?: boolean
 }
 
-function StatGroup({ stats, columns = stats.length }: { stats: OverviewStat[]; columns?: number }) {
+function StatGroup({
+  stats,
+  columns = stats.length,
+  big = false,
+}: {
+  stats: OverviewStat[]
+  columns?: number
+  /** Uses the 24px `text-display` token instead of the default 18px `text-h3` — Overview (mixed) only. */
+  big?: boolean
+}) {
   return (
     <div className="grid gap-lg" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
       {stats.map((s) => (
         <div key={s.id}>
-          <p className={`m-0 text-h3 ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
+          <p className={`m-0 ${big ? 'text-display' : 'text-h3'} ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
           <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
         </div>
       ))}
@@ -181,13 +190,13 @@ function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
         </div>
       )}
 
-      <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={gridColumns} />
+      <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={gridColumns} big={showMynaPerformance} />
 
       {showMynaPerformance && (
         <>
           <div className="my-2xl border-t border-border" />
           <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Myna performance</h3>
-          <StatGroup stats={mynaKpiStats} columns={gridColumns} />
+          <StatGroup stats={mynaKpiStats} columns={gridColumns} big />
         </>
       )}
     </div>
@@ -218,10 +227,36 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
     { id: 'cost-saved', value: `$${jayCostSavedK.toFixed(1)}K`, label: 'Cost saved' },
   ]
 
+  // Reviews responded / New reviews (Reviews AI category only — Posts published/Comments
+  // handled belong to the Social card) promoted upfront, alongside Requests sent/Reviews
+  // received — same treatment as Myna's outcomes on the Inbox card.
+  const requestsSent = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'requests-sent')!
+  const reviewsReceived = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'reviews-received')!
+  const sideReviewStats = OVERVIEW_REVIEWS_STATS.filter((s) => s.id !== 'requests-sent' && s.id !== 'reviews-received')
+  const topReviewStats: OutcomeKpi[] = [
+    ...jayAgents
+      .filter((a) => a.id === 'review-response' || a.id === 'review-generation')
+      .map((a) => ({
+        id: a.id,
+        value: formatK(a.outcome.value),
+        label: a.outcome.label,
+        agentName: a.name,
+        agentPct: AGENT_CONTRIBUTION_PCT[a.id],
+      })),
+    { id: requestsSent.id, value: requestsSent.value, label: requestsSent.label, agentName: '' },
+    { id: reviewsReceived.id, value: reviewsReceived.value, label: reviewsReceived.label, agentName: '' },
+  ]
+
   return (
     <ChartCard title="Reviews">
+      {showJayPerformance && (
+        <div className="mb-2xl">
+          <OutcomeKpiGroup stats={topReviewStats} columns={topReviewStats.length} />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-start gap-3xl">
-        <div className="flex min-w-[320px] flex-1 flex-col gap-lg">
+        <div className="flex min-w-[320px] max-w-[50%] flex-1 flex-col gap-lg">
           <div className="flex items-center gap-sm">
             <span className="text-h2 text-text-primary">{OVERVIEW_REVIEWS_RATING}</span>
             <div className="flex items-center gap-[2px] text-[#f5a623]">
@@ -270,7 +305,7 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
         </div>
 
         <div className="w-[220px] shrink-0">
-          <StatGroup stats={OVERVIEW_REVIEWS_STATS} columns={2} />
+          <StatGroup stats={showJayPerformance ? sideReviewStats : OVERVIEW_REVIEWS_STATS} columns={2} />
         </div>
       </div>
 
@@ -283,7 +318,7 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
         <>
           <div className="my-2xl border-t border-border" />
           <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Jay performance</h3>
-          <StatGroup stats={jayKpiStats} columns={3} />
+          <StatGroup stats={jayKpiStats} columns={3} big />
           <div className="mt-2xl">
             {jayAgents.map((a) => (
               <OutcomeRow key={a.id} label={a.outcome.label} agentName={a.name} value={formatK(a.outcome.value)} />
@@ -306,7 +341,7 @@ function PaymentsCard() {
   )
 }
 
-function ListingsCard() {
+function ListingsCard({ big = false }: { big?: boolean }) {
   return (
     <ChartCard title="Listings">
       <div className="mb-2xl flex items-center gap-sm rounded-sm bg-chip-info-bg px-lg py-md text-small text-text-primary">
@@ -315,36 +350,36 @@ function ListingsCard() {
       </div>
 
       <p className="m-0 mb-lg text-small text-text-tertiary">Google report</p>
-      <StatGroup stats={OVERVIEW_LISTINGS_GOOGLE_REPORT} columns={4} />
+      <StatGroup stats={OVERVIEW_LISTINGS_GOOGLE_REPORT} columns={4} big={big} />
 
       <div className="my-2xl border-t border-border" />
 
       <p className="m-0 mb-lg text-small text-text-tertiary">Google Q&A · By location</p>
-      <StatGroup stats={OVERVIEW_LISTINGS_QA} columns={4} />
+      <StatGroup stats={OVERVIEW_LISTINGS_QA} columns={4} big={big} />
     </ChartCard>
   )
 }
 
-function ReferralsCard() {
+function ReferralsCard({ big = false }: { big?: boolean }) {
   return (
     <ChartCard title="Referrals" minHeight="0">
-      <StatGroup stats={OVERVIEW_REFERRALS_STATS} columns={3} />
+      <StatGroup stats={OVERVIEW_REFERRALS_STATS} columns={3} big={big} />
     </ChartCard>
   )
 }
 
-function AppointmentsCard() {
+function AppointmentsCard({ big = false }: { big?: boolean }) {
   return (
     <ChartCard title="Appointments" minHeight="0">
-      <StatGroup stats={OVERVIEW_APPOINTMENTS_STATS} columns={5} />
+      <StatGroup stats={OVERVIEW_APPOINTMENTS_STATS} columns={5} big={big} />
     </ChartCard>
   )
 }
 
-function InboxActivityCard() {
+function InboxActivityCard({ big = false }: { big?: boolean }) {
   return (
     <ChartCard title="Inbox">
-      <StatGroup stats={OVERVIEW_INBOX_ACTIVITY_STATS} columns={3} />
+      <StatGroup stats={OVERVIEW_INBOX_ACTIVITY_STATS} columns={3} big={big} />
       <div className="mt-2xl">
         <TrendLineChart data={OVERVIEW_MEDIAN_RESPONSE_TREND} height={260} />
         <p className="m-0 text-center text-small text-text-tertiary">Median response time</p>
@@ -353,11 +388,11 @@ function InboxActivityCard() {
   )
 }
 
-function SocialCard() {
+function SocialCard({ big = false }: { big?: boolean }) {
   return (
     <ChartCard title="Social">
       <div>
-        <p className="m-0 text-h3 text-text-primary">{OVERVIEW_SOCIAL_NEW_FOLLOWERS}</p>
+        <p className={`m-0 ${big ? 'text-display' : 'text-h3'} text-text-primary`}>{OVERVIEW_SOCIAL_NEW_FOLLOWERS}</p>
         <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">New followers</p>
       </div>
       <div className="mt-2xl">
@@ -507,11 +542,11 @@ export function OverviewScreen({
 
           <ReviewsCard showJayPerformance={showCoworkerPerformance} />
           <PaymentsCard />
-          <ListingsCard />
-          <ReferralsCard />
-          <AppointmentsCard />
-          <InboxActivityCard />
-          <SocialCard />
+          <ListingsCard big={showCoworkerPerformance} />
+          <ReferralsCard big={showCoworkerPerformance} />
+          <AppointmentsCard big={showCoworkerPerformance} />
+          <InboxActivityCard big={showCoworkerPerformance} />
+          <SocialCard big={showCoworkerPerformance} />
           <InsightsAiCard />
         </div>
       </div>
