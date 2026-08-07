@@ -85,6 +85,11 @@ function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
   const totalTimeSavedHrs = mynaAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const totalCostSavedK = mynaAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
 
+  const outcomeStats: OverviewStat[] = mynaAgents.map((a) => ({
+    id: a.id,
+    value: formatK(a.outcome.value),
+    label: a.outcome.label,
+  }))
   const mynaKpiStats: OverviewStat[] = [
     { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
     { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved' },
@@ -94,6 +99,13 @@ function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
   return (
     <div className="rounded-md border border-border bg-surface p-2xl">
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+
+      {showMynaPerformance && (
+        <div className="mb-2xl">
+          <StatGroup stats={outcomeStats} columns={outcomeStats.length} />
+        </div>
+      )}
+
       <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={4} />
 
       {showMynaPerformance && (
@@ -101,11 +113,6 @@ function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
           <div className="my-2xl border-t border-border" />
           <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Myna performance</h3>
           <StatGroup stats={mynaKpiStats} columns={3} />
-          <div className="mt-2xl">
-            {mynaAgents.map((a) => (
-              <OutcomeRow key={a.id} label={a.outcome.label} agentName={a.name} value={formatK(a.outcome.value)} />
-            ))}
-          </div>
         </>
       )}
     </div>
