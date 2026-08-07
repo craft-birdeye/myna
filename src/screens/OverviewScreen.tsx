@@ -1,6 +1,7 @@
 import { Chip, ChartCard, DataTable, Icon, InfoTooltip, StackedBarChart, TopNav, TrendLineChart, type Column } from '../components'
 import iconGoogle from '../assets/icon-google.svg'
 import iconGooglePlay from '../assets/icon-google-play.svg'
+import { getAgentDirectory } from '../data/agentDirectoryData'
 import {
   OVERVIEW_APPOINTMENTS_STATS,
   OVERVIEW_BIRDEYE_SCORE,
@@ -34,6 +35,8 @@ interface OverviewScreenProps {
   hideWelcomeHeader?: boolean
   /** Uses a plain white content background instead of the default `surface-l2` grey. */
   whiteBackground?: boolean
+  /** Shows the "Myna performance" section (Operations co-worker KPIs + outcomes) below Inbox. */
+  showMynaPerformance?: boolean
 }
 
 function StatGroup({ stats, columns = stats.length }: { stats: OverviewStat[]; columns?: number }) {
@@ -55,6 +58,74 @@ function InboxAlertCard() {
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
       <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} columns={4} />
     </div>
+  )
+}
+
+// 16,230 → "16.2K". Already-compact values ("1.9K", "434") pass through untouched.
+function formatK(raw: string): string {
+  const numeric = parseFloat(raw.replace(/,/g, ''))
+  if (!isNaN(numeric) && numeric >= 1000) return `${parseFloat((numeric / 1000).toFixed(1))}K`
+  return raw
+}
+
+interface MynaOutcomeRow {
+  id: string
+  outcomeLabel: string
+  agentName: string
+  count: string
+  timeSaved: string
+  costSaved: string
+  [key: string]: string
+}
+
+const MYNA_OUTCOME_COLUMNS: Column<MynaOutcomeRow>[] = [
+  {
+    key: 'outcomeLabel',
+    label: 'Outcomes',
+    width: 260,
+    sortable: true,
+    render: (_, row) => (
+      <div className="min-w-0">
+        <p className="m-0 truncate text-body text-text-primary">{row.outcomeLabel}</p>
+        <p className="m-0 truncate text-small text-text-tertiary">{row.agentName}</p>
+      </div>
+    ),
+  },
+  { key: 'count', label: 'Count', width: 140, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
+  { key: 'costSaved', label: 'Cost saved', width: 140, sortable: true },
+]
+
+// Myna = the Operations co-worker (Inbox + Front desk family agents) — see PERSONA_GROUPS
+// in agentDirectoryData.ts, same grouping shown on the AI overview page's "Myna" tab.
+function MynaPerformanceCard() {
+  const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
+  const runningCount = mynaAgents.filter((a) => a.running > 0).length
+  const totalTimeSavedHrs = mynaAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const totalCostSavedK = mynaAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+
+  const kpiStats: OverviewStat[] = [
+    { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
+    { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved' },
+    { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved' },
+  ]
+
+  const outcomeRows: MynaOutcomeRow[] = mynaAgents.map((a) => ({
+    id: a.id,
+    outcomeLabel: a.outcome.label,
+    agentName: a.name,
+    count: formatK(a.outcome.value),
+    timeSaved: a.timeSaved,
+    costSaved: a.costSaved,
+  }))
+
+  return (
+    <ChartCard title="Myna performance">
+      <StatGroup stats={kpiStats} columns={3} />
+      <div className="mt-2xl">
+        <DataTable columns={MYNA_OUTCOME_COLUMNS} data={outcomeRows} />
+      </div>
+    </ChartCard>
   )
 }
 
@@ -284,6 +355,7 @@ export function OverviewScreen({
   hideTopNav = false,
   hideWelcomeHeader = false,
   whiteBackground = false,
+  showMynaPerformance = false,
 }: OverviewScreenProps) {
   return (
     <div className="flex h-full flex-col">
@@ -330,6 +402,8 @@ export function OverviewScreen({
           )}
 
           <InboxAlertCard />
+
+          {showMynaPerformance && <MynaPerformanceCard />}
 
           <div className="flex items-center gap-md">
             <p className="m-0 shrink-0 text-small text-text-tertiary">
