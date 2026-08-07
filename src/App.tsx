@@ -60,9 +60,9 @@ const RAIL_GROUPS: RailGroup[] = [
   {
     id: 'main',
     items: [
-      { id: 'overview-2', label: 'Overview', icon: 'home' },
+      { id: 'overview-2', label: 'Overview', icon: 'home', badge: 'New' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
-      { id: 'agents-2', label: 'Overview (tab)', icon: iconAgents, kind: 'image', badge: 'New' },
+      { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'Tab' },
     ],
   },
   {
@@ -376,7 +376,7 @@ function openDetailInNewTab(view: string, args: unknown) {
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('frontdesk')
+  const [railActive, setRailActive] = useState('overview-2')
   const [navActive, setNavActive] = useState(
     () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
   )
