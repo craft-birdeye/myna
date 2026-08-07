@@ -117,7 +117,7 @@ function OutcomeKpiGroup({ stats, columns }: { stats: OutcomeKpi[]; columns: num
         const contribution = pctNum != null ? formatNumber((parseOutcomeNumber(s.value) * pctNum) / 100) : null
         return (
           <div key={s.id}>
-            <p className="m-0 flex items-center gap-xs text-h3 text-text-primary">
+            <p className="m-0 flex items-center gap-xs text-display text-text-primary">
               {s.value}
               {s.agentPct && (
                 <Tooltip
