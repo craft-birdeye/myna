@@ -60,10 +60,9 @@ const RAIL_GROUPS: RailGroup[] = [
   {
     id: 'main',
     items: [
-      { id: 'overview', label: 'Overview', icon: 'home' },
-      { id: 'overview-2', label: 'Overview (mixed)', icon: 'home' },
+      { id: 'overview-2', label: 'Overview', icon: 'home' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
-      { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'New' },
+      { id: 'agents-2', label: 'Overview (tab)', icon: iconAgents, kind: 'image', badge: 'New' },
     ],
   },
   {
@@ -503,9 +502,7 @@ export function App() {
         )
       )}
       <main className="flex flex-1 flex-col overflow-hidden">
-        {railActive === 'overview' ? (
-          <OverviewScreen />
-        ) : railActive === 'overview-2' ? (
+        {railActive === 'overview-2' ? (
           <OverviewScreen showCoworkerPerformance />
         ) : railActive === 'settings' ? (
           settingsSubScreen?.startsWith('integration-') ? (
