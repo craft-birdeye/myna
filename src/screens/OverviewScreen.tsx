@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { Chip, ChartCard, DataTable, Icon, InfoTooltip, StackedBarChart, Tooltip, TopNav, TrendLineChart, type Column } from '../components'
 import { AiAgentIcon } from '../assets/AiAgentIcon'
 import iconGoogle from '../assets/icon-google.svg'
 import iconGooglePlay from '../assets/icon-google-play.svg'
+import mynaLogo from '../assets/myna-logo.png'
+import jayLogo from '../assets/jay-logo.png'
 import { getAgentDirectory } from '../data/agentDirectoryData'
 import {
   OVERVIEW_APPOINTMENTS_STATS,
@@ -41,6 +44,20 @@ interface OverviewScreenProps {
   showCoworkerPerformance?: boolean
 }
 
+// Rule: a KPI row shows at most 5 per line — fewer on narrower screens, wrapping to another line
+// as needed (CSS grid auto-wraps extra items once every column of a row is filled). Values above
+// 5 are capped since no row should ever exceed 5-across regardless of viewport width.
+const RESPONSIVE_KPI_COLS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-2 sm:grid-cols-3',
+  4: 'grid-cols-2 sm:grid-cols-4',
+  5: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+}
+function kpiGridClass(count: number): string {
+  return RESPONSIVE_KPI_COLS[Math.max(1, Math.min(count, 5))]
+}
+
 function StatGroup({
   stats,
   columns = stats.length,
@@ -52,7 +69,7 @@ function StatGroup({
   big?: boolean
 }) {
   return (
-    <div className="grid gap-lg" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+    <div className={`grid gap-lg ${kpiGridClass(columns)}`}>
       {stats.map((s) => (
         <div key={s.id}>
           <p className={`m-0 ${big ? 'text-display' : 'text-h3'} ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
@@ -102,19 +119,24 @@ interface OutcomeKpi {
   label: string
   agentName: string
   agentPct?: string
+  danger?: boolean
 }
 
 // Same tile shape as StatGroup, with a small violet agent-contribution badge next to the value —
 // hovering it explains which agent and how much of the total that share represents.
-function OutcomeKpiGroup({ stats, columns }: { stats: OutcomeKpi[]; columns: number }) {
+function OutcomeKpiGroup({ stats, columns, big = true }: { stats: OutcomeKpi[]; columns: number; big?: boolean }) {
   return (
-    <div className="grid gap-lg" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+    <div className={`grid gap-lg ${kpiGridClass(columns)}`}>
       {stats.map((s) => {
         const pctNum = s.agentPct ? parseFloat(s.agentPct) : null
         const contribution = pctNum != null ? formatNumber((parseOutcomeNumber(s.value) * pctNum) / 100) : null
         return (
           <div key={s.id}>
-            <p className="m-0 flex items-center gap-xs text-display text-text-primary">
+            <p
+              className={`m-0 flex items-center gap-xs ${big ? 'text-display' : 'text-h3'} ${
+                s.danger ? 'text-chip-danger-text' : 'text-text-primary'
+              }`}
+            >
               {s.value}
               {s.agentPct && (
                 <Tooltip
@@ -183,7 +205,10 @@ function InboxAlertCard({ showMynaPerformance = false }: InboxAlertCardProps) {
       {showMynaPerformance && (
         <>
           <div className="my-2xl border-t border-border" />
-          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Myna performance</h3>
+          <h3 className="m-0 mb-lg flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+            <img src={mynaLogo} alt="" className="size-6 shrink-0 rounded-full" />
+            Myna performance
+          </h3>
           <StatGroup stats={mynaKpiStats} columns={gridColumns} big />
         </>
       )}
@@ -204,6 +229,7 @@ interface ReviewsCardProps {
 // Jay = the Marketing co-worker (Reviews AI + Social AI agents) — see PERSONA_GROUPS in
 // agentDirectoryData.ts, same grouping shown on the AI overview page's "Jay" tab.
 function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
+  const [brokenLogos, setBrokenLogos] = useState<Set<string>>(new Set())
   const maxCount = Math.max(...OVERVIEW_REVIEWS_BREAKDOWN.map((b) => b.count))
   const jayAgents = showJayPerformance ? getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing') : []
   const jayRunningCount = jayAgents.filter((a) => a.running > 0).length
@@ -221,7 +247,8 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
   // sent, Reviews received, New reviews, Reviews responded.
   const requestsSent = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'requests-sent')!
   const reviewsReceived = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'reviews-received')!
-  const sideReviewStats = OVERVIEW_REVIEWS_STATS.filter((s) => s.id !== 'requests-sent' && s.id !== 'reviews-received')
+  const threeStarOrLess = OVERVIEW_REVIEWS_STATS.find((s) => s.id === '3-star-or-less')!
+  const haventReplied = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'havent-replied')!
   const reviewsAgentOutcomes: OutcomeKpi[] = jayAgents
     .filter((a) => a.id === 'review-generation' || a.id === 'review-response')
     .sort((a) => (a.id === 'review-generation' ? -1 : 1))
@@ -236,6 +263,8 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
     { id: requestsSent.id, value: requestsSent.value, label: requestsSent.label, agentName: '' },
     { id: reviewsReceived.id, value: reviewsReceived.value, label: reviewsReceived.label, agentName: '' },
     ...reviewsAgentOutcomes,
+    { id: threeStarOrLess.id, value: threeStarOrLess.value, label: threeStarOrLess.label, agentName: '', danger: true },
+    { id: haventReplied.id, value: haventReplied.value, label: haventReplied.label, agentName: '' },
   ]
   // Same stat rows share the same column count so they line up vertically — matching Inbox.
   const gridColumns = Math.max(topReviewStats.length, jayKpiStats.length)
@@ -276,13 +305,22 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
           </div>
         </div>
 
-        <div className="flex w-[240px] shrink-0 flex-col gap-md">
+        <div className="flex min-w-[320px] flex-1 flex-wrap gap-md">
           {OVERVIEW_REVIEW_SOURCES.map((s) => {
-            const logo = REVIEW_SOURCE_LOGOS[s.id]
+            const logo = !brokenLogos.has(s.id) ? REVIEW_SOURCE_LOGOS[s.id] : undefined
             return (
-              <div key={s.id} className="flex items-center gap-md rounded-sm border border-border px-lg py-md">
+              <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
                 <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${logo ? '' : s.iconColorClassName}`}>
-                  {logo ? <img src={logo} alt="" className="size-6" /> : <Icon name={s.icon} size={18} />}
+                  {logo ? (
+                    <img
+                      src={logo}
+                      alt=""
+                      className="size-6"
+                      onError={() => setBrokenLogos((prev) => new Set(prev).add(s.id))}
+                    />
+                  ) : (
+                    <Icon name={s.icon} size={18} />
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
@@ -297,20 +335,20 @@ function ReviewsCard({ showJayPerformance = false }: ReviewsCardProps) {
           })}
         </div>
 
-        <div className="w-[220px] shrink-0">
-          <StatGroup stats={showJayPerformance ? sideReviewStats : OVERVIEW_REVIEWS_STATS} columns={2} />
-        </div>
-      </div>
-
-      <div className="mt-2xl flex items-center gap-sm rounded-sm bg-chip-info-bg px-lg py-md text-small text-text-primary">
-        <Icon name="info" size={18} className="shrink-0 text-text-action" />
-        Monitor more reviews by updating 7126 review sites. <a href="#" className="text-text-action hover:underline">See all</a>
+        {!showJayPerformance && (
+          <div className="w-[220px] shrink-0">
+            <StatGroup stats={OVERVIEW_REVIEWS_STATS} columns={2} />
+          </div>
+        )}
       </div>
 
       {showJayPerformance && (
         <>
           <div className="my-2xl border-t border-border" />
-          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Jay performance</h3>
+          <h3 className="m-0 mb-lg flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+            <img src={jayLogo} alt="" className="size-6 shrink-0 rounded-full" />
+            Jay performance
+          </h3>
           <StatGroup stats={jayKpiStats} columns={gridColumns} big />
         </>
       )}
@@ -357,9 +395,36 @@ function ReferralsCard({ big = false }: { big?: boolean }) {
 }
 
 function AppointmentsCard({ big = false }: { big?: boolean }) {
+  if (!big) {
+    return (
+      <ChartCard title="Appointments" minHeight="0">
+        <StatGroup stats={OVERVIEW_APPOINTMENTS_STATS} columns={5} big={big} />
+      </ChartCard>
+    )
+  }
+
+  const totalAppointments = OVERVIEW_APPOINTMENTS_STATS.find((s) => s.id === 'total-appointments')!
+  const restStats = OVERVIEW_APPOINTMENTS_STATS.filter((s) => s.id !== 'total-appointments')
+  const appointmentsKpis: OutcomeKpi[] = [
+    { id: totalAppointments.id, value: totalAppointments.value, label: totalAppointments.label, agentName: 'Appointment agent', agentPct: '65%' },
+    { id: 'confirmed-appointments', value: '2.4K', label: 'Confirmed appointments', agentName: 'Reminder agent', agentPct: '78%' },
+    ...restStats.map((s) => ({ id: s.id, value: s.value, label: s.label, agentName: '', danger: s.danger })),
+  ]
+  const appointmentsMynaStats: OverviewStat[] = [
+    { id: 'agents-running', value: '2', label: 'Agents running' },
+    { id: 'time-saved', value: '15h', label: 'Time saved' },
+    { id: 'cost-saved', value: '$1.1K', label: 'Cost saved' },
+  ]
+
   return (
     <ChartCard title="Appointments" minHeight="0">
-      <StatGroup stats={OVERVIEW_APPOINTMENTS_STATS} columns={5} big={big} />
+      <OutcomeKpiGroup stats={appointmentsKpis} columns={appointmentsKpis.length} big />
+      <div className="my-2xl border-t border-border" />
+      <h3 className="m-0 mb-lg flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <img src={mynaLogo} alt="" className="size-6 shrink-0 rounded-full" />
+        Myna performance
+      </h3>
+      <StatGroup stats={appointmentsMynaStats} columns={3} big />
     </ChartCard>
   )
 }
