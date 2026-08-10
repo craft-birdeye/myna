@@ -138,14 +138,18 @@ interface OutcomeKpi {
 
 // Same tile shape as StatGroup, with a small violet agent-contribution badge next to the value —
 // hovering it explains which agent and how much of the total that share represents.
-function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boolean }) {
+// `compact` swaps the usual 250px-min tile for a narrower one whose label can wrap onto a second
+// line — used when the group has to lay its stats out horizontally inside a column that's sharing
+// a line with sibling sections (Surveys/Ticketing next to Insights AI), rather than the ~250px
+// tiles that assume a full-width row.
+function OutcomeKpiGroup({ stats, big = true, compact = false }: { stats: OutcomeKpi[]; big?: boolean; compact?: boolean }) {
   return (
-    <div className={KPI_ROW_CLASS}>
+    <div className={compact ? 'flex flex-wrap gap-md' : KPI_ROW_CLASS}>
       {stats.map((s) => {
         const pctNum = s.agentPct ? parseFloat(s.agentPct) : null
         const contribution = pctNum != null ? formatNumber((parseOutcomeNumber(s.value) * pctNum) / 100) : null
         return (
-          <div key={s.id} className={KPI_TILE_CLASS}>
+          <div key={s.id} className={compact ? 'min-w-[92px]' : KPI_TILE_CLASS}>
             <p
               className={`m-0 flex items-baseline gap-xs whitespace-nowrap ${big ? 'text-display' : 'text-h3'} ${
                 s.danger ? 'text-chip-danger-text' : 'text-text-primary'
@@ -164,7 +168,7 @@ function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boo
                 </Tooltip>
               )}
             </p>
-            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+            <p className={`m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary ${compact ? '' : 'whitespace-nowrap'}`}>{s.label}</p>
           </div>
         )
       })}
@@ -574,7 +578,7 @@ function SurveysSection() {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Surveys</h3>
-      <OutcomeKpiGroup stats={outcomeStats} big />
+      <OutcomeKpiGroup stats={outcomeStats} big compact />
     </>
   )
 }
@@ -592,7 +596,7 @@ function TicketingSection() {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Ticketing</h3>
-      <OutcomeKpiGroup stats={outcomeStats} big />
+      <OutcomeKpiGroup stats={outcomeStats} big compact />
     </>
   )
 }
