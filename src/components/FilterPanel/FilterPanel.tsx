@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { X, ChevronDown } from 'lucide-react'
+import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
 import { FilterField, FilterPanelProps } from './FilterPanel.types'
@@ -16,7 +17,13 @@ export function FilterPanel({
   const [openId, setOpenId] = useState<string | null>(null)
   const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
   const [internalSelections, setInternalSelections] = useState<Record<string, string[]>>({})
+  const [query, setQuery] = useState('')
   const selections = controlledSelections ?? internalSelections
+
+  const visibleFields = useMemo(
+    () => fields.filter((f) => f.label.toLowerCase().includes(query.trim().toLowerCase())),
+    [fields, query],
+  )
 
   function updateSelections(next: Record<string, string[]>) {
     if (onSelectionsChange) onSelectionsChange(next)
@@ -58,10 +65,26 @@ export function FilterPanel({
           )}
         </div>
 
+        {/* Search filters */}
+        <div className="shrink-0 px-xl pb-lg">
+          <div className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
+            <Icon name="search" size={20} className="text-text-icon" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search filters..."
+              className="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
+            />
+          </div>
+        </div>
+
         {/* Fields — scrollable */}
         <div className={`flex flex-1 flex-col gap-sm overflow-y-auto px-xl ${onAdvancedFilters ? 'pb-[56px]' : 'pb-xl'}`}>
           <div className="flex flex-col gap-sm">
-            {fields.map((field) => {
+            {visibleFields.length === 0 && (
+              <p className="py-sm text-body text-text-tertiary">No results.</p>
+            )}
+            {visibleFields.map((field) => {
               const count = selections[field.id]?.length ?? 0
               return (
                 <button

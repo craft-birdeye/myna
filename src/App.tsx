@@ -36,7 +36,7 @@ import { HCWaitlistFilledScreen } from './screens/HCWaitlistFilledScreen'
 import { HCIntakesCompletedScreen } from './screens/HCIntakesCompletedScreen'
 import { DentalRevenueScreen } from './screens/DentalRevenueScreen'
 import { ManageTreatmentPlansScreen } from './screens/ManageTreatmentPlansScreen'
-import { AgentDetailScreen } from './screens/AgentDetailScreen'
+import { AgentDetailScreen, HealthcareFrontdeskCreateAgentScreen, getCreateWithAiSetup, CreateAiGhostwriterShellHeader } from './screens/AgentDetailScreen'
 import { WorkflowEditorScreen } from './screens/WorkflowEditorScreen'
 import { ProceduresScreen } from './screens/ProceduresScreen'
 import { ReviewWaitlistScreen, buildWaitlistDetailProps, type WaitlistDetailArgs } from './screens/ReviewWaitlistScreen'
@@ -71,7 +71,7 @@ import {
   FigmaIconRecommendations,
 } from './components/l1Icons'
 
-function EmptyResourceScreen({ label }: { label: string }) {
+function EmptyResourceScreen({ label, title }: { label: string; title?: string }) {
   return (
     <div className="flex flex-1 items-center justify-center text-body text-text-secondary">
       No {label.toLowerCase()} data yet.
@@ -288,11 +288,10 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
   {
     id: 'agents',
     label: 'Agents',
+    badge: 'New',
     items: [
-      { id: 'generation-agents', label: 'Generation agents' },
       { id: 'response-agents',   label: 'Response agents' },
-      { id: 'tagging-agents',    label: 'Tagging agents' },
-      { id: 'marketing-agents',  label: 'Marketing agents' },
+      { id: 'generation-agents', label: 'Generation agents' },
     ],
   },
   {
@@ -362,6 +361,7 @@ const AGENT_NAMES: Record<string, string> = {
   'treatment-plan-agent':      'Treatment plan agent',
   'review-response-agents':    'Review response agents',
   'response-agents':           'Review response agents',
+  'generation-agents':         'Review generation agents',
 }
 
 // Map railActive → module title shown in the global TopBar
@@ -439,6 +439,9 @@ export function App() {
   // closing the editor) knows which instance + tab to land on instead of its own defaults.
   const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
   const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
+  const [workflowAiCreateFullscreen, setWorkflowAiCreateFullscreen] = useState(false)
+  /** After exiting Create with AI fullscreen, reopen the canvas LHS on that tab. */
+  const [workflowLhsPreferAiTab, setWorkflowLhsPreferAiTab] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
@@ -467,6 +470,7 @@ export function App() {
     setNavActive(DEFAULT_NAV_BY_PRODUCT[id] ?? 'manage-appointments')
     setEditingAgentName(null)
     setWizardAgentDraft(null)
+    setWorkflowAiCreateFullscreen(false)
     setIsAgentSetupActive(false)
     setIntakeDetail(null)
     setAppointmentDetail(null)
@@ -478,6 +482,7 @@ export function App() {
   function handleEditAgent(name: string, draft?: WizardAgentDraft) {
     setWizardAgentDraft(draft ?? null)
     setEditingAgentName(name)
+    setWorkflowAiCreateFullscreen(false)
     if (draft) {
       setAgentToastMessage(`${draft.agentName} created successfully`)
       setAgentToastVisible(true)
@@ -794,33 +799,87 @@ export function App() {
                     }}
                   />
                 ) : isEditingWorkflow ? (
-                  <div className="flex h-full w-full overflow-hidden">
-                    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                      <WorkflowEditorScreen
-                        agentName={editingAgentName}
-                        onClose={() => {
-                          setEditingAgentName(null)
-                          setWizardAgentDraft(null)
-                          setWorkflowAiAssistOpen(false)
-                        }}
-                        product={activeProduct}
-                        wizardDraft={wizardAgentDraft}
-                        agentStatus={
-                          editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                            ? 'Draft'
-                            : undefined
-                        }
-                        aiAssistOpen={workflowAiAssistOpen}
-                        onAiAssistOpenChange={setWorkflowAiAssistOpen}
-                      />
+                  workflowAiCreateFullscreen && editingAgentName ? (
+                    (() => {
+                      const setup = getCreateWithAiSetup(editingAgentName)
+                      const exitToAgentBuilder = () => {
+                        setWorkflowAiCreateFullscreen(false)
+                        setWorkflowLhsPreferAiTab(true)
+                      }
+                      // Shell title matches create-flow naming (drop region suffix when present).
+                      const shellTitle = editingAgentName.replace(/ - .+$/, '') || editingAgentName
+                      return (
+                        <div className="flex h-full w-full overflow-hidden">
+                          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                            <CreateAiGhostwriterShellHeader
+                              title={shellTitle}
+                              onBack={exitToAgentBuilder}
+                              onViewAgentBuilder={exitToAgentBuilder}
+                            />
+                            <div className="scrollbar-subtle flex min-h-0 flex-1 items-stretch justify-center overflow-visible px-lg pt-0">
+                              <div className="flex h-full min-h-0 w-full min-w-0 justify-center">
+                                <HealthcareFrontdeskCreateAgentScreen
+                                  key={`fullscreen-create::${editingAgentName}::welcome`}
+                                  onBack={exitToAgentBuilder}
+                                  onCreateFromScratch={exitToAgentBuilder}
+                                  onSelectFromLibrary={exitToAgentBuilder}
+                                  onViewWorkflow={exitToAgentBuilder}
+                                  onCreateAgent={exitToAgentBuilder}
+                                  pageTitle={editingAgentName}
+                                  hideHeaderBack
+                                  variant={setup.variant}
+                                  initialPrompt={setup.initialPrompt}
+                                  libraryCards={setup.libraryCards}
+                                  fromScratchLabel={setup.fromScratchLabel}
+                                  // Existing agent → expand shows welcome + pills, not a resumed thread.
+                                  autoStart={false}
+                                  workflowVisible={false}
+                                  compactGreeting
+                                  existingAgent
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()
+                  ) : (
+                    <div className="flex h-full w-full overflow-hidden">
+                      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                        <WorkflowEditorScreen
+                          agentName={editingAgentName}
+                          onClose={() => {
+                            setEditingAgentName(null)
+                            setWizardAgentDraft(null)
+                            setWorkflowAiAssistOpen(false)
+                            setWorkflowAiCreateFullscreen(false)
+                            setWorkflowLhsPreferAiTab(false)
+                          }}
+                          product={activeProduct}
+                          wizardDraft={wizardAgentDraft}
+                          agentStatus={
+                            editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
+                              ? 'Draft'
+                              : undefined
+                          }
+                          aiAssistOpen={workflowAiAssistOpen}
+                          onAiAssistOpenChange={setWorkflowAiAssistOpen}
+                          onOpenAiFullscreen={() => setWorkflowAiCreateFullscreen(true)}
+                          lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
+                        />
+                      </div>
+                      {workflowAiAssistOpen && (
+                        <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
+                      )}
                     </div>
-                    {workflowAiAssistOpen && (
-                      <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
-                    )}
-                  </div>
+                  )
                 ) : railActive === 'reviews' ? (
                   navActive === 'view-all-reviews' || navActive === 'all-reviews' ? (
                     <AllReviewsScreen />
+                  ) : navActive === 'respond-to-reviews' ? (
+                    <AllReviewsScreen unansweredOnly />
+                  ) : navActive === 'monitor-agent-replies' ? (
+                    <AllReviewsScreen agentRepliesOnly />
                   ) : AGENT_NAMES[navActive] ? (
                     <AgentDetailScreen
                       key={navActive}

@@ -245,3 +245,61 @@ export function toHealthcareLogRow(row: ReviewResponseLogRow): HealthcareLogRow 
     source: row.source,
   }
 }
+
+export const REVIEW_GENERATION_LOGS_ROWS: ReviewResponseLogRow[] = [
+  {
+    timestamp: 'Feb 25, 2024, 5:30 pm',
+    status: 'Complete',
+    contact: 'Dana Whitfield',
+    source: 'Email, Text',
+    implementedSteps: ['trigger', 'procedures'],
+    executedNodeIds: ['rg-1', 'rg-2', 'rg-3'],
+  },
+  {
+    timestamp: 'Feb 09, 2024, 5:30 pm',
+    status: 'Complete',
+    contact: 'Robert Cho',
+    source: 'Email, Text',
+    implementedSteps: ['trigger', 'procedures'],
+    executedNodeIds: ['rg-1', 'rg-2', 'rg-3'],
+  },
+  {
+    timestamp: 'Feb 05, 2024, 5:30 pm',
+    status: 'Failed',
+    contact: 'Maria Santos',
+    source: 'Email',
+    implementedSteps: ['trigger'],
+    executedNodeIds: ['rg-1', 'rg-2'],
+  },
+  {
+    timestamp: 'Jan 25, 2024, 5:30 pm',
+    status: 'Failed',
+    contact: 'James Okonkwo',
+    source: 'Email, Text',
+    implementedSteps: ['trigger'],
+    executedNodeIds: ['rg-1', 'rg-2', 'rg-3'],
+  },
+  {
+    timestamp: 'Jan 18, 2024, 5:30 pm',
+    status: 'In progress',
+    contact: 'Elena Sokolova',
+    source: 'Email',
+    implementedSteps: ['trigger'],
+    executedNodeIds: ['rg-1', 'rg-2'],
+  },
+]
+
+/** Maps a review-generation log row into the shared HealthcareLogRow shape used by RunDetailView. */
+export function toReviewGenerationLogRow(row: ReviewResponseLogRow): HealthcareLogRow {
+  return {
+    timestamp: row.timestamp,
+    status: row.status,
+    contact: row.contact,
+    channel: row.source,
+    duration: '—',
+    topic: 'Review request',
+    implementedSteps: row.implementedSteps,
+    executedNodeIds: row.executedNodeIds,
+    source: row.source,
+  }
+}

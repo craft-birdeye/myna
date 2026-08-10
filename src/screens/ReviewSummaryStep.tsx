@@ -1,6 +1,12 @@
 import { type ReactNode } from 'react'
 import { Pencil } from 'lucide-react'
-import { Icon, LanguageFlag } from '../components'
+import {
+  Icon,
+  LanguageFlag,
+  type SttSettingsValue,
+  type TtsFailoverSettingsValue,
+  type TtsModelSettingsValue,
+} from '../components'
 import type { HealthcareProcedureCatalogItem } from '../data/healthcareProcedureCatalog'
 import type { WizardLocation } from '../data/wizardLocations'
 import {
@@ -145,6 +151,9 @@ export interface ReviewSummaryStepProps {
   additionalVoices: string[]
   additionalVoiceConfigs?: AdditionalVoiceConfig[]
   voiceSpeed?: number
+  ttsModelSettings: TtsModelSettingsValue
+  ttsFailoverSettings: TtsFailoverSettingsValue
+  sttSettings: SttSettingsValue
   greeting: string
   recording: RecordingMode
   consent: string
@@ -158,6 +167,34 @@ export interface ReviewSummaryStepProps {
   onViewProcedure: (id: string) => void
 }
 
+function SelectValue({ value }: { value: string }) {
+  return (
+    <div className={`${READONLY_SHELL} flex h-9 items-center gap-sm px-md pr-sm`}>
+      <span className="min-w-0 flex-1 truncate">{value || '—'}</span>
+      <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+    </div>
+  )
+}
+
+function VoiceChipList({ configs }: { configs: AdditionalVoiceConfig[] }) {
+  return (
+    <ChipBox>
+      {configs.map((cfg) => {
+        const lang = getAgentLanguage(cfg.language)
+        return (
+          <span
+            key={cfg.label}
+            className="flex h-7 items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary"
+          >
+            <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
+            {cfg.label}
+          </span>
+        )
+      })}
+    </ChipBox>
+  )
+}
+
 export function ReviewSummaryStep({
   agentName,
   systemPrompt,
@@ -166,6 +203,9 @@ export function ReviewSummaryStep({
   selectedChannels,
   voice,
   additionalVoiceConfigs = [],
+  ttsModelSettings,
+  ttsFailoverSettings,
+  sttSettings,
   greeting,
   recording,
   consent,
@@ -190,7 +230,7 @@ export function ReviewSummaryStep({
 
   return (
     <div className="flex w-full flex-col">
-      <div className="w-full max-w-[978px]">
+      <div className="w-full max-w-[720px]">
         <h2 className="text-h3 text-text-primary">Review summary</h2>
         <p className="mt-xs text-small text-text-secondary">
           Review your configurations before creating the agent.
@@ -198,7 +238,7 @@ export function ReviewSummaryStep({
       </div>
 
       {/* Getting started */}
-      <section className="w-full max-w-[978px] pt-3xl">
+      <section className="w-full max-w-[720px] pt-3xl">
         <SectionHeader
           title="Getting started"
           editAriaLabel="Edit getting started"
@@ -226,7 +266,7 @@ export function ReviewSummaryStep({
       </section>
 
       {/* Configure agent */}
-      <section className="w-full max-w-[978px] pt-3xl">
+      <section className="w-full max-w-[720px] pt-3xl">
         <SectionHeader
           title="Configure agent"
           editAriaLabel="Edit configure agent"
@@ -265,7 +305,7 @@ export function ReviewSummaryStep({
       </section>
 
       {/* Channel configuration */}
-      <section className="w-full max-w-[978px] pt-3xl">
+      <section className="w-full max-w-[720px] pt-3xl">
         <SectionHeader
           title="Channel configuration"
           editAriaLabel="Edit channel configuration"
@@ -282,6 +322,13 @@ export function ReviewSummaryStep({
               <div className="flex flex-col gap-md">
                 <h4 className="text-body text-text-primary">Voice call settings</h4>
 
+                <div className="flex flex-col gap-md">
+                  <h5 className="text-body text-text-primary">Text-to-speech (TTS)</h5>
+                  <ReadField label="Primary model" required>
+                    <SelectValue value={ttsModelSettings.ttsModel} />
+                  </ReadField>
+                </div>
+
                 <ReadField label="Default voice" required>
                   <div className={`${READONLY_SHELL} flex h-9 items-center gap-sm px-md pr-sm`}>
                     <span className="min-w-0 flex-1 truncate">{voice || '—'}</span>
@@ -291,41 +338,97 @@ export function ReviewSummaryStep({
 
                 {additionalVoiceConfigs.length > 0 && (
                   <ReadField label="Additional voice">
-                    <ChipBox>
-                      {additionalVoiceConfigs.map((cfg) => {
-                        const lang = getAgentLanguage(cfg.language)
-                        return (
-                          <span
-                            key={cfg.label}
-                            className="flex h-7 items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary"
-                          >
-                            <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
-                            {cfg.label}
-                          </span>
-                        )
-                      })}
-                    </ChipBox>
+                    <VoiceChipList configs={additionalVoiceConfigs} />
                   </ReadField>
                 )}
+
+                <div
+                  className={`grid gap-md ${
+                    ttsFailoverSettings.ttsFailover === 'Manual' ? 'grid-cols-2' : 'grid-cols-1'
+                  }`}
+                >
+                  <ReadField label="Failover policy">
+                    <SelectValue value={ttsFailoverSettings.ttsFailover} />
+                  </ReadField>
+                  {ttsFailoverSettings.ttsFailover === 'Manual' && (
+                    <ReadField label="Failover model" required>
+                      <SelectValue value={ttsFailoverSettings.ttsFailoverModel} />
+                    </ReadField>
+                  )}
+                </div>
+
+                {ttsFailoverSettings.ttsFailover === 'Manual' && (
+                  <>
+                    <ReadField label="Voice" required>
+                      <div className={`${READONLY_SHELL} flex h-9 items-center gap-sm px-md pr-sm`}>
+                        <span className="min-w-0 flex-1 truncate">
+                          {ttsFailoverSettings.failoverVoice || '—'}
+                        </span>
+                        <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+                      </div>
+                    </ReadField>
+                    {ttsFailoverSettings.failoverAdditionalVoiceConfigs.length > 0 && (
+                      <ReadField label="Additional voice">
+                        <VoiceChipList
+                          configs={ttsFailoverSettings.failoverAdditionalVoiceConfigs}
+                        />
+                      </ReadField>
+                    )}
+                  </>
+                )}
+
+                <div className="flex flex-col gap-md pt-lg">
+                  <h5 className="text-body text-text-primary">Speech-to-text (STT)</h5>
+                  <ReadField label="Primary model" required>
+                    <SelectValue value={sttSettings.sttModel} />
+                  </ReadField>
+                  <div
+                    className={`grid gap-md ${
+                      sttSettings.sttFailover === 'Manual' ? 'grid-cols-2' : 'grid-cols-1'
+                    }`}
+                  >
+                    <ReadField label="Failover policy">
+                      <SelectValue value={sttSettings.sttFailover} />
+                    </ReadField>
+                    {sttSettings.sttFailover === 'Manual' && (
+                      <ReadField label="Failover model" required>
+                        <SelectValue value={sttSettings.sttFailoverModel} />
+                      </ReadField>
+                    )}
+                  </div>
+                  <ReadField label="Enable interruptions">
+                    <TextBox value={sttSettings.interruptions ? 'On' : 'Off'} />
+                  </ReadField>
+                </div>
 
                 <ReadField label="Greeting message">
                   <TextBox value={greeting} multiline minHeight="min-h-[80px]" />
                 </ReadField>
 
-                <ReadField label="Voice recording consent">
+                <ReadField label="Call recording">
                   <TextBox
                     value={
                       recording === 'off'
                         ? 'Off'
                         : recording === 'silent'
                           ? 'Record silently'
-                          : consent ||
-                            'This call may be recorded for quality and training purposes.'
+                          : 'Record only after obtaining consent'
                     }
-                    multiline={recording !== 'off'}
-                    minHeight={recording !== 'off' ? 'min-h-[64px]' : undefined}
                   />
                 </ReadField>
+
+                {recording === 'announced' && (
+                  <ReadField label="Consent message">
+                    <TextBox
+                      value={
+                        consent ||
+                        'This call may be recorded for quality and training purposes.'
+                      }
+                      multiline
+                      minHeight="min-h-[64px]"
+                    />
+                  </ReadField>
+                )}
               </div>
             )}
 

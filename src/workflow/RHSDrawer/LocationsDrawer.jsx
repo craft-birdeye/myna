@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '../elemental-stubs';
+import { SelectMenu } from '../../components/SelectMenu/SelectMenu';
 import './LocationsDrawer.css';
 
 const font = '"Roboto", arial, sans-serif';
@@ -33,10 +35,21 @@ const SELECT_BY_OPTIONS = [
 
 const DEFAULT_SELECTED = ['1001', '1002', '1004', '1011', '1014', '1017'];
 
-export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBack, onSave }) {
-  const [selectedIds, setSelectedIds] = useState(initialSelectedIds || DEFAULT_SELECTED);
+export default function LocationsDrawer({ selectedIds: initialSelectedIds = DEFAULT_SELECTED, onBack, onSave }) {
+  const [selectedIds, setSelectedIds] = useState(initialSelectedIds);
   const [search, setSearch] = useState('');
   const [selectBy, setSelectBy] = useState('location');
+  const [selectByOpen, setSelectByOpen] = useState(false);
+  const selectByRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectByOpen) return;
+    const handleOutsideClick = (e) => {
+      if (selectByRef.current && !selectByRef.current.contains(e.target)) setSelectByOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [selectByOpen]);
 
   const filteredLocations = useMemo(() => {
     if (!search.trim()) return ALL_LOCATIONS;
@@ -65,7 +78,10 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
 
   const handleSave = () => onSave?.(ALL_LOCATIONS.filter((loc) => selectedIds.includes(loc.id)));
 
-  return (
+  // Portal to <body> so this full-screen overlay always paints above the rest of the
+  // page (e.g. the LHS "Create with AI"/"Create manually" panel), regardless of where in
+  // the component tree it's mounted or what stacking contexts its ancestors set up.
+  return createPortal(
     <div className="loc-overlay">
       <div className="loc-drawer">
 
@@ -79,7 +95,7 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
             </button>
             <span className="loc-title">Locations</span>
           </div>
-          <Button theme="primary" label="Save" onClick={handleSave} />
+          <Button theme="primary" label="Add" onClick={handleSave} />
         </div>
 
         {/* Body */}
@@ -89,17 +105,29 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
             {/* Description + select by */}
             <div className="loc-description">
               <span>Choose the locations this agent will work for. Select by</span>
-              <div className="loc-select-wrapper">
-                <select
+              <div className="loc-select-wrapper" ref={selectByRef}>
+                <button
+                  type="button"
                   className="loc-select-by"
-                  value={selectBy}
-                  onChange={(e) => setSelectBy(e.target.value)}
+                  onClick={() => setSelectByOpen((open) => !open)}
                 >
-                  {SELECT_BY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined loc-select-chevron">expand_more</span>
+                  {SELECT_BY_OPTIONS.find((opt) => opt.value === selectBy)?.label}
+                  <span className="material-symbols-outlined loc-select-chevron">expand_more</span>
+                </button>
+                {selectByOpen && (
+                  <div className="loc-select-menu">
+                    <SelectMenu
+                      options={SELECT_BY_OPTIONS}
+                      value={[selectBy]}
+                      multi={false}
+                      searchable={false}
+                      onChange={(value) => {
+                        setSelectBy(value[0]);
+                        setSelectByOpen(false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               <span className="material-symbols-outlined loc-info-icon">info</span>
             </div>
@@ -136,7 +164,8 @@ export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBac
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
