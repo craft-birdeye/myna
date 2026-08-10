@@ -240,15 +240,19 @@ function AiCoworkerSummaryCard() {
   const mynaHours = mynaAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const jayHours = jayAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const robinHours = robinAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const mynaCostK = mynaAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+  const jayCostK = jayAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+  const robinCostK = robinAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
 
   const totalAgents = mynaRunning + jayRunning + robinRunning
   const totalHours = mynaHours + jayHours + robinHours
+  const totalCostK = mynaCostK + jayCostK + robinCostK
 
   const stats: OverviewStat[] = [
     { id: 'co-workers', value: '3', label: 'Co-workers' },
     { id: 'agents', value: String(totalAgents), label: 'Agents' },
     { id: 'time-saved', value: `${(totalHours / 24).toFixed(1)} days`, label: 'Time saved' },
-    { id: 'hours-saved', value: `${totalHours}h`, label: 'Hours saved' },
+    { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
     { id: 'agentification-rate', value: '91%', label: 'Agentification rate' },
   ]
 
@@ -336,12 +340,12 @@ function InboxSection({ showMynaPerformance = false }: InboxSectionProps) {
           <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Front desk</h3>
           <OutcomeKpiGroup stats={outcomeStats} />
           <h3 className="m-0 mb-lg mt-3xl text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
-          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} />
+          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} big />
         </>
       ) : (
         <>
           <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
-          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} />
+          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} big />
         </>
       )}
     </>
@@ -579,7 +583,7 @@ function SurveysSection() {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Surveys</h3>
-      <OutcomeKpiGroup stats={outcomeStats} big compact />
+      <OutcomeKpiGroup stats={outcomeStats} big />
     </>
   )
 }
@@ -597,7 +601,7 @@ function TicketingSection() {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Ticketing</h3>
-      <OutcomeKpiGroup stats={outcomeStats} big compact />
+      <OutcomeKpiGroup stats={outcomeStats} big />
     </>
   )
 }
@@ -875,29 +879,17 @@ export function OverviewFeedbackScreen({
                       ? [
                           <CoworkerPerformanceSection persona="marketing" />,
                           <ReviewsSection showJayPerformance />,
-                          <ListingsSection big />,
-                          <div className="flex flex-wrap gap-3xl">
-                            <div className="min-w-[320px] flex-1">
-                              <ReferralsSection big />
-                            </div>
-                            <div className="min-w-[320px] flex-1">
-                              <SocialSection big showJayOutcomes />
-                            </div>
+                          <div className="mt-lg">
+                            <ListingsSection big />
                           </div>,
+                          <ReferralsSection big />,
+                          <SocialSection big showJayOutcomes />,
                         ]
                       : [
                           <CoworkerPerformanceSection persona="cx" />,
-                          <div className="flex flex-wrap gap-3xl">
-                            <div className="min-w-[320px] flex-1">
-                              <SurveysSection />
-                            </div>
-                            <div className="min-w-[320px] flex-1">
-                              <TicketingSection />
-                            </div>
-                            <div className="min-w-[320px] flex-1">
-                              <InsightsAiSection />
-                            </div>
-                          </div>,
+                          <SurveysSection />,
+                          <TicketingSection />,
+                          <InsightsAiSection />,
                         ]),
                 ]}
               />
