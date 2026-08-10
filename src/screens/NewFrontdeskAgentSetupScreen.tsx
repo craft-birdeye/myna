@@ -14,7 +14,13 @@ import {
   VoiceCallEngineSettings,
   TtsModelSettings,
   TtsFailoverSettings,
+  DEFAULT_TTS_MODEL_SETTINGS,
+  DEFAULT_TTS_FAILOVER_SETTINGS,
+  DEFAULT_STT_SETTINGS,
   type AdditionalVoiceConfig,
+  type TtsModelSettingsValue,
+  type TtsFailoverSettingsValue,
+  type SttSettingsValue,
 } from '../components'
 import {
   AGENT_LANGUAGES,
@@ -353,6 +359,12 @@ function VoiceChannelSettings({
   onAdditionalVoicesChange,
   additionalVoiceConfigs,
   onAdditionalVoiceConfigsChange,
+  ttsModelSettings,
+  onTtsModelSettingsChange,
+  ttsFailoverSettings,
+  onTtsFailoverSettingsChange,
+  sttSettings,
+  onSttSettingsChange,
   greeting,
   onGreetingChange,
   recording,
@@ -369,6 +381,12 @@ function VoiceChannelSettings({
   onAdditionalVoicesChange: (values: string[]) => void
   additionalVoiceConfigs: AdditionalVoiceConfig[]
   onAdditionalVoiceConfigsChange: (configs: AdditionalVoiceConfig[]) => void
+  ttsModelSettings: TtsModelSettingsValue
+  onTtsModelSettingsChange: (value: TtsModelSettingsValue) => void
+  ttsFailoverSettings: TtsFailoverSettingsValue
+  onTtsFailoverSettingsChange: (value: TtsFailoverSettingsValue) => void
+  sttSettings: SttSettingsValue
+  onSttSettingsChange: (value: SttSettingsValue) => void
   greeting: string
   onGreetingChange: (value: string) => void
   recording: RecordingMode
@@ -428,7 +446,7 @@ function VoiceChannelSettings({
 
   return (
     <div className="flex flex-col gap-xl">
-      <TtsModelSettings />
+      <TtsModelSettings value={ttsModelSettings} onChange={onTtsModelSettingsChange} />
 
       <div className="flex flex-col gap-xs pt-xs">
         <label className="text-small text-text-secondary">
@@ -527,9 +545,9 @@ function VoiceChannelSettings({
         />
       </div>
 
-      <TtsFailoverSettings />
+      <TtsFailoverSettings value={ttsFailoverSettings} onChange={onTtsFailoverSettingsChange} />
 
-      <VoiceCallEngineSettings />
+      <VoiceCallEngineSettings value={sttSettings} onChange={onSttSettingsChange} />
 
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">Greeting message</label>
@@ -647,7 +665,7 @@ function GettingStartedStep({
         <h2 className="text-h3 text-text-primary">Getting started</h2>
       </div>
 
-      <div className="flex w-full max-w-[978px] flex-col gap-sm">
+      <div className="flex w-full max-w-[720px] flex-col gap-sm">
         <label className="text-body text-text-primary">Name</label>
         <input
           ref={nameInputRef}
@@ -756,7 +774,7 @@ function ConfigureAgentStep({
   }
 
   return (
-    <div className="flex w-full max-w-[978px] flex-col gap-xl">
+    <div className="flex w-full max-w-[720px] flex-col gap-xl">
       <div>
         <h2 className="text-h3 text-text-primary">Configure agent</h2>
       </div>
@@ -941,6 +959,12 @@ function ConfigureChannelsStep({
   onAdditionalVoicesChange,
   additionalVoiceConfigs,
   onAdditionalVoiceConfigsChange,
+  ttsModelSettings,
+  onTtsModelSettingsChange,
+  ttsFailoverSettings,
+  onTtsFailoverSettingsChange,
+  sttSettings,
+  onSttSettingsChange,
   greeting,
   onGreetingChange,
   recording,
@@ -964,6 +988,12 @@ function ConfigureChannelsStep({
   onAdditionalVoicesChange: (values: string[]) => void
   additionalVoiceConfigs: AdditionalVoiceConfig[]
   onAdditionalVoiceConfigsChange: (configs: AdditionalVoiceConfig[]) => void
+  ttsModelSettings: TtsModelSettingsValue
+  onTtsModelSettingsChange: (value: TtsModelSettingsValue) => void
+  ttsFailoverSettings: TtsFailoverSettingsValue
+  onTtsFailoverSettingsChange: (value: TtsFailoverSettingsValue) => void
+  sttSettings: SttSettingsValue
+  onSttSettingsChange: (value: SttSettingsValue) => void
   greeting: string
   onGreetingChange: (value: string) => void
   recording: RecordingMode
@@ -979,7 +1009,7 @@ function ConfigureChannelsStep({
   const useAccordion = selectedChannels.size > 1
 
   return (
-    <div className="flex w-full max-w-[978px] flex-col gap-xl">
+    <div className="flex w-full max-w-[720px] flex-col gap-xl">
       <div>
         <h2 className="text-h3 text-text-primary">Select channels</h2>
       </div>
@@ -1007,6 +1037,12 @@ function ConfigureChannelsStep({
               onAdditionalVoicesChange={onAdditionalVoicesChange}
               additionalVoiceConfigs={additionalVoiceConfigs}
               onAdditionalVoiceConfigsChange={onAdditionalVoiceConfigsChange}
+              ttsModelSettings={ttsModelSettings}
+              onTtsModelSettingsChange={onTtsModelSettingsChange}
+              ttsFailoverSettings={ttsFailoverSettings}
+              onTtsFailoverSettingsChange={onTtsFailoverSettingsChange}
+              sttSettings={sttSettings}
+              onSttSettingsChange={onSttSettingsChange}
               greeting={greeting}
               onGreetingChange={onGreetingChange}
               recording={recording}
@@ -1299,6 +1335,16 @@ export function NewFrontdeskAgentSetupScreen({
   const [voiceSpeed, setVoiceSpeed] = useState(1)
   const [additionalVoices, setAdditionalVoices] = useState<string[]>([])
   const [additionalVoiceConfigs, setAdditionalVoiceConfigs] = useState<AdditionalVoiceConfig[]>([])
+  const [ttsModelSettings, setTtsModelSettings] = useState<TtsModelSettingsValue>(
+    () => ({ ...DEFAULT_TTS_MODEL_SETTINGS }),
+  )
+  const [ttsFailoverSettings, setTtsFailoverSettings] = useState<TtsFailoverSettingsValue>(
+    () => ({
+      ...DEFAULT_TTS_FAILOVER_SETTINGS,
+      failoverAdditionalVoiceConfigs: [],
+    }),
+  )
+  const [sttSettings, setSttSettings] = useState<SttSettingsValue>(() => ({ ...DEFAULT_STT_SETTINGS }))
   const [greeting, setGreeting] = useState('')
   const [recording, setRecording] = useState<RecordingMode>('announced')
   const [consent, setConsent] = useState('')
@@ -1561,6 +1607,12 @@ export function NewFrontdeskAgentSetupScreen({
               onAdditionalVoicesChange={setAdditionalVoices}
               additionalVoiceConfigs={additionalVoiceConfigs}
               onAdditionalVoiceConfigsChange={setAdditionalVoiceConfigs}
+              ttsModelSettings={ttsModelSettings}
+              onTtsModelSettingsChange={setTtsModelSettings}
+              ttsFailoverSettings={ttsFailoverSettings}
+              onTtsFailoverSettingsChange={setTtsFailoverSettings}
+              sttSettings={sttSettings}
+              onSttSettingsChange={setSttSettings}
               greeting={greeting}
               onGreetingChange={setGreeting}
               recording={recording}
@@ -1601,6 +1653,9 @@ export function NewFrontdeskAgentSetupScreen({
               additionalVoices={additionalVoices}
               additionalVoiceConfigs={additionalVoiceConfigs}
               voiceSpeed={voiceSpeed}
+              ttsModelSettings={ttsModelSettings}
+              ttsFailoverSettings={ttsFailoverSettings}
+              sttSettings={sttSettings}
               greeting={greeting}
               recording={recording}
               consent={consent}

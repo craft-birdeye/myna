@@ -10,11 +10,49 @@ import {
 } from '../VoiceSettingsDrawers/VoiceSettingsDrawers'
 import { getAgentLanguage } from '../../data/agentLanguages'
 
-const STT_MODELS = ['Deepgram_flux', 'Deepgram', 'AssemblyAI']
-const TTS_MODELS = ['Cartesia', 'ElevenLabs', 'OpenAI']
-const FAILOVER_POLICIES = ['Automatic', 'Manual', 'Disabled']
-const STT_FAILOVER_MODELS = ['Assembly AI', 'Deepgram', 'Google STT']
-const TTS_FAILOVER_MODELS = ['ElevenLabs', 'OpenAI', 'Cartesia']
+export const STT_MODELS = ['Deepgram_flux', 'Deepgram', 'AssemblyAI']
+export const TTS_MODELS = ['Cartesia', 'ElevenLabs', 'OpenAI']
+export const FAILOVER_POLICIES = ['Automatic', 'Manual', 'Disabled']
+export const STT_FAILOVER_MODELS = ['Assembly AI', 'Deepgram', 'Google STT']
+export const TTS_FAILOVER_MODELS = ['ElevenLabs', 'OpenAI', 'Cartesia']
+
+export interface TtsModelSettingsValue {
+  ttsModel: string
+}
+
+export interface TtsFailoverSettingsValue {
+  ttsFailover: string
+  ttsFailoverModel: string
+  failoverVoice: string
+  failoverVoiceSpeed: number
+  failoverAdditionalVoiceConfigs: AdditionalVoiceConfig[]
+}
+
+export interface SttSettingsValue {
+  sttModel: string
+  sttFailover: string
+  sttFailoverModel: string
+  interruptions: boolean
+}
+
+export const DEFAULT_TTS_MODEL_SETTINGS: TtsModelSettingsValue = {
+  ttsModel: 'Cartesia',
+}
+
+export const DEFAULT_TTS_FAILOVER_SETTINGS: TtsFailoverSettingsValue = {
+  ttsFailover: 'Automatic',
+  ttsFailoverModel: TTS_FAILOVER_MODELS[0],
+  failoverVoice: DEFAULT_AGENT_VOICE,
+  failoverVoiceSpeed: 1,
+  failoverAdditionalVoiceConfigs: [],
+}
+
+export const DEFAULT_STT_SETTINGS: SttSettingsValue = {
+  sttModel: 'Deepgram_flux',
+  sttFailover: 'Automatic',
+  sttFailoverModel: 'Assembly AI',
+  interruptions: true,
+}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -94,8 +132,16 @@ function SettingsSelect({
 }
 
 /** TTS heading + Primary model — shown first, above Default voice. */
-export function TtsModelSettings() {
-  const [ttsModel, setTtsModel] = useState('Cartesia')
+export function TtsModelSettings({
+  value,
+  onChange,
+}: {
+  value?: TtsModelSettingsValue
+  onChange?: (next: TtsModelSettingsValue) => void
+} = {}) {
+  const [internal, setInternal] = useState(DEFAULT_TTS_MODEL_SETTINGS)
+  const settings = value ?? internal
+  const update = onChange ?? setInternal
 
   return (
     <div className="flex flex-col gap-md">
@@ -104,7 +150,11 @@ export function TtsModelSettings() {
         <label className="text-small text-text-secondary">
           Primary model <span className="text-chip-danger-text">*</span>
         </label>
-        <SettingsSelect value={ttsModel} options={TTS_MODELS} onChange={setTtsModel} />
+        <SettingsSelect
+          value={settings.ttsModel}
+          options={TTS_MODELS}
+          onChange={(ttsModel) => update({ ...settings, ttsModel })}
+        />
       </div>
     </div>
   )
@@ -112,21 +162,31 @@ export function TtsModelSettings() {
 
 /** TTS failover policy/model + a mirrored Default voice/Add additional voice for the
  *  failover path — shown after Default voice / Add additional voice, before Speech-to-text. */
-export function TtsFailoverSettings() {
-  const [ttsFailover, setTtsFailover] = useState('Automatic')
-  const [ttsFailoverModel, setTtsFailoverModel] = useState(TTS_FAILOVER_MODELS[0])
-  const [failoverVoice, setFailoverVoice] = useState(DEFAULT_AGENT_VOICE)
-  const [failoverVoiceSpeed, setFailoverVoiceSpeed] = useState(1)
+export function TtsFailoverSettings({
+  value,
+  onChange,
+}: {
+  value?: TtsFailoverSettingsValue
+  onChange?: (next: TtsFailoverSettingsValue) => void
+} = {}) {
+  const [internal, setInternal] = useState(DEFAULT_TTS_FAILOVER_SETTINGS)
+  const settings = value ?? internal
+  const update = onChange ?? setInternal
+
   const [failoverDrawerOpen, setFailoverDrawerOpen] = useState(false)
-  const [failoverAdditionalVoiceConfigs, setFailoverAdditionalVoiceConfigs] = useState<AdditionalVoiceConfig[]>([])
   const [failoverAdditionalDrawerOpen, setFailoverAdditionalDrawerOpen] = useState(false)
   const [editingFailoverAdditionalVoice, setEditingFailoverAdditionalVoice] =
     useState<AdditionalVoiceConfig | null>(null)
 
   function handleFailoverVoiceSave(next: { voice: string; speed: number }) {
-    setFailoverVoice(next.voice)
-    setFailoverVoiceSpeed(next.speed)
-    setFailoverAdditionalVoiceConfigs((configs) => configs.filter((cfg) => cfg.label !== next.voice))
+    update({
+      ...settings,
+      failoverVoice: next.voice,
+      failoverVoiceSpeed: next.speed,
+      failoverAdditionalVoiceConfigs: settings.failoverAdditionalVoiceConfigs.filter(
+        (cfg) => cfg.label !== next.voice,
+      ),
+    })
     setFailoverDrawerOpen(false)
   }
 
@@ -147,17 +207,28 @@ export function TtsFailoverSettings() {
 
   function handleSaveFailoverAdditionalVoice(config: AdditionalVoiceConfig) {
     if (editingFailoverAdditionalVoice) {
-      setFailoverAdditionalVoiceConfigs((configs) =>
-        configs.map((cfg) => (cfg.label === editingFailoverAdditionalVoice.label ? config : cfg)),
-      )
+      update({
+        ...settings,
+        failoverAdditionalVoiceConfigs: settings.failoverAdditionalVoiceConfigs.map((cfg) =>
+          cfg.label === editingFailoverAdditionalVoice.label ? config : cfg,
+        ),
+      })
     } else {
-      setFailoverAdditionalVoiceConfigs((configs) => [...configs, config])
+      update({
+        ...settings,
+        failoverAdditionalVoiceConfigs: [...settings.failoverAdditionalVoiceConfigs, config],
+      })
     }
     closeFailoverAdditionalDrawer()
   }
 
   function handleRemoveFailoverAdditionalVoice(label: string) {
-    setFailoverAdditionalVoiceConfigs((configs) => configs.filter((cfg) => cfg.label !== label))
+    update({
+      ...settings,
+      failoverAdditionalVoiceConfigs: settings.failoverAdditionalVoiceConfigs.filter(
+        (cfg) => cfg.label !== label,
+      ),
+    })
   }
 
   return (
@@ -168,27 +239,31 @@ export function TtsFailoverSettings() {
             Failover policy
             <InfoTooltip text="What happens if the primary text-to-speech model is unavailable." variant="brief" />
           </label>
-          <SettingsSelect value={ttsFailover} options={FAILOVER_POLICIES} onChange={setTtsFailover} />
+          <SettingsSelect
+            value={settings.ttsFailover}
+            options={FAILOVER_POLICIES}
+            onChange={(ttsFailover) => update({ ...settings, ttsFailover })}
+          />
         </div>
-        {ttsFailover === 'Manual' && (
+        {settings.ttsFailover === 'Manual' && (
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">
               Failover model <span className="text-chip-danger-text">*</span>
             </label>
             <SettingsSelect
-              value={ttsFailoverModel}
+              value={settings.ttsFailoverModel}
               options={TTS_FAILOVER_MODELS}
-              onChange={setTtsFailoverModel}
+              onChange={(ttsFailoverModel) => update({ ...settings, ttsFailoverModel })}
             />
           </div>
         )}
       </div>
 
-      {ttsFailover === 'Manual' && (
+      {settings.ttsFailover === 'Manual' && (
         <>
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">
-              Default voice <span className="text-chip-danger-text">*</span>
+              Voice <span className="text-chip-danger-text">*</span>
             </label>
             <button
               type="button"
@@ -197,30 +272,30 @@ export function TtsFailoverSettings() {
             >
               <span
                 className={`min-w-0 flex-1 truncate text-left text-body ${
-                  failoverVoice ? 'text-text-primary' : 'text-text-tertiary'
+                  settings.failoverVoice ? 'text-text-primary' : 'text-text-tertiary'
                 }`}
               >
-                {failoverVoice || 'Select'}
+                {settings.failoverVoice || 'Select'}
               </span>
               <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
             </button>
             <DefaultVoiceDrawer
               open={failoverDrawerOpen}
-              voice={failoverVoice}
-              speed={failoverVoiceSpeed}
+              voice={settings.failoverVoice}
+              speed={settings.failoverVoiceSpeed}
               onClose={() => setFailoverDrawerOpen(false)}
               onSave={handleFailoverVoiceSave}
             />
           </div>
 
           <div className="flex flex-col gap-xs">
-            {failoverAdditionalVoiceConfigs.length > 0 && (
+            {settings.failoverAdditionalVoiceConfigs.length > 0 && (
               <label className="text-small text-text-secondary">Additional voice</label>
             )}
-            {failoverAdditionalVoiceConfigs.length > 0 ? (
+            {settings.failoverAdditionalVoiceConfigs.length > 0 ? (
               <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
                 <div className="flex flex-wrap gap-sm">
-                  {failoverAdditionalVoiceConfigs.map((cfg) => {
+                  {settings.failoverAdditionalVoiceConfigs.map((cfg) => {
                     const lang = getAgentLanguage(cfg.language)
                     return (
                       <button
@@ -277,8 +352,8 @@ export function TtsFailoverSettings() {
               open={failoverAdditionalDrawerOpen}
               initialConfig={editingFailoverAdditionalVoice}
               defaultLanguage="en"
-              defaultSpeed={failoverVoiceSpeed}
-              defaultVoice={failoverVoice}
+              defaultSpeed={settings.failoverVoiceSpeed}
+              defaultVoice={settings.failoverVoice}
               onClose={closeFailoverAdditionalDrawer}
               onSave={handleSaveFailoverAdditionalVoice}
             />
@@ -290,11 +365,16 @@ export function TtsFailoverSettings() {
 }
 
 /** STT heading + Primary model/Failover + Enable interruptions — shown last, before Greeting message. */
-export function VoiceCallEngineSettings() {
-  const [sttModel, setSttModel] = useState('Deepgram_flux')
-  const [sttFailover, setSttFailover] = useState('Automatic')
-  const [sttFailoverModel, setSttFailoverModel] = useState('Assembly AI')
-  const [interruptions, setInterruptions] = useState(true)
+export function VoiceCallEngineSettings({
+  value,
+  onChange,
+}: {
+  value?: SttSettingsValue
+  onChange?: (next: SttSettingsValue) => void
+} = {}) {
+  const [internal, setInternal] = useState(DEFAULT_STT_SETTINGS)
+  const settings = value ?? internal
+  const update = onChange ?? setInternal
 
   return (
     <div className="flex flex-col pt-lg">
@@ -304,7 +384,11 @@ export function VoiceCallEngineSettings() {
           <label className="text-small text-text-secondary">
             Primary model <span className="text-chip-danger-text">*</span>
           </label>
-          <SettingsSelect value={sttModel} options={STT_MODELS} onChange={setSttModel} />
+          <SettingsSelect
+            value={settings.sttModel}
+            options={STT_MODELS}
+            onChange={(sttModel) => update({ ...settings, sttModel })}
+          />
         </div>
         <div className="grid grid-cols-2 gap-md">
           <div className="flex flex-col gap-xs">
@@ -312,17 +396,21 @@ export function VoiceCallEngineSettings() {
               Failover policy
               <InfoTooltip text="What happens if the primary speech-to-text model is unavailable." variant="brief" />
             </label>
-            <SettingsSelect value={sttFailover} options={FAILOVER_POLICIES} onChange={setSttFailover} />
+            <SettingsSelect
+              value={settings.sttFailover}
+              options={FAILOVER_POLICIES}
+              onChange={(sttFailover) => update({ ...settings, sttFailover })}
+            />
           </div>
-          {sttFailover === 'Manual' && (
+          {settings.sttFailover === 'Manual' && (
             <div className="flex flex-col gap-xs">
               <label className="text-small text-text-secondary">
                 Failover model <span className="text-chip-danger-text">*</span>
               </label>
               <SettingsSelect
-                value={sttFailoverModel}
+                value={settings.sttFailoverModel}
                 options={STT_FAILOVER_MODELS}
-                onChange={setSttFailoverModel}
+                onChange={(sttFailoverModel) => update({ ...settings, sttFailoverModel })}
               />
             </div>
           )}
@@ -337,7 +425,10 @@ export function VoiceCallEngineSettings() {
             variant="detail"
           />
         </label>
-        <Toggle checked={interruptions} onChange={setInterruptions} />
+        <Toggle
+          checked={settings.interruptions}
+          onChange={(interruptions) => update({ ...settings, interruptions })}
+        />
       </div>
     </div>
   )
