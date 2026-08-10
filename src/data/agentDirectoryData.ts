@@ -109,6 +109,75 @@ const COMMON_AGENTS: AgentDirectoryEntry[] = [
   TAGGING_ROUTING,
 ]
 
+// ── Customer experience (Robin) agents — product-agnostic, same as the Marketing/
+// Inbox agents above. See PERSONA_GROUPS's 'cx' categories ('Surveys AI', 'Ticketing').
+const SURVEY_CREATION: AgentDirectoryEntry = {
+  id: 'survey-creation',
+  name: 'Survey creation agent',
+  category: 'Surveys AI',
+  persona: 'cx',
+  description: 'Builds and configures new customer surveys from templates or from scratch.',
+  running: 1,
+  outcome: { value: '86', label: 'Surveys created' },
+  timeSaved: '6h',
+  costSaved: '$0.4K',
+  tasksOngoing: 4,
+}
+
+const SURVEY_DISTRIBUTION: AgentDirectoryEntry = {
+  id: 'survey-distribution',
+  name: 'Survey distribution agent',
+  category: 'Surveys AI',
+  persona: 'cx',
+  description: 'Sends surveys to customers across email, text, and QR touchpoints after a qualifying interaction.',
+  running: 2,
+  outcome: { value: '3,240', label: 'Surveys sent' },
+  timeSaved: '19h',
+  costSaved: '$1.3K',
+  tasksOngoing: 9,
+}
+
+const SURVEY_RESPONSE: AgentDirectoryEntry = {
+  id: 'survey-response',
+  name: 'Survey response agent',
+  category: 'Surveys AI',
+  persona: 'cx',
+  description: 'Collects and scores incoming survey responses, flagging detractors for follow-up.',
+  running: 2,
+  outcome: { value: '1,860', label: 'Surveys responded to' },
+  timeSaved: '14h',
+  costSaved: '$1.0K',
+  tasksOngoing: 7,
+}
+
+const TICKETING_SURVEYS: AgentDirectoryEntry = {
+  id: 'ticketing-surveys',
+  name: 'Ticketing agent · Surveys',
+  category: 'Ticketing',
+  persona: 'cx',
+  description: 'Opens a support ticket automatically when a survey response flags a detractor or unresolved issue.',
+  running: 1,
+  outcome: { value: '212', label: 'Tickets created' },
+  timeSaved: '9h',
+  costSaved: '$0.6K',
+  tasksOngoing: 5,
+}
+
+const TICKETING_REVIEWS: AgentDirectoryEntry = {
+  id: 'ticketing-reviews',
+  name: 'Ticketing agent · Reviews',
+  category: 'Ticketing',
+  persona: 'cx',
+  description: 'Sends a ticket to the right team whenever a low-star review comes in, routed by location and topic.',
+  running: 1,
+  outcome: { value: '158', label: 'Tickets sent' },
+  timeSaved: '7h',
+  costSaved: '$0.5K',
+  tasksOngoing: 4,
+}
+
+const CX_AGENTS: AgentDirectoryEntry[] = [SURVEY_CREATION, SURVEY_DISTRIBUTION, SURVEY_RESPONSE, TICKETING_SURVEYS, TICKETING_REVIEWS]
+
 // Front desk agent — same for every product (App.tsx AGENT_NAMES `frontdesk-agent`).
 const FRONT_DESK: AgentDirectoryEntry = {
   id: 'front-desk',
@@ -256,5 +325,5 @@ export function getAgentDirectory(product: string): AgentDirectoryEntry[] {
       ? { ...first, alert: { message: '3 issues identified', actionLabel: 'Show details' } }
       : first
 
-  return [firstWithAlert, REVIEW_RESPONSE, ...rest, REVIEW_GENERATION, ...(last ? [last] : []), ...remainingCommon]
+  return [firstWithAlert, REVIEW_RESPONSE, ...rest, REVIEW_GENERATION, ...(last ? [last] : []), ...remainingCommon, ...CX_AGENTS]
 }
