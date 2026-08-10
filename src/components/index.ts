@@ -30,7 +30,8 @@ export { Tooltip } from './Tooltip/Tooltip'
 export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'
 export {
   VoiceCallEngineSettings,
-  VoiceCallInterruptionSettings,
+  TtsModelSettings,
+  TtsFailoverSettings,
 } from './VoiceCallEngineSettings/VoiceCallEngineSettings'
 export {
   AdditionalVoiceDrawer,

@@ -8,7 +8,8 @@ import {
   LanguageSelectMenu,
   RefChip,
   VoiceCallEngineSettings,
-  VoiceCallInterruptionSettings,
+  TtsModelSettings,
+  TtsFailoverSettings,
   type AdditionalVoiceConfig,
 } from '../components'
 import {
@@ -656,7 +657,7 @@ function ReminderSettings() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-lg">
+    <div className="flex w-full max-w-[720px] flex-col gap-lg">
       <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
         Voice call settings
       </h2>
@@ -668,7 +669,7 @@ function ReminderSettings() {
         </span>
       </div>
 
-      <VoiceCallEngineSettings />
+      <TtsModelSettings />
 
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
@@ -768,7 +769,9 @@ function ReminderSettings() {
         />
       </div>
 
-      <VoiceCallInterruptionSettings />
+      <TtsFailoverSettings />
+
+      <VoiceCallEngineSettings />
 
       <div className="flex flex-col gap-xs">
         <label className="text-body text-text-primary">Greeting message</label>
@@ -949,7 +952,7 @@ function FrontDeskSettings() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-md">
+    <div className="flex w-full max-w-[720px] flex-col gap-md">
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
         <div className="flex items-center gap-xs">
@@ -1120,7 +1123,7 @@ function FrontDeskSettings() {
           Voice call settings
         </h2>
 
-        <VoiceCallEngineSettings />
+        <TtsModelSettings />
 
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
@@ -1220,7 +1223,9 @@ function FrontDeskSettings() {
           />
         </div>
 
-        <VoiceCallInterruptionSettings />
+        <TtsFailoverSettings />
+
+        <VoiceCallEngineSettings />
       </div>
 
       {/* Greeting message */}

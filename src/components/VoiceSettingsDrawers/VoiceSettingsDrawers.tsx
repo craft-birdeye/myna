@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { BackArrowIcon } from '../../assets/BackArrowIcon'
 import { Icon } from '../Icon/Icon'
 import { LanguageFlag } from '../LanguageSelectMenu/LanguageSelectMenu'
+import { Tooltip } from '../Tooltip/Tooltip'
 import {
   AGENT_LANGUAGES,
   getAgentLanguage,
@@ -52,12 +53,77 @@ function formatVoiceSpeed(value: number): string {
   return value.toFixed(2)
 }
 
+function stopVoicePreview() {
+  window.speechSynthesis.cancel()
+}
+
+function playVoicePreview(text: string, speed = 1, onEnd?: () => void) {
+  stopVoicePreview()
+  const utter = new SpeechSynthesisUtterance(text)
+  utter.rate = Math.min(Math.max(speed, VOICE_SPEED_MIN), VOICE_SPEED_MAX)
+  utter.onend = () => onEnd?.()
+  utter.onerror = () => onEnd?.()
+  window.speechSynthesis.speak(utter)
+}
+
+function VoicePreviewButton({
+  voiceLabel,
+  speed = 1,
+  disabled = false,
+}: {
+  voiceLabel: string
+  speed?: number
+  disabled?: boolean
+}) {
+  const [playing, setPlaying] = useState(false)
+
+  useEffect(() => {
+    return () => stopVoicePreview()
+  }, [])
+
+  useEffect(() => {
+    stopVoicePreview()
+    setPlaying(false)
+  }, [voiceLabel, speed])
+
+  const previewText =
+    AGENT_VOICE_OPTIONS.find((opt) => opt.label === voiceLabel)?.preview
+    ?? `Hi, I'm your virtual assistant. How can I help you today?`
+
+  const toggle = () => {
+    if (disabled || !voiceLabel) return
+    if (playing) {
+      stopVoicePreview()
+      setPlaying(false)
+      return
+    }
+    setPlaying(true)
+    playVoicePreview(previewText, speed, () => setPlaying(false))
+  }
+
+  return (
+    <Tooltip content={playing ? 'Stop preview' : 'Preview voice'} variant="brief">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={disabled || !voiceLabel}
+        aria-label={playing ? 'Stop preview' : 'Preview voice'}
+        className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-input bg-surface text-text-icon transition-colors hover:bg-surface-l2 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <Icon name={playing ? 'stop' : 'volume_up'} size={20} fill={playing} />
+      </button>
+    </Tooltip>
+  )
+}
+
 function VoiceDropdown({
   value,
   onChange,
+  speed = 1,
 }: {
   value: string
   onChange: (value: string) => void
+  speed?: number
 }) {
   const [open, setOpen] = useState(false)
   const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null)
@@ -71,7 +137,7 @@ function VoiceDropdown({
   }
 
   const stopPlaying = () => {
-    window.speechSynthesis.cancel()
+    stopVoicePreview()
     setPlaying(null)
   }
 
@@ -82,10 +148,8 @@ function VoiceDropdown({
       return
     }
     stopPlaying()
-    const utter = new SpeechSynthesisUtterance(opt.preview)
-    utter.onend = () => setPlaying(null)
     setPlaying(opt.label)
-    window.speechSynthesis.speak(utter)
+    playVoicePreview(opt.preview, speed, () => setPlaying(null))
   }
 
   const select = (label: string) => {
@@ -93,6 +157,11 @@ function VoiceDropdown({
     onChange(label)
     setOpen(false)
   }
+
+  useEffect(() => {
+    if (!open) stopPlaying()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   return (
     <>
@@ -176,6 +245,8 @@ export function DefaultVoiceDrawer({
       const hasMatchingVoice = AGENT_VOICE_OPTIONS.some((opt) => opt.label === voice)
       setDraftVoice(hasMatchingVoice ? voice : AGENT_VOICE_OPTIONS[0]?.label || '')
       setDraftSpeed(speed)
+    } else {
+      stopVoicePreview()
     }
   }, [open, voice, speed])
 
@@ -225,7 +296,12 @@ export function DefaultVoiceDrawer({
         <div className="flex flex-1 flex-col gap-xl overflow-y-auto px-2xl pb-2xl pt-md">
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">Voice</label>
-            <VoiceDropdown value={draftVoice} onChange={setDraftVoice} />
+            <div className="flex items-center gap-sm">
+              <div className="min-w-0 flex-1">
+                <VoiceDropdown value={draftVoice} onChange={setDraftVoice} speed={draftSpeed} />
+              </div>
+              <VoicePreviewButton voiceLabel={draftVoice} speed={draftSpeed} disabled={!draftVoice} />
+            </div>
           </div>
 
           <div className="h-px shrink-0 bg-border" />
@@ -293,7 +369,10 @@ export function AdditionalVoiceDrawer({
   const isEditing = initialConfig != null
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      stopVoicePreview()
+      return
+    }
     if (initialConfig) {
       setDraftLabel(initialConfig.label)
       setDraftVoice(initialConfig.voice)
@@ -398,7 +477,12 @@ export function AdditionalVoiceDrawer({
 
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">Voice</label>
-            <VoiceDropdown value={draftVoice} onChange={setDraftVoice} />
+            <div className="flex items-center gap-sm">
+              <div className="min-w-0 flex-1">
+                <VoiceDropdown value={draftVoice} onChange={setDraftVoice} speed={draftSpeed} />
+              </div>
+              <VoicePreviewButton voiceLabel={draftVoice} speed={draftSpeed} disabled={!draftVoice} />
+            </div>
           </div>
 
           <div className="flex flex-col gap-xs">

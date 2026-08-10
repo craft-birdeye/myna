@@ -12,7 +12,8 @@ import {
   Toast,
   TopNav,
   VoiceCallEngineSettings,
-  VoiceCallInterruptionSettings,
+  TtsModelSettings,
+  TtsFailoverSettings,
   type AdditionalVoiceConfig,
 } from '../components'
 import {
@@ -427,7 +428,7 @@ function VoiceChannelSettings({
 
   return (
     <div className="flex flex-col gap-xl">
-      <VoiceCallEngineSettings />
+      <TtsModelSettings />
 
       <div className="flex flex-col gap-xs pt-xs">
         <label className="text-small text-text-secondary">
@@ -526,7 +527,9 @@ function VoiceChannelSettings({
         />
       </div>
 
-      <VoiceCallInterruptionSettings />
+      <TtsFailoverSettings />
+
+      <VoiceCallEngineSettings />
 
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">Greeting message</label>

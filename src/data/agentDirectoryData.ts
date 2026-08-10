@@ -44,6 +44,7 @@ const REVIEW_RESPONSE: AgentDirectoryEntry = {
   timeSaved: '51h',
   costSaved: '$3.6K',
   tasksOngoing: 6,
+  navId: 'response-agents',
 }
 
 const REVIEW_GENERATION: AgentDirectoryEntry = {
