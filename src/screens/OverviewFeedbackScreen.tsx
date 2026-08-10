@@ -144,7 +144,7 @@ interface OutcomeKpi {
 // tiles that assume a full-width row.
 function OutcomeKpiGroup({ stats, big = true, compact = false }: { stats: OutcomeKpi[]; big?: boolean; compact?: boolean }) {
   return (
-    <div className={compact ? 'flex flex-wrap gap-md' : KPI_ROW_CLASS}>
+    <div className={compact ? 'flex flex-wrap gap-sm' : KPI_ROW_CLASS}>
       {stats.map((s) => {
         const pctNum = s.agentPct ? parseFloat(s.agentPct) : null
         const contribution = pctNum != null ? formatNumber((parseOutcomeNumber(s.value) * pctNum) / 100) : null
@@ -329,19 +329,20 @@ function InboxSection({ showMynaPerformance = false }: InboxSectionProps) {
     agentName: a.name,
     agentPct: AGENT_CONTRIBUTION_PCT[a.id],
   }))
-  // Unread messages / Open leads fold into the same top row as the outcome KPIs when the Myna
-  // section is shown — same treatment as Reviews' top row.
-  const inboxTopStats: OutcomeKpi[] = [
-    ...outcomeStats,
-    ...OVERVIEW_INBOX_ALERT_STATS.map((s) => ({ id: s.id, value: s.value, label: s.label, agentName: '', danger: s.danger })),
-  ]
   return (
     <>
-      <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
       {showMynaPerformance ? (
-        <OutcomeKpiGroup stats={inboxTopStats} />
+        <>
+          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Front desk</h3>
+          <OutcomeKpiGroup stats={outcomeStats} />
+          <h3 className="m-0 mb-lg mt-3xl text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} />
+        </>
       ) : (
-        <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} />
+        <>
+          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} />
+        </>
       )}
     </>
   )
