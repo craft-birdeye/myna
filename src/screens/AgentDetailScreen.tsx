@@ -41,7 +41,6 @@ import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
-import { AiAgentIcon } from '../assets/AiAgentIcon'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
@@ -54,6 +53,9 @@ import RHSSidePanelHeader from '../workflow/Molecules/RHS/RHSHeader/RHSHeader'
 // @ts-ignore
 import LHSDrawer from '../workflow/LHSDrawer/LHSDrawer'
 import '../workflow/LHSDrawer/LHSDrawer.css'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import LocationsDrawer from '../workflow/RHSDrawer/LocationsDrawer.jsx'
 
 interface AgentDetailScreenProps {
   agentName: string
@@ -1624,7 +1626,7 @@ const REVIEW_RESPONSE_CHOICES = {
   },
   locations: {
     composerFill: 'All 4 locations.',
-    primary: ['All 4 locations', 'Just a few to start'],
+    primary: ['All 4 locations', 'Just a few to start', 'Select locations'],
   },
   spamOk: {
     composerFill: 'ok',
@@ -1671,11 +1673,7 @@ function ReviewChoicePills({
           key={label}
           type="button"
           onClick={() => onPick(label)}
-          className={
-            label.toLowerCase() === 'build agent'
-              ? 'flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover'
-              : 'flex h-9 items-center rounded-sm border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover'
-          }
+          className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
         >
           {label}
         </button>
@@ -1821,6 +1819,7 @@ function ReviewResponseThread({
   const [locationsThoughtsOpen, setLocationsThoughtsOpen] = useState(true)
   const [locationsReplyReady, setLocationsReplyReady] = useState(false)
   const [locationsReplyDone, setLocationsReplyDone] = useState(false)
+  const [locationsDrawerOpen, setLocationsDrawerOpen] = useState(false)
   const [spamOkAnswer, setSpamOkAnswer] = useState('')
   const [spamOkThoughtsOpen, setSpamOkThoughtsOpen] = useState(true)
   const [spamAlertReady, setSpamAlertReady] = useState(false)
@@ -1886,6 +1885,10 @@ function ReviewResponseThread({
         )
         break
       case 'locations':
+        if (text === 'Select locations') {
+          setLocationsDrawerOpen(true)
+          return
+        }
         setLocationsAnswer(
           text === 'All 4 locations' || text === fill ? fill : text,
         )
@@ -2290,6 +2293,21 @@ function ReviewResponseThread({
             </>
           )}
         </>
+      )}
+      {locationsDrawerOpen && (
+        <LocationsDrawer
+          onBack={() => setLocationsDrawerOpen(false)}
+          onSave={(selected: { id: string; name: string }[]) => {
+            setLocationsDrawerOpen(false)
+            if (!selected.length) return
+            const names = selected.map((loc) => loc.name)
+            const answer =
+              names.length <= 2
+                ? names.join(', ')
+                : `${names.slice(0, 2).join(', ')} + ${names.length - 2} more`
+            setLocationsAnswer(answer)
+          }}
+        />
       )}
     </>
   )
@@ -6746,45 +6764,28 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
         <TopNav title={chatHistoryTitle} initials="S" />
         <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
           <section
-            className={`z-10 flex shrink-0 flex-col overflow-hidden bg-surface transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
+            className={`z-10 shrink-0 transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
               createWorkflowOpen
-                ? `absolute bottom-sm left-sm top-[calc(52px+theme(spacing.sm))] w-96 rounded-lg border border-border shadow-card ${
+                ? `lhs-drawer !absolute bottom-lg left-lg top-[calc(52px+theme(spacing.lg))] !h-auto !w-[360px] ${
                     createLeftPaneCollapsed ? 'pointer-events-none -translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
                   }`
-                : 'relative w-full'
+                : 'relative flex h-full w-full flex-col overflow-hidden bg-surface'
             }`}
             aria-label={createWorkflowOpen ? 'Create with AI conversation' : undefined}
             aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
           >
             {createWorkflowOpen ? (
-              // Reuses LHSDrawer's own tab/collapse-button classes (lhs-drawer__tab*,
-              // lhs-drawer__collapse-btn) so this header matches the "edit agent" canvas panel exactly.
-              <div className="flex shrink-0 items-center gap-sm px-2xl pt-lg pb-sm">
-                <div className="lhs-drawer__tabs lhs-drawer__tabs--visible flex-1">
-                  <div className={`group relative lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}>
-                    <span className="lhs-drawer__tab-label">
-                      <span className="relative inline-flex items-center gap-xs">
-                        <button
-                          type="button"
-                          onClick={() => setCreateSideTab('ai')}
-                          className="inline-flex items-center gap-xs"
-                        >
-                          Create with AI
-                          <AiAgentIcon size={16} className="shrink-0" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Expand"
-                          title="Expand to full page"
-                          onClick={closeCreateWorkflow}
-                          className="absolute left-full top-1/2 ml-xs flex size-5 shrink-0 -translate-y-1/2 scale-90 items-center justify-center rounded-sm text-text-icon opacity-0 transition-[opacity,transform] duration-150 ease-out hover:bg-surface-selected group-hover:scale-100 group-hover:opacity-100"
-                        >
-                          <Icon name="open_in_full" size={14} />
-                        </button>
-                      </span>
-                    </span>
+              // Match agent-builder LHSDrawer tab chrome exactly.
+              <div className="lhs-drawer__tabs lhs-drawer__tabs--visible">
+                <div className="lhs-drawer__tabs-list">
+                  <button
+                    type="button"
+                    onClick={() => setCreateSideTab('ai')}
+                    className={`lhs-drawer__tab${createSideTab === 'ai' ? ' lhs-drawer__tab--active' : ''}`}
+                  >
+                    <span className="lhs-drawer__tab-label">Create with AI</span>
                     <span className="lhs-drawer__tab-underline" />
-                  </div>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setCreateSideTab('manual')}
@@ -6794,26 +6795,28 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     <span className="lhs-drawer__tab-underline" />
                   </button>
                 </div>
-                {createSideTab === 'ai' && (
+                <div className="lhs-drawer__tab-actions">
+                  {createSideTab === 'ai' && (
+                    <button
+                      type="button"
+                      onClick={expandCreateAiFullscreen}
+                      className="lhs-drawer__collapse-btn"
+                      aria-label="Full screen"
+                      title="Full screen"
+                    >
+                      <Icon name="open_in_full" size={18} />
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={expandCreateAiFullscreen}
-                    className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                    aria-label="Full screen"
-                    title="Full screen"
+                    aria-label="Collapse panel"
+                    title="Collapse panel"
+                    onClick={() => setCreateLeftPaneCollapsed(true)}
+                    className="lhs-drawer__collapse-btn"
                   >
-                    <Icon name="open_in_full" size={18} />
+                    <Icon name="left_panel_close" size={18} />
                   </button>
-                )}
-                <button
-                  type="button"
-                  aria-label="Collapse panel"
-                  title="Collapse panel"
-                  onClick={() => setCreateLeftPaneCollapsed(true)}
-                  className="lhs-drawer__collapse-btn shrink-0"
-                >
-                  <Icon name="left_panel_close" size={18} />
-                </button>
+                </div>
               </div>
             ) : showGhostwriterShellHeader ? (
               <CreateAiGhostwriterShellHeader
@@ -6860,7 +6863,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 createWorkflowOpen
                   ? createSideTab === 'manual'
                     ? 'px-0 py-0'
-                    : 'px-md'
+                    : 'min-h-0'
                   : 'justify-center px-lg'
               }`}
             >
@@ -6985,7 +6988,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               aria-label="Expand panel"
               title="Expand panel"
               onClick={() => setCreateLeftPaneCollapsed(false)}
-              className="absolute left-sm top-[calc(52px+theme(spacing.sm))] z-10 flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon shadow-card hover:bg-surface-l2"
+              className="absolute left-lg top-[calc(52px+theme(spacing.lg))] z-10 flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon shadow-card hover:bg-surface-l2"
             >
               <Icon name="left_panel_open" size={20} />
             </button>
