@@ -370,7 +370,7 @@ const RAIL_TITLE: Record<string, string> = {
   inbox:                 'Inbox',
   settings:              'Settings',
   overview:              'Overview',
-  agents:                'Agents',
+  agents:                'Co-workers',
   search:                'Search AI',
   listings:              'Listings AI',
   reviews:               'Reviews AI',

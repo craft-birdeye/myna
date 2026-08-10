@@ -145,7 +145,7 @@ function BottomIconButton({
         active ? 'bg-surface-selected-l1 group-hover:bg-transparent' : ''
       }`}>
         {active && (
-          <span className="pointer-events-none absolute inset-y-0 left-2 right-2 rounded-sm bg-surface-selected-l1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+          <span className="pointer-events-none absolute inset-0 rounded-sm bg-surface-selected-l1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
         )}
         {children}
       </span>
