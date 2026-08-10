@@ -38,6 +38,7 @@ import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
+import { OverviewFeedbackScreen } from './screens/OverviewFeedbackScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import { AIOverviewScreen } from './screens/AIOverviewScreen'
@@ -61,6 +62,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview-2', label: 'Overview', icon: 'home', badge: 'New' },
+      { id: 'overview-3', label: 'Overview', icon: 'home', badge: 'Post feedback' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
       { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'Tab' },
     ],
@@ -376,7 +378,7 @@ function openDetailInNewTab(view: string, args: unknown) {
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('overview-2')
+  const [railActive, setRailActive] = useState('overview-3')
   const [navActive, setNavActive] = useState(
     () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
   )
@@ -470,7 +472,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && railActive !== 'overview-2' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && railActive !== 'overview-2' && railActive !== 'overview-3' && (
         railActive === 'reviews' ? (
           <SideNav
             key="reviews"
@@ -504,6 +506,8 @@ export function App() {
       <main className="flex flex-1 flex-col overflow-hidden">
         {railActive === 'overview-2' ? (
           <OverviewScreen showCoworkerPerformance />
+        ) : railActive === 'overview-3' ? (
+          <OverviewFeedbackScreen showCoworkerPerformance />
         ) : railActive === 'settings' ? (
           settingsSubScreen?.startsWith('integration-') ? (
             <IntegrationDetailScreen
