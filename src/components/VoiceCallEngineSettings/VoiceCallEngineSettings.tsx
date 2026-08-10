@@ -95,7 +95,7 @@ function SettingsSelect({
           setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width })
           setOpen(true)
         }}
-        className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
+        className={`flex h-9 w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
           open ? 'border-primary' : 'border-border-input'
         }`}
       >
@@ -145,7 +145,7 @@ export function TtsModelSettings({
 
   return (
     <div className="flex flex-col gap-md">
-      <h3 className="text-body font-medium text-text-primary">Text-to-speech (TTS)</h3>
+      <h3 className="text-body text-text-primary">Text-to-speech (TTS)</h3>
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
           Primary model <span className="text-chip-danger-text">*</span>
@@ -268,7 +268,7 @@ export function TtsFailoverSettings({
             <button
               type="button"
               onClick={() => setFailoverDrawerOpen(true)}
-              className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
+              className="flex h-9 w-full items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
             >
               <span
                 className={`min-w-0 flex-1 truncate text-left text-body ${
@@ -379,7 +379,7 @@ export function VoiceCallEngineSettings({
   return (
     <div className="flex flex-col pt-lg">
       <div className="flex flex-col gap-md">
-        <h3 className="text-body font-medium text-text-primary">Speech-to-text (STT)</h3>
+        <h3 className="text-body text-text-primary">Speech-to-text (STT)</h3>
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
             Primary model <span className="text-chip-danger-text">*</span>

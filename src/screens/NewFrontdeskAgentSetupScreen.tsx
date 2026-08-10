@@ -22,6 +22,7 @@ import {
   type TtsFailoverSettingsValue,
   type SttSettingsValue,
 } from '../components'
+import { type LucideIcon, Check, ChevronDown, ChevronUp, Mail, MessageSquare, Minus, Phone, Play, Search, Square, Volume2, X } from 'lucide-react'
 import {
   AGENT_LANGUAGES,
   getAgentLanguage,
@@ -89,10 +90,10 @@ You handle inbound calls for hotel reservations: new bookings, modifications, ca
 - Attentive to details: dates, room preferences, special requests (anniversary, accessibility, dietary).`
 
 const CHANNELS = [
-  { id: 'voice', label: 'Voice call', icon: 'call' },
-  { id: 'webchat', label: 'Web chat', icon: 'chat' },
-  { id: 'text', label: 'Text', icon: 'sms' },
-  { id: 'email', label: 'Email', icon: 'mail' },
+  { id: 'voice', label: 'Voice call', icon: Phone },
+  { id: 'webchat', label: 'Web chat', icon: MessageSquare },
+  { id: 'text', label: 'Text', icon: MessageSquare },
+  { id: 'email', label: 'Email', icon: Mail },
   {
     id: 'facebook',
     label: 'Facebook',
@@ -186,7 +187,7 @@ function StepIndicator({
                   }`}
                 >
                   {isComplete ? (
-                    <Icon name="check" size={16} fill weight={600} className="text-white" />
+                    <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />
                   ) : (
                     step.id
                   )}
@@ -219,7 +220,7 @@ function SettingsCheckboxBox({ checked }: { checked: boolean }) {
         checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={11} fill weight={600} className="text-white" />}
+      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
     </span>
   )
 }
@@ -260,7 +261,7 @@ function ChannelsMultiSelect({
             {'iconSrc' in channel ? (
               <img src={channel.iconSrc} alt="" className="size-4 shrink-0" />
             ) : (
-              <Icon name={channel.icon} size={16} className="shrink-0 text-text-icon" />
+              (() => { const ChanIcon = channel.icon; return <ChanIcon className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> })()
             )}
             {channel.label}
             <button
@@ -272,7 +273,7 @@ function ChannelsMultiSelect({
               }}
               className="flex size-5 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-l2"
             >
-              <Icon name="close" size={16} />
+              <X className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </span>
         ))}
@@ -284,11 +285,7 @@ function ChannelsMultiSelect({
           {selectedChannelDefs.length === 0 && (
             <span className="text-body text-text-tertiary">Select</span>
           )}
-          <Icon
-            name={open ? 'expand_less' : 'expand_more'}
-            size={20}
-            className="ml-auto shrink-0 text-text-icon"
-          />
+          {open ? <ChevronUp className="ml-auto size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="ml-auto size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
         </button>
       </div>
       {open && anchor && (
@@ -319,7 +316,7 @@ function ChannelsMultiSelect({
                       {'iconSrc' in channel ? (
                         <img src={channel.iconSrc} alt="" className="size-4" />
                       ) : (
-                        <Icon name={channel.icon} size={16} className="text-text-icon" />
+                        (() => { const ChanIcon = channel.icon; return <ChanIcon className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> })()
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -337,7 +334,7 @@ function ChannelsMultiSelect({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-sm bg-primary px-lg py-[7px] text-body text-white transition-colors hover:bg-primary-hover"
+                className="rounded-md bg-primary px-lg py-[7px] text-body text-white transition-colors hover:bg-primary-hover"
               >
                 Apply
               </button>
@@ -1114,9 +1111,9 @@ function LocationCheckbox({
       }`}
     >
       {indeterminate ? (
-        <Icon name="remove" size={12} fill weight={600} className="text-white" />
+        <Minus className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />
       ) : (
-        checked && <Icon name="check" size={12} fill weight={600} className="text-white" />
+        checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />
       )}
     </span>
   )
@@ -1178,11 +1175,7 @@ function SelectLocationsStep({
               <span className={`truncate text-small ${sorted ? 'text-text-primary' : 'text-text-secondary'}`}>
                 {selectedCount > 0 ? `${selectedCount} selected` : 'Location'}
               </span>
-              <Icon
-                name={sorted && sortDir === 'asc' ? 'expand_less' : 'expand_more'}
-                size={16}
-                className={`shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`}
-              />
+              {(sorted && sortDir === 'asc') ? <ChevronUp className={`size-4 shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`} strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className={`size-4 shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`} strokeWidth={1.6} absoluteStrokeWidth />}
             </button>
           </div>
         ),
@@ -1216,7 +1209,7 @@ function SelectLocationsStep({
                 className="inline-flex items-center gap-[2px] text-text-action hover:underline"
               >
                 locations
-                <Icon name="expand_more" size={16} />
+                <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               {filterMenuOpen && (
                 <>
@@ -1246,11 +1239,7 @@ function SelectLocationsStep({
         </div>
 
         <div className="relative w-[280px] shrink-0">
-          <Icon
-            name="search"
-            size={18}
-            className="pointer-events-none absolute left-md top-1/2 -translate-y-1/2 text-text-icon"
-          />
+          <Search className="pointer-events-none absolute left-md top-1/2 size-4 -translate-y-1/2 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           <input
             type="text"
             value={search}
@@ -1508,13 +1497,13 @@ export function NewFrontdeskAgentSetupScreen({
     <div className="flex h-full flex-col">
       <TopNav initials="S" />
 
-      <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-surface px-2xl py-xl">
         <div className="flex items-center gap-sm">
           <button
             type="button"
             aria-label="Back"
             onClick={onBack}
-            className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
           >
             <BackArrowIcon />
           </button>
@@ -1532,7 +1521,7 @@ export function NewFrontdeskAgentSetupScreen({
             type="button"
             onClick={handleNext}
             disabled={isNextDisabled}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-[34px] items-center rounded-md px-lg text-body transition-colors ${
               isNextDisabled
                 ? 'cursor-not-allowed bg-surface-selected text-text-tertiary'
                 : 'bg-primary text-white hover:bg-primary-hover'

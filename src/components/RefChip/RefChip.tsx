@@ -1,4 +1,4 @@
-import { Icon } from '../Icon/Icon'
+import { X } from 'lucide-react'
 import type { RefKind } from '../../data/procedureData'
 import type { RefChipProps } from './RefChip.types'
 // Reuse the workflow editor's variable-field chip styling verbatim so
@@ -40,7 +40,7 @@ export function RefChip({ kind, label, onRemove, className = '' }: RefChipProps)
           aria-label={`Remove ${label}`}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
         >
-          <Icon name="close" size={14} className="text-text-icon" />
+          <X className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       )}
     </span>

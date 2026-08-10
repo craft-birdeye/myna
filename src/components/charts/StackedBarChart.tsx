@@ -35,7 +35,7 @@ export interface StackedBarChartProps {
   hideLegend?: boolean
 }
 
-const axisTick = { fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }
+const axisTick = { fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }
 
 function WrapTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) {
   const value = String(payload?.value ?? '')
@@ -44,8 +44,8 @@ function WrapTick({ x, y, payload }: { x?: number; y?: number; payload?: { value
   const line2 = spaceIdx > -1 ? value.slice(spaceIdx + 1) : ''
   return (
     <g transform={`translate(${x ?? 0},${y ?? 0})`}>
-      <text x={0} dy={14} textAnchor="middle" fill="#212121" fontSize={12} fontFamily="Roboto">{line1}</text>
-      {line2 && <text x={0} dy={28} textAnchor="middle" fill="#212121" fontSize={12} fontFamily="Roboto">{line2}</text>}
+      <text x={0} dy={14} textAnchor="middle" fill="#0d0d12" fontSize={12} fontFamily="Inter, sans-serif">{line1}</text>
+      {line2 && <text x={0} dy={28} textAnchor="middle" fill="#0d0d12" fontSize={12} fontFamily="Inter, sans-serif">{line2}</text>}
     </g>
   )
 }
@@ -138,8 +138,8 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
             align="left"
             iconType="circle"
             iconSize={8}
-            formatter={(value) => <span style={{ color: '#555555' }}>{value}</span>}
-            wrapperStyle={{ fontSize: 12, fontFamily: 'Roboto', paddingTop: 8 }}
+            formatter={(value) => <span style={{ color: '#717182' }}>{value}</span>}
+            wrapperStyle={{ fontSize: 12, fontFamily: 'Inter, sans-serif', paddingTop: 8 }}
           />
         )}
         {series.map((s, i) => (
@@ -158,7 +158,7 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
                 dataKey={s.key}
                 position="top"
                 formatter={kFormat}
-                style={{ fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }}
+                style={{ fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }}
               />
             )}
           </Bar>

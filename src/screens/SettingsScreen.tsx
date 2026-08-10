@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Icon, Link, TopNav } from '../components'
+import React, { useEffect, useState } from 'react'
+import { Globe, LayoutGrid, Navigation, Search, type LucideProps } from 'lucide-react'
+import { Link, TopNav } from '../components'
 import iconQrCode from '../assets/icon-qr-code.svg'
 import iconSetupStatus from '../assets/icon-setup-status.svg'
 import iconMediaLibrary from '../assets/icon-media-library.svg'
@@ -252,7 +253,7 @@ export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppo
           {/* Sticky search bar */}
           <div className="shrink-0 px-2xl pt-2xl pb-md" style={{ backgroundColor: '#F5F5F5' }}>
             <div className="flex items-center gap-sm rounded-sm border border-border bg-surface px-lg py-md">
-              <Icon name="search" size={20} className="shrink-0 text-text-icon" />
+              <Search className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
               <input
                 type="text"
                 value={query}
@@ -298,7 +299,7 @@ export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppo
                       >
                         {item.iconSrc
                           ? <img src={item.iconSrc} alt="" className="size-[22px] shrink-0 text-text-icon" />
-                          : <Icon name={item.icon} size={22} className="shrink-0 text-text-icon" />
+                          : (() => { const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = { near_me: Navigation, language: Globe, grid_view: LayoutGrid }; const I = ICON_MAP[item.icon]; return I ? <I className="size-[22px] shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : null })()
                         }
                         <div className="flex min-w-0 flex-col">
                           <div className="flex items-center gap-sm">

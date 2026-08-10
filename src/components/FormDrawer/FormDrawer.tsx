@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Icon } from '../Icon/Icon'
+import { ChevronDown, Search, Paperclip } from 'lucide-react'
 import { BackArrowIcon } from '../../assets/BackArrowIcon'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
 import { FormDrawerProps, TemplateOption } from './FormDrawer.types'
@@ -50,12 +50,12 @@ export function FormDrawer({
     <div className={`fixed inset-0 z-[100] ${open ? '' : 'pointer-events-none'}`} aria-hidden={!open}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
       />
 
       <aside
-        className={`absolute right-0 top-0 flex h-full w-[650px] max-w-[92vw] flex-col bg-surface shadow-dropdown transition-transform duration-200 ${
-          open ? 'translate-x-0' : 'translate-x-full'
+        className={`absolute right-2 top-2 flex h-[calc(100%-16px)] w-[650px] max-w-[calc(92vw-8px)] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal transition-transform duration-200 ${
+          open ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'
         }`}
       >
         {/* Header */}
@@ -65,7 +65,7 @@ export function FormDrawer({
               type="button"
               aria-label="Back"
               onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
             >
               <BackArrowIcon />
             </button>
@@ -116,7 +116,7 @@ export function FormDrawer({
                     value={value}
                     onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                     placeholder={field.placeholder ?? 'Enter input'}
-                    className="h-9 w-full rounded-sm border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                    className="h-[34px] w-full rounded-md border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
                   />
                 ) : field.type === 'textarea' ? (
                   <textarea
@@ -131,14 +131,14 @@ export function FormDrawer({
                   <button
                     type="button"
                     onClick={(e) => openMenu(field.key, e)}
-                    className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
+                    className={`flex h-[34px] w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
                       openField === field.key ? 'border-primary' : 'border-border-input'
                     }`}
                   >
                     <span className={`min-w-0 flex-1 truncate text-left text-body ${value ? 'text-text-primary' : 'text-text-tertiary'}`}>
                       {value || field.placeholder || 'Select'}
                     </span>
-                    <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+                    <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                 )}
 
@@ -176,8 +176,8 @@ export function FormDrawer({
           >
             {/* Search bar */}
             <div className="shrink-0 p-sm">
-              <div className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md">
-                <Icon name="search" size={20} className="text-text-icon" />
+              <div className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
+                <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                 <input
                   autoFocus
                   value={templateSearch}
@@ -210,7 +210,7 @@ export function FormDrawer({
                         <div className="flex h-[76px] w-[88px] shrink-0 flex-col overflow-hidden rounded-sm border border-border bg-surface-subtle p-xs">
                           <p className="line-clamp-4 text-[9px] leading-[13px] text-text-secondary">{tpl.body}</p>
                           {tpl.hasAttachment && (
-                            <Icon name="attach_file" size={12} className="mt-auto text-text-tertiary" />
+                            <Paperclip className="size-4 mt-auto text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
                           )}
                         </div>
                         {/* Meta */}
@@ -218,7 +218,7 @@ export function FormDrawer({
                           <span className="text-body text-text-primary">{tpl.label}</span>
                           <span className="line-clamp-2 text-small text-text-secondary">{tpl.body}</span>
                           {tpl.hasAttachment && (
-                            <Icon name="attach_file" size={16} className="text-text-tertiary" />
+                            <Paperclip className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
                           )}
                         </div>
                       </button>

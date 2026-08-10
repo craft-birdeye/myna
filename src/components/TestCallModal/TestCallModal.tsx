@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon } from '../Icon/Icon'
+import { Phone, PhoneOff, X, ChevronDown, ChevronUp } from 'lucide-react'
 import type { TestCallModalProps } from './TestCallModal.types'
 
 const AGENTS = [
@@ -83,25 +83,25 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
     >
       <div
-        className="relative w-[480px] rounded-lg bg-surface shadow-modal"
+        className="relative w-[480px] rounded-xl bg-surface shadow-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-xl py-lg">
           <div className="flex items-center gap-sm">
-            <Icon name="call" size={20} className="text-text-primary" />
+            <Phone className="size-5 text-text-primary" strokeWidth={1.6} absoluteStrokeWidth />
             <span className="text-h3 text-text-primary">Test call</span>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
           >
-            <Icon name="close" size={18} />
+            <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         </div>
 
@@ -122,7 +122,9 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
                   className="flex h-11 w-full items-center justify-between rounded-sm border border-border bg-surface px-md text-body text-text-primary hover:border-border-strong"
                 >
                   <span>{selectedAgent}</span>
-                  <Icon name={agentOpen ? 'expand_less' : 'expand_more'} size={20} className="text-text-icon" />
+                  {agentOpen
+                    ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+                    : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
                 </button>
                 {agentOpen && (
                   <>
@@ -155,7 +157,7 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
                   >
                     <span className="text-lg leading-none">{countryCode.flag}</span>
                     <span>{countryCode.code}</span>
-                    <Icon name="expand_more" size={16} className="text-text-icon" />
+                    <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                   {ccOpen && (
                     <>
@@ -193,7 +195,7 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
           {phase === 'calling' && (
             <div className="flex flex-col items-center gap-lg py-xl">
               <div className="relative flex size-20 items-center justify-center rounded-full bg-primary/10">
-                <Icon name="call" size={32} className="text-primary" />
+                <Phone className="size-5 text-primary" strokeWidth={1.6} absoluteStrokeWidth />
                 {/* Pulsing rings */}
                 <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
               </div>
@@ -204,7 +206,7 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
               <button
                 type="button"
                 onClick={() => setPhase('idle')}
-                className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                className="flex h-[34px] items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
               >
                 Cancel
               </button>
@@ -215,7 +217,7 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
           {phase === 'connected' && (
             <div className="flex flex-col items-center gap-lg py-xl">
               <div className="flex size-20 items-center justify-center rounded-full bg-success/10">
-                <Icon name="call" size={32} className="text-success" />
+                <Phone className="size-5 text-success" strokeWidth={1.6} absoluteStrokeWidth />
               </div>
               <div className="flex flex-col items-center gap-xs">
                 <span className="text-h3 text-text-primary">Connected</span>
@@ -228,7 +230,7 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
                   className="flex h-12 w-12 items-center justify-center rounded-full bg-danger text-white hover:bg-danger/90"
                   aria-label="End call"
                 >
-                  <Icon name="call_end" size={22} />
+                  <PhoneOff className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
               <p className="text-center text-small text-text-tertiary">
@@ -241,7 +243,7 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
           {phase === 'ended' && (
             <div className="flex flex-col items-center gap-lg py-xl">
               <div className="flex size-20 items-center justify-center rounded-full bg-surface-subtle">
-                <Icon name="call_end" size={32} className="text-text-secondary" />
+                <PhoneOff className="size-5 text-text-secondary" strokeWidth={1.6} absoluteStrokeWidth />
               </div>
               <div className="flex flex-col items-center gap-xs">
                 <span className="text-h3 text-text-primary">Call ended</span>
@@ -251,14 +253,14 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
                 <button
                   type="button"
                   onClick={() => { setPhase('idle'); setPhone('') }}
-                  className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                  className="flex h-[34px] items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
                 >
                   Try again
                 </button>
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                  className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white hover:bg-primary-hover"
                 >
                   Done
                 </button>
@@ -281,13 +283,13 @@ export function TestCallModal({ open, agentName, onClose }: TestCallModalProps) 
               type="button"
               onClick={handleSend}
               disabled={!canSend}
-              className={`flex h-9 items-center gap-sm rounded-sm px-lg text-body text-white transition-colors ${
+              className={`flex h-[34px] items-center gap-sm rounded-md px-lg text-body text-white transition-colors ${
                 canSend
                   ? 'bg-primary hover:bg-primary-hover'
                   : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
               }`}
             >
-              <Icon name="call" size={16} />
+              <Phone className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               Send test call
             </button>
           </div>

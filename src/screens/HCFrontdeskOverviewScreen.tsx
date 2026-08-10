@@ -17,6 +17,7 @@ import {
   type SankeyLink,
   type SankeyNode,
 } from '../components'
+import { ArrowLeft, ChevronDown, DollarSign, Flame, LayoutList, ListFilter, MoreVertical, Paperclip, Smile, Users } from 'lucide-react'
 
 // ─── Conversation data per funnel node ───────────────────────────────────────
 
@@ -327,9 +328,9 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
                 type="button"
                 aria-label="Filters"
                 onClick={() => setFilterOpen((o) => !o)}
-                className={`flex size-9 items-center justify-center rounded-sm text-text-icon ${filterOpen ? 'bg-surface-selected' : 'border border-border-selected bg-surface hover:bg-surface-l2'}`}
+                className={`flex size-[34px] items-center justify-center rounded-md text-text-icon ${filterOpen ? 'bg-surface-selected' : 'border border-border-selected bg-surface hover:bg-surface-l2'}`}
               >
-                <Icon name="filter_list" size={20} />
+                <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           }
@@ -423,12 +424,12 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
       {/* List drawer */}
       {nodeDrawer !== null && (
         <>
-          <div className="fixed inset-0 z-[70] bg-black/20" onClick={() => { closeDetail(); setTimeout(() => setNodeDrawer(null), 300) }} />
-          <div className="fixed right-0 top-0 z-[80] flex h-full w-[650px] flex-col bg-surface shadow-modal">
+          <div className="fixed inset-0 z-[70] bg-black/20 backdrop-blur-sm" onClick={() => { closeDetail(); setTimeout(() => setNodeDrawer(null), 300) }} />
+          <div className="fixed right-2 top-2 z-[80] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
             <div className="flex items-center justify-between px-2xl py-lg">
               <div className="flex items-center gap-sm">
-                <button type="button" onClick={() => setNodeDrawer(null)} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-                  <Icon name="arrow_back" size={18} />
+                <button type="button" onClick={() => setNodeDrawer(null)} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+                  <ArrowLeft className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
                 <span className="text-h3 text-text-primary">{nodeDrawer}</span>
               </div>
@@ -448,7 +449,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
                     <div className="flex items-center gap-xs">
                       {convo.unread && <span className="size-[6px] shrink-0 rounded-full bg-primary" />}
                       <span className="text-body text-text-primary">{convo.name}</span>
-                      {convo.verified && <Icon name="mode_heat" size={14} className="text-text-icon" />}
+                      {convo.verified && <Flame className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
                     </div>
                     <span className="shrink-0 text-small text-text-secondary">{convo.date}</span>
                   </div>
@@ -463,7 +464,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
                     {convo.assignee && (
                       <>
                         <span>•</span>
-                        <Icon name="group" size={12} />
+                        <Users className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                         <span>{convo.assignee}</span>
                       </>
                     )}
@@ -477,15 +478,15 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
 
       {/* Detail drawer — slides on top of list drawer */}
       {selectedConvo !== null && (
-        <div className={`fixed right-0 top-0 z-[90] flex h-full w-[650px] flex-col overflow-hidden bg-surface shadow-modal transition-transform duration-300 ease-in-out ${detailVisible ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`fixed right-2 top-2 z-[90] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal transition-transform duration-300 ease-in-out ${detailVisible ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'}`}>
           {/* Chat header — matches list drawer header */}
           <div className="flex items-center justify-between px-2xl py-lg">
             <div className="flex items-center gap-sm">
-              <button type="button" onClick={closeDetail} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-                <Icon name="arrow_back" size={18} />
+              <button type="button" onClick={closeDetail} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+                <ArrowLeft className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <span className="text-h3 text-text-primary">{selectedConvo.name}</span>
-              {selectedConvo.verified && <Icon name="mode_heat" size={16} className="text-text-icon" />}
+              {selectedConvo.verified && <Flame className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
             </div>
             <div className="flex items-center gap-md">
               <button type="button" className="flex items-center gap-sm">
@@ -493,10 +494,10 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
                   <Icon name="auto_awesome" size={16} className="text-ai-brand" />
                 </span>
                 <span className="text-body text-text-primary">{selectedConvo.assignee ?? 'Front desk agent - North region'}</span>
-                <Icon name="expand_more" size={14} className="text-text-icon" />
+                <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
-              <button type="button" className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-                <Icon name="more_vert" size={18} />
+              <button type="button" className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+                <MoreVertical className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           </div>
@@ -525,7 +526,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
             <div className="rounded-md border border-border p-md">
               <button type="button" className="mb-sm flex items-center gap-xs text-body text-text-action">
                 Text
-                <Icon name="expand_more" size={16} />
+                <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <div className="mb-md min-h-[48px]">
                 <textarea
@@ -538,10 +539,10 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-md text-text-icon">
-                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="table_rows" size={20} /></button>
-                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="attach_money" size={20} /></button>
-                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="attach_file" size={20} /></button>
-                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Icon name="sentiment_satisfied" size={20} /></button>
+                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><LayoutList className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><DollarSign className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Paperclip className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
+                  <button type="button" className="flex size-5 items-center justify-center hover:text-text-primary"><Smile className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
                   <button type="button" className="flex size-5 items-center justify-center hover:opacity-80">
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M6.51931 10.0887H4.57118L4.24883 11.0207H3.2187L4.97763 6.12236H6.11988L7.8788 11.0207H6.84167L6.51931 10.0887ZM6.25302 9.30384L5.54525 7.25761L4.83747 9.30384H6.25302Z" fill="#6834B7"/>
@@ -555,7 +556,7 @@ export function HCFrontdeskOverviewScreen({ isDental }: HCFrontdeskOverviewScree
                 <div className="flex items-center">
                   <button type="button" className="flex h-9 items-center rounded-l-sm bg-primary px-lg text-body text-white hover:bg-primary-hover">Send</button>
                   <button type="button" className="flex h-9 items-center justify-center rounded-r-sm border-l border-white/30 bg-primary px-sm text-white hover:bg-primary-hover">
-                    <Icon name="expand_more" size={16} />
+                    <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                 </div>
               </div>

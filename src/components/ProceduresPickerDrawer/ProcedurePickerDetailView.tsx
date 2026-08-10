@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { BackArrowIcon } from '../../assets/BackArrowIcon'
-import { Icon } from '../Icon/Icon'
+import { ChevronDown } from 'lucide-react'
 import { ContextModal } from '../ContextModal/ContextModal'
 import type { ContextModalResult } from '../ContextModal/ContextModal.types'
 import ProcedureDetailBody from '../../workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx'
@@ -78,7 +78,7 @@ export function ProcedurePickerDetailView({
               type="button"
               aria-label="Back"
               onClick={onBack}
-              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              className="flex size-7 shrink-0 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
             >
               <BackArrowIcon />
             </button>
@@ -99,7 +99,7 @@ export function ProcedurePickerDetailView({
               </button>
             )}
             <div className="relative">
-              <div className="flex h-9 overflow-hidden rounded-sm">
+              <div className="flex h-[34px] overflow-hidden rounded-md">
                 <button
                   type="button"
                   disabled={!canSave}
@@ -124,7 +124,7 @@ export function ProcedurePickerDetailView({
                       : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
                   }`}
                 >
-                  <Icon name="expand_more" size={16} />
+                  <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
               {saveMenuOpen && canSave && (

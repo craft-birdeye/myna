@@ -18,7 +18,7 @@ import type {
 export type { AdditionalVoiceConfig, VoiceOption } from './VoiceSettingsDrawers.types'
 
 const FIELD_BORDER_CLASS =
-  'rounded-sm border border-border-input transition-colors focus:border-primary focus:outline-none focus-visible:border-primary'
+  'rounded-md border border-border-input transition-colors focus:border-primary focus:outline-none focus-visible:border-primary'
 
 const INPUT_CLASS = `w-full bg-surface px-md text-body text-text-primary ${FIELD_BORDER_CLASS}`
 
@@ -108,7 +108,7 @@ function VoicePreviewButton({
         onClick={toggle}
         disabled={disabled || !voiceLabel}
         aria-label={playing ? 'Stop preview' : 'Preview voice'}
-        className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-input bg-surface text-text-icon transition-colors hover:bg-surface-l2 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface text-text-icon transition-colors hover:bg-surface-l2 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Icon name={playing ? 'stop' : 'volume_up'} size={20} fill={playing} />
       </button>
@@ -168,7 +168,7 @@ function VoiceDropdown({
       <button
         type="button"
         onClick={openMenu}
-        className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
+        className={`flex h-9 w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
           open ? 'border-primary' : 'border-border-input'
         }`}
       >
@@ -283,7 +283,7 @@ export function DefaultVoiceDrawer({
             type="button"
             onClick={() => onSave({ voice: draftVoice, speed: draftSpeed })}
             disabled={!draftVoice}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-9 items-center rounded-md px-lg text-body transition-colors ${
               draftVoice
                 ? 'bg-primary text-white hover:bg-primary-hover'
                 : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
@@ -336,7 +336,7 @@ export function DefaultVoiceDrawer({
                   <span className="text-small text-text-tertiary">Faster</span>
                 </div>
               </div>
-              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-sm border border-border-input bg-surface text-body text-text-primary">
+              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface text-body text-text-primary">
                 {formatVoiceSpeed(draftSpeed)}
               </div>
             </div>
@@ -453,7 +453,7 @@ export function AdditionalVoiceDrawer({
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-9 items-center rounded-md px-lg text-body transition-colors ${
               canSave
                 ? 'bg-primary text-white hover:bg-primary-hover'
                 : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
@@ -511,7 +511,7 @@ export function AdditionalVoiceDrawer({
                   className="absolute left-0 right-0 top-full z-20 mt-xs flex max-h-[320px] flex-col overflow-hidden rounded-sm border border-border bg-surface p-md shadow-dropdown"
                   role="listbox"
                 >
-                  <div className="flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md">
+                  <div className="flex h-9 shrink-0 items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
                     <Icon name="search" size={20} className="text-text-icon" />
                     <input
                       value={langQuery}
@@ -637,7 +637,7 @@ export function AdditionalVoiceDrawer({
                   <span className="text-small text-text-tertiary">Faster</span>
                 </div>
               </div>
-              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-sm border border-border-input bg-surface text-body text-text-primary">
+              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface text-body text-text-primary">
                 {formatVoiceSpeed(draftSpeed)}
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { Pencil } from 'lucide-react'
 import {
   Icon,
   LanguageFlag,
@@ -59,7 +60,7 @@ function SectionHeader({
         aria-label={editAriaLabel}
         className="flex size-7 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-primary"
       >
-        <Icon name="edit" size={16} />
+        <Pencil className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
     </div>
   )
@@ -223,6 +224,9 @@ export function ReviewSummaryStep({
   const hasVoice = selectedChannels.has('voice')
   const hasWebchat = selectedChannels.has('webchat')
   const hasText = selectedChannels.has('text')
+  const hasEmail = selectedChannels.has('email')
+  const hasFacebook = selectedChannels.has('facebook')
+  const hasInstagram = selectedChannels.has('instagram')
 
   return (
     <div className="flex w-full flex-col">
@@ -434,6 +438,16 @@ export function ReviewSummaryStep({
                 <ReadField label="AI agent name">
                   <TextBox value={webchatSettings.aiAgentName || '—'} />
                 </ReadField>
+                {webchatSettings.resolvedEnabled && (
+                  <ReadField label="Resolve button">
+                    <TextBox value={webchatSettings.resolvedName} />
+                  </ReadField>
+                )}
+                {webchatSettings.escalationEnabled && (
+                  <ReadField label="Escalation button">
+                    <TextBox value={webchatSettings.escalationName} />
+                  </ReadField>
+                )}
                 {webchatSettings.duringEnabled && (
                   <ReadField label="Fallback message (during business hours)">
                     <TextBox value={WEBCHAT_FALLBACK_DURING} multiline minHeight="min-h-[80px]" />
@@ -463,6 +477,33 @@ export function ReviewSummaryStep({
                     <TextBox value={TEXT_FALLBACK_AFTER} multiline minHeight="min-h-[80px]" />
                   </ReadField>
                 )}
+              </div>
+            )}
+
+            {hasEmail && (
+              <div className="flex flex-col gap-md">
+                <h4 className="text-body text-text-primary">Email settings</h4>
+                <p className="text-body text-text-secondary">
+                  No additional configuration required for this channel yet.
+                </p>
+              </div>
+            )}
+
+            {hasFacebook && (
+              <div className="flex flex-col gap-md">
+                <h4 className="text-body text-text-primary">Facebook settings</h4>
+                <p className="text-body text-text-secondary">
+                  No additional configuration required for this channel yet.
+                </p>
+              </div>
+            )}
+
+            {hasInstagram && (
+              <div className="flex flex-col gap-md">
+                <h4 className="text-body text-text-primary">Instagram settings</h4>
+                <p className="text-body text-text-secondary">
+                  No additional configuration required for this channel yet.
+                </p>
               </div>
             )}
           </div>

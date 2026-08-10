@@ -3,6 +3,7 @@ import {
   CustomizeColumnsDrawer,
   DataTable,
   FilterPanel,
+  HeaderSearchField,
   Icon,
   IntakeFormPreviewDrawer,
   MetricTiles,
@@ -15,6 +16,7 @@ import {
   type IntakePreviewPatient,
   type Tab,
 } from '../components'
+import { type LucideIcon, Columns3, ListFilter, Mail, MessageSquare } from 'lucide-react'
 
 type IntakeStatus = 'Overdue' | 'Not started' | 'In progress' | 'Completed'
 type SentVia = 'chat' | 'email'
@@ -108,9 +110,9 @@ const TAB_STATUS: Record<string, IntakeStatus | null> = {
   all:         null,
 }
 
-const SENT_VIA_ICON: Record<SentVia, string> = {
-  chat:  'sms',
-  email: 'mail',
+const SENT_VIA_ICON: Record<SentVia, LucideIcon> = {
+  chat:  MessageSquare,
+  email: Mail,
 }
 
 const COLUMN_DEFS: Array<Column<IntakeRow> & { locked?: boolean }> = [
@@ -129,7 +131,7 @@ const COLUMN_DEFS: Array<Column<IntakeRow> & { locked?: boolean }> = [
     label: 'Sent via',
     width: 120,
     sortable: true,
-    render: (v) => <Icon name={SENT_VIA_ICON[v as SentVia]} size={20} className="text-text-icon" />,
+    render: (v) => { const SentViaIcon = SENT_VIA_ICON[v as SentVia]; return <SentViaIcon className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> },
   },
   { key: 'sentOn', label: 'Sent on', width: 140, sortable: true },
 ]
@@ -186,61 +188,22 @@ export function ManageIntakeScreen() {
               <h1 className="text-h3 text-text-primary">Manage intake</h1>
             </div>
             <div className="flex items-center gap-sm">
-              <div
-                className={`flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface transition-all ${
-                  searchOpen ? 'w-56 px-md' : 'w-9 justify-center'
-                }`}
-              >
-                <button
-                  type="button"
-                  aria-label="Search"
-                  onClick={() => {
-                    if (searchOpen) return
-                    setSearchOpen(true)
-                  }}
-                  className="flex shrink-0 items-center justify-center text-text-icon"
-                >
-                  <Icon name="search" size={20} />
-                </button>
-                {searchOpen && (
-                  <>
-                    <input
-                      autoFocus
-                      type="text"
-                      placeholder="Search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-transparent text-body text-text-primary placeholder:text-text-tertiary focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      aria-label="Clear search"
-                      onClick={() => {
-                        setSearchOpen(false)
-                        setSearchQuery('')
-                      }}
-                      className="flex shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
-                    >
-                      <Icon name="close" size={18} />
-                    </button>
-                  </>
-                )}
-              </div>
+              <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
               <button
                 type="button"
                 aria-label="Customize columns"
                 onClick={() => setCustomizeOpen(true)}
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Icon name="view_column" size={20} />
+                <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
               <button
                 type="button"
                 aria-label="Filters"
                 onClick={() => setFilterOpen((o) => !o)}
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Icon name="filter_list" size={20} />
+                <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           </div>

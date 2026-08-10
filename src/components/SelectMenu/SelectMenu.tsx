@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Icon } from '../Icon/Icon'
 import { SelectMenuProps } from './SelectMenu.types'
+import { Check, Search } from 'lucide-react'
 
 function CheckBox({ checked }: { checked: boolean }) {
   return (
@@ -9,7 +9,7 @@ function CheckBox({ checked }: { checked: boolean }) {
         checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
+      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
     </span>
   )
 }
@@ -58,8 +58,8 @@ export function SelectMenu({
       <div className={`flex flex-1 flex-col gap-xs overflow-hidden ${title ? '' : 'pt-md'}`}>
         <div className={`flex flex-1 flex-col gap-xs overflow-y-auto px-lg ${multi && !onApply ? 'pb-md' : 'pb-xs'}`}>
           {searchable && (
-            <div className="flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md">
-              <Icon name="search" size={20} className="text-text-icon" />
+            <div className="flex h-[34px] shrink-0 items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
+              <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -94,7 +94,7 @@ export function SelectMenu({
                   }`}
                 >
                   <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt.label}</span>
-                  {isSel && <Icon name="check" size={20} className="shrink-0 text-text-icon" />}
+                  {isSel && <Check className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
                 </button>
               )
             }
@@ -125,7 +125,7 @@ export function SelectMenu({
             <button
               type="button"
               onClick={onApply}
-              className="rounded-sm bg-primary px-lg py-[7px] text-body font-medium text-white transition-colors hover:bg-primary-hover"
+              className="rounded-md bg-primary px-lg py-[7px] text-body font-medium text-white transition-colors hover:bg-primary-hover"
             >
               Apply
             </button>

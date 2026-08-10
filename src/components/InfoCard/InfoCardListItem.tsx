@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon } from '../Icon/Icon'
+import { MoreVertical } from 'lucide-react'
 import { INFO_CARD_LIST_ITEM_LAYOUT } from './InfoCard.types'
 import type { InfoCardListItemProps } from './InfoCard.types'
 
@@ -33,7 +33,7 @@ export function InfoCardListItem({
           }}
           className={INFO_CARD_LIST_ITEM_LAYOUT.menuTrigger}
         >
-          <Icon name="more_vert" size={20} />
+          <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
 
         {menuOpen && (

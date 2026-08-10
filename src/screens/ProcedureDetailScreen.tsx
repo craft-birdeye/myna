@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { MoreVertical } from 'lucide-react'
 import { TopNav, Icon, ContextModal } from '../components'
 import type { ContextModalResult } from '../components/ContextModal/ContextModal.types'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
@@ -214,7 +215,7 @@ export function ProcedureDetailScreen({
               type="button"
               aria-label="Back"
               onClick={onBack}
-              className="flex size-8 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover"
+              className="flex size-8 items-center justify-center rounded-md text-text-icon transition-colors hover:bg-surface-hover"
             >
               <BackArrowIcon color="#555" />
             </button>
@@ -239,9 +240,9 @@ export function ProcedureDetailScreen({
                   aria-label="More actions"
                   aria-expanded={actionsOpen}
                   onClick={() => setActionsOpen((o) => !o)}
-                  className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon transition-colors hover:bg-surface-l2"
+                  className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon transition-colors hover:bg-surface-l2"
                 >
-                  <Icon name="more_vert" size={20} />
+                  <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
                 {actionsOpen && (
                   <>

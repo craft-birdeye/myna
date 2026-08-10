@@ -30,6 +30,7 @@ import {
   type Metric,
   type Tab,
 } from '../components'
+import { ArrowLeft, Columns3, LayoutGrid, LayoutList, ListFilter } from 'lucide-react'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
@@ -62,6 +63,9 @@ interface AgentDetailScreenProps {
   onEditAgent?: (agentName: string, draft?: WizardAgentDraft) => void
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
+  /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
+   *  (threaded through to `AgentInstanceScreen` → `AgentSettingsTab`). */
+  onOpenIntegrationSettings?: (integrationId: string) => void
   product?: string
   /** Set (e.g. by the canvas eye icon) to reopen a specific instance + tab after a remount. */
   pendingInstanceView?: { instanceName: string; tab: string } | null
@@ -3639,7 +3643,7 @@ export function CreateAiGhostwriterShellHeader({
           type="button"
           onClick={onViewAgentBuilder}
           disabled={viewAgentBuilderDisabled}
-          className="flex h-9 shrink-0 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
+          className="flex h-9 shrink-0 items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2 disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-text-tertiary disabled:hover:bg-surface"
         >
           View agent builder
         </button>
@@ -6271,7 +6275,7 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -7057,6 +7061,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
+          onOpenIntegrationSettings={onOpenIntegrationSettings}
           onFullBleedChange={setInstanceSetupActive}
           onFullBleedDetailActiveChange={onFullBleedDetailActiveChange}
           initialRecommendationId={
@@ -7084,7 +7089,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-auto">
           {/* Header */}
-          <div className="flex h-16 items-center justify-between bg-surface px-2xl">
+          <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
             <h1 className="text-h3 text-text-primary">{agentName}</h1>
             <div className="flex items-center gap-sm">
               <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
@@ -7093,19 +7098,19 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                   <button
                     type="button"
                     onClick={() => (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration) ? openCreateFlow() : onEditAgent?.('')}
-                    className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                    className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                   >
                     Create agent
                   </button>
-                  <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                    <Icon name="view_column" size={20} />
+                  <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                    <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
-                  <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                    <Icon name="filter_list" size={20} />
+                  <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                    <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                 </>
               ) : (
-                <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
+                <div className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-sm">
                   <button
                     type="button"
                     aria-label="Grid view"
@@ -7114,7 +7119,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       libraryView === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
                     }`}
                   >
-                    <Icon name="grid_view" size={18} />
+                    <LayoutGrid className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                   <button
                     type="button"
@@ -7124,7 +7129,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       libraryView === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
                     }`}
                   >
-                    <Icon name="table_rows" size={18} />
+                    <LayoutList className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                 </div>
               )}

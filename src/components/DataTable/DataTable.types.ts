@@ -24,7 +24,7 @@ export interface Column<T> {
 export type SortDir = 'asc' | 'desc'
 
 export interface RowAction<T> {
-  /** Material Symbols icon name for the page-specific primary CTA. */
+  /** Icon name (Material Symbols key mapped to Lucide in DataTable). Use `iconElement` for a custom element. */
   icon?: string
   /** Custom React element to render instead of an Icon (takes priority over icon). */
   iconElement?: ReactNode

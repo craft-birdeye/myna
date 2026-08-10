@@ -1,11 +1,11 @@
 import { useState } from 'react'
+import { Info } from 'lucide-react'
 import {
   ChartCard,
   ChartStatRow,
   DateRangeSelector,
   DonutChart,
   HBarList,
-  Icon,
   ReportHeader,
   StackedBarChart,
   SummaryStats,
@@ -114,7 +114,7 @@ export function SalesScreen() {
               showActions={false}
               titleSuffix={
                 <div className="group relative flex items-center">
-                  <Icon name="info" size={16} className="cursor-help text-text-icon" />
+                  <Info className="size-4 cursor-help text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                   <div className="pointer-events-none absolute left-0 top-6 z-50 hidden w-72 rounded-sm border border-border bg-surface p-sm text-small leading-5 text-text-secondary shadow-dropdown group-hover:block">
                     Shows out of all leads from this source, what % got a first contact attempt within 5 minutes
                   </div>

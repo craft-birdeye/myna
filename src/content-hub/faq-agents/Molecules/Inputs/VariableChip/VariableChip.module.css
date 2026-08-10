@@ -1,0 +1,134 @@
+/* Matches Figma OptionDataType: h=26, swatch 25px, border #d1e5f9, gap 4px, pl-1px pr-7px */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 1px 7px 1px 0;
+  background: #fff;
+  border: 1px solid #d1e5f9;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  cursor: default;
+}
+
+/* Full-width variant for table/list contexts — chip fills container, label wraps */
+.chipFullWidth {
+  width: 100%;
+  height: auto;
+  min-height: 26px;
+  align-items: flex-start;
+}
+
+.chipFullWidth .chipSwatch {
+  height: auto;
+  align-self: stretch;
+  min-height: 24px;
+}
+
+.chipFullWidth .deleteBtn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.chipEditing {
+  border-color: #1976d2 !important;
+}
+
+/* Left swatch: #ecf5fd bg, right-divider */
+.chipSwatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 24px;
+  background: #ecf5fd;
+  border-right: 1px solid #d1e5f9;
+  flex-shrink: 0;
+}
+
+.chipLabel {
+  font-size: 12px;
+  line-height: 16px;
+  color: #555;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chipLabelWrap {
+  white-space: normal;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Input replaces label in edit mode */
+.chipInput {
+  font-size: 12px;
+  line-height: 16px;
+  color: #555;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  min-width: 60px;
+  max-width: 160px;
+  width: 100px;
+  padding: 0;
+}
+
+.chipInput::placeholder {
+  color: #bbb;
+}
+
+/* ─── Per-type chip border colors ─── */
+
+.chipAttachment { border-color: #c8e6c9; }
+.chipLink       { border-color: #f48fb1; }
+.chipAddress    { border-color: #9fa8da; }
+.chipProduct    { border-color: #ffe082; }
+
+/* ─── Per-type swatch backgrounds + right border ─── */
+
+.swatchAttachment { background: #e8f5e9; border-right-color: #c8e6c9; }
+.swatchLink       { background: #fce4ec; border-right-color: #f48fb1; }
+.swatchAddress    { background: #e8eaf6; border-right-color: #9fa8da; }
+.swatchProduct    { background: #fff8e1; border-right-color: #ffe082; }
+.swatchTool       { background: #efefef; border-right-color: #cccccc; }
+
+/* ─── Per-type icon colors ─── */
+
+.iconAttachment { font-size: 13px; color: #2e7d32; }
+.iconLink       { font-size: 13px; color: #c2185b; }
+.iconAddress    { font-size: 13px; color: #3949ab; }
+.iconProduct    { font-size: 13px; color: #f57f17; }
+.iconTool       { font-size: 13px; color: #303030; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+
+/* ─── Swatch acts as type-change trigger ─── */
+
+.swatchClickable {
+  cursor: pointer;
+}
+
+.swatchClickable:hover {
+  filter: brightness(0.95);
+}

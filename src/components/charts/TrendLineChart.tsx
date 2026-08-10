@@ -21,7 +21,7 @@ export interface TrendLineChartProps {
   color?: string
 }
 
-const axisTick = { fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }
+const axisTick = { fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }
 
 export function TrendLineChart({ data, height = 300, color = chartColors.resolved }: TrendLineChartProps) {
   return (

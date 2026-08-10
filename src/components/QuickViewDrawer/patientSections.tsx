@@ -1,7 +1,7 @@
 // src/components/QuickViewDrawer/patientSections.tsx
 import { useState } from 'react'
-import { Icon } from '../Icon/Icon'
 import { PatientDetail } from './QuickViewDrawer.types'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 export function FieldRow({ label, value }: { label: string; value?: string }) {
   return (
@@ -39,11 +39,7 @@ export function AccordionSection({
         className="flex w-full items-center justify-between px-lg py-sm hover:bg-surface-hover"
       >
         <span className="text-body text-text-primary">{title}</span>
-        <Icon
-          name={expanded ? 'expand_less' : 'expand_more'}
-          size={20}
-          className="shrink-0 text-text-icon"
-        />
+        {expanded ? <ChevronUp className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
       </button>
 
       {expanded && (

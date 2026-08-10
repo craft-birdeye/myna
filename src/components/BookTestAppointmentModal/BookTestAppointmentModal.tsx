@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon } from '../Icon/Icon'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
 import type { SelectOption } from '../SelectMenu/SelectMenu.types'
 import type { BookTestAppointmentModalProps, BookTestAppointmentValues } from './BookTestAppointmentModal.types'
+import { ChevronDown, Info, X } from 'lucide-react'
 
 const APPOINTMENT_TYPE_OPTIONS: SelectOption[] = [
   { value: 'Routine checkup', label: 'Routine checkup' },
@@ -37,7 +37,7 @@ const EMPTY_VALUES: BookTestAppointmentValues = {
 }
 
 const INPUT_CLASS =
-  'h-9 w-full rounded-sm border border-border-input bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none'
+  'h-[34px] w-full rounded-md border border-border-input bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none'
 
 function FormField({
   label,
@@ -87,14 +87,14 @@ function SelectField({
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
-        className={`flex h-9 w-full items-center justify-between rounded-sm border bg-surface pl-md pr-sm text-left text-body hover:bg-surface-l2 ${
+        className={`flex h-[34px] w-full items-center justify-between rounded-md border bg-surface pl-md pr-sm text-left text-body hover:bg-surface-l2 ${
           open ? 'border-primary' : 'border-border-input'
         }`}
       >
         <span className={value ? 'text-text-primary' : 'text-text-secondary'}>
           {value || placeholder}
         </span>
-        <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+        <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && (
         <div className="absolute left-0 top-full z-[210] mt-xs w-full">
@@ -148,13 +148,13 @@ export function BookTestAppointmentModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="relative w-[640px] max-w-[92vw] rounded-lg bg-surface shadow-modal"
+        className="relative w-[640px] max-w-[92vw] rounded-xl bg-surface shadow-modal"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-2xl py-lg">
@@ -163,14 +163,14 @@ export function BookTestAppointmentModal({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
           >
-            <Icon name="close" size={18} />
+            <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         </div>
 
         <div className="mx-2xl mt-xl flex gap-sm rounded-sm border border-border bg-surface-l2 px-md py-sm">
-          <Icon name="info" size={18} className="mt-px shrink-0 text-text-icon" />
+          <Info className="size-5 mt-px shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           <p className="text-small text-text-secondary">
             A test appointment will be created for this preview. No actual appointment will be booked with a real provider.
           </p>
@@ -247,7 +247,7 @@ export function BookTestAppointmentModal({
             type="button"
             disabled={!canSubmit}
             onClick={() => onBookAndRun(values)}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-[34px] items-center rounded-md px-lg text-body transition-colors ${
               canSubmit
                 ? 'bg-primary text-white hover:bg-primary-hover'
                 : 'cursor-not-allowed bg-surface-selected text-text-tertiary'

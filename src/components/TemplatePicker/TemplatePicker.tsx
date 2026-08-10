@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon } from '../Icon/Icon'
+import { ChevronDown, ExternalLink, Eye, Info, Search, X } from 'lucide-react'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -85,9 +85,9 @@ export function TemplatePickerModal({ isOpen, onClose, onSelect, initialSelected
       className="fixed inset-0 z-[200] flex items-center justify-center"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative flex max-h-[80vh] w-[720px] max-w-[95vw] flex-col overflow-hidden rounded-md bg-surface shadow-modal"
+        className="relative flex max-h-[80vh] w-[720px] max-w-[95vw] flex-col overflow-hidden rounded-xl bg-surface shadow-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -97,20 +97,20 @@ export function TemplatePickerModal({ isOpen, onClose, onSelect, initialSelected
             className="mr-auto flex items-center gap-xs text-body text-text-action hover:underline"
           >
             Create template
-            <Icon name="open_in_new" size={14} />
+            <ExternalLink className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
           >
-            <Icon name="close" size={20} />
+            <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         </div>
 
         {/* Info bar */}
         <div className="flex items-center gap-sm border-t border-border bg-[#e8f4fd] px-md py-sm">
-          <Icon name="info" size={16} className="shrink-0 text-[#1976d2]" />
+          <Info className="size-4 shrink-0 text-[#1976d2]" strokeWidth={1.6} absoluteStrokeWidth />
           <span className="text-small text-text-primary">
             Select a template to pre-fill the message. You can edit it before sending.
           </span>
@@ -119,7 +119,7 @@ export function TemplatePickerModal({ isOpen, onClose, onSelect, initialSelected
         {/* Search */}
         <div className="border-b border-border px-md py-sm">
           <div className="flex items-center gap-sm rounded-sm border border-border px-sm">
-            <Icon name="search" size={18} className="text-text-icon" />
+            <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             <input
               className="flex-1 bg-transparent py-sm text-body text-text-primary outline-none placeholder:text-text-tertiary"
               placeholder="Search"
@@ -181,7 +181,7 @@ export function TemplatePickerModal({ isOpen, onClose, onSelect, initialSelected
                   onClick={(e) => e.stopPropagation()}
                   className="shrink-0 text-text-icon hover:text-text-primary"
                 >
-                  <Icon name="visibility" size={18} />
+                  <Eye className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
             ))}
@@ -213,7 +213,7 @@ export function TemplatePickerModal({ isOpen, onClose, onSelect, initialSelected
             <button
               type="button"
               onClick={() => onSelect(Array.from(selected))}
-              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+              className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white hover:bg-primary-hover"
             >
               Select
             </button>
@@ -251,7 +251,7 @@ export function TemplateSelectField({ label, selectedIds, placeholder = 'Select'
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm hover:bg-surface-l2"
+          className="flex h-[34px] w-full items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm hover:bg-surface-l2"
         >
           <span
             className={`min-w-0 flex-1 truncate text-left text-body ${
@@ -260,7 +260,7 @@ export function TemplateSelectField({ label, selectedIds, placeholder = 'Select'
           >
             {displayText}
           </span>
-          <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+          <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
 

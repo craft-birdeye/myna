@@ -1,0 +1,178 @@
+.wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ─── Header ─── */
+.th {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.thInner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+  user-select: none;
+}
+
+.thEditIcon {
+  opacity: 0;
+  transition: opacity 0.12s;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.th:hover .thEditIcon {
+  opacity: 1;
+}
+
+.thInput {
+  border: none;
+  border-bottom: 1px solid var(--primary);
+  outline: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: transparent;
+  width: 100%;
+  min-width: 60px;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ─── Rows ─── */
+.tr {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.tr:hover {
+  background: var(--muted);
+}
+
+.td {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--foreground);
+  vertical-align: middle;
+}
+
+.nameCell {
+  transition: color 0.1s;
+}
+
+.tr:hover .nameCell {
+  color: var(--primary);
+}
+
+/* ─── Actions column ─── */
+.tdActions {
+  width: 44px;
+  padding: 0 8px;
+  text-align: right;
+}
+
+.menuWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.menuBtn {
+  opacity: 0;
+  transition: opacity 0.12s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+}
+
+.tr:hover .menuBtn,
+.menuBtn:focus-visible {
+  opacity: 1;
+}
+
+.menuBtn:hover {
+  background: var(--muted);
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  min-width: 160px;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--foreground);
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.menuItem:hover {
+  background: var(--muted);
+}
+
+.menuItemDanger {
+  color: var(--destructive);
+}
+
+.menuItemDanger:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.menuDivider {
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── Cell inline edit ─── */
+.cellInput {
+  border: none;
+  border-bottom: 1px solid var(--primary);
+  outline: none;
+  font-size: 13px;
+  color: var(--foreground);
+  background: transparent;
+  width: 100%;
+  min-width: 60px;
+  padding: 0;
+}

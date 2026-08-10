@@ -188,6 +188,18 @@ body,
   overflow: hidden;
 }
 
+/* ── Ask BirdGPT TopBar button animations (ported from contenthub 2.0) ── */
+@keyframes myna-cta-icon-tilt {
+  0%   { transform: rotate(0deg);  }
+  45%  { transform: rotate(12deg); }
+  100% { transform: rotate(0deg);  }
+}
+
+@keyframes l2-nav-shimmer {
+  0%   { background-position: 200% 0;  }
+  100% { background-position: -200% 0; }
+}
+
 /* Steps field edit mode — strip UserPromptInput's own border/bg so the
    outer paragraph-field shell is the only visible container. */
 .steps-editor-shell [class*="inputBox"] {
@@ -209,10 +221,9 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-variation-settings: 'wdth' 100;
 }
 
 /* Material Symbols Outlined — self-hosted variable font */

@@ -56,7 +56,7 @@ function makeNode(overrides?: Record<number, string>, onHover?: (idx: number | n
         style={{ cursor: 'pointer' }}
       >
         <rect x={x} y={y} width={width} height={height} rx={2} fill={fill} />
-        <text x={lx} y={midY} textAnchor={anchor} dominantBaseline="middle" fontFamily="Roboto" fontSize={12} fontWeight={400} fill="#212121" textDecoration={hovered ? 'underline' : 'none'}>
+        <text x={lx} y={midY} textAnchor={anchor} dominantBaseline="middle" fontFamily="Inter, sans-serif" fontSize={12} fontWeight={400} fill="#0d0d12" textDecoration={hovered ? 'underline' : 'none'}>
           {label}
         </text>
       </g>
@@ -103,15 +103,15 @@ function BreakdownTooltip({ x, y, items }: BreakdownTooltipProps) {
       background: '#fff', border: '1px solid #e5e9f0', borderRadius: 8,
       boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
       padding: '10px 14px', minWidth: 220,
-      fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#212121',
+      fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#0d0d12',
       pointerEvents: 'none',
     }}>
       {items.map((item) => (
         <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, padding: '4px 0' }}>
-          <span style={{ color: '#424242' }}>{item.label}</span>
+          <span style={{ color: '#0d0d12' }}>{item.label}</span>
           <span style={{ display: 'flex', gap: 10 }}>
-            <span style={{ color: '#7c4dff', fontWeight: 500 }}>{item.pct}</span>
-            <span style={{ color: '#757575' }}>{item.value.toLocaleString()}</span>
+            <span style={{ color: '#6834b7', fontWeight: 400 }}>{item.pct}</span>
+            <span style={{ color: '#717182' }}>{item.value.toLocaleString()}</span>
           </span>
         </div>
       ))}
@@ -181,7 +181,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
                     fontSize: 12,
                     fontWeight: 400,
                     color: '#9CA3AF',
-                    fontFamily: 'Roboto, sans-serif',
+                    fontFamily: 'Inter, sans-serif',
                     whiteSpace: 'nowrap',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -193,7 +193,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
                     <span
                       onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHeaderTooltip({ text: tip, x: r.left + r.width / 2, y: r.bottom + 6 }) }}
                       onMouseLeave={() => setHeaderTooltip(null)}
-                      style={{ cursor: 'default', color: '#bdbdbd', fontSize: 13, lineHeight: 1 }}
+                      style={{ cursor: 'default', color: '#9ca3af', fontSize: 13, lineHeight: 1 }}
                     >ⓘ</span>
                   )}
                 </span>
@@ -215,7 +215,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
           node={<NodeComponent />}
           link={<LinkComponent />}
         >
-          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e9f0', fontSize: 12, fontFamily: 'Roboto' }} />
+          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e9f0', fontSize: 12, fontFamily: 'Inter, sans-serif' }} />
         </Sankey>
       </ResponsiveContainer>
 
@@ -223,7 +223,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
         <BreakdownTooltip x={hoverState.x} y={hoverState.y} items={activeBreakdown} />
       )}
       {headerTooltip && (
-        <div className="pointer-events-none fixed z-[120] -translate-x-1/2 rounded-sm bg-[#1c1c1c] px-sm py-xs text-small text-white" style={{ left: headerTooltip.x, top: headerTooltip.y, maxWidth: 280, whiteSpace: 'normal' }}>
+        <div className="pointer-events-none fixed z-[120] -translate-x-1/2 rounded-md bg-text-primary px-sm py-xs text-small text-white" style={{ left: headerTooltip.x, top: headerTooltip.y, maxWidth: 280, whiteSpace: 'normal' }}>
           {headerTooltip.text}
         </div>
       )}

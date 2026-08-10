@@ -1,0 +1,34 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.required {
+  color: #d32f2f;
+}
+
+.whenToUseTextarea {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'Roboto', sans-serif;
+  color: #212121;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  resize: vertical;
+  outline: none;
+  line-height: 1.5;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.whenToUseTextarea:focus {
+  border-color: #1976d2;
+}
