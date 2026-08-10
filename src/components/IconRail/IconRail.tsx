@@ -550,7 +550,8 @@ export function IconRail({
             title="Profile"
             aria-label="Profile"
             onClick={() => setProfileOpen(o => !o)}
-            className="flex h-8 w-full items-center px-[12px] transition-colors hover:bg-black/[0.04]"
+            style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
+            className="flex h-9 w-full items-center transition-colors hover:bg-black/[0.04]"
           >
             <span className="flex size-7 shrink-0 items-center justify-center rounded-sm">
               {avatarUrl ? (
@@ -561,7 +562,7 @@ export function IconRail({
                 </span>
               )}
             </span>
-            <span className="relative ml-lg min-w-0 flex-1 truncate text-left text-body text-text-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            <span className="relative ml-[10px] min-w-0 flex-1 truncate text-left text-body text-text-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100">
               Profile
             </span>
           </button>

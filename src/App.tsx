@@ -52,11 +52,11 @@ import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import logoSrc from './assets/birdeye-logo.svg'
-import { Monitor } from 'lucide-react'
 import {
   FigmaIconBirdAI,
   FigmaIconOverview,
   FigmaIconInbox,
+  FigmaIconFrontDesk,
   FigmaIconListings,
   FigmaIconReviews,
   FigmaIconSocial,
@@ -88,14 +88,14 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
-      { id: 'agents',   label: 'Co-workers',   icon: <FigmaIconBirdAI size={ICON_SIZE} />,   kind: 'element', badge: 'New' },
+      { id: 'agents',   label: 'Co-workers',   icon: <FigmaIconBirdAI size={ICON_SIZE + 2} />,   kind: 'element', badge: 'New' },
     ],
   },
   {
     id: 'marketing',
     header: 'Marketing',
     items: [
-      { id: 'search',               label: 'Search AI',               icon: <FigmaIconRecommendations size={ICON_SIZE} />, kind: 'element' },
+      { id: 'search',               label: 'Search AI',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
       { id: 'listings',             label: 'Listings AI',             icon: <FigmaIconListings size={ICON_SIZE} />,        kind: 'element' },
       { id: 'reviews',              label: 'Reviews AI',              icon: <FigmaIconReviews size={ICON_SIZE} />,         kind: 'element' },
       { id: 'social',               label: 'Social AI',               icon: <FigmaIconSocial size={ICON_SIZE} />,          kind: 'element' },
@@ -109,7 +109,7 @@ const RAIL_GROUPS: RailGroup[] = [
     header: 'Operations',
     items: [
       { id: 'inbox',     label: 'Inbox',      icon: <FigmaIconInbox size={ICON_SIZE} />,        kind: 'element' },
-      { id: 'frontdesk', label: 'Front desk', icon: <Monitor size={ICON_SIZE} />, kind: 'element' },
+      { id: 'frontdesk', label: 'Front desk', icon: <FigmaIconFrontDesk size={ICON_SIZE} />, kind: 'element' },
     ],
   },
   {
