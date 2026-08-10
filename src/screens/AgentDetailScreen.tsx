@@ -53,7 +53,8 @@ import RHSSidePanelHeader from '../workflow/Molecules/RHS/RHSHeader/RHSHeader'
 // @ts-ignore
 import LHSDrawer from '../workflow/LHSDrawer/LHSDrawer'
 import '../workflow/LHSDrawer/LHSDrawer.css'
-// @ts-expect-error JS module without types
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import LocationsDrawer from '../workflow/RHSDrawer/LocationsDrawer.jsx'
 
 interface AgentDetailScreenProps {

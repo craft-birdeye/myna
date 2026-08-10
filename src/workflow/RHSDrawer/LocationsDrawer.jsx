@@ -35,8 +35,8 @@ const SELECT_BY_OPTIONS = [
 
 const DEFAULT_SELECTED = ['1001', '1002', '1004', '1011', '1014', '1017'];
 
-export default function LocationsDrawer({ selectedIds: initialSelectedIds, onBack, onSave }) {
-  const [selectedIds, setSelectedIds] = useState(initialSelectedIds || DEFAULT_SELECTED);
+export default function LocationsDrawer({ selectedIds: initialSelectedIds = DEFAULT_SELECTED, onBack, onSave }) {
+  const [selectedIds, setSelectedIds] = useState(initialSelectedIds);
   const [search, setSearch] = useState('');
   const [selectBy, setSelectBy] = useState('location');
   const [selectByOpen, setSelectByOpen] = useState(false);
