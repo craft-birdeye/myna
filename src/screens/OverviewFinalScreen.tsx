@@ -326,29 +326,16 @@ function AgentPerformanceCard({
   )
 }
 
-// Hidden-by-default detail view shown just below every "<Co-worker> performance" section — one
-// full-length AgentPerformanceCard per agent, replacing the old compact outcomes table.
-function PerformanceByAgentAccordion({ agents, zeroState = false }: { agents: AgentDirectoryEntry[]; zeroState?: boolean }) {
-  const [open, setOpen] = useState(true)
+// Detail view shown just below every "<Co-worker> performance" section — one full-length
+// AgentPerformanceCard per agent, replacing the old compact outcomes table.
+function AgentPerformanceCardList({ agents, zeroState = false }: { agents: AgentDirectoryEntry[]; zeroState?: boolean }) {
   return (
-    <div className="mt-2xl">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-xs text-body text-text-secondary transition-colors hover:text-text-action"
-      >
-        <Icon name={open ? 'expand_less' : 'expand_more'} size={18} />
-        Performance by agent outcomes
-      </button>
-      {open && (
-        <div className="mt-lg flex flex-col gap-lg">
-          {agents.map((agent, i) => (
-            // Zero state: alternate fetching/not-yet-configured so both look real, rather than
-            // every card claiming to already be running.
-            <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} configured={i % 2 === 0} />
-          ))}
-        </div>
-      )}
+    <div className="mt-2xl flex flex-col gap-lg">
+      {agents.map((agent, i) => (
+        // Zero state: alternate fetching/not-yet-configured so both look real, rather than
+        // every card claiming to already be running.
+        <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} configured={i % 2 === 0} />
+      ))}
     </div>
   )
 }
@@ -756,7 +743,7 @@ function CoworkerPerformanceSection({
         {COWORKER_NAME[persona]} performance
       </h3>
       <StatGroup stats={kpiStats} big />
-      <PerformanceByAgentAccordion agents={agents} zeroState={zeroState} />
+      <AgentPerformanceCardList agents={agents} zeroState={zeroState} />
     </>
   )
 }
