@@ -537,11 +537,11 @@ function ReviewsSection({ showJayPerformance = false }: ReviewsSectionProps) {
           ))}
         </div>
 
-        <div className="flex min-w-[320px] flex-1 flex-wrap gap-md">
+        <div className="flex min-w-[320px] max-w-[520px] flex-1 flex-col gap-md">
           {OVERVIEW_REVIEW_SOURCES.map((s) => {
             const logo = !brokenLogos.has(s.id) ? REVIEW_SOURCE_LOGOS[s.id] : undefined
             return (
-              <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
+              <div key={s.id} className="flex items-center gap-md rounded-sm border border-border px-lg py-md">
                 <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${logo ? '' : s.iconColorClassName}`}>
                   {logo ? (
                     <img
@@ -568,8 +568,13 @@ function ReviewsSection({ showJayPerformance = false }: ReviewsSectionProps) {
         </div>
 
         {!showJayPerformance && (
-          <div className="w-[220px] shrink-0">
-            <StatGroup stats={OVERVIEW_REVIEWS_STATS} />
+          <div className="grid shrink-0 grid-cols-2 gap-x-3xl gap-y-xl">
+            {OVERVIEW_REVIEWS_STATS.map((s) => (
+              <div key={s.id}>
+                <p className={`m-0 whitespace-nowrap text-h3 ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
+                <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+              </div>
+            ))}
           </div>
         )}
       </div>
