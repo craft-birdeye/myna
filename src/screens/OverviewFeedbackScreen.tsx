@@ -640,15 +640,15 @@ function CoworkerPerformanceSection({ persona }: { persona: AgentPersonaId }) {
 }
 
 // Merges a co-worker's performance section + its individual sections (Inbox, Reviews, Surveys...)
-// into a single bordered card. Only the two dividers touching the performance section (tab bar →
-// performance, performance → first section) are drawn — the sections after that flow together
-// with no line between them.
+// into a single bordered card. Only one divider is drawn, between the performance section and the
+// first content section below it — tab bar → performance and every section after that just get a
+// plain top margin, no line.
 function CoworkerSectionsCard({ sections }: { sections: ReactNode[] }) {
   return (
     <div className="rounded-md border border-border bg-surface p-xl pb-[36px]">
       {sections.map((section, i) => (
-        <div key={i} className={i > 2 ? 'mt-2xl' : undefined}>
-          {i > 0 && i <= 2 && <div className="my-2xl border-t border-border" />}
+        <div key={i} className={i !== 0 && i !== 2 ? 'mt-2xl' : undefined}>
+          {i === 2 && <div className="my-2xl border-t border-border" />}
           {section}
         </div>
       ))}
