@@ -273,7 +273,17 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
 // same fields (category, running/paused status, name, description, KPIs), just laid out across
 // the full card width instead of a grid cell. The KPI row is a flex-wrap, not a fixed grid, so
 // more KPIs can be appended per agent later without needing a layout change.
-function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirectoryEntry; zeroState?: boolean }) {
+function AgentPerformanceCard({
+  agent,
+  zeroState = false,
+  configured = true,
+}: {
+  agent: AgentDirectoryEntry
+  zeroState?: boolean
+  /** Zero state only — false renders a "Create agent" CTA instead of the fetching message,
+   *  for agent types the customer hasn't set up yet. */
+  configured?: boolean
+}) {
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
     <div className="rounded-md border border-border bg-surface p-xl">
@@ -284,10 +294,22 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
         {zeroState ? (
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-sm">
-            <Icon name="sync" size={16} className="shrink-0 animate-spin text-text-tertiary" />
-            <p className="m-0 text-small text-text-tertiary">This agent is running — data is still being fetched.</p>
-          </div>
+          configured ? (
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-sm">
+              <Icon name="sync" size={16} className="shrink-0 animate-spin text-text-tertiary" />
+              <p className="m-0 text-small text-text-tertiary">This agent is running — data is still being fetched.</p>
+            </div>
+          ) : (
+            <div className="flex min-w-0 flex-1 items-center justify-end">
+              <button
+                type="button"
+                className="flex h-9 shrink-0 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              >
+                <Icon name="add" size={18} />
+                Create agent
+              </button>
+            </div>
+          )
         ) : (
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
             <AgentKpiCell value={String(agent.running)} label="Agents running" />
@@ -320,8 +342,10 @@ function PerformanceByAgentAccordion({ agents, zeroState = false }: { agents: Ag
       </button>
       {open && (
         <div className="mt-lg flex flex-col gap-lg">
-          {agents.map((agent) => (
-            <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} />
+          {agents.map((agent, i) => (
+            // Zero state: alternate fetching/not-yet-configured so both look real, rather than
+            // every card claiming to already be running.
+            <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} configured={i % 2 === 0} />
           ))}
         </div>
       )}
