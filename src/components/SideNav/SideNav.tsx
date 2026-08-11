@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLeaf, NavSection, SideNavProps } from './SideNav.types'
 import { ChevronDown, ChevronUp, ExternalLink, Plus } from 'lucide-react'
-import iconAgentsOutline from '../../assets/icon-agents-outline.svg'
+// Filled glyph — stroke-only outline SVGs don't mask reliably in production.
+import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
 
 function findSectionIdForItem(sections: NavSection[], itemId: string): string | null {
   for (const section of sections) {
@@ -112,8 +113,8 @@ function Section({
             <span
               className="ai-gradient-icon size-[18px]"
               style={{
-                WebkitMaskImage: `url(${iconAgentsOutline})`,
-                maskImage: `url(${iconAgentsOutline})`,
+                WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                maskImage: `url("${iconAgentsPurple}")`,
               }}
               aria-hidden
             />
