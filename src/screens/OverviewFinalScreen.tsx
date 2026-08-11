@@ -276,26 +276,28 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
 function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
-    <div className="rounded-md border border-border bg-surface p-xl">
-      <div className="mb-xs flex items-center justify-between gap-sm">
-        <span className="truncate text-small text-text-tertiary">{agent.category}</span>
-        {agent.running > 0 ? (
-          <span className="shrink-0 rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
-            {agent.running} running
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Paused</span>
-        )}
-      </div>
-      <h4 className="m-0 mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
-      <p className="m-0 mb-lg text-small text-text-tertiary">{agent.description}</p>
-      <div className="flex flex-wrap gap-xl">
-        <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
-        <AgentKpiCell value={agent.timeSaved} label="Time saved" />
-        <AgentKpiCell value={agent.costSaved} label="Cost saved" />
-        {extraKpis.map((kpi) => (
-          <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
-        ))}
+    <div className="relative rounded-md border border-border bg-surface p-xl">
+      {agent.running > 0 ? (
+        <span className="absolute right-xl top-xl shrink-0 rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
+          {agent.running} running
+        </span>
+      ) : (
+        <span className="absolute right-xl top-xl shrink-0 rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Paused</span>
+      )}
+      <div className="flex flex-wrap items-start gap-3xl">
+        <div className="min-w-[220px] max-w-[320px] shrink-0 pr-3xl">
+          <p className="m-0 truncate text-small text-text-tertiary">{agent.category}</p>
+          <h4 className="m-0 mt-xs mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
+          <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-wrap justify-end gap-xl">
+          <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
+          <AgentKpiCell value={agent.timeSaved} label="Time saved" />
+          <AgentKpiCell value={agent.costSaved} label="Cost saved" />
+          {extraKpis.map((kpi) => (
+            <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
+          ))}
+        </div>
       </div>
     </div>
   )
