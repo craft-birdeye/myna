@@ -3,14 +3,14 @@
 // the "Post feedback" page (`overview-3`, still OverviewFeedbackScreen.tsx) or the original
 // "Overview / New" page (`overview-2`, OverviewScreen.tsx).
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { DataTable, DatePickerModal, Icon, InfoTooltip, Tooltip, TopNav, type Column } from '../components'
+import { DatePickerModal, Icon, InfoTooltip, Tooltip, TopNav } from '../components'
 import { AiAgentIcon } from '../assets/AiAgentIcon'
 import iconGoogle from '../assets/icon-google.svg'
 import iconGooglePlay from '../assets/icon-google-play.svg'
 import mynaLogo from '../assets/myna-logo.png'
 import jayLogo from '../assets/jay-logo.png'
 import robinLogo from '../assets/robin-logo.png'
-import { getAgentDirectory, PERSONA_GROUPS, type AgentPersonaId } from '../data/agentDirectoryData'
+import { getAgentDirectory, PERSONA_GROUPS, type AgentDirectoryEntry, type AgentPersonaId } from '../data/agentDirectoryData'
 import {
   OVERVIEW_APPOINTMENTS_STATS,
   OVERVIEW_BIRDEYE_SCORE,
@@ -182,38 +182,54 @@ function OutcomeKpiGroup({ stats, big = true, compact = false }: { stats: Outcom
   )
 }
 
-interface AgentOutcomeRow {
-  id: string
-  outcomeLabel: string
-  agentName: string
-  count: string
-  timeSaved: string
-  costSaved: string
-  [key: string]: string
+// One KPI within an AgentPerformanceCard — plain by default, with a hover tooltip only for the
+// card's primary (outcome) metric, same treatment as the Co-workers directory's own agent cards.
+function AgentKpiCell({ value, label, tooltip }: { value: string; label: string; tooltip?: string }) {
+  const content = (
+    <div className="min-w-[140px]">
+      <p className="m-0 text-h3 text-text-primary">{value}</p>
+      <p className="m-0 mt-xs text-small text-text-tertiary">{label}</p>
+    </div>
+  )
+  if (!tooltip) return content
+  return (
+    <Tooltip content={tooltip} variant="detail">
+      {content}
+    </Tooltip>
+  )
 }
 
-// Mirrors the Outcomes table on the AI overview page (AgentDirectoryScreen's
-// coworkerTabsWithSubtext OUTCOME_COLUMNS) — outcome label with the agent name as subtext,
-// then count/time saved/cost saved.
-const AGENT_OUTCOME_COLUMNS: Column<AgentOutcomeRow>[] = [
-  {
-    key: 'outcomeLabel',
-    label: 'Outcomes',
-    width: 280,
-    render: (_, row) => (
-      <div className="min-w-0">
-        <p className="m-0 truncate text-body text-text-primary">{row.outcomeLabel}</p>
-        <p className="m-0 truncate text-small text-text-tertiary">{row.agentName}</p>
+// Full-width version of the agent card shown on the Co-workers directory (AgentDirectoryScreen) —
+// same fields (category, running/paused status, name, description, KPIs), just laid out across
+// the full card width instead of a grid cell. The KPI row is a flex-wrap, not a fixed grid, so
+// more KPIs can be appended per agent later without needing a layout change.
+function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
+  return (
+    <div className="rounded-md border border-border bg-surface p-xl">
+      <div className="mb-xs flex items-center justify-between gap-sm">
+        <span className="truncate text-small text-text-tertiary">{agent.category}</span>
+        {agent.running > 0 ? (
+          <span className="shrink-0 rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
+            {agent.running} running
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Paused</span>
+        )}
       </div>
-    ),
-  },
-  { key: 'count', label: 'Count', width: 160 },
-  { key: 'timeSaved', label: 'Time saved', width: 160 },
-  { key: 'costSaved', label: 'Cost saved', width: 160 },
-]
+      <h4 className="m-0 mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
+      <p className="m-0 mb-lg text-small text-text-tertiary">{agent.description}</p>
+      <div className="flex flex-wrap gap-xl">
+        <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
+        <AgentKpiCell value={agent.timeSaved} label="Time saved" />
+        <AgentKpiCell value={agent.costSaved} label="Cost saved" />
+      </div>
+    </div>
+  )
+}
 
-// Hidden-by-default detail table shown just below every "<Co-worker> performance" section.
-function PerformanceByAgentAccordion({ rows }: { rows: AgentOutcomeRow[] }) {
+// Hidden-by-default detail view shown just below every "<Co-worker> performance" section — one
+// full-length AgentPerformanceCard per agent, replacing the old compact outcomes table.
+function PerformanceByAgentAccordion({ agents }: { agents: AgentDirectoryEntry[] }) {
   const [open, setOpen] = useState(true)
   return (
     <div className="mt-2xl">
@@ -226,8 +242,10 @@ function PerformanceByAgentAccordion({ rows }: { rows: AgentOutcomeRow[] }) {
         Performance by agent outcomes
       </button>
       {open && (
-        <div className="mt-lg">
-          <DataTable columns={AGENT_OUTCOME_COLUMNS} data={rows} />
+        <div className="mt-lg flex flex-col gap-lg">
+          {agents.map((agent) => (
+            <AgentPerformanceCard key={agent.id} agent={agent} />
+          ))}
         </div>
       )}
     </div>
@@ -631,14 +649,6 @@ function CoworkerPerformanceSection({ persona, dateRange }: { persona: AgentPers
     { id: 'time-saved', value: formatTimeSaved(timeSavedHrs, dateRange), label: 'Time saved' },
     { id: 'cost-saved', value: `$${costSavedK.toFixed(1)}K`, label: 'Cost saved' },
   ]
-  const outcomeRows: AgentOutcomeRow[] = agents.map((a) => ({
-    id: a.id,
-    outcomeLabel: a.outcome.label,
-    agentName: a.name,
-    count: formatK(a.outcome.value),
-    timeSaved: a.timeSaved,
-    costSaved: a.costSaved,
-  }))
   return (
     <>
       <h3 className="m-0 mb-lg flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
@@ -646,7 +656,7 @@ function CoworkerPerformanceSection({ persona, dateRange }: { persona: AgentPers
         {COWORKER_NAME[persona]} performance
       </h3>
       <StatGroup stats={kpiStats} big />
-      <PerformanceByAgentAccordion rows={outcomeRows} />
+      <PerformanceByAgentAccordion agents={agents} />
     </>
   )
 }
