@@ -133,6 +133,76 @@ const AGENT_CONTRIBUTION_PCT: Record<string, string> = {
   'ticketing-reviews': '89%',
 }
 
+interface AgentExtraKpi {
+  value: string
+  label: string
+  tooltip?: string
+}
+
+// Extra top-level KPIs shown on each agent's own card, on top of the outcome/time saved/cost
+// saved already there — keyed by agentDirectoryData.ts's agent `name`. Where the agent already
+// has a real breakdown on its own detail page (e.g. Front desk agent's Conversations responded/
+// Resolution rate — see AgentDetailScreen.tsx's METRICS_BY_AGENT), those are reused here; agents
+// without an existing detail-page breakdown get an illustrative pair in the same style.
+const AGENT_EXTRA_KPIS: Record<string, AgentExtraKpi[]> = {
+  'Front desk agent': [
+    { value: '18,420', label: 'Conversations responded', tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
+    { value: '88%', label: 'Resolution rate', tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
+  ],
+  'Waitlist agent': [
+    { value: '5.5K', label: 'Outreach sent', tooltip: 'Total waitlist outreach messages sent by the agent to fill cancelled or open slots.' },
+    { value: '23.7%', label: 'Fill rate', tooltip: 'Percentage of waitlisted patients who booked after receiving outreach.' },
+  ],
+  'Pre-visit agent': [
+    { value: '463', label: 'Outreach sent', tooltip: 'Total intake reminder outreach sent by the agent across all channels in the selected period.' },
+    { value: '90%', label: 'Completion rate', tooltip: 'Percentage of outreach that resulted in a completed intake.' },
+  ],
+  'Reminder agent': [
+    { value: '450', label: 'Total bookings', tooltip: 'Total appointments booked across all locations in the selected period.' },
+    { value: '23.7%', label: 'Confirmation rate', tooltip: 'Percentage of total bookings where the patient confirmed attendance.' },
+  ],
+  'Tagging & routing agent': [
+    { value: '2,850', label: 'Statuses updated', tooltip: 'Total conversations that received an updated contact status.' },
+    { value: '2,000', label: 'Conversations assigned', tooltip: 'Total conversations assigned to a team or user by the agent.' },
+  ],
+  'Review response agent': [
+    { value: '92%', label: 'Response rate', tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+    { value: '20m', label: 'Average response time', tooltip: 'Average time from review receipt to published reply.' },
+  ],
+  'Review generation agent': [
+    { value: '4.2K', label: 'Requests sent', tooltip: 'Total review requests sent to customers in the selected period.' },
+    { value: '21%', label: 'Conversion rate', tooltip: 'Percentage of requests that resulted in a published review.' },
+  ],
+  'Social publishing agent': [
+    { value: '812', label: 'Posts scheduled', tooltip: 'Total posts queued for publishing across all connected accounts.' },
+    { value: '91%', label: 'Approval rate', tooltip: 'Percentage of scheduled posts published without requiring manual edits.' },
+  ],
+  'Social engagement agent': [
+    { value: '89%', label: 'Response rate', tooltip: 'Percentage of comments and mentions that received a reply.' },
+    { value: '15m', label: 'Average response time', tooltip: 'Average time from a comment or mention to a reply.' },
+  ],
+  'Survey creation agent': [
+    { value: '12', label: 'Templates used', tooltip: 'Distinct survey templates used to build new surveys in the selected period.' },
+    { value: '3m', label: 'Average build time', tooltip: 'Average time to configure and publish a new survey.' },
+  ],
+  'Survey distribution agent': [
+    { value: '4.1K', label: 'Touchpoints reached', tooltip: 'Distinct customers reached across email, text, and QR touchpoints.' },
+    { value: '96%', label: 'Delivery rate', tooltip: 'Percentage of surveys successfully delivered to the customer.' },
+  ],
+  'Survey response agent': [
+    { value: '58%', label: 'Response rate', tooltip: 'Percentage of sent surveys that received a customer response.' },
+    { value: '14%', label: 'Detractors flagged', tooltip: 'Percentage of responses flagged as detractors for follow-up.' },
+  ],
+  'Ticketing agent · Surveys': [
+    { value: '92%', label: 'Auto-routed', tooltip: 'Percentage of tickets automatically routed to the right team without manual triage.' },
+    { value: '4m', label: 'Average time to open', tooltip: 'Average time from a flagged survey response to a ticket being opened.' },
+  ],
+  'Ticketing agent · Reviews': [
+    { value: '89%', label: 'Auto-routed', tooltip: 'Percentage of tickets automatically routed to the right team by location and topic.' },
+    { value: '5m', label: 'Average time to open', tooltip: 'Average time from a low-star review to a ticket being opened.' },
+  ],
+}
+
 interface OutcomeKpi {
   id: string
   value: string
@@ -204,6 +274,7 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
 // the full card width instead of a grid cell. The KPI row is a flex-wrap, not a fixed grid, so
 // more KPIs can be appended per agent later without needing a layout change.
 function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
+  const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
     <div className="rounded-md border border-border bg-surface p-xl">
       <div className="mb-xs flex items-center justify-between gap-sm">
@@ -222,6 +293,9 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
         <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
         <AgentKpiCell value={agent.timeSaved} label="Time saved" />
         <AgentKpiCell value={agent.costSaved} label="Cost saved" />
+        {extraKpis.map((kpi) => (
+          <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
+        ))}
       </div>
     </div>
   )
