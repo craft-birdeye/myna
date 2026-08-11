@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Sheet, SheetContent } from "@/contenthub-ui/sheet.v1";
+import { Sheet, SheetContent } from "@/contenthub-ui/sheet";
 import { PostDetailsDrawerContent } from "./PostDetailsDrawerContent";
 interface PostDetailsDrawerProps {
   postId: string | null;

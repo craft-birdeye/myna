@@ -1,9 +1,17 @@
+import type { LibraryCardGlyph, LibraryCardTone } from '../LibraryCardIcon/LibraryCardIcon'
+
 export interface InfoCardProps {
   title: string
   description: string
   /** Hover CTA label (revealed on hover). */
   actionLabel?: string
   onAction?: () => void
+  /** Optional secondary hover CTA (e.g. Preview). */
+  previewLabel?: string
+  onPreview?: () => void
+  /** Optional create-library icon chip (matches create-agent landing cards). */
+  glyph?: LibraryCardGlyph
+  tone?: LibraryCardTone
 }
 
 export interface InfoCardListItemProps {
@@ -12,17 +20,25 @@ export interface InfoCardListItemProps {
   /** Menu CTA label (revealed via row-hover three-dot menu). */
   actionLabel?: string
   onAction?: () => void
+  previewLabel?: string
+  onPreview?: () => void
   /** Omit top border on the first row. */
   first?: boolean
 }
 
-/** Library card layout — 16px padding, fixed 192px height. On hover: description clips to 2 lines to reveal the CTA without growing the card. */
+/** Library card layout — fixed height. Hover: AI gradient border, clamp description, reveal CTAs. */
 export const INFO_CARD_LAYOUT = {
-  root: 'group flex h-[192px] min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover',
+  root: 'info-card-ai-border group flex h-[192px] min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface px-lg pb-lg pt-lg transition-[border-color,box-shadow,background-color] hover:border-transparent hover:bg-surface hover:shadow-dropdown',
   title: 'min-w-0 shrink-0 line-clamp-2 text-[16px] leading-6 tracking-[-0.32px] text-text-primary',
-  description: 'mt-sm min-w-0 shrink-0 line-clamp-3 text-body text-text-secondary group-hover:line-clamp-2',
-  ctaWrap: 'mt-auto shrink-0 pt-sm',
-  cta: 'flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white opacity-0 transition-opacity hover:bg-primary-hover group-hover:opacity-100',
+  description:
+    'mt-sm min-w-0 flex-1 overflow-hidden text-body text-text-secondary group-hover:line-clamp-2',
+  /** Collapsed when idle; expands on hover. mt-auto keeps the row at the bottom of the fixed card. */
+  ctaShell: 'mt-auto grid grid-rows-[0fr] group-hover:grid-rows-[1fr]',
+  ctaInner: 'min-h-0 overflow-hidden',
+  ctaWrap: 'flex items-center gap-sm pt-sm',
+  cta: 'flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white opacity-0 transition-opacity hover:bg-primary-hover group-hover:opacity-100',
+  ctaSecondary:
+    'flex h-9 flex-1 items-center justify-center rounded-sm border border-border-strong bg-surface px-lg text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100',
 } as const
 
 /** Library list row — 2-line description, three-dot menu on row hover. */

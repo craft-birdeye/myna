@@ -3,10 +3,11 @@ import { setFlowDragData } from '../../../flowDragData';
 import './LHSExternalAppsGroup.css';
 
 export const EXTERNAL_APPS_TASK_ITEMS = [
-  { id: 'freshdesk', name: 'FreshDesk' },
-  { id: 'quickbooks', name: 'QuickBooks Online' },
-  { id: 'servicetitan', name: 'ServiceTitan' },
-  { id: 'salesforce', name: 'Salesforce' },
+  { id: 'freshdesk', name: 'FreshDesk', description: 'Freshdesk CRM tools' },
+  { id: 'quickbooks', name: 'QuickBooks Online', description: 'QuickBooks CRM tools' },
+  { id: 'servicetitan', name: 'ServiceTitan', description: 'Service titan CRM tools' },
+  { id: 'salesforce', name: 'Salesforce', description: 'Salesforce CRM tools' },
+  { id: 'zendesk', name: 'Zendesk', description: 'Creates a ticket in Zendesk' },
 ];
 
 function AppIcon({ id }) {
@@ -55,6 +56,14 @@ function AppIcon({ id }) {
     );
   }
 
+  if (id === 'zendesk') {
+    return (
+      <span className="lhs-external-apps__icon lhs-external-apps__icon--zendesk" aria-hidden>
+        <span className="lhs-external-apps__icon-text">Z</span>
+      </span>
+    );
+  }
+
   return null;
 }
 
@@ -64,6 +73,9 @@ export default function LHSExternalAppsGroup({
   parentLabel = 'External apps',
   viewOnly = false,
   onDragStartItem,
+  /** Plain inline block under a category header (no flyout card chrome). */
+  inline = false,
+  showTitle = true,
 }) {
   const handleDragStart = (e, app) => {
     setFlowDragData(e.dataTransfer, {
@@ -71,24 +83,37 @@ export default function LHSExternalAppsGroup({
       label: parentLabel,
       description: app.name,
     });
+
+    const ghost = document.createElement('div');
+    ghost.className = 'lhs-entity-group__drag-ghost';
+    ghost.textContent = app.name;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 16, 16);
+    requestAnimationFrame(() => ghost.remove());
+
     onDragStartItem?.(app);
   };
 
   return (
-    <div className="lhs-external-apps">
-      <p className="lhs-external-apps__title">External apps</p>
+    <div className={`lhs-external-apps${inline ? ' lhs-external-apps--inline' : ''}`}>
+      {showTitle ? <p className="lhs-external-apps__title">External apps</p> : null}
       <div className="lhs-external-apps__items">
         {apps.map((app) => (
           <div
             key={app.id}
-            className="lhs-external-apps__item"
+            className={`lhs-external-apps__item${app.description ? ' lhs-external-apps__item--described' : ''}`}
             draggable={!viewOnly}
             onDragStart={(e) => !viewOnly && handleDragStart(e, app)}
           >
             <AppIcon id={app.id} />
-            <span className="lhs-external-apps__item-label">{app.name}</span>
+            <div className="lhs-external-apps__item-text">
+              <span className="lhs-external-apps__item-label">{app.name}</span>
+              {app.description ? (
+                <span className="lhs-external-apps__item-desc">{app.description}</span>
+              ) : null}
+            </div>
             {!viewOnly && (
-              <span className="lhs-external-apps__item-drag material-symbols-outlined">
+              <span className="lhs-external-apps__item-drag material-symbols-outlined lhs-external-apps__item-drag--visible">
                 drag_indicator
               </span>
             )}

@@ -52,6 +52,9 @@ import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import logoSrc from './assets/birdeye-logo.svg'
+import jayIcon from './assets/icon-jay.svg'
+import mynaIcon from './assets/icon-myna.svg'
+import robinIcon from './assets/icon-robin.svg'
 import {
   FigmaIconBirdAI,
   FigmaIconOverview,
@@ -93,7 +96,8 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'marketing',
-    header: 'Marketing',
+    header: 'Marketing · Jay',
+    headerIcon: jayIcon,
     items: [
       { id: 'search',               label: 'Search AI',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
       { id: 'listings',             label: 'Listings AI',             icon: <FigmaIconListings size={ICON_SIZE} />,        kind: 'element' },
@@ -106,7 +110,8 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'operations',
-    header: 'Operations',
+    header: 'Operations · Myna',
+    headerIcon: mynaIcon,
     items: [
       { id: 'inbox',     label: 'Inbox',      icon: <FigmaIconInbox size={ICON_SIZE} />,        kind: 'element' },
       { id: 'frontdesk', label: 'Front desk', icon: <FigmaIconFrontDesk size={ICON_SIZE} />, kind: 'element' },
@@ -114,7 +119,8 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'cx',
-    header: 'Customer experience',
+    header: 'Customer experience · Robin',
+    headerIcon: robinIcon,
     items: [
       { id: 'surveys',   label: 'Surveys AI',  icon: <FigmaIconSurveys size={ICON_SIZE} />,   kind: 'element' },
       { id: 'ticketing', label: 'Ticketing',   icon: <FigmaIconTicketing size={ICON_SIZE} />, kind: 'element' },
@@ -145,9 +151,11 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
   {
     id: 'agent',
     label: 'Agents',
+    badge: 'New',
     items: [
       { id: 'frontdesk-agent', label: 'Front desk agent' },
       { id: 'reminder-agent',  label: 'Reminder agent'  },
+      { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
       { id: 'outreach-agent',  label: 'Outreach agent'  },
     ],
   },
@@ -186,11 +194,13 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
   {
     id: 'agent',
     label: 'Agents',
+    badge: 'New',
     items: [
       { id: 'frontdesk-agent',  label: 'Front desk agent'  },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
       { id: 'pre-visit-agent',  label: 'Pre-visit agent'  },
       { id: 'reminder-agent',   label: 'Reminder agent'   },
+      { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
     ],
   },
   {
@@ -232,11 +242,13 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
   {
     id: 'agent',
     label: 'Agents',
+    badge: 'New',
     items: [
       { id: 'frontdesk-agent',             label: 'Front desk agent'             },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
       { id: 'pre-visit-agent',             label: 'Pre-visit agent'             },
       { id: 'reminder-agent',              label: 'Reminder agent'              },
+      { id: 'reminder-agent-sep-1',        label: 'Reminder agent (Sep 1)'      },
       { id: 'recall-agent',                label: 'Recall agent'                },
       { id: 'revenue-agent',               label: 'Revenue agent'               },
       { id: 'treatment-plan-agent',        label: 'Treatment plan agent'        },
@@ -263,7 +275,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
       { id: 'procedure-library', label: 'Procedures'       },
       { id: 'phone-number',      label: 'Phone number'     },
       { id: 'knowledge-base',    label: 'Knowledge base', external: true },
-      { id: 'widgets',           label: 'Widgets',        external: true },
+      { id: 'widgets',           label: 'Widgets',           external: true },
     ],
   },
 ]
@@ -290,8 +302,9 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
-      { id: 'response-agents',   label: 'Response agents' },
-      { id: 'generation-agents', label: 'Generation agents' },
+      { id: 'response-agents-sep-1',   label: 'Response agents (Sep 1)' },
+      { id: 'response-agents',         label: 'Response agents' },
+      { id: 'generation-agents',       label: 'Generation agents' },
     ],
   },
   {
@@ -352,6 +365,7 @@ const PRODUCT_BRAND: Record<string, string> = {
 
 const AGENT_NAMES: Record<string, string> = {
   'frontdesk-agent':           'Front desk agent',
+  'reminder-agent-sep-1':      'Reminder agent',
   'reminder-agent':            'Reminder agent',
   'outreach-agent':            'Outreach agent',
   'waitlist-agent':            'Waitlist agent',
@@ -361,6 +375,7 @@ const AGENT_NAMES: Record<string, string> = {
   'treatment-plan-agent':      'Treatment plan agent',
   'review-response-agents':    'Review response agents',
   'response-agents':           'Review response agents',
+  'response-agents-sep-1':     'Review response agents',
   'generation-agents':         'Review generation agents',
 }
 
@@ -438,8 +453,13 @@ export function App() {
   // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
   // closing the editor) knows which instance + tab to land on instead of its own defaults.
   const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
+  // Set by the Agent directory "Create agent" CTA so the freshly-mounted AgentDetailScreen
+  // lands directly in its create-agent flow instead of the default Agents-tab table.
+  const [autoOpenAgentCreateFlow, setAutoOpenAgentCreateFlow] = useState(false)
   const [workflowAiAssistOpen, setWorkflowAiAssistOpen] = useState(false)
   const [workflowAiCreateFullscreen, setWorkflowAiCreateFullscreen] = useState(false)
+  /** Docked "AI Builder" side panel (Reviews AI review-response chrome). */
+  const [workflowAiBuilderPanelOpen, setWorkflowAiBuilderPanelOpen] = useState(false)
   /** After exiting Create with AI fullscreen, reopen the canvas LHS on that tab. */
   const [workflowLhsPreferAiTab, setWorkflowLhsPreferAiTab] = useState(false)
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
@@ -483,6 +503,8 @@ export function App() {
     setWizardAgentDraft(draft ?? null)
     setEditingAgentName(name)
     setWorkflowAiCreateFullscreen(false)
+    // Keep the AI Builder closed on land — user opens it via the Create with AI FAB.
+    setWorkflowAiBuilderPanelOpen(false)
     if (draft) {
       setAgentToastMessage(`${draft.agentName} created successfully`)
       setAgentToastVisible(true)
@@ -797,6 +819,11 @@ export function App() {
                       setRailActive('frontdesk')
                       setNavActive(navId)
                     }}
+                    onCreateAgent={() => {
+                      setRailActive('frontdesk')
+                      setNavActive('frontdesk-agent')
+                      setAutoOpenAgentCreateFlow(true)
+                    }}
                   />
                 ) : isEditingWorkflow ? (
                   workflowAiCreateFullscreen && editingAgentName ? (
@@ -805,6 +832,8 @@ export function App() {
                       const exitToAgentBuilder = () => {
                         setWorkflowAiCreateFullscreen(false)
                         setWorkflowLhsPreferAiTab(true)
+                        // Keep Create with AI / AI Builder docked panel open on return.
+                        setWorkflowAiBuilderPanelOpen(true)
                       }
                       // Shell title matches create-flow naming (drop region suffix when present).
                       const shellTitle = editingAgentName.replace(/ - .+$/, '') || editingAgentName
@@ -853,6 +882,7 @@ export function App() {
                             setWizardAgentDraft(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)
+                            setWorkflowAiBuilderPanelOpen(false)
                             setWorkflowLhsPreferAiTab(false)
                           }}
                           product={activeProduct}
@@ -865,6 +895,8 @@ export function App() {
                           aiAssistOpen={workflowAiAssistOpen}
                           onAiAssistOpenChange={setWorkflowAiAssistOpen}
                           onOpenAiFullscreen={() => setWorkflowAiCreateFullscreen(true)}
+                          aiBuilderPanelOpen={workflowAiBuilderPanelOpen}
+                          onAiBuilderPanelOpenChange={setWorkflowAiBuilderPanelOpen}
                           lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
                         />
                       </div>
@@ -884,6 +916,7 @@ export function App() {
                     <AgentDetailScreen
                       key={navActive}
                       agentName={AGENT_NAMES[navActive]}
+                      navId={navActive}
                       onEditAgent={handleEditAgent}
                       onAgentSetupActiveChange={setIsAgentSetupActive}
                       onNavigateToInbox={(conversationId) => {
@@ -1007,6 +1040,7 @@ export function App() {
                   <AgentDetailScreen
                     key={navActive}
                     agentName={AGENT_NAMES[navActive]}
+                    navId={navActive}
                     onEditAgent={handleEditAgent}
                     onOpenIntegrationSettings={openIntegrationSettings}
                     onAgentSetupActiveChange={setIsAgentSetupActive}
@@ -1020,6 +1054,8 @@ export function App() {
                     product={activeProduct}
                     pendingInstanceView={pendingAgentInstanceView}
                     onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
+                    autoOpenCreateFlow={autoOpenAgentCreateFlow}
+                    onAutoOpenCreateFlowConsumed={() => setAutoOpenAgentCreateFlow(false)}
                   />
                 ) : appointmentDetail ? (
                   <>

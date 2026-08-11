@@ -1,4 +1,4 @@
-import { Sheet, SheetContent } from "@/contenthub-ui/sheet.v1";
+import { Sheet, SheetContent } from "@/contenthub-ui/sheet";
 import { FLOATING_SHEET_FRAME_CONTENT_CLASS } from "./layout/FloatingSheetFrame";
 import { ActivityDrawerContent } from "./ActivityDrawerContent";
 

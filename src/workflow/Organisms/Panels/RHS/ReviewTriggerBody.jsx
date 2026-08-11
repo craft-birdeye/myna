@@ -1,27 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { FormInput, TextArea, SingleSelect } from '../../../elemental-stubs';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { TextArea } from '../../../elemental-stubs';
 import Conditions from '../../../Molecules/Conditions/Conditions';
+import ChooseTriggerModal, { REVIEW_TRIGGER_OPTIONS } from './ChooseTriggerModal';
 
-const TRIGGER_TYPE_OPTIONS = [
-  { value: 'Reviews', label: 'Reviews' },
-  { value: 'Inbox', label: 'Inbox' },
-  { value: 'Listings', label: 'Listings' },
-  { value: 'Social', label: 'Social' },
-  { value: 'Surveys', label: 'Surveys' },
-  { value: 'Ticketing', label: 'Ticketing' },
-  { value: 'External apps', label: 'External apps' },
-];
-
-// Singular entity name used in the pseudo-code Preview block below.
-const TRIGGER_TYPE_ENTITY = {
-  Reviews: 'Review',
-  Inbox: 'Inbox',
-  Listings: 'Listing',
-  Social: 'Social',
-  Surveys: 'Survey',
-  Ticketing: 'Ticket',
-  'External apps': 'External app',
-};
+const DEFAULT_TRIGGER = REVIEW_TRIGGER_OPTIONS[2];
 
 const OPERATOR_SYMBOLS = {
   is: '==',
@@ -56,11 +38,15 @@ const DEFAULT_CONDITION_OPTIONS = {
   ],
 };
 
-const DEFAULT_CONDITIONS = [
-  { id: 1, fieldValue: '', operatorValue: '', valueValue: '' },
-];
-
 const makeCondition = (id) => ({ id, fieldValue: '', operatorValue: '', valueValue: '' });
+
+function resolveTrigger(initialValues) {
+  const raw = initialValues.triggerType ?? initialValues.triggerName ?? '';
+  return (
+    REVIEW_TRIGGER_OPTIONS.find((o) => o.value === raw || o.label === raw) ??
+    DEFAULT_TRIGGER
+  );
+}
 
 /** Builds the "IF ..." pseudo-code preview from the current conditions — a representative
  *  rendering for the prototype, not a real rules compiler. */
@@ -80,26 +66,37 @@ function buildPreview(entity, conditions, conditionOptions, logic) {
 }
 
 export default function ReviewTriggerBody({ initialValues = {}, onFieldChange }) {
-  const [triggerType, setTriggerType] = useState(initialValues.triggerType ?? 'Reviews');
-  const [triggerName, setTriggerName] = useState(initialValues.triggerName ?? '');
-  const [description, setDescription] = useState(initialValues.description ?? '');
-  const [conditions, setConditions] = useState(
-    initialValues.conditions?.length ? initialValues.conditions : DEFAULT_CONDITIONS
+  const initialTrigger = resolveTrigger(initialValues);
+  const [trigger, setTrigger] = useState(initialTrigger);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const triggerFieldRef = useRef(null);
+  const [description, setDescription] = useState(
+    initialValues.description ?? initialTrigger.agentDescription ?? '',
   );
+  const [conditions, setConditions] = useState([]);
   const [logic, setLogic] = useState(initialValues.logic ?? 'AND');
-  const [conditionOptions, setConditionOptions] = useState(
-    initialValues.conditionOptions ?? DEFAULT_CONDITION_OPTIONS
-  );
+  const conditionOptions = initialValues.conditionOptions ?? DEFAULT_CONDITION_OPTIONS;
 
-  const handleTriggerType = (opt) => {
-    setTriggerType(opt.value);
+  // Keep the card empty by default (Add condition only). Drop any blank placeholder rows
+  // that older nodeDetails still carry so Selects don't reappear on open.
+  useEffect(() => {
+    const list = initialValues.conditions;
+    if (!list?.length) return;
+    const hasAnyValue = list.some((c) => c.fieldValue || c.operatorValue || c.valueValue);
+    if (!hasAnyValue) {
+      setConditions([]);
+      onFieldChange?.('conditions', []);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleTriggerSelect = (opt) => {
+    setTrigger(opt);
     onFieldChange?.('triggerType', opt.value);
-  };
-
-  const handleTriggerName = (e) => {
-    const val = e.target.value;
-    setTriggerName(val);
-    onFieldChange?.('triggerName', val);
+    onFieldChange?.('triggerName', opt.label);
+    if (!description || description === trigger.agentDescription) {
+      setDescription(opt.agentDescription);
+      onFieldChange?.('description', opt.agentDescription);
+    }
   };
 
   const handleDescription = (e) => {
@@ -140,42 +137,31 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
     });
   }
 
-  function handleOptionsChange(key, opts) {
-    setConditionOptions((prev) => {
-      const next = { ...prev, [key]: opts };
-      onFieldChange?.('conditionOptions', next);
-      return next;
-    });
-  }
-
-  const entity = TRIGGER_TYPE_ENTITY[triggerType] ?? 'Review';
   const preview = useMemo(
-    () => buildPreview(entity, conditions, conditionOptions, logic),
-    [entity, conditions, conditionOptions, logic]
+    () => buildPreview('Review', conditions, conditionOptions, logic),
+    [conditions, conditionOptions, logic],
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: 12, lineHeight: '16px', color: '#757575', fontFamily: '"Roboto", sans-serif' }}>
-          Trigger type
+          Trigger<span style={{ color: '#d32f2f' }}>*</span>
         </span>
-        <SingleSelect
-          name="triggerType"
-          selected={triggerType}
-          options={TRIGGER_TYPE_OPTIONS}
-          onChange={handleTriggerType}
-        />
+        <div className="tc-dropdown" ref={triggerFieldRef}>
+          <button
+            type="button"
+            name="trigger"
+            className={`tc-dropdown__trigger${pickerOpen ? ' tc-dropdown__trigger--open' : ''}`}
+            onClick={() => setPickerOpen((open) => !open)}
+            aria-haspopup="dialog"
+            aria-expanded={pickerOpen}
+          >
+            <span className="tc-dropdown__value">{trigger.label}</span>
+            <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
+          </button>
+        </div>
       </div>
-      <FormInput
-        name="triggerName"
-        type="text"
-        label="Trigger name"
-        placeholder="Enter name"
-        value={triggerName}
-        onChange={handleTriggerName}
-        required
-      />
       <TextArea
         name="description"
         label="Description"
@@ -192,9 +178,9 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
         onConnectorChange={handleConnectorChange}
         onAddCondition={handleAddCondition}
         onRemoveCondition={handleRemoveCondition}
-        onAdvancedFilters={() => {}}
         conditionOptions={conditionOptions}
-        onOptionsChange={handleOptionsChange}
+        label="Trigger condition"
+        showAdvancedFilters={false}
       />
       {preview && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -220,6 +206,14 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
           </pre>
         </div>
       )}
+
+      <ChooseTriggerModal
+        open={pickerOpen}
+        selectedValue={trigger.value}
+        anchorRef={triggerFieldRef}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handleTriggerSelect}
+      />
     </div>
   );
 }

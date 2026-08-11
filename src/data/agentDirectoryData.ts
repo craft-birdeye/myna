@@ -24,7 +24,8 @@ export interface PersonaGroup {
   categories: string[]
 }
 
-// Mirrors the real product groupings in the L1 icon rail (App.tsx RAIL_GROUPS).
+// Mirrors the L1 icon-rail persona segregation in App.tsx RAIL_GROUPS:
+// Jay (marketing) / Myna (operations) / Robin (customer experience).
 export const PERSONA_GROUPS: PersonaGroup[] = [
   { id: 'marketing', label: 'Marketing', categories: ['Search AI', 'Listings AI', 'Reviews AI', 'Social AI', 'Referral', 'Marketing Automation AI'] },
   { id: 'operations', label: 'Operations', categories: ['Inbox', 'Front desk'] },

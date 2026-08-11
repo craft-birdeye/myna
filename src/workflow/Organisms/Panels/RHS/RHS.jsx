@@ -130,7 +130,7 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
         height: '100%',
         background: '#ffffff',
         borderRadius: 12,
-        boxShadow: '0px 2px 12px 0px rgba(33, 33, 33, 0.06)',
+        boxShadow: '0 2px 12px 1px rgba(33, 33, 33, 0.06)',
         border: '1px solid #e5e9f0',
         overflow: 'hidden',
         fontFamily: '"Roboto", arial, sans-serif',
@@ -167,8 +167,12 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           </div>
         </div>
 
-        {!viewOnly && (variant === 'createCustomProcedure' || variant === 'reviewTrigger') && (
-          <RHSPanelFooter onSave={onSave} saveLabel="Save" />
+        {!viewOnly && (
+          <RHSPanelFooter
+            onSave={onSave}
+            saveLabel="Save"
+            showPromptStrength={config.showPromptStrength}
+          />
         )}
       </div>
   );

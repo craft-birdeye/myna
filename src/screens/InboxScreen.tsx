@@ -779,6 +779,7 @@ export function InboxScreen({
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
+  const [inboxAiBuilderPanelOpen, setInboxAiBuilderPanelOpen] = useState(false)
   // Maps a chat-bubble message id to the recommendation id its feedback landed on, once known —
   // that bubble's "Coach agent" link switches to "Track your feedback" pointing at it.
   const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
@@ -960,10 +961,22 @@ export function InboxScreen({
           <WorkflowEditorScreen
             agentName={editingAgentName}
             product="healthcare"
-            onClose={() => setEditingAgentName(null)}
+            onClose={() => {
+              setEditingAgentName(null)
+              setInboxAiBuilderPanelOpen(false)
+            }}
+            aiBuilderPanelOpen={inboxAiBuilderPanelOpen}
+            onAiBuilderPanelOpenChange={setInboxAiBuilderPanelOpen}
           />
         ) : activeNav === 'tagging-routing-agent' ? (
-          <AgentDetailScreen agentName="Tagging & routing agent" product="healthcare" onEditAgent={setEditingAgentName} />
+          <AgentDetailScreen
+            agentName="Tagging & routing agent"
+            product="healthcare"
+            onEditAgent={(name) => {
+              setInboxAiBuilderPanelOpen(false)
+              setEditingAgentName(name)
+            }}
+          />
         ) : (
         <>
         <TopNav initials="S" />

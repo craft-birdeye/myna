@@ -2,6 +2,8 @@ export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
 export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
 export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
+export { AiBuilderPanel } from './AiBuilderPanel/AiBuilderPanel'
+export type { AiBuilderPanelProps } from './AiBuilderPanel/AiBuilderPanel.types'
 export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
 export type {
   RunConversationEntry,
@@ -27,7 +29,7 @@ export { EmptyState } from './EmptyState/EmptyState'
 export type { EmptyStateProps } from './EmptyState/EmptyState.types'
 export { InfoTooltip } from './InfoTooltip/InfoTooltip'
 export { Tooltip } from './Tooltip/Tooltip'
-export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'
+export type { TooltipProps, TooltipVariant, TooltipSide } from './Tooltip/Tooltip.types'
 export {
   VoiceCallEngineSettings,
   TtsModelSettings,
@@ -79,6 +81,8 @@ export type { IntegrationSelectCardProps } from './IntegrationSelectCard/Integra
 export { IntakeFormPreviewDrawer } from './IntakeFormPreviewDrawer/IntakeFormPreviewDrawer'
 export { InfoCard } from './InfoCard/InfoCard'
 export { InfoCardListItem } from './InfoCard/InfoCardListItem'
+export { LibraryCardIcon } from './LibraryCardIcon/LibraryCardIcon'
+export type { LibraryCardGlyph, LibraryCardTone } from './LibraryCardIcon/LibraryCardIcon'
 export { Link } from './Link/Link'
 export { LogDetailsPanel } from './LogDetailsPanel/LogDetailsPanel'
 export type {
@@ -111,6 +115,12 @@ export { ShareFeedbackModal } from './ShareFeedbackModal/ShareFeedbackModal'
 export type { ShareFeedbackModalProps } from './ShareFeedbackModal/ShareFeedbackModal.types'
 export { EstimateSavingsModal } from './EstimateSavingsModal/EstimateSavingsModal'
 export type { EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
+export type {
+  AgentLibraryPreviewData,
+  AgentLibraryPreviewModalProps,
+  AgentLibraryPreviewStep,
+} from './AgentLibraryPreviewModal/AgentLibraryPreviewModal.types'
 export { ViewActivityDrawer } from './ViewActivityDrawer/ViewActivityDrawer'
 export { WeekCalendar } from './WeekCalendar/WeekCalendar'
 export { DayCalendar } from './DayCalendar/DayCalendar'

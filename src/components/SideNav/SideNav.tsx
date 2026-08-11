@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLeaf, NavSection, SideNavProps } from './SideNav.types'
 import { ChevronDown, ChevronUp, ExternalLink, Plus } from 'lucide-react'
+import iconAgentsOutline from '../../assets/icon-agents-outline.svg'
 
 function findSectionIdForItem(sections: NavSection[], itemId: string): string | null {
   for (const section of sections) {
@@ -105,12 +106,17 @@ function Section({
         onClick={onHeaderClick}
         className="flex h-7 w-full items-center justify-between gap-sm rounded-sm px-sm py-[6px] hover:bg-surface-selected"
       >
-        <span className="flex min-w-0 items-center gap-sm">
+        <span className="flex min-w-0 items-center gap-xs">
           <span className="truncate text-body text-text-primary">{section.label}</span>
           {section.badge && (
-            <span className="ai-gradient-badge flex shrink-0 items-center justify-center px-sm text-[11px] leading-[14px]">
-              <span className="ai-gradient-badge-text">{section.badge}</span>
-            </span>
+            <span
+              className="ai-gradient-icon size-[18px]"
+              style={{
+                WebkitMaskImage: `url(${iconAgentsOutline})`,
+                maskImage: `url(${iconAgentsOutline})`,
+              }}
+              aria-hidden
+            />
           )}
         </span>
         {expanded ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}

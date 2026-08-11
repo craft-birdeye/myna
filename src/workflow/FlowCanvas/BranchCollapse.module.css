@@ -1,0 +1,77 @@
+/* Collapse control on the stem under a Branch card */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #e5e9f0;
+  color: #afbcdf;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(33, 33, 33, 0.08);
+}
+
+.circle:hover {
+  background: #1976d2;
+  color: #ffffff;
+}
+
+.circle :global(.material-symbols-outlined) {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
+  height: 32px;
+  margin: 0;
+  padding: 0 10px 0 12px;
+  border: 1px solid #90caf9;
+  border-radius: 16px;
+  background: #e3f2fd;
+  color: #1565c0;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  box-shadow: 0 1px 2px rgba(33, 33, 33, 0.06);
+}
+
+.pill:hover {
+  background: #bbdefb;
+}
+
+.pillLabel {
+  min-width: 0;
+}
+
+.pill :global(.material-symbols-outlined) {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  overflow: hidden;
+  color: #1976d2;
+  flex-shrink: 0;
+}

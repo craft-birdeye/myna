@@ -12,10 +12,10 @@ export default function RHSPanelHeader({
 }) {
   const svgStyle = { width: 24, height: 24, display: 'block' };
   const iconStyle = {
-    fontSize: 24,
+    fontSize: 20,
     lineHeight: 1,
     color: '#303030',
-    fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
+    fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
   };
 
   return (

@@ -17,6 +17,8 @@ export interface RailGroup {
   id: string
   /** Section label shown above the group when expanded. Groups are separated by dividers. */
   header?: string
+  /** Optional bird/avatar icon shown beside the section header. */
+  headerIcon?: string
   items: RailNavItem[]
 }
 

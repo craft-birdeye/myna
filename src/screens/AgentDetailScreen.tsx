@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  AgentLibraryPreviewModal,
   AttachMenuPopover,
   Chip,
   CustomizeColumnsDrawer,
@@ -11,8 +12,8 @@ import {
   Icon,
   INFO_CARD_LAYOUT,
   InfoCard,
-  InfoCardListItem,
   InfoTooltip,
+  LibraryCardIcon,
   MediaLibraryModal,
   MetricTiles,
   PromptComposer,
@@ -21,16 +22,20 @@ import {
   Toast,
   Tooltip,
   TopNav,
+  type AgentLibraryPreviewData,
+  type AgentLibraryPreviewStep,
   type AttachItem,
   type ChipVariant,
   type Column,
   type ColumnOption,
   type EstimateSavingsValues,
   type FilterField,
+  type LibraryCardGlyph,
+  type LibraryCardTone,
   type Metric,
   type Tab,
 } from '../components'
-import { ArrowLeft, Columns3, LayoutGrid, LayoutList, ListFilter } from 'lucide-react'
+import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
@@ -42,10 +47,17 @@ import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
+import iconAgentsPurple from '../assets/icon-agents-purple.svg'
+import agentEmptyState from '../assets/agent-empty-state.svg'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { rememberCreateAgentChat, getLastSavedCreateChat } from '../data/createAgentChatStore'
+import {
+  rememberCreateAgentChat,
+  getLastSavedCreateChat,
+  setCreateAiDraftTrail,
+} from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
+import { useAiBuilderTrail } from '../components/AiBuilderPanel/useAiBuilderTrail'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -60,6 +72,12 @@ import LocationsDrawer from '../workflow/RHSDrawer/LocationsDrawer.jsx'
 
 interface AgentDetailScreenProps {
   agentName: string
+  /**
+   * Side-nav item id (e.g. `response-agents-sep-1`). Used to distinguish Sep 1
+   * library-only create landings from the Ghostwriter create flow that shares
+   * the same display `agentName`.
+   */
+  navId?: string
   onEditAgent?: (agentName: string, draft?: WizardAgentDraft) => void
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
@@ -76,7 +94,17 @@ interface AgentDetailScreenProps {
    *  recommendation inside a specific agent instance. */
   initialRecommendationFocus?: { instanceName: string; recommendationId: string; feedbackPrefill?: string } | null
   onInitialRecommendationFocusConsumed?: () => void
+  /** Set by the host app (e.g. the Agent directory "Create agent" CTA) to land directly in
+   *  the create-agent flow instead of the agent's default Agents-tab table. */
+  autoOpenCreateFlow?: boolean
+  onAutoOpenCreateFlowConsumed?: () => void
 }
+
+/** Nav ids that open Create agent as illustration + library cards only (no Ghostwriter chat). */
+const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
+  'response-agents-sep-1',
+  'reminder-agent-sep-1',
+])
 
 interface AgentInstance {
   name: string
@@ -120,6 +148,8 @@ interface AgentInstance {
   clickThroughRate?: string
   /** Open issues for this instance — shown next to the status chip and gating Publish in the editor. */
   issues?: number
+  lastUpdated?: string
+  updatedBy?: string
   [key: string]: string | number | undefined
 }
 
@@ -185,7 +215,18 @@ interface RegionRow {
   clickThroughRate?: string
   /** Overrides the default `${agentName} - ${region}` row label. */
   instanceName?: string
+  lastUpdated?: string
+  updatedBy?: string
 }
+
+/** Sample dates / editors for the Agents table trailing columns. */
+const LAST_UPDATED_SAMPLES = [
+  'Aug 06, 2026',
+  'Aug 05, 2026',
+  'Aug 03, 2026',
+  'Jul 29, 2026',
+] as const
+const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as const
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
   'Front desk agent': [
@@ -278,8 +319,6 @@ const DEFAULT_REGIONS: RegionRow[] = REGIONS_BY_AGENT['Front desk agent']
 
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l }))
 
-type LibraryView = 'grid' | 'list'
-
 // ── Library template cards for the create-agent empty state ───────────────
 const LIBRARY_TEMPLATES = [
   {
@@ -305,73 +344,280 @@ const LIBRARY_TEMPLATES = [
 ]
 
 // ── Healthcare-only "Front desk agents" create screen: library cards ───────
-const HEALTHCARE_FRONTDESK_CREATE_CARDS = [
+type CreateLibraryCard = {
+  id: string
+  title: string
+  description: string
+  glyph?: LibraryCardGlyph
+  tone?: LibraryCardTone
+  /** Preview modal Outcome — falls back to a generic coverage blurb when omitted. */
+  outcome?: string
+  steps?: AgentLibraryPreviewStep[]
+}
+
+function toLibraryPreviewData(card: CreateLibraryCard): AgentLibraryPreviewData {
+  return {
+    id: card.id,
+    name: card.title,
+    goal: card.description,
+    outcome:
+      card.outcome ??
+      'Increase coverage by automating more of this workflow across locations. Free your team to focus on exceptions while the agent handles the routine work.',
+    locationsLabel: 'All locations',
+    steps: card.steps ?? [
+      {
+        kind: 'trigger',
+        title: '1. Workflow starts',
+        description: 'Agent triggers when the configured event occurs across all sources and locations.',
+      },
+      {
+        kind: 'task',
+        title: '2. Complete the agent goal',
+        description: card.description,
+      },
+    ],
+  }
+}
+
+const HEALTHCARE_FRONTDESK_CREATE_CARDS: CreateLibraryCard[] = [
   {
     id: 'routing',
     title: 'Routing and triage',
     description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+    glyph: 'routing',
+    tone: 'info',
   },
   {
     id: 'new-patient',
     title: 'New patient intake',
     description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
+    glyph: 'intake',
+    tone: 'success',
   },
   {
     id: 'patient-scheduling',
     title: 'Patient scheduling',
     description: 'Finds returning patient records, confirms coverage, and books or reschedules visits',
+    glyph: 'scheduling',
+    tone: 'ai',
   },
 ]
 
-const REMINDER_CREATE_CARDS = [
+const REMINDER_CREATE_CARDS: CreateLibraryCard[] = [
   {
     id: 'appointment-confirmation-reminder',
     title: 'Appointment confirmation reminder',
     description:
       'Sends a multi-step reminder sequence at 72h, 24h, and 2h before the appointment. Adapts tone and channel based on patient history and no-show risk.',
+    glyph: 'reminder',
+    tone: 'info',
   },
   {
     id: 'no-show-risk-intervention',
     title: 'No-show risk intervention agent',
     description:
-      'Identifies patients flagged as high-risk by the AI scoring model and triggers a personalized outreach campaign – including a live AI call for patients with 3+ prior no-shows. Escalates to staff when needed.',
+      'Identifies patients flagged as high-risk by the AI scoring model and triggers a personalized outreach campaign — including a live AI call for patients with 3+ prior no-shows. Escalates to staff when needed.',
+    glyph: 'noshow',
+    tone: 'danger',
   },
   {
     id: 'pre-visit-preparation-reminder',
     title: 'Pre-visit preparation reminder',
     description:
       'Reminds patients of pre-visit requirements — fasting, medication holds, forms, and insurance documents. Checks completion status via patient portal and sends a targeted follow-up only for outstanding items.',
+    glyph: 'prep',
+    tone: 'success',
   },
   {
     id: 'chronic-care-medication-reminder',
     title: 'Chronic care & medication reminder',
     description:
       "Sends recurring reminders for chronic condition follow-ups, lab reorders, and prescription refills. Detects gaps in care by querying the patient's care plan and nudges patients who have fallen out of schedule.",
+    glyph: 'medication',
+    tone: 'warning',
   },
 ]
 
-const REVIEW_RESPONSE_CREATE_CARDS = [
+const WAITLIST_CREATE_CARDS: CreateLibraryCard[] = [
+  {
+    id: 'waitlist-agent',
+    title: 'Waitlist agent',
+    description:
+      'Manages waitlist requests by reviewing availability, offering open slots, and confirming appointments with patients.',
+    glyph: 'scheduling',
+    tone: 'info',
+    outcome:
+      'Fill more cancelled and open slots automatically. Reach waitlisted patients faster so your schedule stays fuller with less staff outreach.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. Open or cancelled slot is available',
+        description: 'Agent triggers when a cancelled or newly opened appointment slot needs to be filled.',
+      },
+      {
+        kind: 'task',
+        title: '2. Outreach and confirm',
+        description: 'Contacts waitlisted patients, offers the open slot, and confirms the booking.',
+      },
+    ],
+  },
+]
+
+const PREVISIT_CREATE_CARDS: CreateLibraryCard[] = [
+  {
+    id: 'previsit-checkin-outreach',
+    title: 'Pre-visit agent',
+    description: 'The Pre-Visit Agent automates pre-appointment check-in form outreach.',
+    glyph: 'prep',
+    tone: 'success',
+    outcome:
+      'Increase intake completion before visits. Patients arrive prepared so your front desk spends less time chasing forms.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. Upcoming appointment needs intake',
+        description: 'Agent triggers ahead of the visit when intake or check-in forms are still outstanding.',
+      },
+      {
+        kind: 'task',
+        title: '2. Send outreach and follow up',
+        description: 'Sends check-in form reminders and follows up until the intake is completed.',
+      },
+    ],
+  },
+]
+
+const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
   {
     id: 'reviews-response-templates',
     title: 'Review response agent replying using templates',
-    description: 'Uses pre-defined templates and responds to reviews automatically.',
+    description: 'Uses pre-defined templates and responds to reviews automatically',
+    glyph: 'templates',
+    tone: 'info',
+    outcome:
+      'Respond to more reviews consistently with on-brand templates. Reduce drafting time while keeping reply quality steady across locations.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+      },
+      {
+        kind: 'task',
+        title: '2. Match and post a template reply',
+        description: 'Selects the best matching template by rating and topic, then posts the reply automatically.',
+      },
+    ],
   },
   {
     id: 'reviews-response-autonomous',
     title: 'Review response agent replying autonomously',
-    description: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
+    description:
+      'Uses AI to analyze review sentiment, generates and posts unique, context-aware replies automatically',
+    glyph: 'autonomous',
+    tone: 'danger',
+    outcome:
+      'Increase review coverage by responding to more reviews across platforms effortlessly. Boost response rates with faster, personalized replies that build trust and satisfaction.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+      },
+      {
+        kind: 'task',
+        title: '2. Analyze sentiment and draft reply',
+        description:
+          'Uses AI to understand the review, generate a unique context-aware reply, and apply brand tone guidelines.',
+      },
+      {
+        kind: 'task',
+        title: '3. Post reply automatically',
+        description: 'Publishes the reply to the original review source without waiting for human approval.',
+      },
+    ],
   },
   {
     id: 'reviews-response-human-approval',
     title: 'Review response agent replying after human approval',
-    description: 'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting.',
+    description:
+      'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting',
+    glyph: 'approval',
+    tone: 'success',
+    outcome:
+      'Keep humans in the loop for sensitive replies while still drafting faster. Improve consistency without losing final approval control.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+      },
+      {
+        kind: 'task',
+        title: '2. Draft reply for approval',
+        description: 'Generates a unique reply and routes it to the dashboard for a teammate to approve or edit.',
+      },
+      {
+        kind: 'task',
+        title: '3. Post after approval',
+        description: 'Publishes the reply once a human approves the draft.',
+      },
+    ],
   },
   {
     id: 'reviews-response-dashboard-suggestions',
     title: 'Review response agent suggesting replies in dashboard',
-    description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
+    description:
+      'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting',
+    glyph: 'dashboard',
+    tone: 'ai',
+    outcome:
+      'Give your team ready-to-post drafts in the dashboard. Speed up manual responses while keeping full control of when replies go live.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+      },
+      {
+        kind: 'task',
+        title: '2. Suggest reply in dashboard',
+        description: 'Surfaces a unique draft reply next to the review so a teammate can post with one click.',
+      },
+    ],
   },
 ]
+
+/** Rotating landing-composer placeholders for the review response create flow. */
+const REVIEW_RESPONSE_PLACEHOLDERS = [
+  'Reply to new reviews using templates…',
+  'Create a review response agent that drafts and posts unique, context-aware replies automatically…',
+  'Hold replies for human approval…',
+  'Build an agent that suggests reply drafts in the dashboard for one-click posting…',
+  'Flag spam and alert the team…',
+] as const
+
+const FRONTDESK_PLACEHOLDERS = [
+  'Route urgent calls to the right team…',
+  'Create a front desk agent that handles intake, verifies insurance, and books the right visit…',
+  'Schedule or reschedule returning patients…',
+  'Build an agent that triages symptoms and transfers with full call context…',
+  'Answer after-hours questions…',
+] as const
+
+const REMINDER_PLACEHOLDERS = [
+  'Send appointment reminders at 72h, 24h, and 2h…',
+  'Create a reminder agent that intervenes on high no-show risk patients with a live AI call…',
+  'Remind patients about forms and prep…',
+  'Build an agent that nudges overdue medication refills and chronic care follow-ups…',
+  'Confirm visits over text and email…',
+] as const
+
+const DEFAULT_CREATE_PLACEHOLDER = 'Describe the agent you want to build…'
 
 const REVIEW_GENERATION_CREATE_CARDS = [
   {
@@ -393,9 +639,45 @@ const REVIEW_GENERATION_CREATE_PROMPT =
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
     {
-      id: 'frontdesk-routing-triage',
-      title: 'Front desk agent routing and triage',
-      description: 'Handles inbound calls, texts, and web chats to identify patient needs, answer questions from the knowledge base, manage appointments & verify insurance',
+      id: 'routing',
+      title: 'Routing and triage',
+      description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+    },
+    {
+      id: 'new-patient',
+      title: 'New patient intake',
+      description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
+    },
+    {
+      id: 'patient-scheduling',
+      title: 'Patient scheduling',
+      description: 'Finds returning patient records, confirms coverage, and books or reschedules visits',
+    },
+  ],
+  'Reminder agent': [
+    {
+      id: 'appointment-confirmation-reminder',
+      title: 'Appointment confirmation reminder',
+      description:
+        'Sends a multi-step reminder sequence at 72h, 24h, and 2h before the appointment. Adapts tone and channel based on patient history and no-show risk.',
+    },
+    {
+      id: 'no-show-risk-intervention',
+      title: 'No-show risk intervention agent',
+      description:
+        'Identifies patients flagged as high-risk by the AI scoring model and triggers a personalized outreach campaign – including a live AI call for patients with 3+ prior no-shows. Escalates to staff when needed.',
+    },
+    {
+      id: 'pre-visit-preparation-reminder',
+      title: 'Pre-visit preparation reminder',
+      description:
+        'Reminds patients of pre-visit requirements — fasting, medication holds, forms, and insurance documents. Checks completion status via patient portal and sends a targeted follow-up only for outstanding items.',
+    },
+    {
+      id: 'chronic-care-medication-reminder',
+      title: 'Chronic care & medication reminder',
+      description:
+        "Sends recurring reminders for chronic condition follow-ups, lab reorders, and prescription refills. Detects gaps in care by querying the patient's care plan and nudges patients who have fallen out of schedule.",
     },
   ],
   'Recall agent': [
@@ -459,22 +741,22 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
     {
       id: 'reviews-response-templates',
       title: 'Review response agent replying using templates',
-      description: 'Uses pre-defined templates and responds to reviews automatically.',
+      description: 'Uses pre-defined templates and responds to reviews automatically',
     },
     {
       id: 'reviews-response-autonomous',
       title: 'Review response agent replying autonomously',
-      description: 'Uses AI to analyze review sentiment, generates and posts unique, context aware replies automatically.',
+      description: 'Uses AI to analyze sentiment and post unique, context-aware replies automatically',
     },
     {
       id: 'reviews-response-human-approval',
       title: 'Review response agent replying after human approval',
-      description: 'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting.',
+      description: 'Uses AI to analyze sentiment, generate unique replies for human approval before posting',
     },
     {
       id: 'reviews-response-dashboard-suggestions',
       title: 'Review response agent suggesting replies in dashboard',
-      description: 'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting.',
+      description: 'Uses AI to analyze review sentiment and shows unique, context-aware replies in the dashboard for one-click posting',
     },
   ],
   'Review generation agents': [
@@ -491,93 +773,81 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
   ],
 }
 
-// ── Illustration for the create-agent empty state ──────────────────────────
+// ── Illustration for the create-agent empty state (library-only landing) ───
 function CreateAgentEmptyState({
+  cards,
   onCreateFromScratch,
   onSelectFromLibrary,
+  onPreview,
+  fromScratchLabel = 'Create from scratch',
 }: {
+  cards: CreateLibraryCard[]
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
+  onPreview?: (card: CreateLibraryCard) => void
+  fromScratchLabel?: string
 }) {
+  const cardCount = cards.length
   return (
-    <div className="flex w-full max-w-[980px] flex-col items-center gap-[24px] py-lg">
-      {/* Mini workflow illustration */}
-      <div className="relative shrink-0">
-        <div
-          style={{
-            width: 168,
-            background: '#fff',
-            borderRadius: 6,
-            padding: '20px 10px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            boxShadow: '0 2px 12px rgba(33,33,33,0.08)',
-          }}
+    <div
+      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${
+        cardCount === 4
+          ? 'max-w-[1280px]'
+          : cardCount === 2
+            ? 'max-w-[720px]'
+            : cardCount === 1
+              ? 'max-w-[360px]'
+              : 'max-w-[1000px]'
+      }`}
+    >
+      <img
+        src={agentEmptyState}
+        alt=""
+        width={282}
+        height={194}
+        className="h-[194px] w-[282px] shrink-0 select-none"
+        draggable={false}
+      />
+
+      <p className="m-0 text-center text-body text-text-secondary">
+        <button
+          type="button"
+          onClick={onCreateFromScratch}
+          className="text-body text-text-action hover:underline"
         >
-          <div style={{ background: '#ebeff6', borderRadius: 4, height: 23, width: 76, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
-            <div style={{ background: '#afbcdf', height: 4, borderRadius: 100, width: 51 }} />
-          </div>
-          <div style={{ display: 'flex', gap: 4, marginTop: 1 }}>
-            {[0, 1].map((i) => (
-              <div key={i} style={{ width: 36, height: 31, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                <svg width="36" height="31" viewBox="0 0 36 31" fill="none" style={{ position: 'absolute' }}>
-                  <path d="M18 0 L18 12 M18 12 L6 24 M18 12 L30 24" stroke="#afbcdf" strokeWidth="1" fill="none" />
-                </svg>
-                <div style={{ background: '#f4f6f7', borderRadius: 40, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 12, color: '#555', lineHeight: 1 }}>add</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 4, marginTop: 1, width: '100%' }}>
-            <div style={{ background: '#ebeff6', border: '1px dashed #2b3650', borderRadius: 4, height: 23, width: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#555', lineHeight: 1 }}>add</span>
-            </div>
-            <div style={{ background: '#ebeff6', borderRadius: 4, height: 23, flex: 1, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
-              <div style={{ background: '#afbcdf', height: 4, borderRadius: 100, width: '80%' }} />
-            </div>
-          </div>
-        </div>
-        {/* AI overlay chip */}
-        <div style={{ position: 'absolute', top: -23, right: -62, background: '#ecf5fd', border: '1px solid #6834b7', borderRadius: 4, padding: '11px 7px', display: 'flex', alignItems: 'flex-end', gap: 5, width: 116 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#6834b7', lineHeight: 1 }}>auto_awesome</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ background: '#3790e7', height: 4, borderRadius: 100, width: '100%' }} />
-            <div style={{ background: '#9aceff', height: 4, borderRadius: 100, width: '60%' }} />
-          </div>
-        </div>
-      </div>
+          {fromScratchLabel}
+        </button>
+        <span className="text-text-primary">{' or select from '}</span>
+        <button type="button" className="text-body text-text-primary hover:underline">
+          library
+        </button>
+      </p>
 
-      {/* Copy + CTAs */}
-      <div className="flex flex-col items-center gap-sm text-center">
-        <p style={{ fontSize: 14, lineHeight: '20px', letterSpacing: '-0.28px', color: '#212121', margin: 0 }}>
-          Build your agent.{' '}
-          <button
-            type="button"
-            onClick={onCreateFromScratch}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#1976d2', fontSize: 14, fontFamily: 'inherit', letterSpacing: '-0.28px', lineHeight: '20px' }}
-          >
-            Set up a new agent
-          </button>
-        </p>
-        <p style={{ fontSize: 14, color: '#212121', margin: 0, letterSpacing: '-0.28px', lineHeight: '20px' }}>or</p>
-        <p style={{ fontSize: 14, color: '#212121', margin: 0, letterSpacing: '-0.28px', lineHeight: '20px' }}>
-          Select from <span style={{ color: '#1976d2' }}>library</span>
-        </p>
-      </div>
-
-      {/* Library template cards — same InfoCard component as the Library tab */}
-      <div className="grid w-full grid-cols-4 gap-md">
-        {LIBRARY_TEMPLATES.map((tpl) => (
-          <InfoCard
-            key={tpl.id}
-            title={tpl.title}
-            description={tpl.description}
-            actionLabel="Use agent"
-            onAction={() => onSelectFromLibrary(tpl.id)}
-          />
-        ))}
+      <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
+        <div
+          className={`grid w-full gap-md ${
+            cardCount === 4
+              ? 'grid-cols-1 min-[500px]:grid-cols-4'
+              : cardCount === 2
+                ? 'grid-cols-1 min-[500px]:grid-cols-2'
+                : cardCount === 1
+                  ? 'max-w-[325px] grid-cols-1'
+                  : 'grid-cols-3'
+          }`}
+        >
+          {cards.map((tpl) => (
+            <InfoCard
+              key={tpl.id}
+              title={tpl.title}
+              description={tpl.description}
+              glyph={tpl.glyph}
+              tone={tpl.tone}
+              actionLabel="Use agent"
+              onAction={() => onSelectFromLibrary(tpl.id)}
+              onPreview={onPreview ? () => onPreview(tpl) : undefined}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -769,7 +1039,7 @@ export function getCreateWithAiSetup(agentName: string): {
   variant: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   pageTitle: string
   initialPrompt?: string
-  libraryCards?: { id: string; title: string; description: string }[]
+  libraryCards?: CreateLibraryCard[]
   fromScratchLabel: string
 } {
   const name = agentName || ''
@@ -1243,24 +1513,24 @@ function CreateAgentThinkingPanel({
   onComplete,
   text = CREATE_AGENT_THOUGHTS_TEXT,
   label = 'Thoughts',
-  fast = false,
+  fast = true,
 }: {
   open: boolean
   onToggle: () => void
   onComplete?: () => void
   text?: string
   label?: string
-  /** Faster typewriter — used by the Reminder create flow. */
+  /** Faster typewriter for create-agent thoughts (default on). */
   fast?: boolean
 }) {
   const completedRef = useRef(false)
   const { typed, done } = useTypewriter(text, {
-    charsPerTick: fast ? 8 : 4,
-    intervalMs: fast ? 12 : 16,
+    charsPerTick: fast ? 10 : 6,
+    intervalMs: fast ? 10 : 12,
     onDone: () => {
       if (completedRef.current) return
       completedRef.current = true
-      window.setTimeout(() => onComplete?.(), fast ? 200 : 350)
+      window.setTimeout(() => onComplete?.(), fast ? 100 : 180)
     },
   })
 
@@ -1345,13 +1615,13 @@ function TypedParagraphs({
   paragraphs,
   className,
   onDone,
-  fast = false,
+  fast = true,
   instant = false,
 }: {
   paragraphs: ReactNode[]
   className?: string
   onDone?: () => void
-  /** Faster typewriter — used by the Reminder create flow. */
+  /** Faster typewriter for create-agent replies (default on). */
   fast?: boolean
   /** Show the full reply immediately — used when reopening a past chat from history. */
   instant?: boolean
@@ -1361,8 +1631,8 @@ function TypedParagraphs({
   const texts = paragraphs.map((p) => (typeof p === 'string' ? p : ''))
   const current = texts[visible] ?? ''
   const { typed, done } = useTypewriter(instant ? '' : current, {
-    charsPerTick: fast ? 8 : 4,
-    intervalMs: fast ? 12 : 16,
+    charsPerTick: fast ? 10 : 6,
+    intervalMs: fast ? 10 : 12,
   })
 
   useEffect(() => {
@@ -1375,7 +1645,7 @@ function TypedParagraphs({
     if (instant) return
     if (!done) return
     if (visible < paragraphs.length - 1) {
-      const t = window.setTimeout(() => setVisible((v) => v + 1), fast ? 120 : 200)
+      const t = window.setTimeout(() => setVisible((v) => v + 1), fast ? 60 : 100)
       return () => window.clearTimeout(t)
     }
     onDone?.()
@@ -1566,6 +1836,7 @@ function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
+          fast
           paragraphs={CREATE_AGENT_INTRO_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -1800,6 +2071,7 @@ function ReviewResponseThread({
   onPendingAnswerConsumed,
   onComposerFillChange,
   onBusyChange,
+  onTrailChange,
 }: {
   onDraftReady?: (name: string | null) => void
   onCreateAgent?: (options?: { publish?: boolean }) => void
@@ -1813,6 +2085,8 @@ function ReviewResponseThread({
   /** Scripted reply for the current open question — parent fills composer on click. */
   onComposerFillChange?: (text: string | null) => void
   onBusyChange?: (busy: boolean) => void
+  /** Emits the visible create-thread turns for the shared AI Builder draft store. */
+  onTrailChange?: (trail: CreateChatTurn[]) => void
 }) {
   const [introDone, setIntroDone] = useState(false)
   const [sourcesAnswer, setSourcesAnswer] = useState('')
@@ -1965,6 +2239,110 @@ function ReviewResponseThread({
   useEffect(() => {
     if (buildCardDone) onDraftReady?.(REVIEW_RESPONSE_BUILD_CARD.title)
   }, [buildCardDone, onDraftReady])
+
+  useEffect(() => {
+    if (!onTrailChange) return
+    const trail: CreateChatTurn[] = []
+    const pushAgent = (paragraphs: string[]) => {
+      trail.push({ kind: 'agent', paragraphs })
+    }
+
+    // Intro is on screen as soon as this thread mounts (typed reply).
+    pushAgent(REVIEW_RESPONSE_INTRO_PARAGRAPHS)
+
+    if (sourcesAnswer) {
+      trail.push({ kind: 'user', text: sourcesAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS })
+      if (sourcesReplyReady || sourcesReplyDone) pushAgent(REVIEW_RESPONSE_SOURCES_REPLY)
+    }
+    if (locationsAnswer) {
+      trail.push({ kind: 'user', text: locationsAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_LOCATIONS_THOUGHTS })
+      if (locationsReplyReady || locationsReplyDone) pushAgent(REVIEW_RESPONSE_LOCATIONS_REPLY)
+    }
+    if (spamOkAnswer) {
+      trail.push({ kind: 'user', text: spamOkAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SPAM_OK_THOUGHTS })
+      if (spamAlertReady || spamAlertDone) pushAgent(REVIEW_RESPONSE_SPAM_ALERT_REPLY)
+    }
+    if (spamAlertAnswer) {
+      trail.push({ kind: 'user', text: spamAlertAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SPAM_ALERT_THOUGHTS })
+      if (spamEmailReady || spamEmailDone) pushAgent(REVIEW_RESPONSE_SPAM_EMAIL_REPLY)
+    }
+    if (spamEmailAnswer) {
+      trail.push({ kind: 'user', text: spamEmailAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SPAM_EMAIL_THOUGHTS })
+      if (offlineReady || offlineDone) pushAgent(REVIEW_RESPONSE_OFFLINE_REPLY)
+    }
+    if (offlineAnswer) {
+      trail.push({ kind: 'user', text: offlineAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_OFFLINE_THOUGHTS })
+      if (writingReady || writingDone) pushAgent(REVIEW_RESPONSE_WRITING_REPLY)
+    }
+    if (writingAnswer) {
+      trail.push({ kind: 'user', text: writingAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_WRITING_THOUGHTS })
+      if (publishReady || publishDone) pushAgent(REVIEW_RESPONSE_PUBLISH_REPLY)
+    }
+    if (publishAnswer) {
+      trail.push({ kind: 'user', text: publishAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_PUBLISH_THOUGHTS })
+      if (holdReady || holdDone) pushAgent(REVIEW_RESPONSE_HOLD_REPLY)
+    }
+    if (buildAnswer) {
+      trail.push({ kind: 'user', text: buildAnswer })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_BUILD_THOUGHTS })
+      if (summaryReady || summaryDone) pushAgent(REVIEW_RESPONSE_SUMMARY_PARAGRAPHS)
+    }
+    if (buildCardDone) {
+      trail.push({
+        kind: 'draft',
+        title: REVIEW_RESPONSE_BUILD_CARD.title,
+        description: REVIEW_RESPONSE_BUILD_CARD.description,
+      })
+    }
+    if (postDraftDone) {
+      pushAgent([REVIEW_RESPONSE_POST_DRAFT_REPLY])
+    }
+    if (postDraftAnswer) {
+      trail.push({ kind: 'user', text: postDraftAnswer })
+    }
+
+    onTrailChange(trail)
+  }, [
+    onTrailChange,
+    sourcesAnswer,
+    sourcesReplyReady,
+    sourcesReplyDone,
+    locationsAnswer,
+    locationsReplyReady,
+    locationsReplyDone,
+    spamOkAnswer,
+    spamAlertReady,
+    spamAlertDone,
+    spamAlertAnswer,
+    spamEmailReady,
+    spamEmailDone,
+    spamEmailAnswer,
+    offlineReady,
+    offlineDone,
+    offlineAnswer,
+    writingReady,
+    writingDone,
+    writingAnswer,
+    publishReady,
+    publishDone,
+    publishAnswer,
+    holdReady,
+    holdDone,
+    buildAnswer,
+    summaryReady,
+    summaryDone,
+    buildCardDone,
+    postDraftDone,
+    postDraftAnswer,
+  ])
 
   const handlePostDraftAnswer = (label: string) => {
     if (label === 'View in agent builder') {
@@ -2914,12 +3292,20 @@ const CREATE_AGENT_DOCS_REPLY_PARAGRAPHS = [
   "CALLOUT: This might take 10–15 minutes. No need to wait — close this whenever, and I'll notify you when your draft is ready.",
 ]
 
+/** Pre-filled into the composer when John clicks the box after being asked for docs. */
+const DEMO_DOCS_ATTACHMENTS: AttachItem[] = [
+  { id: 'docs-transcripts', kind: 'file', label: 'call-transcripts (612).zip' },
+  { id: 'docs-faq', kind: 'file', label: 'insurance-faq.pdf' },
+  { id: 'docs-sop', kind: 'file', label: 'front-desk-SOP.pdf' },
+]
+
 function GhostwriterDocsReply({ onComplete }: { onComplete?: () => void }) {
   return (
     <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
+          fast
           paragraphs={CREATE_AGENT_DOCS_REPLY_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -2965,6 +3351,7 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
+          fast
           paragraphs={CREATE_AGENT_DRAFT_READY_INTRO}
           onDone={() => setStage('list')}
         />
@@ -2972,7 +3359,7 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
         {(stage === 'list' || stage === 'closing' || stage === 'done') && (
           <div className="agent-build-fade flex flex-col gap-sm">
             <p className="text-body text-text-primary">What your callers actually ask for:</p>
-            <ul className="flex flex-col gap-xs">
+            <ul className="flex flex-col gap-sm">
               {CALLER_JOB_BREAKDOWN.map((job) => (
                 <li key={job.id} className="flex items-start gap-sm text-body text-text-secondary">
                   <span className="shrink-0 text-[18px] leading-6" aria-hidden>
@@ -2989,6 +3376,7 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
 
         {(stage === 'closing' || stage === 'done') && (
           <TypedParagraphs
+            fast
             paragraphs={CREATE_AGENT_DRAFT_READY_CLOSING}
             onDone={() => setStage('done')}
           />
@@ -3023,6 +3411,7 @@ function GhostwriterRefillReply({ onComplete }: { onComplete?: () => void }) {
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
+          fast
           paragraphs={CREATE_AGENT_REFILL_REPLY_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -3071,6 +3460,7 @@ function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
       <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
+          fast
           paragraphs={CREATE_AGENT_TEST_REPLY_PARAGRAPHS}
           onDone={onComplete}
         />
@@ -3280,10 +3670,10 @@ function BuildingProgressPanel({
   useEffect(() => {
     if (persisted) return
     if (step >= BUILD_STEPS.length) {
-      const t = window.setTimeout(() => onComplete?.(), 500)
+      const t = window.setTimeout(() => onComplete?.(), 300)
       return () => window.clearTimeout(t)
     }
-    const t = window.setTimeout(() => setStep((s) => s + 1), 1300)
+    const t = window.setTimeout(() => setStep((s) => s + 1), 850)
     return () => window.clearTimeout(t)
   }, [step, persisted, onComplete])
 
@@ -3291,7 +3681,7 @@ function BuildingProgressPanel({
     if (done) return
     const id = window.setInterval(() => {
       setActivity((a) => (a + 1) % BUILD_ACTIVITY_MESSAGES.length)
-    }, 850)
+    }, 500)
     return () => window.clearInterval(id)
   }, [done])
 
@@ -3370,12 +3760,12 @@ function FrontdeskBuildingCard({
     if (done) {
       if (!completedRef.current) {
         completedRef.current = true
-        const t = window.setTimeout(() => onDone?.(), 350)
+        const t = window.setTimeout(() => onDone?.(), 200)
         return () => window.clearTimeout(t)
       }
       return
     }
-    const t = window.setTimeout(() => setStep((s) => s + 1), 480)
+    const t = window.setTimeout(() => setStep((s) => s + 1), 320)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, done, persisted])
@@ -3652,6 +4042,106 @@ export function CreateAiGhostwriterShellHeader({
   )
 }
 
+/** Fullscreen existing-agent Create with AI — shares trail with docked AI Builder panel. */
+function ExistingAgentCompactHelp({
+  agentKey,
+  greeting,
+  quickStarts,
+}: {
+  agentKey: string
+  greeting: string
+  quickStarts: { label: string; prompt: string }[]
+}) {
+  const [prompt, setPrompt] = useState('')
+  const { trail, send, hasMessages } = useAiBuilderTrail(agentKey)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [trail.length])
+
+  const handleSend = (text?: string) => {
+    const value = (text ?? prompt).trim()
+    if (!value) return
+    send(value)
+    setPrompt('')
+  }
+
+  return (
+    <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
+      <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
+        <div
+          ref={scrollRef}
+          className={`scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto pb-md ${
+            hasMessages ? '' : 'justify-end'
+          }`}
+        >
+          {!hasMessages ? (
+            <div className="flex items-start gap-sm">
+              <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                <SparkleLoader size={14} spinning={false} />
+              </span>
+              <div className="flex min-w-0 flex-col items-start gap-md">
+                <p className="text-body leading-6 text-text-primary">{greeting}</p>
+                <div className="flex flex-col items-start gap-sm">
+                  {quickStarts.map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => handleSend(option.prompt)}
+                      className="flex h-8 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-body text-text-primary hover:bg-surface-l2"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-lg pt-md">
+              {trail.map((turn, i) => {
+                if (turn.kind === 'user') {
+                  return (
+                    <div key={i} className="flex justify-end">
+                      <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary whitespace-pre-wrap">
+                        {turn.text}
+                      </span>
+                    </div>
+                  )
+                }
+                if (turn.kind === 'agent') {
+                  return (
+                    <div key={i} className="flex items-start gap-sm">
+                      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                        <SparkleLoader size={14} spinning={false} />
+                      </span>
+                      <p className="min-w-0 flex-1 text-body leading-6 text-text-primary whitespace-pre-wrap">
+                        {(turn.paragraphs || []).join('\n')}
+                      </p>
+                    </div>
+                  )
+                }
+                return null
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm pt-md">
+          <PromptComposer
+            value={prompt}
+            onChange={setPrompt}
+            onSend={() => handleSend()}
+            placeholder="What would you like to do?"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CreateFlowPageHeader({
   onBack,
   title,
@@ -3733,7 +4223,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   pageTitle?: string
   /** Hides the in-column back arrow when the shell header already provides navigation. */
   hideHeaderBack?: boolean
-  libraryCards?: { id: string; title: string; description: string }[]
+  libraryCards?: CreateLibraryCard[]
   initialPrompt?: string
   /** Auto-sends `initialPrompt` on mount instead of waiting for the user — used to "reopen" a recent chat. */
   autoStart?: boolean
@@ -3839,7 +4329,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
   hideHeaderBack?: boolean
-  libraryCards?: { id: string; title: string; description: string }[]
+  libraryCards?: CreateLibraryCard[]
   initialPrompt?: string
   autoStart?: boolean
   fromScratchLabel?: string
@@ -3860,6 +4350,21 @@ function HealthcareFrontdeskCreateAgentLive({
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
   const [filesModalOpen, setFilesModalOpen] = useState(false)
   const landingImageInputRef = useRef<HTMLInputElement | null>(null)
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const rotatingPlaceholders = isReviewFlow
+    ? REVIEW_RESPONSE_PLACEHOLDERS
+    : isReminderFlow
+      ? REMINDER_PLACEHOLDERS
+      : variant === 'frontdesk'
+        ? FRONTDESK_PLACEHOLDERS
+        : null
+  const landingPlaceholder = rotatingPlaceholders
+    ? rotatingPlaceholders[placeholderIndex % rotatingPlaceholders.length]
+    : DEFAULT_CREATE_PLACEHOLDER
+  const { typed: typedPlaceholder, done: placeholderTyped } = useTypewriter(
+    rotatingPlaceholders ? landingPlaceholder : '',
+    { charsPerTick: 1, intervalMs: 28 },
+  )
   const [submitted, setSubmitted] = useState(false)
   const [phase, setPhase] = useState<CreatePhase>('ask-docs')
   const [docsAnswer, setDocsAnswer] = useState('')
@@ -3959,6 +4464,7 @@ function HealthcareFrontdeskCreateAgentLive({
   const [reviewComposerFill, setReviewComposerFill] = useState<string | null>(null)
   const [reviewPendingAnswer, setReviewPendingAnswer] = useState('')
   const [reviewThreadBusy, setReviewThreadBusy] = useState(true)
+  const [reviewThreadTrail, setReviewThreadTrail] = useState<CreateChatTurn[]>([])
   const [attachments, setAttachments] = useState<AttachItem[]>([])
   const threadRef = useRef<HTMLDivElement | null>(null)
   const threadScrollRef = useRef<HTMLDivElement | null>(null)
@@ -4109,6 +4615,7 @@ function HealthcareFrontdeskCreateAgentLive({
     setReviewComposerFill(null)
     setReviewPendingAnswer('')
     setReviewThreadBusy(true)
+    setReviewThreadTrail([])
     setDocsThoughtsOpen(true)
     setDocsReplyReady(false)
     setDocsReplyDone(false)
@@ -4141,6 +4648,82 @@ function HealthcareFrontdeskCreateAgentLive({
     previewActiveRef.current = false
     setFollowUp('')
   }
+
+  // Keep the docked AI Builder panel in sync with this create-flow transcript.
+  useEffect(() => {
+    if (!submitted) return
+    const draftKey = isReviewFlow
+      ? agentName || REVIEW_RESPONSE_BUILD_CARD.title
+      : isReminderFlow
+        ? agentName || REMINDER_BUILD_CARD.title
+        : agentName || FRONTDESK_BUILD_CARD.title
+
+    if (isReviewFlow) {
+      const trail: CreateChatTurn[] = []
+      const trimmed = prompt.trim()
+      if (trimmed) trail.push({ kind: 'user', text: trimmed })
+      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT })
+      trail.push(...reviewThreadTrail)
+      setCreateAiDraftTrail(draftKey, trail)
+      return
+    }
+
+    if (isReviewGenFlow) return
+
+    const trail = buildCreateChatTrail({
+      variant: isReminderFlow ? 'reminder' : 'frontdesk',
+      prompt,
+      draftTitle: draftKey,
+      draftDescription: isReminderFlow
+        ? REMINDER_BUILD_CARD.description
+        : FRONTDESK_BUILD_CARD.description,
+      docsAnswer,
+      docsFileLabels: docsAttachments.map((f) => f.label),
+      docsProvided,
+      docsBuildComplete,
+      docsDraftReadyDone,
+      refillAnswer,
+      refillProcedureCreated,
+      createAgentAnswer,
+      draftBuildReady,
+      reviewFollowUpAnswer,
+      testReplyDone,
+      testAgentAnswers,
+      timingAnswer,
+      timingFollowDone,
+      rescheduleAnswer,
+      connectAnswer,
+      connectFileLabels: connectAttachments.map((f) => f.label),
+      reminderBuildDone,
+    })
+    setCreateAiDraftTrail(draftKey, trail)
+  }, [
+    submitted,
+    isReviewFlow,
+    isReminderFlow,
+    isReviewGenFlow,
+    agentName,
+    prompt,
+    reviewThreadTrail,
+    docsAnswer,
+    docsAttachments,
+    docsProvided,
+    docsBuildComplete,
+    docsDraftReadyDone,
+    refillAnswer,
+    refillProcedureCreated,
+    createAgentAnswer,
+    draftBuildReady,
+    reviewFollowUpAnswer,
+    testReplyDone,
+    testAgentAnswers,
+    timingAnswer,
+    timingFollowDone,
+    rescheduleAnswer,
+    connectAnswer,
+    connectAttachments,
+    reminderBuildDone,
+  ])
 
   // Advance to the next question behind a short "analyzing / building /
   // getting context" loader; the new agent response stays hidden until done.
@@ -4183,6 +4766,14 @@ function HealthcareFrontdeskCreateAgentLive({
     return () => scrollEl.removeEventListener('scroll', handleScroll)
   }, [submitted])
 
+  useEffect(() => {
+    if (!rotatingPlaceholders || !placeholderTyped) return
+    const id = window.setTimeout(() => {
+      setPlaceholderIndex((i) => (i + 1) % rotatingPlaceholders.length)
+    }, 2200)
+    return () => window.clearTimeout(id)
+  }, [rotatingPlaceholders, placeholderTyped, placeholderIndex])
+
   // Auto-follow: while the conversation is actively being generated (loaders and
   // typed text keep growing the thread), keep it pinned to the bottom. Manual
   // Thoughts toggles set suppressAutoScrollRef so they never move the page.
@@ -4207,7 +4798,7 @@ function HealthcareFrontdeskCreateAgentLive({
     if (!introThinking) return
     setIntroStatusIndex(0)
     let i = 0
-    const rotateMs = isReminderFlow || isReviewFlow ? 550 : 700
+    const rotateMs = 450
     const rotate = window.setInterval(() => {
       i += 1
       if (i >= INTRO_STATUS_LABELS.length) {
@@ -4218,7 +4809,7 @@ function HealthcareFrontdeskCreateAgentLive({
       }
     }, rotateMs)
     return () => window.clearInterval(rotate)
-  }, [introThinking, isReminderFlow])
+  }, [introThinking, isReminderFlow, isReviewFlow])
 
 
   useEffect(() => {
@@ -4230,7 +4821,7 @@ function HealthcareFrontdeskCreateAgentLive({
       } else {
         setStepThinkingPhase(null)
       }
-    }, 850)
+    }, 500)
     return () => clearTimeout(timer)
   }, [stepThinkingPhase, stepThinkingIndex])
 
@@ -4243,14 +4834,14 @@ function HealthcareFrontdeskCreateAgentLive({
         setLoaderIndex(null)
         setPhase('summary')
       }
-    }, 2600)
+    }, 1600)
     return () => clearTimeout(timer)
   }, [loaderIndex])
 
   // Hold on the "Creating the procedure…" loader before revealing the card.
   useEffect(() => {
     if (!refillReplyDone || refillProcedureCreated) return
-    const timer = setTimeout(() => setRefillProcedureCreated(true), 1450)
+    const timer = setTimeout(() => setRefillProcedureCreated(true), 900)
     return () => clearTimeout(timer)
   }, [refillReplyDone, refillProcedureCreated])
 
@@ -4453,7 +5044,7 @@ function HealthcareFrontdeskCreateAgentLive({
     return (
       <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
         <style>{`
-          .agent-build-fade { animation: agent-build-fade-in 0.25s ease-out; }
+          .agent-build-fade { animation: agent-build-fade-in 0.15s ease-out; }
           @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
           @keyframes sparkle-twinkle {
             0%, 100% { transform: scale(0.85) rotate(-8deg); opacity: 0.6; }
@@ -4537,7 +5128,7 @@ function HealthcareFrontdeskCreateAgentLive({
                     ? REMINDER_CREATE_THOUGHTS_TEXT
                     : CREATE_AGENT_THOUGHTS_TEXT
               }
-              fast={isReminderFlow || isReviewFlow}
+              fast
             />
 
             {introReplyReady && (
@@ -4556,6 +5147,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   onPendingAnswerConsumed={() => setReviewPendingAnswer('')}
                   onComposerFillChange={setReviewComposerFill}
                   onBusyChange={setReviewThreadBusy}
+                  onTrailChange={setReviewThreadTrail}
                 />
               ) : isReminderFlow ? (
                 <>
@@ -4720,7 +5312,6 @@ function HealthcareFrontdeskCreateAgentLive({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setRefillAnswer("Skip refills for now. Let's keep it to the four")}
                           className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                         >
                           Skip refills for now. Let&apos;s keep it to the four
@@ -4818,7 +5409,6 @@ function HealthcareFrontdeskCreateAgentLive({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={resetCreateFlow}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
                                   Make changes
@@ -4873,14 +5463,12 @@ function HealthcareFrontdeskCreateAgentLive({
                             <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
                               <button
                                 type="button"
-                                onClick={onCreateFromScratch}
                                 className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                               >
                                 Yes, that&apos;s right
                               </button>
                               <button
                                 type="button"
-                                onClick={resetCreateFlow}
                                 className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                               >
                                 Make changes
@@ -4924,7 +5512,6 @@ function HealthcareFrontdeskCreateAgentLive({
                                   <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
                                     <button
                                       type="button"
-                                      onClick={resetCreateFlow}
                                       className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                     >
                                       Make changes
@@ -5149,14 +5736,12 @@ function HealthcareFrontdeskCreateAgentLive({
                 <div className="mt-sm flex items-center gap-sm">
                   <button
                     type="button"
-                    onClick={onCreateFromScratch}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Yes, that's right
                   </button>
                   <button
                     type="button"
-                    onClick={resetCreateFlow}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Make changes
@@ -5192,7 +5777,6 @@ function HealthcareFrontdeskCreateAgentLive({
                 <div className="ml-3xl mt-sm flex items-center gap-sm">
                   <button
                     type="button"
-                    onClick={resetCreateFlow}
                     className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                   >
                     Make changes
@@ -5261,6 +5845,17 @@ function HealthcareFrontdeskCreateAgentLive({
                 setFollowUp(REMINDER_EMAIL_REPLY)
                 return
               }
+              // Front desk: after being asked for docs, click to attach the demo files.
+              if (
+                !isReminderFlow &&
+                !isReviewFlow &&
+                phase === 'ask-docs' &&
+                introReplyDone &&
+                attachments.length === 0
+              ) {
+                setAttachments(DEMO_DOCS_ATTACHMENTS)
+                return
+              }
               // Review response: click composer to pre-fill the current question's reply.
               if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
                 setFollowUp(reviewComposerFill)
@@ -5287,6 +5882,16 @@ function HealthcareFrontdeskCreateAgentLive({
               ) {
                 emailPromptFilledRef.current = true
                 setFollowUp(REMINDER_EMAIL_REPLY)
+                return
+              }
+              if (
+                !isReminderFlow &&
+                !isReviewFlow &&
+                phase === 'ask-docs' &&
+                introReplyDone &&
+                attachments.length === 0
+              ) {
+                setAttachments(DEMO_DOCS_ATTACHMENTS)
                 return
               }
               if (isReviewFlow && reviewComposerFill && !followUp.trim() && !reviewThreadBusy) {
@@ -5499,6 +6104,16 @@ function HealthcareFrontdeskCreateAgentLive({
       ? "Hi! I'm here to help you. Tell me what you'd like to do"
       : `Hi! I'm here to help you build your ${greetingName}. Tell me what you'd like to build`
 
+    if (existingAgent) {
+      return (
+        <ExistingAgentCompactHelp
+          agentKey={pageTitle?.trim() || greetingName}
+          greeting={greeting}
+          quickStarts={quickStarts}
+        />
+      )
+    }
+
     return (
       <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
         <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
@@ -5587,7 +6202,7 @@ function HealthcareFrontdeskCreateAgentLive({
   }
 
   return (
-    <div className={`mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
+    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
       (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
         ? 'max-w-[1280px]'
         : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
@@ -5611,6 +6226,14 @@ function HealthcareFrontdeskCreateAgentLive({
       )}
 
       <div className="flex flex-col items-center gap-sm text-center">
+        <span
+          className="ai-gradient-icon size-10"
+          style={{
+            WebkitMaskImage: `url(${iconAgentsPurple})`,
+            maskImage: `url(${iconAgentsPurple})`,
+          }}
+          aria-hidden
+        />
         <p className="text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary">
           Build your <span className="ai-gradient-text">agent</span>
         </p>
@@ -5644,7 +6267,7 @@ function HealthcareFrontdeskCreateAgentLive({
               }
             }}
             rows={3}
-            placeholder="Describe the agent you want to build..."
+            placeholder={rotatingPlaceholders ? typedPlaceholder : DEFAULT_CREATE_PLACEHOLDER}
             className="scrollbar-light min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
@@ -5724,7 +6347,7 @@ function HealthcareFrontdeskCreateAgentLive({
           {fromScratchLabel}
         </button>
         <span className="text-text-primary">{' or select from '}</span>
-        <button type="button" className="text-body text-text-action hover:underline">
+        <button type="button" className="text-body text-text-primary hover:underline">
           library
         </button>
       </p>
@@ -5738,21 +6361,28 @@ function HealthcareFrontdeskCreateAgentLive({
               : 'grid-cols-3'
         }`}>
           {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
-            <div
-              key={tpl.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Use agent: ${tpl.title}`}
-              onClick={() => onSelectFromLibrary(tpl.id)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectFromLibrary(tpl.id) }}
-              className={`${INFO_CARD_LAYOUT.root} cursor-pointer`}
-            >
-              <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
+            <div key={tpl.id} className={INFO_CARD_LAYOUT.root}>
+              {tpl.glyph && tpl.tone ? (
+                <div className="flex min-w-0 items-center gap-md">
+                  <LibraryCardIcon glyph={tpl.glyph} tone={tpl.tone} />
+                  <h3 className="min-w-0 flex-1 text-body leading-[22px] tracking-[-0.28px] text-text-primary">{tpl.title}</h3>
+                </div>
+              ) : (
+                <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
+              )}
               <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
-              <div className={INFO_CARD_LAYOUT.ctaWrap}>
-                <span className="inline-flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary opacity-0 transition-opacity hover:bg-surface-l2 group-hover:opacity-100">
-                  Use agent
-                </span>
+              <div className={INFO_CARD_LAYOUT.ctaShell}>
+                <div className={INFO_CARD_LAYOUT.ctaInner}>
+                  <div className={INFO_CARD_LAYOUT.ctaWrap}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectFromLibrary(tpl.id)}
+                      className={`${INFO_CARD_LAYOUT.ctaSecondary} max-w-fit flex-none`}
+                    >
+                      Use agent
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -6275,9 +6905,8 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
-  const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -6297,10 +6926,13 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   }, [pendingInstanceView])
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
+  const [libraryPreview, setLibraryPreview] = useState<AgentLibraryPreviewData | null>(null)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false)
   const [createWorkflowMounted, setCreateWorkflowMounted] = useState(false)
   const [createLeftPaneCollapsed, setCreateLeftPaneCollapsed] = useState(false)
+  /** Review-response: docked AI Builder on the canvas (replaces the left Create with AI floater). */
+  const [createAiBuilderPanelOpen, setCreateAiBuilderPanelOpen] = useState(false)
   const [createAiFullscreen, setCreateAiFullscreen] = useState(false)
   const [createSideTab, setCreateSideTab] = useState<'ai' | 'manual'>('ai')
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
@@ -6350,7 +6982,10 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
-    setCreateLeftPaneCollapsed(false)
+    // Floating chrome uses the right AI Builder panel as the only chat surface —
+    // never show the left Create with AI floater beside the canvas.
+    setCreateLeftPaneCollapsed(true)
+    setCreateAiBuilderPanelOpen(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
@@ -6360,12 +6995,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     setCreateWorkflowOpen(false)
     setCreateSideTab('ai')
     setCreateLeftPaneCollapsed(false)
+    setCreateAiBuilderPanelOpen(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
   }
 
   const expandCreateAiFullscreen = () => {
     setCreateAiFullscreen(true)
+    setCreateAiBuilderPanelOpen(false)
     closeCreateWorkflow()
   }
 
@@ -6489,7 +7126,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     : metrics
 
   const regions = REGIONS_BY_AGENT[agentName] ?? DEFAULT_REGIONS
-  const data: AgentInstance[] = regions.map((r) => ({
+  const data: AgentInstance[] = regions.map((r, i) => ({
     name: r.instanceName ?? `${agentName} - ${r.region}`,
     status: r.status,
     channels: r.channels,
@@ -6530,6 +7167,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     contactsReached: r.contactsReached,
     clickThroughRate: r.clickThroughRate,
     issues: r.issues,
+    lastUpdated: r.lastUpdated ?? LAST_UPDATED_SAMPLES[i % LAST_UPDATED_SAMPLES.length],
+    updatedBy: r.updatedBy ?? UPDATED_BY_SAMPLES[i % UPDATED_BY_SAMPLES.length],
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
 
   useEffect(() => {
@@ -6555,6 +7194,24 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   const isReviewResponse  = agentName === 'Review response agents'
   const isReviewGeneration = agentName === 'Review generation agents'
   const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration
+  /** Illustration + library cards only (no Ghostwriter) — Sep 1 response/reminder, waitlist, pre-visit. */
+  const isLibraryOnlyCreate =
+    isWaitlist ||
+    isPreVisit ||
+    Boolean(navId && LIBRARY_ONLY_CREATE_NAV_IDS.has(navId))
+
+  useEffect(() => {
+    if (!autoOpenCreateFlow) return
+    if (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration) {
+      openCreateFlow()
+    } else {
+      onEditAgent?.('')
+    }
+    onAutoOpenCreateFlowConsumed?.()
+    // Only react to the flag flipping true; the effect itself must not be re-triggered by
+    // openCreateFlow's own state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenCreateFlow])
 
   useEffect(() => {
     if (!showCreateFlow) setCreateAiFullscreen(false)
@@ -6568,15 +7225,14 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   useEffect(() => {
     // Instance screen owns full-bleed signaling (e.g. View log) while drilled in.
     if (selectedInstance) return
-    // Setup wizard is full-bleed (no SideNav). Review response / review generation create
-    // landings also hide L2 while the create flow is open.
+    // Setup wizard / library-only create / review create landings hide L2 while open.
     const isAgentSetupActive =
-      ((isFrontdesk || isReminder) && (showCreateFlow || showSetupWizard)) ||
+      ((isFrontdesk || isReminder || isWaitlist || isPreVisit) && (showCreateFlow || showSetupWizard)) ||
       ((isReviewResponse || isReviewGeneration) && showCreateFlow) ||
       instanceSetupActive
     onAgentSetupActiveChange?.(isAgentSetupActive)
     return () => onAgentSetupActiveChange?.(false)
-  }, [isFrontdesk, isReminder, isReviewResponse, isReviewGeneration, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
+  }, [isFrontdesk, isReminder, isWaitlist, isPreVisit, isReviewResponse, isReviewGeneration, showCreateFlow, showSetupWizard, instanceSetupActive, selectedInstance, onAgentSetupActiveChange])
   const COLUMN_DEFS: Array<Column<AgentInstance> & { locked?: boolean }> = [
     {
       key: 'name',
@@ -6664,6 +7320,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
       { key: 'aht' as keyof AgentInstance, label: 'Average handle time', width: 180, sortable: true },
       { key: 'escalation' as keyof AgentInstance, label: 'Escalation rate', width: 150, sortable: true },
     ]),
+    { key: 'lastUpdated', label: 'Last updated', width: 150, sortable: true },
+    { key: 'updatedBy', label: 'Updated by', width: 160, sortable: true },
     { key: 'locations', label: 'Locations', width: 120, sortable: true },
   ]
 
@@ -6672,15 +7330,37 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
   // Front desk, Pre-visit, Waitlist, and Reminder each report exactly 4 metrics, so all 4
   // are shown by default. Agents with more metrics (Recall, Revenue, Treatment plan, etc.)
   // still default to the first two, with the rest available via Customize columns.
-  const metricKeys = COLUMN_DEFS.slice(hideChannels ? 2 : 3, -1).map((c) => String(c.key))
+  const trailingKeys = new Set(['lastUpdated', 'updatedBy', 'locations'])
+  const metricKeys = COLUMN_DEFS
+    .slice(hideChannels ? 2 : 3)
+    .map((c) => String(c.key))
+    .filter((k) => !trailingKeys.has(k))
   const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse || isReviewGeneration
-  const DEFAULT_VISIBLE = ['name', 'status', ...(hideChannels ? [] : ['channels']), ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)), 'locations']
+  const DEFAULT_VISIBLE = [
+    'name',
+    'status',
+    ...(hideChannels ? [] : ['channels']),
+    ...(showAllMetrics ? metricKeys : metricKeys.slice(0, 2)),
+    'lastUpdated',
+    'updatedBy',
+    'locations',
+  ]
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
 
+  // Remount-safe: keep Last updated / Updated by (and the rest of the default set) in sync
+  // when switching between Front desk, Reminder, Waitlist, Pre-visit, Reviews, etc.
+  useEffect(() => {
+    setOrder(DEFAULT_ORDER)
+    setVisible(DEFAULT_VISIBLE)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentName])
+
   const columns = useMemo<Column<AgentInstance>[]>(
     () => order.filter((k) => visible.includes(k)).map((k) => DEF_BY_KEY.get(k)!).filter(Boolean),
-    [order, visible],
+    // DEF_BY_KEY is rebuilt per agent; include agentName so column defs refresh with the row set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [order, visible, agentName],
   )
   const columnOptions = useMemo<ColumnOption[]>(
     () => order.map((k) => ({ key: k, label: DEF_BY_KEY.get(k)!.label, locked: DEF_BY_KEY.get(k)!.locked })),
@@ -6694,12 +7374,28 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     { id: 'location', label: 'Location', options: opts('Mountain View', 'Palo Alto', 'San Jose', 'Sunnyvale') },
   ]
 
-  const librarySource = DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES
+  const librarySource: CreateLibraryCard[] =
+    isReviewResponse
+      ? REVIEW_RESPONSE_CREATE_CARDS
+      : isReviewGeneration
+        ? REVIEW_GENERATION_CREATE_CARDS.map((c) => ({ ...c }))
+        : isReminder
+          ? REMINDER_CREATE_CARDS
+          : isWaitlist
+            ? WAITLIST_CREATE_CARDS
+            : isPreVisit
+              ? PREVISIT_CREATE_CARDS
+              : isFrontdesk
+                ? HEALTHCARE_FRONTDESK_CREATE_CARDS
+                : (DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES).map((c) => ({ ...c }))
   const libraryCards = librarySource.map((tpl) => ({
     title: tpl.title,
     description: tpl.description,
+    glyph: tpl.glyph,
+    tone: tpl.tone,
     actionLabel: 'Use agent' as const,
     onAction: () => onEditAgent?.(tpl.title),
+    onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl)),
   }))
 
   const searchQ = searchQuery.trim().toLowerCase()
@@ -6727,6 +7423,84 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     )
   }
 
+
+  if (showCreateFlow && isLibraryOnlyCreate) {
+    const chatHistoryTitle = isReviewResponse
+      ? 'Reviews AI'
+      : isWaitlist
+        ? 'Waitlist'
+        : isPreVisit
+          ? 'Pre-visit'
+          : 'Reminder'
+    const emptyCards = isReviewResponse
+      ? REVIEW_RESPONSE_CREATE_CARDS
+      : isWaitlist
+        ? WAITLIST_CREATE_CARDS
+        : isPreVisit
+          ? PREVISIT_CREATE_CARDS
+          : REMINDER_CREATE_CARDS
+    const scratchName = isReviewResponse
+      ? 'Review response agent 1'
+      : isWaitlist
+        ? 'Waitlist agent 1'
+        : isPreVisit
+          ? 'Pre-visit agent 1'
+          : 'Reminder agent 1'
+    const fallbackLibraryName = isReviewResponse
+      ? 'Review response agent'
+      : isWaitlist
+        ? 'Waitlist agent'
+        : isPreVisit
+          ? 'Pre-visit agent'
+          : 'Reminder agent'
+    return (
+      <div className="flex h-full flex-col">
+        <TopNav title={chatHistoryTitle} initials="S" />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface">
+          <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+            <button
+              type="button"
+              onClick={() => setShowCreateFlow(false)}
+              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              aria-label="Back"
+            >
+              <Icon name="arrow_back" size={20} />
+            </button>
+            <h1 className="text-h3 text-text-primary">Back</h1>
+          </div>
+          <div className="scrollbar-subtle flex min-h-0 flex-1 items-start justify-center overflow-auto px-lg pb-lg">
+            <CreateAgentEmptyState
+              key={createFlowKey}
+              cards={emptyCards}
+              fromScratchLabel="Create from scratch"
+              onCreateFromScratch={() => {
+                setShowCreateFlow(false)
+                onEditAgent?.(scratchName)
+              }}
+              onSelectFromLibrary={(templateId) => {
+                const card = emptyCards.find((c) => c.id === templateId)
+                setShowCreateFlow(false)
+                onEditAgent?.(card?.title ?? fallbackLibraryName)
+              }}
+              onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card))}
+            />
+          </div>
+        </div>
+        <AgentLibraryPreviewModal
+          open={libraryPreview != null}
+          data={libraryPreview}
+          onClose={() => setLibraryPreview(null)}
+          onUseAgent={() => {
+            if (!libraryPreview) return
+            const name = libraryPreview.name
+            setLibraryPreview(null)
+            setShowCreateFlow(false)
+            onEditAgent?.(name)
+          }}
+        />
+      </div>
+    )
+  }
 
   if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration)) {
     const isHealthcareFrontdesk = product === 'healthcare'
@@ -6761,6 +7535,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
     const ghostwriterShellTitle = isReviewsCreateFlow
       ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
       : createWorkflowAgentName
+    // Canvas + docked AI Builder only — no left Create with AI floater.
+    const hideCreateLeftFloater = createWorkflowOpen && isReviewResponse
 
     return (
       <div className="flex h-full">
@@ -6769,16 +7545,18 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
         <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
           <section
             className={`z-10 shrink-0 transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
-              createWorkflowOpen
+              hideCreateLeftFloater
+                ? 'pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0'
+                : createWorkflowOpen
                 ? `lhs-drawer !absolute bottom-lg left-lg top-[calc(52px+theme(spacing.lg))] !h-auto !w-[360px] ${
                     createLeftPaneCollapsed ? 'pointer-events-none -translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
                   }`
                 : 'relative flex h-full w-full flex-col overflow-hidden bg-surface'
             }`}
-            aria-label={createWorkflowOpen ? 'Create with AI conversation' : undefined}
-            aria-hidden={createWorkflowOpen && createLeftPaneCollapsed}
+            aria-label={createWorkflowOpen && !hideCreateLeftFloater ? 'Create with AI conversation' : undefined}
+            aria-hidden={hideCreateLeftFloater || (createWorkflowOpen && createLeftPaneCollapsed)}
           >
-            {createWorkflowOpen ? (
+            {createWorkflowOpen && !hideCreateLeftFloater ? (
               // Match agent-builder LHSDrawer tab chrome exactly.
               <div className="lhs-drawer__tabs lhs-drawer__tabs--visible">
                 <div className="lhs-drawer__tabs-list">
@@ -6855,7 +7633,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 >
                   <Icon name="arrow_back" size={20} />
                 </button>
-                <h1 className="text-h3 text-text-primary text-left">Create agent</h1>
+                <h1 className="text-h3 text-text-primary text-left">Back</h1>
               </div>
             )}
             <div
@@ -6935,7 +7713,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                       onEditAgent?.('')
                     }}
                     onCreateAgent={handleCreateAgentSuccess}
-                    onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse) ? openCreateWorkflow : undefined}
+                    onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
                     libraryCards={
                       isReminder
                         ? REMINDER_CREATE_CARDS
@@ -6979,6 +7757,8 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
               ) : (
                 <CreateAgentEmptyState
                   key={createFlowKey}
+                  cards={LIBRARY_TEMPLATES.map((c) => ({ ...c }))}
+                  fromScratchLabel="Set up a new agent"
                   onCreateFromScratch={() => setShowSetupWizard(true)}
                   onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
                 />
@@ -6986,7 +7766,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             </div>
           </section>
 
-          {createWorkflowOpen && createLeftPaneCollapsed && (
+          {createWorkflowOpen && createLeftPaneCollapsed && !(isReviewResponse || isReviewGeneration || isFrontdesk || isReminder) && (
             <button
               type="button"
               aria-label="Expand panel"
@@ -6998,7 +7778,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             </button>
           )}
 
-          {createWorkflowMounted && (isReminder || isFrontdesk || isReviewResponse) && (
+          {createWorkflowMounted && (isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) && (
             <section
               className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out motion-reduce:transition-none ${
                 createWorkflowOpen
@@ -7011,9 +7791,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 agentName={
                   isReviewResponse
                     ? 'Review response agent - North Region'
-                    : isReminder
-                      ? 'Reminder agent - North region'
-                      : 'Front desk agent - North region'
+                    : isReviewGeneration
+                      ? 'Review generation agent - North Region'
+                      : isReminder
+                        ? 'Reminder agent - North region'
+                        : 'Front desk agent - North region'
                 }
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"
@@ -7021,8 +7803,10 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 onClose={closeCreateWorkflow}
                 hideLhs
                 existingAgent={false}
-                createAiPanelOpen={createWorkflowOpen && !createLeftPaneCollapsed}
+                createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
+                aiBuilderPanelOpen={createAiBuilderPanelOpen}
+                onAiBuilderPanelOpenChange={setCreateAiBuilderPanelOpen}
                 previewProcedureId={isReminder ? canvasProcedureId : null}
                 previewProcedureDetail={
                   isReminder
@@ -7097,7 +7881,11 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 <>
                   <button
                     type="button"
-                    onClick={() => (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration) ? openCreateFlow() : onEditAgent?.('')}
+                    onClick={() =>
+                      (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
+                        ? openCreateFlow()
+                        : onEditAgent?.('')
+                    }
                     className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                   >
                     Create agent
@@ -7109,30 +7897,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                     <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                 </>
-              ) : (
-                <div className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-sm">
-                  <button
-                    type="button"
-                    aria-label="Grid view"
-                    onClick={() => setLibraryView('grid')}
-                    className={`flex size-6 items-center justify-center rounded-sm transition-colors ${
-                      libraryView === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
-                    }`}
-                  >
-                    <LayoutGrid className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="List view"
-                    onClick={() => setLibraryView('list')}
-                    className={`flex size-6 items-center justify-center rounded-sm transition-colors ${
-                      libraryView === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
-                    }`}
-                  >
-                    <LayoutList className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
-                  </button>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -7141,10 +7906,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
             <Tabs
               tabs={TABS}
               activeTab={activeTab}
-              onChange={(tabId) => {
-                setActiveTab(tabId)
-                if (tabId === 'library') setLibraryView('grid')
-              }}
+              onChange={setActiveTab}
             />
           </div>
 
@@ -7208,16 +7970,10 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
                 />
               </div>
             </>
-          ) : libraryView === 'grid' ? (
+          ) : (
             <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
               {visibleLibraryCards.map((card) => (
                 <InfoCard key={card.title} {...card} />
-              ))}
-            </div>
-          ) : (
-            <div className="px-2xl py-lg">
-              {visibleLibraryCards.map((card, i) => (
-                <InfoCardListItem key={card.title} first={i === 0} {...card} />
               ))}
             </div>
           )}
@@ -7238,6 +7994,18 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
         onRestoreDefault={() => {
           setOrder(DEFAULT_ORDER)
           setVisible(DEFAULT_VISIBLE)
+        }}
+      />
+
+      <AgentLibraryPreviewModal
+        open={libraryPreview != null}
+        data={libraryPreview}
+        onClose={() => setLibraryPreview(null)}
+        onUseAgent={() => {
+          if (!libraryPreview) return
+          const name = libraryPreview.name
+          setLibraryPreview(null)
+          onEditAgent?.(name)
         }}
       />
 

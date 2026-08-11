@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import AddStepButton from '../../../FlowCanvas/AddStepButton';
 import { getFlowDragPayload, isDraggingFlowKind } from '../../../flowDragData';
 import './EndNode.css';
@@ -12,8 +12,14 @@ export default function EndNode({
   product = 'healthcare',
   agentName = '',
   hideAdd = false,
+  hasClipboard = false,
+  onPaste = undefined,
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
+
+  useEffect(() => {
+    if (!isDraggingFromLHS) setIsDragOver(false);
+  }, [isDraggingFromLHS]);
 
   // The "+" above End adds steps (tasks/branches/etc.) — never a trigger. Triggers only land
   // on the dedicated trigger placeholder slot at the top of the flow.
@@ -50,6 +56,7 @@ export default function EndNode({
             onDrop={handleAddSlotDrop}
           >
             <AddStepButton
+              className="add-step-btn--end-slot"
               isDraggingFromLHS={isDraggingFromLHS}
               isDragOver={isDragOver}
               product={product}
@@ -62,6 +69,8 @@ export default function EndNode({
               onDragOver={handleAddSlotDragOver}
               onDragLeave={handleAddSlotDragLeave}
               onDrop={handleAddSlotDrop}
+              showPasteOption={!!hasClipboard}
+              onPaste={onPaste}
             />
           </div>
         )}

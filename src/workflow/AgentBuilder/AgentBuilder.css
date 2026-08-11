@@ -121,6 +121,41 @@
   flex-direction: column;
 }
 
+.agent-builder__rhs--ai {
+  width: 390px;
+}
+
+@keyframes agent-builder-rhs-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes agent-builder-rhs-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.agent-builder__rhs--opening {
+  animation: agent-builder-rhs-slide-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.agent-builder__rhs--closing {
+  animation: agent-builder-rhs-slide-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
 .agent-builder__ai-assist {
   flex-shrink: 0;
   height: 100%;
@@ -200,7 +235,235 @@
 .ab-header-actions {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.ab-resolve-issues {
+  position: relative;
+}
+
+.ab-resolve-issues__trigger {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
+  margin: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #555;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ab-resolve-issues__trigger:hover,
+.ab-resolve-issues__trigger[aria-expanded='true'] {
+  background: #f5f5f5;
+}
+
+.ab-resolve-issues__trigger .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  color: #de1b0c;
+}
+
+.ab-resolve-issues__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 320;
+  width: 320px;
+  padding: 8px 0;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.ab-resolve-issues__heading {
+  padding: 6px 14px 10px;
+  color: #212121;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ab-resolve-issues__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ab-resolve-issues__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  transition: background 0.12s ease;
+}
+
+.ab-resolve-issues__item:hover {
+  background: #f5f5f5;
+}
+
+.ab-resolve-issues__item-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 18px;
+  line-height: 1;
+  color: #de1b0c;
+}
+
+.ab-resolve-issues__item-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ab-resolve-issues__item-title {
+  color: #212121;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ab-resolve-issues__item-desc {
+  color: #555;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.ab-publish-split {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  height: 36px;
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.ab-publish-split__main,
+.ab-publish-split__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  border: none;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-publish-split__main {
+  padding: 0 14px 0 16px;
+  border-radius: 4px 0 0 4px;
+}
+
+.ab-publish-split__chevron {
+  width: 32px;
+  padding: 0;
+  border-radius: 0 4px 4px 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.ab-publish-split__main:hover,
+.ab-publish-split__chevron:hover,
+.ab-publish-split__chevron--open {
+  background: #1565c0;
+}
+
+.ab-publish-split__main:disabled,
+.ab-publish-split__chevron:disabled {
+  background: #90caf9;
+  cursor: not-allowed;
+}
+
+.ab-publish-split__chevron .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  color: #fff;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ab-publish-split__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 148px;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 320;
+}
+
+.ab-publish-split__menu-item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.ab-publish-split__menu-item:hover {
+  background: #f4f6f7;
+}
+
+.ab-header-cloud-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.ab-header-cloud-btn:hover {
+  background: #f2f4f7;
+}
+
+.ab-header-cloud-btn__icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.ab-header-cloud-btn__material {
+  font-size: 20px;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
 
 .ab-header-more {
@@ -395,8 +658,21 @@
 }
 
 .ab-header-status--draft {
-  background: #eaeaea;
-  color: #555555;
+  background: #eeeeee;
+  color: #212121;
+}
+
+.ab-header-status--with-info {
+  gap: 4px;
+}
+
+.ab-header-status__info {
+  font-size: 14px !important;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+  color: #757575;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
 .ab-header-spacer {
@@ -525,4 +801,432 @@
   flex-direction: column;
   z-index: 5;
   overflow: hidden;
+}
+
+/* ─── Review response floating chrome ─── */
+/* Canvas: #FAFAFA + Figma grid (scale 240% → ~48px, spacing ~33%, align bottom-center) */
+.faq-ab-embedded--rr-chrome .agent-builder-wrapper,
+.agent-builder--rr-chrome {
+  background-color: #fafafa;
+}
+
+.agent-builder--rr-chrome {
+  position: relative;
+}
+
+.agent-builder--rr-chrome .react-flow__node {
+  overflow: visible;
+}
+
+.agent-builder--rr-chrome .start-node {
+  border-radius: 8px;
+}
+
+.agent-builder--rr-chrome .cnh__ai-icon {
+  display: none;
+}
+
+.agent-builder--rr-chrome .cnh__more-wrapper {
+  display: none;
+}
+
+/* Match floating chrome shadow (same as graph-controls__rr-edit) */
+.agent-builder--rr-chrome .agent-builder__rhs {
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+/* Idle canvas +: always grey (white fill). Blue is ONLY while .flow-canvas--lhs-dragging. */
+.agent-builder--rr-chrome .add-step-btn:not(.add-step-btn--empty-slot),
+.agent-builder--rr-chrome .flow-canvas__edge-add {
+  background: #fff !important;
+  border-color: #e5e9f0 !important;
+  color: #555 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn:not(.add-step-btn--empty-slot) .material-symbols-outlined,
+.agent-builder--rr-chrome .flow-canvas__edge-add .material-symbols-outlined {
+  color: #555 !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn:not(.add-step-btn--empty-slot):hover,
+.agent-builder--rr-chrome .add-step-btn--open:not(.add-step-btn--empty-slot):not(.add-step-btn--paste-active),
+.agent-builder--rr-chrome .flow-canvas__edge-add:hover {
+  background: #f5f5f5 !important;
+  border-color: #e5e9f0 !important;
+  color: #555 !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn--paste-active {
+  background: #1976d2 !important;
+  border-color: #1976d2 !important;
+  color: #fff !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn--paste-active .material-symbols-outlined {
+  color: #fff !important;
+}
+
+/* Trigger empty-slot idle: outlined blue (not filled) */
+.agent-builder--rr-chrome .add-step-btn--empty-slot {
+  background: #fff !important;
+  border-color: #1976d2 !important;
+  color: #1976d2 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn--empty-slot .material-symbols-outlined {
+  color: #1976d2 !important;
+}
+
+/* Keep connector / End + grey while approaching during an LHS drag.
+   No dark-blue oval — the dotted "Drop here" rectangle appears only on hover. */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--lhs-drag:not(.add-step-btn--drop-target):not(.add-step-btn--empty-slot),
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add--lhs-drag:not(.end-node__add--drop-target) {
+  animation: none !important;
+  background: #fff !important;
+  border-color: #e5e9f0 !important;
+  color: #555 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--lhs-drag:not(.add-step-btn--drop-target):not(.add-step-btn--empty-slot) .material-symbols-outlined,
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add--lhs-drag:not(.end-node__add--drop-target) .material-symbols-outlined {
+  color: #555 !important;
+}
+
+/* Trigger empty-slot still fills blue while a trigger is dragged. */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--empty-slot.add-step-btn--lhs-drag,
+.agent-builder--rr-chrome .add-step-btn--empty-slot.add-step-btn--drop-target {
+  animation: none !important;
+  background: #1976d2 !important;
+  border-color: #1976d2 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--empty-slot.add-step-btn--lhs-drag .material-symbols-outlined,
+.agent-builder--rr-chrome .add-step-btn--empty-slot.add-step-btn--drop-target .material-symbols-outlined {
+  color: #fff !important;
+}
+
+.agent-builder--rr-chrome .add-step-btn-wrap--drop-target {
+  position: relative;
+  z-index: 5;
+  width: auto !important;
+  min-width: 280px;
+  height: auto !important;
+  min-height: 50px;
+  overflow: visible;
+}
+
+/* Old small square drop indicator — replaced by the wide "Drop here" box below. */
+.agent-builder--rr-chrome .add-step-btn-wrap--drop-target::before {
+  display: none;
+}
+
+.agent-builder--rr-chrome .add-step-btn-wrap--drop-target .add-step-btn {
+  position: relative;
+  z-index: 1;
+  transform: none !important;
+}
+
+/* Connector / end-node drop zone (not the trigger placeholder): a wide
+   dotted-blue "Drop here" box with a pale-blue fill and blue text — no "+" icon.
+   Overrides the blue-fill button rules above. Snaps in (no oval morph). */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--drop-target:not(.add-step-btn--empty-slot),
+.agent-builder--rr-chrome .add-step-btn--drop-target:not(.add-step-btn--empty-slot) {
+  width: 280px !important;
+  min-width: 280px !important;
+  max-width: none !important;
+  height: 50px !important;
+  flex-shrink: 0;
+  padding: 0 20px;
+  border: 2px dotted #1976d2 !important;
+  border-radius: 12px !important;
+  background: #f5f9ff !important;
+  color: #1976d2 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .material-symbols-outlined,
+.agent-builder--rr-chrome .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .material-symbols-outlined {
+  display: none !important;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .add-step-btn__drop-label,
+.agent-builder--rr-chrome .add-step-btn--drop-target:not(.add-step-btn--empty-slot) .add-step-btn__drop-label {
+  display: inline;
+  color: #1976d2 !important;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Larger hit area while dragging so the box appears as you approach the +.
+   Excludes --drop-target (and end-slot while it contains one): once active, the
+   wrap/slot must grow so the 280×50 "Drop here" box isn't flex-shrunk. */
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .add-step-btn-wrap--lhs-drag:not(.add-step-btn-wrap--drop-target),
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add-slot:not(:has(.add-step-btn-wrap--drop-target)) {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .end-node__add-slot:has(.add-step-btn-wrap--drop-target) {
+  width: auto;
+  min-width: 280px;
+  height: auto;
+  min-height: 50px;
+  overflow: visible;
+}
+
+/* Trigger placeholder: on drag the "+" stays a plain solid-blue circle — no
+   rectangular drop-indicator box, and the dashed placeholder box keeps its
+   height (skip the 56px hit-area growth that would make it taller). */
+.agent-builder--rr-chrome .trigger-placeholder .add-step-btn-wrap--drop-target::before {
+  display: none;
+}
+
+.agent-builder--rr-chrome .flow-canvas--lhs-dragging .trigger-placeholder .add-step-btn-wrap--lhs-drag,
+.agent-builder--rr-chrome .trigger-placeholder .add-step-btn-wrap--drop-target {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+}
+
+.agent-builder--rr-chrome .flow-canvas {
+  background-color: #fafafa;
+  background-image: radial-gradient(circle, #d0d0d0 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+  background-position: center bottom;
+}
+
+.rr-chrome-back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px 0 10px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.rr-chrome-back:hover {
+  background: #f2f4f7;
+}
+
+.rr-chrome-top {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(720px, calc(100% - 200px));
+  height: 48px;
+  padding: 0 12px 0 16px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-top__title-tip {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 22.5rem;
+  overflow: hidden;
+}
+
+.rr-chrome-top .ab-header-title {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.rr-chrome-top__spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.rr-chrome-top .ab-header-actions {
+  flex-shrink: 0;
+}
+
+.ab-header-status--dot {
+  gap: 6px;
+}
+
+.ab-header-status--dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.ab-header-status--draft.ab-header-status--dot::before {
+  background: #c69204;
+}
+
+/* Figma Agent ARC 15324:293284 — pad/gap + hover chip + right tooltip */
+.rr-chrome-left-floater {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  z-index: 55;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 56px;
+  padding: 12px;
+  border: 1px solid #f0f2f5;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-left-floater__btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+}
+
+.rr-chrome-left-floater__icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.rr-chrome-left-floater__btn:hover,
+.rr-chrome-left-floater__btn--active {
+  background: #f0f2f5;
+}
+
+.rr-chrome-palette {
+  position: absolute;
+  top: 72px;
+  left: 82px;
+  bottom: 96px;
+  z-index: 56;
+  width: 304px;
+  max-height: calc(100% - 168px);
+  overflow: hidden;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  display: flex;
+  flex-direction: column;
+}
+
+.rr-chrome-palette .lhs-drawer {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.rr-chrome-right-panel {
+  position: absolute;
+  top: 72px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 56;
+  width: 392px;
+  max-height: calc(100% - 88px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.rr-chrome-ai-panel {
+  width: 100% !important;
+  height: 100% !important;
+  /* Match RHS floating panel chrome (RHS.jsx shell) */
+  border: 1px solid #e5e9f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06) !important;
+  overflow: hidden !important;
+}
+
+.rr-chrome-ai-fab {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #6834b7;
+  transition: right 0.25s ease;
+}
+
+/* Sit left of the 390px RHS (right: 8px) with a 16px gap — keep in sync with
+   .flow-canvas__toolbar-anchor--rr-chrome when canvas has --with-rhs */
+.rr-chrome-ai-fab--with-rhs {
+  right: 414px;
+}
+
+.rr-chrome-ai-fab .rr-chrome-ai-fab__icon {
+  width: 20px;
+  height: 20px;
+}
+
+.rr-chrome-ai-fab:hover {
+  background: #f9f7fd;
 }

@@ -8,6 +8,8 @@ export function InfoCardListItem({
   description,
   actionLabel = 'Use agent',
   onAction,
+  previewLabel = 'Preview',
+  onPreview,
   first = false,
 }: InfoCardListItemProps) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -40,6 +42,18 @@ export function InfoCardListItem({
           <>
             <div className="fixed inset-0 z-[105]" onClick={() => setMenuOpen(false)} />
             <div className={INFO_CARD_LIST_ITEM_LAYOUT.menu}>
+              {onPreview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPreview()
+                    setMenuOpen(false)
+                  }}
+                  className={INFO_CARD_LIST_ITEM_LAYOUT.menuItem}
+                >
+                  {previewLabel}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

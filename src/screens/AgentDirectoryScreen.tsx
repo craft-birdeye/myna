@@ -486,9 +486,11 @@ function AgentCard({
 export function AgentDirectoryScreen({
   product = 'healthcare',
   onOpenAgent,
+  onCreateAgent,
 }: {
   product?: string
   onOpenAgent?: (navId: string) => void
+  onCreateAgent?: () => void
 } = {}) {
   const AGENT_DIRECTORY = getAgentDirectory(product)
   const [statusFilter, setStatusFilter] = useState('Running')
@@ -600,6 +602,7 @@ export function AgentDirectoryScreen({
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
               <button
                 type="button"
+                onClick={onCreateAgent}
                 className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
               >
                 Create agent

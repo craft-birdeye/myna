@@ -89,7 +89,7 @@
   filter: drop-shadow(0 0 2px rgba(104, 52, 183, 0.35));
 }
 .sparkle-loader.is-spinning {
-  animation: sparkle-loader-spin 1.8s ease-in-out infinite;
+  animation: sparkle-loader-spin 1.2s ease-in-out infinite;
 }
 @keyframes sparkle-loader-spin {
   0%   { transform: rotate(0deg) scale(0.82); opacity: 0.75; }
@@ -151,18 +151,64 @@
   font-weight: 500;
   animation: ai-gradient-flow 4s ease infinite;
 }
+/* Icon filled with the same animated AI gradient (use with CSS mask-image) */
+.ai-gradient-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #ec4899, #a855f7, #6366f1, #a855f7, #ec4899);
+  background-size: 300% 100%;
+  animation: ai-gradient-flow 4s ease infinite;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
 @keyframes ai-gradient-flow {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
-/* Blue-to-violet gradient text — headline accent word */
-.ai-gradient-text {
-  background: linear-gradient(90deg, theme('colors.primary.DEFAULT'), theme('colors.ai.brand'));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* Aero Tooltip / Web — left caret when side="right" */
+.tooltip-caret-left::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent;
+  border-right-color: theme('colors.tooltip.DEFAULT');
+}
+
+/* Library InfoCard — AI gradient border on hover (blue → violet → magenta) */
+.info-card-ai-border {
+  position: relative;
+  isolation: isolate;
+}
+.info-card-ai-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #1976d2 0%, #7c4dff 48%, #e040a8 100%);
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.info-card-ai-border:hover::before {
+  opacity: 1;
 }
 
 /* Bobbing ghost — "building" loader mascot (bluish-gray, no color) */

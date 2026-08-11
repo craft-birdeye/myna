@@ -1,4 +1,4 @@
-import { Sheet, SheetContent } from "@/contenthub-ui/sheet.v1";
+import { Sheet, SheetContent } from "@/contenthub-ui/sheet";
 import { cn } from "@/contenthub-ui/utils";
 import {
   FLOATING_SHEET_FRAME_CONTENT_CLASS,

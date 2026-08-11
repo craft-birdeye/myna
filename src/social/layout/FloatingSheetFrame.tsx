@@ -6,7 +6,7 @@ import {
   SheetDescription,
   SheetFooter,
   SheetTitle,
-} from "@/contenthub-ui/sheet.v1";
+} from "@/contenthub-ui/sheet";
 import { Button } from "@/contenthub-ui/button";
 import { cn } from "@/contenthub-ui/utils";
 

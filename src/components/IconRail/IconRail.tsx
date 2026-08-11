@@ -432,7 +432,7 @@ export function IconRail({
   return (
     <div className={`icon-rail-outer ${isExpanding ? 'group' : ''} relative h-full w-[52px] shrink-0 overflow-visible`}>
       <nav
-        className={`absolute inset-y-0 left-0 z-[40] flex flex-col overflow-hidden bg-surface-shell transition-[left,width,background-color,box-shadow] duration-200 ${
+        className={`absolute inset-y-0 left-0 z-[70] flex flex-col overflow-hidden bg-surface-shell transition-[left,width,background-color,box-shadow] duration-200 ${
           isExpanding ? 'w-[52px] hover:left-2 hover:w-[260px] hover:rounded-lg hover:bg-surface hover:shadow-dropdown' : 'w-[52px]'
         }`}
       >
@@ -493,9 +493,19 @@ export function IconRail({
               )}
               {group.header && (
                 <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-200 group-hover:grid-rows-[1fr] group-hover:opacity-100">
-                  <p className="min-h-0 overflow-hidden truncate px-[12px] text-small text-text-tertiary">
-                    {group.header}
-                  </p>
+                  <div
+                    className="flex min-h-0 items-center overflow-hidden"
+                    style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
+                  >
+                    {group.headerIcon ? (
+                      <span className="flex size-7 shrink-0 items-center justify-center">
+                        <img src={group.headerIcon} alt="" className="size-[18px] rounded-full" />
+                      </span>
+                    ) : null}
+                    <p className={`min-w-0 truncate text-body text-text-tertiary ${group.headerIcon ? 'ml-[10px]' : ''}`}>
+                      {group.header}
+                    </p>
+                  </div>
                 </div>
               )}
               {group.items.map((item) => (

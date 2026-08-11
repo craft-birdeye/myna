@@ -62,8 +62,15 @@ function SectionInfoIcon({ tooltip }) {
   }
 
   return (
-    <span ref={ref} className="inline-flex items-center" onMouseEnter={show} onMouseLeave={() => setPos(null)}>
-      <span className={`material-symbols-outlined ${etStyles.sectionLabelIcon}`}>info</span>
+    <span
+      ref={ref}
+      className="inline-flex items-center self-center"
+      onMouseEnter={show}
+      onMouseLeave={() => setPos(null)}
+    >
+      <span className={`material-symbols-outlined ${etStyles.sectionLabelIcon}`} aria-hidden>
+        info
+      </span>
       {pos && tooltip && createPortal(
         <div
           className="pointer-events-none fixed z-[120] w-max max-w-[280px] rounded-sm bg-[#212121] px-sm py-xs text-small text-white shadow-dropdown"

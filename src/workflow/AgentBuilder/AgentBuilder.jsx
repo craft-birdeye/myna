@@ -1,5 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import LHSDrawer, { isFrontDeskAgent, INITIATE_VOICE_CALL_TASK } from '../LHSDrawer/LHSDrawer';
+import LHSDrawer, {
+  isFrontDeskAgent as agentNameIsFrontDesk,
+  INITIATE_VOICE_CALL_TASK,
+  REVIEWS_TASK_SUB_ITEMS,
+  DELAY_VARIANT_PRESETS,
+} from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
 import RHS from '../Organisms/Panels/RHS/RHS';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
@@ -39,12 +44,32 @@ import {
   FLOW_TRIGGER_PLACEHOLDER_HEIGHT,
 } from '../flowLayoutConstants';
 import { computeLoopCanvasHeight, computeLoopBodyHeight } from '../Molecules/Canvas/LoopNode/LoopNode';
+import iconRrTrigger from '../../assets/rr-chrome/icon-trigger.svg';
+import iconRrTasks from '../../assets/rr-chrome/icon-tasks.svg';
+import iconRrProcedures from '../../assets/rr-chrome/icon-procedures.svg';
+import iconRrControls from '../../assets/rr-chrome/icon-controls.svg';
+import iconRrHistory from '../../assets/rr-chrome/icon-history.svg';
+import iconRrPreview from '../../assets/rr-chrome/icon-preview.svg';
+import iconAgentsPurple from '../../assets/icon-agents-purple.svg';
+import { Tooltip } from '../../components/Tooltip/Tooltip';
+import { AiBuilderPanel } from '../../components/AiBuilderPanel/AiBuilderPanel';
+import { getAgentIssues } from '../../data/agentIssues';
+import VersionHistoryPanel from './VersionHistoryPanel';
 import './AgentBuilder.css';
 
 const START_NODE_ID = '__start__';
 const END_NODE_ID = '__end__';
 // Synthetic node (not part of nodeList) that reserves step 1 for the trigger while none exists.
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
+
+/** RR chrome header title — ellipsizes past a fixed max width; full name on hover. */
+function RrChromeAgentTitle({ text }) {
+  return (
+    <Tooltip content={text} variant="detail" side="bottom" className="rr-chrome-top__title-tip">
+      <span className="ab-header-title">{text}</span>
+    </Tooltip>
+  );
+}
 
 /* ─── Error boundary for RHS panel — prevents blank screen on render error ─── */
 class RHSErrorBoundary extends React.Component {
@@ -108,9 +133,7 @@ function makeNodeDetails(type, label) {
     return {
       triggerName: '',
       description: '',
-      conditions: [
-        { id: 1, fieldValue: '', operatorValue: '', valueValue: '' },
-      ],
+      conditions: [],
     };
   }
   if (type === 'procedures') {
@@ -151,6 +174,18 @@ function makeNodeDetails(type, label) {
   };
 }
 
+/** Seed canvas/RHS description (and optional tools) from the LHS palette leaf name. */
+function reviewsTaskDropDefaults() {
+  const defaults = {};
+  Object.values(REVIEWS_TASK_SUB_ITEMS).forEach((group) => {
+    (group.items || []).forEach((item) => {
+      if (!item?.label || !item?.description) return;
+      defaults[item.label] = { description: item.description };
+    });
+  });
+  return defaults;
+}
+
 const TASK_DROP_DEFAULTS = {
   'Initiate voice call': { description: 'Call the customer' },
   'In-call SMS': { description: 'Send a text message to the caller during the active call', selectedTools: ['in-call-sms'] },
@@ -166,19 +201,12 @@ const TASK_DROP_DEFAULTS = {
   'Send data to external app': { description: 'Push data to a connected external application' },
   'Fetch data from external app': { description: 'Retrieve data from a connected external application' },
   'Trigger external webhook': { description: 'Fire a webhook to an external system' },
-  'Triage review': {
-    description:
-      'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
-  },
+  // Legacy leaf names still used by older workflows / add-step shortcuts
   'Review details extraction': {
     description:
       'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
   },
   'Review responder': { description: 'Reply to the review using the generated response' },
-  'Response generation': {
-    description:
-      'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
-  },
   'Message assembly': {
     description:
       'Combine the crafted approach, extracted insights, and brand voice to create the final reply.',
@@ -188,6 +216,13 @@ const TASK_DROP_DEFAULTS = {
   'Enroll in campaign': { description: 'Add the contact to a review or recovery campaign sequence.' },
   'Send referral invite': { description: 'Invite happy reviewers to refer friends or leave additional feedback.' },
   'Send survey': { description: 'Send a follow-up survey after a review to capture more structured feedback.' },
+  // Reviews AI palette copy is the source of truth for leaf descriptions
+  ...reviewsTaskDropDefaults(),
+  // Tool pre-selection overrides (keep LHS description from the spread above)
+  'Assign tags': {
+    description: 'Add tags to a review',
+    selectedTools: ['assign-tags'],
+  },
 };
 
 function makeNodeConfig(id, type, label, description) {
@@ -306,6 +341,11 @@ function computeLoopFlowWidth(nodes, nodeDetails) {
   return maxWidth;
 }
 
+/** Task incomplete warning — hidden for design; re-enable checks below when needed. */
+function isTaskConfigIncomplete(_item, _details = {}) {
+  return false;
+}
+
 function getNodeBlockHeight(item, nodeId, nodeDetails, product = 'automotive') {
   if (item?.flowType === 'procedures') {
     const ids = nodeDetails?.[nodeId]?.procedureIds ?? [];
@@ -318,7 +358,9 @@ function getNodeBlockHeight(item, nodeId, nodeDetails, product = 'automotive') {
     const childCount = loopNodes.length;
     return computeLoopCanvasHeight(Math.max(childCount, 1));
   }
-  return FLOW_STANDARD_NODE_HEIGHT;
+  const base = FLOW_STANDARD_NODE_HEIGHT;
+  if (isTaskConfigIncomplete(item, nodeDetails?.[nodeId])) return base + 24;
+  return base;
 }
 
 function getFlowVerticalStep(item, nodeId, nodeDetails, product = 'automotive') {
@@ -338,7 +380,7 @@ function mapProcedureItems(procedureIds = [], nodeDetails, nodeId, product) {
   });
 }
 
-function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive') {
+function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive', collapsedBranches = {}, collapsedBranchPaths = {}) {
   let y = 0;
   const nodes = [];
   const edges = [];
@@ -388,7 +430,12 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
 
   nodeList.forEach((item, i) => {
     const nodeId = item.id;
-    const prevId = i === 0 ? entryId : nodeList[i - 1].id;
+    const prevItem = i === 0 ? null : nodeList[i - 1];
+    const prevId = i === 0
+      ? entryId
+      : (prevItem.flowType === 'branch' && collapsedBranches[prevItem.id]
+        ? `${prevItem.id}__collapse`
+        : prevItem.id);
     lastNodeY = y;
     lastNodeBlockHeight = getNodeBlockHeight(item, nodeId, nodeDetails, product);
     const topLevelStep = ++stepCounter;
@@ -400,7 +447,15 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
         ? {
             ...item.data,
             stepNumber: topLevelStep,
-            title: 'Based on conditions',
+            title:
+              nodeDetails[nodeId]?.branchNodeTitle
+              || (nodeDetails[nodeId]?.basedOn === 'percentage'
+                ? 'Based on percentage'
+                : nodeDetails[nodeId]?.basedOn === 'field'
+                  ? 'Based on field'
+                  : nodeDetails[nodeId]?.basedOn === 'prompts'
+                    ? 'Based on prompts'
+                    : 'Based on conditions'),
             subtitle: nodeDetails[nodeId]?.description || 'Build condition-specific flows',
           }
         : item.data?.subtype === 'Schedule-based'
@@ -470,6 +525,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                     ?? nodeDetails[nodeId]?.triggerName
                     ?? item.data.title,
                   subtitle: nodeDetails[nodeId]?.description ?? item.data.subtitle,
+                  showConfigWarning: isTaskConfigIncomplete(item, nodeDetails[nodeId]),
                 },
     });
     const prevIsProcedures = i > 0 && nodeList[i - 1].flowType === 'procedures';
@@ -487,6 +543,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
       const isVoiceCall = item.flowType === 'voiceCall';
       const branches = nodeDetails[nodeId]?.branches || [];
+      const parentCollapsed = !isVoiceCall && !!collapsedBranches[nodeId];
 
       // Detect nesting depth to set spacing:
       // level-1: voiceCall directly in a branch arm → 1100
@@ -503,29 +560,84 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
         )
       );
       const spacing = hasDoublyNestedVoiceCall ? 2400 : hasNestedVoiceCall ? 1100 : 480;
+      // Every arm node (path chip, task card, End) uses the same 432px centered
+      // wrapper, so sharing position.x keeps source/target handles on one vertical line.
       const startX = -((branches.length - 1) * spacing) / 2;
-      const branchChipY = y + 150;
-      const branchNodeStartY = y + 260;
+      const branchChipY = y + 260;
+      const branchNodeStartY = y + 370;
+
+      // Stem control between the Branch card and the fan (Reviews-style collapse).
+      let fanSourceId = nodeId;
+      if (!isVoiceCall) {
+        const stemId = `${nodeId}__collapse`;
+        const stemY = y + 154;
+        const taskCount = branches.reduce(
+          (sum, b) => sum + (nodeDetails[b.id]?.nodes || []).length,
+          0,
+        );
+        nodes.push({
+          id: stemId,
+          type: 'branchCollapse',
+          position: { x: 0, y: stemY },
+          data: {
+            collapsed: parentCollapsed,
+            branchCount: branches.length,
+            taskCount,
+            parentBranchId: nodeId,
+          },
+        });
+        edges.push({
+          id: `e-${nodeId}-${stemId}`,
+          source: nodeId,
+          target: stemId,
+          type: 'straight',
+        });
+        fanSourceId = stemId;
+        if (parentCollapsed) {
+          lastNodeY = stemY;
+          lastNodeBlockHeight = 36;
+        }
+      }
 
       // Helper: fan out a voiceCall node's sub-branches
       const renderVoiceCallBranches = (vcNodeId, baseX, baseY) => {
         const vcBranches = nodeDetails[vcNodeId]?.branches || [];
         const vcSpacing = 480;
         const vcStartX = baseX - ((vcBranches.length - 1) * vcSpacing) / 2;
-        const vcChipY = baseY + 150;
-        const vcNodeStartY = baseY + 260;
+        const vcChipY = baseY + 260;
+        const vcNodeStartY = baseY + 370;
         vcBranches.forEach((vcBranch, vcBi) => {
           const vcBranchX = vcStartX + vcBi * vcSpacing;
           const vcBranchNodes = nodeDetails[vcBranch.id]?.nodes || [];
-          nodes.push({ id: vcBranch.id, type: 'branchPath', position: { x: vcBranchX, y: vcChipY }, data: { label: vcBranch.name, parentId: vcNodeId, isFallback: !!vcBranch.isFallback, isVoiceCallBranch: true } });
+          const vcPathCollapsed = !!collapsedBranchPaths[vcBranch.id];
+          nodes.push({
+            id: vcBranch.id,
+            type: 'branchPath',
+            position: { x: vcBranchX, y: vcChipY },
+            data: {
+              label: vcBranch.name,
+              description: nodeDetails[vcBranch.id]?.description || '',
+              parentId: vcNodeId,
+              isFallback: !!vcBranch.isFallback,
+              isVoiceCallBranch: true,
+              collapsed: vcPathCollapsed,
+              hiddenCount: vcBranchNodes.length,
+            },
+          });
           edges.push({ id: `e-${vcNodeId}-${vcBranch.id}`, source: vcNodeId, target: vcBranch.id, type: 'branchFan' });
+          if (vcPathCollapsed) return;
           let vcPrevId = vcBranch.id;
           vcBranchNodes.forEach((vcChild, vcIdx) => {
             const vcChildId = vcChild.id;
             const vcChildDet = nodeDetails[vcChildId] || {};
             let vcChildData = { ...vcChild.data, stepNumber: ++stepCounter };
             if (vcChild.flowType !== 'delay' && vcChild.flowType !== 'branch') {
-              vcChildData = { ...vcChildData, title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title, subtitle: vcChildDet.description ?? vcChildData.subtitle };
+              vcChildData = {
+                ...vcChildData,
+                title: vcChildDet.taskName ?? vcChildDet.triggerName ?? vcChildData.title,
+                subtitle: vcChildDet.description ?? vcChildData.subtitle,
+                showConfigWarning: isTaskConfigIncomplete(vcChild, vcChildDet),
+              };
             }
             nodes.push({ id: vcChildId, type: vcChild.flowType, position: { x: vcBranchX, y: vcNodeStartY + vcIdx * FLOW_NODE_STEP }, data: vcChildData });
             edges.push({ id: `e-${vcPrevId}-${vcChildId}`, source: vcPrevId, target: vcChildId, type: 'addButton', data: { branchPathId: vcBranch.id, afterNodeId: vcPrevId === vcBranch.id ? null : vcPrevId, betweenCards: vcPrevId !== vcBranch.id } });
@@ -537,94 +649,169 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
         });
       };
 
-      branches.forEach((branch, bi) => {
-        const branchX = startX + bi * spacing;
-        const branchNodes = nodeDetails[branch.id]?.nodes || [];
-        nodes.push({
-          id: branch.id,
-          type: 'branchPath',
-          position: { x: branchX, y: branchChipY },
-          data: { label: branch.name, parentId: nodeId, isFallback: !!branch.isFallback, isVoiceCallBranch: isVoiceCall || !!branch.isVoiceCallBranch },
-        });
-        edges.push({ id: `e-${nodeId}-${branch.id}`, source: nodeId, target: branch.id, type: 'branchFan' });
+      if (!parentCollapsed) {
+        branches.forEach((branch, bi) => {
+          const branchX = startX + bi * spacing;
+          const branchNodes = nodeDetails[branch.id]?.nodes || [];
+          const pathCollapsed = !!collapsedBranchPaths[branch.id];
+          nodes.push({
+            id: branch.id,
+            type: 'branchPath',
+            position: { x: branchX, y: branchChipY },
+            data: {
+              label: branch.name,
+              description: nodeDetails[branch.id]?.description || '',
+              parentId: nodeId,
+              isFallback: !!branch.isFallback,
+              isVoiceCallBranch: isVoiceCall || !!branch.isVoiceCallBranch,
+              collapsed: pathCollapsed,
+              hiddenCount: branchNodes.length,
+            },
+          });
+          edges.push({ id: `e-${fanSourceId}-${branch.id}`, source: fanSourceId, target: branch.id, type: 'branchFan' });
 
-        let previousId = branch.id;
-        let previousChildFlowType = null;
-        let childYOffset = 0;
-        branchNodes.forEach((childNode, childIndex) => {
-          const childId = childNode.id;
-          const childDet = nodeDetails[childId] || {};
-          let childData = { ...childNode.data, stepNumber: ++stepCounter };
-          if (childNode.flowType === 'procedures') {
-            childData = { ...childData, toggleEnabled: childNode.data?.toggleEnabled ?? true, procedureItems: mapProcedureItems(childDet.procedureIds, nodeDetails, childId, product) };
-          } else if (childNode.flowType !== 'delay' && childNode.flowType !== 'branch') {
-            childData = { ...childData, title: childDet.taskName ?? childDet.triggerName ?? childData.title, subtitle: childDet.description ?? childData.subtitle };
-          }
-          const childY = branchNodeStartY + childYOffset;
-          nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
-          edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
-          previousId = childNode.id;
-          previousChildFlowType = childNode.flowType;
-          childYOffset += FLOW_NODE_STEP;
+          if (pathCollapsed) return;
 
-          // Fan out voiceCall sub-branches when voiceCall is nested inside a branch path
-          if (childNode.flowType === 'voiceCall') {
-            renderVoiceCallBranches(childId, branchX, childY);
-          }
+          let previousId = branch.id;
+          let previousChildFlowType = null;
+          let childYOffset = 0;
+          branchNodes.forEach((childNode) => {
+            const childId = childNode.id;
+            const childDet = nodeDetails[childId] || {};
+            let childData = { ...childNode.data, stepNumber: ++stepCounter };
+            if (childNode.flowType === 'procedures') {
+              childData = { ...childData, toggleEnabled: childNode.data?.toggleEnabled ?? true, procedureItems: mapProcedureItems(childDet.procedureIds, nodeDetails, childId, product) };
+            } else if (childNode.flowType !== 'delay' && childNode.flowType !== 'branch') {
+              childData = {
+                ...childData,
+                title: childDet.taskName ?? childDet.triggerName ?? childData.title,
+                subtitle: childDet.description ?? childData.subtitle,
+                showConfigWarning: isTaskConfigIncomplete(childNode, childDet),
+              };
+            }
+            const childY = branchNodeStartY + childYOffset;
+            nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
+            edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
+            previousId = childNode.id;
+            previousChildFlowType = childNode.flowType;
+            childYOffset += FLOW_NODE_STEP;
 
-          // Fan out a nested branch node inside this branch path
-          if (childNode.flowType === 'branch') {
-            const innerBranches = childDet.branches || [];
-            // Detect if any inner arm contains a voiceCall to size inner spacing
-            const innerHasVoiceCall = innerBranches.some(nb =>
-              (nodeDetails[nb.id]?.nodes || []).some(nn => nn.flowType === 'voiceCall')
-            );
-            const innerSpacing = innerHasVoiceCall ? 1100 : 480;
-            const innerStartX = branchX - ((innerBranches.length - 1) * innerSpacing) / 2;
-            const innerChipY = childY + 150;
-            const innerNodeStartY = childY + 260;
-            innerBranches.forEach((innerBranch, innerBi) => {
-              const innerBranchX = innerStartX + innerBi * innerSpacing;
-              const innerBranchNodes = nodeDetails[innerBranch.id]?.nodes || [];
-              nodes.push({ id: innerBranch.id, type: 'branchPath', position: { x: innerBranchX, y: innerChipY }, data: { label: innerBranch.name, parentId: childId, isFallback: !!innerBranch.isFallback, isVoiceCallBranch: false } });
-              edges.push({ id: `e-${childId}-${innerBranch.id}`, source: childId, target: innerBranch.id, type: 'branchFan' });
-              let innerPrevId = innerBranch.id;
-              let innerYOff = 0;
-              innerBranchNodes.forEach((innerChild) => {
-                const innerChildId = innerChild.id;
-                const innerChildDet = nodeDetails[innerChildId] || {};
-                let innerChildData = { ...innerChild.data, stepNumber: ++stepCounter };
-                if (innerChild.flowType !== 'delay' && innerChild.flowType !== 'branch') {
-                  innerChildData = { ...innerChildData, title: innerChildDet.taskName ?? innerChildDet.triggerName ?? innerChildData.title, subtitle: innerChildDet.description ?? innerChildData.subtitle };
-                }
-                const innerChildY = innerNodeStartY + innerYOff;
-                nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
-                edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
-                innerPrevId = innerChildId;
-                innerYOff += FLOW_NODE_STEP;
-                if (innerChild.flowType === 'voiceCall') {
-                  renderVoiceCallBranches(innerChildId, innerBranchX, innerChildY);
-                }
+            if (childNode.flowType === 'voiceCall') {
+              renderVoiceCallBranches(childId, branchX, childY);
+            }
+
+            if (childNode.flowType === 'branch') {
+              const innerBranches = childDet.branches || [];
+              const innerCollapsed = !!collapsedBranches[childId];
+              const innerHasVoiceCall = innerBranches.some(nb =>
+                (nodeDetails[nb.id]?.nodes || []).some(nn => nn.flowType === 'voiceCall')
+              );
+              const innerSpacing = innerHasVoiceCall ? 1100 : 480;
+              const innerStartX = branchX - ((innerBranches.length - 1) * innerSpacing) / 2;
+              const innerChipY = childY + 260;
+              const innerNodeStartY = childY + 370;
+              const innerStemId = `${childId}__collapse`;
+              const innerStemY = childY + 154;
+              const innerTaskCount = innerBranches.reduce(
+                (sum, b) => sum + (nodeDetails[b.id]?.nodes || []).length,
+                0,
+              );
+              nodes.push({
+                id: innerStemId,
+                type: 'branchCollapse',
+                position: { x: branchX, y: innerStemY },
+                data: {
+                  collapsed: innerCollapsed,
+                  branchCount: innerBranches.length,
+                  taskCount: innerTaskCount,
+                  parentBranchId: childId,
+                },
               });
-              const lastInnerIsVoiceCall = innerBranchNodes.length > 0 && innerBranchNodes[innerBranchNodes.length - 1].flowType === 'voiceCall';
-              if (!lastInnerIsVoiceCall) {
-                const innerEndId = `${innerBranch.id}-end`;
-                nodes.push({ id: innerEndId, type: 'branchEnd', position: { x: innerBranchX, y: innerNodeStartY + innerYOff }, data: { parentId: innerBranch.id } });
-                edges.push({ id: `e-${innerPrevId}-${innerEndId}`, source: innerPrevId, target: innerEndId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId } });
+              edges.push({
+                id: `e-${childId}-${innerStemId}`,
+                source: childId,
+                target: innerStemId,
+                type: 'straight',
+              });
+              if (innerCollapsed) {
+                const innerEndId = `${childId}-end`;
+                nodes.push({
+                  id: innerEndId,
+                  type: 'branchEnd',
+                  position: { x: branchX, y: innerStemY + 50 },
+                  data: { parentId: branch.id },
+                });
+                edges.push({
+                  id: `e-${innerStemId}-${innerEndId}`,
+                  source: innerStemId,
+                  target: innerEndId,
+                  type: 'addButton',
+                  data: { branchPathId: branch.id, afterNodeId: childId },
+                });
+              } else {
+                innerBranches.forEach((innerBranch, innerBi) => {
+                  const innerBranchX = innerStartX + innerBi * innerSpacing;
+                  const innerBranchNodes = nodeDetails[innerBranch.id]?.nodes || [];
+                  const innerPathCollapsed = !!collapsedBranchPaths[innerBranch.id];
+                  nodes.push({
+                    id: innerBranch.id,
+                    type: 'branchPath',
+                    position: { x: innerBranchX, y: innerChipY },
+                    data: {
+                      label: innerBranch.name,
+                      description: nodeDetails[innerBranch.id]?.description || '',
+                      parentId: childId,
+                      isFallback: !!innerBranch.isFallback,
+                      isVoiceCallBranch: false,
+                      collapsed: innerPathCollapsed,
+                      hiddenCount: innerBranchNodes.length,
+                    },
+                  });
+                  edges.push({ id: `e-${innerStemId}-${innerBranch.id}`, source: innerStemId, target: innerBranch.id, type: 'branchFan' });
+                  if (innerPathCollapsed) return;
+                  let innerPrevId = innerBranch.id;
+                  let innerYOff = 0;
+                  innerBranchNodes.forEach((innerChild) => {
+                    const innerChildId = innerChild.id;
+                    const innerChildDet = nodeDetails[innerChildId] || {};
+                    let innerChildData = { ...innerChild.data, stepNumber: ++stepCounter };
+                    if (innerChild.flowType !== 'delay' && innerChild.flowType !== 'branch') {
+                      innerChildData = {
+                        ...innerChildData,
+                        title: innerChildDet.taskName ?? innerChildDet.triggerName ?? innerChildData.title,
+                        subtitle: innerChildDet.description ?? innerChildData.subtitle,
+                        showConfigWarning: isTaskConfigIncomplete(innerChild, innerChildDet),
+                      };
+                    }
+                    const innerChildY = innerNodeStartY + innerYOff;
+                    nodes.push({ id: innerChildId, type: innerChild.flowType, position: { x: innerBranchX, y: innerChildY }, data: innerChildData });
+                    edges.push({ id: `e-${innerPrevId}-${innerChildId}`, source: innerPrevId, target: innerChildId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId, betweenCards: innerPrevId !== innerBranch.id } });
+                    innerPrevId = innerChildId;
+                    innerYOff += FLOW_NODE_STEP;
+                    if (innerChild.flowType === 'voiceCall') {
+                      renderVoiceCallBranches(innerChildId, innerBranchX, innerChildY);
+                    }
+                  });
+                  const lastInnerIsVoiceCall = innerBranchNodes.length > 0 && innerBranchNodes[innerBranchNodes.length - 1].flowType === 'voiceCall';
+                  if (!lastInnerIsVoiceCall) {
+                    const innerEndId = `${innerBranch.id}-end`;
+                    nodes.push({ id: innerEndId, type: 'branchEnd', position: { x: innerBranchX, y: innerNodeStartY + innerYOff }, data: { parentId: innerBranch.id } });
+                    edges.push({ id: `e-${innerPrevId}-${innerEndId}`, source: innerPrevId, target: innerEndId, type: 'addButton', data: { branchPathId: innerBranch.id, afterNodeId: innerPrevId === innerBranch.id ? null : innerPrevId } });
+                  }
+                });
               }
-            });
+            }
+          });
+
+          const lastChild = branchNodes.length > 0 ? branchNodes[branchNodes.length - 1] : null;
+          const lastChildIsBranchLike = lastChild && (lastChild.flowType === 'voiceCall' || lastChild.flowType === 'branch');
+          if (!lastChildIsBranchLike) {
+            const branchEndId = `${branch.id}-end`;
+            nodes.push({ id: branchEndId, type: 'branchEnd', position: { x: branchX, y: branchNodeStartY + childYOffset }, data: { parentId: branch.id } });
+            edges.push({ id: `e-${previousId}-${branchEndId}`, source: previousId, target: branchEndId, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, viewOnly: !!branch.isFallback, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
           }
         });
-
-        // Skip branchEnd when last child is a voiceCall or nested branch (they render their own ends)
-        const lastChild = branchNodes.length > 0 ? branchNodes[branchNodes.length - 1] : null;
-        const lastChildIsBranchLike = lastChild && (lastChild.flowType === 'voiceCall' || lastChild.flowType === 'branch');
-        if (!lastChildIsBranchLike) {
-          const branchEndId = `${branch.id}-end`;
-          nodes.push({ id: branchEndId, type: 'branchEnd', position: { x: branchX, y: branchNodeStartY + childYOffset }, data: { parentId: branch.id } });
-          edges.push({ id: `e-${previousId}-${branchEndId}`, source: previousId, target: branchEndId, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, viewOnly: !!branch.isFallback, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
-        }
-      });
+      }
       // Branch paths fan out to the side — do not inflate main-spine y or spine edges stretch.
     }
 
@@ -634,8 +821,10 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   const lastId = nodeList.length > 0 ? nodeList[nodeList.length - 1].id : entryId;
   const lastNodeIsProcedures = nodeList.length > 0 && nodeList[nodeList.length - 1].flowType === 'procedures';
   const lastFlowType = nodeList.length > 0 ? nodeList[nodeList.length - 1].flowType : null;
-  if (!nodeList.length || (lastFlowType !== 'branch' && lastFlowType !== 'voiceCall')) {
+  const lastBranchCollapsed = lastFlowType === 'branch' && !!collapsedBranches[lastId];
+  if (!nodeList.length || (lastFlowType !== 'branch' && lastFlowType !== 'voiceCall') || lastBranchCollapsed) {
     const endY = lastNodeY + lastNodeBlockHeight;
+    const endSourceId = lastBranchCollapsed ? `${lastId}__collapse` : lastId;
     nodes.push({
       id: END_NODE_ID,
       type: 'end',
@@ -644,8 +833,8 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       data: { afterNodeId: lastId, hideAddBeforeEnd: lastNodeIsProcedures },
     });
     edges.push({
-      id: `e-${lastId}-${END_NODE_ID}`,
-      source: lastId,
+      id: `e-${endSourceId}-${END_NODE_ID}`,
+      source: endSourceId,
       target: END_NODE_ID,
       type: 'addButton',
     });
@@ -759,6 +948,7 @@ export default function AgentBuilder({
   onAddProcedure,
   publishDisabled = false,
   issueCount = 0,
+  issues = null,
   defaultOpenSection = 'Tasks',
   initialZoom = 1,
   runDisabled = false,
@@ -768,6 +958,9 @@ export default function AgentBuilder({
   createAiPanelOpen = false,
   /** Opens the full-page Create with AI experience (parent-owned navigation). */
   onOpenAiFullscreen = null,
+  /** Parent-controlled AI Builder dock (reopened after fullscreen expand). */
+  aiBuilderPanelOpen: aiBuilderPanelOpenProp = false,
+  onAiBuilderPanelOpenChange = null,
   /** Initial LHS drawer tab. */
   lhsDefaultTab = 'Create manually',
   /** When set (e.g. from Create-with-AI chat), open this procedure in the canvas RHS. */
@@ -779,6 +972,8 @@ export default function AgentBuilder({
   aiTranscript = null,
   /** Editing an already-built agent (Create with AI uses help copy, not build copy). */
   existingAgent = false,
+  /** When set by the parent, forces the Procedures floater on/off (preferred over name sniffing). */
+  showProceduresPalette = null,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -801,6 +996,10 @@ export default function AgentBuilder({
   const [navId, setNavId] = useState(activeNavId);
   const [nodeList, setNodeList] = useState(() => initialNodes || []);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  /** Parent branch nodes whose path arms are collapsed on the canvas. */
+  const [collapsedBranches, setCollapsedBranches] = useState({});
+  /** Individual branch-path chips whose child steps are collapsed. */
+  const [collapsedBranchPaths, setCollapsedBranchPaths] = useState({});
   // Canvas node clipboard — holds a copied node's entry + a snapshot of its (and any referenced branch/loop) details
   const [clipboard, setClipboard] = useState(null);
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
@@ -840,7 +1039,22 @@ export default function AgentBuilder({
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // RHS panel stays mounted a beat past `drawerOpen` turning false so it can
+  // play its slide-out animation instead of vanishing instantly.
+  const [rhsRendered, setRhsRendered] = useState(false);
+  const [rhsClosing, setRhsClosing] = useState(false);
+  const rhsRenderedRef = useRef(false);
+  const rhsCloseTimeoutRef = useRef(null);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  /** Review-response left floater: which palette section is open (Trigger / Tasks / Controls). */
+  const [paletteSection, setPaletteSection] = useState(null);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [rrAiPanelOpen, setRrAiPanelOpen] = useState(() => !!aiBuilderPanelOpenProp);
+  const [rrAiPanelRendered, setRrAiPanelRendered] = useState(() => !!aiBuilderPanelOpenProp);
+  const [rrAiPanelClosing, setRrAiPanelClosing] = useState(false);
+  const rrAiPanelRenderedRef = useRef(!!aiBuilderPanelOpenProp);
+  const rrAiPanelCloseTimeoutRef = useRef(null);
+  const [canvasOrientation, setCanvasOrientation] = useState('vertical');
   const [aiAssistOpenInternal, setAiAssistOpenInternal] = useState(false);
   // AI assist panel is controlled by the parent when it needs to render the
   // panel itself (e.g. spanning the full app height, above this editor's own
@@ -884,6 +1098,62 @@ export default function AgentBuilder({
   useEffect(() => {
     if (drawerOpen || previewOpen) setAiAssistOpen(false);
   }, [drawerOpen, previewOpen]);
+
+  /* ─── RHS panel slide in/out: keep it mounted through the close animation ─── */
+  useEffect(() => {
+    if (drawerOpen) {
+      if (rhsCloseTimeoutRef.current) {
+        clearTimeout(rhsCloseTimeoutRef.current);
+        rhsCloseTimeoutRef.current = null;
+      }
+      setRhsClosing(false);
+      setRhsRendered(true);
+      rhsRenderedRef.current = true;
+    } else if (rhsRenderedRef.current) {
+      setRhsClosing(true);
+      rhsCloseTimeoutRef.current = setTimeout(() => {
+        rhsRenderedRef.current = false;
+        setRhsRendered(false);
+        setRhsClosing(false);
+      }, 260);
+    }
+    return () => {
+      if (rhsCloseTimeoutRef.current) clearTimeout(rhsCloseTimeoutRef.current);
+    };
+  }, [drawerOpen]);
+
+  /* ─── Review-response AI panel slide in/out ─── */
+  useEffect(() => {
+    if (rrAiPanelOpen) {
+      if (rrAiPanelCloseTimeoutRef.current) {
+        clearTimeout(rrAiPanelCloseTimeoutRef.current);
+        rrAiPanelCloseTimeoutRef.current = null;
+      }
+      setRrAiPanelClosing(false);
+      setRrAiPanelRendered(true);
+      rrAiPanelRenderedRef.current = true;
+    } else if (rrAiPanelRenderedRef.current) {
+      setRrAiPanelClosing(true);
+      rrAiPanelCloseTimeoutRef.current = setTimeout(() => {
+        rrAiPanelRenderedRef.current = false;
+        setRrAiPanelRendered(false);
+        setRrAiPanelClosing(false);
+      }, 260);
+    }
+    return () => {
+      if (rrAiPanelCloseTimeoutRef.current) clearTimeout(rrAiPanelCloseTimeoutRef.current);
+    };
+  }, [rrAiPanelOpen]);
+
+  /* ─── Reopen AI Builder when parent asks (e.g. View agent builder after expand) ─── */
+  useEffect(() => {
+    if (aiBuilderPanelOpenProp) setRrAiPanelOpen(true);
+  }, [aiBuilderPanelOpenProp]);
+
+  const closeAiBuilderPanel = useCallback(() => {
+    setRrAiPanelOpen(false);
+    onAiBuilderPanelOpenChange?.(false);
+  }, [onAiBuilderPanelOpenChange]);
 
   /* ─── View-only: keep canvas state in sync when workflow props change ─── */
   useEffect(() => {
@@ -993,7 +1263,11 @@ export default function AgentBuilder({
 
   /* ─── Header three-dots menu ─── */
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [publishMenuOpen, setPublishMenuOpen] = useState(false);
+  const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
+  const publishMenuRef = useRef(null);
+  const resolveIssuesRef = useRef(null);
   const importInputRef = useRef(null);
   useEffect(() => {
     if (!headerMenuOpen) return;
@@ -1005,22 +1279,67 @@ export default function AgentBuilder({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [headerMenuOpen]);
+  useEffect(() => {
+    if (!publishMenuOpen) return;
+    const handler = (e) => {
+      if (publishMenuRef.current && !publishMenuRef.current.contains(e.target)) {
+        setPublishMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [publishMenuOpen]);
+  useEffect(() => {
+    if (!resolveIssuesOpen) return;
+    const handler = (e) => {
+      if (resolveIssuesRef.current && !resolveIssuesRef.current.contains(e.target)) {
+        setResolveIssuesOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [resolveIssuesOpen]);
   /* ─── Agent name is derived from nodeDetails (single source of truth) ─── */
   const agentName = nodeDetails[START_NODE_ID]?.agentName || (typeof pageTitle === 'string' ? pageTitle : '') || '';
-  const isReminderAgent = /reminder/i.test(agentName);
-  const isReviewResponseAgent = /review response/i.test(agentName);
-  const isReviewGenerationAgent = /review generation/i.test(agentName);
-  const isReviewsAgent = isReviewResponseAgent || isReviewGenerationAgent;
+  // Shell/chrome identity must stay stable while the user edits the start-node
+  // name in Agent details — otherwise renaming off "Review response…" flips the
+  // canvas back to the classic LHS drawer mid-edit.
+  const entryAgentName = (typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName;
+  const isReminderAgent = /reminder/i.test(entryAgentName);
+  // Front-desk-specific behaviour (task filters, etc.) — name / parent flag.
+  const isFrontDeskAgentName =
+    !!showProceduresPalette ||
+    agentNameIsFrontDesk(entryAgentName) ||
+    agentNameIsFrontDesk(agentName) ||
+    agentNameIsFrontDesk(typeof appTitle === 'string' ? appTitle : '');
+  const isReviewResponseAgent = /review response/i.test(entryAgentName) || /review response/i.test(agentName);
+  const isReviewGenerationAgent = /review generation/i.test(entryAgentName) || /review generation/i.test(agentName);
+  const isReviewsAiAgent = isReviewResponseAgent || isReviewGenerationAgent;
+  // Procedures floater: available on Front desk / Reminder / etc. — not on Reviews AI.
+  const showProceduresFloater = !isReviewsAiAgent;
+  const isHcProduct = product === 'healthcare' || product === 'dental';
+  // All main AgentBuilder canvases use Reminder / Review-response floating chrome
+  // (left Trigger/Procedures/Task/Controls + right AI Builder). Classic LHS is retired.
+  const isReviewResponseChrome = true;
 
-  // Undo/redo history for the canvas (nodeList + nodeDetails) — Reviews AI only,
-  // per product decision; other agents keep today's (inert) toolbar unchanged.
+  // Close Procedures palette if it was open when landing on a Reviews AI canvas.
+  useEffect(() => {
+    if (!showProceduresFloater && paletteSection === 'Procedures') {
+      setPaletteSection(null);
+    }
+  }, [showProceduresFloater, paletteSection]);
+  const resolveIssuesList =
+    (Array.isArray(issues) && issues.length > 0 ? issues : null) ||
+    getAgentIssues(entryAgentName);
+
+  // Undo/redo history for the floating-chrome canvas toolbar.
   const [historyPast, setHistoryPast] = useState([]);
   const [historyFuture, setHistoryFuture] = useState([]);
   const historySnapshotRef = useRef(null);
   const isApplyingHistoryRef = useRef(false);
 
   useEffect(() => {
-    if (!isReviewsAgent) return;
+    if (!isReviewResponseChrome) return;
     if (isApplyingHistoryRef.current) {
       isApplyingHistoryRef.current = false;
       historySnapshotRef.current = { nodeList, nodeDetails };
@@ -1031,7 +1350,7 @@ export default function AgentBuilder({
       setHistoryFuture([]);
     }
     historySnapshotRef.current = { nodeList, nodeDetails };
-  }, [nodeList, nodeDetails, isReviewsAgent]);
+  }, [nodeList, nodeDetails, isReviewResponseChrome]);
 
   const handleUndo = useCallback(() => {
     setHistoryPast((prev) => {
@@ -1064,8 +1383,8 @@ export default function AgentBuilder({
   /* ─── Always-fresh ref so publish never reads stale closure values ─── */
   const latestRef = useRef({});
   useLayoutEffect(() => {
-    latestRef.current = { agentId, agentName, agentDesc, moduleContext: agentModuleContext, sectionContext: agentSectionContext, agentStatus, nodeList, nodeDetails, templateId: agentTemplateId, templateSource: agentTemplateSource, moduleSlug: agentModuleSlug, agentSlug };
-  }, [agentId, agentName, agentDesc, agentModuleContext, agentSectionContext, agentStatus, nodeList, nodeDetails, agentTemplateId, agentTemplateSource, agentModuleSlug, agentSlug]);
+    latestRef.current = { agentId, agentName, agentDesc, moduleContext: agentModuleContext, sectionContext: agentSectionContext, agentStatus, nodeList, nodeDetails, selectedNodeId, templateId: agentTemplateId, templateSource: agentTemplateSource, moduleSlug: agentModuleSlug, agentSlug };
+  }, [agentId, agentName, agentDesc, agentModuleContext, agentSectionContext, agentStatus, nodeList, nodeDetails, selectedNodeId, agentTemplateId, agentTemplateSource, agentModuleSlug, agentSlug]);
 
   /* ─── Auto-save to Firestore (debounced 1.5 s) ─── */
   const saveTimerRef = useRef(null);
@@ -1159,6 +1478,20 @@ export default function AgentBuilder({
         const { agentId: id, agentName: name, agentDesc: desc, moduleContext: mod, sectionContext: sec, agentStatus: status, nodeList: nodes, nodeDetails: details, moduleSlug: msSlug, agentSlug: asSlug } = latestRef.current;
         saveAgent(id, { id, name: name || 'Untitled agent', description: desc, status, moduleContext: mod, sectionContext: sec, moduleSlug: msSlug, agentSlug: asSlug, nodes, nodeDetails: details });
       }, 1500);
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handleSaveAsDraft = useCallback(async () => {
+    setPublishMenuOpen(false);
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Draft');
+    if (!payload) return;
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Draft');
+      onSaveAgent?.(false, payload);
+    } catch (e) {
+      console.error('Save as draft failed', e);
     }
   }, [buildAgentPayload, onSaveAgent]);
 
@@ -1338,6 +1671,12 @@ export default function AgentBuilder({
       });
       return copy;
     });
+    setCollapsedBranches((prev) => {
+      if (!prev[nodeId]) return prev;
+      const next = { ...prev };
+      delete next[nodeId];
+      return next;
+    });
     if (selectedNodeId === nodeId) {
       setSelectedNodeId(null);
       setDrawerOpen(false);
@@ -1398,6 +1737,7 @@ export default function AgentBuilder({
       });
       setNodeDetails((prev) => ({ ...prev, ...extraOut }));
     }
+    setClipboard(null);
   }, [clipboard, nodeList, nodeDetails]);
 
   const handlePasteReplace = useCallback((nodeId) => {
@@ -1437,6 +1777,7 @@ export default function AgentBuilder({
       setSelectedNodeId(null);
       setDrawerOpen(false);
     }
+    setClipboard(null);
   }, [clipboard, nodeList, nodeDetails, selectedNodeId]);
 
   const handleAddBranchPath = useCallback((branchNodeId) => {
@@ -1519,11 +1860,60 @@ export default function AgentBuilder({
       delete copy[branchPathId];
       return copy;
     });
+    setCollapsedBranches((prev) => {
+      if (!prev[branchPathId]) return prev;
+      const next = { ...prev };
+      delete next[branchPathId];
+      return next;
+    });
+    setCollapsedBranchPaths((prev) => {
+      if (!prev[branchPathId]) return prev;
+      const next = { ...prev };
+      delete next[branchPathId];
+      return next;
+    });
     if (selectedNodeId === branchPathId) {
       setSelectedNodeId(null);
       setDrawerOpen(false);
     }
   }, [selectedNodeId]);
+
+  const handleToggleBranchCollapse = useCallback((branchNodeId) => {
+    setCollapsedBranches((prev) => {
+      const nextCollapsed = !prev[branchNodeId];
+      if (nextCollapsed) {
+        const details = latestRef.current.nodeDetails || {};
+        const childIds = new Set();
+        (details[branchNodeId]?.branches || []).forEach((b) => {
+          childIds.add(b.id);
+          (details[b.id]?.nodes || []).forEach((n) => childIds.add(n.id));
+        });
+        const selected = latestRef.current.selectedNodeId;
+        if (selected && childIds.has(selected)) {
+          setSelectedNodeId(null);
+          setDrawerOpen(false);
+        }
+      }
+      return { ...prev, [branchNodeId]: nextCollapsed };
+    });
+  }, []);
+
+  const handleToggleBranchPathCollapse = useCallback((branchPathId) => {
+    setCollapsedBranchPaths((prev) => {
+      const nextCollapsed = !prev[branchPathId];
+      if (nextCollapsed) {
+        const childIds = new Set(
+          (latestRef.current.nodeDetails?.[branchPathId]?.nodes || []).map((n) => n.id),
+        );
+        const selected = latestRef.current.selectedNodeId;
+        if (selected && childIds.has(selected)) {
+          setSelectedNodeId(null);
+          setDrawerOpen(false);
+        }
+      }
+      return { ...prev, [branchPathId]: nextCollapsed };
+    });
+  }, []);
 
   // "Add locations" link on the start node — opens the agent-details RHS panel straight
   // into its Locations picker, whether or not that panel is already open.
@@ -1547,12 +1937,39 @@ export default function AgentBuilder({
     subtitleIsLink: locationCount === 0,
     onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
   };
-  const { nodes: rawNodes, edges } = buildFlow(nodeList, startData, nodeDetails, product);
+  const { nodes: rawNodes, edges } = buildFlow(
+    nodeList,
+    startData,
+    nodeDetails,
+    product,
+    collapsedBranches,
+    collapsedBranchPaths,
+  );
 
   const nodes = rawNodes.map((n) => {
     if (n.id === START_NODE_ID || n.id === END_NODE_ID) return n;
+    if (n.type === 'branchCollapse') {
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          onToggle: () => handleToggleBranchCollapse(n.data.parentBranchId),
+        },
+      };
+    }
     if (n.type === 'branchPath') {
-      return { ...n, data: { ...n.data, onDelete: () => handleDeleteBranchPath(n.id) } };
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          viewOnly,
+          onDelete:
+            viewOnly || n.data.isFallback || n.data.isVoiceCallBranch
+              ? undefined
+              : () => handleDeleteBranchPath(n.id),
+          onToggleCollapse: () => handleToggleBranchPathCollapse(n.id),
+        },
+      };
     }
     if (n.type === 'branchEnd') return n;
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
@@ -1663,7 +2080,7 @@ export default function AgentBuilder({
     }
 
     if (
-      isFrontDeskAgent(agentName)
+      agentNameIsFrontDesk(agentName)
       && (description === INITIATE_VOICE_CALL_TASK || label === INITIATE_VOICE_CALL_TASK)
     ) {
       return;
@@ -1687,12 +2104,30 @@ export default function AgentBuilder({
     }
     if (effectiveType === 'task' && description && label !== 'Custom') {
       const taskDefaults = TASK_DROP_DEFAULTS[description] || {};
+      const seededDescription = taskDefaults.description ?? '';
       details = {
         ...details,
         taskName: description,
-        description: taskDefaults.description ?? '',
+        description: seededDescription,
         ...(taskDefaults.selectedTools ? { selectedTools: taskDefaults.selectedTools } : {}),
       };
+      // Mirror onto the canvas node so the card shows the LHS blurb immediately
+      if (seededDescription) {
+        newNode.data = { ...newNode.data, subtitle: seededDescription };
+      }
+    }
+
+    // Controls variant name comes through the drag payload's `description`
+    // (both the compact CardRow and the rich LHSEntityGroup cards set it), while
+    // `label` may be the parent group name ('Branch' / 'Delay') for the palette cards.
+    const controlVariant = description || label;
+
+    // Delay dropped from one of the LHS Controls variant cards (For a set amount
+    // of time / Until a calendar date / …) — preselect that delay option.
+    // (Branch variants are handled by the scaffold block below since it owns the
+    // branch/path structure the canvas renders.)
+    if (effectiveType === 'delay' && DELAY_VARIANT_PRESETS[controlVariant]) {
+      details = { ...details, delayOption: DELAY_VARIANT_PRESETS[controlVariant] };
     }
 
     if (effectiveType === 'trigger' && !branchPathId) {
@@ -1722,8 +2157,14 @@ export default function AgentBuilder({
       setDrawerOpen(true);
       setActiveProcedureId(null);
       // After the first (or replaced) trigger lands, open Tasks so the next step is ready to drag.
-      setLhsCollapsed(false);
-      setLhsForceOpenSection('Tasks');
+      // Review-response chrome uses the floater palette instead — close it after drop.
+      if (isReviewResponseChrome) {
+        setPaletteSection(null);
+        closeAiBuilderPanel();
+      } else {
+        setLhsCollapsed(false);
+        setLhsForceOpenSection('Tasks');
+      }
       return;
     }
 
@@ -1750,6 +2191,10 @@ export default function AgentBuilder({
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
+      if (isReviewResponseChrome) {
+        setPaletteSection(null);
+        closeAiBuilderPanel();
+      }
       return;
     }
 
@@ -1791,20 +2236,55 @@ export default function AgentBuilder({
 
     if (type === 'branch') {
       const path1Id = `${id}-path-1`;
+      const path2Id = `${id}-path-2`;
       const fallbackId = `${id}-path-fallback`;
-      Object.assign(details, {
-        basedOn: 'conditions',
-        description: 'Build condition-specific flows',
-        mergeBranches: true,
-        branches: [
-          { id: path1Id, name: 'Branch 1' },
-          { id: fallbackId, name: 'No conditions met', isFallback: true },
-        ],
-      });
-      extraDetails = {
-        [path1Id]: { branchName: 'Branch 1', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
-        [fallbackId]: { branchName: 'No conditions met', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
-      };
+      const makePath = (extra) => ({ description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [], ...extra });
+
+      if (controlVariant === 'Based on percentage') {
+        Object.assign(details, {
+          basedOn: 'percentage',
+          branchNodeTitle: 'Based on percentage',
+          description: 'Split the flow by percentage',
+          mergeBranches: true,
+          branches: [
+            { id: path1Id, name: 'Branch 1', percentage: 50 },
+            { id: path2Id, name: 'Branch 2', percentage: 50 },
+          ],
+        });
+        extraDetails = {
+          [path1Id]: makePath({ branchName: 'Branch 1' }),
+          [path2Id]: makePath({ branchName: 'Branch 2' }),
+        };
+      } else if (controlVariant === 'Always run') {
+        Object.assign(details, {
+          basedOn: 'conditions',
+          branchNodeTitle: 'Always run',
+          description: 'Always run this path',
+          mergeBranches: true,
+          branches: [
+            { id: path1Id, name: 'Always run', isFallback: true },
+          ],
+        });
+        extraDetails = {
+          [path1Id]: makePath({ branchName: 'Always run', isFallback: true }),
+        };
+      } else {
+        // 'Based on condition' (and the legacy plain "Branch" card / add-step menu)
+        Object.assign(details, {
+          basedOn: 'conditions',
+          branchNodeTitle: 'Based on conditions',
+          description: 'Build condition-specific flows',
+          mergeBranches: true,
+          branches: [
+            { id: path1Id, name: 'Branch 1' },
+            { id: fallbackId, name: 'No conditions met', isFallback: true },
+          ],
+        });
+        extraDetails = {
+          [path1Id]: makePath({ branchName: 'Branch 1' }),
+          [fallbackId]: makePath({ branchName: 'No conditions met', isFallback: true }),
+        };
+      }
     }
 
     if (effectiveType === 'voiceCall') {
@@ -1841,24 +2321,34 @@ export default function AgentBuilder({
     setSelectedNodeId(id);
     setDrawerOpen(true);
     setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
-  }, [agentName, product]);
+    if (isReviewResponseChrome) {
+      setPaletteSection(null);
+      closeAiBuilderPanel();
+    }
+  }, [agentName, product, isReviewResponseChrome, closeAiBuilderPanel]);
 
   const handleNodeClick = useCallback((node) => {
-    if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder') return;
+    if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder' || node.type === 'branchCollapse') return;
     // Voice call branches are hard-coded and non-editable — block RHS open
     if (node.data?.isVoiceCallBranch) return;
+    // Node config and AI Builder share the right pane — dismiss AI when inspecting a node.
+    setPaletteSection(null);
+    setVersionHistoryOpen(false);
+    closeAiBuilderPanel();
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
     if (node.data?.title) {
       setAiNodeContext({ id: node.id, type: node.type, title: node.data.title });
     }
-  }, []);
+  }, [closeAiBuilderPanel]);
 
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
     setSelectedNodeId(null);
     setActiveProcedureId(null);
     setLhsPreviewProcedureId(null);
+    // Do not reopen AI Builder — user closed config and should return to a clean canvas
+    // (FAB remains available to reopen AI explicitly).
   }, []);
 
   const currentDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
@@ -2317,7 +2807,7 @@ export default function AgentBuilder({
     return (
       <RHS
         variant="entityTask"
-        title="Task"
+        title="Task details"
         viewOnly={viewOnly}
         bodyProps={{
           initialValues: currentDetails,
@@ -2349,27 +2839,141 @@ export default function AgentBuilder({
   ) : (
     <div className="ab-header-actions">
       {issueCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555', fontSize: 13 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, lineHeight: 1, color: '#de1b0c' }}>error</span>
-          Resolve issues ({issueCount})
+        <div className="ab-resolve-issues" ref={resolveIssuesRef}>
+          <button
+            type="button"
+            className="ab-resolve-issues__trigger"
+            aria-expanded={resolveIssuesOpen}
+            aria-haspopup="dialog"
+            onClick={() => {
+              setPublishMenuOpen(false);
+              setHeaderMenuOpen(false);
+              setResolveIssuesOpen((open) => !open);
+            }}
+          >
+            <span className="material-symbols-outlined" aria-hidden>error</span>
+            Resolve issues ({issueCount})
+          </button>
+          {resolveIssuesOpen && (
+            <div className="ab-resolve-issues__popover" role="dialog" aria-label="Resolve issues">
+              <div className="ab-resolve-issues__heading">
+                {issueCount} {issueCount === 1 ? 'issue' : 'issues'} to resolve
+              </div>
+              <ul className="ab-resolve-issues__list">
+                {(resolveIssuesList.length > 0
+                  ? resolveIssuesList
+                  : Array.from({ length: issueCount }, (_, i) => ({
+                      id: `issue-${i + 1}`,
+                      title: `Issue ${i + 1}`,
+                      description: 'Review this item before publishing.',
+                    }))
+                ).map((issue) => (
+                  <li key={issue.id}>
+                    <button
+                      type="button"
+                      className="ab-resolve-issues__item"
+                      onClick={() => setResolveIssuesOpen(false)}
+                    >
+                      <span className="material-symbols-outlined ab-resolve-issues__item-icon" aria-hidden>
+                        error
+                      </span>
+                      <span className="ab-resolve-issues__item-body">
+                        <span className="ab-resolve-issues__item-title">{issue.title}</span>
+                        {issue.description ? (
+                          <span className="ab-resolve-issues__item-desc">{issue.description}</span>
+                        ) : null}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
-      {/* Cloud save icon — matches Figma 41-43635 */}
-      <button
-        type="button"
-        className="ab-header-cloud-btn"
-        onClick={handleShare}
-        title="Save to cloud"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#555', padding: 4, borderRadius: 4 }}
+      {/* Cloud save / version history — matches Figma 15324:121197 */}
+      <Tooltip
+        content={isReviewResponseChrome ? 'Version history' : 'Save to cloud'}
+        variant="brief"
+        side="bottom"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 20, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}>cloud_upload</span>
-      </button>
-<Button
-        theme="primary"
-        label={isTemplateMode ? 'Save template' : 'Publish'}
-        onClick={isTemplateMode ? handleSaveTemplate : handlePublish}
-        disabled={!isTemplateMode && (publishDisabled || issueCount > 0)}
-      />
+        <button
+          type="button"
+          className="ab-header-cloud-btn"
+          onClick={() => {
+            if (isReviewResponseChrome) {
+              closeAiBuilderPanel();
+              setPaletteSection(null);
+              setDrawerOpen(false);
+              setVersionHistoryOpen((open) => !open);
+              return;
+            }
+            handleShare();
+          }}
+          aria-label={isReviewResponseChrome ? 'Version history' : 'Save to cloud'}
+          aria-pressed={isReviewResponseChrome ? versionHistoryOpen : undefined}
+        >
+          {isReviewResponseChrome ? (
+            <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
+          ) : (
+            <span className="material-symbols-outlined ab-header-cloud-btn__material">cloud_upload</span>
+          )}
+        </button>
+      </Tooltip>
+      {isReviewResponseChrome && (
+        <Tooltip content="Run test" variant="brief" side="bottom">
+          <button
+            type="button"
+            className="ab-header-cloud-btn"
+            onClick={() => {}}
+            aria-label="Run test"
+          >
+            <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
+          </button>
+        </Tooltip>
+      )}
+      {isTemplateMode ? (
+        <Button
+          theme="primary"
+          label="Save template"
+          onClick={handleSaveTemplate}
+        />
+      ) : (
+        <div className="ab-publish-split" ref={publishMenuRef}>
+          <button
+            type="button"
+            className="ab-publish-split__main"
+            aria-label="Publish"
+            disabled={publishDisabled || issueCount > 0}
+            onClick={handlePublish}
+          >
+            Publish
+          </button>
+          <button
+            type="button"
+            className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
+            aria-label="More publish options"
+            aria-haspopup="menu"
+            aria-expanded={publishMenuOpen}
+            disabled={publishDisabled || issueCount > 0}
+            onClick={() => setPublishMenuOpen((open) => !open)}
+          >
+            <span className="material-symbols-outlined">expand_more</span>
+          </button>
+          {publishMenuOpen && (
+            <div className="ab-publish-split__menu" role="menu">
+              <button
+                type="button"
+                className="ab-publish-split__menu-item"
+                role="menuitem"
+                onClick={handleSaveAsDraft}
+              >
+                Save as draft
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -2399,38 +3003,40 @@ export default function AgentBuilder({
   }
 
   return (
-    <div className="faq-ab-embedded" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'transparent' }}>
-      {/* ─── Embedded builder header ─── */}
-      <div className="faq-ab-header" style={{
-        height: 52,
-        borderBottom: '1px solid #e9e9eb',
-        background: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        flexShrink: 0,
-        gap: 8,
-      }}>
-        <div className="ab-header-left">
-          {onClose && (
-            <button
-              type="button"
-              className="ab-header-back-btn"
-              onClick={onClose}
-              title="Back to agents"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-                <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
-              </svg>
-            </button>
-          )}
-          <span className="ab-header-title">{agentName || 'Untitled agent'}</span>
-          <span className={`ab-header-status ${statusBadgeClass}`}>{agentStatus}</span>
+    <div className={`faq-ab-embedded${isReviewResponseChrome ? ' faq-ab-embedded--rr-chrome' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'transparent' }}>
+      {/* ─── Embedded builder header (non–review-response) ─── */}
+      {!isReviewResponseChrome && (
+        <div className="faq-ab-header" style={{
+          height: 52,
+          borderBottom: '1px solid #e9e9eb',
+          background: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          flexShrink: 0,
+          gap: 8,
+        }}>
+          <div className="ab-header-left">
+            {onClose && (
+              <button
+                type="button"
+                className="ab-header-back-btn"
+                onClick={onClose}
+                title="Back to agents"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
+                </svg>
+              </button>
+            )}
+            <span className="ab-header-title">{agentName || 'Untitled agent'}</span>
+            <span className={`ab-header-status ${statusBadgeClass}`}>{agentStatus}</span>
+          </div>
+          <div className="ab-header-spacer" aria-hidden />
+          {headerActions}
         </div>
-        <div className="ab-header-spacer" aria-hidden />
-        {headerActions}
-      </div>
+      )}
 
       {/* ─── Builder body ─── */}
       <div
@@ -2450,8 +3056,148 @@ export default function AgentBuilder({
           </div>
         )}
 
-        <div className="agent-builder">
-          {!hideLhs && (
+        <div className={`agent-builder${isReviewResponseChrome ? ' agent-builder--rr-chrome' : ''}`}>
+          {/* Review response floating chrome */}
+          {isReviewResponseChrome && (
+            <>
+              {onClose && (
+                <button
+                  type="button"
+                  className="rr-chrome-back"
+                  onClick={onClose}
+                  aria-label="Back"
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                    <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
+                  </svg>
+                  <span>Back</span>
+                </button>
+              )}
+
+              <div className="rr-chrome-top">
+                <RrChromeAgentTitle text={agentName || 'Untitled agent'} />
+                <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                  {agentStatus}
+                </span>
+                <div className="rr-chrome-top__spacer" aria-hidden />
+                {headerActions}
+              </div>
+
+              {!viewOnly && (
+                <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
+                  {[
+                    { id: 'Trigger', src: iconRrTrigger, label: 'Trigger' },
+                    ...(showProceduresFloater
+                      ? [{ id: 'Procedures', src: iconRrProcedures, label: 'Procedures' }]
+                      : []),
+                    { id: 'Tasks', src: iconRrTasks, label: 'Task' },
+                    { id: 'Controls', src: iconRrControls, label: 'Controls' },
+                  ].map((item) => (
+                    <Tooltip key={item.id} content={item.label} variant="brief" side="right">
+                      <button
+                        type="button"
+                        className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
+                        aria-label={item.label}
+                        aria-pressed={paletteSection === item.id}
+                        onClick={() => {
+                          closeAiBuilderPanel();
+                          setVersionHistoryOpen(false);
+                          setPaletteSection((prev) => (prev === item.id ? null : item.id));
+                        }}
+                      >
+                        <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                      </button>
+                    </Tooltip>
+                  ))}
+                </div>
+              )}
+
+              {paletteSection && !viewOnly && (
+                <div className="rr-chrome-palette">
+                  <LHSDrawer
+                    key={paletteSection}
+                    defaultTab="Create manually"
+                    showTabs={false}
+                    sectionOnly
+                    defaultOpenSection={paletteSection}
+                    forceOpenSection={paletteSection}
+                    viewOnly={viewOnly}
+                    product={product}
+                    agentName={agentName}
+                    procedures={procedures}
+                    onCollapse={() => setPaletteSection(null)}
+                    onDropNode={handleDropNode}
+                    onProcedureClick={(procedureId) => {
+                      closeAiBuilderPanel();
+                      setLhsPreviewProcedureId(procedureId);
+                      setSelectedNodeId(null);
+                      setActiveProcedureId(null);
+                      setDrawerOpen(true);
+                    }}
+                  />
+                </div>
+              )}
+
+              {versionHistoryOpen && !viewOnly && (
+                <VersionHistoryPanel onClose={() => setVersionHistoryOpen(false)} />
+              )}
+
+              {rrAiPanelRendered && !viewOnly && (
+                <div className={`agent-builder__rhs agent-builder__rhs--ai${rrAiPanelClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}>
+                  <AiBuilderPanel
+                    agentName={(typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName}
+                    onClose={closeAiBuilderPanel}
+                    onExpand={
+                      onOpenAiFullscreen
+                        ? () => {
+                            closeAiBuilderPanel();
+                            onOpenAiFullscreen();
+                          }
+                        : undefined
+                    }
+                    className="rr-chrome-ai-panel"
+                    fillShell
+                  />
+                </div>
+              )}
+
+              {!viewOnly && !rrAiPanelRendered && (
+                <button
+                  type="button"
+                  className={`rr-chrome-ai-fab${(drawerOpen || rrAiPanelOpen) ? ' rr-chrome-ai-fab--with-rhs' : ''}`}
+                  onClick={() => {
+                    setPaletteSection(null);
+                    setVersionHistoryOpen(false);
+                    setRrAiPanelOpen((open) => {
+                      const nextOpen = !open;
+                      if (nextOpen) {
+                        setDrawerOpen(false);
+                        setSelectedNodeId(null);
+                        setLhsPreviewProcedureId(null);
+                        setActiveProcedureId(null);
+                        onAiBuilderPanelOpenChange?.(true);
+                      } else {
+                        onAiBuilderPanelOpenChange?.(false);
+                      }
+                      return nextOpen;
+                    });
+                  }}
+                >
+                  <span
+                    className="ai-gradient-icon rr-chrome-ai-fab__icon"
+                    style={{
+                      WebkitMaskImage: `url(${iconAgentsPurple})`,
+                      maskImage: `url(${iconAgentsPurple})`,
+                    }}
+                    aria-hidden
+                  />
+                  Create with AI
+                </button>
+              )}
+            </>
+          )}
+
+          {!hideLhs && !isReviewResponseChrome && (
             <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
               <LHSDrawer
                 defaultTab={lhsDefaultTab}
@@ -2480,7 +3226,7 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {!hideLhs && lhsCollapsed && (
+          {!hideLhs && lhsCollapsed && !isReviewResponseChrome && (
             <button
               type="button"
               className="ab-lhs-expand-pill"
@@ -2495,7 +3241,7 @@ export default function AgentBuilder({
             </button>
           )}
 
-          {hideLhs && (
+          {hideLhs && !isReviewResponseChrome && (
             <div
               className={`agent-builder__ai-panel-spacer${createAiPanelOpen ? ' agent-builder__ai-panel-spacer--open' : ''}`}
               aria-hidden
@@ -2512,10 +3258,12 @@ export default function AgentBuilder({
               hasClipboard={!viewOnly && !!clipboard}
               onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
               selectedNodeId={selectedNodeId}
-              orientation="vertical"
+              orientation={canvasOrientation}
+              onOrientationChange={setCanvasOrientation}
               viewOnly={viewOnly}
               product={product}
               agentName={agentName}
+              rrChrome={isReviewResponseChrome}
               initialZoom={initialZoom}
               runDisabled={runDisabled}
               onEdit={onEdit}
@@ -2542,8 +3290,11 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {drawerOpen && (
-            <div key={selectedNodeId || lhsPreviewProcedureId || 'rhs'} className="agent-builder__rhs">
+          {rhsRendered && (
+            <div
+              key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}
+              className={`agent-builder__rhs${rhsClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}
+            >
               <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
               </RHSErrorBoundary>
