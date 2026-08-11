@@ -273,7 +273,7 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
 // same fields (category, running/paused status, name, description, KPIs), just laid out across
 // the full card width instead of a grid cell. The KPI row is a flex-wrap, not a fixed grid, so
 // more KPIs can be appended per agent later without needing a layout change.
-function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
+function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirectoryEntry; zeroState?: boolean }) {
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
     <div className="rounded-md border border-border bg-surface p-xl">
@@ -283,15 +283,22 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
           <h4 className="m-0 mt-xs mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
-          <AgentKpiCell value={String(agent.running)} label="Agents running" />
-          <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
-          {extraKpis.map((kpi) => (
-            <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
-          ))}
-          <AgentKpiCell value={agent.timeSaved} label="Time saved" />
-          <AgentKpiCell value={agent.costSaved} label="Cost saved" />
-        </div>
+        {zeroState ? (
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-sm">
+            <Icon name="sync" size={16} className="shrink-0 animate-spin text-text-tertiary" />
+            <p className="m-0 text-small text-text-tertiary">This agent is running — data is still being fetched.</p>
+          </div>
+        ) : (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
+            <AgentKpiCell value={String(agent.running)} label="Agents running" />
+            <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
+            {extraKpis.map((kpi) => (
+              <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
+            ))}
+            <AgentKpiCell value={agent.timeSaved} label="Time saved" />
+            <AgentKpiCell value={agent.costSaved} label="Cost saved" />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -299,7 +306,7 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
 
 // Hidden-by-default detail view shown just below every "<Co-worker> performance" section — one
 // full-length AgentPerformanceCard per agent, replacing the old compact outcomes table.
-function PerformanceByAgentAccordion({ agents }: { agents: AgentDirectoryEntry[] }) {
+function PerformanceByAgentAccordion({ agents, zeroState = false }: { agents: AgentDirectoryEntry[]; zeroState?: boolean }) {
   const [open, setOpen] = useState(true)
   return (
     <div className="mt-2xl">
@@ -314,7 +321,7 @@ function PerformanceByAgentAccordion({ agents }: { agents: AgentDirectoryEntry[]
       {open && (
         <div className="mt-lg flex flex-col gap-lg">
           {agents.map((agent) => (
-            <AgentPerformanceCard key={agent.id} agent={agent} />
+            <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} />
           ))}
         </div>
       )}
@@ -324,7 +331,27 @@ function PerformanceByAgentAccordion({ agents }: { agents: AgentDirectoryEntry[]
 
 // Rolls up all 3 AI co-workers (Myna/operations, Jay/marketing, Robin/customer experience) into
 // one headline row, shown above the co-worker tabs on the Overview (mixed) page only.
-function AiCoworkerSummaryCard({ dateRange }: { dateRange: string }) {
+// Zero-state replacement for AiCoworkerSummaryCard — a promotional banner (overlapping co-worker
+// avatars + a savings pitch) instead of numbers that don't exist yet for a brand-new account.
+function ZeroStateSummaryBanner() {
+  return (
+    <div className="flex items-center gap-xl rounded-md border border-ai-summary-border bg-ai-summary p-2xl">
+      <div className="flex shrink-0 items-center">
+        <img src={mynaLogo} alt="" className="size-14 rounded-full border-2 border-surface" />
+        <img src={jayLogo} alt="" className="-ml-4 size-14 rounded-full border-2 border-surface" />
+        <img src={robinLogo} alt="" className="-ml-4 size-14 rounded-full border-2 border-surface" />
+      </div>
+      <div className="min-w-0">
+        <p className="m-0 text-h3 text-text-primary">Customers using AI co-workers save up to 20 hours per week, per person.</p>
+        <p className="m-0 mt-xs text-body text-text-secondary">
+          Meet Myna, Jay, and Robin — your AI co-workers, already set up and ready to start saving your team time.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function AiCoworkerSummaryCard({ dateRange, zeroState = false }: { dateRange: string; zeroState?: boolean }) {
   const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
   const jayAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing')
   const robinAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'cx')
@@ -348,6 +375,8 @@ function AiCoworkerSummaryCard({ dateRange }: { dateRange: string }) {
     { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
     { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
   ]
+
+  if (zeroState) return <ZeroStateSummaryBanner />
 
   return (
     <div className="rounded-md border border-border bg-surface p-2xl">
@@ -678,7 +707,15 @@ function SocialSection({ big = false, showJayOutcomes = false }: SocialSectionPr
 // Primary section shown at the top of each co-worker tab — the full aggregate across every agent
 // that persona owns (not the partial per-widget subsets the sections below use for their own
 // top-row outcome badges).
-function CoworkerPerformanceSection({ persona, dateRange }: { persona: AgentPersonaId; dateRange: string }) {
+function CoworkerPerformanceSection({
+  persona,
+  dateRange,
+  zeroState = false,
+}: {
+  persona: AgentPersonaId
+  dateRange: string
+  zeroState?: boolean
+}) {
   const agents = getAgentDirectory('healthcare').filter((a) => a.persona === persona)
   const runningCount = agents.filter((a) => a.running > 0).length
   const timeSavedHrs = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
@@ -695,7 +732,7 @@ function CoworkerPerformanceSection({ persona, dateRange }: { persona: AgentPers
         {COWORKER_NAME[persona]} performance
       </h3>
       <StatGroup stats={kpiStats} big />
-      <PerformanceByAgentAccordion agents={agents} />
+      <PerformanceByAgentAccordion agents={agents} zeroState={zeroState} />
     </>
   )
 }
@@ -865,6 +902,61 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
   )
 }
 
+type DataState = 'Zero state' | 'Filled data' | 'Single co-worker'
+const DATA_STATE_OPTIONS: DataState[] = ['Zero state', 'Filled data', 'Single co-worker']
+
+// Design-review toggle — lets whoever's looking at the page preview it in a different data
+// state without needing separate mocked pages. Same trigger + floating panel as the date-range
+// dropdown beside it.
+function DataStateDropdown({ value, onChange }: { value: DataState; onChange: (value: DataState) => void }) {
+  const [open, setOpen] = useState(false)
+  const { mounted, entered } = useOpenTransition(open)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+      >
+        {value}
+        <Icon name="expand_more" size={18} className="text-text-icon" />
+      </button>
+
+      {mounted && (
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div
+            className={`absolute right-0 top-full z-[110] mt-xs min-w-[180px] origin-top-right rounded-sm border border-border bg-surface p-md shadow-dropdown ${DROPDOWN_TRANSITION} ${
+              entered ? DROPDOWN_SHOWN : DROPDOWN_HIDDEN
+            }`}
+          >
+            {DATA_STATE_OPTIONS.map((opt) => {
+              const isSel = opt === value
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                    isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt}</span>
+                  {isSel && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export function OverviewFinalScreen({
   userName = 'Akhil',
   locationLabel = 'All locations',
@@ -875,6 +967,7 @@ export function OverviewFinalScreen({
 }: OverviewFinalScreenProps) {
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
   const [dateRange, setDateRange] = useState('Last week')
+  const [dataState, setDataState] = useState<DataState>('Filled data')
 
   return (
     <div className="flex h-full flex-col">
@@ -911,6 +1004,7 @@ export function OverviewFinalScreen({
                 <p className="m-0 mt-xs text-body text-text-secondary">Here are the things which need your attention</p>
               </div>
               <div className="flex items-center gap-sm">
+                <DataStateDropdown value={dataState} onChange={setDataState} />
                 <DateRangeDropdown value={dateRange} onChange={setDateRange} />
                 <button
                   type="button"
@@ -925,17 +1019,21 @@ export function OverviewFinalScreen({
 
           {showCoworkerPerformance ? (
             <>
-              <AiCoworkerSummaryCard dateRange={dateRange} />
+              <AiCoworkerSummaryCard dateRange={dateRange} zeroState={dataState === 'Zero state'} />
 
               <CoworkerSectionsCard
-                sections={[
-                  <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
-                  ...(activeCoworkerTab === 'operations'
-                    ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} />]
-                    : activeCoworkerTab === 'marketing'
-                      ? [<CoworkerPerformanceSection persona="marketing" dateRange={dateRange} />]
-                      : [<CoworkerPerformanceSection persona="cx" dateRange={dateRange} />]),
-                ]}
+                sections={
+                  dataState === 'Single co-worker'
+                    ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={false} />]
+                    : [
+                        <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
+                        ...(activeCoworkerTab === 'operations'
+                          ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={dataState === 'Zero state'} />]
+                          : activeCoworkerTab === 'marketing'
+                            ? [<CoworkerPerformanceSection persona="marketing" dateRange={dateRange} zeroState={dataState === 'Zero state'} />]
+                            : [<CoworkerPerformanceSection persona="cx" dateRange={dateRange} zeroState={dataState === 'Zero state'} />]),
+                      ]
+                }
               />
 
               {/* Same business-wide cards as the AI Overview page's "Business metrics" tab
