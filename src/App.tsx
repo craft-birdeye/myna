@@ -39,6 +39,7 @@ import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { OverviewFeedbackScreen } from './screens/OverviewFeedbackScreen'
+import { OverviewFinalScreen } from './screens/OverviewFinalScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import { AIOverviewScreen } from './screens/AIOverviewScreen'
@@ -63,6 +64,7 @@ const RAIL_GROUPS: RailGroup[] = [
     items: [
       { id: 'overview-2', label: 'Overview', icon: 'home', badge: 'New' },
       { id: 'overview-3', label: 'Overview', icon: 'home', badge: 'Post feedback' },
+      { id: 'overview-4', label: 'Overview', icon: 'home', badge: 'Final' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
       { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'Tab' },
     ],
@@ -472,7 +474,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && railActive !== 'overview-2' && railActive !== 'overview-3' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && railActive !== 'overview-2' && railActive !== 'overview-3' && railActive !== 'overview-4' && (
         railActive === 'reviews' ? (
           <SideNav
             key="reviews"
@@ -508,6 +510,8 @@ export function App() {
           <OverviewScreen showCoworkerPerformance />
         ) : railActive === 'overview-3' ? (
           <OverviewFeedbackScreen showCoworkerPerformance />
+        ) : railActive === 'overview-4' ? (
+          <OverviewFinalScreen showCoworkerPerformance />
         ) : railActive === 'settings' ? (
           settingsSubScreen?.startsWith('integration-') ? (
             <IntegrationDetailScreen
