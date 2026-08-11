@@ -670,42 +670,6 @@ function SocialSection({ big = false, showJayOutcomes = false }: SocialSectionPr
   )
 }
 
-function SurveysSection() {
-  const surveyAgents = getAgentDirectory('healthcare').filter((a) => a.category === 'Surveys AI')
-  const outcomeStats: OutcomeKpi[] = surveyAgents.map((a) => ({
-    id: a.id,
-    value: formatK(a.outcome.value),
-    label: a.outcome.label,
-    agentName: a.name,
-    agentPct: AGENT_CONTRIBUTION_PCT[a.id],
-  }))
-
-  return (
-    <>
-      <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Surveys</h3>
-      <OutcomeKpiGroup stats={outcomeStats} big />
-    </>
-  )
-}
-
-function TicketingSection() {
-  const ticketingAgents = getAgentDirectory('healthcare').filter((a) => a.category === 'Ticketing')
-  const outcomeStats: OutcomeKpi[] = ticketingAgents.map((a) => ({
-    id: a.id,
-    value: formatK(a.outcome.value),
-    label: a.outcome.label,
-    agentName: a.name,
-    agentPct: AGENT_CONTRIBUTION_PCT[a.id],
-  }))
-
-  return (
-    <>
-      <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Ticketing</h3>
-      <OutcomeKpiGroup stats={outcomeStats} big />
-    </>
-  )
-}
-
 // Primary section shown at the top of each co-worker tab — the full aggregate across every agent
 // that persona owns (not the partial per-widget subsets the sections below use for their own
 // top-row outcome badges).
@@ -962,29 +926,24 @@ export function OverviewFinalScreen({
                 sections={[
                   <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
                   ...(activeCoworkerTab === 'operations'
-                    ? [
-                        <CoworkerPerformanceSection persona="operations" dateRange={dateRange} />,
-                        <InboxSection showMynaPerformance />,
-                        <AppointmentsSection big />,
-                      ]
+                    ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} />]
                     : activeCoworkerTab === 'marketing'
-                      ? [
-                          <CoworkerPerformanceSection persona="marketing" dateRange={dateRange} />,
-                          <ReviewsSection showJayPerformance />,
-                          <div className="mt-lg">
-                            <ListingsSection big />
-                          </div>,
-                          <ReferralsSection big />,
-                          <SocialSection big showJayOutcomes />,
-                        ]
-                      : [
-                          <CoworkerPerformanceSection persona="cx" dateRange={dateRange} />,
-                          <SurveysSection />,
-                          <TicketingSection />,
-                          <InsightsAiSection />,
-                        ]),
+                      ? [<CoworkerPerformanceSection persona="marketing" dateRange={dateRange} />]
+                      : [<CoworkerPerformanceSection persona="cx" dateRange={dateRange} />]),
                 ]}
               />
+
+              {/* Same business-wide cards as the AI Overview page's "Business metrics" tab
+                  (OverviewScreen with showCoworkerPerformance off) — shown once, the same
+                  regardless of which co-worker tab above is active. */}
+              <CoworkerSectionsCard sections={[<InboxSection />]} />
+              <CoworkerSectionsCard sections={[<ReviewsSection />]} />
+              <CoworkerSectionsCard sections={[<ListingsSection />]} />
+              <CoworkerSectionsCard sections={[<ReferralsSection />]} />
+              <CoworkerSectionsCard sections={[<AppointmentsSection />]} />
+              <CoworkerSectionsCard sections={[<InboxActivitySection />]} />
+              <CoworkerSectionsCard sections={[<SocialSection />]} />
+              <CoworkerSectionsCard sections={[<InsightsAiSection />]} />
             </>
           ) : (
             <>
