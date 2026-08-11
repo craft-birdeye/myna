@@ -281,7 +281,7 @@ function CoworkerTabBar({
       {/* Full-width baseline the active tab's own accent underline sits in front of — gray under
           the inactive tabs and the empty space past the last tab, covered by the accent color
           exactly where the active tab's underline (z-10 below) overlaps it. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-border" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border" />
       {COWORKER_TAB_ORDER.map((id, i) => {
         const active = id === activeTab
         const group = PERSONA_GROUPS.find((g) => g.id === id)!
@@ -309,7 +309,7 @@ function CoworkerTabBar({
                 </span>
               </span>
               <span
-                className="absolute inset-x-0 bottom-0 z-10 h-[2px]"
+                className="absolute inset-x-0 bottom-0 z-10 h-px"
                 style={{ backgroundColor: active ? COWORKER_ACCENT[id] : 'transparent' }}
               />
             </button>
