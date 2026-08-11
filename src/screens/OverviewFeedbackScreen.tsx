@@ -277,7 +277,11 @@ function CoworkerTabBar({
   onChange: (id: AgentPersonaId) => void
 }) {
   return (
-    <div className="flex items-center gap-xs">
+    <div className="relative flex items-center gap-xs">
+      {/* Full-width baseline the active tab's own accent underline sits in front of — gray under
+          the inactive tabs and the empty space past the last tab, covered by the accent color
+          exactly where the active tab's underline (z-10 below) overlaps it. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-border" />
       {COWORKER_TAB_ORDER.map((id, i) => {
         const active = id === activeTab
         const group = PERSONA_GROUPS.find((g) => g.id === id)!
@@ -285,7 +289,7 @@ function CoworkerTabBar({
         return (
           <Fragment key={id}>
             {i > 0 && <span className="self-stretch w-px shrink-0 bg-border" />}
-            <button type="button" onClick={() => onChange(id)} className="flex flex-col items-stretch text-left">
+            <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
               <span
                 className={`flex items-center gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
                 style={active ? { backgroundColor: `${COWORKER_ACCENT[id]}1A` } : undefined}
@@ -304,7 +308,10 @@ function CoworkerTabBar({
                   </span>
                 </span>
               </span>
-              <span className="h-[2px] w-full" style={{ backgroundColor: active ? COWORKER_ACCENT[id] : 'transparent' }} />
+              <span
+                className="absolute inset-x-0 bottom-0 z-10 h-[2px]"
+                style={{ backgroundColor: active ? COWORKER_ACCENT[id] : 'transparent' }}
+              />
             </button>
           </Fragment>
         )
