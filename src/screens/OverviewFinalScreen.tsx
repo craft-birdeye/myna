@@ -108,6 +108,12 @@ function formatNumber(n: number): string {
   return String(Math.round(n))
 }
 
+// "Today"/"Last week" are short enough that hours read naturally; anything longer (Last month,
+// Last quarter, a custom range) accumulates enough hours that days is the more readable unit.
+function formatTimeSaved(hours: number, dateRange: string): string {
+  return dateRange === 'Today' || dateRange === 'Last week' ? `${hours}h` : `${(hours / 24).toFixed(1)} days`
+}
+
 // Illustrative share of each outcome's volume driven by the agent's own automated actions
 // (vs. human-assisted) — keyed by agentDirectoryData.ts's agent id.
 const AGENT_CONTRIBUTION_PCT: Record<string, string> = {
@@ -230,7 +236,7 @@ function PerformanceByAgentAccordion({ rows }: { rows: AgentOutcomeRow[] }) {
 
 // Rolls up all 3 AI co-workers (Myna/operations, Jay/marketing, Robin/customer experience) into
 // one headline row, shown above the co-worker tabs on the Overview (mixed) page only.
-function AiCoworkerSummaryCard() {
+function AiCoworkerSummaryCard({ dateRange }: { dateRange: string }) {
   const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
   const jayAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing')
   const robinAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'cx')
@@ -251,9 +257,8 @@ function AiCoworkerSummaryCard() {
   const stats: OverviewStat[] = [
     { id: 'co-workers', value: '3', label: 'Co-workers' },
     { id: 'agents', value: String(totalAgents), label: 'Agents' },
-    { id: 'time-saved', value: `${(totalHours / 24).toFixed(1)} days`, label: 'Time saved' },
+    { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
     { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
-    { id: 'agentification-rate', value: '91%', label: 'Agentification rate' },
   ]
 
   return (
@@ -616,14 +621,14 @@ function TicketingSection() {
 // Primary section shown at the top of each co-worker tab — the full aggregate across every agent
 // that persona owns (not the partial per-widget subsets the sections below use for their own
 // top-row outcome badges).
-function CoworkerPerformanceSection({ persona }: { persona: AgentPersonaId }) {
+function CoworkerPerformanceSection({ persona, dateRange }: { persona: AgentPersonaId; dateRange: string }) {
   const agents = getAgentDirectory('healthcare').filter((a) => a.persona === persona)
   const runningCount = agents.filter((a) => a.running > 0).length
   const timeSavedHrs = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const costSavedK = agents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
   const kpiStats: OverviewStat[] = [
     { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
-    { id: 'time-saved', value: `${timeSavedHrs}h`, label: 'Time saved' },
+    { id: 'time-saved', value: formatTimeSaved(timeSavedHrs, dateRange), label: 'Time saved' },
     { id: 'cost-saved', value: `$${costSavedK.toFixed(1)}K`, label: 'Cost saved' },
   ]
   const outcomeRows: AgentOutcomeRow[] = agents.map((a) => ({
@@ -871,20 +876,20 @@ export function OverviewFinalScreen({
 
           {showCoworkerPerformance ? (
             <>
-              <AiCoworkerSummaryCard />
+              <AiCoworkerSummaryCard dateRange={dateRange} />
 
               <CoworkerSectionsCard
                 sections={[
                   <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
                   ...(activeCoworkerTab === 'operations'
                     ? [
-                        <CoworkerPerformanceSection persona="operations" />,
+                        <CoworkerPerformanceSection persona="operations" dateRange={dateRange} />,
                         <InboxSection showMynaPerformance />,
                         <AppointmentsSection big />,
                       ]
                     : activeCoworkerTab === 'marketing'
                       ? [
-                          <CoworkerPerformanceSection persona="marketing" />,
+                          <CoworkerPerformanceSection persona="marketing" dateRange={dateRange} />,
                           <ReviewsSection showJayPerformance />,
                           <div className="mt-lg">
                             <ListingsSection big />
@@ -893,7 +898,7 @@ export function OverviewFinalScreen({
                           <SocialSection big showJayOutcomes />,
                         ]
                       : [
-                          <CoworkerPerformanceSection persona="cx" />,
+                          <CoworkerPerformanceSection persona="cx" dateRange={dateRange} />,
                           <SurveysSection />,
                           <TicketingSection />,
                           <InsightsAiSection />,
