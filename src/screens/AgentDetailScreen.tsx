@@ -6229,8 +6229,8 @@ function HealthcareFrontdeskCreateAgentLive({
         <span
           className="ai-gradient-icon size-10"
           style={{
-            WebkitMaskImage: `url(${iconAgentsPurple})`,
-            maskImage: `url(${iconAgentsPurple})`,
+            WebkitMaskImage: `url("${iconAgentsPurple}")`,
+            maskImage: `url("${iconAgentsPurple}")`,
           }}
           aria-hidden
         />

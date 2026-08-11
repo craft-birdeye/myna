@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Icon } from '../Icon/Icon'
 import { SendIcon } from '../../assets/SendIcon'
-import iconAgentsOutline from '../../assets/icon-agents-outline.svg'
+import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
 import type { CreateChatTurn } from '../../data/createAgentChatStore'
 import { AiBuilderPanelProps } from './AiBuilderPanel.types'
 import { useAiBuilderTrail } from './useAiBuilderTrail'
@@ -296,8 +296,8 @@ export function AiBuilderPanel({
             className="size-5 shrink-0 bg-white"
             aria-hidden="true"
             style={{
-              maskImage: `url(${iconAgentsOutline})`,
-              WebkitMaskImage: `url(${iconAgentsOutline})`,
+              maskImage: `url("${iconAgentsPurple}")`,
+              WebkitMaskImage: `url("${iconAgentsPurple}")`,
               maskSize: 'contain',
               WebkitMaskSize: 'contain',
               maskRepeat: 'no-repeat',
@@ -342,8 +342,8 @@ export function AiBuilderPanel({
                 className="ai-gradient-icon size-8"
                 aria-hidden="true"
                 style={{
-                  maskImage: 'url("/src/assets/icon-agents-purple.svg")',
-                  WebkitMaskImage: 'url("/src/assets/icon-agents-purple.svg")',
+                  maskImage: `url("${iconAgentsPurple}")`,
+                  WebkitMaskImage: `url("${iconAgentsPurple}")`,
                 }}
               />
               <p className="m-0 text-[14px] leading-6 text-text-secondary">

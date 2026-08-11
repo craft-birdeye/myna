@@ -3186,8 +3186,8 @@ export default function AgentBuilder({
                   <span
                     className="ai-gradient-icon rr-chrome-ai-fab__icon"
                     style={{
-                      WebkitMaskImage: `url(${iconAgentsPurple})`,
-                      maskImage: `url(${iconAgentsPurple})`,
+                      WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                      maskImage: `url("${iconAgentsPurple}")`,
                     }}
                     aria-hidden
                   />

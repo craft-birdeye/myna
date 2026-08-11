@@ -15,8 +15,8 @@ export default function StartNode({
         <span
           className="ai-gradient-icon start-node__icon-gradient"
           style={{
-            WebkitMaskImage: `url(${iconAgentsPurple})`,
-            maskImage: `url(${iconAgentsPurple})`,
+            WebkitMaskImage: `url("${iconAgentsPurple}")`,
+            maskImage: `url("${iconAgentsPurple}")`,
           }}
           aria-hidden
         />
