@@ -51,6 +51,7 @@ import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
+import { OverviewScreen } from './screens/OverviewScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import jayIcon from './assets/icon-jay.svg'
 import mynaIcon from './assets/icon-myna.svg'
@@ -441,7 +442,7 @@ function openDetailInNewTab(view: string, args: unknown) {
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('frontdesk')
+  const [railActive, setRailActive] = useState('overview')
   const [navActive, setNavActive] = useState(
     () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
   )
@@ -545,6 +546,7 @@ export function App() {
     railActive !== 'settings' &&
     railActive !== 'inbox' &&
     railActive !== 'agents' &&
+    railActive !== 'overview' &&
     railActive !== 'content-hub' &&
     railActive !== 'search' &&
     railActive !== 'social'
@@ -809,6 +811,15 @@ export function App() {
                       setRecommendationFocus({ instanceName, recommendationId, feedbackPrefill })
                       setNavActive(navId)
                       setRailActive('frontdesk')
+                    }}
+                  />
+                ) : railActive === 'overview' ? (
+                  <OverviewScreen
+                    key={activeProduct}
+                    product={activeProduct}
+                    onOpenAgent={(navId) => {
+                      setRailActive('frontdesk')
+                      setNavActive(navId)
                     }}
                   />
                 ) : railActive === 'agents' ? (
