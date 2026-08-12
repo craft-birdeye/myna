@@ -258,7 +258,7 @@ function AgentKpiCell({
   muted?: boolean
 }) {
   const content = (
-    <div className="min-w-[140px]">
+    <div className="min-w-[140px] text-center">
       <p className={`m-0 text-h3 ${muted ? 'text-text-secondary' : 'text-text-primary'}`}>{value}</p>
       <p className="m-0 mt-xs text-small text-text-tertiary">{label}</p>
     </div>
@@ -286,10 +286,12 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
         {zeroState ? (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
-            <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
-            <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
-            <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-xl">
+            <div className="flex flex-1 flex-wrap items-center justify-center gap-xl">
+              <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
+              <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
+              <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
+            </div>
             <div className="flex shrink-0 items-center gap-sm">
               <button
                 type="button"
@@ -309,7 +311,7 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
             </div>
           </div>
         ) : (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-xl">
             <AgentKpiCell value={String(agent.running)} label="Agents running" />
             <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
             {extraKpis.map((kpi) => (
