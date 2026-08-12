@@ -269,7 +269,7 @@ function ZeroStateEstimatesPanel({ agent }: { agent: AgentDirectoryEntry }) {
     { value: `~${agent.costSaved}`, label: 'Cost saved' },
   ]
   return (
-    <div className="inline-flex shrink-0 items-center gap-xl whitespace-nowrap rounded-sm bg-[#ECF5FD] px-xl py-sm">
+    <div className="inline-flex shrink-0 items-center gap-xl whitespace-nowrap">
       <span className="whitespace-nowrap text-body text-text-secondary">Estimates from similar businesses</span>
       <div className="h-8 w-px shrink-0 bg-border" />
       <div className="flex items-center gap-3xl">
