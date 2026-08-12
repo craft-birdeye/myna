@@ -12,4 +12,6 @@ export interface AiBuilderPanelProps {
   className?: string
   /** When true, panel fills parent shell width instead of fixed 392px. */
   fillShell?: boolean
+  /** Which edge the panel docks to (affects border + corner radius). */
+  side?: 'left' | 'right'
 }

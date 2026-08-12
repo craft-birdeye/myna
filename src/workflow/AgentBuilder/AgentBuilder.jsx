@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import LHSDrawer, {
   isFrontDeskAgent as agentNameIsFrontDesk,
+  isFrontDeskCanvasAgent,
   INITIATE_VOICE_CALL_TASK,
   REVIEWS_TASK_SUB_ITEMS,
   DELAY_VARIANT_PRESETS,
@@ -1052,6 +1053,7 @@ export default function AgentBuilder({
   const [rrAiPanelOpen, setRrAiPanelOpen] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelRendered, setRrAiPanelRendered] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelClosing, setRrAiPanelClosing] = useState(false);
+  const [paletteInstant, setPaletteInstant] = useState(false);
   const rrAiPanelRenderedRef = useRef(!!aiBuilderPanelOpenProp);
   const rrAiPanelCloseTimeoutRef = useRef(null);
   const [canvasOrientation, setCanvasOrientation] = useState('vertical');
@@ -1154,6 +1156,25 @@ export default function AgentBuilder({
     setRrAiPanelOpen(false);
     onAiBuilderPanelOpenChange?.(false);
   }, [onAiBuilderPanelOpenChange]);
+
+  const closeAiBuilderPanelInstant = useCallback(() => {
+    if (rrAiPanelCloseTimeoutRef.current) {
+      clearTimeout(rrAiPanelCloseTimeoutRef.current);
+      rrAiPanelCloseTimeoutRef.current = null;
+    }
+    rrAiPanelRenderedRef.current = false;
+    setRrAiPanelRendered(false);
+    setRrAiPanelClosing(false);
+    setRrAiPanelOpen(false);
+    onAiBuilderPanelOpenChange?.(false);
+  }, [onAiBuilderPanelOpenChange]);
+
+  /* Re-enable palette position transition after an instant AI → palette swap. */
+  useEffect(() => {
+    if (!paletteInstant) return undefined;
+    const frame = requestAnimationFrame(() => setPaletteInstant(false));
+    return () => cancelAnimationFrame(frame);
+  }, [paletteInstant, paletteSection]);
 
   /* ─── View-only: keep canvas state in sync when workflow props change ─── */
   useEffect(() => {
@@ -1306,23 +1327,27 @@ export default function AgentBuilder({
   // canvas back to the classic LHS drawer mid-edit.
   const entryAgentName = (typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName;
   const isReminderAgent = /reminder/i.test(entryAgentName);
+  const isWaitlistAgent = /\bwaitlist\b/i.test(entryAgentName);
+  const isPreVisitAgent = /\bpre-visit\b/i.test(entryAgentName);
+  const appTitleStr = typeof appTitle === 'string' ? appTitle : '';
   // Front-desk-specific behaviour (task filters, etc.) — name / parent flag.
   const isFrontDeskAgentName =
     !!showProceduresPalette ||
-    agentNameIsFrontDesk(entryAgentName) ||
-    agentNameIsFrontDesk(agentName) ||
-    agentNameIsFrontDesk(typeof appTitle === 'string' ? appTitle : '');
+    isFrontDeskCanvasAgent(entryAgentName, agentName, appTitleStr);
   const isReviewResponseAgent = /review response/i.test(entryAgentName) || /review response/i.test(agentName);
   const isReviewGenerationAgent = /review generation/i.test(entryAgentName) || /review generation/i.test(agentName);
   const isReviewsAiAgent = isReviewResponseAgent || isReviewGenerationAgent;
-  // Procedures floater: available on Front desk / Reminder / etc. — not on Reviews AI.
-  const showProceduresFloater = !isReviewsAiAgent;
+  const hideProceduresFloater =
+    isReviewsAiAgent || isWaitlistAgent || isPreVisitAgent || isReminderAgent;
+  // Procedures floater: Front desk family only — not Reviews AI, Waitlist, Pre-visit, or Reminder.
+  const showProceduresFloater =
+    !hideProceduresFloater &&
+    (isFrontDeskAgentName || showProceduresPalette == null);
   const isHcProduct = product === 'healthcare' || product === 'dental';
-  // All main AgentBuilder canvases use Reminder / Review-response floating chrome
-  // (left Trigger/Procedures/Task/Controls + right AI Builder). Classic LHS is retired.
+  // All agent canvases use floating chrome (left floater + Create with AI panel + RHS config).
   const isReviewResponseChrome = true;
 
-  // Close Procedures palette if it was open when landing on a Reviews AI canvas.
+  // Close Procedures palette if it was open when landing on a canvas without the floater.
   useEffect(() => {
     if (!showProceduresFloater && paletteSection === 'Procedures') {
       setPaletteSection(null);
@@ -2160,7 +2185,6 @@ export default function AgentBuilder({
       // Review-response chrome uses the floater palette instead — close it after drop.
       if (isReviewResponseChrome) {
         setPaletteSection(null);
-        closeAiBuilderPanel();
       } else {
         setLhsCollapsed(false);
         setLhsForceOpenSection('Tasks');
@@ -2193,7 +2217,6 @@ export default function AgentBuilder({
       setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
       if (isReviewResponseChrome) {
         setPaletteSection(null);
-        closeAiBuilderPanel();
       }
       return;
     }
@@ -2323,24 +2346,22 @@ export default function AgentBuilder({
     setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
     if (isReviewResponseChrome) {
       setPaletteSection(null);
-      closeAiBuilderPanel();
     }
-  }, [agentName, product, isReviewResponseChrome, closeAiBuilderPanel]);
+  }, [agentName, product, isReviewResponseChrome]);
 
   const handleNodeClick = useCallback((node) => {
     if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder' || node.type === 'branchCollapse') return;
     // Voice call branches are hard-coded and non-editable — block RHS open
     if (node.data?.isVoiceCallBranch) return;
-    // Node config and AI Builder share the right pane — dismiss AI when inspecting a node.
+    // AI Builder docks on the left; node config uses the right pane — both can stay open.
     setPaletteSection(null);
     setVersionHistoryOpen(false);
-    closeAiBuilderPanel();
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
     if (node.data?.title) {
       setAiNodeContext({ id: node.id, type: node.type, title: node.data.title });
     }
-  }, [closeAiBuilderPanel]);
+  }, []);
 
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
@@ -2893,7 +2914,7 @@ export default function AgentBuilder({
       )}
       {/* Cloud save / version history — matches Figma 15324:121197 */}
       <Tooltip
-        content={isReviewResponseChrome ? 'Version history' : 'Save to cloud'}
+        content="Version history"
         variant="brief"
         side="bottom"
       >
@@ -2901,37 +2922,26 @@ export default function AgentBuilder({
           type="button"
           className="ab-header-cloud-btn"
           onClick={() => {
-            if (isReviewResponseChrome) {
-              closeAiBuilderPanel();
-              setPaletteSection(null);
-              setDrawerOpen(false);
-              setVersionHistoryOpen((open) => !open);
-              return;
-            }
-            handleShare();
+            setPaletteSection(null);
+            if (!versionHistoryOpen) closeAiBuilderPanel();
+            setVersionHistoryOpen((open) => !open);
           }}
-          aria-label={isReviewResponseChrome ? 'Version history' : 'Save to cloud'}
-          aria-pressed={isReviewResponseChrome ? versionHistoryOpen : undefined}
+          aria-label="Version history"
+          aria-pressed={versionHistoryOpen}
         >
-          {isReviewResponseChrome ? (
-            <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
-          ) : (
-            <span className="material-symbols-outlined ab-header-cloud-btn__material">cloud_upload</span>
-          )}
+          <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
         </button>
       </Tooltip>
-      {isReviewResponseChrome && (
-        <Tooltip content="Run test" variant="brief" side="bottom">
-          <button
-            type="button"
-            className="ab-header-cloud-btn"
-            onClick={() => {}}
-            aria-label="Run test"
-          >
-            <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
-          </button>
-        </Tooltip>
-      )}
+      <Tooltip content="Run test" variant="brief" side="bottom">
+        <button
+          type="button"
+          className="ab-header-cloud-btn"
+          onClick={() => {}}
+          aria-label="Run test"
+        >
+          <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
+        </button>
+      </Tooltip>
       {isTemplateMode ? (
         <Button
           theme="primary"
@@ -3003,41 +3013,7 @@ export default function AgentBuilder({
   }
 
   return (
-    <div className={`faq-ab-embedded${isReviewResponseChrome ? ' faq-ab-embedded--rr-chrome' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'transparent' }}>
-      {/* ─── Embedded builder header (non–review-response) ─── */}
-      {!isReviewResponseChrome && (
-        <div className="faq-ab-header" style={{
-          height: 52,
-          borderBottom: '1px solid #e9e9eb',
-          background: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-          flexShrink: 0,
-          gap: 8,
-        }}>
-          <div className="ab-header-left">
-            {onClose && (
-              <button
-                type="button"
-                className="ab-header-back-btn"
-                onClick={onClose}
-                title="Back to agents"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
-                </svg>
-              </button>
-            )}
-            <span className="ab-header-title">{agentName || 'Untitled agent'}</span>
-            <span className={`ab-header-status ${statusBadgeClass}`}>{agentStatus}</span>
-          </div>
-          <div className="ab-header-spacer" aria-hidden />
-          {headerActions}
-        </div>
-      )}
-
+    <div className="faq-ab-embedded faq-ab-embedded--rr-chrome" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'transparent' }}>
       {/* ─── Builder body ─── */}
       <div
         className="agent-builder-wrapper"
@@ -3056,10 +3032,9 @@ export default function AgentBuilder({
           </div>
         )}
 
-        <div className={`agent-builder${isReviewResponseChrome ? ' agent-builder--rr-chrome' : ''}`}>
-          {/* Review response floating chrome */}
-          {isReviewResponseChrome && (
-            <>
+        <div className={`agent-builder agent-builder--rr-chrome${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
+          {/* Floating canvas chrome (all agents) */}
+          <>
               {onClose && (
                 <button
                   type="button"
@@ -3084,36 +3059,74 @@ export default function AgentBuilder({
               </div>
 
               {!viewOnly && (
-                <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
-                  {[
-                    { id: 'Trigger', src: iconRrTrigger, label: 'Trigger' },
-                    ...(showProceduresFloater
-                      ? [{ id: 'Procedures', src: iconRrProcedures, label: 'Procedures' }]
-                      : []),
-                    { id: 'Tasks', src: iconRrTasks, label: 'Task' },
-                    { id: 'Controls', src: iconRrControls, label: 'Controls' },
-                  ].map((item) => (
-                    <Tooltip key={item.id} content={item.label} variant="brief" side="right">
-                      <button
-                        type="button"
-                        className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
-                        aria-label={item.label}
-                        aria-pressed={paletteSection === item.id}
-                        onClick={() => {
-                          closeAiBuilderPanel();
-                          setVersionHistoryOpen(false);
-                          setPaletteSection((prev) => (prev === item.id ? null : item.id));
+                <div className="rr-chrome-left-stack">
+                  <Tooltip content="Create with AI" variant="brief" side="right">
+                    <button
+                      type="button"
+                      className={`rr-chrome-left-ai${rrAiPanelOpen ? ' rr-chrome-left-ai--active' : ''}`}
+                      aria-label="Create with AI"
+                      aria-pressed={rrAiPanelOpen}
+                      onClick={() => {
+                        setPaletteSection(null);
+                        setVersionHistoryOpen(false);
+                        setRrAiPanelOpen((open) => {
+                          const nextOpen = !open;
+                          if (nextOpen) {
+                            onAiBuilderPanelOpenChange?.(true);
+                          } else {
+                            onAiBuilderPanelOpenChange?.(false);
+                          }
+                          return nextOpen;
+                        });
+                      }}
+                    >
+                      <span
+                        className="ai-gradient-icon rr-chrome-left-floater__icon rr-chrome-left-floater__icon--ai"
+                        style={{
+                          WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                          maskImage: `url("${iconAgentsPurple}")`,
                         }}
-                      >
-                        <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
-                      </button>
-                    </Tooltip>
-                  ))}
+                        aria-hidden
+                      />
+                    </button>
+                  </Tooltip>
+                  <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
+                    {[
+                      { id: 'Trigger', src: iconRrTrigger, label: 'Trigger' },
+                      ...(showProceduresFloater
+                        ? [{ id: 'Procedures', src: iconRrProcedures, label: 'Procedures' }]
+                        : []),
+                      { id: 'Tasks', src: iconRrTasks, label: 'Task' },
+                      { id: 'Controls', src: iconRrControls, label: 'Controls' },
+                    ].map((item) => (
+                      <Tooltip key={item.id} content={item.label} variant="brief" side="right">
+                        <button
+                          type="button"
+                          className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
+                          aria-label={item.label}
+                          aria-pressed={paletteSection === item.id}
+                          onClick={() => {
+                            setVersionHistoryOpen(false);
+                            const opening = paletteSection !== item.id;
+                            if (opening && rrAiPanelOpen) {
+                              setPaletteInstant(true);
+                              closeAiBuilderPanelInstant();
+                            } else if (opening) {
+                              closeAiBuilderPanel();
+                            }
+                            setPaletteSection((prev) => (prev === item.id ? null : item.id));
+                          }}
+                        >
+                          <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                        </button>
+                      </Tooltip>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {paletteSection && !viewOnly && (
-                <div className="rr-chrome-palette">
+                <div className={`rr-chrome-palette${paletteInstant ? ' rr-chrome-palette--instant' : ''}`}>
                   <LHSDrawer
                     key={paletteSection}
                     defaultTab="Create manually"
@@ -3128,7 +3141,6 @@ export default function AgentBuilder({
                     onCollapse={() => setPaletteSection(null)}
                     onDropNode={handleDropNode}
                     onProcedureClick={(procedureId) => {
-                      closeAiBuilderPanel();
                       setLhsPreviewProcedureId(procedureId);
                       setSelectedNodeId(null);
                       setActiveProcedureId(null);
@@ -3143,7 +3155,7 @@ export default function AgentBuilder({
               )}
 
               {rrAiPanelRendered && !viewOnly && (
-                <div className={`agent-builder__rhs agent-builder__rhs--ai${rrAiPanelClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}>
+                <div className={`agent-builder__lhs-ai${rrAiPanelClosing ? ' agent-builder__lhs-ai--closing' : ' agent-builder__lhs-ai--opening'}`}>
                   <AiBuilderPanel
                     agentName={(typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName}
                     onClose={closeAiBuilderPanel}
@@ -3157,96 +3169,12 @@ export default function AgentBuilder({
                     }
                     className="rr-chrome-ai-panel"
                     fillShell
+                    side="left"
                   />
                 </div>
               )}
 
-              {!viewOnly && !rrAiPanelRendered && (
-                <button
-                  type="button"
-                  className={`rr-chrome-ai-fab${(drawerOpen || rrAiPanelOpen) ? ' rr-chrome-ai-fab--with-rhs' : ''}`}
-                  onClick={() => {
-                    setPaletteSection(null);
-                    setVersionHistoryOpen(false);
-                    setRrAiPanelOpen((open) => {
-                      const nextOpen = !open;
-                      if (nextOpen) {
-                        setDrawerOpen(false);
-                        setSelectedNodeId(null);
-                        setLhsPreviewProcedureId(null);
-                        setActiveProcedureId(null);
-                        onAiBuilderPanelOpenChange?.(true);
-                      } else {
-                        onAiBuilderPanelOpenChange?.(false);
-                      }
-                      return nextOpen;
-                    });
-                  }}
-                >
-                  <span
-                    className="ai-gradient-icon rr-chrome-ai-fab__icon"
-                    style={{
-                      WebkitMaskImage: `url("${iconAgentsPurple}")`,
-                      maskImage: `url("${iconAgentsPurple}")`,
-                    }}
-                    aria-hidden
-                  />
-                  Create with AI
-                </button>
-              )}
-            </>
-          )}
-
-          {!hideLhs && !isReviewResponseChrome && (
-            <div className={`agent-builder__lhs${lhsCollapsed ? ' agent-builder__lhs--collapsed' : ''}`}>
-              <LHSDrawer
-                defaultTab={lhsDefaultTab}
-                showTabs={!viewOnly}
-                defaultOpenSection={defaultOpenSection}
-                forceOpenSection={lhsForceOpenSection}
-                onForceOpenSectionHandled={() => setLhsForceOpenSection(null)}
-                viewOnly={viewOnly}
-                product={product}
-                agentName={agentName}
-                procedures={procedures}
-                aiTranscript={aiTranscript}
-                existingAgent={existingAgent}
-                onOpenAiFullscreen={viewOnly ? undefined : onOpenAiFullscreen}
-                onCollapse={viewOnly ? undefined : () => setLhsCollapsed(true)}
-                onDropNode={viewOnly ? undefined : handleDropNode}
-                nodeContext={aiNodeContext}
-                onClearNodeContext={() => setAiNodeContext(null)}
-                onProcedureClick={viewOnly ? undefined : (procedureId) => {
-                  setLhsPreviewProcedureId(procedureId);
-                  setSelectedNodeId(null);
-                  setActiveProcedureId(null);
-                  setDrawerOpen(true);
-                }}
-              />
-            </div>
-          )}
-
-          {!hideLhs && lhsCollapsed && !isReviewResponseChrome && (
-            <button
-              type="button"
-              className="ab-lhs-expand-pill"
-              onClick={() => setLhsCollapsed(false)}
-              aria-label="Open editor"
-              title="Open editor"
-            >
-              <span className="material-symbols-outlined" aria-hidden>
-                left_panel_open
-              </span>
-              <span className="ab-lhs-expand-pill__label">Editor</span>
-            </button>
-          )}
-
-          {hideLhs && !isReviewResponseChrome && (
-            <div
-              className={`agent-builder__ai-panel-spacer${createAiPanelOpen ? ' agent-builder__ai-panel-spacer--open' : ''}`}
-              aria-hidden
-            />
-          )}
+          </>
 
           <div className={`agent-builder__canvas${drawerOpen ? ' agent-builder__canvas--with-rhs' : ''}`}>
             <FlowCanvas
@@ -3263,7 +3191,7 @@ export default function AgentBuilder({
               viewOnly={viewOnly}
               product={product}
               agentName={agentName}
-              rrChrome={isReviewResponseChrome}
+              rrChrome
               initialZoom={initialZoom}
               runDisabled={runDisabled}
               onEdit={onEdit}

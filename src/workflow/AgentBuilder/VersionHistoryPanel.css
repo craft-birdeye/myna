@@ -3,13 +3,13 @@
 .rr-version-history {
   position: absolute;
   top: 72px;
-  left: 76px;
+  left: var(--rr-chrome-lhs-panel-left, 76px);
   bottom: 16px;
   z-index: 56;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  width: 360px;
+  width: var(--rr-chrome-lhs-panel-width, 360px);
   max-height: calc(100% - 88px);
   overflow: hidden;
   border: 1px solid #e5e9f0;

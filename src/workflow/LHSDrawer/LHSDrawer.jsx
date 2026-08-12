@@ -488,6 +488,24 @@ export function isFrontDeskAgent(agentName = '') {
   return /front\s*desk/.test(name) || name.includes('frontdesk');
 }
 
+/** Front desk library template titles (Use agent from the Front desk agent library tab). */
+const FRONT_DESK_LIBRARY_TITLES = new Set([
+  'Routing and triage',
+  'New patient intake',
+  'Patient scheduling',
+  'Established patient scheduling',
+  'Urgent escalations',
+]);
+
+export function isFrontDeskLibraryTemplate(agentName = '') {
+  return FRONT_DESK_LIBRARY_TITLES.has(String(agentName).trim());
+}
+
+/** True when the canvas belongs to the front desk agent family (base, regional, create-flow, or library template). */
+export function isFrontDeskCanvasAgent(...names) {
+  return names.some((name) => isFrontDeskAgent(name) || isFrontDeskLibraryTemplate(name));
+}
+
 /** Remove task sub-items unavailable for the current agent. */
 export function filterTaskItemsForAgent(items = [], agentName = '') {
   if (!isFrontDeskAgent(agentName)) return items;

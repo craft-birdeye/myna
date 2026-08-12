@@ -6982,10 +6982,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
-    // Floating chrome uses the right AI Builder panel as the only chat surface —
-    // never show the left Create with AI floater beside the canvas.
+    // Floating chrome: Create with AI lives on the canvas (sparkle + LHS panel).
     setCreateLeftPaneCollapsed(true)
-    setCreateAiBuilderPanelOpen(false)
+    setCreateAiBuilderPanelOpen(true)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
@@ -7535,8 +7534,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     const ghostwriterShellTitle = isReviewsCreateFlow
       ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
       : createWorkflowAgentName
-    // Canvas + docked AI Builder only — no left Create with AI floater.
-    const hideCreateLeftFloater = createWorkflowOpen && isReviewResponse
+    // Canvas uses floating chrome — hide the legacy create-flow LHS when the workflow is open.
+    const hideCreateLeftFloater = createWorkflowOpen
 
     return (
       <div className="flex h-full">

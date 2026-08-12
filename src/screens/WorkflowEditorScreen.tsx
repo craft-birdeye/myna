@@ -13,6 +13,7 @@ import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
+import { isFrontDeskCanvasAgent } from '../workflow/LHSDrawer/LHSDrawer'
 
 // Cast to accept any props so TypeScript doesn't complain about JSX prop types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,12 +126,8 @@ export function WorkflowEditorScreen({
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'
-  // Any Front desk canvas (base agent, regional instance, or create-flow title).
-  const isFrontDeskAgent =
-    agentBaseName === 'Front desk agent' ||
-    /front\s*desk|frontdesk/i.test(agentBaseName) ||
-    /front\s*desk|frontdesk/i.test(agentName) ||
-    /front\s*desk|frontdesk/i.test(shownName)
+  // Any Front desk canvas (base agent, regional instance, create-flow title, or library template).
+  const isFrontDeskAgent = isFrontDeskCanvasAgent(agentBaseName, agentName, shownName)
   const filteredProcedures = procedures.filter((p) => {
     if (!isHCProduct) return p.category !== 'Healthcare Frontdesk' && p.category !== 'Healthcare Pre-visit'
     if (isPreVisit) return p.category === 'Healthcare Pre-visit'

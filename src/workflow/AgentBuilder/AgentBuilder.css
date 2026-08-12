@@ -812,6 +812,8 @@
 
 .agent-builder--rr-chrome {
   position: relative;
+  --rr-chrome-lhs-panel-left: 76px;
+  --rr-chrome-lhs-panel-width: 360px;
 }
 
 .agent-builder--rr-chrome .react-flow__node {
@@ -834,6 +836,7 @@
 .agent-builder--rr-chrome .agent-builder__rhs {
   box-shadow: none;
   border-radius: 12px;
+  z-index: 56;
 }
 
 /* Idle canvas +: always grey (white fill). Blue is ONLY while .flow-canvas--lhs-dragging. */
@@ -1097,13 +1100,42 @@
   background: #c69204;
 }
 
-/* Figma Agent ARC 15324:293284 — pad/gap + hover chip + right tooltip */
-.rr-chrome-left-floater {
+/* Left AI sparkle + Add-nodes floater stack (vertically centered) */
+.rr-chrome-left-stack {
   position: absolute;
   top: 50%;
   left: 16px;
   transform: translateY(-50%);
   z-index: 55;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.rr-chrome-left-ai {
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #f0f2f5;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  cursor: pointer;
+}
+
+.rr-chrome-left-ai:hover,
+.rr-chrome-left-ai--active {
+  background: #f9f7fd;
+}
+
+/* Figma Agent ARC 15324:293284 — pad/gap + hover chip + right tooltip */
+.rr-chrome-left-floater {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -1139,6 +1171,11 @@
   pointer-events: none;
 }
 
+.rr-chrome-left-floater__icon--ai {
+  width: 20px;
+  height: 20px;
+}
+
 .rr-chrome-left-floater__btn:hover,
 .rr-chrome-left-floater__btn--active {
   background: #f0f2f5;
@@ -1159,6 +1196,18 @@
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
   display: flex;
   flex-direction: column;
+  transition: left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Shift node palette right when Create with AI is open so both stay visible */
+.agent-builder--lhs-ai-open .rr-chrome-palette {
+  left: calc(var(--rr-chrome-lhs-panel-left) + var(--rr-chrome-lhs-panel-width) + 12px);
+}
+
+/* Instant swap from Create with AI → Trigger/Tasks/Procedures/Controls (no slide). */
+.agent-builder--palette-instant .rr-chrome-palette,
+.rr-chrome-palette--instant {
+  transition: none !important;
 }
 
 .rr-chrome-palette .lhs-drawer {
@@ -1168,6 +1217,52 @@
   border: none;
   border-radius: 6px;
   box-shadow: none;
+}
+
+/* Same shell placement as .rr-version-history */
+.agent-builder__lhs-ai {
+  position: absolute;
+  top: 72px;
+  left: var(--rr-chrome-lhs-panel-left);
+  bottom: 16px;
+  z-index: 56;
+  box-sizing: border-box;
+  width: var(--rr-chrome-lhs-panel-width);
+  max-height: calc(100% - 88px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes agent-builder-lhs-slide-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes agent-builder-lhs-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.agent-builder__lhs-ai--opening {
+  animation: agent-builder-lhs-slide-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.agent-builder__lhs-ai--closing {
+  animation: agent-builder-lhs-slide-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
 }
 
 .rr-chrome-right-panel {
@@ -1193,40 +1288,3 @@
   overflow: hidden !important;
 }
 
-.rr-chrome-ai-fab {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  z-index: 55;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
-  cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-  line-height: 20px;
-  letter-spacing: -0.28px;
-  color: #6834b7;
-  transition: right 0.25s ease;
-}
-
-/* Sit left of the 390px RHS (right: 8px) with a 16px gap — keep in sync with
-   .flow-canvas__toolbar-anchor--rr-chrome when canvas has --with-rhs */
-.rr-chrome-ai-fab--with-rhs {
-  right: 414px;
-}
-
-.rr-chrome-ai-fab .rr-chrome-ai-fab__icon {
-  width: 20px;
-  height: 20px;
-}
-
-.rr-chrome-ai-fab:hover {
-  background: #f9f7fd;
-}

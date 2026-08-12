@@ -265,6 +265,7 @@ export function AiBuilderPanel({
   onSend,
   className = '',
   fillShell = false,
+  side = 'right',
 }: AiBuilderPanelProps) {
   const [draft, setDraft] = useState('')
   const { trail, send, hasMessages } = useAiBuilderTrail(agentName)
@@ -288,7 +289,9 @@ export function AiBuilderPanel({
 
   return (
     <aside
-      className={`flex h-full ${fillShell ? 'w-full' : 'w-[392px]'} shrink-0 flex-col rounded-tl-xl border-l border-border bg-surface shadow-modal ${className}`.trim()}
+      className={`flex h-full ${fillShell ? 'w-full' : 'w-[392px]'} shrink-0 flex-col bg-surface shadow-modal ${
+        side === 'left' ? 'rounded-tr-xl border-r border-border' : 'rounded-tl-xl border-l border-border'
+      } ${className}`.trim()}
     >
       <div className="flex shrink-0 items-center gap-sm bg-gradient-to-r from-violet-600 to-blue-500 px-lg py-md">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white/15">
@@ -308,13 +311,12 @@ export function AiBuilderPanel({
           />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="m-0 text-body text-white">AI Builder</p>
-          <p className="m-0 text-small text-white/80">Describe changes — I&apos;ll build them</p>
+          <p className="m-0 text-body text-white">Create with AI</p>
         </div>
         {onExpand && (
           <button
             type="button"
-            aria-label="Expand AI Builder"
+            aria-label="Expand Create with AI"
             onClick={onExpand}
             className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
           >
@@ -323,7 +325,7 @@ export function AiBuilderPanel({
         )}
         <button
           type="button"
-          aria-label="Close AI Builder"
+          aria-label="Close Create with AI"
           onClick={onClose}
           className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
         >
