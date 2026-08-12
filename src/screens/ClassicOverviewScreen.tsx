@@ -259,14 +259,27 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
   )
 }
 
-// Zero-state KPI pill — same value/label shape as AgentKpiCell, but wrapped in the same light-grey
-// chip background as the "Estimates from similar businesses" chip it sits alongside, so the whole
-// row reads as one family of illustrative estimates.
-function ZeroStateKpiChip({ value, label }: { value: string; label: string }) {
+// Zero-state estimates panel — a single light-blue pill (hugs its own content, doesn't stretch)
+// with the "Estimates from similar businesses" caption on the left and the three illustrative
+// "~" KPIs after it, all inside the one box instead of separate chips per KPI.
+function ZeroStateEstimatesPanel({ agent }: { agent: AgentDirectoryEntry }) {
+  const kpis = [
+    { value: `~${formatK(agent.outcome.value)}`, label: agent.outcome.label },
+    { value: `~${agent.timeSaved}`, label: 'Time saved' },
+    { value: `~${agent.costSaved}`, label: 'Cost saved' },
+  ]
   return (
-    <div className="flex flex-col items-center gap-[2px] rounded-sm bg-chip-neutral-bg px-lg py-sm">
-      <p className="m-0 text-h3 text-text-secondary">{value}</p>
-      <p className="m-0 text-small text-text-tertiary">{label}</p>
+    <div className="inline-flex flex-wrap items-center gap-lg rounded-sm bg-chip-info-bg px-lg py-sm">
+      <span className="whitespace-nowrap text-body text-text-secondary">Estimates from similar businesses</span>
+      <div className="h-8 w-px shrink-0 bg-border" />
+      <div className="flex flex-wrap items-center gap-xl">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className="text-center">
+            <p className="m-0 text-h3 text-text-secondary">{kpi.value}</p>
+            <p className="m-0 text-small text-text-tertiary">{kpi.label}</p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -317,11 +330,8 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
       </div>
 
       {zeroState && (
-        <div className="mt-xl flex flex-wrap items-center justify-center gap-md">
-          <ZeroStateKpiChip value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} />
-          <ZeroStateKpiChip value={`~${agent.timeSaved}`} label="Time saved" />
-          <ZeroStateKpiChip value={`~${agent.costSaved}`} label="Cost saved" />
-          <Chip label="Estimates from similar businesses" variant="neutral" />
+        <div className="mt-xl flex justify-center">
+          <ZeroStateEstimatesPanel agent={agent} />
         </div>
       )}
 
