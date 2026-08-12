@@ -674,7 +674,7 @@ function ReviewsSection({ showJayPerformance = false }: ReviewsSectionProps) {
           <div className="grid shrink-0 grid-cols-2 gap-x-3xl gap-y-xl">
             {OVERVIEW_REVIEWS_STATS.map((s) => (
               <div key={s.id}>
-                <p className={`m-0 whitespace-nowrap text-h3 ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
+                <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
                 <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
               </div>
             ))}
@@ -685,7 +685,7 @@ function ReviewsSection({ showJayPerformance = false }: ReviewsSectionProps) {
   )
 }
 
-function ListingsSection({ big = false }: { big?: boolean }) {
+function ListingsSection({ big = true }: { big?: boolean }) {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Listings</h3>
@@ -698,7 +698,7 @@ function ListingsSection({ big = false }: { big?: boolean }) {
   )
 }
 
-function ReferralsSection({ big = false }: { big?: boolean }) {
+function ReferralsSection({ big = true }: { big?: boolean }) {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Referrals</h3>
@@ -712,7 +712,9 @@ function AppointmentsSection({ big = false }: { big?: boolean }) {
     return (
       <>
         <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Appointments</h3>
-        <StatGroup stats={OVERVIEW_APPOINTMENTS_STATS} big={big} />
+        {/* Big text regardless of the `big` prop — `big` here also picks the agent-badged
+            structural variant below, which isn't wanted for the plain business-metrics card. */}
+        <StatGroup stats={OVERVIEW_APPOINTMENTS_STATS} big />
       </>
     )
   }
@@ -733,7 +735,7 @@ function AppointmentsSection({ big = false }: { big?: boolean }) {
   )
 }
 
-function InboxActivitySection({ big = false }: { big?: boolean }) {
+function InboxActivitySection({ big = true }: { big?: boolean }) {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
@@ -753,7 +755,7 @@ interface SocialSectionProps {
 
 // Social AI half of Jay (Marketing) — Reviews AI half (Reviews responded/New reviews) lives on
 // the Reviews section instead. See PERSONA_GROUPS in agentDirectoryData.ts.
-function SocialSection({ big = false, showJayOutcomes = false }: SocialSectionProps) {
+function SocialSection({ big = true, showJayOutcomes = false }: SocialSectionProps) {
   const socialAgents = showJayOutcomes
     ? getAgentDirectory('healthcare').filter((a) => a.id === 'social-publishing' || a.id === 'social-engagement')
     : []
@@ -874,7 +876,7 @@ function InsightsAiSection() {
       <div className="grid grid-cols-3 gap-3xl">
         {OVERVIEW_UNDERSTANDING_SCORES.map((score) => (
           <div key={score.id}>
-            <p className="m-0 text-h3 text-text-primary">{score.value}</p>
+            <p className="m-0 text-display text-text-primary">{score.value}</p>
             <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">{score.label}</p>
           </div>
         ))}
