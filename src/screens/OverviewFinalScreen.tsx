@@ -393,15 +393,6 @@ function ZeroStateSummaryBanner({
           </p>
         </div>
       )}
-      {compact && (
-        <button
-          type="button"
-          className="flex h-9 shrink-0 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-        >
-          <Icon name="add" size={18} />
-          Create agent
-        </button>
-      )}
       {showDemoCta && (
         <button
           type="button"
@@ -488,24 +479,18 @@ function CoworkerTabBar({
 }) {
   return (
     <div className="relative flex items-center gap-xs">
-      {/* Full-width baseline the active tab's own accent underline sits in front of — gray under
-          the inactive tabs and the empty space past the last tab, covered by the accent color
-          exactly where the active tab's underline (z-10 below) overlaps it. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border" />
       {COWORKER_TAB_ORDER.map((id, i) => {
         const active = id === activeTab
         const group = PERSONA_GROUPS.find((g) => g.id === id)!
         const agentCount = getAgentDirectory('healthcare').filter((a) => a.persona === id).length
         return (
           <Fragment key={id}>
-            {i > 0 && <span className="self-stretch w-px shrink-0 bg-border" />}
+            {i > 0 && <span className="h-6 w-px shrink-0 bg-border" />}
             <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
               <span
-                className={`flex items-center gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
-                style={active ? { backgroundColor: `${COWORKER_ACCENT[id]}1A` } : undefined}
+                className={`flex items-start gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
               >
-                {/* Sized to match the label + subtext text block's combined height (20px + 2px gap + 18px = 40px). */}
-                <img src={COWORKER_LOGO[id]} alt="" className="size-10 shrink-0 rounded-full" />
+                <img src={COWORKER_LOGO[id]} alt="" className="size-7 shrink-0 rounded-full" />
                 <span className="flex flex-col gap-[2px]">
                   <span
                     className={`text-body ${active ? '' : 'text-text-secondary'}`}
@@ -1106,7 +1091,7 @@ export function OverviewFinalScreen({
   hideBanner = false,
 }: OverviewFinalScreenProps) {
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
-  const [dateRange, setDateRange] = useState('Last week')
+  const [dateRange, setDateRange] = useState('Last month')
   const [dataState, setDataState] = useState<DataState>('Current')
   const zeroState = dataState === 'Zero state'
   const showPromoBanner = !hideBanner && dataState === 'Current'

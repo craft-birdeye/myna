@@ -542,7 +542,7 @@ export function CoworkersOverviewScreen({
   // No status-filter UI on this page (removed in favor of "Switch to classic overview"), so this
   // always shows every agent rather than defaulting to just the running ones.
   const [statusFilter] = useState('All agents')
-  const [dateRange, setDateRange] = useState('Last week')
+  const [dateRange, setDateRange] = useState('Last month')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
   const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
