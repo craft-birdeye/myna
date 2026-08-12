@@ -944,6 +944,8 @@ export default function AgentBuilder({
   onEdit,
   onView,
   viewOnly = false,
+  /** View-only canvases that should show edit/run actions instead of the name + status chrome. */
+  viewChromeActions = false,
   product = 'automotive',
   procedures = null,
   onAddProcedure,
@@ -2851,12 +2853,39 @@ export default function AgentBuilder({
     );
   };
 
-  /* ─── Header actions: Publish + three-dots menu (or view-only badge) ─── */
-  const headerActions = viewOnly ? (
-    <div className="ab-view-badge">
-      <span className="material-symbols-outlined">visibility</span>
-      View only
+  /* ─── Header actions: Publish + three-dots menu (or view-only chrome) ─── */
+  const viewChromeButtons = (
+    <div className="ab-header-actions">
+      <Tooltip content="Edit workflow" variant="brief" side="bottom">
+        <button
+          type="button"
+          className="ab-header-cloud-btn"
+          onClick={onEdit}
+          aria-label="Edit workflow"
+        >
+          <span className="material-symbols-outlined ab-header-cloud-btn__material" aria-hidden>edit</span>
+        </button>
+      </Tooltip>
+      <Tooltip content="Run test" variant="brief" side="bottom">
+        <button
+          type="button"
+          className="ab-header-cloud-btn"
+          onClick={() => {}}
+          aria-label="Run test"
+        >
+          <span className="material-symbols-outlined ab-header-cloud-btn__material ab-header-cloud-btn__material--play" aria-hidden>play_arrow</span>
+        </button>
+      </Tooltip>
     </div>
+  );
+
+  const headerActions = viewOnly ? (
+    viewChromeActions ? viewChromeButtons : (
+      <div className="ab-view-badge">
+        <span className="material-symbols-outlined">visibility</span>
+        View only
+      </div>
+    )
   ) : (
     <div className="ab-header-actions">
       {issueCount > 0 && (
@@ -3019,19 +3048,6 @@ export default function AgentBuilder({
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        {viewOnly && (
-          <div className="ab-view-banner">
-            <span className="material-symbols-outlined">visibility</span>
-            <span>You&apos;re viewing a shared workflow. Editing is disabled.</span>
-            <a
-              className="ab-view-banner__link"
-              href={`mailto:?subject=Request edit access – ${agentName}`}
-            >
-              Request edit access
-            </a>
-          </div>
-        )}
-
         <div className={`agent-builder agent-builder--rr-chrome${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
@@ -3049,12 +3065,16 @@ export default function AgentBuilder({
                 </button>
               )}
 
-              <div className="rr-chrome-top">
-                <RrChromeAgentTitle text={agentName || 'Untitled agent'} />
-                <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
-                  {agentStatus}
-                </span>
-                <div className="rr-chrome-top__spacer" aria-hidden />
+              <div className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}`}>
+                {!(viewOnly && viewChromeActions) && (
+                  <>
+                    <RrChromeAgentTitle text={agentName || 'Untitled agent'} />
+                    <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                      {agentStatus}
+                    </span>
+                    <div className="rr-chrome-top__spacer" aria-hidden />
+                  </>
+                )}
                 {headerActions}
               </div>
 
