@@ -367,18 +367,27 @@ function ZeroStateSummaryBanner({
         <img src={jayLogo} alt="" className={`-ml-3 ${avatarSize} rounded-full border-2 border-surface`} />
         <img src={robinLogo} alt="" className={`-ml-3 ${avatarSize} rounded-full border-2 border-surface`} />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className={`m-0 text-text-primary ${compact ? 'text-body' : 'text-h3'}`}>
-          Customers using AI co-workers save up to 20 hours per week.
+      {compact ? (
+        <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+          AI co-workers save up to 20 hours a week — set up yours and start saving today.
         </p>
-        {compact ? (
-          <p className="m-0 mt-xs text-body text-text-secondary">Set up your agents and start saving right away.</p>
-        ) : (
+      ) : (
+        <div className="min-w-0 flex-1">
+          <p className="m-0 text-h3 text-text-primary">Customers using AI co-workers save up to 20 hours per week.</p>
           <p className="m-0 mt-xs text-body text-text-secondary">
             Set up Myna, Jay, and Robin in minutes — and start saving time from day one.
           </p>
-        )}
-      </div>
+        </div>
+      )}
+      {compact && (
+        <button
+          type="button"
+          className="flex h-9 shrink-0 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+        >
+          <Icon name="add" size={18} />
+          Create agent
+        </button>
+      )}
       {showDemoCta && (
         <button
           type="button"
