@@ -419,8 +419,8 @@ function AiCoworkerSummaryCard({ dateRange, zeroState = false }: { dateRange: st
     ? [
         { id: 'co-workers', value: '3', label: 'Co-workers' },
         { id: 'agents', value: '0', label: 'Agents' },
-        { id: 'time-saved', value: '~85h', label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
-        { id: 'cost-saved', value: '~$6.2K', label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'time-saved', value: `~${formatTimeSaved(totalHours, dateRange)}`, label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'cost-saved', value: `~$${totalCostK.toFixed(1)}K`, label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
       ]
     : [
         { id: 'co-workers', value: '3', label: 'Co-workers' },
@@ -763,8 +763,8 @@ function CoworkerPerformanceSection({
   const kpiStats: OverviewStat[] = zeroState
     ? [
         { id: 'agents-running', value: '0', label: 'Agents running' },
-        { id: 'time-saved', value: '~35h', label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
-        { id: 'cost-saved', value: '~$2.4K', label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'time-saved', value: `~${formatTimeSaved(timeSavedHrs, dateRange)}`, label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'cost-saved', value: `~$${costSavedK.toFixed(1)}K`, label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
       ]
     : [
         { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
