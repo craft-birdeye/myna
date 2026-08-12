@@ -371,15 +371,7 @@ function CoworkerTabBar({
               <span
                 className={`flex items-center gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
               >
-                {id === 'all' ? (
-                  <span className="flex shrink-0 items-center">
-                    <img src={mynaLogo} alt="" className="size-7 rounded-full border-2 border-surface" />
-                    <img src={jayLogo} alt="" className="-ml-2 size-7 rounded-full border-2 border-surface" />
-                    <img src={robinLogo} alt="" className="-ml-2 size-7 rounded-full border-2 border-surface" />
-                  </span>
-                ) : (
-                  <img src={COWORKER_LOGO[id]} alt="" className="size-10 shrink-0 rounded-full" />
-                )}
+                {id !== 'all' && <img src={COWORKER_LOGO[id]} alt="" className="size-10 shrink-0 rounded-full" />}
                 <span className="flex flex-col gap-[2px]">
                   <span className={`text-body ${active ? '' : 'text-text-secondary'}`} style={active ? { color: accent } : undefined}>
                     {name}
