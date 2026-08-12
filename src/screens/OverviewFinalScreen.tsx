@@ -913,8 +913,10 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
   )
 }
 
-type DataState = 'Zero state' | 'Filled data' | 'Single co-worker'
-const DATA_STATE_OPTIONS: DataState[] = ['Zero state', 'Filled data', 'Single co-worker']
+type DataState = 'Zero state' | 'Filled data' | 'Single co-worker' | 'Current'
+// "Current" is a duplicate of "Zero state" (same rendering) kept as its own selectable option —
+// see the `zeroState` derivation in OverviewFinalScreen below.
+const DATA_STATE_OPTIONS: DataState[] = ['Zero state', 'Filled data', 'Single co-worker', 'Current']
 
 // Design-review toggle — lets whoever's looking at the page preview it in a different data
 // state without needing separate mocked pages. Same trigger + floating panel as the date-range
@@ -979,6 +981,7 @@ export function OverviewFinalScreen({
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
   const [dateRange, setDateRange] = useState('Last week')
   const [dataState, setDataState] = useState<DataState>('Filled data')
+  const zeroState = dataState === 'Zero state' || dataState === 'Current'
 
   return (
     <div className="flex h-full flex-col">
@@ -1030,7 +1033,7 @@ export function OverviewFinalScreen({
 
           {showCoworkerPerformance ? (
             <>
-              <AiCoworkerSummaryCard dateRange={dateRange} zeroState={dataState === 'Zero state'} />
+              <AiCoworkerSummaryCard dateRange={dateRange} zeroState={zeroState} />
 
               <CoworkerSectionsCard
                 sections={
@@ -1039,10 +1042,10 @@ export function OverviewFinalScreen({
                     : [
                         <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
                         ...(activeCoworkerTab === 'operations'
-                          ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={dataState === 'Zero state'} />]
+                          ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={zeroState} />]
                           : activeCoworkerTab === 'marketing'
-                            ? [<CoworkerPerformanceSection persona="marketing" dateRange={dateRange} zeroState={dataState === 'Zero state'} />]
-                            : [<CoworkerPerformanceSection persona="cx" dateRange={dateRange} zeroState={dataState === 'Zero state'} />]),
+                            ? [<CoworkerPerformanceSection persona="marketing" dateRange={dateRange} zeroState={zeroState} />]
+                            : [<CoworkerPerformanceSection persona="cx" dateRange={dateRange} zeroState={zeroState} />]),
                       ]
                 }
               />
