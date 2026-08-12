@@ -279,17 +279,8 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
 // same fields (category, running/paused status, name, description, KPIs), just laid out across
 // the full card width instead of a grid cell. The KPI row is a flex-wrap, not a fixed grid, so
 // more KPIs can be appended per agent later without needing a layout change.
-function AgentPerformanceCard({
-  agent,
-  zeroState = false,
-  configured = true,
-}: {
-  agent: AgentDirectoryEntry
-  zeroState?: boolean
-  /** Zero state only — false renders a "Create agent" CTA instead of the fetching message,
-   *  for agent types the customer hasn't set up yet. */
-  configured?: boolean
-}) {
+function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirectoryEntry; zeroState?: boolean }) {
+  const [videoOpen, setVideoOpen] = useState(false)
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
     <div className="rounded-md border border-border bg-surface p-xl">
@@ -300,22 +291,23 @@ function AgentPerformanceCard({
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
         {zeroState ? (
-          configured ? (
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-sm">
-              <Icon name="sync" size={16} className="shrink-0 animate-spin text-text-tertiary" />
-              <p className="m-0 text-small text-text-tertiary">This agent is running — data is still being fetched.</p>
-            </div>
-          ) : (
-            <div className="flex min-w-0 flex-1 items-center justify-end">
-              <button
-                type="button"
-                className="flex h-9 shrink-0 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-              >
-                <Icon name="add" size={18} />
-                Create agent
-              </button>
-            </div>
-          )
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-sm">
+            <button
+              type="button"
+              onClick={() => setVideoOpen(true)}
+              className="flex h-9 shrink-0 items-center gap-xs rounded-sm px-md text-body text-text-action hover:bg-surface-hover"
+            >
+              <Icon name="play_circle" size={18} />
+              Show how this works
+            </button>
+            <button
+              type="button"
+              className="flex h-9 shrink-0 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              <Icon name="add" size={18} />
+              Create agent
+            </button>
+          </div>
         ) : (
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
             <AgentKpiCell value={String(agent.running)} label="Agents running" />
@@ -328,6 +320,28 @@ function AgentPerformanceCard({
           </div>
         )}
       </div>
+
+      {videoOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60"
+          onClick={() => setVideoOpen(false)}
+        >
+          <div className="relative w-full max-w-[720px] rounded-md bg-surface p-lg" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setVideoOpen(false)}
+              className="absolute right-lg top-lg flex size-8 items-center justify-center rounded-full text-text-icon hover:bg-surface-hover"
+            >
+              <Icon name="close" size={20} />
+            </button>
+            <p className="m-0 mb-lg text-h3 text-text-primary">{agent.name}</p>
+            <div className="flex aspect-video items-center justify-center rounded-sm bg-surface-selected">
+              <Icon name="play_circle" size={48} className="text-text-tertiary" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -337,17 +351,13 @@ function AgentPerformanceCard({
 function AgentPerformanceCardList({ agents, zeroState = false }: { agents: AgentDirectoryEntry[]; zeroState?: boolean }) {
   return (
     <div className="mt-2xl flex flex-col gap-lg">
-      {agents.map((agent, i) => (
-        // Zero state: alternate fetching/not-yet-configured so both look real, rather than
-        // every card claiming to already be running.
-        <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} configured={i % 2 === 0} />
+      {agents.map((agent) => (
+        <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} />
       ))}
     </div>
   )
 }
 
-// Rolls up all 3 AI co-workers (Myna/operations, Jay/marketing, Robin/customer experience) into
-// one headline row, shown above the co-worker tabs on the Overview (mixed) page only.
 // Zero-state replacement for AiCoworkerSummaryCard — a promotional banner (overlapping co-worker
 // avatars + a savings pitch) instead of numbers that don't exist yet for a brand-new account.
 function ZeroStateSummaryBanner({
@@ -802,11 +812,17 @@ function CoworkerPerformanceSection({
   const runningCount = agents.filter((a) => a.running > 0).length
   const timeSavedHrs = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const costSavedK = agents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
-  const kpiStats: OverviewStat[] = [
-    { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
-    { id: 'time-saved', value: formatTimeSaved(timeSavedHrs, dateRange), label: 'Time saved' },
-    { id: 'cost-saved', value: `$${costSavedK.toFixed(1)}K`, label: 'Cost saved' },
-  ]
+  const kpiStats: OverviewStat[] = zeroState
+    ? [
+        { id: 'agents-running', value: '0', label: 'Agents running' },
+        { id: 'time-saved', value: '--', label: 'Time saved' },
+        { id: 'cost-saved', value: '--', label: 'Cost saved' },
+      ]
+    : [
+        { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
+        { id: 'time-saved', value: formatTimeSaved(timeSavedHrs, dateRange), label: 'Time saved' },
+        { id: 'cost-saved', value: `$${costSavedK.toFixed(1)}K`, label: 'Cost saved' },
+      ]
   return (
     <>
       <h3 className="m-0 mb-lg flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
