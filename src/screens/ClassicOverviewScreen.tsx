@@ -571,7 +571,7 @@ function ReviewsSection({ showJayPerformance = false }: ReviewsSectionProps) {
           ))}
         </div>
 
-        <div className="flex min-w-[320px] max-w-[520px] flex-1 flex-col gap-md">
+        <div className="flex min-w-[280px] max-w-[380px] flex-col gap-md">
           {OVERVIEW_REVIEW_SOURCES.map((s) => {
             const logo = !brokenLogos.has(s.id) ? REVIEW_SOURCE_LOGOS[s.id] : undefined
             return (
@@ -602,7 +602,7 @@ function ReviewsSection({ showJayPerformance = false }: ReviewsSectionProps) {
         </div>
 
         {!showJayPerformance && (
-          <div className="grid shrink-0 grid-cols-2 gap-x-3xl gap-y-xl">
+          <div className="grid shrink-0 grid-cols-2 gap-x-3xl gap-y-xl pl-xl pr-xl">
             {OVERVIEW_REVIEWS_STATS.map((s) => (
               <div key={s.id}>
                 <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
