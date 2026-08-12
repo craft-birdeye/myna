@@ -569,7 +569,6 @@ export function App() {
               setRailActive('frontdesk')
               setNavActive(navId)
             }}
-            onSwitchToClassic={() => setRailActive('agents')}
           />
         ) : isEditingWorkflow ? (
           <div className="flex h-full w-full overflow-hidden">

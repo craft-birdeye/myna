@@ -45,6 +45,8 @@ interface OverviewFinalScreenProps {
   whiteBackground?: boolean
   /** Shows the co-worker tabs (Myna/Jay/Robin) with each one's aggregate performance + sections. */
   showCoworkerPerformance?: boolean
+  /** Shows a "Switch to agentic overview" button in the welcome header; called on click. */
+  onSwitchToAgentic?: () => void
 }
 
 // Co-worker brand names + logos + accent colors for the three persona groups — same name
@@ -1098,6 +1100,7 @@ export function OverviewFinalScreen({
   hideWelcomeHeader = false,
   whiteBackground = false,
   showCoworkerPerformance = false,
+  onSwitchToAgentic,
 }: OverviewFinalScreenProps) {
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
   const [dateRange, setDateRange] = useState('Last week')
@@ -1140,6 +1143,16 @@ export function OverviewFinalScreen({
                 <p className="m-0 mt-xs text-body text-text-secondary">Here are the things which need your attention</p>
               </div>
               <div className="flex items-center gap-sm">
+                {onSwitchToAgentic && (
+                  <button
+                    type="button"
+                    onClick={onSwitchToAgentic}
+                    className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                  >
+                    <Icon name="swap_horiz" size={18} />
+                    Switch to agentic overview
+                  </button>
+                )}
                 <DataStateDropdown value={dataState} onChange={setDataState} />
                 <DateRangeDropdown value={dateRange} onChange={setDateRange} />
                 <button

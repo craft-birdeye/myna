@@ -9,6 +9,7 @@ import {
 import mynaLogo from '../assets/myna-logo.png'
 import jayLogo from '../assets/jay-logo.png'
 import robinLogo from '../assets/robin-logo.png'
+import { OverviewFinalScreen } from './OverviewFinalScreen'
 
 type SortMode = 'runs' | 'persona' | 'custom'
 
@@ -522,7 +523,6 @@ export function CoworkersOverviewScreen({
   coworkerTabsWithSubtext = false,
   hideTopNav = false,
   userName = 'Akhil',
-  onSwitchToClassic,
 }: {
   product?: string
   onOpenAgent?: (navId: string) => void
@@ -533,9 +533,10 @@ export function CoworkersOverviewScreen({
    *  already renders its own TopNav (e.g. the "AI Co-worker" tab on the AI overview page). */
   hideTopNav?: boolean
   userName?: string
-  /** "Switch to classic overview" button — takes the status-filter dropdown's old spot. */
-  onSwitchToClassic?: () => void
 } = {}) {
+  // "Switch to classic overview"/"Switch to agentic overview" swap the page body in place —
+  // no navigation, so the LAV rail item stays active and the URL/nav state never changes.
+  const [showClassicOverview, setShowClassicOverview] = useState(false)
   const AGENT_DIRECTORY = getAgentDirectory(product)
   // No status-filter UI on this page (removed in favor of "Switch to classic overview"), so this
   // always shows every agent rather than defaulting to just the running ones.
@@ -636,6 +637,17 @@ export function CoworkersOverviewScreen({
     })
   }
 
+  if (showClassicOverview) {
+    return (
+      <OverviewFinalScreen
+        showCoworkerPerformance
+        hideTopNav={hideTopNav}
+        userName={userName}
+        onSwitchToAgentic={() => setShowClassicOverview(false)}
+      />
+    )
+  }
+
   return (
     <div className="flex h-full flex-col">
       {!hideTopNav && <TopNav title={showCoworkers ? 'Overview' : 'Agents'} initials="S" />}
@@ -649,9 +661,10 @@ export function CoworkersOverviewScreen({
           <div className="flex shrink-0 items-center gap-sm">
             <button
               type="button"
-              onClick={onSwitchToClassic}
-              className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+              onClick={() => setShowClassicOverview(true)}
+              className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
             >
+              <Icon name="swap_horiz" size={18} />
               Switch to classic overview
             </button>
             <DateRangeDropdown value={dateRange} onChange={setDateRange} />
