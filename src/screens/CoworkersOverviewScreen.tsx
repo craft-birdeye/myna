@@ -32,7 +32,7 @@ const COWORKER_ACCENT: Record<AgentPersonaId, string> = {
   marketing: '#335EB2',
   cx: '#B8482C',
 }
-const COWORKER_TAB_ORDER: AgentPersonaId[] = ['operations', 'marketing', 'cx']
+const COWORKER_TAB_ORDER: AgentPersonaId[] = ['marketing', 'operations', 'cx']
 
 // 16,230 → { display: '16.2K', exact: '16,230' }. Already-compact values ("1.9K", "434") pass through untouched.
 function formatK(raw: string): { display: string; exact?: string } {
@@ -639,7 +639,7 @@ export function CoworkersOverviewScreen({
 
   return (
     <div className="flex h-full flex-col">
-      {!hideTopNav && <TopNav title={showCoworkers ? 'Co-workers' : 'Agents'} initials="S" />}
+      {!hideTopNav && <TopNav title={showCoworkers ? 'Overview' : 'Agents'} initials="S" />}
 
       <div className="flex-1 overflow-auto bg-surface">
         <div className="flex items-start justify-between px-2xl py-xl">
