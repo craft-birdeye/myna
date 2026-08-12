@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Chip, DataTable, DatePickerModal, Icon, InfoTooltip, StackedBarChart, Tooltip, TopNav, TrendLineChart, type Column } from '../components'
+import { AiAgentIcon } from '../assets/AiAgentIcon'
 import iconGoogle from '../assets/icon-google.svg'
 import iconGooglePlay from '../assets/icon-google-play.svg'
+import mynaLogo from '../assets/icon-myna.svg'
+import jayLogo from '../assets/icon-jay.svg'
+import robinLogo from '../assets/icon-robin.svg'
+import { getAgentDirectory, PERSONA_GROUPS, type AgentDirectoryEntry, type AgentPersonaId } from '../data/agentDirectoryData'
 import {
   OVERVIEW_APPOINTMENTS_STATS,
   OVERVIEW_BIRDEYE_SCORE,
@@ -29,6 +34,27 @@ interface ClassicOverviewScreenProps {
   /** Shows a "Switch to agentic overview" button in the welcome header; called on click. */
   onSwitchToAgentic?: () => void
 }
+
+// Co-worker brand names + logos + accent colors for the three persona groups — same name
+// mapping as OverviewScreen's COWORKER_NAME. Accent colors are sampled from each co-worker's
+// own icon (icon-myna.svg/icon-jay.svg/icon-robin.svg) so the active tab underline and label
+// always match that co-worker's brand color instead of a generic primary blue.
+const COWORKER_NAME: Record<AgentPersonaId, string> = {
+  operations: 'Myna',
+  marketing: 'Jay',
+  cx: 'Robin',
+}
+const COWORKER_LOGO: Record<AgentPersonaId, string> = {
+  operations: mynaLogo,
+  marketing: jayLogo,
+  cx: robinLogo,
+}
+const COWORKER_ACCENT: Record<AgentPersonaId, string> = {
+  operations: '#2E6B36',
+  marketing: '#335EB2',
+  cx: '#B8482C',
+}
+const COWORKER_TAB_ORDER: AgentPersonaId[] = ['marketing', 'operations', 'cx']
 
 // Every KPI tile across the page (every widget's StatGroup/OutcomeKpiGroup) floors at 250px, but
 // grows wider when its own value/label text needs more room (nowrap, so long text stretches the
@@ -66,6 +92,13 @@ function StatGroup({
   )
 }
 
+// 16,230 → "16.2K". Already-compact values ("1.9K", "434") pass through untouched.
+function formatK(raw: string): string {
+  const numeric = parseFloat(raw.replace(/,/g, ''))
+  if (!isNaN(numeric) && numeric >= 1000) return `${parseFloat((numeric / 1000).toFixed(1))}K`
+  return raw
+}
+
 // "16,230" → 16230, "7.9K" → 7900 — agentDirectoryData.ts mixes both formats.
 function parseOutcomeNumber(raw: string): number {
   const trimmed = raw.trim()
@@ -76,6 +109,101 @@ function parseOutcomeNumber(raw: string): number {
 function formatNumber(n: number): string {
   if (n >= 1000) return `${parseFloat((n / 1000).toFixed(1))}K`
   return String(Math.round(n))
+}
+
+// "Today"/"Last week" are short enough that hours read naturally; anything longer (Last month,
+// Last quarter, a custom range) accumulates enough hours that days is the more readable unit.
+function formatTimeSaved(hours: number, dateRange: string): string {
+  return dateRange === 'Today' || dateRange === 'Last week' ? `${hours}h` : `${(hours / 24).toFixed(1)} days`
+}
+
+// Illustrative share of each outcome's volume driven by the agent's own automated actions
+// (vs. human-assisted) — keyed by agentDirectoryData.ts's agent id.
+const AGENT_CONTRIBUTION_PCT: Record<string, string> = {
+  'front-desk': '82%',
+  waitlist: '76%',
+  'pre-visit': '90%',
+  reminder: '85%',
+  'tagging-routing': '95%',
+  'review-response': '88%',
+  'review-generation': '93%',
+  'social-publishing': '97%',
+  'social-engagement': '80%',
+  'survey-creation': '91%',
+  'survey-distribution': '96%',
+  'survey-response': '84%',
+  'ticketing-surveys': '92%',
+  'ticketing-reviews': '89%',
+}
+
+interface AgentExtraKpi {
+  value: string
+  label: string
+  tooltip?: string
+}
+
+// Extra top-level KPIs shown on each agent's own card, on top of the outcome/time saved/cost
+// saved already there — keyed by agentDirectoryData.ts's agent `name`. Where the agent already
+// has a real breakdown on its own detail page (e.g. Front desk agent's Conversations responded/
+// Resolution rate — see AgentDetailScreen.tsx's METRICS_BY_AGENT), those are reused here; agents
+// without an existing detail-page breakdown get an illustrative pair in the same style.
+const AGENT_EXTRA_KPIS: Record<string, AgentExtraKpi[]> = {
+  'Front desk agent': [
+    { value: '18,420', label: 'Conversations responded', tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
+    { value: '88%', label: 'Resolution rate', tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
+  ],
+  'Waitlist agent': [
+    { value: '5.5K', label: 'Outreach sent', tooltip: 'Total waitlist outreach messages sent by the agent to fill cancelled or open slots.' },
+    { value: '23.7%', label: 'Fill rate', tooltip: 'Percentage of waitlisted patients who booked after receiving outreach.' },
+  ],
+  'Pre-visit agent': [
+    { value: '463', label: 'Outreach sent', tooltip: 'Total intake reminder outreach sent by the agent across all channels in the selected period.' },
+    { value: '90%', label: 'Completion rate', tooltip: 'Percentage of outreach that resulted in a completed intake.' },
+  ],
+  'Reminder agent': [
+    { value: '450', label: 'Total bookings', tooltip: 'Total appointments booked across all locations in the selected period.' },
+    { value: '23.7%', label: 'Confirmation rate', tooltip: 'Percentage of total bookings where the patient confirmed attendance.' },
+  ],
+  'Tagging & routing agent': [
+    { value: '2,850', label: 'Statuses updated', tooltip: 'Total conversations that received an updated contact status.' },
+    { value: '2,000', label: 'Conversations assigned', tooltip: 'Total conversations assigned to a team or user by the agent.' },
+  ],
+  'Review response agent': [
+    { value: '92%', label: 'Response rate', tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+    { value: '20m', label: 'Average response time', tooltip: 'Average time from review receipt to published reply.' },
+  ],
+  'Review generation agent': [
+    { value: '4.2K', label: 'Requests sent', tooltip: 'Total review requests sent to customers in the selected period.' },
+    { value: '21%', label: 'Conversion rate', tooltip: 'Percentage of requests that resulted in a published review.' },
+  ],
+  'Social publishing agent': [
+    { value: '812', label: 'Posts scheduled', tooltip: 'Total posts queued for publishing across all connected accounts.' },
+    { value: '91%', label: 'Approval rate', tooltip: 'Percentage of scheduled posts published without requiring manual edits.' },
+  ],
+  'Social engagement agent': [
+    { value: '89%', label: 'Response rate', tooltip: 'Percentage of comments and mentions that received a reply.' },
+    { value: '15m', label: 'Average response time', tooltip: 'Average time from a comment or mention to a reply.' },
+  ],
+  'Survey creation agent': [
+    { value: '12', label: 'Templates used', tooltip: 'Distinct survey templates used to build new surveys in the selected period.' },
+    { value: '3m', label: 'Average build time', tooltip: 'Average time to configure and publish a new survey.' },
+  ],
+  'Survey distribution agent': [
+    { value: '4.1K', label: 'Touchpoints reached', tooltip: 'Distinct customers reached across email, text, and QR touchpoints.' },
+    { value: '96%', label: 'Delivery rate', tooltip: 'Percentage of surveys successfully delivered to the customer.' },
+  ],
+  'Survey response agent': [
+    { value: '58%', label: 'Response rate', tooltip: 'Percentage of sent surveys that received a customer response.' },
+    { value: '14%', label: 'Detractors flagged', tooltip: 'Percentage of responses flagged as detractors for follow-up.' },
+  ],
+  'Ticketing agent · Surveys': [
+    { value: '92%', label: 'Auto-routed', tooltip: 'Percentage of tickets automatically routed to the right team without manual triage.' },
+    { value: '4m', label: 'Average time to open', tooltip: 'Average time from a flagged survey response to a ticket being opened.' },
+  ],
+  'Ticketing agent · Reviews': [
+    { value: '89%', label: 'Auto-routed', tooltip: 'Percentage of tickets automatically routed to the right team by location and topic.' },
+    { value: '5m', label: 'Average time to open', tooltip: 'Average time from a low-star review to a ticket being opened.' },
+  ],
 }
 
 interface OutcomeKpi {
@@ -89,7 +217,7 @@ interface OutcomeKpi {
 
 // Same tile shape as StatGroup, with a small violet agent-contribution badge next to the value —
 // hovering it explains which agent and how much of the total that share represents.
-function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boolean }) {
+function OutcomeKpiGroup({ stats, big = true, hideIcon = false }: { stats: OutcomeKpi[]; big?: boolean; hideIcon?: boolean }) {
   return (
     <div className={KPI_ROW_CLASS}>
       {stats.map((s) => {
@@ -108,7 +236,10 @@ function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boo
                   variant="detail"
                   content={`${s.agentName} handled ${contribution} of ${s.value} ${s.label.toLowerCase()}.`}
                 >
-                  <span className="text-[14px] leading-none text-ai-brand">{s.agentPct}</span>
+                  <span className="flex items-center gap-[2px] text-[14px] leading-none text-ai-brand">
+                    {!hideIcon && <AiAgentIcon size={14} />}
+                    {s.agentPct}
+                  </span>
                 </Tooltip>
               )}
             </p>
@@ -120,11 +251,296 @@ function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boo
   )
 }
 
-function InboxSection() {
+// One KPI within an AgentPerformanceCard — plain by default, with a hover tooltip only for the
+// card's primary (outcome) metric, same treatment as the Co-workers directory's own agent cards.
+function AgentKpiCell({ value, label, tooltip }: { value: string; label: string; tooltip?: string }) {
+  const content = (
+    <div className="min-w-[140px] text-center">
+      <p className="m-0 text-h3 text-text-primary">{value}</p>
+      <p className="m-0 mt-xs text-small text-text-tertiary">{label}</p>
+    </div>
+  )
+  if (!tooltip) return content
+  return (
+    <Tooltip content={tooltip} variant="detail">
+      {content}
+    </Tooltip>
+  )
+}
+
+// Zero-state estimates panel — a single light-blue pill (hugs its own content, doesn't stretch)
+// with the "Estimates from similar businesses" caption on the left and the three illustrative
+// "~" KPIs after it, all inside the one box instead of separate chips per KPI.
+function ZeroStateEstimatesPanel({ agent, dateRange }: { agent: AgentDirectoryEntry; dateRange: string }) {
+  const kpis = [
+    { value: `~${formatK(agent.outcome.value)}`, label: agent.outcome.label },
+    { value: `~${formatTimeSaved(parseFloat(agent.timeSaved), dateRange)}`, label: 'Time saved' },
+    { value: `~${agent.costSaved}`, label: 'Cost saved' },
+  ]
+  return (
+    <div className="inline-flex shrink-0 items-center gap-xl whitespace-nowrap">
+      <span className="whitespace-nowrap text-body text-text-tertiary">Estimates from similar businesses</span>
+      <div className="h-8 w-px shrink-0 bg-border" />
+      <div className="flex items-center gap-3xl">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className="shrink-0 text-center">
+            <p className="m-0 whitespace-nowrap text-h3 text-text-tertiary">{kpi.value}</p>
+            <p className="m-0 whitespace-nowrap text-small text-text-tertiary">{kpi.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Full-width version of the agent card shown on the Overview/Co-workers directory — same fields
+// (category, running/paused status, name, description, KPIs), just laid out across the full card
+// width instead of a grid cell.
+function AgentPerformanceCard({
+  agent,
+  dateRange,
+  zeroState = false,
+}: {
+  agent: AgentDirectoryEntry
+  dateRange: string
+  zeroState?: boolean
+}) {
+  const [videoOpen, setVideoOpen] = useState(false)
+  const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
+  return (
+    <div className="rounded-md border border-border bg-surface p-xl">
+      <div className="flex items-center justify-between gap-3xl">
+        <div className="min-w-[220px] max-w-[320px] shrink-0 pr-3xl">
+          <p className="m-0 truncate text-small text-text-tertiary">{agent.category}</p>
+          <h4 className="m-0 mt-xs mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
+          <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
+        </div>
+        {zeroState ? (
+          <>
+            <div className="flex min-w-0 flex-1 items-center justify-center">
+              <ZeroStateEstimatesPanel agent={agent} dateRange={dateRange} />
+            </div>
+            <div className="flex shrink-0 items-center gap-sm">
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
+              >
+                <Icon name="play_circle" size={18} />
+                Show how this works
+              </button>
+              <button
+                type="button"
+                className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              >
+                <Icon name="add" size={18} />
+                Create agent
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-xl">
+            <AgentKpiCell value={String(agent.running)} label="Agents running" />
+            <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
+            {extraKpis.map((kpi) => (
+              <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
+            ))}
+            <AgentKpiCell value={formatTimeSaved(parseFloat(agent.timeSaved), dateRange)} label="Time saved" />
+            <AgentKpiCell value={agent.costSaved} label="Cost saved" />
+          </div>
+        )}
+      </div>
+
+      {videoOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60"
+          onClick={() => setVideoOpen(false)}
+        >
+          <div className="relative w-full max-w-[720px] rounded-md bg-surface p-lg" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setVideoOpen(false)}
+              className="absolute right-lg top-lg flex size-8 items-center justify-center rounded-full text-text-icon hover:bg-surface-hover"
+            >
+              <Icon name="close" size={20} />
+            </button>
+            <p className="m-0 mb-lg text-h3 text-text-primary">{agent.name}</p>
+            <div className="flex aspect-video items-center justify-center rounded-sm bg-surface-selected">
+              <Icon name="play_circle" size={48} className="text-text-tertiary" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Detail view shown just below every "<Co-worker> performance" section — one full-length
+// AgentPerformanceCard per agent.
+function AgentPerformanceCardList({
+  agents,
+  dateRange,
+  zeroState = false,
+}: {
+  agents: AgentDirectoryEntry[]
+  dateRange: string
+  zeroState?: boolean
+}) {
+  return (
+    <div className="mt-2xl flex flex-col gap-lg">
+      {agents.map((agent) => (
+        <AgentPerformanceCard key={agent.id} agent={agent} dateRange={dateRange} zeroState={zeroState} />
+      ))}
+    </div>
+  )
+}
+
+// Zero-state promo strip shown inline inside the AI workforce summary card when there's no real
+// data yet — overlapping co-worker avatars + a savings pitch instead of numbers.
+function ZeroStateSummaryBanner() {
+  return (
+    <div className="flex items-center gap-lg rounded-md border border-ai-summary-border bg-ai-summary p-lg">
+      <div className="flex shrink-0 items-center">
+        <img src={mynaLogo} alt="" className="size-9 rounded-full border-2 border-surface" />
+        <img src={jayLogo} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+        <img src={robinLogo} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+      </div>
+      <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+        AI co-workers save up to 20 hours a week — set up yours and start saving today.
+      </p>
+    </div>
+  )
+}
+
+function AiCoworkerSummaryCard({ dateRange, zeroState = false }: { dateRange: string; zeroState?: boolean }) {
+  const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
+  const jayAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing')
+  const robinAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'cx')
+  const mynaRunning = mynaAgents.filter((a) => a.running > 0).length
+  const jayRunning = jayAgents.filter((a) => a.running > 0).length
+  const robinRunning = robinAgents.filter((a) => a.running > 0).length
+  const mynaHours = mynaAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const jayHours = jayAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const robinHours = robinAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const mynaCostK = mynaAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+  const jayCostK = jayAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+  const robinCostK = robinAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+
+  const totalAgents = mynaRunning + jayRunning + robinRunning
+  const totalHours = mynaHours + jayHours + robinHours
+  const totalCostK = mynaCostK + jayCostK + robinCostK
+
+  const stats: OverviewStat[] = zeroState
+    ? [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: '0', label: 'Agents' },
+        { id: 'time-saved', value: `~${formatTimeSaved(totalHours, dateRange)}`, label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'cost-saved', value: `~$${totalCostK.toFixed(1)}K`, label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
+      ]
+    : [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: String(totalAgents), label: 'Agents' },
+        { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
+        { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
+      ]
+
+  return (
+    <div className="rounded-md border border-border bg-surface p-2xl">
+      <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
+      <StatGroup stats={stats} big />
+      {zeroState && (
+        <div className="mt-xl">
+          <ZeroStateSummaryBanner />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Custom tab bar (not the shared `Tabs` component) so each tab's active state can use that
+// co-worker's own brand color (COWORKER_ACCENT) instead of the shared component's fixed primary
+// blue, and so the logo sits beside the label+subtext column instead of inside its first row.
+function CoworkerTabBar({
+  activeTab,
+  onChange,
+}: {
+  activeTab: AgentPersonaId
+  onChange: (id: AgentPersonaId) => void
+}) {
+  return (
+    <div className="relative flex items-center gap-xs">
+      {COWORKER_TAB_ORDER.map((id, i) => {
+        const active = id === activeTab
+        const group = PERSONA_GROUPS.find((g) => g.id === id)!
+        const agentCount = getAgentDirectory('healthcare').filter((a) => a.persona === id).length
+        return (
+          <Fragment key={id}>
+            {i > 0 && <span className="h-6 w-px shrink-0 bg-border" />}
+            <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
+              <span
+                className={`flex items-start gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
+              >
+                <img src={COWORKER_LOGO[id]} alt="" className="size-7 shrink-0 rounded-full" />
+                <span className="flex flex-col gap-[2px]">
+                  <span
+                    className={`text-body ${active ? '' : 'text-text-secondary'}`}
+                    style={active ? { color: COWORKER_ACCENT[id] } : undefined}
+                  >
+                    {COWORKER_NAME[id]}
+                  </span>
+                  <span className="text-left text-small text-text-tertiary">
+                    {group.label} • {agentCount} agents
+                  </span>
+                </span>
+              </span>
+              <span
+                className="absolute inset-x-0 bottom-0 z-10 h-px"
+                style={{ backgroundColor: active ? COWORKER_ACCENT[id] : 'transparent' }}
+              />
+            </button>
+          </Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
+interface InboxSectionProps {
+  /** Adds the outcome KPI row (agent-badged outcomes + alert stats) instead of the plain stat row. */
+  showMynaPerformance?: boolean
+}
+
+// Myna = the Operations co-worker (Inbox + Front desk family agents) — see PERSONA_GROUPS
+// in agentDirectoryData.ts, same grouping shown on the co-worker tabs above.
+function InboxSection({ showMynaPerformance = false }: InboxSectionProps) {
+  // Reminder's outcome (Appointments confirmed) is promoted on the Appointments section instead —
+  // excluded here so this section's own outcome badges don't double up with Appointments'.
+  const mynaAgents = showMynaPerformance
+    ? getAgentDirectory('healthcare').filter((a) => a.persona === 'operations' && a.id !== 'reminder')
+    : []
+  const outcomeStats: OutcomeKpi[] = mynaAgents.map((a) => ({
+    id: a.id,
+    value: formatK(a.outcome.value),
+    label: a.outcome.label,
+    agentName: a.name,
+    agentPct: AGENT_CONTRIBUTION_PCT[a.id],
+  }))
   return (
     <>
-      <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
-      <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} big />
+      {showMynaPerformance ? (
+        <>
+          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Front desk</h3>
+          <OutcomeKpiGroup stats={outcomeStats} />
+          <h3 className="m-0 mb-lg mt-3xl text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} big />
+        </>
+      ) : (
+        <>
+          <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+          <StatGroup stats={OVERVIEW_INBOX_ALERT_STATS} big />
+        </>
+      )}
     </>
   )
 }
@@ -134,13 +550,52 @@ const REVIEW_SOURCE_LOGOS: Record<string, string> = {
   'google-play': iconGooglePlay,
 }
 
-function ReviewsSection() {
+interface ReviewsSectionProps {
+  /** Adds the outcome KPI row (agent-badged outcomes) instead of the plain stat column. */
+  showJayPerformance?: boolean
+}
+
+// Jay = the Marketing co-worker (Reviews AI + Social AI agents) — see PERSONA_GROUPS in
+// agentDirectoryData.ts, same grouping shown on the co-worker tabs above.
+function ReviewsSection({ showJayPerformance = false }: ReviewsSectionProps) {
   const [brokenLogos, setBrokenLogos] = useState<Set<string>>(new Set())
   const maxCount = Math.max(...OVERVIEW_REVIEWS_BREAKDOWN.map((b) => b.count))
+  // Only the Reviews AI agents actually badged in this section's top KPI row (Social publishing/
+  // engagement belong to the Social section instead) — keeps the outcomes in sync with what's
+  // shown up top.
+  const jayAgents = showJayPerformance
+    ? getAgentDirectory('healthcare').filter((a) => a.id === 'review-generation' || a.id === 'review-response')
+    : []
+  const requestsSent = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'requests-sent')!
+  const reviewsReceived = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'reviews-received')!
+  const threeStarOrLess = OVERVIEW_REVIEWS_STATS.find((s) => s.id === '3-star-or-less')!
+  const haventReplied = OVERVIEW_REVIEWS_STATS.find((s) => s.id === 'havent-replied')!
+  const reviewsAgentOutcomes: OutcomeKpi[] = jayAgents
+    .sort((a) => (a.id === 'review-generation' ? -1 : 1))
+    .map((a) => ({
+      id: a.id,
+      value: formatK(a.outcome.value),
+      label: a.outcome.label,
+      agentName: a.name,
+      agentPct: AGENT_CONTRIBUTION_PCT[a.id],
+    }))
+  const topReviewStats: OutcomeKpi[] = [
+    { id: requestsSent.id, value: requestsSent.value, label: requestsSent.label, agentName: '' },
+    { id: reviewsReceived.id, value: reviewsReceived.value, label: reviewsReceived.label, agentName: '' },
+    ...reviewsAgentOutcomes,
+    { id: threeStarOrLess.id, value: threeStarOrLess.value, label: threeStarOrLess.label, agentName: '', danger: true },
+    { id: haventReplied.id, value: haventReplied.value, label: haventReplied.label, agentName: '' },
+  ]
 
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Reviews</h3>
+
+      {showJayPerformance && (
+        <div className="mb-2xl">
+          <OutcomeKpiGroup stats={topReviewStats} />
+        </div>
+      )}
 
       <div className="flex items-center gap-sm">
         <span className="text-display text-text-primary">{OVERVIEW_REVIEWS_RATING}</span>
@@ -201,14 +656,16 @@ function ReviewsSection() {
           })}
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-x-3xl gap-y-xl pl-xl pr-xl">
-          {OVERVIEW_REVIEWS_STATS.map((s) => (
-            <div key={s.id}>
-              <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
-              <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
-            </div>
-          ))}
-        </div>
+        {!showJayPerformance && (
+          <div className="grid shrink-0 grid-cols-2 gap-x-3xl gap-y-xl pl-xl pr-xl">
+            {OVERVIEW_REVIEWS_STATS.map((s) => (
+              <div key={s.id}>
+                <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
+                <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   )
@@ -265,14 +722,37 @@ function InboxActivitySection() {
   )
 }
 
-function SocialSection() {
+interface SocialSectionProps {
+  /** Adds Posts published / Comments handled (Social AI agents) alongside New followers. */
+  showJayOutcomes?: boolean
+}
+
+// Social AI half of Jay (Marketing) — Reviews AI half (Reviews responded/New reviews) lives on
+// the Reviews section instead. See PERSONA_GROUPS in agentDirectoryData.ts.
+function SocialSection({ showJayOutcomes = false }: SocialSectionProps) {
+  const socialAgents = showJayOutcomes
+    ? getAgentDirectory('healthcare').filter((a) => a.id === 'social-publishing' || a.id === 'social-engagement')
+    : []
+  const socialAgentOutcomes: OutcomeKpi[] = socialAgents.map((a) => ({
+    id: a.id,
+    value: formatK(a.outcome.value),
+    label: a.outcome.label,
+    agentName: a.name,
+    agentPct: AGENT_CONTRIBUTION_PCT[a.id],
+  }))
+  const followersStat: OutcomeKpi = { id: 'new-followers', value: OVERVIEW_SOCIAL_NEW_FOLLOWERS, label: 'New followers', agentName: '' }
+
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Social</h3>
-      <div>
-        <p className="m-0 text-display text-text-primary">{OVERVIEW_SOCIAL_NEW_FOLLOWERS}</p>
-        <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">New followers</p>
-      </div>
+      {showJayOutcomes ? (
+        <OutcomeKpiGroup stats={[followersStat, ...socialAgentOutcomes]} />
+      ) : (
+        <div>
+          <p className="m-0 text-display text-text-primary">{OVERVIEW_SOCIAL_NEW_FOLLOWERS}</p>
+          <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">New followers</p>
+        </div>
+      )}
       <div className="mt-2xl">
         <StackedBarChart data={OVERVIEW_SOCIAL_DATA} series={OVERVIEW_SOCIAL_SERIES} xKey="month" height={280} grouped />
       </div>
@@ -280,13 +760,54 @@ function SocialSection() {
   )
 }
 
+// Primary section shown at the top of each co-worker tab — the full aggregate across every agent
+// that persona owns (not the partial per-widget subsets the sections below use for their own
+// top-row outcome badges).
+function CoworkerPerformanceSection({
+  persona,
+  dateRange,
+  zeroState = false,
+}: {
+  persona: AgentPersonaId
+  dateRange: string
+  zeroState?: boolean
+}) {
+  const agents = getAgentDirectory('healthcare').filter((a) => a.persona === persona)
+  const runningCount = agents.filter((a) => a.running > 0).length
+  const timeSavedHrs = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const costSavedK = agents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+  const kpiStats: OverviewStat[] = zeroState
+    ? [
+        { id: 'agents-running', value: '0', label: 'Agents running' },
+        { id: 'time-saved', value: `~${formatTimeSaved(timeSavedHrs, dateRange)}`, label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'cost-saved', value: `~$${costSavedK.toFixed(1)}K`, label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
+      ]
+    : [
+        { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
+        { id: 'time-saved', value: formatTimeSaved(timeSavedHrs, dateRange), label: 'Time saved' },
+        { id: 'cost-saved', value: `$${costSavedK.toFixed(1)}K`, label: 'Cost saved' },
+      ]
+  return (
+    <>
+      <h3 className="m-0 mb-lg flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <img src={COWORKER_LOGO[persona]} alt="" className="size-6 shrink-0 rounded-full" />
+        {COWORKER_NAME[persona]} performance
+      </h3>
+      <StatGroup stats={kpiStats} big />
+      <AgentPerformanceCardList agents={agents} dateRange={dateRange} zeroState={zeroState} />
+    </>
+  )
+}
 
-// Wraps a single business-metric section (Inbox, Reviews, Listings...) in a bordered card.
+// Merges a co-worker's performance section + its individual sections (Inbox, Reviews, Surveys...)
+// into a single bordered card. Only one divider is drawn, between the performance section and the
+// first content section below it.
 function CoworkerSectionsCard({ sections }: { sections: ReactNode[] }) {
   return (
     <div className="rounded-md border border-border bg-surface p-xl pb-[36px]">
       {sections.map((section, i) => (
-        <div key={i} className={i !== 0 ? 'mt-2xl' : undefined}>
+        <div key={i} className={i !== 0 && i !== 2 ? 'mt-2xl' : undefined}>
+          {i === 2 && <div className="my-2xl border-t border-border" />}
           {section}
         </div>
       ))}
@@ -473,12 +994,71 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
   )
 }
 
+type DataState = 'Current' | 'Zero state' | 'Single co-worker' | 'Filled data'
+const DATA_STATE_OPTIONS: DataState[] = ['Current', 'Zero state', 'Single co-worker', 'Filled data']
+
+// Design-review toggle — lets whoever's looking at the page preview it in a different data
+// state without needing separate mocked pages. Same trigger + floating panel as the date-range
+// dropdown beside it.
+function DataStateDropdown({ value, onChange }: { value: DataState; onChange: (value: DataState) => void }) {
+  const [open, setOpen] = useState(false)
+  const { mounted, entered } = useOpenTransition(open)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+      >
+        {value}
+        <Icon name="expand_more" size={18} className="text-text-icon" />
+      </button>
+
+      {mounted && (
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div
+            className={`absolute right-0 top-full z-[110] mt-xs min-w-[180px] origin-top-right rounded-sm border border-border bg-surface p-md shadow-dropdown ${DROPDOWN_TRANSITION} ${
+              entered ? DROPDOWN_SHOWN : DROPDOWN_HIDDEN
+            }`}
+          >
+            {DATA_STATE_OPTIONS.map((opt) => {
+              const isSel = opt === value
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                    isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt}</span>
+                  {isSel && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // "Classic overview" — the business-metrics dashboard (Inbox/Reviews/Listings/Referrals/
-// Appointments/Social/Insights AI) ported from Akhil-myna-repo's OverviewFinalScreen, restyled
-// with this repo's own chrome (rounded-md dropdown/CTA buttons). Reached only via the Overview
-// page's "Switch to classic overview" toggle — never routed to directly.
+// Appointments/Social/Insights AI, plus per-co-worker performance) ported from
+// Akhil-myna-repo's OverviewFinalScreen, restyled with this repo's own chrome (rounded-md
+// dropdown/CTA buttons). Reached only via the Overview page's "Switch to classic overview"
+// toggle — never routed to directly.
 export function ClassicOverviewScreen({ userName = 'Rupa', onSwitchToAgentic }: ClassicOverviewScreenProps) {
+  const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('marketing')
   const [dateRange, setDateRange] = useState('Last month')
+  const [dataState, setDataState] = useState<DataState>('Current')
+  const zeroState = dataState === 'Zero state'
 
   return (
     <div className="flex h-full flex-col">
@@ -513,9 +1093,25 @@ export function ClassicOverviewScreen({ userName = 'Rupa', onSwitchToAgentic }: 
                   Switch to agentic overview
                 </button>
               )}
+              <DataStateDropdown value={dataState} onChange={setDataState} />
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
             </div>
           </div>
+
+          {dataState !== 'Current' && <AiCoworkerSummaryCard dateRange={dateRange} zeroState={zeroState} />}
+
+          {dataState !== 'Current' && (
+            <CoworkerSectionsCard
+              sections={
+                dataState === 'Single co-worker'
+                  ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={false} />]
+                  : [
+                      <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
+                      <CoworkerPerformanceSection persona={activeCoworkerTab} dateRange={dateRange} zeroState={zeroState} />,
+                    ]
+              }
+            />
+          )}
 
           <CoworkerSectionsCard sections={[<InboxSection />]} />
           <CoworkerSectionsCard sections={[<ReviewsSection />]} />
