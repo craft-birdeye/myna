@@ -244,10 +244,22 @@ function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boo
 
 // One KPI within an AgentPerformanceCard — plain by default, with a hover tooltip only for the
 // card's primary (outcome) metric, same treatment as the Co-workers directory's own agent cards.
-function AgentKpiCell({ value, label, tooltip }: { value: string; label: string; tooltip?: string }) {
+function AgentKpiCell({
+  value,
+  label,
+  tooltip,
+  muted = false,
+}: {
+  value: string
+  label: string
+  tooltip?: string
+  /** Lighter grey value text — used for zero-state's illustrative "~" estimates
+   *  (the agent isn't created yet, so these numbers aren't real). */
+  muted?: boolean
+}) {
   const content = (
     <div className="min-w-[140px]">
-      <p className="m-0 text-h3 text-text-primary">{value}</p>
+      <p className={`m-0 text-h3 ${muted ? 'text-text-secondary' : 'text-text-primary'}`}>{value}</p>
       <p className="m-0 mt-xs text-small text-text-tertiary">{label}</p>
     </div>
   )
@@ -274,22 +286,27 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
         {zeroState ? (
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-sm">
-            <button
-              type="button"
-              onClick={() => setVideoOpen(true)}
-              className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
-            >
-              <Icon name="play_circle" size={18} />
-              Show how this works
-            </button>
-            <button
-              type="button"
-              className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-            >
-              <Icon name="add" size={18} />
-              Create agent
-            </button>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
+            <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
+            <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
+            <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
+            <div className="flex shrink-0 items-center gap-sm">
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
+              >
+                <Icon name="play_circle" size={18} />
+                Show how this works
+              </button>
+              <button
+                type="button"
+                className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              >
+                <Icon name="add" size={18} />
+                Create agent
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
