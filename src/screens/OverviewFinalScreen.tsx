@@ -1021,7 +1021,7 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
 type DataState = 'Zero state' | 'Filled data' | 'Single co-worker' | 'Current'
 // "Current" is a duplicate of "Zero state" (same rendering) kept as its own selectable option —
 // see the `zeroState` derivation in OverviewFinalScreen below.
-const DATA_STATE_OPTIONS: DataState[] = ['Zero state', 'Filled data', 'Single co-worker', 'Current']
+const DATA_STATE_OPTIONS: DataState[] = ['Current', 'Zero state', 'Single co-worker', 'Filled data']
 
 // Design-review toggle — lets whoever's looking at the page preview it in a different data
 // state without needing separate mocked pages. Same trigger + floating panel as the date-range
