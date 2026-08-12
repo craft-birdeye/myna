@@ -369,9 +369,11 @@ function ZeroStateSummaryBanner({
       </div>
       <div className="min-w-0 flex-1">
         <p className={`m-0 text-text-primary ${compact ? 'text-body' : 'text-h3'}`}>
-          Customers using AI co-workers save up to 20 hours per week, per person.
+          Customers using AI co-workers save up to 20 hours per week.
         </p>
-        {!compact && (
+        {compact ? (
+          <p className="m-0 mt-xs text-body text-text-secondary">Set up your agents and start saving right away.</p>
+        ) : (
           <p className="m-0 mt-xs text-body text-text-secondary">
             Meet Myna, Jay, and Robin — your AI co-workers, already set up and ready to start saving your team time.
           </p>
