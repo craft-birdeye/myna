@@ -359,8 +359,9 @@ function CoworkerTabBar({
   agents: AgentDirectoryEntry[]
 }) {
   return (
-    <div className="flex items-center gap-xs">
-      {COWORKER_TAB_ORDER.map((id) => {
+    <div className="relative flex items-center gap-xs">
+      <span className="absolute inset-x-0 bottom-0 z-0 h-px bg-border" />
+      {COWORKER_TAB_ORDER.map((id, index) => {
         const active = id === activeTab
         const accent = id === 'all' ? ALL_TAB_ACCENT : COWORKER_ACCENT[id]
         const name = id === 'all' ? 'All AI co-workers' : COWORKER_NAME[id]
@@ -368,11 +369,12 @@ function CoworkerTabBar({
           id === 'all' ? `${agents.length} agents` : `${PERSONA_GROUPS.find((g) => g.id === id)!.label} • ${agents.filter((a) => a.persona === id).length} agents`
         return (
           <Fragment key={id}>
+            {index > 0 && <span className="h-6 w-px shrink-0 bg-border" />}
             <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
               <span
                 className={`flex items-center gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
               >
-                {id !== 'all' && <img src={COWORKER_LOGO[id]} alt="" className="size-10 shrink-0 rounded-full" />}
+                {id !== 'all' && <img src={COWORKER_LOGO[id]} alt="" className="size-7 shrink-0 rounded-full" />}
                 <span className="flex flex-col gap-[2px]">
                   <span className={`text-body ${active ? '' : 'text-text-secondary'}`} style={active ? { color: accent } : undefined}>
                     {name}
