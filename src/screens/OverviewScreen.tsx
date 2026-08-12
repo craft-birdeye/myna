@@ -637,19 +637,7 @@ export function OverviewScreen({
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-lg">
-                <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} agents={AGENT_DIRECTORY} />
-
-                <SortDropdown
-                  sortMode={sortMode}
-                  personaFilter={personaFilter}
-                  onSortModeChange={(m) => {
-                    setSortMode(m)
-                    if (m !== 'persona') setPersonaFilter(null)
-                  }}
-                  onPersonaFilterChange={setPersonaFilter}
-                />
-              </div>
+              <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} agents={AGENT_DIRECTORY} />
             )}
 
             {(showCoworkers ? coworkerFilteredAgents : visibleAgents).length === 0 ? (
