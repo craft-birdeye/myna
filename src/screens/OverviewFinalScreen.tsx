@@ -3,7 +3,7 @@
 // the "Post feedback" page (`overview-3`, still OverviewFeedbackScreen.tsx) or the original
 // "Overview / New" page (`overview-2`, OverviewScreen.tsx).
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { DatePickerModal, Icon, InfoTooltip, Tooltip, TopNav } from '../components'
+import { Chip, DataTable, DatePickerModal, Icon, InfoTooltip, StackedBarChart, Tooltip, TopNav, TrendLineChart, type Column } from '../components'
 import { AiAgentIcon } from '../assets/AiAgentIcon'
 import iconGoogle from '../assets/icon-google.svg'
 import iconGooglePlay from '../assets/icon-google-play.svg'
@@ -18,12 +18,18 @@ import {
   OVERVIEW_INBOX_ALERT_STATS,
   OVERVIEW_LISTINGS_GOOGLE_REPORT,
   OVERVIEW_LISTINGS_QA,
+  OVERVIEW_MEDIAN_RESPONSE_TREND,
   OVERVIEW_REFERRALS_STATS,
   OVERVIEW_REVIEWS_BREAKDOWN,
   OVERVIEW_REVIEWS_RATING,
   OVERVIEW_REVIEWS_STATS,
   OVERVIEW_REVIEW_SOURCES,
+  OVERVIEW_SOCIAL_DATA,
   OVERVIEW_SOCIAL_NEW_FOLLOWERS,
+  OVERVIEW_SOCIAL_SERIES,
+  OVERVIEW_TOP_LOCATIONS,
+  OVERVIEW_UNDERSTANDING_SCORES,
+  type OverviewLocationScoreRow,
   type OverviewStat,
 } from '../data/overviewData'
 
@@ -344,7 +350,7 @@ function AgentPerformanceCardList({ agents, zeroState = false }: { agents: Agent
 // one headline row, shown above the co-worker tabs on the Overview (mixed) page only.
 // Zero-state replacement for AiCoworkerSummaryCard — a promotional banner (overlapping co-worker
 // avatars + a savings pitch) instead of numbers that don't exist yet for a brand-new account.
-function ZeroStateSummaryBanner() {
+function ZeroStateSummaryBanner({ showDemoCta = false }: { showDemoCta?: boolean }) {
   return (
     <div className="flex items-center gap-xl rounded-md border border-ai-summary-border bg-ai-summary p-2xl">
       <div className="flex shrink-0 items-center">
@@ -352,17 +358,34 @@ function ZeroStateSummaryBanner() {
         <img src={jayLogo} alt="" className="-ml-4 size-14 rounded-full border-2 border-surface" />
         <img src={robinLogo} alt="" className="-ml-4 size-14 rounded-full border-2 border-surface" />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="m-0 text-h3 text-text-primary">Customers using AI co-workers save up to 20 hours per week, per person.</p>
         <p className="m-0 mt-xs text-body text-text-secondary">
           Meet Myna, Jay, and Robin — your AI co-workers, already set up and ready to start saving your team time.
         </p>
       </div>
+      {showDemoCta && (
+        <button
+          type="button"
+          className="flex h-9 shrink-0 items-center justify-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+        >
+          Schedule a demo
+        </button>
+      )}
     </div>
   )
 }
 
-function AiCoworkerSummaryCard({ dateRange, zeroState = false }: { dateRange: string; zeroState?: boolean }) {
+function AiCoworkerSummaryCard({
+  dateRange,
+  showBanner = false,
+  showDemoCta = false,
+}: {
+  dateRange: string
+  /** Renders the promotional ZeroStateSummaryBanner instead of the normal numeric card. */
+  showBanner?: boolean
+  showDemoCta?: boolean
+}) {
   const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
   const jayAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing')
   const robinAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'cx')
@@ -387,7 +410,7 @@ function AiCoworkerSummaryCard({ dateRange, zeroState = false }: { dateRange: st
     { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
   ]
 
-  if (zeroState) return <ZeroStateSummaryBanner />
+  if (showBanner) return <ZeroStateSummaryBanner showDemoCta={showDemoCta} />
 
   return (
     <div className="rounded-md border border-border bg-surface p-2xl">
@@ -675,6 +698,9 @@ function InboxActivitySection({ big = false }: { big?: boolean }) {
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
       <StatGroup stats={OVERVIEW_INBOX_ACTIVITY_STATS} big={big} />
+      <div className="mt-2xl">
+        <TrendLineChart data={OVERVIEW_MEDIAN_RESPONSE_TREND} height={260} />
+      </div>
     </>
   )
 }
@@ -711,6 +737,9 @@ function SocialSection({ big = false, showJayOutcomes = false }: SocialSectionPr
           <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">New followers</p>
         </div>
       )}
+      <div className="mt-2xl">
+        <StackedBarChart data={OVERVIEW_SOCIAL_DATA} series={OVERVIEW_SOCIAL_SERIES} xKey="month" height={280} grouped />
+      </div>
     </>
   )
 }
@@ -768,6 +797,20 @@ function CoworkerSectionsCard({ sections }: { sections: ReactNode[] }) {
 // Renders the Birdeye Score as a plain KPI tile — same value/label treatment as StatGroup —
 // instead of the old bespoke ScoreCard layout (accent-colored number + "Industry average: X"
 // caption), which looked out of place next to the rest of the page's KPI-tile styling.
+const LOCATION_SCORE_COLUMNS: Column<OverviewLocationScoreRow>[] = [
+  { key: 'location', label: 'Locations', width: 260, sortable: true },
+  {
+    key: 'birdeyeScore',
+    label: 'Birdeye Score',
+    width: 160,
+    sortable: true,
+    render: (v) => <Chip label={String(v)} variant="success" />,
+  },
+  { key: 'sentimentScore', label: 'Sentiment Score', width: 160, sortable: true },
+  { key: 'reputationScore', label: 'Reputation Score', width: 160, sortable: true },
+  { key: 'listingScore', label: 'Listing Score', width: 160, sortable: true },
+]
+
 function InsightsAiSection() {
   return (
     <>
@@ -781,6 +824,26 @@ function InsightsAiSection() {
           </p>
         </div>
       </div>
+
+      <div className="my-2xl border-t border-border" />
+
+      <p className="m-0 mb-lg flex items-center gap-xs text-body text-text-primary">
+        Understanding the Birdeye Score
+        <InfoTooltip text="How each underlying signal contributes to the overall Birdeye Score." variant="detail" />
+      </p>
+      <div className="grid grid-cols-3 gap-3xl">
+        {OVERVIEW_UNDERSTANDING_SCORES.map((score) => (
+          <div key={score.id}>
+            <p className="m-0 text-h3 text-text-primary">{score.value}</p>
+            <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">{score.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="my-2xl border-t border-border" />
+
+      <p className="m-0 mb-lg text-body text-text-primary">Top performing locations</p>
+      <DataTable columns={LOCATION_SCORE_COLUMNS} data={OVERVIEW_TOP_LOCATIONS} />
     </>
   )
 }
@@ -981,7 +1044,8 @@ export function OverviewFinalScreen({
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
   const [dateRange, setDateRange] = useState('Last week')
   const [dataState, setDataState] = useState<DataState>('Filled data')
-  const zeroState = dataState === 'Zero state' || dataState === 'Current'
+  const zeroState = dataState === 'Zero state'
+  const showPromoBanner = dataState === 'Current'
 
   return (
     <div className="flex h-full flex-col">
@@ -1033,7 +1097,7 @@ export function OverviewFinalScreen({
 
           {showCoworkerPerformance ? (
             <>
-              <AiCoworkerSummaryCard dateRange={dateRange} zeroState={zeroState} />
+              <AiCoworkerSummaryCard dateRange={dateRange} showBanner={showPromoBanner} showDemoCta={showPromoBanner} />
 
               {dataState !== 'Current' && (
                 <CoworkerSectionsCard
