@@ -279,39 +279,29 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
     <div className="rounded-md border border-border bg-surface p-xl">
-      <div className="flex flex-wrap items-center gap-3xl">
+      <div className="flex flex-wrap items-center justify-between gap-3xl">
         <div className="min-w-[220px] max-w-[320px] shrink-0 pr-3xl">
           <p className="m-0 truncate text-small text-text-tertiary">{agent.category}</p>
           <h4 className="m-0 mt-xs mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
         {zeroState ? (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-xl">
-            <div className="flex flex-1 flex-col items-center gap-xs">
-              <div className="flex flex-wrap items-center justify-center gap-xl">
-                <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
-                <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
-                <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
-              </div>
-              <Chip label="Based on data from similar businesses" variant="neutral" />
-            </div>
-            <div className="flex shrink-0 items-center gap-sm">
-              <button
-                type="button"
-                onClick={() => setVideoOpen(true)}
-                className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
-              >
-                <Icon name="play_circle" size={18} />
-                Show how this works
-              </button>
-              <button
-                type="button"
-                className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-              >
-                <Icon name="add" size={18} />
-                Create agent
-              </button>
-            </div>
+          <div className="flex shrink-0 items-center gap-sm">
+            <button
+              type="button"
+              onClick={() => setVideoOpen(true)}
+              className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
+            >
+              <Icon name="play_circle" size={18} />
+              Show how this works
+            </button>
+            <button
+              type="button"
+              className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              <Icon name="add" size={18} />
+              Create agent
+            </button>
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-xl">
@@ -325,6 +315,17 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
           </div>
         )}
       </div>
+
+      {zeroState && (
+        <div className="mt-xl flex flex-col items-center gap-lg">
+          <div className="flex flex-wrap items-center justify-center gap-xl">
+            <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
+            <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
+            <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
+          </div>
+          <Chip label="Based on data from similar businesses" variant="neutral" />
+        </div>
+      )}
 
       {videoOpen && (
         <div
