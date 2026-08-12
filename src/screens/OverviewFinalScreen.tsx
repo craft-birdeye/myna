@@ -350,19 +350,32 @@ function AgentPerformanceCardList({ agents, zeroState = false }: { agents: Agent
 // one headline row, shown above the co-worker tabs on the Overview (mixed) page only.
 // Zero-state replacement for AiCoworkerSummaryCard — a promotional banner (overlapping co-worker
 // avatars + a savings pitch) instead of numbers that don't exist yet for a brand-new account.
-function ZeroStateSummaryBanner({ showDemoCta = false }: { showDemoCta?: boolean }) {
+function ZeroStateSummaryBanner({
+  showDemoCta = false,
+  compact = false,
+}: {
+  showDemoCta?: boolean
+  /** Smaller avatars/padding/copy — used inline inside the AI workforce summary card
+   *  (Zero state) rather than as its own full-size banner (Current). */
+  compact?: boolean
+}) {
+  const avatarSize = compact ? 'size-9' : 'size-14'
   return (
-    <div className="flex items-center gap-xl rounded-md border border-ai-summary-border bg-ai-summary p-2xl">
+    <div className={`flex items-center gap-lg rounded-md border border-ai-summary-border bg-ai-summary ${compact ? 'p-lg' : 'p-2xl gap-xl'}`}>
       <div className="flex shrink-0 items-center">
-        <img src={mynaLogo} alt="" className="size-14 rounded-full border-2 border-surface" />
-        <img src={jayLogo} alt="" className="-ml-4 size-14 rounded-full border-2 border-surface" />
-        <img src={robinLogo} alt="" className="-ml-4 size-14 rounded-full border-2 border-surface" />
+        <img src={mynaLogo} alt="" className={`${avatarSize} rounded-full border-2 border-surface`} />
+        <img src={jayLogo} alt="" className={`-ml-3 ${avatarSize} rounded-full border-2 border-surface`} />
+        <img src={robinLogo} alt="" className={`-ml-3 ${avatarSize} rounded-full border-2 border-surface`} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="m-0 text-h3 text-text-primary">Customers using AI co-workers save up to 20 hours per week, per person.</p>
-        <p className="m-0 mt-xs text-body text-text-secondary">
-          Meet Myna, Jay, and Robin — your AI co-workers, already set up and ready to start saving your team time.
+        <p className={`m-0 text-text-primary ${compact ? 'text-body' : 'text-h3'}`}>
+          Customers using AI co-workers save up to 20 hours per week, per person.
         </p>
+        {!compact && (
+          <p className="m-0 mt-xs text-body text-text-secondary">
+            Meet Myna, Jay, and Robin — your AI co-workers, already set up and ready to start saving your team time.
+          </p>
+        )}
       </div>
       {showDemoCta && (
         <button
@@ -380,11 +393,15 @@ function AiCoworkerSummaryCard({
   dateRange,
   showBanner = false,
   showDemoCta = false,
+  zeroState = false,
 }: {
   dateRange: string
   /** Renders the promotional ZeroStateSummaryBanner instead of the normal numeric card. */
   showBanner?: boolean
   showDemoCta?: boolean
+  /** No agents have run yet — zeroes Agents/Time saved/Cost saved and adds a compact promo
+   *  banner inside the card instead of the usual numbers for those. */
+  zeroState?: boolean
 }) {
   const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
   const jayAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing')
@@ -403,12 +420,19 @@ function AiCoworkerSummaryCard({
   const totalHours = mynaHours + jayHours + robinHours
   const totalCostK = mynaCostK + jayCostK + robinCostK
 
-  const stats: OverviewStat[] = [
-    { id: 'co-workers', value: '3', label: 'Co-workers' },
-    { id: 'agents', value: String(totalAgents), label: 'Agents' },
-    { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
-    { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
-  ]
+  const stats: OverviewStat[] = zeroState
+    ? [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: '0', label: 'Agents' },
+        { id: 'time-saved', value: '--', label: 'Time saved' },
+        { id: 'cost-saved', value: '--', label: 'Cost saved' },
+      ]
+    : [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: String(totalAgents), label: 'Agents' },
+        { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
+        { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
+      ]
 
   if (showBanner) return <ZeroStateSummaryBanner showDemoCta={showDemoCta} />
 
@@ -416,6 +440,11 @@ function AiCoworkerSummaryCard({
     <div className="rounded-md border border-border bg-surface p-2xl">
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
       <StatGroup stats={stats} big />
+      {zeroState && (
+        <div className="mt-xl">
+          <ZeroStateSummaryBanner compact />
+        </div>
+      )}
     </div>
   )
 }
@@ -1097,7 +1126,7 @@ export function OverviewFinalScreen({
 
           {showCoworkerPerformance ? (
             <>
-              <AiCoworkerSummaryCard dateRange={dateRange} showBanner={showPromoBanner} showDemoCta={showPromoBanner} />
+              <AiCoworkerSummaryCard dateRange={dateRange} showBanner={showPromoBanner} showDemoCta={showPromoBanner} zeroState={zeroState} />
 
               {dataState !== 'Current' && (
                 <CoworkerSectionsCard
