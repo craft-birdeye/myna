@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, Tabs, type Metric, type Tab } from '../components'
+import { Fragment, useEffect, useRef, useState, type DragEvent } from 'react'
+import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, type Metric } from '../components'
 import {
   getAgentDirectory,
   PERSONA_GROUPS,
   type AgentDirectoryEntry,
   type AgentPersonaId,
 } from '../data/agentDirectoryData'
+import mynaLogo from '../assets/icon-myna.svg'
+import jayLogo from '../assets/icon-jay.svg'
+import robinLogo from '../assets/icon-robin.svg'
+import { ClassicOverviewScreen } from './ClassicOverviewScreen'
 
 type SortMode = 'runs' | 'persona' | 'custom'
 
@@ -20,6 +24,20 @@ const COWORKER_NAME: Record<AgentPersonaId, string> = {
   operations: 'Myna',
   cx: 'Robin',
 }
+const COWORKER_LOGO: Record<AgentPersonaId, string> = {
+  operations: mynaLogo,
+  marketing: jayLogo,
+  cx: robinLogo,
+}
+const COWORKER_ACCENT: Record<AgentPersonaId, string> = {
+  operations: '#2E6B36',
+  marketing: '#335EB2',
+  cx: '#B8482C',
+}
+type CoworkerTabId = AgentPersonaId | 'all'
+const COWORKER_TAB_ORDER: CoworkerTabId[] = ['all', 'marketing', 'operations', 'cx']
+// Neutral accent for the "All" tab, which isn't tied to one co-worker's brand color.
+const ALL_TAB_ACCENT = '#1976d2'
 
 // 16,230 → { display: '16.2K', exact: '16,230' }. Already-compact values ("1.9K", "434") pass through untouched.
 function formatK(raw: string): { display: string; exact?: string } {
@@ -407,6 +425,52 @@ function MetricCell({ value, label, tooltip }: { value: string; label: string; t
   )
 }
 
+// ── Co-worker tab bar — avatar + brand-color underline per tab, ported from Akhil's
+// "Overview LAV" build (this repo's icon-myna/jay/robin.svg substitute for the PNG logos there). ──
+function CoworkerTabBar({
+  activeTab,
+  onChange,
+  agents,
+}: {
+  activeTab: CoworkerTabId
+  onChange: (id: CoworkerTabId) => void
+  agents: AgentDirectoryEntry[]
+}) {
+  return (
+    <div className="relative flex items-center gap-xs">
+      {COWORKER_TAB_ORDER.map((id, index) => {
+        const active = id === activeTab
+        const accent = id === 'all' ? ALL_TAB_ACCENT : COWORKER_ACCENT[id]
+        const name = id === 'all' ? 'All AI co-workers' : COWORKER_NAME[id]
+        const subtext =
+          id === 'all' ? `${agents.length} agents` : `${PERSONA_GROUPS.find((g) => g.id === id)!.label} • ${agents.filter((a) => a.persona === id).length} agents`
+        return (
+          <Fragment key={id}>
+            {index > 0 && <span className="h-6 w-px shrink-0 bg-border" />}
+            <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
+              <span
+                className={`flex items-start gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
+              >
+                {id !== 'all' && <img src={COWORKER_LOGO[id]} alt="" className="size-7 shrink-0 rounded-full" />}
+                <span className="flex flex-col gap-[2px]">
+                  <span className={`text-body ${active ? '' : 'text-text-secondary'}`} style={active ? { color: accent } : undefined}>
+                    {name}
+                  </span>
+                  <span className="text-left text-small text-text-tertiary">{subtext}</span>
+                </span>
+              </span>
+              <span
+                className="absolute inset-x-0 bottom-0 z-10 h-px"
+                style={{ backgroundColor: active ? accent : 'transparent' }}
+              />
+            </button>
+          </Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Grid card ───────────────────────────────────────────────────────────
 function AgentCard({
   agent,
@@ -495,13 +559,16 @@ export function OverviewScreen({
   onOpenAgent?: (navId: string) => void
   onCreateAgent?: () => void
 } = {}) {
+  // "Switch to classic overview"/"Switch to agentic overview" swap the page body in place —
+  // no navigation, so the Overview rail item stays active and the URL/nav state never changes.
+  const [showClassicOverview, setShowClassicOverview] = useState(false)
   const AGENT_DIRECTORY = getAgentDirectory(product)
   const [statusFilter, setStatusFilter] = useState('Running')
   const [dateRange, setDateRange] = useState('Last month')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
   const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
-  const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId | 'all'>('operations')
+  const [activeCoworkerTab, setActiveCoworkerTab] = useState<CoworkerTabId>('operations')
   const dragIdRef = useRef<string | null>(null)
 
   // "Co-workers" rebrand (tabs, renamed header, coworkers tile) — Healthcare
@@ -547,10 +614,6 @@ export function OverviewScreen({
     }
     return customOrder.indexOf(a.id) - customOrder.indexOf(b.id)
   })
-  const COWORKER_TABS: Tab[] = [
-    { id: 'all', label: 'All' },
-    ...PERSONA_GROUPS.map((g) => ({ id: g.id, label: COWORKER_NAME[g.id] })),
-  ]
 
   const runningCount = AGENT_DIRECTORY.filter((a) => a.running > 0).length
   const attentionCount = AGENT_DIRECTORY.filter((a) => a.alert).length
@@ -587,16 +650,30 @@ export function OverviewScreen({
     })
   }
 
+  if (showClassicOverview) {
+    return <ClassicOverviewScreen onSwitchToAgentic={() => setShowClassicOverview(false)} />
+  }
+
   return (
     <div className="flex h-full flex-col">
       <TopNav title="Overview" initials="S" />
 
       <div className="flex-1 overflow-auto bg-surface">
         <ReportHeader
-          title="Overview"
+          title="Welcome, Rupa"
           subtitle={showCoworkers ? 'Here are the things which need your attention.' : 'Manage and monitor AI agents across your business.'}
           rightSlot={
             <div className="flex shrink-0 items-center gap-sm">
+              {showCoworkers && (
+                <button
+                  type="button"
+                  onClick={() => setShowClassicOverview(true)}
+                  className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                >
+                  <Icon name="swap_horiz" size={18} />
+                  Switch to classic overview
+                </button>
+              )}
               <TopBarDropdown value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} />
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
               <button
@@ -630,11 +707,7 @@ export function OverviewScreen({
               </div>
             ) : (
               <div className="flex items-center justify-between gap-lg">
-                <Tabs
-                  tabs={COWORKER_TABS}
-                  activeTab={activeCoworkerTab}
-                  onChange={(id) => setActiveCoworkerTab(id as AgentPersonaId | 'all')}
-                />
+                <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} agents={AGENT_DIRECTORY} />
 
                 <SortDropdown
                   sortMode={sortMode}
