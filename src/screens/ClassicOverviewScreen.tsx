@@ -293,7 +293,7 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
                 <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
                 <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
               </div>
-              <p className="m-0 text-small text-text-tertiary">Based on data from similar businesses</p>
+              <Chip label="Based on data from similar businesses" variant="neutral" />
             </div>
             <div className="flex shrink-0 items-center gap-sm">
               <button
