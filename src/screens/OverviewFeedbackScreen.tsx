@@ -60,7 +60,7 @@ const COWORKER_ACCENT: Record<AgentPersonaId, string> = {
   marketing: '#335EB2',
   cx: '#B8482C',
 }
-const COWORKER_TAB_ORDER: AgentPersonaId[] = ['operations', 'marketing', 'cx']
+const COWORKER_TAB_ORDER: AgentPersonaId[] = ['marketing', 'operations', 'cx']
 
 // Every KPI tile across the page (every widget's StatGroup/OutcomeKpiGroup) floors at 250px, but
 // grows wider when its own value/label text needs more room (nowrap, so long text stretches the
