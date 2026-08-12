@@ -360,7 +360,6 @@ function CoworkerTabBar({
 }) {
   return (
     <div className="relative flex items-center gap-xs">
-      <span className="absolute inset-x-0 bottom-0 z-0 h-px bg-border" />
       {COWORKER_TAB_ORDER.map((id, index) => {
         const active = id === activeTab
         const accent = id === 'all' ? ALL_TAB_ACCENT : COWORKER_ACCENT[id]

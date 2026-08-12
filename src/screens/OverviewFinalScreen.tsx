@@ -1147,9 +1147,9 @@ export function OverviewFinalScreen({
                   <button
                     type="button"
                     onClick={onSwitchToAgentic}
-                    className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                    className="flex h-9 items-center gap-sm rounded-sm border border-ai-brand bg-surface px-lg text-body text-ai-brand hover:bg-ai-summary"
                   >
-                    <Icon name="swap_horiz" size={18} />
+                    <Icon name="swap_horiz" size={18} className="text-ai-brand" />
                     Switch to agentic overview
                   </button>
                 )}
