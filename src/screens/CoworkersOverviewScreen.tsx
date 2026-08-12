@@ -32,7 +32,10 @@ const COWORKER_ACCENT: Record<AgentPersonaId, string> = {
   marketing: '#335EB2',
   cx: '#B8482C',
 }
-const COWORKER_TAB_ORDER: AgentPersonaId[] = ['marketing', 'operations', 'cx']
+type CoworkerTabId = AgentPersonaId | 'all'
+const COWORKER_TAB_ORDER: CoworkerTabId[] = ['all', 'marketing', 'operations', 'cx']
+// Neutral accent for the "All" tab, which isn't tied to one co-worker's brand color.
+const ALL_TAB_ACCENT = '#1976d2'
 
 // 16,230 → { display: '16.2K', exact: '16,230' }. Already-compact values ("1.9K", "434") pass through untouched.
 function formatK(raw: string): { display: string; exact?: string } {
@@ -350,8 +353,8 @@ function CoworkerTabBar({
   onChange,
   agents,
 }: {
-  activeTab: AgentPersonaId
-  onChange: (id: AgentPersonaId) => void
+  activeTab: CoworkerTabId
+  onChange: (id: CoworkerTabId) => void
   agents: AgentDirectoryEntry[]
 }) {
   return (
@@ -359,32 +362,36 @@ function CoworkerTabBar({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border" />
       {COWORKER_TAB_ORDER.map((id, i) => {
         const active = id === activeTab
-        const group = PERSONA_GROUPS.find((g) => g.id === id)!
-        const agentCount = agents.filter((a) => a.persona === id).length
+        const accent = id === 'all' ? ALL_TAB_ACCENT : COWORKER_ACCENT[id]
+        const name = id === 'all' ? 'All' : COWORKER_NAME[id]
+        const subtext =
+          id === 'all' ? `${agents.length} agents` : `${PERSONA_GROUPS.find((g) => g.id === id)!.label} • ${agents.filter((a) => a.persona === id).length} agents`
         return (
           <Fragment key={id}>
             {i > 0 && <span className="self-stretch w-px shrink-0 bg-border" />}
             <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
               <span
                 className={`flex items-center gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
-                style={active ? { backgroundColor: `${COWORKER_ACCENT[id]}1A` } : undefined}
               >
-                <img src={COWORKER_LOGO[id]} alt="" className="size-10 shrink-0 rounded-full" />
+                {id === 'all' ? (
+                  <span className="flex shrink-0 items-center">
+                    <img src={mynaLogo} alt="" className="size-7 rounded-full border-2 border-surface" />
+                    <img src={jayLogo} alt="" className="-ml-2 size-7 rounded-full border-2 border-surface" />
+                    <img src={robinLogo} alt="" className="-ml-2 size-7 rounded-full border-2 border-surface" />
+                  </span>
+                ) : (
+                  <img src={COWORKER_LOGO[id]} alt="" className="size-10 shrink-0 rounded-full" />
+                )}
                 <span className="flex flex-col gap-[2px]">
-                  <span
-                    className={`text-body ${active ? '' : 'text-text-secondary'}`}
-                    style={active ? { color: COWORKER_ACCENT[id] } : undefined}
-                  >
-                    {COWORKER_NAME[id]}
+                  <span className={`text-body ${active ? '' : 'text-text-secondary'}`} style={active ? { color: accent } : undefined}>
+                    {name}
                   </span>
-                  <span className="text-left text-small text-text-tertiary">
-                    {group.label} • {agentCount} agents
-                  </span>
+                  <span className="text-left text-small text-text-tertiary">{subtext}</span>
                 </span>
               </span>
               <span
                 className="absolute inset-x-0 bottom-0 z-10 h-px"
-                style={{ backgroundColor: active ? COWORKER_ACCENT[id] : 'transparent' }}
+                style={{ backgroundColor: active ? accent : 'transparent' }}
               />
             </button>
           </Fragment>
@@ -547,7 +554,7 @@ export function CoworkersOverviewScreen({
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
   const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
-  const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
+  const [activeCoworkerTab, setActiveCoworkerTab] = useState<CoworkerTabId>('operations')
   const dragIdRef = useRef<string | null>(null)
 
   // "Co-workers" rebrand (tabs, renamed header, coworkers tile) — Healthcare
@@ -583,7 +590,9 @@ export function CoworkersOverviewScreen({
   // "All" tab plus one tab per coworker, sitting alongside the same sort
   // dropdown used elsewhere — the tab narrows which agents show, the
   // dropdown still controls their order within that set.
-  const coworkerFilteredAgents = [...statusFiltered.filter((a) => a.persona === activeCoworkerTab)].sort((a, b) => {
+  const coworkerFilteredAgents = [
+    ...(activeCoworkerTab === 'all' ? statusFiltered : statusFiltered.filter((a) => a.persona === activeCoworkerTab)),
+  ].sort((a, b) => {
     if (sortMode === 'persona') {
       const pa = PERSONA_GROUPS.findIndex((p) => p.id === a.persona)
       const pb = PERSONA_GROUPS.findIndex((p) => p.id === b.persona)
