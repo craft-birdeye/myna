@@ -269,14 +269,14 @@ function ZeroStateEstimatesPanel({ agent }: { agent: AgentDirectoryEntry }) {
     { value: `~${agent.costSaved}`, label: 'Cost saved' },
   ]
   return (
-    <div className="inline-flex flex-wrap items-center gap-lg rounded-sm bg-chip-info-bg px-lg py-sm">
+    <div className="inline-flex shrink-0 items-center gap-xl whitespace-nowrap rounded-sm bg-[#ECF5FD] px-xl py-sm">
       <span className="whitespace-nowrap text-body text-text-secondary">Estimates from similar businesses</span>
       <div className="h-8 w-px shrink-0 bg-border" />
-      <div className="flex flex-wrap items-center gap-xl">
+      <div className="flex items-center gap-3xl">
         {kpis.map((kpi) => (
-          <div key={kpi.label} className="text-center">
-            <p className="m-0 text-h3 text-text-secondary">{kpi.value}</p>
-            <p className="m-0 text-small text-text-tertiary">{kpi.label}</p>
+          <div key={kpi.label} className="shrink-0 text-center">
+            <p className="m-0 whitespace-nowrap text-h3 text-text-secondary">{kpi.value}</p>
+            <p className="m-0 whitespace-nowrap text-small text-text-tertiary">{kpi.label}</p>
           </div>
         ))}
       </div>
@@ -292,30 +292,35 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
     <div className="rounded-md border border-border bg-surface p-xl">
-      <div className="flex flex-wrap items-center justify-between gap-3xl">
+      <div className="flex items-center justify-between gap-3xl">
         <div className="min-w-[220px] max-w-[320px] shrink-0 pr-3xl">
           <p className="m-0 truncate text-small text-text-tertiary">{agent.category}</p>
           <h4 className="m-0 mt-xs mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
         {zeroState ? (
-          <div className="flex shrink-0 items-center gap-sm">
-            <button
-              type="button"
-              onClick={() => setVideoOpen(true)}
-              className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
-            >
-              <Icon name="play_circle" size={18} />
-              Show how this works
-            </button>
-            <button
-              type="button"
-              className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-            >
-              <Icon name="add" size={18} />
-              Create agent
-            </button>
-          </div>
+          <>
+            <div className="flex min-w-0 flex-1 items-center justify-center">
+              <ZeroStateEstimatesPanel agent={agent} />
+            </div>
+            <div className="flex shrink-0 items-center gap-sm">
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
+              >
+                <Icon name="play_circle" size={18} />
+                Show how this works
+              </button>
+              <button
+                type="button"
+                className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              >
+                <Icon name="add" size={18} />
+                Create agent
+              </button>
+            </div>
+          </>
         ) : (
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-xl">
             <AgentKpiCell value={String(agent.running)} label="Agents running" />
@@ -328,12 +333,6 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
           </div>
         )}
       </div>
-
-      {zeroState && (
-        <div className="mt-xl flex justify-center">
-          <ZeroStateEstimatesPanel agent={agent} />
-        </div>
-      )}
 
       {videoOpen && (
         <div
