@@ -1031,6 +1031,26 @@
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
 }
 
+/* ─── Test run: canvas node states ───────────────────────────────────────── */
+/* Per-node borders are injected inline by AgentBuilder (keyed on react-flow's data-id).
+   Only the shared pulse keyframe lives here. */
+
+@keyframes ab-test-run-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node .canvas-node {
+    animation: none !important;
+  }
+}
+
 /* Actions-only pill: view-only canvases that show just Edit workflow + Run test. */
 .rr-chrome-top--actions-only {
   max-width: none;

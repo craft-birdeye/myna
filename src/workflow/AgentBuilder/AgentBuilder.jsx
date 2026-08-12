@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import LHSDrawer, {
   isFrontDeskAgent as agentNameIsFrontDesk,
   isFrontDeskCanvasAgent,
@@ -54,11 +54,16 @@ import iconRrPreview from '../../assets/rr-chrome/icon-preview.svg';
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg';
 import { Tooltip } from '../../components/Tooltip/Tooltip';
 import { AiBuilderPanel } from '../../components/AiBuilderPanel/AiBuilderPanel';
+import { TestRunPanel } from '../../components/TestRunPanel/TestRunPanel';
+import { buildTestRunSteps } from '../../data/testRunSteps';
+import { useTestRun } from '../../hooks/useTestRun';
 import { getAgentIssues } from '../../data/agentIssues';
 import VersionHistoryPanel from './VersionHistoryPanel';
 import './AgentBuilder.css';
 
 const START_NODE_ID = '__start__';
+/* Stable identity — `useTestRun` restarts whenever its `steps` reference changes. */
+const EMPTY_TEST_RUN_STEPS = [];
 const END_NODE_ID = '__end__';
 // Synthetic node (not part of nodeList) that reserves step 1 for the trigger while none exists.
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
@@ -1092,6 +1097,27 @@ export default function AgentBuilder({
     return base;
   });
   const [agentStatus, setAgentStatus] = useState(initialStatus || 'Draft');
+
+  /* ─── Test run ─── */
+  const [testRunOpen, setTestRunOpen] = useState(false);
+  // Rebuilt only while the panel is open so the run isn't restarted by unrelated edits.
+  const testRunSteps = useMemo(
+    () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails) : EMPTY_TEST_RUN_STEPS),
+    [testRunOpen, nodeList, nodeDetails],
+  );
+  const testRun = useTestRun(testRunSteps);
+  const testRunActiveId = testRunOpen ? testRun.activeNodeId : null;
+  // Canvas highlighting for the executing / finished nodes, keyed by react-flow's data-id.
+  const testRunCss = testRunOpen
+    ? [
+        ...testRun.doneNodeIds.map(
+          (id) => `.react-flow__node[data-id="${id}"] .canvas-node { border: 1px solid #4caf50 !important; box-shadow: 0 2px 12px 0 rgba(33, 33, 33, 0.06) !important; }`,
+        ),
+        testRunActiveId
+          ? `.react-flow__node[data-id="${testRunActiveId}"] .canvas-node { border: 1px solid #1976d2 !important; animation: ab-test-run-pulse 2.6s ease-in-out infinite; }`
+          : '',
+      ].join('\n')
+    : '';
 
   /* ─── Sync live procedure library into the procedureService registry ─── */
   useEffect(() => {
@@ -2870,7 +2896,7 @@ export default function AgentBuilder({
         <button
           type="button"
           className="ab-header-cloud-btn"
-          onClick={() => {}}
+          onClick={() => setTestRunOpen(true)}
           aria-label="Run test"
         >
           <span className="material-symbols-outlined ab-header-cloud-btn__material ab-header-cloud-btn__material--play" aria-hidden>play_arrow</span>
@@ -2965,7 +2991,7 @@ export default function AgentBuilder({
         <button
           type="button"
           className="ab-header-cloud-btn"
-          onClick={() => {}}
+          onClick={() => setTestRunOpen(true)}
           aria-label="Run test"
         >
           <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
@@ -3214,6 +3240,7 @@ export default function AgentBuilder({
               rrChrome
               initialZoom={initialZoom}
               runDisabled={runDisabled}
+              focusNodeId={testRunActiveId}
               onEdit={onEdit}
               onView={onView}
               onUndo={handleUndo}
@@ -3236,6 +3263,21 @@ export default function AgentBuilder({
             <div className="agent-builder__ai-assist">
               <AiAssistPanel onClose={() => setAiAssistOpen(false)} />
             </div>
+          )}
+
+          {testRunOpen && (
+            <>
+              <style>{testRunCss}</style>
+              <div className="agent-builder__rhs agent-builder__rhs--opening">
+                <TestRunPanel
+                  steps={testRunSteps}
+                  stepStatuses={testRun.stepStatuses}
+                  activeIndex={testRun.activeIndex}
+                  status={testRun.status}
+                  onExit={() => setTestRunOpen(false)}
+                />
+              </div>
+            </>
           )}
 
           {rhsRendered && (

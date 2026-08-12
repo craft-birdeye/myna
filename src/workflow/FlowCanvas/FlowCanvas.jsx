@@ -625,6 +625,8 @@ function FlowCanvasInner({
   onRedo,
   canUndo = false,
   canRedo = false,
+  /** Node id to pan into view — used by the test run to follow the executing card. */
+  focusNodeId = null,
 }) {
   const { zoomTo, fitView, setCenter, setViewport, getViewport, getNodes } = useReactFlow();
   const [zoom, setZoom] = useState(Math.round(initialZoom * 100));
@@ -638,6 +640,19 @@ function FlowCanvasInner({
 
   const onPasteAtConnectorRef = useRef(onPasteAtConnector);
   useEffect(() => { onPasteAtConnectorRef.current = onPasteAtConnector; }, [onPasteAtConnector]);
+
+  // Pan the executing test-run node into view, keeping the user's current zoom.
+  useEffect(() => {
+    if (!focusNodeId) return;
+    const node = getNodes().find((n) => n.id === focusNodeId);
+    if (!node) return;
+    const w = node.measured?.width ?? node.width ?? 0;
+    const h = node.measured?.height ?? node.height ?? 0;
+    setCenter(node.position.x + w / 2, node.position.y + h / 2, {
+      zoom: getViewport().zoom,
+      duration: 700,
+    });
+  }, [focusNodeId, getNodes, setCenter, getViewport]);
 
   const endEdgeSourceId = useMemo(
     () => edges.find((e) => e.target === '__end__')?.source ?? null,
