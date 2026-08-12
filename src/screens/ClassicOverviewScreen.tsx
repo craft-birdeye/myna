@@ -287,10 +287,13 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
         </div>
         {zeroState ? (
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-xl">
-            <div className="flex flex-1 flex-wrap items-center justify-center gap-xl">
-              <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
-              <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
-              <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
+            <div className="flex flex-1 flex-col items-center gap-xs">
+              <div className="flex flex-wrap items-center justify-center gap-xl">
+                <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
+                <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
+                <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
+              </div>
+              <p className="m-0 text-small text-text-tertiary">Based on data from similar businesses</p>
             </div>
             <div className="flex shrink-0 items-center gap-sm">
               <button
