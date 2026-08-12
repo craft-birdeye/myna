@@ -217,7 +217,7 @@ interface OutcomeKpi {
 
 // Same tile shape as StatGroup, with a small violet agent-contribution badge next to the value —
 // hovering it explains which agent and how much of the total that share represents.
-function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boolean }) {
+function OutcomeKpiGroup({ stats, big = true, hideIcon = false }: { stats: OutcomeKpi[]; big?: boolean; hideIcon?: boolean }) {
   return (
     <div className={KPI_ROW_CLASS}>
       {stats.map((s) => {
@@ -237,7 +237,7 @@ function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boo
                   content={`${s.agentName} handled ${contribution} of ${s.value} ${s.label.toLowerCase()}.`}
                 >
                   <span className="flex items-center gap-[2px] text-[14px] leading-none text-ai-brand">
-                    <AiAgentIcon size={14} />
+                    {!hideIcon && <AiAgentIcon size={14} />}
                     {s.agentPct}
                   </span>
                 </Tooltip>
@@ -705,7 +705,7 @@ function AppointmentsSection() {
   return (
     <>
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Appointments</h3>
-      <OutcomeKpiGroup stats={appointmentsKpis} big />
+      <OutcomeKpiGroup stats={appointmentsKpis} big hideIcon />
     </>
   )
 }
