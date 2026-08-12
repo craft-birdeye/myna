@@ -271,10 +271,10 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
 // Zero-state estimates panel — a single light-blue pill (hugs its own content, doesn't stretch)
 // with the "Estimates from similar businesses" caption on the left and the three illustrative
 // "~" KPIs after it, all inside the one box instead of separate chips per KPI.
-function ZeroStateEstimatesPanel({ agent }: { agent: AgentDirectoryEntry }) {
+function ZeroStateEstimatesPanel({ agent, dateRange }: { agent: AgentDirectoryEntry; dateRange: string }) {
   const kpis = [
     { value: `~${formatK(agent.outcome.value)}`, label: agent.outcome.label },
-    { value: `~${agent.timeSaved}`, label: 'Time saved' },
+    { value: `~${formatTimeSaved(parseFloat(agent.timeSaved), dateRange)}`, label: 'Time saved' },
     { value: `~${agent.costSaved}`, label: 'Cost saved' },
   ]
   return (
@@ -296,7 +296,15 @@ function ZeroStateEstimatesPanel({ agent }: { agent: AgentDirectoryEntry }) {
 // Full-width version of the agent card shown on the Overview/Co-workers directory — same fields
 // (category, running/paused status, name, description, KPIs), just laid out across the full card
 // width instead of a grid cell.
-function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirectoryEntry; zeroState?: boolean }) {
+function AgentPerformanceCard({
+  agent,
+  dateRange,
+  zeroState = false,
+}: {
+  agent: AgentDirectoryEntry
+  dateRange: string
+  zeroState?: boolean
+}) {
   const [videoOpen, setVideoOpen] = useState(false)
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
@@ -310,7 +318,7 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
         {zeroState ? (
           <>
             <div className="flex min-w-0 flex-1 items-center justify-center">
-              <ZeroStateEstimatesPanel agent={agent} />
+              <ZeroStateEstimatesPanel agent={agent} dateRange={dateRange} />
             </div>
             <div className="flex shrink-0 items-center gap-sm">
               <button
@@ -337,7 +345,7 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
             {extraKpis.map((kpi) => (
               <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
             ))}
-            <AgentKpiCell value={agent.timeSaved} label="Time saved" />
+            <AgentKpiCell value={formatTimeSaved(parseFloat(agent.timeSaved), dateRange)} label="Time saved" />
             <AgentKpiCell value={agent.costSaved} label="Cost saved" />
           </div>
         )}
@@ -370,11 +378,19 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
 
 // Detail view shown just below every "<Co-worker> performance" section — one full-length
 // AgentPerformanceCard per agent.
-function AgentPerformanceCardList({ agents, zeroState = false }: { agents: AgentDirectoryEntry[]; zeroState?: boolean }) {
+function AgentPerformanceCardList({
+  agents,
+  dateRange,
+  zeroState = false,
+}: {
+  agents: AgentDirectoryEntry[]
+  dateRange: string
+  zeroState?: boolean
+}) {
   return (
     <div className="mt-2xl flex flex-col gap-lg">
       {agents.map((agent) => (
-        <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} />
+        <AgentPerformanceCard key={agent.id} agent={agent} dateRange={dateRange} zeroState={zeroState} />
       ))}
     </div>
   )
@@ -778,7 +794,7 @@ function CoworkerPerformanceSection({
         {COWORKER_NAME[persona]} performance
       </h3>
       <StatGroup stats={kpiStats} big />
-      <AgentPerformanceCardList agents={agents} zeroState={zeroState} />
+      <AgentPerformanceCardList agents={agents} dateRange={dateRange} zeroState={zeroState} />
     </>
   )
 }
