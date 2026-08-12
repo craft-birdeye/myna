@@ -363,7 +363,7 @@ function CoworkerTabBar({
       {COWORKER_TAB_ORDER.map((id, i) => {
         const active = id === activeTab
         const accent = id === 'all' ? ALL_TAB_ACCENT : COWORKER_ACCENT[id]
-        const name = id === 'all' ? 'All' : COWORKER_NAME[id]
+        const name = id === 'all' ? 'All AI co-workers' : COWORKER_NAME[id]
         const subtext =
           id === 'all' ? `${agents.length} agents` : `${PERSONA_GROUPS.find((g) => g.id === id)!.label} • ${agents.filter((a) => a.persona === id).length} agents`
         return (
