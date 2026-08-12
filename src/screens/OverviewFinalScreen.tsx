@@ -375,7 +375,7 @@ function ZeroStateSummaryBanner({
           <p className="m-0 mt-xs text-body text-text-secondary">Set up your agents and start saving right away.</p>
         ) : (
           <p className="m-0 mt-xs text-body text-text-secondary">
-            Meet Myna, Jay, and Robin — your AI co-workers, already set up and ready to start saving your team time.
+            Set up Myna, Jay, and Robin in minutes — and start saving time from day one.
           </p>
         )}
       </div>
