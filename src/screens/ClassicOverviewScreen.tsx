@@ -262,7 +262,8 @@ function AgentKpiCell({ value, label, tooltip }: { value: string; label: string;
 // Full-width version of the agent card shown on the Overview/Co-workers directory — same fields
 // (category, running/paused status, name, description, KPIs), just laid out across the full card
 // width instead of a grid cell.
-function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
+function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirectoryEntry; zeroState?: boolean }) {
+  const [videoOpen, setVideoOpen] = useState(false)
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
     <div className="rounded-md border border-border bg-surface p-xl">
@@ -272,33 +273,92 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
           <h4 className="m-0 mt-xs mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
           <p className="m-0 text-small text-text-tertiary">{agent.description}</p>
         </div>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
-          <AgentKpiCell value={String(agent.running)} label="Agents running" />
-          <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
-          {extraKpis.map((kpi) => (
-            <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
-          ))}
-          <AgentKpiCell value={agent.timeSaved} label="Time saved" />
-          <AgentKpiCell value={agent.costSaved} label="Cost saved" />
-        </div>
+        {zeroState ? (
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-sm">
+            <button
+              type="button"
+              onClick={() => setVideoOpen(true)}
+              className="flex h-9 shrink-0 items-center gap-xs rounded-md px-md text-body text-text-action hover:bg-surface-hover"
+            >
+              <Icon name="play_circle" size={18} />
+              Show how this works
+            </button>
+            <button
+              type="button"
+              className="flex h-9 shrink-0 items-center gap-xs rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              <Icon name="add" size={18} />
+              Create agent
+            </button>
+          </div>
+        ) : (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-xl">
+            <AgentKpiCell value={String(agent.running)} label="Agents running" />
+            <AgentKpiCell value={formatK(agent.outcome.value)} label={agent.outcome.label} tooltip={agent.description} />
+            {extraKpis.map((kpi) => (
+              <AgentKpiCell key={kpi.label} value={kpi.value} label={kpi.label} tooltip={kpi.tooltip} />
+            ))}
+            <AgentKpiCell value={agent.timeSaved} label="Time saved" />
+            <AgentKpiCell value={agent.costSaved} label="Cost saved" />
+          </div>
+        )}
       </div>
+
+      {videoOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60"
+          onClick={() => setVideoOpen(false)}
+        >
+          <div className="relative w-full max-w-[720px] rounded-md bg-surface p-lg" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setVideoOpen(false)}
+              className="absolute right-lg top-lg flex size-8 items-center justify-center rounded-full text-text-icon hover:bg-surface-hover"
+            >
+              <Icon name="close" size={20} />
+            </button>
+            <p className="m-0 mb-lg text-h3 text-text-primary">{agent.name}</p>
+            <div className="flex aspect-video items-center justify-center rounded-sm bg-surface-selected">
+              <Icon name="play_circle" size={48} className="text-text-tertiary" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // Detail view shown just below every "<Co-worker> performance" section — one full-length
 // AgentPerformanceCard per agent.
-function AgentPerformanceCardList({ agents }: { agents: AgentDirectoryEntry[] }) {
+function AgentPerformanceCardList({ agents, zeroState = false }: { agents: AgentDirectoryEntry[]; zeroState?: boolean }) {
   return (
     <div className="mt-2xl flex flex-col gap-lg">
       {agents.map((agent) => (
-        <AgentPerformanceCard key={agent.id} agent={agent} />
+        <AgentPerformanceCard key={agent.id} agent={agent} zeroState={zeroState} />
       ))}
     </div>
   )
 }
 
-function AiCoworkerSummaryCard({ dateRange }: { dateRange: string }) {
+// Zero-state promo strip shown inline inside the AI workforce summary card when there's no real
+// data yet — overlapping co-worker avatars + a savings pitch instead of numbers.
+function ZeroStateSummaryBanner() {
+  return (
+    <div className="flex items-center gap-lg rounded-md border border-ai-summary-border bg-ai-summary p-lg">
+      <div className="flex shrink-0 items-center">
+        <img src={mynaLogo} alt="" className="size-9 rounded-full border-2 border-surface" />
+        <img src={jayLogo} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+        <img src={robinLogo} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+      </div>
+      <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+        AI co-workers save up to 20 hours a week — set up yours and start saving today.
+      </p>
+    </div>
+  )
+}
+
+function AiCoworkerSummaryCard({ dateRange, zeroState = false }: { dateRange: string; zeroState?: boolean }) {
   const mynaAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'operations')
   const jayAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'marketing')
   const robinAgents = getAgentDirectory('healthcare').filter((a) => a.persona === 'cx')
@@ -316,17 +376,29 @@ function AiCoworkerSummaryCard({ dateRange }: { dateRange: string }) {
   const totalHours = mynaHours + jayHours + robinHours
   const totalCostK = mynaCostK + jayCostK + robinCostK
 
-  const stats: OverviewStat[] = [
-    { id: 'co-workers', value: '3', label: 'Co-workers' },
-    { id: 'agents', value: String(totalAgents), label: 'Agents' },
-    { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
-    { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
-  ]
+  const stats: OverviewStat[] = zeroState
+    ? [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: '0', label: 'Agents' },
+        { id: 'time-saved', value: '--', label: 'Time saved' },
+        { id: 'cost-saved', value: '--', label: 'Cost saved' },
+      ]
+    : [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: String(totalAgents), label: 'Agents' },
+        { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
+        { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
+      ]
 
   return (
     <div className="rounded-md border border-border bg-surface p-2xl">
       <h3 className="m-0 mb-lg text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
       <StatGroup stats={stats} big />
+      {zeroState && (
+        <div className="mt-xl">
+          <ZeroStateSummaryBanner />
+        </div>
+      )}
     </div>
   )
 }
@@ -636,16 +708,30 @@ function SocialSection({ showJayOutcomes = false }: SocialSectionProps) {
 // Primary section shown at the top of each co-worker tab — the full aggregate across every agent
 // that persona owns (not the partial per-widget subsets the sections below use for their own
 // top-row outcome badges).
-function CoworkerPerformanceSection({ persona, dateRange }: { persona: AgentPersonaId; dateRange: string }) {
+function CoworkerPerformanceSection({
+  persona,
+  dateRange,
+  zeroState = false,
+}: {
+  persona: AgentPersonaId
+  dateRange: string
+  zeroState?: boolean
+}) {
   const agents = getAgentDirectory('healthcare').filter((a) => a.persona === persona)
   const runningCount = agents.filter((a) => a.running > 0).length
   const timeSavedHrs = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const costSavedK = agents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
-  const kpiStats: OverviewStat[] = [
-    { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
-    { id: 'time-saved', value: formatTimeSaved(timeSavedHrs, dateRange), label: 'Time saved' },
-    { id: 'cost-saved', value: `$${costSavedK.toFixed(1)}K`, label: 'Cost saved' },
-  ]
+  const kpiStats: OverviewStat[] = zeroState
+    ? [
+        { id: 'agents-running', value: '0', label: 'Agents running' },
+        { id: 'time-saved', value: '--', label: 'Time saved' },
+        { id: 'cost-saved', value: '--', label: 'Cost saved' },
+      ]
+    : [
+        { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
+        { id: 'time-saved', value: formatTimeSaved(timeSavedHrs, dateRange), label: 'Time saved' },
+        { id: 'cost-saved', value: `$${costSavedK.toFixed(1)}K`, label: 'Cost saved' },
+      ]
   return (
     <>
       <h3 className="m-0 mb-lg flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
@@ -653,7 +739,7 @@ function CoworkerPerformanceSection({ persona, dateRange }: { persona: AgentPers
         {COWORKER_NAME[persona]} performance
       </h3>
       <StatGroup stats={kpiStats} big />
-      <AgentPerformanceCardList agents={agents} />
+      <AgentPerformanceCardList agents={agents} zeroState={zeroState} />
     </>
   )
 }
@@ -853,8 +939,8 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
   )
 }
 
-type DataState = 'Current' | 'Single co-worker' | 'Filled data'
-const DATA_STATE_OPTIONS: DataState[] = ['Current', 'Single co-worker', 'Filled data']
+type DataState = 'Current' | 'Zero state' | 'Single co-worker' | 'Filled data'
+const DATA_STATE_OPTIONS: DataState[] = ['Current', 'Zero state', 'Single co-worker', 'Filled data']
 
 // Design-review toggle — lets whoever's looking at the page preview it in a different data
 // state without needing separate mocked pages. Same trigger + floating panel as the date-range
@@ -917,6 +1003,7 @@ export function ClassicOverviewScreen({ userName = 'Rupa', onSwitchToAgentic }: 
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
   const [dateRange, setDateRange] = useState('Last month')
   const [dataState, setDataState] = useState<DataState>('Current')
+  const zeroState = dataState === 'Zero state'
 
   return (
     <div className="flex h-full flex-col">
@@ -956,16 +1043,16 @@ export function ClassicOverviewScreen({ userName = 'Rupa', onSwitchToAgentic }: 
             </div>
           </div>
 
-          {dataState !== 'Current' && <AiCoworkerSummaryCard dateRange={dateRange} />}
+          {dataState !== 'Current' && <AiCoworkerSummaryCard dateRange={dateRange} zeroState={zeroState} />}
 
           {dataState !== 'Current' && (
             <CoworkerSectionsCard
               sections={
                 dataState === 'Single co-worker'
-                  ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} />]
+                  ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={false} />]
                   : [
                       <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
-                      <CoworkerPerformanceSection persona={activeCoworkerTab} dateRange={dateRange} />,
+                      <CoworkerPerformanceSection persona={activeCoworkerTab} dateRange={dateRange} zeroState={zeroState} />,
                     ]
               }
             />
