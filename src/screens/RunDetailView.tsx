@@ -442,7 +442,6 @@ function AgentWorkflowRunCanvas({
         .run-wf-viewer { height: 100%; width: calc(100% - 600px); }
         .run-wf-viewer .agent-builder__lhs    { display: none !important; }
         .run-wf-viewer .faq-ab-header         { display: none !important; }
-        .run-wf-viewer .ab-view-banner        { display: none !important; }
         .run-wf-viewer .faq-ab-embedded       { height: 100% !important; }
         .run-wf-viewer .agent-builder-wrapper { background: transparent !important; background-image: none !important; }
         .run-wf-viewer .agent-builder         { padding: 0 !important; gap: 0 !important; }

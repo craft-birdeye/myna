@@ -5,6 +5,8 @@ export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
 export { AiBuilderPanel } from './AiBuilderPanel/AiBuilderPanel'
 export type { AiBuilderPanelProps } from './AiBuilderPanel/AiBuilderPanel.types'
 export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
+export { TestRunPanel } from './TestRunPanel/TestRunPanel'
+export type { TestRunPanelProps, TestRunStepStatus } from './TestRunPanel/TestRunPanel.types'
 export type {
   RunConversationEntry,
   RunDetailsPanelProps,

@@ -2,7 +2,7 @@
  * WorkflowViewerTab
  * View-only workflow canvas on the Workflow tab of AgentInstanceScreen.
  * - No LHS drawer, no yellow banner, no editing
- * - Edit pencil lives inside the existing floating zoom toolbar (via onEdit prop)
+ * - Floating top chrome shows only Edit workflow (pencil, via onEdit) + Run test (play)
  * - Canvas has left/right padding and rounded corners
  */
 import React, { Suspense } from 'react'
@@ -86,6 +86,7 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
             pageTitle={shownName}
             appTitle={shownName}
             viewOnly={true}
+            viewChromeActions
             onEdit={onEdit}
             product={product ?? 'automotive'}
             moduleSlug="myna"

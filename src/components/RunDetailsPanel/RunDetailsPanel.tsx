@@ -34,7 +34,8 @@ function MetaLabel({ label }: { label: string }) {
   )
 }
 
-const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
+/** Node-type icon + colour, matched to the canvas node-card glyphs. Shared with `TestRunPanel`. */
+export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
   task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
@@ -178,7 +179,8 @@ function NestedFieldBlock({ field }: { field: RunLogField }) {
   )
 }
 
-function FieldList({ fields }: { fields: RunLogField[] }) {
+/** `{}`-chip keyed field tree (nested objects collapse). Shared with `TestRunPanel`. */
+export function FieldList({ fields }: { fields: RunLogField[] }) {
   return (
     <div className="flex flex-col gap-xs">
       {fields.map((f) =>

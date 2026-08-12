@@ -466,6 +466,12 @@
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
 
+/* play_arrow has a narrower optical box than edit — scale it up to match. */
+.ab-header-cloud-btn__material--play {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+}
+
 .ab-header-more {
   position: relative;
 }
@@ -681,39 +687,6 @@
 }
 
 /* ─── View-only mode ─── */
-.ab-view-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: #fff8e1;
-  border-bottom: 1px solid #ffe082;
-  flex-shrink: 0;
-  font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  color: #5d4037;
-  letter-spacing: -0.26px;
-}
-
-.ab-view-banner .material-symbols-outlined {
-  font-size: 16px;
-  color: #f9a825;
-  flex-shrink: 0;
-}
-
-.ab-view-banner__link {
-  margin-left: auto;
-  font-size: 13px;
-  color: #1b72e8;
-  text-decoration: none;
-  font-weight: 400;
-  flex-shrink: 0;
-}
-
-.ab-view-banner__link:hover {
-  text-decoration: none;
-}
-
 .ab-view-badge {
   display: flex;
   align-items: center;
@@ -1058,6 +1031,38 @@
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
 }
 
+/* ─── Test run: canvas node states ───────────────────────────────────────── */
+/* Per-node borders are injected inline by AgentBuilder (keyed on react-flow's data-id).
+   Only the shared pulse keyframe lives here. */
+
+@keyframes ab-test-run-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node .canvas-node {
+    animation: none !important;
+  }
+}
+
+/* Actions-only pill: view-only canvases that show just Edit workflow + Run test. */
+.rr-chrome-top--actions-only {
+  max-width: none;
+  height: 44px;
+  padding: 0 6px;
+}
+
+/* Tighter than the editor header's 12px — these two sit alone in a small pill. */
+.rr-chrome-top--actions-only .ab-header-actions {
+  gap: 6px;
+}
+
 .rr-chrome-top__title-tip {
   flex-shrink: 1;
   min-width: 0;
@@ -1224,11 +1229,12 @@
   position: absolute;
   top: 72px;
   left: var(--rr-chrome-lhs-panel-left);
-  bottom: 16px;
+  /* Stop short of the bottom so the zoom controls stay visible below (matches .rr-chrome-palette). */
+  bottom: 96px;
   z-index: 56;
   box-sizing: border-box;
   width: var(--rr-chrome-lhs-panel-width);
-  max-height: calc(100% - 88px);
+  max-height: calc(100% - 168px);
   overflow: hidden;
   display: flex;
   flex-direction: column;

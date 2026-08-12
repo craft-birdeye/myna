@@ -1290,19 +1290,6 @@ export default function AgentBuilder({
 
       {/* ─── Builder body ─── */}
       <div className="agent-builder-wrapper" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: 'transparent' }}>
-        {viewOnly && (
-          <div className="ab-view-banner">
-            <span className="material-symbols-outlined">visibility</span>
-            <span>You&apos;re viewing a shared workflow. Editing is disabled.</span>
-            <a
-              className="ab-view-banner__link"
-              href={`mailto:?subject=Request edit access – ${agentName}`}
-            >
-              Request edit access
-            </a>
-          </div>
-        )}
-
         <div className="agent-builder">
           <div className="agent-builder__lhs">
             <LHSDrawer
