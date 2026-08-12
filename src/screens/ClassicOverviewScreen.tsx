@@ -244,22 +244,10 @@ function OutcomeKpiGroup({ stats, big = true }: { stats: OutcomeKpi[]; big?: boo
 
 // One KPI within an AgentPerformanceCard — plain by default, with a hover tooltip only for the
 // card's primary (outcome) metric, same treatment as the Co-workers directory's own agent cards.
-function AgentKpiCell({
-  value,
-  label,
-  tooltip,
-  muted = false,
-}: {
-  value: string
-  label: string
-  tooltip?: string
-  /** Lighter grey value text — used for zero-state's illustrative "~" estimates
-   *  (the agent isn't created yet, so these numbers aren't real). */
-  muted?: boolean
-}) {
+function AgentKpiCell({ value, label, tooltip }: { value: string; label: string; tooltip?: string }) {
   const content = (
     <div className="min-w-[140px] text-center">
-      <p className={`m-0 text-h3 ${muted ? 'text-text-secondary' : 'text-text-primary'}`}>{value}</p>
+      <p className="m-0 text-h3 text-text-primary">{value}</p>
       <p className="m-0 mt-xs text-small text-text-tertiary">{label}</p>
     </div>
   )
@@ -268,6 +256,18 @@ function AgentKpiCell({
     <Tooltip content={tooltip} variant="detail">
       {content}
     </Tooltip>
+  )
+}
+
+// Zero-state KPI pill — same value/label shape as AgentKpiCell, but wrapped in the same light-grey
+// chip background as the "Estimates from similar businesses" chip it sits alongside, so the whole
+// row reads as one family of illustrative estimates.
+function ZeroStateKpiChip({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-[2px] rounded-sm bg-chip-neutral-bg px-lg py-sm">
+      <p className="m-0 text-h3 text-text-secondary">{value}</p>
+      <p className="m-0 text-small text-text-tertiary">{label}</p>
+    </div>
   )
 }
 
@@ -317,13 +317,11 @@ function AgentPerformanceCard({ agent, zeroState = false }: { agent: AgentDirect
       </div>
 
       {zeroState && (
-        <div className="mt-xl flex flex-col items-center gap-lg">
-          <div className="flex flex-wrap items-center justify-center gap-xl">
-            <AgentKpiCell value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} tooltip={agent.description} muted />
-            <AgentKpiCell value={`~${agent.timeSaved}`} label="Time saved" muted />
-            <AgentKpiCell value={`~${agent.costSaved}`} label="Cost saved" muted />
-          </div>
-          <Chip label="Based on data from similar businesses" variant="neutral" />
+        <div className="mt-xl flex flex-wrap items-center justify-center gap-md">
+          <ZeroStateKpiChip value={`~${formatK(agent.outcome.value)}`} label={agent.outcome.label} />
+          <ZeroStateKpiChip value={`~${agent.timeSaved}`} label="Time saved" />
+          <ZeroStateKpiChip value={`~${agent.costSaved}`} label="Cost saved" />
+          <Chip label="Estimates from similar businesses" variant="neutral" />
         </div>
       )}
 
