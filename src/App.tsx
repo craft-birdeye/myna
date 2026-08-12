@@ -67,6 +67,7 @@ const RAIL_GROUPS: RailGroup[] = [
       { id: 'overview-4', label: 'Overview', icon: 'home', badge: 'Final' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
       { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'Tab' },
+      { id: 'agents-3', label: 'Overview', icon: 'home' },
     ],
   },
   {
@@ -474,7 +475,7 @@ export function App() {
         activeProduct={activeProduct}
         onProductChange={handleProductChange}
       />
-      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'overview' && railActive !== 'overview-2' && railActive !== 'overview-3' && railActive !== 'overview-4' && (
+      {!isEditingWorkflow && !isViewingDetail && !isAgentSetupActive && !isViewingFullBleedDetail && railActive !== 'settings' && railActive !== 'inbox' && railActive !== 'agents' && railActive !== 'agents-2' && railActive !== 'agents-3' && railActive !== 'overview' && railActive !== 'overview-2' && railActive !== 'overview-3' && railActive !== 'overview-4' && (
         railActive === 'reviews' ? (
           <SideNav
             key="reviews"
@@ -551,6 +552,15 @@ export function App() {
             }}
           />
         ) : railActive === 'agents' ? (
+          <AgentDirectoryScreen
+            key={activeProduct}
+            product={activeProduct}
+            onOpenAgent={(navId) => {
+              setRailActive('frontdesk')
+              setNavActive(navId)
+            }}
+          />
+        ) : railActive === 'agents-3' ? (
           <AgentDirectoryScreen
             key={activeProduct}
             product={activeProduct}
