@@ -13,7 +13,6 @@ import { ClassicOverviewScreen } from './ClassicOverviewScreen'
 
 type SortMode = 'runs' | 'persona' | 'custom'
 
-const STATUS_OPTIONS = ['All agents', 'Running', 'Paused', 'Needs attention']
 const DATE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
 // Co-worker brand names for the three persona groups — Jay (marketing), Myna
@@ -100,66 +99,6 @@ function useOpenTransition(open: boolean, duration = 150) {
 const DROPDOWN_TRANSITION = 'transition-all duration-150 ease-out'
 const DROPDOWN_HIDDEN = 'opacity-0 scale-95 -translate-y-1'
 const DROPDOWN_SHOWN = 'opacity-100 scale-100 translate-y-0'
-
-// ── Shared anchored dropdown (status + date filters) ──────────────────────
-// Same trigger + outside-click-to-close structure as DateRangeSelector, with
-// the reference dropdown's selected-row treatment: gray background + check icon.
-function TopBarDropdown({
-  value,
-  options,
-  onChange,
-}: {
-  value: string
-  options: string[]
-  onChange: (value: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const { mounted, entered } = useOpenTransition(open)
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
-      >
-        {value}
-        <Icon name="expand_more" size={18} className="text-text-icon" />
-      </button>
-
-      {mounted && (
-        <>
-          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
-          <div
-            className={`absolute right-0 top-full z-[110] mt-xs min-w-[200px] origin-top-right rounded-sm border border-border bg-surface p-md shadow-dropdown ${DROPDOWN_TRANSITION} ${
-              entered ? DROPDOWN_SHOWN : DROPDOWN_HIDDEN
-            }`}
-          >
-            {options.map((opt) => {
-              const isSel = opt === value
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt)
-                    setOpen(false)
-                  }}
-                  className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
-                    isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
-                  }`}
-                >
-                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt}</span>
-                  {isSel && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
-                </button>
-              )
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
 
 // ── Sort dropdown — runs / persona (with flyout) / custom order ───────────
 function SortDropdown({
@@ -549,21 +488,21 @@ function AgentCard({
 // ── Screen ──────────────────────────────────────────────────────────────
 // "Overview" nav item — a co-worker-performance landing page (ported from the
 // "Overview LAV" build), rebuilt with this app's own directory chrome
-// (ReportHeader, Tabs, TopBarDropdown, AgentCard grid) rather than Akhil's.
+// (ReportHeader, Tabs, AgentCard grid) rather than Akhil's.
 export function OverviewScreen({
   product = 'healthcare',
   onOpenAgent,
-  onCreateAgent,
 }: {
   product?: string
   onOpenAgent?: (navId: string) => void
-  onCreateAgent?: () => void
 } = {}) {
   // "Switch to classic overview"/"Switch to agentic overview" swap the page body in place —
   // no navigation, so the Overview rail item stays active and the URL/nav state never changes.
   const [showClassicOverview, setShowClassicOverview] = useState(false)
   const AGENT_DIRECTORY = getAgentDirectory(product)
-  const [statusFilter, setStatusFilter] = useState('Running')
+  // No status-filter UI on this page (the dropdown was removed), so this always
+  // shows every agent rather than defaulting to just the running ones.
+  const [statusFilter] = useState('All agents')
   const [dateRange, setDateRange] = useState('Last month')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
@@ -674,15 +613,7 @@ export function OverviewScreen({
                   Switch to classic overview
                 </button>
               )}
-              <TopBarDropdown value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} />
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
-              <button
-                type="button"
-                onClick={onCreateAgent}
-                className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-              >
-                Create agent
-              </button>
             </div>
           }
         />

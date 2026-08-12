@@ -821,11 +821,6 @@ export function App() {
                       setRailActive('frontdesk')
                       setNavActive(navId)
                     }}
-                    onCreateAgent={() => {
-                      setRailActive('frontdesk')
-                      setNavActive('frontdesk-agent')
-                      setAutoOpenAgentCreateFlow(true)
-                    }}
                   />
                 ) : railActive === 'agents' ? (
                   <AgentDirectoryScreen
