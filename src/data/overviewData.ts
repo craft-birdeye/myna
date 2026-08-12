@@ -5,6 +5,10 @@ export interface OverviewStat {
   value: string
   label: string
   danger?: boolean
+  /** Lighter grey value text — used for zero-state's illustrative "~" estimates. */
+  muted?: boolean
+  /** Info-icon tooltip shown beside the label — used to explain illustrative estimates. */
+  tooltip?: string
 }
 
 export const OVERVIEW_INBOX_ALERT_STATS: OverviewStat[] = [

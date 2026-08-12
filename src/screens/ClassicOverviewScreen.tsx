@@ -75,8 +75,17 @@ function StatGroup({
     <div className={KPI_ROW_CLASS}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
-          <p className={`m-0 whitespace-nowrap ${big ? 'text-display' : 'text-h3'} ${s.danger ? 'text-chip-danger-text' : 'text-text-primary'}`}>{s.value}</p>
-          <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+          <p
+            className={`m-0 whitespace-nowrap ${big ? 'text-display' : 'text-h3'} ${
+              s.danger ? 'text-chip-danger-text' : s.muted ? 'text-text-tertiary' : 'text-text-primary'
+            }`}
+          >
+            {s.value}
+          </p>
+          <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
+            {s.label}
+            {s.tooltip && <InfoTooltip text={s.tooltip} variant="detail" />}
+          </p>
         </div>
       ))}
     </div>
@@ -270,12 +279,12 @@ function ZeroStateEstimatesPanel({ agent }: { agent: AgentDirectoryEntry }) {
   ]
   return (
     <div className="inline-flex shrink-0 items-center gap-xl whitespace-nowrap">
-      <span className="whitespace-nowrap text-body text-text-secondary">Estimates from similar businesses</span>
+      <span className="whitespace-nowrap text-body text-text-tertiary">Estimates from similar businesses</span>
       <div className="h-8 w-px shrink-0 bg-border" />
       <div className="flex items-center gap-3xl">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="shrink-0 text-center">
-            <p className="m-0 whitespace-nowrap text-h3 text-text-secondary">{kpi.value}</p>
+            <p className="m-0 whitespace-nowrap text-h3 text-text-tertiary">{kpi.value}</p>
             <p className="m-0 whitespace-nowrap text-small text-text-tertiary">{kpi.label}</p>
           </div>
         ))}
@@ -410,8 +419,8 @@ function AiCoworkerSummaryCard({ dateRange, zeroState = false }: { dateRange: st
     ? [
         { id: 'co-workers', value: '3', label: 'Co-workers' },
         { id: 'agents', value: '0', label: 'Agents' },
-        { id: 'time-saved', value: '--', label: 'Time saved' },
-        { id: 'cost-saved', value: '--', label: 'Cost saved' },
+        { id: 'time-saved', value: '~85h', label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'cost-saved', value: '~$6.2K', label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
       ]
     : [
         { id: 'co-workers', value: '3', label: 'Co-workers' },
@@ -754,8 +763,8 @@ function CoworkerPerformanceSection({
   const kpiStats: OverviewStat[] = zeroState
     ? [
         { id: 'agents-running', value: '0', label: 'Agents running' },
-        { id: 'time-saved', value: '--', label: 'Time saved' },
-        { id: 'cost-saved', value: '--', label: 'Cost saved' },
+        { id: 'time-saved', value: '~35h', label: 'Time saved', muted: true, tooltip: 'Estimates from similar businesses' },
+        { id: 'cost-saved', value: '~$2.4K', label: 'Cost saved', muted: true, tooltip: 'Estimates from similar businesses' },
       ]
     : [
         { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
