@@ -956,7 +956,7 @@ export function ClassicOverviewScreen({ userName = 'Rupa', onSwitchToAgentic }: 
             </div>
           </div>
 
-          <AiCoworkerSummaryCard dateRange={dateRange} />
+          {dataState !== 'Current' && <AiCoworkerSummaryCard dateRange={dateRange} />}
 
           {dataState !== 'Current' && (
             <CoworkerSectionsCard

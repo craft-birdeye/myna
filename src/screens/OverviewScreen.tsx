@@ -507,7 +507,7 @@ export function OverviewScreen({
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
   const [customOrder, setCustomOrder] = useState<string[]>(() => AGENT_DIRECTORY.map((a) => a.id))
-  const [activeCoworkerTab, setActiveCoworkerTab] = useState<CoworkerTabId>('operations')
+  const [activeCoworkerTab, setActiveCoworkerTab] = useState<CoworkerTabId>('all')
   const dragIdRef = useRef<string | null>(null)
 
   // "Co-workers" rebrand (tabs, renamed header, coworkers tile) — Healthcare
