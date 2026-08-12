@@ -1000,7 +1000,7 @@ function DataStateDropdown({ value, onChange }: { value: DataState; onChange: (v
 // dropdown/CTA buttons). Reached only via the Overview page's "Switch to classic overview"
 // toggle — never routed to directly.
 export function ClassicOverviewScreen({ userName = 'Rupa', onSwitchToAgentic }: ClassicOverviewScreenProps) {
-  const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
+  const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('marketing')
   const [dateRange, setDateRange] = useState('Last month')
   const [dataState, setDataState] = useState<DataState>('Current')
   const zeroState = dataState === 'Zero state'
