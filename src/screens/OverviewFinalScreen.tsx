@@ -47,6 +47,8 @@ interface OverviewFinalScreenProps {
   showCoworkerPerformance?: boolean
   /** Shows a "Switch to agentic overview" button in the welcome header; called on click. */
   onSwitchToAgentic?: () => void
+  /** Hides the top promo banner ("Customers using AI co-workers...") regardless of data state. */
+  hideBanner?: boolean
 }
 
 // Co-worker brand names + logos + accent colors for the three persona groups — same name
@@ -1101,12 +1103,13 @@ export function OverviewFinalScreen({
   whiteBackground = false,
   showCoworkerPerformance = false,
   onSwitchToAgentic,
+  hideBanner = false,
 }: OverviewFinalScreenProps) {
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
   const [dateRange, setDateRange] = useState('Last week')
   const [dataState, setDataState] = useState<DataState>('Current')
   const zeroState = dataState === 'Zero state'
-  const showPromoBanner = dataState === 'Current'
+  const showPromoBanner = !hideBanner && dataState === 'Current'
 
   return (
     <div className="flex h-full flex-col">

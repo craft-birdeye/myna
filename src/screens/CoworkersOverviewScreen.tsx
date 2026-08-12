@@ -371,7 +371,7 @@ function CoworkerTabBar({
             {index > 0 && <span className="h-6 w-px shrink-0 bg-border" />}
             <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
               <span
-                className={`flex items-center gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
+                className={`flex items-start gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
               >
                 {id !== 'all' && <img src={COWORKER_LOGO[id]} alt="" className="size-7 shrink-0 rounded-full" />}
                 <span className="flex flex-col gap-[2px]">
@@ -645,6 +645,7 @@ export function CoworkersOverviewScreen({
         hideTopNav={hideTopNav}
         userName={userName}
         onSwitchToAgentic={() => setShowClassicOverview(false)}
+        hideBanner
       />
     )
   }
