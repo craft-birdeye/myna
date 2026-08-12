@@ -42,6 +42,7 @@ import { OverviewFeedbackScreen } from './screens/OverviewFeedbackScreen'
 import { OverviewFinalScreen } from './screens/OverviewFinalScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
+import { CoworkersOverviewScreen } from './screens/CoworkersOverviewScreen'
 import { AIOverviewScreen } from './screens/AIOverviewScreen'
 import logoSrc from './assets/birdeye-logo.svg'
 import iconMarketing from './assets/icon-marketing.svg'
@@ -67,7 +68,7 @@ const RAIL_GROUPS: RailGroup[] = [
       { id: 'overview-4', label: 'Overview', icon: 'home', badge: 'Final' },
       { id: 'agents', label: 'Co-workers', icon: iconAgents, kind: 'image', badge: 'New' },
       { id: 'agents-2', label: 'Overview', icon: iconAgents, kind: 'image', badge: 'Tab' },
-      { id: 'agents-3', label: 'Overview', icon: 'home' },
+      { id: 'agents-3', label: 'Overview', icon: 'home', badge: 'LAV' },
     ],
   },
   {
@@ -561,13 +562,14 @@ export function App() {
             }}
           />
         ) : railActive === 'agents-3' ? (
-          <AgentDirectoryScreen
+          <CoworkersOverviewScreen
             key={activeProduct}
             product={activeProduct}
             onOpenAgent={(navId) => {
               setRailActive('frontdesk')
               setNavActive(navId)
             }}
+            onSwitchToClassic={() => setRailActive('agents')}
           />
         ) : isEditingWorkflow ? (
           <div className="flex h-full w-full overflow-hidden">
