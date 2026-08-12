@@ -1035,20 +1035,22 @@ export function OverviewFinalScreen({
             <>
               <AiCoworkerSummaryCard dateRange={dateRange} zeroState={zeroState} />
 
-              <CoworkerSectionsCard
-                sections={
-                  dataState === 'Single co-worker'
-                    ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={false} />]
-                    : [
-                        <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
-                        ...(activeCoworkerTab === 'operations'
-                          ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={zeroState} />]
-                          : activeCoworkerTab === 'marketing'
-                            ? [<CoworkerPerformanceSection persona="marketing" dateRange={dateRange} zeroState={zeroState} />]
-                            : [<CoworkerPerformanceSection persona="cx" dateRange={dateRange} zeroState={zeroState} />]),
-                      ]
-                }
-              />
+              {dataState !== 'Current' && (
+                <CoworkerSectionsCard
+                  sections={
+                    dataState === 'Single co-worker'
+                      ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={false} />]
+                      : [
+                          <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} />,
+                          ...(activeCoworkerTab === 'operations'
+                            ? [<CoworkerPerformanceSection persona="operations" dateRange={dateRange} zeroState={zeroState} />]
+                            : activeCoworkerTab === 'marketing'
+                              ? [<CoworkerPerformanceSection persona="marketing" dateRange={dateRange} zeroState={zeroState} />]
+                              : [<CoworkerPerformanceSection persona="cx" dateRange={dateRange} zeroState={zeroState} />]),
+                        ]
+                  }
+                />
+              )}
 
               {/* Same business-wide cards as the AI Overview page's "Business metrics" tab
                   (OverviewScreen with showCoworkerPerformance off) — shown once, the same
