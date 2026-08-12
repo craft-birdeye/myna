@@ -1085,7 +1085,7 @@ export function OverviewFinalScreen({
 }: OverviewFinalScreenProps) {
   const [activeCoworkerTab, setActiveCoworkerTab] = useState<AgentPersonaId>('operations')
   const [dateRange, setDateRange] = useState('Last week')
-  const [dataState, setDataState] = useState<DataState>('Filled data')
+  const [dataState, setDataState] = useState<DataState>('Current')
   const zeroState = dataState === 'Zero state'
   const showPromoBanner = dataState === 'Current'
 
