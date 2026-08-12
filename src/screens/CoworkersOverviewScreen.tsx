@@ -358,9 +358,8 @@ function CoworkerTabBar({
   agents: AgentDirectoryEntry[]
 }) {
   return (
-    <div className="relative flex items-center gap-xs">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border" />
-      {COWORKER_TAB_ORDER.map((id, i) => {
+    <div className="flex items-center gap-xs">
+      {COWORKER_TAB_ORDER.map((id) => {
         const active = id === activeTab
         const accent = id === 'all' ? ALL_TAB_ACCENT : COWORKER_ACCENT[id]
         const name = id === 'all' ? 'All AI co-workers' : COWORKER_NAME[id]
@@ -368,7 +367,6 @@ function CoworkerTabBar({
           id === 'all' ? `${agents.length} agents` : `${PERSONA_GROUPS.find((g) => g.id === id)!.label} • ${agents.filter((a) => a.persona === id).length} agents`
         return (
           <Fragment key={id}>
-            {i > 0 && <span className="self-stretch w-px shrink-0 bg-border" />}
             <button type="button" onClick={() => onChange(id)} className="relative flex flex-col items-stretch text-left">
               <span
                 className={`flex items-center gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
@@ -665,12 +663,6 @@ export function CoworkersOverviewScreen({
               Switch to classic overview
             </button>
             <DateRangeDropdown value={dateRange} onChange={setDateRange} />
-            <button
-              type="button"
-              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-            >
-              Create agent
-            </button>
           </div>
         </div>
 
@@ -693,19 +685,7 @@ export function CoworkersOverviewScreen({
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-lg">
-                <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} agents={AGENT_DIRECTORY} />
-
-                <SortDropdown
-                  sortMode={sortMode}
-                  personaFilter={personaFilter}
-                  onSortModeChange={(m) => {
-                    setSortMode(m)
-                    if (m !== 'persona') setPersonaFilter(null)
-                  }}
-                  onPersonaFilterChange={setPersonaFilter}
-                />
-              </div>
+              <CoworkerTabBar activeTab={activeCoworkerTab} onChange={setActiveCoworkerTab} agents={AGENT_DIRECTORY} />
             )}
 
             {coworkerTabsWithSubtext ? (
