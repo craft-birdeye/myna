@@ -145,8 +145,8 @@ export function HCIntakesCompletedScreen({ isDental = false }: { isDental?: bool
       <div className="flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
-          title="Intakes completed"
-          subtitle="Intake completion rates and outreach performance across your locations"
+          title={isDental ? 'Intakes completed' : 'Intake rate'}
+          subtitle="Intake completion rate and outreach performance across your locations"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector

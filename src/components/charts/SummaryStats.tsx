@@ -1,3 +1,5 @@
+import { Icon } from '../Icon/Icon'
+
 export interface SummaryStat {
   id: string
   value: string
@@ -5,6 +7,8 @@ export interface SummaryStat {
   /** e.g. "8.4%" — sign comes from `trend`. */
   delta?: string
   trend?: 'up' | 'down'
+  /** Shows a small tune-icon button next to the label — e.g. to configure how this stat is calculated. */
+  onConfigure?: () => void
 }
 
 export interface SummaryStatsProps {
@@ -42,7 +46,19 @@ export function SummaryStats({ title = 'Summary', stats }: SummaryStatsProps) {
                   </span>
                 )}
               </div>
-              <p className="text-body text-text-secondary">{s.label}</p>
+              <p className="flex items-center gap-xs text-body text-text-secondary">
+                {s.label}
+                {s.onConfigure && (
+                  <button
+                    type="button"
+                    aria-label={`Configure ${s.label}`}
+                    onClick={s.onConfigure}
+                    className="flex size-5 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                  >
+                    <Icon name="tune" size={14} />
+                  </button>
+                )}
+              </p>
             </div>
           )
         })}

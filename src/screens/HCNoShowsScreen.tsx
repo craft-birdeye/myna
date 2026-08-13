@@ -142,8 +142,12 @@ export function HCNoShowsScreen({ isDental = false }: { isDental?: boolean }) {
       <div className="flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
-          title="No-shows prevented"
-          subtitle="No-show prevention and appointment confirmation outcomes across your locations"
+          title={isDental ? 'Appointment confirmation' : 'No-show rate'}
+          subtitle={
+            isDental
+              ? 'Appointment confirmation outcomes across your locations'
+              : 'No-show and appointment confirmation outcomes across your locations'
+          }
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector

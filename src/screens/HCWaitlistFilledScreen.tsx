@@ -170,8 +170,8 @@ export function HCWaitlistFilledScreen({ isDental = false }: { isDental?: boolea
       <div className="flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <ReportHeader
-          title="Waitlist filled"
-          subtitle="Cancellation recovery and slot fill outcomes across your locations"
+          title={isDental ? 'Waitlist filled' : 'Waitlist fills'}
+          subtitle="Waitlist outreach and slot fill outcomes across your locations"
           rightSlot={
             <div className="flex items-center gap-sm">
               <DateRangeSelector

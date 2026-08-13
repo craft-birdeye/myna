@@ -34,6 +34,28 @@ export interface SankeyChartProps {
    * this if columns should read as evenly full.
    */
   nodePadding?: number
+  /**
+   * Recharts' Sankey re-sorts nodes within a column by value (largest first) by default. Pass
+   * `false` to keep each column in the exact order `nodes` lists them, when a fixed reading
+   * order (e.g. Resolved → Transferred → Pending → Missed) matters more than size ranking.
+   */
+  sort?: boolean
+  /**
+   * Recharts relaxes node positions toward their connected links' weighted average across this
+   * many passes (default 32), which can drift a shorter column (less total value than its
+   * neighbors, e.g. one that drops some terminal nodes) away from a shared top edge — it settles
+   * around its own connections' center instead of sitting flush with the other columns. Pass `0`
+   * to skip relaxation and keep every column stacked from the top down.
+   */
+  iterations?: number
+  /**
+   * Node indices forming the last column, whose bars should fill the chart's full height (keeping
+   * their relative proportions to each other) instead of sharing Recharts' single global ratio —
+   * use when that column legitimately carries less total flow than its neighbors (e.g. some
+   * upstream nodes are terminal and never reach it) but should still read as an equally full bar,
+   * not a proportionally shorter one. Incoming links are repositioned/rewidthed to match.
+   */
+  stretchColumn?: number[]
 }
 
 const colorAt = (i: number, overrides?: Record<number, string>) =>
@@ -55,11 +77,13 @@ interface LinkHoverState {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function makeNode(overrides?: Record<number, string>, onHover?: (idx: number | null, x: number, y: number) => void, measuredWidth?: number, onNodeClick?: (name: string) => void, linkHover?: LinkHoverState | null, clearHovers?: () => void) {
+function makeNode(overrides?: Record<number, string>, onHover?: (idx: number | null, x: number, y: number) => void, measuredWidth?: number, onNodeClick?: (name: string) => void, linkHover?: LinkHoverState | null, clearHovers?: () => void, stretchOverrides?: Map<number, { y: number; height: number }>) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function Node({ x, y, width, height, index, payload, containerWidth }: any) {
     const [hovered, setHovered] = useState(false)
     if (payload?.name === '__phantom__' || height < 1) return null
+    const stretched = stretchOverrides?.get(index)
+    if (stretched) { y = stretched.y; height = stretched.height }
     const cw = measuredWidth || containerWidth || 800
     const onRightEdge = x > cw - 60
     const fill = colorAt(index, overrides)
@@ -89,7 +113,7 @@ function makeNode(overrides?: Record<number, string>, onHover?: (idx: number | n
   }
 }
 
-function makeLink(overrides?: Record<number, string>, nameToIndex?: Map<string, number>, onLinkHover?: (state: LinkHoverState | null) => void, linkHover?: LinkHoverState | null) {
+function makeLink(overrides?: Record<number, string>, nameToIndex?: Map<string, number>, onLinkHover?: (state: LinkHoverState | null) => void, linkHover?: LinkHoverState | null, stretchLinkOverrides?: Map<string, { targetY: number; targetWidth: number }>) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function Link({ sourceX, sourceY, targetX, targetY, sourceControlX, targetControlX, linkWidth, payload }: any) {
     if (payload?.target?.name === '__phantom__' || linkWidth < 0.5) return null
@@ -106,18 +130,32 @@ function makeLink(overrides?: Record<number, string>, nameToIndex?: Map<string, 
     }
     const srcIdx = resolveIdx(src)
     const tgtIdx = resolveIdx(tgt)
+    // Reposition + rewiden where the ribbon lands in a stretched target. A single stroke can't
+    // taper along its length, so this is drawn as a filled quad instead — full source-side width
+    // at the source end, full (stretched) target-side width at the target end, with curved top
+    // and bottom edges — rather than one constant-width stroked centerline.
+    const stretched = stretchLinkOverrides?.get(`${srcIdx}-${tgtIdx}`)
+    if (stretched) targetY = stretched.targetY
+    const sourceHalf = linkWidth / 2
+    const targetHalf = (stretched?.targetWidth ?? linkWidth) / 2
     const sourceName = stripPct(src?.name ?? '')
     const targetName = stripPct(tgt?.name ?? '')
     const isHighlighted = !!linkHover && linkHover.srcIdx === srcIdx && linkHover.tgtIdx === tgtIdx
     const isDimmed = !!linkHover && !isHighlighted
+    const d = [
+      `M${sourceX},${sourceY - sourceHalf}`,
+      `C${sourceControlX},${sourceY - sourceHalf} ${targetControlX},${targetY - targetHalf} ${targetX},${targetY - targetHalf}`,
+      `L${targetX},${targetY + targetHalf}`,
+      `C${targetControlX},${targetY + targetHalf} ${sourceControlX},${sourceY + sourceHalf} ${sourceX},${sourceY + sourceHalf}`,
+      'Z',
+    ].join('')
     return (
       <path
-        d={`M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
-        fill="none"
-        stroke={colorAt(srcIdx, overrides)}
-        strokeOpacity={isHighlighted ? 0.55 : isDimmed ? 0.05 : 0.2}
-        strokeWidth={linkWidth}
-        style={{ cursor: 'pointer', transition: 'stroke-opacity 0.15s' }}
+        d={d}
+        fill={colorAt(srcIdx, overrides)}
+        fillOpacity={isHighlighted ? 0.55 : isDimmed ? 0.05 : 0.2}
+        stroke="none"
+        style={{ cursor: 'pointer', transition: 'fill-opacity 0.15s' }}
         onMouseEnter={(e) => onLinkHover?.({ srcIdx, tgtIdx, sourceName, targetName, value: payload.value, x: e.clientX, y: e.clientY })}
         onMouseMove={(e) => onLinkHover?.({ srcIdx, tgtIdx, sourceName, targetName, value: payload.value, x: e.clientX, y: e.clientY })}
         onMouseLeave={() => onLinkHover?.(null)}
@@ -209,7 +247,7 @@ function useTooltipTransition<T>(exitMs = 150) {
   return { data, shown, set }
 }
 
-export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnHeaderTooltips, nodeColors, terminalNodes, onNodeClick, nodePadding = 10 }: SankeyChartProps) {
+export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnHeaderTooltips, nodeColors, terminalNodes, onNodeClick, nodePadding = 10, sort = true, iterations, stretchColumn }: SankeyChartProps) {
   const { data: hoverState, shown: hoverShown, set: setHoverState } = useTooltipTransition<{ idx: number; x: number; y: number }>()
   const { data: headerTooltip, shown: headerTooltipShown, set: setHeaderTooltip } = useTooltipTransition<{ text: string; x: number; y: number }>()
   const { data: linkHover, shown: linkHoverShown, set: setLinkHover } = useTooltipTransition<LinkHoverState>()
@@ -242,8 +280,37 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
   const clearHovers = useCallback(() => { setHoverState(null); setLinkHover(null) }, [setHoverState, setLinkHover])
 
   const nameToIndex = new Map(sankeyNodes.map((n, i) => [n.name, i]))
-  const NodeComponent = makeNode(nodeColors, handleHover, measuredWidth, onNodeClick, linkHover, clearHovers)
-  const LinkComponent = makeLink(nodeColors, nameToIndex, setLinkHover, linkHover)
+
+  // Independently rescale stretchColumn's nodes (and their incoming links) to fill the full plot
+  // height at their own ratio, rather than Recharts' single ratio shared across every column —
+  // see the prop doc for why. margin.top/bottom below must match the <Sankey margin> prop.
+  let stretchOverrides: Map<number, { y: number; height: number }> | undefined
+  let stretchLinkOverrides: Map<string, { targetY: number; targetWidth: number }> | undefined
+  if (stretchColumn?.length) {
+    const marginTop = 8
+    const plotHeight = height - marginTop - 8
+    const values = stretchColumn.map((i) => links.reduce((sum, l) => sum + (l.target === i ? l.value : 0), 0))
+    const total = values.reduce((a, b) => a + b, 0)
+    const ratio = total > 0 ? (plotHeight - (stretchColumn.length - 1) * nodePadding) / total : 0
+    stretchOverrides = new Map()
+    stretchLinkOverrides = new Map()
+    let y = marginTop
+    stretchColumn.forEach((idx, i) => {
+      const nodeHeight = values[i] * ratio
+      stretchOverrides!.set(idx, { y, height: nodeHeight })
+      const incoming = [...links].filter((l) => l.target === idx).sort((a, b) => (a.source as number) - (b.source as number))
+      let linkY = y
+      incoming.forEach((l) => {
+        const linkHeight = l.value * ratio
+        stretchLinkOverrides!.set(`${l.source}-${l.target}`, { targetY: linkY + linkHeight / 2, targetWidth: linkHeight })
+        linkY += linkHeight
+      })
+      y += nodeHeight + nodePadding
+    })
+  }
+
+  const NodeComponent = makeNode(nodeColors, handleHover, measuredWidth, onNodeClick, linkHover, clearHovers, stretchOverrides)
+  const LinkComponent = makeLink(nodeColors, nameToIndex, setLinkHover, linkHover, stretchLinkOverrides)
 
   const activeBreakdown = hoverState !== null ? nodes[hoverState.idx]?.breakdown : undefined
 
@@ -303,6 +370,8 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
             return { ...l, source: si, target: ti }
           }) }}
           nodePadding={nodePadding}
+          sort={sort}
+          iterations={iterations}
           nodeWidth={12}
           margin={{ top: 8, right: 10, bottom: 8, left: 10 }}
           node={<NodeComponent />}
