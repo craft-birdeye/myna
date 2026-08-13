@@ -1,23 +1,38 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Chip } from '../Chip/Chip'
 import { Icon } from '../Icon/Icon'
+import { MoreLabelsCell } from '../MoreLabelsCell/MoreLabelsCell'
 import { Tabs } from '../Tabs/Tabs'
-import { FIELD_TYPE_OPTIONS, type FieldType, type TemplateField } from '../../data/bookingTemplatesData'
+import {
+  FIELD_TYPE_OPTIONS,
+  defaultFieldOptions,
+  isOptionFieldType,
+  type FieldType,
+  type TemplateField,
+} from '../../data/bookingTemplatesData'
 import type { BaseFieldsEditorProps } from './BaseFieldsEditor.types'
 
 const FIELD_TYPE_GLYPH: Record<FieldType, { text?: string; icon?: string }> = {
   text: { text: 'T' },
   number: { text: '123' },
   date: { icon: 'calendar_today' },
-  dropdown: { icon: 'arrow_drop_down_circle' },
-  'multiple-choice': { icon: 'radio_button_checked' },
+  'dropdown-single': { icon: 'radio_button_checked' },
+  'dropdown-multi': { icon: 'check_box' },
+  'multiple-choice': { icon: 'checklist' },
+}
+
+/** Prefix glyph shown beside each answer option while editing. */
+function optionMarkerIcon(type: FieldType): string {
+  if (type === 'dropdown-multi') return 'check_box_outline_blank'
+  if (type === 'dropdown-single') return 'radio_button_unchecked'
+  return 'radio_button_unchecked'
 }
 
 export function FieldTypeIcon({ type }: { type: FieldType }) {
   const glyph = FIELD_TYPE_GLYPH[type]
   return (
     <span className="flex w-6 shrink-0 items-center justify-center text-small text-text-tertiary">
-      {glyph.icon ? <Icon name={glyph.icon} size={16} /> : glyph.text}
+      {glyph?.icon ? <Icon name={glyph.icon} size={16} /> : (glyph?.text ?? '?')}
     </span>
   )
 }
@@ -54,16 +69,16 @@ export function SimpleSelect({ value, options, onChange, className = '' }: Simpl
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`flex h-9 w-full items-center justify-between rounded-sm border px-md text-body text-text-primary transition-colors hover:bg-surface-hover ${open ? 'border-primary' : 'border-border-input'}`}
+        className={`flex h-9 w-full items-center justify-between gap-sm rounded-sm border px-md text-body text-text-primary transition-colors hover:bg-surface-hover ${open ? 'border-primary' : 'border-border-input'}`}
       >
-        <span className="flex items-center gap-sm">
+        <span className="flex min-w-0 items-center gap-sm">
           {selected?.icon}
-          {selected?.label ?? 'Select'}
+          <span className="truncate">{selected?.label ?? 'Select'}</span>
         </span>
         <Icon name={open ? 'expand_less' : 'expand_more'} size={18} className="shrink-0 text-text-icon" />
       </button>
       {open && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-[70] w-full rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+        <div className="absolute left-0 top-[calc(100%+4px)] z-[70] w-full min-w-[240px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
           {options.map((o) => (
             <button
               key={o.value}
@@ -81,14 +96,78 @@ export function SimpleSelect({ value, options, onChange, className = '' }: Simpl
   )
 }
 
-/** Inline "add a field" mini-form — Label + Type + Required. Shared by the base-form fields
-    list ("+ Add field to base form") and a field group's extra fields ("+ Add another field"),
-    so authoring a `TemplateField` looks identical everywhere it happens. */
+/** Google Forms–style answer options list for choice field types. */
+function OptionsEditor({
+  type,
+  options,
+  onChange,
+}: {
+  type: FieldType
+  options: string[]
+  onChange: (next: string[]) => void
+}) {
+  const marker = optionMarkerIcon(type)
+  const canRemove = options.length > 2
+
+  function updateOption(index: number, value: string) {
+    onChange(options.map((opt, i) => (i === index ? value : opt)))
+  }
+
+  function removeOption(index: number) {
+    if (!canRemove) return
+    onChange(options.filter((_, i) => i !== index))
+  }
+
+  function addOption() {
+    onChange([...options, `Option ${options.length + 1}`])
+  }
+
+  return (
+    <div className="flex flex-col gap-sm">
+      <label className="text-small text-text-secondary">Options</label>
+      <div className="flex flex-col gap-xs">
+        {options.map((opt, i) => (
+          <div key={i} className="flex items-center gap-sm">
+            <Icon name={marker} size={18} className="shrink-0 text-text-tertiary" />
+            <input
+              value={opt}
+              onChange={(e) => updateOption(i, e.target.value)}
+              placeholder={`Option ${i + 1}`}
+              className="h-9 min-w-0 flex-1 rounded-sm border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+            />
+            <button
+              type="button"
+              aria-label={`Remove option ${i + 1}`}
+              disabled={!canRemove}
+              onClick={() => removeOption(i)}
+              className={`flex size-6 shrink-0 items-center justify-center rounded-sm ${
+                canRemove ? 'text-text-icon hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary opacity-40'
+              }`}
+            >
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addOption}
+        className="flex items-center gap-xs self-start text-body text-text-action"
+      >
+        <Icon name="add" size={18} />
+        Add option
+      </button>
+    </div>
+  )
+}
+
 const TYPE_SELECT_OPTIONS: SimpleSelectOption[] = FIELD_TYPE_OPTIONS.map((o) => ({
   ...o,
   icon: <FieldTypeIcon type={o.value} />,
 }))
 
+/** Inline add/edit field form — Label + Type + (Options for choice types) + Required.
+    Shared by base form fields and field-group extra fields. */
 export function AddFieldForm({
   field,
   onAdd,
@@ -102,13 +181,27 @@ export function AddFieldForm({
   const [label, setLabel] = useState(field?.label ?? '')
   const [type, setType] = useState<FieldType>(field?.type ?? 'text')
   const [required, setRequired] = useState(field?.required ?? false)
-  const canSave = label.trim().length > 0
+  const [options, setOptions] = useState<string[]>(
+    field?.options && field.options.length >= 2 ? [...field.options] : defaultFieldOptions(),
+  )
+  const canSave = label.trim().length > 0 && (
+    !isOptionFieldType(type) || options.every((o) => o.trim().length > 0)
+  )
   const isEdit = Boolean(field)
+  const showOptions = isOptionFieldType(type)
+
+  function handleTypeChange(next: string) {
+    const nextType = next as FieldType
+    setType(nextType)
+    if (isOptionFieldType(nextType) && options.length < 2) {
+      setOptions(defaultFieldOptions())
+    }
+  }
 
   return (
     <div className="flex flex-col gap-md rounded-sm border border-border-input bg-surface-l2 p-lg">
-      <div className="flex items-end gap-md">
-        <div className="flex-1">
+      <div className="flex flex-col gap-md sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
           <label className="mb-xs block text-small text-text-secondary">Label</label>
           <input
             autoFocus
@@ -118,11 +211,16 @@ export function AddFieldForm({
             className="h-9 w-full rounded-sm border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
           />
         </div>
-        <div className="w-[180px]">
+        <div className="w-full sm:w-[260px]">
           <label className="mb-xs block text-small text-text-secondary">Field type</label>
-          <SimpleSelect value={type} options={TYPE_SELECT_OPTIONS} onChange={(v) => setType(v as FieldType)} />
+          <SimpleSelect value={type} options={TYPE_SELECT_OPTIONS} onChange={handleTypeChange} />
         </div>
       </div>
+
+      {showOptions && (
+        <OptionsEditor type={type} options={options} onChange={setOptions} />
+      )}
+
       <div className="flex items-center justify-between">
         <label className="flex cursor-pointer items-center gap-sm">
           <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} className="accent-primary" />
@@ -142,6 +240,10 @@ export function AddFieldForm({
                 label: label.trim(),
                 type,
                 required,
+                ...(isOptionFieldType(type)
+                  ? { options: options.map((o) => o.trim()) }
+                  : { options: undefined }),
+                ...(field?.system ? { system: true } : {}),
               })
             }}
             className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
@@ -208,10 +310,21 @@ export function BaseFieldsEditor({ value, onChange, readOnly = false }: BaseFiel
           ) : (
             <div key={f.id} className={`flex items-center gap-md border-b border-border py-sm last:border-0 ${readOnly ? 'opacity-60' : ''}`}>
               <FieldTypeIcon type={f.type} />
-              <span className="flex-1 text-body text-text-primary">
-                {f.label}
-                {f.required && <span className="text-chip-danger-text"> *</span>}
-              </span>
+              <div className="min-w-0 flex-1 leading-tight">
+                <span className="text-body text-text-primary">
+                  {f.label}
+                  {f.required && <span className="text-chip-danger-text"> *</span>}
+                </span>
+                {isOptionFieldType(f.type) && f.options && f.options.length > 0 && (
+                  <div className="leading-4">
+                    <MoreLabelsCell
+                      labels={f.options}
+                      maxVisible={5}
+                      className="text-small text-text-tertiary"
+                    />
+                  </div>
+                )}
+              </div>
               {!f.system && (
                 <>
                   <Chip label="Custom" variant="neutral" />
