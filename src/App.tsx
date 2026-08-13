@@ -306,6 +306,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
       { id: 'response-agents-sep-1',   label: 'Response agents (Sep 1)' },
       { id: 'response-agents',         label: 'Response agents' },
       { id: 'generation-agents',       label: 'Generation agents' },
+      { id: 'review-tagging-agent',    label: 'Review tagging agents' },
     ],
   },
   {
@@ -378,6 +379,7 @@ const AGENT_NAMES: Record<string, string> = {
   'response-agents':           'Review response agents',
   'response-agents-sep-1':     'Review response agents',
   'generation-agents':         'Review generation agents',
+  'review-tagging-agent':      'Review tagging agents',
 }
 
 // Map railActive → module title shown in the global TopBar

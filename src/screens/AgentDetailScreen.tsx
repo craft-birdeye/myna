@@ -313,6 +313,8 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
       instanceName: 'Review generation agent with A/B testing, smart targeting and split campaigns 1',
     },
   ],
+  // First-time empty — no instances yet; Agents tab shows the create empty state.
+  'Review tagging agents': [],
 }
 
 const DEFAULT_REGIONS: RegionRow[] = REGIONS_BY_AGENT['Front desk agent']
@@ -619,21 +621,76 @@ const REMINDER_PLACEHOLDERS = [
 
 const DEFAULT_CREATE_PLACEHOLDER = 'Describe the agent you want to build…'
 
-const REVIEW_GENERATION_CREATE_CARDS = [
+const REVIEW_GENERATION_CREATE_CARDS: CreateLibraryCard[] = [
   {
     id: 'reviews-generation-standard',
     title: 'Review generation agent',
     description: 'Sends review requests to customers after transactions complete across email and text.',
+    glyph: 'generation',
+    tone: 'info',
   },
   {
     id: 'reviews-generation-ab',
     title: 'Review generation agent with A/B testing',
     description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
+    glyph: 'generation-ab',
+    tone: 'ai',
   },
 ]
 
 const REVIEW_GENERATION_CREATE_PROMPT =
   'Create a review generation agent that sends review request emails and texts after a customer completes a transaction, so we get more reviews across locations.'
+
+const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
+  {
+    id: 'review-tagging-evaluation',
+    title: 'Review tagging - Review evaluation',
+    description:
+      'Analyzes review comments to identify topics mentioned in it. Uses the identified topics to tag reviews.',
+    glyph: 'tagging',
+    tone: 'success',
+    outcome:
+      'Tag more reviews consistently by topic so teams can find and act on themes faster across locations.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations.',
+      },
+      {
+        kind: 'task',
+        title: '2. Identify topics and apply tags',
+        description:
+          'Analyzes review comments for mentioned topics, then applies matching tags to the review.',
+      },
+    ],
+  },
+  {
+    id: 'review-tagging-high-risk',
+    title: 'High risk review tagging agent',
+    description:
+      'Analyzes review comments to identify extreme negative sentiments and critical issue topics mentioned to match them with tags existing in the account',
+    glyph: 'tagging-risk',
+    tone: 'danger',
+    outcome:
+      'Surface high-risk reviews quickly so teams can prioritize responses and escalate critical issues.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations.',
+      },
+      {
+        kind: 'task',
+        title: '2. Detect high-risk sentiment and tag',
+        description:
+          'Flags extreme negative sentiment and critical topics, then matches them to existing account tags.',
+      },
+    ],
+  },
+]
 
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
@@ -759,18 +816,8 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       description: 'Uses AI to analyze review sentiment and shows unique, context-aware replies in the dashboard for one-click posting',
     },
   ],
-  'Review generation agents': [
-    {
-      id: 'reviews-generation-standard',
-      title: 'Review generation agent',
-      description: 'Sends review requests to customers after transactions complete across email and text.',
-    },
-    {
-      id: 'reviews-generation-ab',
-      title: 'Review generation agent with A/B testing',
-      description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
-    },
-  ],
+  'Review generation agents': REVIEW_GENERATION_CREATE_CARDS,
+  'Review tagging agents': REVIEW_TAGGING_CREATE_CARDS,
 }
 
 // ── Illustration for the create-agent empty state (library-only landing) ───
@@ -780,14 +827,21 @@ function CreateAgentEmptyState({
   onSelectFromLibrary,
   onPreview,
   fromScratchLabel = 'Create from scratch',
+  /** `build` = screenshot-style "Build your agent" + collapsible library (1st-time UX). */
+  layout = 'compact',
+  libraryDefaultOpen = true,
 }: {
   cards: CreateLibraryCard[]
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
   onPreview?: (card: CreateLibraryCard) => void
   fromScratchLabel?: string
+  layout?: 'compact' | 'build'
+  libraryDefaultOpen?: boolean
 }) {
+  const [libraryOpen, setLibraryOpen] = useState(libraryDefaultOpen)
   const cardCount = cards.length
+  const showLibrary = layout === 'compact' || libraryOpen
   return (
     <div
       className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${
@@ -809,46 +863,82 @@ function CreateAgentEmptyState({
         draggable={false}
       />
 
-      <p className="m-0 text-center text-body text-text-secondary">
-        <button
-          type="button"
-          onClick={onCreateFromScratch}
-          className="text-body text-text-action hover:underline"
-        >
-          {fromScratchLabel}
-        </button>
-        <span className="text-text-primary">{' or select from '}</span>
-        <button type="button" className="text-body text-text-primary hover:underline">
-          library
-        </button>
-      </p>
-
-      <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
-        <div
-          className={`grid w-full gap-md ${
-            cardCount === 4
-              ? 'grid-cols-1 min-[500px]:grid-cols-4'
-              : cardCount === 2
-                ? 'grid-cols-1 min-[500px]:grid-cols-2'
-                : cardCount === 1
-                  ? 'max-w-[325px] grid-cols-1'
-                  : 'grid-cols-3'
-          }`}
-        >
-          {cards.map((tpl) => (
-            <InfoCard
-              key={tpl.id}
-              title={tpl.title}
-              description={tpl.description}
-              glyph={tpl.glyph}
-              tone={tpl.tone}
-              actionLabel="Use agent"
-              onAction={() => onSelectFromLibrary(tpl.id)}
-              onPreview={onPreview ? () => onPreview(tpl) : undefined}
+      {layout === 'build' ? (
+        <div className="flex flex-col items-center gap-sm text-center">
+          <p className="m-0 flex items-center justify-center gap-xs text-body text-text-primary">
+            <span
+              className="ai-gradient-icon size-4 shrink-0"
+              style={{
+                WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                maskImage: `url("${iconAgentsPurple}")`,
+              }}
+              aria-hidden
             />
-          ))}
+            <span>
+              Build your agent.{' '}
+              <button
+                type="button"
+                onClick={onCreateFromScratch}
+                className="text-body text-text-action hover:underline"
+              >
+                {fromScratchLabel}
+              </button>
+            </span>
+          </p>
+          <p className="m-0 text-body text-text-primary">or</p>
+          <button
+            type="button"
+            onClick={() => setLibraryOpen((open) => !open)}
+            className="flex items-center gap-xs text-body text-text-primary"
+            aria-expanded={libraryOpen}
+          >
+            Select from library
+          </button>
         </div>
-      </div>
+      ) : (
+        <p className="m-0 text-center text-body text-text-secondary">
+          <button
+            type="button"
+            onClick={onCreateFromScratch}
+            className="text-body text-text-action hover:underline"
+          >
+            {fromScratchLabel}
+          </button>
+          <span className="text-text-primary">{' or select from '}</span>
+          <button type="button" className="text-body text-text-primary hover:underline">
+            library
+          </button>
+        </p>
+      )}
+
+      {showLibrary && (
+        <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
+          <div
+            className={`grid w-full gap-md ${
+              cardCount === 4
+                ? 'grid-cols-1 min-[500px]:grid-cols-4'
+                : cardCount === 2
+                  ? 'grid-cols-1 min-[500px]:grid-cols-2'
+                  : cardCount === 1
+                    ? 'max-w-[325px] grid-cols-1'
+                    : 'grid-cols-3'
+            }`}
+          >
+            {cards.map((tpl) => (
+              <InfoCard
+                key={tpl.id}
+                title={tpl.title}
+                description={tpl.description}
+                glyph={tpl.glyph}
+                tone={tpl.tone}
+                actionLabel="Use agent"
+                onAction={() => onSelectFromLibrary(tpl.id)}
+                onPreview={onPreview ? () => onPreview(tpl) : undefined}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -7098,6 +7188,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       { id: 'clickThroughRate', value: '4.9%', label: 'Click-through rate', delta: '0.3%', trend: 'down', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
       { id: 'timeSaved', value: '9h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
     ],
+    'Review tagging agents': [
+      { id: 'reviewsTagged', value: '0', label: 'Reviews tagged', info: true, tooltip: 'Total reviews the agent has tagged across all locations in the selected period.' },
+      { id: 'topicsIdentified', value: '0', label: 'Topics identified', info: true, tooltip: 'Unique topics identified from review comments.' },
+      { id: 'highRiskTagged', value: '0', label: 'High-risk reviews tagged', info: true, tooltip: 'Reviews tagged for extreme negative sentiment or critical issues.' },
+      { id: 'timeSaved', value: '0m', label: 'Time saved', info: true, tooltip: 'Estimated staff time saved by automating review tagging.' },
+    ],
   }
 
   const DEFAULT_METRICS: Metric[] = [
@@ -7192,7 +7288,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
   const isReviewResponse  = agentName === 'Review response agents'
   const isReviewGeneration = agentName === 'Review generation agents'
-  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration
+  const isReviewTagging   = agentName === 'Review tagging agents'
+  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging
   /** Illustration + library cards only (no Ghostwriter) — Sep 1 response/reminder, waitlist, pre-visit. */
   const isLibraryOnlyCreate =
     isWaitlist ||
@@ -7378,15 +7475,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       ? REVIEW_RESPONSE_CREATE_CARDS
       : isReviewGeneration
         ? REVIEW_GENERATION_CREATE_CARDS.map((c) => ({ ...c }))
-        : isReminder
-          ? REMINDER_CREATE_CARDS
-          : isWaitlist
-            ? WAITLIST_CREATE_CARDS
-            : isPreVisit
-              ? PREVISIT_CREATE_CARDS
-              : isFrontdesk
-                ? HEALTHCARE_FRONTDESK_CREATE_CARDS
-                : (DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES).map((c) => ({ ...c }))
+        : isReviewTagging
+          ? REVIEW_TAGGING_CREATE_CARDS
+          : isReminder
+            ? REMINDER_CREATE_CARDS
+            : isWaitlist
+              ? WAITLIST_CREATE_CARDS
+              : isPreVisit
+                ? PREVISIT_CREATE_CARDS
+                : isFrontdesk
+                  ? HEALTHCARE_FRONTDESK_CREATE_CARDS
+                  : (DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES).map((c) => ({ ...c }))
   const libraryCards = librarySource.map((tpl) => ({
     title: tpl.title,
     description: tpl.description,
@@ -7404,6 +7503,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
         (card) => card.title.toLowerCase().includes(searchQ) || card.description.toLowerCase().includes(searchQ),
       )
     : libraryCards
+  const isReviewTaggingFirstTime = isReviewTagging && visibleData.length === 0
 
   if (showSetupWizard && isFrontdesk) {
     return (
@@ -7874,107 +7974,128 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           {/* Header */}
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
             <h1 className="text-h3 text-text-primary">{agentName}</h1>
-            <div className="flex items-center gap-sm">
-              <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
+            {!isReviewTaggingFirstTime && (
+              <div className="flex items-center gap-sm">
+                <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
+                {activeTab === 'agents' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
+                          ? openCreateFlow()
+                          : onEditAgent?.('')
+                      }
+                      className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                    >
+                      Create agent
+                    </button>
+                    <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                      <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                    </button>
+                    <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                      <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {isReviewTaggingFirstTime ? (
+            <div className="scrollbar-subtle flex min-h-0 flex-1 items-start justify-center overflow-auto px-lg pb-lg">
+              <CreateAgentEmptyState
+                layout="build"
+                libraryDefaultOpen
+                cards={REVIEW_TAGGING_CREATE_CARDS}
+                fromScratchLabel="Create from scratch"
+                onCreateFromScratch={() => onEditAgent?.('Review tagging agent 1')}
+                onSelectFromLibrary={(templateId) => {
+                  const card = REVIEW_TAGGING_CREATE_CARDS.find((c) => c.id === templateId)
+                  onEditAgent?.(card?.title ?? 'Review tagging agent')
+                }}
+                onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card))}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Tabs */}
+              <div className="px-2xl">
+                <Tabs
+                  tabs={TABS}
+                  activeTab={activeTab}
+                  onChange={setActiveTab}
+                />
+              </div>
+
               {activeTab === 'agents' ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
-                        ? openCreateFlow()
-                        : onEditAgent?.('')
-                    }
-                    className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                  >
-                    Create agent
-                  </button>
-                  <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                    <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-                  </button>
-                  <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                    <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-                  </button>
+                  <div className="px-2xl pt-lg">
+                    <MetricTiles
+                      metrics={displayMetrics}
+                      renderTileAction={
+                        isFrontdesk
+                          ? (metric) =>
+                              metric.id === 'timeSaved' ? (
+                                <button
+                                  type="button"
+                                  aria-label="Estimate savings"
+                                  onClick={() => setSavingsModalOpen(true)}
+                                  className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                >
+                                  <Icon name="tune" size={18} />
+                                </button>
+                              ) : null
+                          : undefined
+                      }
+                    />
+                  </div>
+                  <EstimateSavingsModal
+                    open={savingsModalOpen}
+                    onClose={() => setSavingsModalOpen(false)}
+                    initialValues={savingsSettings}
+                    onSave={(values) => {
+                      setSavingsSettings(values)
+                      setSavingsModalOpen(false)
+                    }}
+                  />
+                  <div className="px-lg py-lg">
+                    <DataTable
+                      columns={columns}
+                      data={visibleData}
+                      scrollOnHover
+                      onRowClick={(row) => {
+                        setInstanceInitialTab('outcomes')
+                        setSelectedInstanceDisplayName(null)
+                        setSelectedInstance(row.name)
+                      }}
+                      rowMenuItems={[
+                        { label: 'Edit', onClick: (row) => onEditAgent?.(row.name) },
+                        {
+                          label: 'Pause',
+                          onClick: () => {},
+                          visible: (row) => row.status === 'Running',
+                        },
+                        { label: 'Duplicate', onClick: () => {} },
+                        { label: 'View details', onClick: (row) => {
+                          setInstanceInitialTab('outcomes')
+                          setSelectedInstanceDisplayName(null)
+                          setSelectedInstance(row.name)
+                        } },
+                        { label: 'Reports', onClick: () => {} },
+                        { label: 'Delete', onClick: () => {}, variant: 'danger' },
+                      ]}
+                    />
+                  </div>
                 </>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="px-2xl">
-            <Tabs
-              tabs={TABS}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
-          </div>
-
-          {activeTab === 'agents' ? (
-            <>
-              <div className="px-2xl pt-lg">
-                <MetricTiles
-                  metrics={displayMetrics}
-                  renderTileAction={
-                    isFrontdesk
-                      ? (metric) =>
-                          metric.id === 'timeSaved' ? (
-                            <button
-                              type="button"
-                              aria-label="Estimate savings"
-                              onClick={() => setSavingsModalOpen(true)}
-                              className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-                            >
-                              <Icon name="tune" size={18} />
-                            </button>
-                          ) : null
-                      : undefined
-                  }
-                />
-              </div>
-              <EstimateSavingsModal
-                open={savingsModalOpen}
-                onClose={() => setSavingsModalOpen(false)}
-                initialValues={savingsSettings}
-                onSave={(values) => {
-                  setSavingsSettings(values)
-                  setSavingsModalOpen(false)
-                }}
-              />
-              <div className="px-lg py-lg">
-                <DataTable
-                  columns={columns}
-                  data={visibleData}
-                  scrollOnHover
-                  onRowClick={(row) => {
-                    setInstanceInitialTab('outcomes')
-                    setSelectedInstanceDisplayName(null)
-                    setSelectedInstance(row.name)
-                  }}
-                  rowMenuItems={[
-                    { label: 'Edit', onClick: (row) => onEditAgent?.(row.name) },
-                    {
-                      label: 'Pause',
-                      onClick: () => {},
-                      visible: (row) => row.status === 'Running',
-                    },
-                    { label: 'Duplicate', onClick: () => {} },
-                    { label: 'View details', onClick: (row) => {
-                      setInstanceInitialTab('outcomes')
-                      setSelectedInstanceDisplayName(null)
-                      setSelectedInstance(row.name)
-                    } },
-                    { label: 'Reports', onClick: () => {} },
-                    { label: 'Delete', onClick: () => {}, variant: 'danger' },
-                  ]}
-                />
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
+                  {visibleLibraryCards.map((card) => (
+                    <InfoCard key={card.title} {...card} />
+                  ))}
+                </div>
+              )}
             </>
-          ) : (
-            <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
-              {visibleLibraryCards.map((card) => (
-                <InfoCard key={card.title} {...card} />
-              ))}
-            </div>
           )}
         </div>
 
