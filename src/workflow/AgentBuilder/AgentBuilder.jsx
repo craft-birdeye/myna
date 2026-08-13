@@ -951,6 +951,8 @@ export default function AgentBuilder({
   viewOnly = false,
   /** View-only canvases that should show edit/run actions instead of the name + status chrome. */
   viewChromeActions = false,
+  /** Set false to make node cards inert (no RHS on click) — used by the read-only log run view. */
+  nodesInteractive = true,
   product = 'automotive',
   procedures = null,
   onAddProcedure,
@@ -3091,6 +3093,13 @@ export default function AgentBuilder({
                 </button>
               )}
 
+              {viewOnly && viewChromeActions && (
+                <div className="rr-chrome-viewonly">
+                  <span className="material-symbols-outlined" aria-hidden>visibility</span>
+                  View only mode
+                </div>
+              )}
+
               <div className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}`}>
                 {!(viewOnly && viewChromeActions) && (
                   <>
@@ -3226,7 +3235,7 @@ export default function AgentBuilder({
             <FlowCanvas
               nodes={nodes}
               edges={edges}
-              onNodeClick={handleNodeClick}
+              onNodeClick={nodesInteractive ? handleNodeClick : undefined}
               onDropNode={viewOnly ? undefined : handleDropNode}
               onNodesReorder={viewOnly ? undefined : handleNodesReorder}
               hasClipboard={!viewOnly && !!clipboard}

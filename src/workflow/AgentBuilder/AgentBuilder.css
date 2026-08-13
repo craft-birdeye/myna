@@ -686,6 +686,50 @@
   min-width: 0;
 }
 
+/* ─── Read-only node config (RHS in view-only mode) ─── */
+/* Chips lose their remove cross entirely — there is nothing to remove here. */
+.rhs-readonly [class*="deleteBtn"] {
+  display: none !important;
+}
+
+/* Add / Fields / Tools / Rephrase etc. are disabled by the fieldset — show it. */
+.rhs-readonly button:disabled,
+.rhs-readonly input:disabled,
+.rhs-readonly textarea:disabled,
+.rhs-readonly select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Canvas chrome: view-only badge (top-left, paired with the centred action pill) ─── */
+.rr-chrome-viewonly {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  color: #555;
+  letter-spacing: -0.28px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.rr-chrome-viewonly .material-symbols-outlined {
+  font-size: 18px;
+  color: #888;
+  flex-shrink: 0;
+}
+
 /* ─── View-only mode ─── */
 .ab-view-badge {
   display: flex;

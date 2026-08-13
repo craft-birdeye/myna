@@ -253,6 +253,14 @@
   pointer-events: none;
 }
 
+/* Layout-orientation arrows sit beside 18px SVG icons in this group, so they render at 18px
+   rather than the 16px used by the legacy (non-chrome) toolbar. */
+.graph-controls__rr-edit .graph-controls__toggle-btn .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+}
+
 .graph-controls__rr-zoom .graph-controls__zoom-btn,
 .graph-controls__rr-edit .graph-controls__zoom-btn {
   border: none;

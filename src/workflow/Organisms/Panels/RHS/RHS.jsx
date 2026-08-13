@@ -112,6 +112,12 @@ const VARIANTS = {
   },
 };
 
+/** Renders as <fieldset> in read-only mode (so nested controls are natively disabled),
+ *  otherwise a plain <div>. */
+function FieldsetOrDiv({ as: Tag = 'div', children, ...rest }) {
+  return <Tag {...rest}>{children}</Tag>;
+}
+
 const PANEL_WIDTH = {
   procedureDetail: 500,
   createCustomProcedure: 500,
@@ -151,10 +157,18 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           padding: '16px 15px',
           boxSizing: 'border-box',
         }}>
-          <div style={{
-            pointerEvents: viewOnly ? 'none' : undefined,
-            userSelect: viewOnly ? 'text' : undefined,
-          }}>
+          {/* Read-only mode uses a disabled <fieldset>, not just pointer-events: that natively
+              disables every nested control so Tab-and-type can't edit the panel either. The
+              pointer-events guard stays for non-form click handlers (swatch pickers etc.). */}
+          <FieldsetOrDiv
+            as={viewOnly ? 'fieldset' : 'div'}
+            {...(viewOnly ? { disabled: true, className: 'rhs-readonly' } : {})}
+            style={{
+              pointerEvents: viewOnly ? 'none' : undefined,
+              userSelect: viewOnly ? 'text' : undefined,
+              ...(viewOnly ? { border: 0, margin: 0, padding: 0, minWidth: 0 } : {}),
+            }}
+          >
             <Body
               {...(bodyProps || {})}
               viewOnly={viewOnly}
@@ -164,7 +178,7 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
                 ?? (variant === 'procedureDetail' || variant === 'createCustomProcedure')
               }
             />
-          </div>
+          </FieldsetOrDiv>
         </div>
 
         {!viewOnly && (

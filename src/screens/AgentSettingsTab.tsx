@@ -968,6 +968,117 @@ function ReminderSettings() {
 }
 
 /** Flat Front desk settings (system prompt → language → voice → greeting → recording). */
+/* ── Front desk settings shell ─────────────────────────────────────────────
+ * Three levels of separation, no font-weight (§6.6):
+ *   card (white on tinted ground) → header band → sub-panel → 12px field label.
+ * Local to the Front desk page; other agents keep the flat layout.
+ */
+
+/** Level 1 — a titled section card with a tinted header band. */
+function SettingsCard({
+  title,
+  description,
+  children,
+  defaultOpen = true,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <section className="rounded-lg border border-border bg-surface">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`flex w-full items-center gap-md bg-surface-subtle px-2xl py-lg text-left transition-colors hover:bg-surface-selected ${
+          open ? 'border-b border-border' : ''
+        }`}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</span>
+          {description && <span className="mt-xs block text-small text-text-secondary">{description}</span>}
+        </span>
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={20}
+          className="shrink-0 text-text-icon"
+        />
+      </button>
+      {open && <div className="flex flex-col gap-2xl p-2xl">{children}</div>}
+    </section>
+  )
+}
+
+/** Level 2 — a bordered sub-panel inside a card (TTS / STT). */
+function SettingsSubPanel({
+  title,
+  children,
+  defaultOpen = true,
+}: {
+  title: string
+  children: React.ReactNode
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-md py-xs text-left"
+      >
+        <span className="min-w-0 flex-1 text-body text-text-primary">{title}</span>
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={20}
+          className="shrink-0 text-text-icon"
+        />
+      </button>
+      {open && <div className="mt-lg flex flex-col gap-lg">{children}</div>}
+    </div>
+  )
+}
+
+/** Level 4 — a selectable option row; the selected one tints and hosts its own detail field. */
+function SettingsOptionRow({
+  name,
+  checked,
+  onSelect,
+  label,
+  description,
+  children,
+}: {
+  name: string
+  checked: boolean
+  onSelect: () => void
+  label: string
+  description?: string
+  children?: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="flex cursor-pointer items-start gap-sm">
+        <input
+          type="radio"
+          name={name}
+          checked={checked}
+          onChange={onSelect}
+          className="mt-[3px] accent-primary"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-body text-text-primary">{label}</span>
+          {description && <span className="mt-[2px] block text-small text-text-tertiary">{description}</span>}
+        </span>
+      </label>
+      {checked && children && <div className="mt-sm pl-2xl">{children}</div>}
+    </div>
+  )
+}
+
 function FrontDeskSettings() {
   const [systemPrompt, setSystemPrompt] = useState(FRONTDESK_SYSTEM_PROMPT)
   const [language, setLanguage] = useState<AgentLanguageId>('en')
@@ -1092,12 +1203,13 @@ function FrontDeskSettings() {
   }
 
   return (
-    <div className="flex w-full max-w-[720px] flex-col gap-md">
+    <div className="flex w-full flex-col gap-2xl">
+      <SettingsCard title="General" description="Core behaviour and language for this agent">
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
         <div className="flex items-center gap-xs">
-          <label className="text-body text-text-primary">System prompt</label>
-          <span className="text-body text-chip-danger-text" aria-hidden>
+          <label className="text-small text-text-secondary">System prompt</label>
+          <span className="text-small text-chip-danger-text" aria-hidden>
             *
           </span>
         </div>
@@ -1156,7 +1268,7 @@ function FrontDeskSettings() {
       <div className="flex flex-col gap-md pt-sm">
         <div className="flex flex-col gap-sm">
           <div>
-            <label className="text-body text-text-primary">Language</label>
+            <label className="text-small text-text-secondary">Language</label>
             <p className="mt-[2px] text-small text-text-secondary">
               Choose the default and additional languages the agent will communicate in.
             </p>
@@ -1188,7 +1300,7 @@ function FrontDeskSettings() {
 
         {additionalFieldVisible ? (
           <div className="flex flex-col gap-sm">
-            <label className="text-body text-text-primary">Additional language</label>
+            <label className="text-small text-text-secondary">Additional language</label>
             <div ref={additionalRef} className="relative">
               <div
                 className={`flex min-h-9 w-full items-center gap-sm rounded-md border bg-surface py-xs pr-sm transition-colors ${
@@ -1257,13 +1369,11 @@ function FrontDeskSettings() {
         )}
       </div>
 
-      {/* Voice call settings */}
-      <div className="flex flex-col gap-md pt-3xl">
-        <h2 className="text-[16px] font-medium leading-6 tracking-[-0.32px] text-text-primary">
-          Voice call settings
-        </h2>
+      </SettingsCard>
 
-        <TtsModelSettings />
+      <SettingsCard title="Voice call settings" description="Speech engines, voice and call behaviour">
+        <SettingsSubPanel title="Text-to-speech (TTS)">
+        <TtsModelSettings hideHeading />
 
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
@@ -1364,48 +1474,44 @@ function FrontDeskSettings() {
         </div>
 
         <TtsFailoverSettings />
+        </SettingsSubPanel>
 
-        <VoiceCallEngineSettings />
-      </div>
+        <SettingsSubPanel title="Speech-to-text (STT)">
+        <VoiceCallEngineSettings hideHeading />
 
-      {/* Greeting message */}
-      <div className="flex flex-col gap-xs">
-        <label className="text-body text-text-primary">Greeting message</label>
-        <textarea
-          value={greeting}
-          onChange={(e) => setGreeting(e.target.value)}
-          rows={4}
-          className={`${INPUT_CLASS} resize-none py-sm`}
-        />
-      </div>
-
-      {/* Recording */}
-      <div className="pt-sm">
-        <p className="text-body text-text-primary">Call recording</p>
-        <div className="mt-sm flex flex-col gap-sm">
-          <label className="flex cursor-pointer items-center gap-sm">
-            <input
-              type="radio"
-              name="frontdesk-recording"
-              checked={recording === 'off'}
-              onChange={() => setRecording('off')}
-              className="accent-primary"
+        {/* Engine config above, call behaviour below */}
+        <div className="flex flex-col gap-lg border-t border-border pt-lg">
+          <div className="flex flex-col gap-xs">
+            <label className="text-small text-text-secondary">Greeting message</label>
+            <p className="text-small text-text-tertiary">
+              First thing the agent says when a call connects.
+            </p>
+            <textarea
+              value={greeting}
+              onChange={(e) => setGreeting(e.target.value)}
+              rows={4}
+              className={`${INPUT_CLASS} resize-none py-sm`}
             />
-            <span className="text-body text-text-primary">Off</span>
-          </label>
-          <div>
-            <label className="flex cursor-pointer items-center gap-sm">
-              <input
-                type="radio"
+          </div>
+
+          {/* Call recording — option rows so the consent field clearly belongs to its option */}
+          <div className="flex flex-col gap-xs">
+            <label className="text-small text-text-secondary">Call recording</label>
+            <div className="mt-xs flex flex-col gap-md">
+              <SettingsOptionRow
+                name="frontdesk-recording"
+                checked={recording === 'off'}
+                onSelect={() => setRecording('off')}
+                label="Off"
+                description="Calls are never recorded."
+              />
+              <SettingsOptionRow
                 name="frontdesk-recording"
                 checked={recording === 'announced'}
-                onChange={() => setRecording('announced')}
-                className="accent-primary"
-              />
-              <span className="text-body text-text-primary">Record only after obtaining consent</span>
-            </label>
-            {recording === 'announced' && (
-              <div className="mt-sm pl-2xl">
+                onSelect={() => setRecording('announced')}
+                label="Record only after obtaining consent"
+                description="Plays a consent line before recording starts."
+              >
                 <label className="mb-xs block text-small text-text-secondary">Consent message</label>
                 <textarea
                   value={consent}
@@ -1413,11 +1519,12 @@ function FrontDeskSettings() {
                   rows={3}
                   className={`${INPUT_CLASS} resize-none py-sm`}
                 />
-              </div>
-            )}
+              </SettingsOptionRow>
+            </div>
           </div>
         </div>
-      </div>
+        </SettingsSubPanel>
+      </SettingsCard>
     </div>
   )
 }
@@ -1638,12 +1745,13 @@ export function AgentSettingsTab({
       )
     }
     return (
-      <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
+      // White ground; cards are separated by their border + header hairline. The cards fill the
+      // width left of a 350px reserved gutter, so the whitespace is constant at any viewport.
+      <div className="flex min-h-full bg-surface px-2xl pt-lg pb-2xl">
         <div className="flex min-w-0 flex-1 flex-col">
           <FrontDeskSettings />
         </div>
-        {/* Same right-column width as ProcedureDetailScreen Context panel */}
-        <div className="w-[400px] shrink-0" aria-hidden />
+        <div className="w-[350px] shrink-0" aria-hidden />
       </div>
     )
   }

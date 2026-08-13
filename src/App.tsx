@@ -454,6 +454,7 @@ export function App() {
   // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
   // closing the editor) knows which instance + tab to land on instead of its own defaults.
   const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
+  const [editorReturnView, setEditorReturnView] = useState<{ instanceName: string; tab: string } | null>(null)
   // Set by the Agent directory "Create agent" CTA so the freshly-mounted AgentDetailScreen
   // lands directly in its create-agent flow instead of the default Agents-tab table.
   const [autoOpenAgentCreateFlow, setAutoOpenAgentCreateFlow] = useState(false)
@@ -500,7 +501,14 @@ export function App() {
     setServiceRequestDetail(null)
   }
 
-  function handleEditAgent(name: string, draft?: WizardAgentDraft) {
+  function handleEditAgent(
+    name: string,
+    draft?: WizardAgentDraft,
+    returnTo?: { instanceName: string; tab: string },
+  ) {
+    // Remembered so closing the editor lands back where editing started (e.g. the instance's
+    // Workflow tab) instead of dropping to the agent list.
+    setEditorReturnView(returnTo ?? null)
     setWizardAgentDraft(draft ?? null)
     setEditingAgentName(name)
     setWorkflowAiCreateFullscreen(false)
@@ -890,6 +898,10 @@ export function App() {
                           agentName={editingAgentName}
                           onClose={() => {
                             setEditingAgentName(null)
+                            if (editorReturnView) {
+                              setPendingAgentInstanceView(editorReturnView)
+                              setEditorReturnView(null)
+                            }
                             setWizardAgentDraft(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)
@@ -930,6 +942,9 @@ export function App() {
                       navId={navActive}
                       onEditAgent={handleEditAgent}
                       onAgentSetupActiveChange={setIsAgentSetupActive}
+                      onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
+                      pendingInstanceView={pendingAgentInstanceView}
+                      onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
                       onNavigateToInbox={(conversationId) => {
                         setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
                         setRailActive('inbox')

@@ -115,8 +115,8 @@ export { QuickSendModal } from './QuickSendModal/QuickSendModal'
 export { Toast } from './Toast/Toast'
 export { ShareFeedbackModal } from './ShareFeedbackModal/ShareFeedbackModal'
 export type { ShareFeedbackModalProps } from './ShareFeedbackModal/ShareFeedbackModal.types'
-export { EstimateSavingsModal } from './EstimateSavingsModal/EstimateSavingsModal'
-export type { EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { EstimateSavingsModal, REVIEW_RESPONSE_SAVINGS_COPY, parseTimeSavedHours } from './EstimateSavingsModal/EstimateSavingsModal'
+export type { EstimateSavingsCopy, EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
 export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
 export type {
   AgentLibraryPreviewData,

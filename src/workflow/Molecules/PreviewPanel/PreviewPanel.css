@@ -44,14 +44,14 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 550px; /* 530px panel + 10px padding each side */
+  width: 480px; /* 460px panel + 10px padding each side */
   min-width: 380px; /* 360px panel + 10px padding each side */
   z-index: 10;
 }
 
 .preview-panel-float-wrap--log-details .log-details-panel,
 .preview-panel-float-wrap--log-details .preview-panel {
-  width: 530px !important;
+  width: 460px !important;
   min-width: 360px;
   flex-shrink: 0;
   box-shadow: none;

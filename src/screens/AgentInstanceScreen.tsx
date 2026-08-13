@@ -5,18 +5,23 @@ import {
   DataTable,
   EmptyState,
   EstimateSavingsModal,
+  REVIEW_RESPONSE_SAVINGS_COPY,
+  parseTimeSavedHours,
+  FilterPanel,
+  HeaderSearchField,
   Icon,
   MetricTiles,
   Tabs,
   TopNav,
   type ChipVariant,
   type Column,
+  type FilterField,
   type EstimateSavingsValues,
   type Metric,
   type Tab,
 } from '../components'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { AgentLogsTab } from './AgentLogsTab'
+import { AgentLogsTab, getLogFilterFields } from './AgentLogsTab'
 import { OutboundAgentLogsTab } from './OutboundAgentLogsTab'
 import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
@@ -33,7 +38,12 @@ interface AgentInstanceScreenProps {
   displayName?: string
   status?: string
   onBack: () => void
-  onEditAgent?: (agentName: string) => void
+  /** `returnTo` tells the host where to navigate back to when the editor closes. */
+  onEditAgent?: (
+    agentName: string,
+    draft?: unknown,
+    returnTo?: { instanceName: string; tab: string },
+  ) => void
   onNavigateToInbox?: (conversationId?: string) => void
   /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
    *  (threaded through to `AgentSettingsTab`'s Integrations section). */
@@ -155,6 +165,21 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'conversationsAssigned', value: '900', label: 'Conversations assigned', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations assigned to a team or user at this location.' },
     { id: 'conversationsManaged', value: '95%', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Share of conversations tagged and routed end-to-end at this location.' },
     { id: 'timeSaved', value: '32m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing at this location.' },
+  ],
+  // Registered under both the plural (agent-group) and singular (per-instance) keys, matching
+  // the Review generation pattern below. Without a `timeSaved` tile the drilled-in screen would
+  // fall back to DEFAULT_METRICS and have nothing to hang the Configure action on.
+  'Review response agents': [
+    { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+    { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+    { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+    { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+  ],
+  'Review response agent': [
+    { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+    { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+    { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+    { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
   ],
   'Review generation agents': [
     { id: 'reviewsReceived', value: '137', label: 'Reviews received', delta: '1.3%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
@@ -379,6 +404,17 @@ export function AgentInstanceScreen({
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
 
+  // Header search + filters. Outcomes and Logs each keep their own state — the two tabs search
+  // different tables, so a query typed on one would be meaningless on the other.
+  const [outcomesSearchOpen, setOutcomesSearchOpen] = useState(false)
+  const [outcomesQuery, setOutcomesQuery] = useState('')
+  const [outcomesFilterOpen, setOutcomesFilterOpen] = useState(false)
+  const [outcomesFilters, setOutcomesFilters] = useState<Record<string, string[]>>({})
+  const [logsSearchOpen, setLogsSearchOpen] = useState(false)
+  const [logsQuery, setLogsQuery] = useState('')
+  const [logsFilterOpen, setLogsFilterOpen] = useState(false)
+  const [logsFilters, setLogsFilters] = useState<Record<string, string[]>>({})
+
   useEffect(() => {
     onFullBleedDetailActiveChange?.(selectedRecommendationId !== null || selectedRun !== null)
     return () => onFullBleedDetailActiveChange?.(false)
@@ -419,10 +455,10 @@ export function AgentInstanceScreen({
       : METRICS_BY_AGENT[agentName]
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
-  const displayMetrics: Metric[] = isFrontdeskAgent
+  const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
-        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const hours = parseTimeSavedHours(String(m.value))
         const cost = hours * savingsSettings.hourlyWage
         const formattedCost = new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -448,6 +484,37 @@ export function AgentInstanceScreen({
       ? LOCATIONS_BY_AGENT[reviewGenerationKey]
       : LOCATIONS_BY_AGENT[agentName]
   ) ?? LOCATIONS_BY_AGENT['Front desk agent']
+
+  /* ─── Header search + filters (Outcomes and Logs tabs only) ─── */
+  // Front desk and the two review agents get the header controls; other agents are unchanged.
+  const supportsHeaderSearch = isFrontdeskAgent || isReviewResponse || isReviewGeneration
+  const isOutcomesTab = activeTab === 'outcomes'
+  const isLogsTab = activeTab === 'logs'
+  const showHeaderSearch = supportsHeaderSearch && (isOutcomesTab || isLogsTab)
+
+  // Outcomes filters by location, sourced from the rows actually on screen.
+  const outcomesFilterFields: FilterField[] = [
+    {
+      id: 'location',
+      label: 'Location',
+      options: Array.from(new Set(locations.map((l) => String(l.location)))).map((v) => ({
+        value: v,
+        label: v,
+      })),
+    },
+  ]
+  const outcomesQ = outcomesQuery.trim().toLowerCase()
+  const visibleLocations = locations.filter((row) => {
+    if (
+      outcomesQ &&
+      !Object.values(row).some((v) => typeof v === 'string' && v.toLowerCase().includes(outcomesQ))
+    ) {
+      return false
+    }
+    const picked = outcomesFilters.location
+    return !picked?.length || picked.includes(String(row.location))
+  })
+
   const isTaggingRouting = agentName === 'Tagging & routing agent'
   const tabs = isTaggingRouting
     ? TAGGING_ROUTING_TABS
@@ -537,6 +604,14 @@ export function AgentInstanceScreen({
                   {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                 </span>
               )}
+              {showHeaderSearch && (
+                <HeaderSearchField
+                  open={isOutcomesTab ? outcomesSearchOpen : logsSearchOpen}
+                  value={isOutcomesTab ? outcomesQuery : logsQuery}
+                  onOpenChange={isOutcomesTab ? setOutcomesSearchOpen : setLogsSearchOpen}
+                  onChange={isOutcomesTab ? setOutcomesQuery : setLogsQuery}
+                />
+              )}
               <div className="relative">
                 <button
                   type="button"
@@ -593,6 +668,19 @@ export function AgentInstanceScreen({
                   Save
                 </button>
               )}
+              {/* Filters always sits last in the header row. */}
+              {showHeaderSearch && (
+                <button
+                  type="button"
+                  aria-label="Filters"
+                  onClick={() =>
+                    isOutcomesTab ? setOutcomesFilterOpen((o) => !o) : setLogsFilterOpen((o) => !o)
+                  }
+                  className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                >
+                  <Icon name="filter_list" size={20} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -612,7 +700,7 @@ export function AgentInstanceScreen({
             <WorkflowViewerTab
               instanceName={instanceName}
               displayName={shownName}
-              onEdit={() => onEditAgent?.(instanceName)}
+              onEdit={() => onEditAgent?.(instanceName, undefined, { instanceName, tab: 'workflow' })}
               product={product}
             />
           ) : isRecommendationTab ? (
@@ -632,12 +720,12 @@ export function AgentInstanceScreen({
                     <MetricTiles
                       metrics={displayMetrics}
                       renderTileAction={
-                        isFrontdeskAgent
+                        isFrontdeskAgent || isReviewResponse
                           ? (metric) =>
                               metric.id === 'timeSaved' ? (
                                 <button
                                   type="button"
-                                  aria-label="Estimate savings"
+                                  aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
                                   onClick={() => setSavingsModalOpen(true)}
                                   className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                                 >
@@ -652,13 +740,14 @@ export function AgentInstanceScreen({
                     open={savingsModalOpen}
                     onClose={() => setSavingsModalOpen(false)}
                     initialValues={savingsSettings}
+                    copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
                     onSave={(values) => {
                       setSavingsSettings(values)
                       setSavingsModalOpen(false)
                     }}
                   />
                   <div className="px-lg py-lg">
-                    <DataTable columns={COLUMNS} data={locations} scrollOnHover />
+                    <DataTable columns={COLUMNS} data={visibleLocations} scrollOnHover />
                   </div>
                 </>
               ) : showEmptyDraftLogs ? (
@@ -673,6 +762,8 @@ export function AgentInstanceScreen({
                   agentName={agentName}
                   onNavigateToInbox={onNavigateToInbox}
                   onViewRun={setSelectedRun}
+                  searchQuery={supportsHeaderSearch ? logsQuery : ''}
+                  filters={supportsHeaderSearch ? logsFilters : undefined}
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
@@ -690,6 +781,19 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
+
+        {/* Push-panel filter, sibling of the content column so it squeezes rather than overlays. */}
+        {showHeaderSearch && (
+          <FilterPanel
+            open={isOutcomesTab ? outcomesFilterOpen : logsFilterOpen}
+            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName)}
+            selections={isOutcomesTab ? outcomesFilters : logsFilters}
+            onSelectionsChange={isOutcomesTab ? setOutcomesFilters : setLogsFilters}
+            onClose={() =>
+              isOutcomesTab ? setOutcomesFilterOpen(false) : setLogsFilterOpen(false)
+            }
+          />
+        )}
       </div>
     </div>
   )

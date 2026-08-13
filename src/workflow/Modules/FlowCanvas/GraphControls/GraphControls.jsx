@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import GraphControlTooltip from './GraphControlTooltip';
 import iconUndo from '../../../../assets/rr-chrome/icon-undo.svg';
 import iconRedo from '../../../../assets/rr-chrome/icon-redo.svg';
-import iconLayoutCols from '../../../../assets/rr-chrome/icon-layout-cols.svg';
-import iconLayoutRows from '../../../../assets/rr-chrome/icon-layout-rows.svg';
 import iconZoomIn from '../../../../assets/rr-chrome/icon-zoom-in.svg';
 import iconZoomOut from '../../../../assets/rr-chrome/icon-zoom-out.svg';
 import iconFit from '../../../../assets/rr-chrome/icon-fit.svg';
@@ -217,7 +215,7 @@ export default function GraphControls({
                 type="button"
                 aria-label="Horizontal layout"
               >
-                <RrIcon src={iconLayoutCols} />
+                <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </GraphControlTooltip>
             <GraphControlTooltip text="Vertical layout" above>
@@ -227,7 +225,7 @@ export default function GraphControls({
                 type="button"
                 aria-label="Vertical layout"
               >
-                <RrIcon src={iconLayoutRows} />
+                <span className="material-symbols-outlined">arrow_downward</span>
               </button>
             </GraphControlTooltip>
           </div>

@@ -68,11 +68,16 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
       {/* Scoped CSS overrides */}
       <style>{`
         .wf-viewer .faq-ab-embedded       { height: 100% !important; }
-        .wf-viewer .agent-builder-wrapper { background-color: #f8f9fb !important; background-image: radial-gradient(circle, #c8cdd8 1px, transparent 1px) !important; background-size: 28px 28px !important; margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
+        /* Flat, slightly darker than the page — matches the log detail canvas. */
+        .wf-viewer .agent-builder-wrapper { background-color: #eef0f4 !important; background-image: none !important; margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
+        .wf-viewer .flow-canvas { background-color: #eef0f4 !important; background-image: none !important; }
         .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; padding: 0 !important; gap: 0 !important; }
         .wf-viewer .flow-canvas           { border-radius: 12px !important; }
         .wf-viewer .flow-canvas__toolbar-anchor--rr-chrome { top: auto !important; bottom: 16px !important; left: 16px !important; right: 16px !important; }
         .wf-viewer .graph-controls__toggle { display: none !important; }
+        /* Node toggles are disabled here (state display, not a control) — don't invite clicks. */
+        .wf-viewer .cnh__toggle, .wf-viewer .cnh__toggle * { cursor: default !important; }
+        .wf-viewer .cnh__toggle { opacity: 0.75; }
       `}</style>
 
       <div className="wf-viewer" style={{ height: '100%' }}>

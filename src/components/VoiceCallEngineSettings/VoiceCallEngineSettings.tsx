@@ -135,9 +135,12 @@ function SettingsSelect({
 export function TtsModelSettings({
   value,
   onChange,
+  /** Suppresses the built-in heading when the caller renders its own (e.g. a sub-panel header). */
+  hideHeading = false,
 }: {
   value?: TtsModelSettingsValue
   onChange?: (next: TtsModelSettingsValue) => void
+  hideHeading?: boolean
 } = {}) {
   const [internal, setInternal] = useState(DEFAULT_TTS_MODEL_SETTINGS)
   const settings = value ?? internal
@@ -145,7 +148,7 @@ export function TtsModelSettings({
 
   return (
     <div className="flex flex-col gap-md">
-      <h3 className="text-body text-text-primary">Text-to-speech (TTS)</h3>
+      {!hideHeading && <h3 className="text-body text-text-primary">Text-to-speech (TTS)</h3>}
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
           Primary model <span className="text-chip-danger-text">*</span>
@@ -368,18 +371,21 @@ export function TtsFailoverSettings({
 export function VoiceCallEngineSettings({
   value,
   onChange,
+  /** Suppresses the built-in heading + top padding when rendered inside a sub-panel. */
+  hideHeading = false,
 }: {
   value?: SttSettingsValue
   onChange?: (next: SttSettingsValue) => void
+  hideHeading?: boolean
 } = {}) {
   const [internal, setInternal] = useState(DEFAULT_STT_SETTINGS)
   const settings = value ?? internal
   const update = onChange ?? setInternal
 
   return (
-    <div className="flex flex-col pt-lg">
+    <div className={`flex flex-col ${hideHeading ? "" : "pt-lg"}`}>
       <div className="flex flex-col gap-md">
-        <h3 className="text-body text-text-primary">Speech-to-text (STT)</h3>
+        {!hideHeading && <h3 className="text-body text-text-primary">Speech-to-text (STT)</h3>}
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
             Primary model <span className="text-chip-danger-text">*</span>

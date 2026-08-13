@@ -437,9 +437,10 @@ function AgentWorkflowRunCanvas({
     <div className="run-wf-bg absolute inset-0 overflow-hidden">
       <style>{`
         /* Dot grid spans the full run view, including under the details panel */
-        .run-wf-bg { background-color: #f8f9fb; background-image: radial-gradient(circle, #c8cdd8 1px, transparent 1px); background-size: 28px 28px; }
-        /* Canvas itself stays clear of the overlaid 600px details panel */
-        .run-wf-viewer { height: 100%; width: calc(100% - 600px); }
+        .run-wf-bg { background-color: #eef0f4; }
+        /* Canvas stays clear of the overlaid details panel — must match the 480px float wrap
+           in PreviewPanel.css (this previously reserved 600px against a 550px wrap). */
+        .run-wf-viewer { height: 100%; width: calc(100% - 480px); }
         .run-wf-viewer .agent-builder__lhs    { display: none !important; }
         .run-wf-viewer .faq-ab-header         { display: none !important; }
         .run-wf-viewer .faq-ab-embedded       { height: 100% !important; }
@@ -470,6 +471,7 @@ function AgentWorkflowRunCanvas({
           initialZoom={0.85}
           onEdit={onEditWorkflow}
           runDisabled
+          nodesInteractive={false}
         />
       </div>
     </div>
@@ -585,23 +587,43 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
   const useRunDetailsPanel = isReminder || isReviewAgent
 
   return (
-    <div className="relative flex h-full flex-col bg-surface">
-      {/* Header — title + status chip with agent name subtitle (matches recommendation detail) */}
-      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
+    <div className="log-detail-view relative flex h-full flex-col bg-surface">
+      {/* Visual chrome shared by both canvas paths (AgentBuilder run canvas and the plain
+          WorkflowCanvas) so every agent's log view looks identical, whatever data it shows.
+          Scoped to .log-detail-view — .flow-canvas is shared with the workflow editor. */}
+      <style>{`
+        .log-detail-view .flow-canvas,
+        .log-detail-view .run-wf-bg,
+        .log-detail-view .agent-builder-wrapper {
+          background-color: #eef0f4 !important;
+          background-image: none !important;
+        }
+        /* No agent name / Draft / View only pill over a read-only run. */
+        .log-detail-view .rr-chrome-top { display: none !important; }
+
+        /* Node cards are a read-only record here — fully inert: no pointer, no hover
+           affordances, no selection ring. Clicks are already a no-op via nodesInteractive. */
+        .log-detail-view .canvas-node-wrap,
+        .log-detail-view .canvas-node,
+        .log-detail-view .react-flow__node { cursor: default !important; }
+        .log-detail-view .canvas-node__hover-actions { display: none !important; }
+        .log-detail-view .canvas-node--hover,
+        .log-detail-view .canvas-node--selected { border-color: transparent !important; }
+      `}</style>
+
+      {/* Header — title + status chip, vertically centred against the back arrow */}
+      <div className="flex shrink-0 items-center gap-sm border-b border-border px-2xl py-sm">
         <button
           type="button"
           aria-label="Back to logs"
           onClick={onBack}
-          className="mt-xs flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
         >
           <BackArrowIcon />
         </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-sm">
-            <h1 className="text-h3 text-text-primary">Log - {row.timestamp}</h1>
-            <Chip label={row.status} variant={statusVariant} />
-          </div>
-          <p className="mt-xs text-small text-text-secondary">{instanceName}</p>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-sm">
+          <h1 className="text-h3 text-text-primary">Log - {row.timestamp}</h1>
+          <Chip label={row.status} variant={statusVariant} />
         </div>
       </div>
 

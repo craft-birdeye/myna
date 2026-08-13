@@ -821,7 +821,10 @@ function FlowCanvasInner({
   const handleNodeClick = useCallback(
     (event, node) => {
       if (event.target.closest('.cnh__toggle')) return;
-      onNodeClick?.(node);
+      // No handler means the canvas is non-interactive (e.g. a read-only log run) — bail before
+      // the recentre below, which would otherwise pan on every click for no reason.
+      if (!onNodeClick) return;
+      onNodeClick(node);
       // Read width after React has flushed the re-render (RHS panel may open,
       // making the canvas narrower). Using rAF gives us the post-layout width.
       requestAnimationFrame(() => {

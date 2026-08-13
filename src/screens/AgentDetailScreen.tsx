@@ -6,6 +6,8 @@ import {
   CustomizeColumnsDrawer,
   DataTable,
   EstimateSavingsModal,
+  REVIEW_RESPONSE_SAVINGS_COPY,
+  parseTimeSavedHours,
   FilesModal,
   FilterPanel,
   HeaderSearchField,
@@ -78,7 +80,7 @@ interface AgentDetailScreenProps {
    * the same display `agentName`.
    */
   navId?: string
-  onEditAgent?: (agentName: string, draft?: WizardAgentDraft) => void
+  onEditAgent?: (agentName: string, draft?: WizardAgentDraft, returnTo?: { instanceName: string; tab: string }) => void
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
@@ -7206,10 +7208,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
 
   const isFrontdeskAgent = agentName === 'Front desk agent'
-  const displayMetrics: Metric[] = isFrontdeskAgent
+  const displayMetrics: Metric[] = isFrontdeskAgent || agentName === 'Review response agents'
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
-        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const hours = parseTimeSavedHours(String(m.value))
         const cost = hours * savingsSettings.hourlyWage
         const formattedCost = new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -8034,12 +8036,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     <MetricTiles
                       metrics={displayMetrics}
                       renderTileAction={
-                        isFrontdesk
+                        isFrontdesk || isReviewResponse
                           ? (metric) =>
                               metric.id === 'timeSaved' ? (
                                 <button
                                   type="button"
-                                  aria-label="Estimate savings"
+                                  aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
                                   onClick={() => setSavingsModalOpen(true)}
                                   className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                                 >
@@ -8054,6 +8056,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     open={savingsModalOpen}
                     onClose={() => setSavingsModalOpen(false)}
                     initialValues={savingsSettings}
+                    copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
                     onSave={(values) => {
                       setSavingsSettings(values)
                       setSavingsModalOpen(false)
