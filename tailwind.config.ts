@@ -48,6 +48,7 @@ export default {
           danger: { bg: '#fef6f5', text: '#de1b0c' }, // Red/10 · negative
           neutral: { bg: '#eaeaea', text: '#555555' }, // Gray/40 · Gray/300
           info: { bg: '#e8f1fc', text: '#1976d2' }, // Blue/10 · informational (matches text/action primary)
+          purple: { bg: '#f3eefb', text: '#6834b7' }, // Light tint of ai.brand — "Template" / type badges
         },
         rating: {
           star: '#F2C052', // filled review star

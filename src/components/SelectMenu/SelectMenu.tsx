@@ -27,7 +27,11 @@ export function SelectMenu({
   const selected = new Set(value)
 
   const filtered = useMemo(
-    () => options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase())),
+    () => options.filter((o) => {
+      const q = query.trim().toLowerCase()
+      if (!q) return true
+      return o.label.toLowerCase().includes(q) || (o.description?.toLowerCase().includes(q) ?? false)
+    }),
     [options, query],
   )
   const allSelected = options.length > 0 && options.every((o) => selected.has(o.value))
@@ -83,6 +87,14 @@ export function SelectMenu({
           {filtered.map((opt) => {
             const isSel = selected.has(opt.value)
             // Single select — label left, gray tick on the right, gray selected row.
+            const labelBlock = (
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-body text-text-primary">{opt.label}</span>
+                {opt.description && (
+                  <span className="truncate text-xs text-text-tertiary">{opt.description}</span>
+                )}
+              </span>
+            )
             if (!multi) {
               return (
                 <button
@@ -93,21 +105,22 @@ export function SelectMenu({
                     isSel ? 'bg-surface-selected' : 'hover:bg-surface-hover'
                   }`}
                 >
-                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt.label}</span>
+                  {labelBlock}
                   {isSel && <Icon name="check" size={20} className="shrink-0 text-text-icon" />}
                 </button>
               )
             }
-            // Multi select — checkbox on the left.
             return (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => toggle(opt.value)}
-                className="flex w-full items-center gap-sm rounded-sm py-sm pr-sm text-left hover:bg-surface-hover"
+                className={`flex w-full gap-sm rounded-sm py-sm pr-sm text-left hover:bg-surface-hover ${opt.description ? 'items-start' : 'items-center'}`}
               >
-                <CheckBox checked={isSel} />
-                <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt.label}</span>
+                <span className={opt.description ? 'mt-xs' : ''}>
+                  <CheckBox checked={isSel} />
+                </span>
+                {labelBlock}
               </button>
             )
           })}

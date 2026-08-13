@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DataTable, HeaderSearchField, Icon, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
+import { APPOINTMENT_TYPES } from '../data/appointmentTypesData'
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
 interface ToggleProps { value: boolean; onChange: (v: boolean) => void }
@@ -29,18 +30,20 @@ interface ApptTypeRow {
   [key: string]: string | boolean | undefined
 }
 
+const AT = Object.fromEntries(APPOINTMENT_TYPES.map((t) => [t.id, t]))
+
 const APPT_TYPES: ApptTypeRow[] = [
-  { name: 'New Patient Exam',         description: 'Comprehensive initial exam + X-rays',       duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"new patient"', recognitionExtra: '+1 more', active: true  },
-  { name: 'Routine Cleaning',         description: 'Prophylaxis + polishing',                   duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'Emergency Visit',          description: 'Urgent pain or dental injury',              duration: '30 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: 'Invisalign Consultation',  description: 'Orthodontic assessment + treatment plan',  duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'Tooth Filling',            description: 'Composite or amalgam restoration',          duration: '45 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'Whitening Treatment',      description: 'In-office bleaching session',               duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: false },
-  { name: 'Invisalign Consultation',  description: 'Orthodontic assessment + treatment plan',  duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: 'Emergency Visit',          description: 'Urgent pain or dental injury',              duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"new patient"',  recognitionExtra: '+1 more', active: true  },
-  { name: 'Routine Cleaning',         description: 'Prophylaxis + polishing',                   duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: 'New Patient Exam',         description: 'Comprehensive initial exam + X-rays',       duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: 'Tooth Filling',            description: 'Composite or amalgam restoration',          duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['new-patient-exam'].name,         description: AT['new-patient-exam'].description,         duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"new patient"', recognitionExtra: '+1 more', active: true  },
+  { name: AT['routine-cleaning'].name,         description: AT['routine-cleaning'].description,         duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['emergency-visit'].name,          description: AT['emergency-visit'].description,          duration: '30 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: AT['invisalign-consultation'].name,  description: AT['invisalign-consultation'].description,  duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['tooth-filling'].name,            description: AT['tooth-filling'].description,            duration: '45 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['whitening-treatment'].name,      description: AT['whitening-treatment'].description,      duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: false },
+  { name: AT['invisalign-consultation'].name,  description: AT['invisalign-consultation'].description,  duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: AT['emergency-visit'].name,          description: AT['emergency-visit'].description,          duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"new patient"',  recognitionExtra: '+1 more', active: true  },
+  { name: AT['routine-cleaning'].name,         description: AT['routine-cleaning'].description,         duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: AT['new-patient-exam'].name,         description: AT['new-patient-exam'].description,         duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: AT['tooth-filling'].name,            description: AT['tooth-filling'].description,            duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
 ]
 
 // ── Dropdown data ─────────────────────────────────────────────────────────────

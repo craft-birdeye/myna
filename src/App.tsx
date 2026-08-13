@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
+import { BookingTemplateStoreProvider } from './data/BookingTemplateStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
@@ -16,6 +17,7 @@ import { ServiceScreen } from './screens/ServiceScreen'
 import { ProvidersScreen } from './screens/ProvidersScreen'
 import { AppointmentTypeScreen } from './screens/AppointmentTypeScreen'
 import { AvailabilityScreen } from './screens/AvailabilityScreen'
+import { BookingTemplatesScreen } from './screens/BookingTemplatesScreen'
 import { AutoAppointmentTypeScreen } from './screens/AutoAppointmentTypeScreen'
 import { AutoAvailabilityScreen } from './screens/AutoAvailabilityScreen'
 import { HCFrontdeskOverviewScreen } from './screens/HCFrontdeskOverviewScreen'
@@ -179,6 +181,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
       { id: 'providers',         label: 'Providers'          },
       { id: 'appointment-type',  label: 'Appointment type'   },
       { id: 'availability',      label: 'Availability'       },
+      { id: 'booking-templates', label: 'Booking templates' },
       { id: 'procedure-library', label: 'Procedures'         },
       { id: 'phone-number',      label: 'Phone number'       },
       { id: 'knowledge-base',    label: 'Knowledge base',    external: true },
@@ -229,6 +232,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
       { id: 'providers',         label: 'Providers'        },
       { id: 'appointment-type',  label: 'Appointment type' },
       { id: 'availability',      label: 'Availability'     },
+      { id: 'booking-templates', label: 'Booking templates' },
       { id: 'procedure-library', label: 'Procedures'       },
       { id: 'phone-number',      label: 'Phone number'     },
       { id: 'knowledge-base',    label: 'Knowledge base', external: true },
@@ -395,6 +399,7 @@ export function App() {
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
   const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
+  const [pendingBookingTemplateId, setPendingBookingTemplateId] = useState<string | null>(null)
 
   function handleProductChange(id: string) {
     setActiveProduct(id)
@@ -446,6 +451,7 @@ export function App() {
 
   return (
     <ProcedureStoreProvider>
+    <BookingTemplateStoreProvider>
     <FeedbackRecommendationsStoreProvider>
     <RecommendationOverridesStoreProvider>
     <div className="flex h-screen w-screen overflow-hidden bg-surface text-text-primary">
@@ -516,7 +522,15 @@ export function App() {
           ) : settingsSubScreen === 'web-widgets' ? (
             <WebWidgetsScreen onBack={() => setSettingsSubScreen(null)} />
           ) : settingsSubScreen === 'appointment-widgets' ? (
-            <AppointmentWidgetsScreen onBack={() => setSettingsSubScreen(null)} />
+            <AppointmentWidgetsScreen
+              onBack={() => setSettingsSubScreen(null)}
+              onOpenBookingTemplates={(templateId) => {
+                setPendingBookingTemplateId(templateId)
+                setSettingsSubScreen(null)
+                setRailActive('frontdesk')
+                setNavActive('booking-templates')
+              }}
+            />
           ) : (
             <SettingsScreen initialTab={settingsTab} onTabConsumed={() => setSettingsTab(null)} onWebWidgets={() => setSettingsSubScreen('web-widgets')} onAppointmentWidgets={() => setSettingsSubScreen('appointment-widgets')} />
           )
@@ -775,6 +789,11 @@ export function App() {
           <AppointmentTypeScreen />
         ) : navActive === 'hc-availability' || navActive === 'availability' ? (
           <AvailabilityScreen />
+        ) : navActive === 'booking-templates' ? (
+          <BookingTemplatesScreen
+            initialEditId={pendingBookingTemplateId}
+            onInitialEditConsumed={() => setPendingBookingTemplateId(null)}
+          />
         ) : navActive === 'hc-frontdesk-overview' || navActive === 'dental-frontdesk-overview' || navActive === 'auto-frontdesk-overview' ? (
           <HCFrontdeskOverviewScreen isDental={navActive === 'dental-frontdesk-overview'} />
         ) : navActive === 'hc-no-shows' || navActive === 'dental-no-shows' || navActive === 'auto-no-shows' ? (
@@ -797,6 +816,10 @@ export function App() {
             onNavigateToInbox={(conversationId) => {
               setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
               setRailActive('inbox')
+            }}
+            onOpenBookingTemplates={(templateId) => {
+              setPendingBookingTemplateId(templateId)
+              setNavActive('booking-templates')
             }}
             initialRecommendationFocus={recommendationFocus}
             onInitialRecommendationFocusConsumed={() => setRecommendationFocus(null)}
@@ -834,6 +857,7 @@ export function App() {
     </div>
     </RecommendationOverridesStoreProvider>
     </FeedbackRecommendationsStoreProvider>
+    </BookingTemplateStoreProvider>
     </ProcedureStoreProvider>
   )
 }

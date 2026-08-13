@@ -1,6 +1,17 @@
 import { Icon } from '../Icon/Icon'
 import { MetricTilesProps } from './MetricTiles.types'
 
+/** 18420 → "18.4K". Percentages, times, currency, and already-compact values ("1.9K") pass through. */
+function formatK(raw: string | number): string {
+  const text = String(raw)
+  const numeric = parseFloat(text.replace(/,/g, ''))
+  if (!isNaN(numeric) && numeric >= 1000 && !/[^\d.,]/.test(text.replace(/,/g, ''))) {
+    const k = parseFloat((numeric / 1000).toFixed(1))
+    return `${k}K`
+  }
+  return text
+}
+
 export function MetricTiles({ metrics, renderTileAction }: MetricTilesProps) {
   return (
     <div className="flex gap-md">
@@ -13,7 +24,7 @@ export function MetricTiles({ metrics, renderTileAction }: MetricTilesProps) {
             <div className="absolute right-md top-lg">{renderTileAction(metric)}</div>
           )}
           <div className="flex items-baseline gap-sm">
-            <span className={`text-display ${metric.valueColorClassName ?? 'text-text-primary'}`}>{metric.value}</span>
+            <span className={`text-display ${metric.valueColorClassName ?? 'text-text-primary'}`}>{formatK(metric.value)}</span>
             {metric.delta && (
               <span className={`text-small ${
                 (metric.positiveDown ? metric.trend === 'up' : metric.trend === 'down')
