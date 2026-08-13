@@ -57,7 +57,6 @@ import jayIcon from './assets/icon-jay.svg'
 import mynaIcon from './assets/icon-myna.svg'
 import robinIcon from './assets/icon-robin.svg'
 import {
-  FigmaIconBirdAI,
   FigmaIconOverview,
   FigmaIconInbox,
   FigmaIconFrontDesk,
@@ -92,7 +91,6 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
-      { id: 'agents',   label: 'Co-workers',   icon: <FigmaIconBirdAI size={ICON_SIZE + 2} />,   kind: 'element', badge: 'New' },
     ],
   },
   {

@@ -9,6 +9,7 @@ import {
 import mynaLogo from '../assets/icon-myna.svg'
 import jayLogo from '../assets/icon-jay.svg'
 import robinLogo from '../assets/icon-robin.svg'
+import iconAgentsPurple from '../assets/icon-agents-purple.svg'
 import { ClassicOverviewScreen } from './ClassicOverviewScreen'
 
 type SortMode = 'runs' | 'persona' | 'custom'
@@ -390,7 +391,30 @@ function CoworkerTabBar({
               <span
                 className={`flex items-start gap-sm rounded-sm px-lg py-md text-left transition-colors ${active ? '' : 'hover:bg-surface-hover'}`}
               >
-                {id !== 'all' && <img src={COWORKER_LOGO[id]} alt="" className="size-7 shrink-0 rounded-full" />}
+                {id === 'all' ? (
+                  <span
+                    className="flex size-7 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: '#E2D6F4' }}
+                    aria-hidden
+                  >
+                    <span
+                      className="size-4 shrink-0"
+                      style={{
+                        backgroundColor: '#9970D7',
+                        WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                        maskImage: `url("${iconAgentsPurple}")`,
+                        WebkitMaskSize: 'contain',
+                        maskSize: 'contain',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
+                      }}
+                    />
+                  </span>
+                ) : (
+                  <img src={COWORKER_LOGO[id]} alt="" className="size-7 shrink-0 rounded-full" />
+                )}
                 <span className="flex flex-col gap-[2px]">
                   <span className={`text-body ${active ? '' : 'text-text-secondary'}`} style={active ? { color: accent } : undefined}>
                     {name}
@@ -563,7 +587,7 @@ export function OverviewScreen({
   )
 
   const SUMMARY_METRICS: Metric[] = [
-    { id: 'coworkers', value: String(PERSONA_GROUPS.length), label: 'Co-workers' },
+    { id: 'coworkers', value: String(PERSONA_GROUPS.length), label: 'AI Co-workers' },
     { id: 'running', value: String(runningCount), label: 'Running agents' },
     { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved', delta: '16%', trend: 'up' },
     { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved', delta: '14%', trend: 'up' },
@@ -601,6 +625,7 @@ export function OverviewScreen({
         <ReportHeader
           title="Welcome, Rupa"
           subtitle={showCoworkers ? 'Here are the things which need your attention.' : 'Manage and monitor AI agents across your business.'}
+          size="display"
           rightSlot={
             <div className="flex shrink-0 items-center gap-sm">
               {showCoworkers && (
