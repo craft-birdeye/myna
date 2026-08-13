@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { MoreLabelsCellProps } from './MoreLabelsCell.types'
 
-/** "First label, +N more" — hovering "+N more" reveals the rest in a small popover. Portaled
-    to <body> with fixed positioning since table cells truncate/clip overflow. A short close
-    delay lets the mouse travel from the trigger to the popover without it disappearing.
-    Shared by the Booking templates list (Services column) and the template editor's Field
-    groups table (Mapped services / Extra fields columns). */
-export function MoreLabelsCell({ labels, emptyLabel = '—' }: MoreLabelsCellProps) {
+/** "Label, Label, +N more" — hovering "+N more" reveals the remaining labels in a popover.
+    Portaled to <body> with fixed positioning since table cells truncate/clip overflow.
+    Shared by Booking templates list columns and the template editor field-options summary. */
+export function MoreLabelsCell({
+  labels,
+  emptyLabel = '—',
+  maxVisible = 1,
+  className = 'text-body text-text-primary',
+}: MoreLabelsCellProps) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -18,10 +21,11 @@ export function MoreLabelsCell({ labels, emptyLabel = '—' }: MoreLabelsCellPro
   }, [])
 
   if (labels.length === 0) {
-    return <span className="text-body text-text-primary">{emptyLabel}</span>
+    return <span className={className}>{emptyLabel}</span>
   }
 
-  const [first, ...rest] = labels
+  const visible = labels.slice(0, Math.max(1, maxVisible))
+  const rest = labels.slice(visible.length)
 
   function clearCloseTimer() {
     if (closeTimer.current) {
@@ -43,8 +47,8 @@ export function MoreLabelsCell({ labels, emptyLabel = '—' }: MoreLabelsCellPro
   }
 
   return (
-    <span className="inline-flex items-center gap-xs" onClick={(e) => e.stopPropagation()}>
-      <span className="text-body text-text-primary">{first}</span>
+    <span className={`inline-flex flex-wrap items-center gap-xs ${className}`} onClick={(e) => e.stopPropagation()}>
+      <span>{visible.join(', ')}</span>
       {rest.length > 0 && (
         <>
           <button
@@ -53,18 +57,18 @@ export function MoreLabelsCell({ labels, emptyLabel = '—' }: MoreLabelsCellPro
             onMouseEnter={handleEnter}
             onMouseLeave={scheduleClose}
             onClick={(e) => e.stopPropagation()}
-            className="text-body text-text-primary"
+            className="text-inherit"
           >
             , +{rest.length} more
           </button>
           {open && createPortal(
             <div
               style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999 }}
-              className="min-w-[200px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
+              className="max-h-[280px] min-w-[200px] overflow-y-auto rounded-sm border border-border bg-surface py-xs shadow-dropdown"
               onMouseEnter={clearCloseTimer}
               onMouseLeave={scheduleClose}
             >
-              {rest.map((label, i) => (
+              {labels.map((label, i) => (
                 <div key={`${label}-${i}`} className="px-md py-sm text-body text-text-primary">
                   {label}
                 </div>

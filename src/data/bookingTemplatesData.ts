@@ -4,21 +4,45 @@
 
 import { APPOINTMENT_TYPES } from './appointmentTypesData'
 
-export type FieldType = 'text' | 'number' | 'date' | 'dropdown' | 'multiple-choice'
+export type FieldType =
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'dropdown-single'
+  | 'dropdown-multi'
+  | 'multiple-choice'
 
 export const FIELD_TYPE_OPTIONS: { value: FieldType; label: string }[] = [
   { value: 'text', label: 'Text' },
   { value: 'number', label: 'Number' },
   { value: 'date', label: 'Date' },
-  { value: 'dropdown', label: 'Dropdown' },
+  { value: 'dropdown-single', label: 'Dropdown single select' },
+  { value: 'dropdown-multi', label: 'Dropdown multi-select' },
   { value: 'multiple-choice', label: 'Multiple choice' },
 ]
+
+/** Field types that need a list of answer options (Google Forms–style). */
+export const OPTION_FIELD_TYPES: ReadonlySet<FieldType> = new Set([
+  'dropdown-single',
+  'dropdown-multi',
+  'multiple-choice',
+])
+
+export function isOptionFieldType(type: FieldType): boolean {
+  return OPTION_FIELD_TYPES.has(type)
+}
+
+export function defaultFieldOptions(): string[] {
+  return ['Option 1', 'Option 2']
+}
 
 export interface TemplateField {
   id: string
   label: string
   type: FieldType
   required?: boolean
+  /** Answer choices for dropdown / multiple-choice fields. */
+  options?: string[]
   /** Seeded default fields (First name, Email, …) can't be removed; user-added fields can. */
   system?: boolean
 }
@@ -79,7 +103,14 @@ export const DEFAULT_MYSELF_FIELDS: TemplateField[] = [
   { id: 'last-name', label: 'Last name', type: 'text', system: true },
   { id: 'phone-number', label: 'Phone number', type: 'number', required: true, system: true },
   { id: 'email', label: 'Email', type: 'text', required: true, system: true },
-  { id: 'gender', label: 'Gender', type: 'multiple-choice', required: true, system: true },
+  {
+    id: 'gender',
+    label: 'Gender',
+    type: 'dropdown-single',
+    required: true,
+    system: true,
+    options: ['Female', 'Male', 'Non-binary', 'Prefer not to say'],
+  },
   { id: 'dob', label: 'Date of birth (MM/DD/YYYY)', type: 'date', required: true, system: true },
 ]
 
@@ -114,7 +145,7 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     baseFields: {
       myself: [
         ...DEFAULT_MYSELF_FIELDS.map((f) => ({ ...f })),
-        { id: 'preferred-language', label: 'Preferred language', type: 'dropdown' },
+        { id: 'preferred-language', label: 'Preferred language', type: 'dropdown-single', options: ['English', 'Spanish', 'Mandarin', 'Other'] },
       ],
       someoneElse: defaultSomeoneElseFields(),
     },
@@ -132,7 +163,7 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
         name: 'Surgical intake',
         mappedServiceIds: ['tooth-filling', 'emergency-visit'],
         extraFields: [
-          { id: 'pain-level', label: 'Pain level', type: 'dropdown', required: true },
+          { id: 'pain-level', label: 'Pain level', type: 'dropdown-single', required: true, options: ['None', 'Mild', 'Moderate', 'Severe'] },
           { id: 'current-medications', label: 'Current medications', type: 'text', required: true },
           { id: 'allergies', label: 'Allergies', type: 'text', required: true },
         ],
@@ -166,7 +197,7 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
         name: 'Default',
         mappedServiceIds: ['tooth-filling', 'emergency-visit'],
         extraFields: [
-          { id: 'pain-level-2', label: 'Pain level', type: 'dropdown', required: true },
+          { id: 'pain-level-2', label: 'Pain level', type: 'dropdown-single', required: true, options: ['None', 'Mild', 'Moderate', 'Severe'] },
         ],
       },
     ],
@@ -216,7 +247,7 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
         name: 'Symptom details',
         mappedServiceIds: ['emergency-visit'],
         extraFields: [
-          { id: 'pain-level-3', label: 'Pain level', type: 'dropdown', required: true },
+          { id: 'pain-level-3', label: 'Pain level', type: 'dropdown-single', required: true, options: ['None', 'Mild', 'Moderate', 'Severe'] },
           { id: 'symptom-onset', label: 'When did symptoms start?', type: 'text', required: true },
         ],
       },
@@ -231,7 +262,7 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     baseFields: {
       myself: [
         ...DEFAULT_MYSELF_FIELDS.map((f) => ({ ...f })),
-        { id: 'desired-shade', label: 'Desired shade improvement', type: 'dropdown' },
+        { id: 'desired-shade', label: 'Desired shade improvement', type: 'dropdown-single', options: ['1–2 shades', '3–4 shades', '5+ shades'] },
       ],
       someoneElse: defaultSomeoneElseFields(),
     },
