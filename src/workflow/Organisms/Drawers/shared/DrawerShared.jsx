@@ -163,63 +163,53 @@ export function Toggle({ label, subtext, tooltip, checked, onChange }) {
 }
 
 /* ─── Real healthcare procedure catalog (mirrors the "Healthcare Frontdesk" / "Healthcare
-   Waitlist" / "Healthcare Pre-visit" entries in procedureService.js). `activeIn` lists the
-   agent(s) whose workflow currently references this procedure via a real `procedureIds`
-   array — that's what powers the "Active procedures" tab and its agent pill. Shared by every
-   drawer that lets you pick a procedure (Initiate voice call, Reminder tool, ...). ─── */
+   Waitlist" / "Healthcare Pre-visit" entries in procedureService.js). Shared by every drawer
+   that lets you pick a procedure (Initiate voice call, Reminder tool, ...). ─── */
 export const HEALTHCARE_PROCEDURE_LIBRARY = [
   {
     id: 'Appointment confirmation',
     name: 'Appointment confirmation',
     whenToUse: 'Use when the patient wants to book a new appointment or schedule a visit with a provider',
-    activeIn: ['Reminder agent'],
   },
   {
     id: 'Greet and open conversation',
     name: 'Greet and open conversation',
     whenToUse: 'Identifies the caller, screens for urgency, and routes them to the right procedure.',
-    activeIn: [],
   },
   {
     id: 'Handle general inquiry',
     name: 'Handle general inquiry',
     whenToUse: 'Answers informational questions like hours, location, insurance, and services.',
-    activeIn: ['Front desk agent'],
   },
   {
     id: 'Handle emergency or urgent concern',
     name: 'Handle emergency or urgent concern',
     whenToUse: 'Detects urgent symptoms or concerns and escalates for patient safety.',
-    activeIn: [],
   },
   {
     id: 'Handle unclear message',
     name: 'Handle unclear message',
     whenToUse: "Clarifies vague or out-of-scope messages to recover the patient's intent.",
-    activeIn: [],
   },
   {
     id: 'Talk to human',
     name: 'Talk to human',
     whenToUse: 'Hands off to a live agent when the patient asks for a person or shows frustration.',
-    activeIn: ['Front desk agent'],
   },
   {
     id: 'Form not filled',
     name: 'Form not filled',
     whenToUse: 'Patient has not completed their pre-visit intake form before the appointment date.',
-    activeIn: [],
   },
   {
     id: 'Waitlist slot confirmation',
     name: 'Waitlist slot confirmation',
     whenToUse: 'Agent is calling outbound to confirm a newly opened slot with a patient on the waitlist.',
-    activeIn: [],
   },
 ];
 
 /* Searchable "title + subtext" row, shared by every procedure search/pick list. */
-export function ProcedureRow({ item, selected, showCheckbox, pillLabels, onClick }) {
+export function ProcedureRow({ item, selected, showCheckbox, onClick }) {
   return (
     <button type="button" className="ds__proclist-row" onClick={onClick}>
       {showCheckbox && (
@@ -228,12 +218,7 @@ export function ProcedureRow({ item, selected, showCheckbox, pillLabels, onClick
         </span>
       )}
       <span className="ds__proclist-rowtext">
-        <span className="ds__proclist-row-title">
-          {item.name}
-          {pillLabels?.map((label) => (
-            <span key={label} className="ds__pill">{label}</span>
-          ))}
-        </span>
+        <span className="ds__proclist-row-title">{item.name}</span>
         {item.whenToUse && <span className="ds__proclist-row-desc">{item.whenToUse}</span>}
       </span>
     </button>
@@ -334,17 +319,13 @@ export function ProcedureSelectField({ value, library, onChange, onView, placeho
   );
 }
 
-/* Two-pane picker: left nav switches "Active procedures" (already used by a real agent
-   somewhere) vs the full "Procedure library"; right pane is a searchable multi-select
-   checklist. Selections are staged in `draft` and only committed on Apply. Anchored below
-   the field, same width — not a centered modal. */
+/* Flat searchable multi-select picker — same "search on top, flat list below" layout as
+   ProcedureSelectField's single-select dropdown, just with checkboxes instead of single-click
+   selection. Selections are staged in `draft` and only committed on Apply. Anchored below the
+   field, same width — not a centered modal. */
 function ProcedureMultiSelectDropdown({ library, selected, onApply, onCancel }) {
-  const [tab, setTab] = useState('active');
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState(selected);
-
-  const activeItems = library.filter((p) => (p.activeIn || []).length > 0);
-  const items = tab === 'active' ? activeItems : library;
 
   const toggle = (id) => {
     setDraft((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
@@ -352,51 +333,20 @@ function ProcedureMultiSelectDropdown({ library, selected, onApply, onCancel }) 
 
   return (
     <div className="ds__addproc-anchor" onClick={(e) => e.stopPropagation()}>
-      <div className="ds__addproc-anchor-body">
-        <div className="ds__addproc-nav">
-          <button
-            type="button"
-            className={`ds__addproc-nav-item${tab === 'active' ? ' ds__addproc-nav-item--active' : ''}`}
-            onClick={() => setTab('active')}
-          >
-            <span className="ds__addproc-nav-label">Active procedures</span>
-            <span className="ds__addproc-nav-meta">
-              <span className="ds__addproc-nav-count">{activeItems.length}</span>
-              <span className="material-symbols-outlined">chevron_right</span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`ds__addproc-nav-item${tab === 'library' ? ' ds__addproc-nav-item--active' : ''}`}
-            onClick={() => setTab('library')}
-          >
-            <span className="ds__addproc-nav-label">Procedure library</span>
-            <span className="ds__addproc-nav-meta">
-              <span className="ds__addproc-nav-count">{library.length}</span>
-              <span className="material-symbols-outlined">chevron_right</span>
-            </span>
-          </button>
-        </div>
-
-        <div className="ds__addproc-main">
-          <ProcedureSearchList
-            items={items}
-            query={query}
-            onQueryChange={setQuery}
-            emptyLabel={tab === 'active' ? 'No active procedures found.' : 'No procedures found.'}
-            renderRow={(item) => (
-              <ProcedureRow
-                key={item.id}
-                item={item}
-                selected={draft.includes(item.id)}
-                showCheckbox
-                pillLabels={tab === 'active' ? item.activeIn : undefined}
-                onClick={() => toggle(item.id)}
-              />
-            )}
+      <ProcedureSearchList
+        items={library}
+        query={query}
+        onQueryChange={setQuery}
+        renderRow={(item) => (
+          <ProcedureRow
+            key={item.id}
+            item={item}
+            selected={draft.includes(item.id)}
+            showCheckbox
+            onClick={() => toggle(item.id)}
           />
-        </div>
-      </div>
+        )}
+      />
 
       <div className="ds__addproc-footer">
         <button type="button" className="ds__cancel" onClick={onCancel}>Cancel</button>
