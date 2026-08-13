@@ -6,6 +6,7 @@ const VARIANTS: Record<NonNullable<ChipProps['variant']>, string> = {
   danger: 'bg-chip-danger-bg text-chip-danger-text',
   neutral: 'bg-chip-neutral-bg text-chip-neutral-text',
   info: 'bg-chip-info-bg text-chip-info-text',
+  purple: 'bg-chip-purple-bg text-chip-purple-text',
 }
 
 export function Chip({ label, variant = 'warning' }: ChipProps) {

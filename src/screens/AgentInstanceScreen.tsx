@@ -34,6 +34,8 @@ interface AgentInstanceScreenProps {
   onBack: () => void
   onEditAgent?: (agentName: string) => void
   onNavigateToInbox?: (conversationId?: string) => void
+  /** Settings tab's Booking template "Edit template" link — opens that template's editor. */
+  onOpenBookingTemplates?: (templateId: string) => void
   /** Hide L2 SideNav while a full-bleed view (e.g. View log) is open. */
   onFullBleedChange?: (active: boolean) => void
   product?: string
@@ -359,6 +361,7 @@ export function AgentInstanceScreen({
   onBack,
   onEditAgent,
   onNavigateToInbox,
+  onOpenBookingTemplates,
   onFullBleedChange,
   product,
   initialTab = 'outcomes',
@@ -678,6 +681,7 @@ export function AgentInstanceScreen({
               ) : activeTab === 'settings' ? (
                 <AgentSettingsTab
                   product={product}
+                  onOpenBookingTemplates={onOpenBookingTemplates}
                   agentName={agentName}
                 />
               ) : (

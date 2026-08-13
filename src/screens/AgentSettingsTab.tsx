@@ -7,6 +7,7 @@ import {
   LanguageFlag,
   LanguageSelectMenu,
   RefChip,
+  BookingTemplateSelectField,
   VoiceCallEngineSettings,
   TtsModelSettings,
   TtsFailoverSettings,
@@ -17,6 +18,7 @@ import {
   getAgentLanguage,
   type AgentLanguageId,
 } from '../data/agentLanguages'
+import { useBookingTemplateStore } from '../data/BookingTemplateStoreContext'
 import {
   BuildIcon,
   VariableIcon,
@@ -26,6 +28,7 @@ import FieldPickerModal from '../workflow/Organisms/Modals/FieldPickerModal/Fiel
 interface AgentSettingsTabProps {
   product?: string
   agentName?: string
+  onOpenBookingTemplates?: (templateId: string) => void
 }
 
 const FRONTDESK_SYSTEM_PROMPT = `# Personality
@@ -828,7 +831,11 @@ function ReminderSettings() {
 }
 
 /** Flat Front desk settings (system prompt → language → voice → greeting → recording). */
-function FrontDeskSettings() {
+function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?: (templateId: string) => void }) {
+  const { templates } = useBookingTemplateStore()
+  const [bookingTemplateId, setBookingTemplateId] = useState(
+    templates.find((t) => t.id === 'general-intake')?.id ?? templates[0]?.id ?? '',
+  )
   const [systemPrompt, setSystemPrompt] = useState(FRONTDESK_SYSTEM_PROMPT)
   const [language, setLanguage] = useState<AgentLanguageId>('en')
   const [additionalLanguages, setAdditionalLanguages] = useState<AgentLanguageId[]>([])
@@ -953,6 +960,23 @@ function FrontDeskSettings() {
 
   return (
     <div className="flex w-full max-w-[720px] flex-col gap-md">
+      {/* Booking template */}
+      <div className="mb-lg rounded-md border border-border p-xl">
+        <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Booking template</h2>
+        <p className="mt-xs text-small text-text-tertiary">
+          Form fields, appointment types, and providers this agent uses to book.
+        </p>
+        <div className="mt-lg">
+          <BookingTemplateSelectField
+            label=""
+            value={bookingTemplateId}
+            onChange={setBookingTemplateId}
+            templates={templates}
+            onEditTemplate={onOpenBookingTemplates}
+          />
+        </div>
+      </div>
+
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
         <div className="flex items-center gap-xs">
@@ -1284,6 +1308,7 @@ function FrontDeskSettings() {
 
 export function AgentSettingsTab({
   agentName,
+  onOpenBookingTemplates,
 }: AgentSettingsTabProps) {
   const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
   const [greeting, setGreeting] = useState(
@@ -1301,7 +1326,7 @@ export function AgentSettingsTab({
     return (
       <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
         <div className="flex min-w-0 flex-1 flex-col">
-          <FrontDeskSettings />
+          <FrontDeskSettings onOpenBookingTemplates={onOpenBookingTemplates} />
         </div>
         {/* Same right-column width as ProcedureDetailScreen Context panel */}
         <div className="w-[400px] shrink-0" aria-hidden />

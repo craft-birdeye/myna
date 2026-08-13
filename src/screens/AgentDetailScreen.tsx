@@ -62,6 +62,8 @@ interface AgentDetailScreenProps {
   onEditAgent?: (agentName: string, draft?: WizardAgentDraft) => void
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
+  /** Settings tab's Booking template "Edit template" link — opens that template's editor. */
+  onOpenBookingTemplates?: (templateId: string) => void
   product?: string
   /** Set (e.g. by the canvas eye icon) to reopen a specific instance + tab after a remount. */
   pendingInstanceView?: { instanceName: string; tab: string } | null
@@ -6271,7 +6273,7 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenBookingTemplates, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
   const [libraryView, setLibraryView] = useState<LibraryView>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -7057,6 +7059,7 @@ export function AgentDetailScreen({ agentName, onEditAgent, onAgentSetupActiveCh
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
+          onOpenBookingTemplates={onOpenBookingTemplates}
           onFullBleedChange={setInstanceSetupActive}
           onFullBleedDetailActiveChange={onFullBleedDetailActiveChange}
           initialRecommendationId={

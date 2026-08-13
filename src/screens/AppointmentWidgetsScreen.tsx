@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DataTable, HeaderSearchField, Icon, Link, TopNav } from '../components'
+import { AppointmentWidgetEditorScreen } from './AppointmentWidgetEditorScreen'
 
 interface ApptWidgetRow {
   name: string
@@ -57,13 +58,25 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 
 interface AppointmentWidgetsScreenProps {
   onBack: () => void
+  onOpenBookingTemplates?: (templateId: string) => void
 }
 
-export function AppointmentWidgetsScreen({ onBack }: AppointmentWidgetsScreenProps) {
+export function AppointmentWidgetsScreen({ onBack, onOpenBookingTemplates }: AppointmentWidgetsScreenProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [toggles, setToggles] = useState<boolean[]>(TOGGLES.map(() => true))
+  const [editingWidget, setEditingWidget] = useState<ApptWidgetRow | null>(null)
+
+  if (editingWidget) {
+    return (
+      <AppointmentWidgetEditorScreen
+        widget={editingWidget}
+        onBack={() => setEditingWidget(null)}
+        onOpenBookingTemplates={onOpenBookingTemplates}
+      />
+    )
+  }
 
   const filtered = search.trim()
     ? DATA.filter(
@@ -124,8 +137,9 @@ export function AppointmentWidgetsScreen({ onBack }: AppointmentWidgetsScreenPro
           columns={COLUMNS}
           data={filtered as unknown as Record<string, unknown>[]}
           rowAction={{ icon: 'content_copy', label: 'Copy widget URL', onClick: () => {} }}
+          onRowClick={(row) => setEditingWidget(row as unknown as ApptWidgetRow)}
           rowMenuItems={[
-            { label: 'Edit',      onClick: () => {} },
+            { label: 'Edit',      onClick: (row) => setEditingWidget(row as unknown as ApptWidgetRow) },
             { label: 'Duplicate', onClick: () => {} },
             { label: 'Delete',    onClick: () => {}, variant: 'danger' },
           ]}

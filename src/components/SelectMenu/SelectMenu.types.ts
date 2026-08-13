@@ -1,6 +1,8 @@
 export interface SelectOption {
   value: string
   label: string
+  /** Optional second line under the label (e.g. appointment type description). */
+  description?: string
 }
 
 export interface SelectMenuProps {
