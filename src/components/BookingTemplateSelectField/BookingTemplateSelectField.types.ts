@@ -14,4 +14,6 @@ export interface BookingTemplateSelectFieldProps {
   noneLabel?: string
   /** Renders an "Edit template" link with a redirect icon below the field when a template is selected. */
   onEditTemplate?: (templateId: string) => void
+  /** Fills the parent's width instead of capping at 420px (e.g. to match a plain settings field). */
+  fullWidth?: boolean
 }

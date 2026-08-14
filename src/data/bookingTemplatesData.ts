@@ -71,6 +71,8 @@ export interface BookingTemplate {
   usedBy: string[]
   createdBy: string
   createdDate: string
+  updatedBy: string
+  updatedDate: string
 }
 
 export interface BookingService {
@@ -121,7 +123,12 @@ export function defaultSomeoneElseFields(): TemplateField[] {
   ]
 }
 
+export function formatTemplateDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+}
+
 export function emptyTemplate(): BookingTemplate {
+  const today = formatTemplateDate(new Date())
   return {
     id: `tmpl-${Date.now()}`,
     name: 'New template',
@@ -134,7 +141,9 @@ export function emptyTemplate(): BookingTemplate {
     fieldGroups: [],
     usedBy: [],
     createdBy: 'You',
-    createdDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    createdDate: today,
+    updatedBy: 'You',
+    updatedDate: today,
   }
 }
 
@@ -181,6 +190,8 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     usedBy: ['Agent', 'Widget'],
     createdBy: 'Sarah Martinez',
     createdDate: 'Jan 15, 2026',
+    updatedBy: 'David Brown',
+    updatedDate: 'Jun 20, 2026',
   },
   {
     id: 'surgical-template',
@@ -204,6 +215,8 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     usedBy: [],
     createdBy: 'David Brown',
     createdDate: 'Feb 03, 2026',
+    updatedBy: 'David Brown',
+    updatedDate: 'Mar 10, 2026',
   },
   {
     id: 'new-patient-intake',
@@ -231,6 +244,8 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     usedBy: ['Widget'],
     createdBy: 'Emily Davis',
     createdDate: 'Mar 22, 2026',
+    updatedBy: 'Emily Davis',
+    updatedDate: 'Jul 02, 2026',
   },
   {
     id: 'emergency-visit-template',
@@ -255,6 +270,8 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     usedBy: ['Agent'],
     createdBy: 'Christopher Garcia',
     createdDate: 'Apr 05, 2026',
+    updatedBy: 'Patricia Clark',
+    updatedDate: 'Jul 28, 2026',
   },
   {
     id: 'cosmetic-consultation',
@@ -272,6 +289,8 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     usedBy: ['Widget'],
     createdBy: 'James Rodriguez',
     createdDate: 'May 18, 2026',
+    updatedBy: 'James Rodriguez',
+    updatedDate: 'Jun 30, 2026',
   },
   {
     id: 'treatment-plan-followup',
@@ -295,6 +314,8 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     usedBy: ['Agent', 'Widget'],
     createdBy: 'Linda White',
     createdDate: 'Jun 09, 2026',
+    updatedBy: 'Sarah Martinez',
+    updatedDate: 'Aug 01, 2026',
   },
   {
     id: 'recall-cleaning',
@@ -309,5 +330,7 @@ export const INITIAL_BOOKING_TEMPLATES: BookingTemplate[] = [
     usedBy: [],
     createdBy: 'William Harris',
     createdDate: 'Jul 14, 2026',
+    updatedBy: 'William Harris',
+    updatedDate: 'Aug 10, 2026',
   },
 ]

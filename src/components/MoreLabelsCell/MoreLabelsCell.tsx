@@ -47,8 +47,8 @@ export function MoreLabelsCell({
   }
 
   return (
-    <span className={`inline-flex flex-wrap items-center gap-xs ${className}`} onClick={(e) => e.stopPropagation()}>
-      <span>{visible.join(', ')}</span>
+    <span className={`flex min-w-0 items-center gap-xs whitespace-nowrap ${className}`} onClick={(e) => e.stopPropagation()}>
+      <span className="min-w-0 truncate">{visible.join(', ')}</span>
       {rest.length > 0 && (
         <>
           <button
@@ -57,7 +57,7 @@ export function MoreLabelsCell({
             onMouseEnter={handleEnter}
             onMouseLeave={scheduleClose}
             onClick={(e) => e.stopPropagation()}
-            className="text-inherit"
+            className="shrink-0 text-inherit"
           >
             , +{rest.length} more
           </button>
