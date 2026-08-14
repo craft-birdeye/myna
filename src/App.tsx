@@ -52,6 +52,7 @@ import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
+import { OverviewV2Screen } from './screens/OverviewV2Screen'
 import logoSrc from './assets/birdeye-logo.svg'
 import jayIcon from './assets/icon-jay.svg'
 import mynaIcon from './assets/icon-myna.svg'
@@ -92,6 +93,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
+      { id: 'overview-v2', label: 'Overview v2', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
       { id: 'agents',   label: 'Co-workers',   icon: <FigmaIconBirdAI size={ICON_SIZE + 2} />,   kind: 'element', badge: 'New' },
     ],
   },
@@ -386,6 +388,7 @@ const RAIL_TITLE: Record<string, string> = {
   inbox:                 'Inbox',
   settings:              'Settings',
   overview:              'Overview',
+  'overview-v2':         'Overview v2',
   agents:                'Co-workers',
   search:                'Search AI',
   listings:              'Listings AI',
@@ -547,6 +550,7 @@ export function App() {
     railActive !== 'inbox' &&
     railActive !== 'agents' &&
     railActive !== 'overview' &&
+    railActive !== 'overview-v2' &&
     railActive !== 'content-hub' &&
     railActive !== 'search' &&
     railActive !== 'social'
@@ -822,6 +826,8 @@ export function App() {
                       setNavActive(navId)
                     }}
                   />
+                ) : railActive === 'overview-v2' ? (
+                  <OverviewV2Screen />
                 ) : railActive === 'agents' ? (
                   <AgentDirectoryScreen
                     key={activeProduct}

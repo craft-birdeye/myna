@@ -1,0 +1,205 @@
+import { useState } from 'react'
+import { Icon, TopNav } from '../components'
+import { OVERVIEW_V2_SECTIONS, type V2Agent, type V2Stat } from '../data/overviewV2Data'
+import {
+  OVERVIEW_REVIEWS_BREAKDOWN,
+  OVERVIEW_REVIEWS_RATING,
+  OVERVIEW_REVIEW_SOURCES,
+} from '../data/overviewData'
+
+interface OverviewV2ScreenProps {
+  userName?: string
+}
+
+const KPI_ROW_CLASS = 'flex flex-wrap gap-xl'
+const KPI_TILE_CLASS = 'min-w-[140px] shrink-0'
+
+// KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
+// to visually separate "automated by an agent" metrics from the rest of the app.
+function V2StatGroup({ stats }: { stats: V2Stat[] }) {
+  return (
+    <div className={KPI_ROW_CLASS}>
+      {stats.map((s) => (
+        <div key={s.id} className={KPI_TILE_CLASS}>
+          <p className="m-0 whitespace-nowrap text-h3 text-text-action">{s.value}</p>
+          <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AgentRow({ agent }: { agent: V2Agent }) {
+  return (
+    <div className="flex flex-col gap-md">
+      <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-text-action text-white">
+          <Icon name="auto_awesome" size={14} />
+        </span>
+        {agent.name}
+      </h4>
+      <V2StatGroup stats={agent.stats} />
+    </div>
+  )
+}
+
+function ActionNeeded({ stats }: { stats: V2Stat[] }) {
+  return (
+    <div className="flex flex-col gap-md border-t border-border pt-lg">
+      <h4 className="m-0 text-body text-text-primary">Action needed</h4>
+      <div className={KPI_ROW_CLASS}>
+        {stats.map((s) => (
+          <div key={s.id} className={KPI_TILE_CLASS}>
+            <p className="m-0 whitespace-nowrap text-h3 text-text-action">{s.value}</p>
+            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Reviews gets its own richer layout (rating + breakdown bars + source cards) instead of the
+// generic top-stats row every other section uses — same content as Classic Overview's Reviews
+// section, kept as an independent copy rather than a cross-import.
+function ReviewsOverview() {
+  const maxCount = Math.max(...OVERVIEW_REVIEWS_BREAKDOWN.map((b) => b.count))
+  return (
+    <div className="flex flex-col gap-lg">
+      <div className="flex items-center gap-sm">
+        <span className="text-display text-text-primary">{OVERVIEW_REVIEWS_RATING}</span>
+        <div className="flex items-center gap-[2px] text-[#f5a623]">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Icon key={i} name="star" size={18} fill />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-start gap-3xl">
+        <div className="flex min-w-[320px] max-w-[50%] flex-1 flex-col gap-sm">
+          {OVERVIEW_REVIEWS_BREAKDOWN.map((b) => (
+            <div key={b.stars} className="flex items-center gap-md">
+              <span className="w-[28px] shrink-0 text-small text-text-secondary">{b.stars} ★</span>
+              <div className="flex flex-1 items-center gap-sm">
+                <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-surface-selected">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-[#f5a623]"
+                    style={{ width: `${(b.count / maxCount) * 100}%` }}
+                  />
+                </div>
+                <span className="w-[64px] shrink-0 text-right text-small text-text-secondary">{b.count.toLocaleString()}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex min-w-[280px] max-w-[380px] flex-col gap-md">
+          {OVERVIEW_REVIEW_SOURCES.map((s) => (
+            <div key={s.id} className="flex items-center gap-md rounded-sm border border-border px-lg py-md">
+              <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
+                {s.icon === 'G' ? 'G' : <Icon name={s.icon} size={18} />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
+                <p className="m-0 flex items-center gap-xs text-body text-text-primary">
+                  {s.rating}
+                  <Icon name="star" size={14} fill className="text-[#f5a623]" />
+                  <span className="text-small text-text-tertiary">{s.reviewCount}</span>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const DATE_RANGE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
+
+function DateRangeDropdown({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+      >
+        {value}
+        <Icon name="expand_more" size={18} className="text-text-icon" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-[110] mt-xs min-w-[160px] rounded-sm border border-border bg-surface p-md shadow-dropdown">
+            {DATE_RANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  onChange(opt)
+                  setOpen(false)
+                }}
+                className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                  opt === value ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                }`}
+              >
+                <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt}</span>
+                {opt === value && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function SectionCard({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-col gap-xl rounded-md border border-border bg-surface p-xl">{children}</div>
+}
+
+export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = {}) {
+  const [dateRange, setDateRange] = useState('Last month')
+
+  return (
+    <div className="flex h-full flex-col">
+      <TopNav title="Overview" initials="S" />
+      <div className="flex-1 overflow-y-auto bg-surface-l2 px-2xl py-xl">
+        <div className="flex flex-col gap-lg">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="m-0 text-display text-text-primary">Welcome, {userName}!</h1>
+              <p className="m-0 mt-xs text-body text-text-secondary">Here are the things which need your attention.</p>
+            </div>
+            <DateRangeDropdown value={dateRange} onChange={setDateRange} />
+          </div>
+
+          {OVERVIEW_V2_SECTIONS.map((section) => (
+            <SectionCard key={section.id}>
+              <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+                <Icon name={section.icon} size={20} className="text-text-icon" />
+                {section.label}
+              </h3>
+
+              {section.id === 'reviews' ? (
+                <ReviewsOverview />
+              ) : (
+                section.stats && <V2StatGroup stats={section.stats} />
+              )}
+
+              {section.agents.map((agent) => (
+                <div key={agent.id} className="border-t border-border pt-lg">
+                  <AgentRow agent={agent} />
+                </div>
+              ))}
+
+              {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} />}
+            </SectionCard>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
