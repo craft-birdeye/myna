@@ -24,9 +24,9 @@ const KPI_TILE_CLASS = 'min-w-[140px] shrink-0'
 
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app.
-function V2StatGroup({ stats }: { stats: V2Stat[] }) {
+function V2StatGroup({ stats, nowrap = false }: { stats: V2Stat[]; nowrap?: boolean }) {
   return (
-    <div className={KPI_ROW_CLASS}>
+    <div className={`flex ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-xl`}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
           <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
@@ -37,14 +37,16 @@ function V2StatGroup({ stats }: { stats: V2Stat[] }) {
   )
 }
 
+// flex-none (rather than flex-1/min-w) sizes each agent to its own content width — all of its
+// KPIs stay on one line, and the whole block wraps to the next row as a unit when it doesn't fit.
 function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) {
   return (
-    <div className="flex min-w-[260px] flex-1 flex-col gap-md">
+    <div className="flex flex-none flex-col gap-md">
       <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
         <img src={icon} alt="" className="size-6 shrink-0 rounded-full" />
         {agent.name}
       </h4>
-      <V2StatGroup stats={agent.stats} />
+      <V2StatGroup stats={agent.stats} nowrap />
     </div>
   )
 }
