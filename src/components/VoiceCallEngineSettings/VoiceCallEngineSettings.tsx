@@ -12,7 +12,7 @@ import { getAgentLanguage } from '../../data/agentLanguages'
 
 export const STT_MODELS = ['Deepgram_flux', 'Deepgram', 'AssemblyAI']
 export const TTS_MODELS = ['Cartesia', 'ElevenLabs', 'OpenAI']
-export const FAILOVER_POLICIES = ['Automatic', 'Manual', 'Disabled']
+export const FAILOVER_POLICIES = ['Best fit', 'Automatic', 'Manual', 'Disabled']
 export const STT_FAILOVER_MODELS = ['Assembly AI', 'Deepgram', 'Google STT']
 export const TTS_FAILOVER_MODELS = ['ElevenLabs', 'OpenAI', 'Cartesia']
 
@@ -40,7 +40,7 @@ export const DEFAULT_TTS_MODEL_SETTINGS: TtsModelSettingsValue = {
 }
 
 export const DEFAULT_TTS_FAILOVER_SETTINGS: TtsFailoverSettingsValue = {
-  ttsFailover: 'Automatic',
+  ttsFailover: 'Best fit',
   ttsFailoverModel: TTS_FAILOVER_MODELS[0],
   failoverVoice: DEFAULT_AGENT_VOICE,
   failoverVoiceSpeed: 1,
@@ -49,7 +49,7 @@ export const DEFAULT_TTS_FAILOVER_SETTINGS: TtsFailoverSettingsValue = {
 
 export const DEFAULT_STT_SETTINGS: SttSettingsValue = {
   sttModel: 'Deepgram_flux',
-  sttFailover: 'Automatic',
+  sttFailover: 'Best fit',
   sttFailoverModel: 'Assembly AI',
   interruptions: true,
 }

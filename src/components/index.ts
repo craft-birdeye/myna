@@ -50,6 +50,7 @@ export {
   AGENT_VOICE_OPTIONS,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
 } from './VoiceSettingsDrawers/VoiceSettingsDrawers'
 export type {
   AdditionalVoiceConfig,

@@ -66,7 +66,7 @@ function playVoicePreview(text: string, speed = 1, onEnd?: () => void) {
   window.speechSynthesis.speak(utter)
 }
 
-function VoicePreviewButton({
+export function VoicePreviewButton({
   voiceLabel,
   speed = 1,
   disabled = false,
@@ -277,7 +277,7 @@ export function DefaultVoiceDrawer({
             >
               <BackArrowIcon />
             </button>
-            <h2 className="text-h3 text-text-primary">Default voice</h2>
+            <h2 className="text-h3 text-text-primary">Persona</h2>
           </div>
           <button
             type="button"
@@ -295,7 +295,7 @@ export function DefaultVoiceDrawer({
 
         <div className="flex flex-1 flex-col gap-xl overflow-y-auto px-2xl pb-2xl pt-md">
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Voice</label>
+            <label className="text-small text-text-secondary">Persona</label>
             <div className="flex items-center gap-sm">
               <div className="min-w-0 flex-1">
                 <VoiceDropdown value={draftVoice} onChange={setDraftVoice} speed={draftSpeed} />
@@ -465,7 +465,7 @@ export function AdditionalVoiceDrawer({
 
         <div className="flex flex-1 flex-col gap-xl overflow-y-auto px-2xl pb-2xl pt-md">
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Voice label</label>
+            <label className="text-small text-text-secondary">Persona label</label>
             <input
               type="text"
               value={draftLabel}
@@ -473,16 +473,6 @@ export function AdditionalVoiceDrawer({
               placeholder="e.g. Andrea_Spanish"
               className={`h-9 ${INPUT_CLASS} placeholder:text-text-tertiary`}
             />
-          </div>
-
-          <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Voice</label>
-            <div className="flex items-center gap-sm">
-              <div className="min-w-0 flex-1">
-                <VoiceDropdown value={draftVoice} onChange={setDraftVoice} speed={draftSpeed} />
-              </div>
-              <VoicePreviewButton voiceLabel={draftVoice} speed={draftSpeed} disabled={!draftVoice} />
-            </div>
           </div>
 
           <div className="flex flex-col gap-xs">
@@ -578,6 +568,16 @@ export function AdditionalVoiceDrawer({
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-xs">
+            <label className="text-small text-text-secondary">Persona</label>
+            <div className="flex items-center gap-sm">
+              <div className="min-w-0 flex-1">
+                <VoiceDropdown value={draftVoice} onChange={setDraftVoice} speed={draftSpeed} />
+              </div>
+              <VoicePreviewButton voiceLabel={draftVoice} speed={draftSpeed} disabled={!draftVoice} />
             </div>
           </div>
 
