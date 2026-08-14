@@ -14,6 +14,7 @@ export function BookingTemplateSelectField({
   templates,
   noneLabel,
   onEditTemplate,
+  fullWidth = false,
 }: BookingTemplateSelectFieldProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -38,7 +39,7 @@ export function BookingTemplateSelectField({
     <div className="flex flex-col gap-xs">
       {label && <label className="text-small text-text-secondary">{label}</label>}
       {description && <p className="mb-xs text-body text-text-secondary">{description}</p>}
-      <div ref={ref} className="relative max-w-[420px]">
+      <div ref={ref} className={`relative ${fullWidth ? '' : 'max-w-[420px]'}`}>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}

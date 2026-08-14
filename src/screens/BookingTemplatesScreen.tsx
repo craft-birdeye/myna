@@ -23,6 +23,8 @@ interface TemplateRow {
   usedByLabel: string
   createdBy: string
   createdDate: string
+  updatedBy: string
+  updatedDate: string
   template: BookingTemplate
   [key: string]: string | number | string[] | BookingTemplate
 }
@@ -36,6 +38,8 @@ function toRow(t: BookingTemplate): TemplateRow {
     usedByLabel: t.usedBy.length > 0 ? t.usedBy.join(', ') : '—',
     createdBy: t.createdBy,
     createdDate: t.createdDate,
+    updatedBy: t.updatedBy,
+    updatedDate: t.updatedDate,
     template: t,
   }
 }
@@ -60,10 +64,12 @@ const COLUMN_DEFS: Array<Column<TemplateRow> & { locked?: boolean }> = [
   { key: 'usedByLabel', label: 'Used by', locked: true },
   { key: 'createdBy', label: 'Created by' },
   { key: 'createdDate', label: 'Created date' },
+  { key: 'updatedBy', label: 'Updated by' },
+  { key: 'updatedDate', label: 'Last updated' },
 ]
 
 const DEFAULT_ORDER = COLUMN_DEFS.map((c) => String(c.key))
-const DEFAULT_VISIBLE = ['name', 'serviceIds', 'fieldGroupsCount', 'usedByLabel']
+const DEFAULT_VISIBLE = ['name', 'serviceIds', 'fieldGroupsCount', 'usedByLabel', 'updatedBy', 'updatedDate']
 const DEF_BY_KEY = new Map(COLUMN_DEFS.map((c) => [String(c.key), c]))
 
 const opts = (labels: string[]) => labels.map((l) => ({ value: l, label: l }))
@@ -83,7 +89,6 @@ export function BookingTemplatesScreen({ initialEditId, onInitialEditConsumed }:
   const [filterSelections, setFilterSelections] = useState<Record<string, string[]>>({})
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE)
-  const [bannerDismissed, setBannerDismissed] = useState(false)
   const [editing, setEditing] = useState<BookingTemplate | 'new' | null>(() => {
     if (!initialEditId) return null
     return templates.find((t) => t.id === initialEditId) ?? null
@@ -188,23 +193,6 @@ export function BookingTemplatesScreen({ initialEditId, onInitialEditConsumed }:
           </div>
 
           <div className="px-2xl pb-2xl">
-            {!bannerDismissed && (
-              <div className="mb-lg flex items-start gap-sm rounded-md bg-chip-info-bg px-lg py-md">
-                <Icon name="info" size={18} className="mt-[1px] shrink-0 text-text-primary" />
-                <p className="flex-1 text-body text-text-primary">
-                  Agents and widgets use the same templates. Changing a template updates both.
-                </p>
-                <button
-                  type="button"
-                  aria-label="Dismiss"
-                  onClick={() => setBannerDismissed(true)}
-                  className="shrink-0 text-text-primary hover:opacity-70"
-                >
-                  <Icon name="close" size={18} />
-                </button>
-              </div>
-            )}
-
             <DataTable
               columns={columns}
               data={rows}

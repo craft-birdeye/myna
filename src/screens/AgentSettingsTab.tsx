@@ -960,23 +960,6 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
 
   return (
     <div className="flex w-full max-w-[720px] flex-col gap-md">
-      {/* Booking template */}
-      <div className="mb-lg rounded-md border border-border p-xl">
-        <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Booking template</h2>
-        <p className="mt-xs text-small text-text-tertiary">
-          Form fields, appointment types, and providers this agent uses to book.
-        </p>
-        <div className="mt-lg">
-          <BookingTemplateSelectField
-            label=""
-            value={bookingTemplateId}
-            onChange={setBookingTemplateId}
-            templates={templates}
-            onEditTemplate={onOpenBookingTemplates}
-          />
-        </div>
-      </div>
-
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
         <div className="flex items-center gap-xs">
@@ -1034,6 +1017,24 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
             anchorEl={fieldsBtnRef.current}
           />
         )}
+      </div>
+
+      {/* Booking template */}
+      <div className="flex flex-col gap-sm pt-lg">
+        <div>
+          <label className="text-body text-text-primary">Booking template</label>
+          <p className="mt-[2px] text-small text-text-secondary">
+            Form fields, appointment types, and providers this agent uses to book.
+          </p>
+        </div>
+        <BookingTemplateSelectField
+          label=""
+          value={bookingTemplateId}
+          onChange={setBookingTemplateId}
+          templates={templates}
+          onEditTemplate={onOpenBookingTemplates}
+          fullWidth
+        />
       </div>
 
       {/* Language */}

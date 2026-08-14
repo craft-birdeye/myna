@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AddFieldForm, BaseFieldsEditor, Chip, DataTable, FieldTypeIcon, Icon, MoreLabelsCell, SelectMenu, TopNav, fieldTypeLabel, type Column } from '../components'
+import { AddFieldForm, BaseFieldsEditor, Chip, DataTable, FieldTypeIcon, Icon, MoreLabelsCell, SelectMenu, TopNav, type Column } from '../components'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import {
   BOOKING_SERVICES,
   BOOKING_PROVIDERS,
   emptyTemplate,
+  formatTemplateDate,
+  isOptionFieldType,
   type BookingTemplate,
   type FieldGroup,
   type TemplateField,
@@ -92,21 +94,33 @@ function MultiSelectField({ label, options, value, onChange }: MultiSelectFieldP
   )
 }
 
-// ── Field group modal ────────────────────────────────────────────────────────
+// ── Field group drawer ───────────────────────────────────────────────────────
 
-interface FieldGroupModalProps {
+interface FieldGroupDrawerProps {
+  open: boolean
   group: FieldGroup | 'new'
   availableServiceIds: string[]
   onCancel: () => void
   onSave: (group: FieldGroup) => void
 }
-function FieldGroupModal({ group, availableServiceIds, onCancel, onSave }: FieldGroupModalProps) {
+function FieldGroupDrawer({ open, group, availableServiceIds, onCancel, onSave }: FieldGroupDrawerProps) {
   const isNew = group === 'new'
-  const [name, setName] = useState(isNew ? '' : group.name)
-  const [mappedServiceIds, setMappedServiceIds] = useState<string[]>(isNew ? [] : [...group.mappedServiceIds])
-  const [extraFields, setExtraFields] = useState<TemplateField[]>(isNew ? [] : group.extraFields.map((f) => ({ ...f })))
+  const [name, setName] = useState('')
+  const [mappedServiceIds, setMappedServiceIds] = useState<string[]>([])
+  const [extraFields, setExtraFields] = useState<TemplateField[]>([])
   const [addingField, setAddingField] = useState(false)
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
+
+  // (Re)initialise the draft whenever the drawer opens, mirroring CustomizeColumnsDrawer.
+  useEffect(() => {
+    if (!open) return
+    setName(isNew ? '' : group.name)
+    setMappedServiceIds(isNew ? [] : [...group.mappedServiceIds])
+    setExtraFields(isNew ? [] : group.extraFields.map((f) => ({ ...f })))
+    setAddingField(false)
+    setEditingFieldId(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isNew, isNew ? null : group.id])
 
   const services = BOOKING_SERVICES.filter((s) => availableServiceIds.includes(s.id))
   const canSave = name.trim().length > 0
@@ -116,14 +130,45 @@ function FieldGroupModal({ group, availableServiceIds, onCancel, onSave }: Field
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) onCancel() }}>
-      <div className="relative flex max-h-[85vh] w-[640px] max-w-[92vw] flex-col rounded-md bg-surface shadow-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-xl py-lg">
-          <h2 className="text-h3 text-text-primary">
-            {isNew ? 'New field group' : `Edit field group — ${group.name}`}
-          </h2>
-          <button type="button" aria-label="Close" onClick={onCancel} className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-            <Icon name="close" size={18} />
+    <div className={`fixed inset-0 z-[1300] ${open ? '' : 'pointer-events-none'}`} aria-hidden={!open}>
+      {/* Backdrop */}
+      <div
+        onClick={onCancel}
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
+      />
+
+      {/* Panel */}
+      <aside
+        className={`absolute right-0 top-0 flex h-full w-[640px] max-w-[92vw] flex-col bg-surface shadow-dropdown transition-transform duration-200 ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="flex h-16 shrink-0 items-center justify-between px-2xl">
+          <div className="flex items-center gap-sm">
+            <button type="button" aria-label="Back" onClick={onCancel} className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
+              <BackArrowIcon />
+            </button>
+            <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+              {isNew ? 'New field group' : `Edit field group — ${group.name}`}
+            </h2>
+          </div>
+          <button
+            type="button"
+            disabled={!canSave}
+            onClick={() => {
+              if (!canSave) return
+              onSave({
+                id: isNew ? `group-${Date.now()}` : group.id,
+                name: name.trim(),
+                mappedServiceIds,
+                extraFields,
+              })
+            }}
+            className={`rounded-sm px-lg py-[7px] text-body font-medium transition-colors ${
+              canSave ? 'bg-primary text-white hover:bg-primary-hover' : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+            }`}
+          >
+            Save
           </button>
         </div>
 
@@ -167,12 +212,19 @@ function FieldGroupModal({ group, availableServiceIds, onCancel, onSave }: Field
                     }}
                   />
                 ) : (
-                  <div key={f.id} className="flex items-center gap-md rounded-sm border border-border px-md py-sm">
+                  <div key={f.id} className="flex items-center gap-md border-b border-border py-sm last:border-0">
                     <FieldTypeIcon type={f.type} />
-                    <span className="flex-1 text-body text-text-primary">{f.label}</span>
-                    <span className="text-small text-text-tertiary">
-                      {fieldTypeLabel(f.type)}{f.required ? ' · Required' : ''}
-                    </span>
+                    <div className="min-w-0 flex-1 leading-tight">
+                      <span className="text-body text-text-primary">
+                        {f.label}
+                        {f.required && <span className="text-chip-danger-text"> *</span>}
+                      </span>
+                      {isOptionFieldType(f.type) && f.options && f.options.length > 0 && (
+                        <div className="leading-4">
+                          <MoreLabelsCell labels={f.options} maxVisible={5} className="text-small text-text-tertiary" />
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
                       aria-label="Edit field"
@@ -211,31 +263,7 @@ function FieldGroupModal({ group, availableServiceIds, onCancel, onSave }: Field
             </div>
           </div>
         </div>
-
-        <div className="flex items-center justify-end gap-md px-xl py-lg">
-          <button type="button" onClick={onCancel} className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover">
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!canSave}
-            onClick={() => {
-              if (!canSave) return
-              onSave({
-                id: isNew ? `group-${Date.now()}` : group.id,
-                name: name.trim(),
-                mappedServiceIds,
-                extraFields,
-              })
-            }}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
-              canSave ? 'bg-primary text-white hover:bg-primary-hover' : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-            }`}
-          >
-            Save field group
-          </button>
-        </div>
-      </div>
+      </aside>
     </div>,
     document.body,
   )
@@ -291,6 +319,7 @@ export function BookingTemplateEditorScreen({ template, onBack, onSave, onDelete
   const [nameDraft, setNameDraft] = useState(local.name)
   const [groupModal, setGroupModal] = useState<FieldGroup | 'new' | null>(null)
   const [actionsOpen, setActionsOpen] = useState(false)
+  const [showImpactConfirm, setShowImpactConfirm] = useState(false)
 
   const canSave = local.name.trim().length > 0
 
@@ -298,6 +327,22 @@ export function BookingTemplateEditorScreen({ template, onBack, onSave, onDelete
     const trimmed = nameDraft.trim()
     if (trimmed) setLocal((prev) => ({ ...prev, name: trimmed }))
     setEditingName(false)
+  }
+
+  function commitSave() {
+    const stamped: BookingTemplate = isNew
+      ? local
+      : { ...local, updatedBy: 'You', updatedDate: formatTemplateDate(new Date()) }
+    onSave(stamped, isNew)
+  }
+
+  function handleSaveClick() {
+    if (!canSave) return
+    if (!isNew && local.usedBy.length > 0) {
+      setShowImpactConfirm(true)
+      return
+    }
+    commitSave()
   }
 
   const fieldGroupRows: FieldGroupRow[] = local.fieldGroups.map((g) => ({
@@ -375,7 +420,7 @@ export function BookingTemplateEditorScreen({ template, onBack, onSave, onDelete
             <button
               type="button"
               disabled={!canSave}
-              onClick={() => canSave && onSave(local, isNew)}
+              onClick={handleSaveClick}
               className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
                 canSave ? 'bg-primary text-white hover:bg-primary-hover' : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
               }`}
@@ -386,7 +431,7 @@ export function BookingTemplateEditorScreen({ template, onBack, onSave, onDelete
         </div>
 
         {/* Body */}
-        <div className="mx-auto flex max-w-[960px] flex-col gap-2xl px-2xl pb-2xl pt-md">
+        <div className="flex max-w-[960px] flex-col gap-2xl px-2xl pb-2xl pt-md">
           {/* Base form fields */}
           <section className="rounded-md border border-border p-2xl">
             <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Base form fields</h2>
@@ -460,21 +505,47 @@ export function BookingTemplateEditorScreen({ template, onBack, onSave, onDelete
         </div>
       </div>
 
-      {groupModal && (
-        <FieldGroupModal
-          group={groupModal}
-          availableServiceIds={local.serviceIds}
-          onCancel={() => setGroupModal(null)}
-          onSave={(group) => {
-            setLocal((prev) => ({
-              ...prev,
-              fieldGroups: groupModal === 'new'
-                ? [...prev.fieldGroups, group]
-                : prev.fieldGroups.map((g) => (g.id === group.id ? group : g)),
-            }))
-            setGroupModal(null)
-          }}
-        />
+      <FieldGroupDrawer
+        open={groupModal !== null}
+        group={groupModal ?? 'new'}
+        availableServiceIds={local.serviceIds}
+        onCancel={() => setGroupModal(null)}
+        onSave={(group) => {
+          setLocal((prev) => ({
+            ...prev,
+            fieldGroups: groupModal === 'new'
+              ? [...prev.fieldGroups, group]
+              : prev.fieldGroups.map((g) => (g.id === group.id ? group : g)),
+          }))
+          setGroupModal(null)
+        }}
+      />
+
+      {showImpactConfirm && createPortal(
+        <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) setShowImpactConfirm(false) }}>
+          <div className="relative w-[440px] max-w-[92vw] rounded-md bg-surface p-xl shadow-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-sm">
+              <Icon name="info" size={20} className="shrink-0 text-text-primary" />
+              <h2 className="text-h3 text-text-primary">This template is in use</h2>
+            </div>
+            <p className="mt-md text-body text-text-secondary">
+              &ldquo;{local.name}&rdquo; is used by {local.usedBy.join(' and ')}. Saving will update it everywhere it&apos;s used.
+            </p>
+            <div className="mt-xl flex items-center justify-end gap-md">
+              <button type="button" onClick={() => setShowImpactConfirm(false)} className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowImpactConfirm(false); commitSave() }}
+                className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
