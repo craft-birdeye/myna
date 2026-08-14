@@ -39,7 +39,7 @@ function V2StatGroup({ stats }: { stats: V2Stat[] }) {
 
 function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) {
   return (
-    <div className="flex flex-col gap-md">
+    <div className="flex min-w-[260px] flex-1 flex-col gap-md">
       <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
         <img src={icon} alt="" className="size-6 shrink-0 rounded-full" />
         {agent.name}
@@ -244,7 +244,7 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
               {section.id === 'reviews' && <ReviewsOverview />}
 
               {section.agents.length > 0 && (
-                <div className="flex flex-col gap-lg border-t border-border pt-lg">
+                <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
                   {section.agents.map((agent) => (
                     <AgentRow key={agent.id} agent={agent} />
                   ))}
