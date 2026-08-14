@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon, TopNav } from '../components'
+import jayIcon from '../assets/icon-jay.svg'
 import { OVERVIEW_V2_SECTIONS, type V2Agent, type V2Stat } from '../data/overviewV2Data'
 import {
   OVERVIEW_REVIEWS_BREAKDOWN,
@@ -33,9 +34,7 @@ function AgentRow({ agent }: { agent: V2Agent }) {
   return (
     <div className="flex flex-col gap-md">
       <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-text-action text-white">
-          <Icon name="auto_awesome" size={14} />
-        </span>
+        <img src={jayIcon} alt="" className="size-6 shrink-0 rounded-full" />
         {agent.name}
       </h4>
       <V2StatGroup stats={agent.stats} />
