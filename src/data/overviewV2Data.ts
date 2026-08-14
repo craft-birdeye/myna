@@ -20,6 +20,118 @@ export interface V2Section {
   actionNeeded?: V2Stat[]
 }
 
+export interface V2FrontDeskAgentSummary {
+  id: string
+  name: string
+  outcome: V2Stat
+  timeSaved: string
+  costSaved: string
+  status: string
+}
+
+export interface V2FrontDeskSubArea {
+  id: string
+  label: string
+  businessMetrics: V2Stat[]
+  agentOutcomes: V2Stat[]
+  humanActions: V2Stat[]
+}
+
+export const OVERVIEW_V2_FRONTDESK_AGENTS: V2FrontDeskAgentSummary[] = [
+  {
+    id: 'front-desk',
+    name: 'Front desk agent',
+    outcome: { id: 'conversations-resolved', value: '16.2K', label: 'Conversations resolved' },
+    timeSaved: '40h',
+    costSaved: '$2.8K',
+    status: '2 running · 3 issues',
+  },
+  {
+    id: 'waitlist',
+    name: 'Waitlist agent',
+    outcome: { id: 'slots-filled', value: '7.9K', label: 'Slots filled' },
+    timeSaved: '2.5h',
+    costSaved: '$0.2K',
+    status: '2 running',
+  },
+  {
+    id: 'pre-visit',
+    name: 'Pre-visit agent',
+    outcome: { id: 'intakes-completed', value: '2.7K', label: 'Intakes completed' },
+    timeSaved: '1h',
+    costSaved: '$0.1K',
+    status: '2 running',
+  },
+  {
+    id: 'reminder',
+    name: 'Reminder agent',
+    outcome: { id: 'appointments-confirmed', value: '100', label: 'Appointments confirmed' },
+    timeSaved: '13h',
+    costSaved: '$0.9K',
+    status: '2 running',
+  },
+]
+
+export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
+  {
+    id: 'conversations',
+    label: 'Conversations',
+    businessMetrics: [
+      { id: 'ai-handled-share', value: '72%', label: 'AI-handled share' },
+      { id: 'insurance-verification-rate', value: '94.2%', label: 'Insurance verification rate' },
+    ],
+    agentOutcomes: [
+      { id: 'conversations-resolved', value: '16.2K', label: 'Conversations resolved' },
+      { id: 'resolution-rate', value: '88%', label: 'Resolution rate' },
+      { id: 'time-saved', value: '40h', label: 'Time saved' },
+    ],
+    humanActions: [{ id: 'open-recommendations', value: '12+', label: 'Open recommendations' }],
+  },
+  {
+    id: 'appointments',
+    label: 'Appointments',
+    businessMetrics: [
+      { id: 'total-bookings', value: '1.5K', label: 'Total bookings' },
+      { id: 'rescheduled', value: '450', label: 'Rescheduled' },
+      { id: 'cancelled', value: '25', label: 'Cancelled' },
+    ],
+    agentOutcomes: [
+      { id: 'appointments-confirmed', value: '100', label: 'Appointments confirmed' },
+      { id: 'confirmation-rate', value: '23.7%', label: 'Confirmation rate' },
+    ],
+    humanActions: [
+      { id: 'unconfirmed', value: '5', label: 'Unconfirmed appointments' },
+      { id: 'no-shows', value: '4', label: 'No-shows' },
+    ],
+  },
+  {
+    id: 'waitlist',
+    label: 'Waitlist',
+    businessMetrics: [
+      { id: 'slots-filled', value: '7.9K', label: 'Slots filled' },
+      { id: 'avg-fill-time', value: '2.5h', label: 'Average fill time' },
+    ],
+    agentOutcomes: [
+      { id: 'fill-rate', value: '23.7%', label: 'Fill rate' },
+      { id: 'outreach-sent', value: '5.5K', label: 'Outreach sent' },
+    ],
+    humanActions: [{ id: 'waitlisted', value: '13', label: 'Waitlisted patients (5 high priority)' }],
+  },
+  {
+    id: 'intake',
+    label: 'Intake',
+    businessMetrics: [
+      { id: 'intakes-completed-3mo', value: '750', label: 'Intakes completed (3-mo)' },
+      { id: 'avg-completion-time', value: '8.5min', label: 'Average completion time' },
+    ],
+    agentOutcomes: [
+      { id: 'intakes-completed', value: '2.7K', label: 'Intakes completed' },
+      { id: 'completion-rate', value: '90%', label: 'Completion rate' },
+    ],
+    humanActions: [{ id: 'overdue-intakes', value: '11', label: 'Overdue intakes' }],
+  },
+]
+
 export const OVERVIEW_V2_SECTIONS: V2Section[] = [
   {
     id: 'listings',
@@ -32,6 +144,7 @@ export const OVERVIEW_V2_SECTIONS: V2Section[] = [
       { id: 'submitted', value: '4', label: 'Submitted' },
       { id: 'not-connected', value: '10', label: 'Not connected' },
       { id: 'opted-out', value: '56', label: 'Opted out' },
+      { id: 'profile-completeness', value: '53%', label: 'Profile completeness' },
     ],
     agents: [
       {
@@ -75,6 +188,11 @@ export const OVERVIEW_V2_SECTIONS: V2Section[] = [
     id: 'reviews',
     label: 'Reviews',
     icon: 'star',
+    stats: [
+      { id: 'requests-sent', value: '1.9K', label: 'Request sent' },
+      { id: 'reviews-received', value: '7', label: 'Reviews received' },
+      { id: '3-star-or-less', value: '2', label: '3 star or less' },
+    ],
     agents: [
       {
         id: 'review-marketing',
@@ -191,5 +309,35 @@ export const OVERVIEW_V2_SECTIONS: V2Section[] = [
       },
     ],
     actionNeeded: [{ id: 'survey-approval-pending', value: '18', label: 'Survey approval pending' }],
+  },
+  {
+    id: 'ticketing',
+    label: 'Ticketing',
+    icon: 'confirmation_number',
+    stats: [
+      { id: 'avg-resolution-time', value: '6h', label: 'Average resolution time' },
+      { id: 'new-tickets', value: '9', label: 'New' },
+      { id: 'assigned-tickets', value: '14', label: 'Assigned' },
+      { id: 'in-progress-tickets', value: '6', label: 'In progress' },
+    ],
+    agents: [
+      {
+        id: 'ticketing-surveys',
+        name: 'Ticketing agent · Surveys',
+        stats: [
+          { id: 'tickets-created', value: '212', label: 'Tickets created' },
+          { id: 'tickets-escalated', value: '5', label: 'Tickets escalated' },
+        ],
+      },
+      {
+        id: 'ticketing-reviews',
+        name: 'Ticketing agent · Reviews',
+        stats: [
+          { id: 'tickets-created', value: '158', label: 'Tickets created' },
+          { id: 'tickets-escalated', value: '4', label: 'Tickets escalated' },
+        ],
+      },
+    ],
+    actionNeeded: [{ id: 'assigned-to-me', value: '11', label: 'Tickets assigned to me' }],
   },
 ]

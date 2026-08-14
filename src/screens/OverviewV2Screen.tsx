@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { Icon, TopNav } from '../components'
 import jayIcon from '../assets/icon-jay.svg'
-import { OVERVIEW_V2_SECTIONS, type V2Agent, type V2Stat } from '../data/overviewV2Data'
+import mynaIcon from '../assets/icon-myna.svg'
+import {
+  OVERVIEW_V2_SECTIONS,
+  OVERVIEW_V2_FRONTDESK_AGENTS,
+  OVERVIEW_V2_FRONTDESK_SUBAREAS,
+  type V2Agent,
+  type V2Stat,
+} from '../data/overviewV2Data'
 import {
   OVERVIEW_REVIEWS_BREAKDOWN,
   OVERVIEW_REVIEWS_RATING,
@@ -30,11 +37,11 @@ function V2StatGroup({ stats }: { stats: V2Stat[] }) {
   )
 }
 
-function AgentRow({ agent }: { agent: V2Agent }) {
+function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) {
   return (
     <div className="flex flex-col gap-md">
       <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <img src={jayIcon} alt="" className="size-6 shrink-0 rounded-full" />
+        <img src={icon} alt="" className="size-6 shrink-0 rounded-full" />
         {agent.name}
       </h4>
       <V2StatGroup stats={agent.stats} />
@@ -159,6 +166,56 @@ function SectionCard({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col gap-xl rounded-md border border-border bg-surface p-xl">{children}</div>
 }
 
+// Front desk (owner: Myna) spans 4 sub-areas that share one date filter — each sub-area gets its
+// own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
+// sections above.
+function FrontDeskAgentSummaryRow() {
+  return (
+    <div className="flex flex-wrap gap-lg">
+      {OVERVIEW_V2_FRONTDESK_AGENTS.map((a) => (
+        <div key={a.id} className="flex min-w-[220px] flex-1 flex-col gap-sm rounded-sm border border-border p-lg">
+          <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
+            <img src={mynaIcon} alt="" className="size-6 shrink-0 rounded-full" />
+            {a.name}
+          </h4>
+          <p className="m-0 whitespace-nowrap text-h3 text-text-action">{a.outcome.value}</p>
+          <p className="m-0 whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{a.outcome.label}</p>
+          <div className="flex flex-wrap gap-md text-small text-text-secondary">
+            <span>{a.timeSaved} time saved</span>
+            <span>{a.costSaved} cost saved</span>
+          </div>
+          <p className="m-0 text-small text-text-tertiary">{a.status}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FrontDeskSection() {
+  return (
+    <SectionCard>
+      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <Icon name="support_agent" size={20} className="text-text-icon" />
+        Front desk
+      </h3>
+
+      <FrontDeskAgentSummaryRow />
+
+      {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
+        <div key={area.id} className="flex flex-col gap-lg border-t border-border pt-lg">
+          <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
+          <V2StatGroup stats={area.businessMetrics} />
+          <AgentRow
+            icon={mynaIcon}
+            agent={{ id: `${area.id}-agent-outcomes`, name: 'Agent outcomes', stats: area.agentOutcomes }}
+          />
+          <ActionNeeded stats={area.humanActions} />
+        </div>
+      ))}
+    </SectionCard>
+  )
+}
+
 export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
 
@@ -182,21 +239,23 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
                 {section.label}
               </h3>
 
-              {section.id === 'reviews' ? (
-                <ReviewsOverview />
-              ) : (
-                section.stats && <V2StatGroup stats={section.stats} />
-              )}
+              {section.stats && <V2StatGroup stats={section.stats} />}
 
-              {section.agents.map((agent) => (
-                <div key={agent.id} className="border-t border-border pt-lg">
-                  <AgentRow agent={agent} />
+              {section.id === 'reviews' && <ReviewsOverview />}
+
+              {section.agents.length > 0 && (
+                <div className="flex flex-col gap-lg border-t border-border pt-lg">
+                  {section.agents.map((agent) => (
+                    <AgentRow key={agent.id} agent={agent} />
+                  ))}
                 </div>
-              ))}
+              )}
 
               {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} />}
             </SectionCard>
           ))}
+
+          <FrontDeskSection />
         </div>
       </div>
     </div>
