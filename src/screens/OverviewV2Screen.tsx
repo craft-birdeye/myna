@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { Icon, TopNav } from '../components'
-import { FigmaIconFrontDesk, FigmaIconSurveys, FigmaIconTicketing } from '../components/l1Icons'
+import {
+  FigmaIconFrontDesk,
+  FigmaIconSurveys,
+  FigmaIconTicketing,
+  FigmaIconContentHub,
+  FigmaIconRecommendations,
+} from '../components/l1Icons'
 import jayIcon from '../assets/icon-jay.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
@@ -102,9 +108,9 @@ function ReviewsOverview() {
           ))}
         </div>
 
-        <div className="flex min-w-[280px] max-w-[380px] flex-col gap-md">
+        <div className="flex min-w-[280px] flex-1 flex-wrap items-start gap-md">
           {OVERVIEW_REVIEW_SOURCES.map((s) => (
-            <div key={s.id} className="flex items-center gap-md rounded-sm border border-border px-lg py-md">
+            <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
               <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
                 {s.icon === 'G' ? 'G' : <Icon name={s.icon} size={18} />}
               </span>
@@ -129,6 +135,8 @@ function ReviewsOverview() {
 const SECTION_NAV_ICON: Record<string, (props: { size?: number; className?: string }) => React.ReactNode> = {
   surveys: FigmaIconSurveys,
   ticketing: FigmaIconTicketing,
+  'content-hub': FigmaIconContentHub,
+  'search-ai': FigmaIconRecommendations,
 }
 const CX_SECTION_IDS = new Set(['surveys', 'ticketing'])
 
@@ -179,8 +187,8 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 
 // Front desk (owner: Myna) spans 4 sub-areas that share one date filter — each sub-area gets its
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
-// sections above. Business metrics and agents each stack one per row (rather than wrapping side
-// by side) so every row's KPI tiles start at the same x position and read as clean columns.
+// sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
+// columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
 function FrontDeskSection() {
   const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
 
@@ -191,7 +199,7 @@ function FrontDeskSection() {
         Front desk
       </h3>
 
-      <div className="flex flex-col gap-lg border-t border-border pt-lg">
+      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg border-t border-border pt-lg">
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
           <div key={area.id} className="flex flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
@@ -200,7 +208,7 @@ function FrontDeskSection() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-lg border-t border-border pt-lg">
+      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg border-t border-border pt-lg">
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
           <AgentRow
             key={area.id}

@@ -44,7 +44,7 @@ export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
       { id: 'time-saved', value: '40h', label: 'Time saved' },
       { id: 'cost-saved', value: '$2.8K', label: 'Cost saved' },
     ],
-    humanActions: [{ id: 'open-recommendations', value: '12+', label: 'Open recommendations' }],
+    humanActions: [{ id: 'open-recommendations', value: '14', label: 'Open recommendations' }],
   },
   {
     id: 'appointments',
