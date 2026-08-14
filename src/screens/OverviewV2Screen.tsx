@@ -60,7 +60,7 @@ function ActionNeeded({ stats }: { stats: V2Stat[] }) {
       <div className={KPI_ROW_CLASS}>
         {stats.map((s) => (
           <div key={s.id} className={KPI_TILE_CLASS}>
-            <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+            <p className="m-0 whitespace-nowrap text-display text-chip-danger-text">{s.value}</p>
             <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
           </div>
         ))}
@@ -215,16 +215,24 @@ function FrontDeskSection() {
 
       <FrontDeskAgentSummaryRow />
 
-      {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
-        <div key={area.id} className="flex flex-col gap-lg border-t border-border pt-lg">
-          <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-          <V2StatGroup stats={area.businessMetrics} />
+      <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
+        {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
+          <div key={area.id} className="flex flex-none flex-col gap-md">
+            <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
+            <V2StatGroup stats={area.businessMetrics} nowrap />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
+        {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
           <AgentRow
+            key={area.id}
             icon={mynaIcon}
             agent={{ id: `${area.id}-agent-outcomes`, name: area.agentName, stats: area.agentOutcomes }}
           />
-        </div>
-      ))}
+        ))}
+      </div>
 
       <ActionNeeded stats={allHumanActions} />
     </SectionCard>
