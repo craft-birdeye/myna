@@ -29,7 +29,7 @@ function V2StatGroup({ stats }: { stats: V2Stat[] }) {
     <div className={KPI_ROW_CLASS}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
-          <p className="m-0 whitespace-nowrap text-h3 text-text-action">{s.value}</p>
+          <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
           <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
         </div>
       ))}
@@ -56,7 +56,7 @@ function ActionNeeded({ stats }: { stats: V2Stat[] }) {
       <div className={KPI_ROW_CLASS}>
         {stats.map((s) => (
           <div key={s.id} className={KPI_TILE_CLASS}>
-            <p className="m-0 whitespace-nowrap text-h3 text-text-action">{s.value}</p>
+            <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
             <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
           </div>
         ))}
@@ -178,7 +178,7 @@ function FrontDeskAgentSummaryRow() {
             <img src={mynaIcon} alt="" className="size-6 shrink-0 rounded-full" />
             {a.name}
           </h4>
-          <p className="m-0 whitespace-nowrap text-h3 text-text-action">{a.outcome.value}</p>
+          <p className="m-0 whitespace-nowrap text-display text-text-action">{a.outcome.value}</p>
           <p className="m-0 whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{a.outcome.label}</p>
           <div className="flex flex-wrap gap-md text-small text-text-secondary">
             <span>{a.timeSaved} time saved</span>
