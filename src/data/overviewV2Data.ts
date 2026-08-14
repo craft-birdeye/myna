@@ -32,6 +32,7 @@ export interface V2FrontDeskAgentSummary {
 export interface V2FrontDeskSubArea {
   id: string
   label: string
+  agentName: string
   businessMetrics: V2Stat[]
   agentOutcomes: V2Stat[]
   humanActions: V2Stat[]
@@ -76,6 +77,7 @@ export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
   {
     id: 'conversations',
     label: 'Conversations',
+    agentName: 'Front desk agent',
     businessMetrics: [
       { id: 'ai-handled-share', value: '72%', label: 'AI-handled share' },
       { id: 'insurance-verification-rate', value: '94.2%', label: 'Insurance verification rate' },
@@ -84,12 +86,14 @@ export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
       { id: 'conversations-resolved', value: '16.2K', label: 'Conversations resolved' },
       { id: 'resolution-rate', value: '88%', label: 'Resolution rate' },
       { id: 'time-saved', value: '40h', label: 'Time saved' },
+      { id: 'cost-saved', value: '$2.8K', label: 'Cost saved' },
     ],
     humanActions: [{ id: 'open-recommendations', value: '12+', label: 'Open recommendations' }],
   },
   {
     id: 'appointments',
     label: 'Appointments',
+    agentName: 'Reminder agent',
     businessMetrics: [
       { id: 'total-bookings', value: '1.5K', label: 'Total bookings' },
       { id: 'rescheduled', value: '450', label: 'Rescheduled' },
@@ -98,6 +102,7 @@ export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
     agentOutcomes: [
       { id: 'appointments-confirmed', value: '100', label: 'Appointments confirmed' },
       { id: 'confirmation-rate', value: '23.7%', label: 'Confirmation rate' },
+      { id: 'cost-saved', value: '$0.9K', label: 'Cost saved' },
     ],
     humanActions: [
       { id: 'unconfirmed', value: '5', label: 'Unconfirmed appointments' },
@@ -107,6 +112,7 @@ export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
   {
     id: 'waitlist',
     label: 'Waitlist',
+    agentName: 'Waitlist agent',
     businessMetrics: [
       { id: 'slots-filled', value: '7.9K', label: 'Slots filled' },
       { id: 'avg-fill-time', value: '2.5h', label: 'Average fill time' },
@@ -114,12 +120,14 @@ export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
     agentOutcomes: [
       { id: 'fill-rate', value: '23.7%', label: 'Fill rate' },
       { id: 'outreach-sent', value: '5.5K', label: 'Outreach sent' },
+      { id: 'cost-saved', value: '$0.2K', label: 'Cost saved' },
     ],
     humanActions: [{ id: 'waitlisted', value: '13', label: 'Waitlisted patients (5 high priority)' }],
   },
   {
     id: 'intake',
     label: 'Intake',
+    agentName: 'Pre-visit agent',
     businessMetrics: [
       { id: 'intakes-completed-3mo', value: '750', label: 'Intakes completed (3-mo)' },
       { id: 'avg-completion-time', value: '8.5min', label: 'Average completion time' },
@@ -127,6 +135,7 @@ export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
     agentOutcomes: [
       { id: 'intakes-completed', value: '2.7K', label: 'Intakes completed' },
       { id: 'completion-rate', value: '90%', label: 'Completion rate' },
+      { id: 'cost-saved', value: '$0.1K', label: 'Cost saved' },
     ],
     humanActions: [{ id: 'overdue-intakes', value: '11', label: 'Overdue intakes' }],
   },

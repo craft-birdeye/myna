@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Icon, TopNav } from '../components'
+import { FigmaIconFrontDesk, FigmaIconSurveys, FigmaIconTicketing } from '../components/l1Icons'
 import jayIcon from '../assets/icon-jay.svg'
 import mynaIcon from '../assets/icon-myna.svg'
+import robinIcon from '../assets/icon-robin.svg'
 import {
   OVERVIEW_V2_SECTIONS,
   OVERVIEW_V2_FRONTDESK_AGENTS,
@@ -123,6 +125,14 @@ function ReviewsOverview() {
   )
 }
 
+// Surveys and Ticketing are owned by Robin (Customer experience), not Jay (Marketing) — their
+// section heading uses the same icon as the L1 nav item, and their agent rows use Robin's icon.
+const SECTION_NAV_ICON: Record<string, (props: { size?: number; className?: string }) => React.ReactNode> = {
+  surveys: FigmaIconSurveys,
+  ticketing: FigmaIconTicketing,
+}
+const CX_SECTION_IDS = new Set(['surveys', 'ticketing'])
+
 const DATE_RANGE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
 function DateRangeDropdown({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -199,7 +209,7 @@ function FrontDeskSection() {
   return (
     <SectionCard>
       <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-        <Icon name="support_agent" size={20} className="text-text-icon" />
+        <FigmaIconFrontDesk size={20} className="text-text-icon" />
         Front desk
       </h3>
 
@@ -211,7 +221,7 @@ function FrontDeskSection() {
           <V2StatGroup stats={area.businessMetrics} />
           <AgentRow
             icon={mynaIcon}
-            agent={{ id: `${area.id}-agent-outcomes`, name: 'Agent outcomes', stats: area.agentOutcomes }}
+            agent={{ id: `${area.id}-agent-outcomes`, name: area.agentName, stats: area.agentOutcomes }}
           />
         </div>
       ))}
@@ -237,28 +247,32 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
             <DateRangeDropdown value={dateRange} onChange={setDateRange} />
           </div>
 
-          {OVERVIEW_V2_SECTIONS.map((section) => (
-            <SectionCard key={section.id}>
-              <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-                <Icon name={section.icon} size={20} className="text-text-icon" />
-                {section.label}
-              </h3>
+          {OVERVIEW_V2_SECTIONS.map((section) => {
+            const NavIcon = SECTION_NAV_ICON[section.id]
+            const isCx = CX_SECTION_IDS.has(section.id)
+            return (
+              <SectionCard key={section.id}>
+                <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+                  {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
+                  {section.label}
+                </h3>
 
-              {section.stats && <V2StatGroup stats={section.stats} />}
+                {section.stats && <V2StatGroup stats={section.stats} />}
 
-              {section.id === 'reviews' && <ReviewsOverview />}
+                {section.id === 'reviews' && <ReviewsOverview />}
 
-              {section.agents.length > 0 && (
-                <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
-                  {section.agents.map((agent) => (
-                    <AgentRow key={agent.id} agent={agent} />
-                  ))}
-                </div>
-              )}
+                {section.agents.length > 0 && (
+                  <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
+                    {section.agents.map((agent) => (
+                      <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
+                    ))}
+                  </div>
+                )}
 
-              {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} />}
-            </SectionCard>
-          ))}
+                {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} />}
+              </SectionCard>
+            )
+          })}
 
           <FrontDeskSection />
         </div>
