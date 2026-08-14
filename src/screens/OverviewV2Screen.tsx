@@ -8,6 +8,7 @@ import {
   FigmaIconRecommendations,
 } from '../components/l1Icons'
 import jayIcon from '../assets/icon-jay.svg'
+import actionNeededIcon from '../assets/icon-action-needed.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import {
@@ -50,7 +51,7 @@ function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) 
   return (
     <div className="flex flex-none flex-col gap-md">
       <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <img src={icon} alt="" className="size-6 shrink-0 rounded-full" />
+        <img src={icon} alt="" className="size-5 shrink-0 rounded-full" />
         {agent.name}
       </h4>
       <V2StatGroup stats={agent.stats} nowrap />
@@ -61,7 +62,10 @@ function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) 
 function ActionNeeded({ stats }: { stats: V2Stat[] }) {
   return (
     <div className="flex flex-col gap-md border-t border-border pt-lg">
-      <h4 className="m-0 text-body text-text-primary">Action needed</h4>
+      <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
+        <img src={actionNeededIcon} alt="" className="size-5 shrink-0" />
+        Action needed
+      </h4>
       <div className={KPI_ROW_CLASS}>
         {stats.map((s) => (
           <div key={s.id} className={KPI_TILE_CLASS}>
