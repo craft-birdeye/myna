@@ -194,6 +194,8 @@ function FrontDeskAgentSummaryRow() {
 }
 
 function FrontDeskSection() {
+  const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
+
   return (
     <SectionCard>
       <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
@@ -211,9 +213,10 @@ function FrontDeskSection() {
             icon={mynaIcon}
             agent={{ id: `${area.id}-agent-outcomes`, name: 'Agent outcomes', stats: area.agentOutcomes }}
           />
-          <ActionNeeded stats={area.humanActions} />
         </div>
       ))}
+
+      <ActionNeeded stats={allHumanActions} />
     </SectionCard>
   )
 }
