@@ -4,6 +4,7 @@ import {
   AdditionalVoiceDrawer,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
   Icon,
   IntegrationsPickerDrawer,
   LanguageFlag,
