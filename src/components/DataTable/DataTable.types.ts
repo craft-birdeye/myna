@@ -56,6 +56,10 @@ export interface DataTableProps<T = Record<string, unknown>> {
   rowMenuItems?: RowMenuItem<T>[]
   /** Hide the horizontal scrollbar until the user hovers over the table. */
   scrollOnHover?: boolean
+  /** Initial sort column key (e.g. `'reviewsResponded'`). */
+  initialSortKey?: string
+  /** Initial sort direction when `initialSortKey` is set. Defaults to `'asc'`. */
+  initialSortDir?: SortDir
   /** Returns extra className(s) for the <tr> — use for row-level styling like disabled/dimmed. */
   rowClassName?: (row: T, index: number) => string
   /** Row height in px. Defaults to 48 (h-12). */

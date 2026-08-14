@@ -17,6 +17,8 @@ import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolVi
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
+import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
+import { WorkflowCoachTour } from '../../components/WorkflowCoachTour/WorkflowCoachTour';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -68,11 +70,53 @@ const END_NODE_ID = '__end__';
 // Synthetic node (not part of nodeList) that reserves step 1 for the trigger while none exists.
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
 
-/** RR chrome header title — ellipsizes past a fixed max width; full name on hover. */
-function RrChromeAgentTitle({ text }) {
+/** RR chrome header title — ellipsizes past a fixed max width; full name on hover only when truncated. */
+function RrChromeAgentTitle({ text, onClick }) {
+  const textRef = useRef(null);
+  const [truncated, setTruncated] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+
+    const check = () => {
+      setTruncated(el.scrollWidth > el.clientWidth + 1);
+    };
+
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    if (el.parentElement) ro.observe(el.parentElement);
+    return () => ro.disconnect();
+  }, [text]);
+
   return (
-    <Tooltip content={text} variant="detail" side="bottom" className="rr-chrome-top__title-tip">
-      <span className="ab-header-title">{text}</span>
+    <Tooltip
+      content={text}
+      variant="detail"
+      side="bottom"
+      className="rr-chrome-top__title-tip"
+      disabled={!truncated}
+    >
+      {onClick ? (
+        <button
+          type="button"
+          className="ab-header-title ab-header-title--button"
+          onClick={onClick}
+          aria-label={`Open agent details for ${text}`}
+        >
+          <span ref={textRef} className="ab-header-title__text">
+            {text}
+          </span>
+          <span className="material-symbols-outlined ab-header-title__edit" aria-hidden>
+            edit
+          </span>
+        </button>
+      ) : (
+        <span ref={textRef} className="ab-header-title">
+          {text}
+        </span>
+      )}
     </Tooltip>
   );
 }
@@ -1057,7 +1101,9 @@ export default function AgentBuilder({
   const rhsCloseTimeoutRef = useRef(null);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
   /** Review-response left floater: which palette section is open (Trigger / Tasks / Controls). */
-  const [paletteSection, setPaletteSection] = useState(null);
+  const [paletteSection, setPaletteSection] = useState(
+    defaultOpenSection === 'Trigger' ? 'Trigger' : null,
+  );
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [rrAiPanelOpen, setRrAiPanelOpen] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelRendered, setRrAiPanelRendered] = useState(() => !!aiBuilderPanelOpenProp);
@@ -1102,6 +1148,9 @@ export default function AgentBuilder({
 
   /* ─── Test run ─── */
   const [testRunOpen, setTestRunOpen] = useState(false);
+  // First-time coach queue on the edit canvas — Help center "Start tour" also reopens it.
+  const [coachTourOpen, setCoachTourOpen] = useState(false);
+  const [helpCenterOpen, setHelpCenterOpen] = useState(false);
   // Rebuilt only while the panel is open so the run isn't restarted by unrelated edits.
   const testRunSteps = useMemo(
     () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails) : EMPTY_TEST_RUN_STEPS),
@@ -1978,6 +2027,14 @@ export default function AgentBuilder({
     setStartLocationsOpenToken((t) => t + 1);
   };
 
+  // Shared open path for the header agent name and the canvas start-node card.
+  const handleOpenAgentDetails = useCallback(() => {
+    setPaletteSection(null);
+    setVersionHistoryOpen(false);
+    setSelectedNodeId(START_NODE_ID);
+    setDrawerOpen(true);
+  }, []);
+
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
   const locationCount = startLocations.length;
@@ -2383,6 +2440,14 @@ export default function AgentBuilder({
     if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder' || node.type === 'branchCollapse') return;
     // Voice call branches are hard-coded and non-editable — block RHS open
     if (node.data?.isVoiceCallBranch) return;
+    // Start node shares the Agent details panel with the chrome header title.
+    if (node.type === 'start' || node.id === START_NODE_ID) {
+      setPaletteSection(null);
+      setVersionHistoryOpen(false);
+      setSelectedNodeId(START_NODE_ID);
+      setDrawerOpen(true);
+      return;
+    }
     // AI Builder docks on the left; node config uses the right pane — both can stay open.
     setPaletteSection(null);
     setVersionHistoryOpen(false);
@@ -2882,28 +2947,51 @@ export default function AgentBuilder({
   };
 
   /* ─── Header actions: Publish + three-dots menu (or view-only chrome) ─── */
+  const handleRunTest = () => {
+    // Front desk: voice/chat preview instead of the step-log test run.
+    if (isFrontDeskAgentName) {
+      setTestRunOpen(false);
+      setDrawerOpen(false);
+      setSelectedNodeId(null);
+      setTestAppointment(null);
+      setPreviewOpen(true);
+      return;
+    }
+    setPreviewOpen(false);
+    setTestRunOpen(true);
+  };
+
   const viewChromeButtons = (
-    <div className="ab-header-actions">
-      <Tooltip content="Edit workflow" variant="brief" side="bottom">
+    <div className="ab-header-actions ab-header-actions--view-mode">
+      <div className="rr-chrome-mode-switch" role="group" aria-label="Workflow mode">
         <button
           type="button"
-          className="ab-header-cloud-btn"
+          className="rr-chrome-mode-btn rr-chrome-mode-btn--active"
+          aria-current="true"
+          aria-label="View-only"
+        >
+          <span className="material-symbols-outlined" aria-hidden>visibility</span>
+          <span>View-only</span>
+        </button>
+        <button
+          type="button"
+          className="rr-chrome-mode-btn"
           onClick={onEdit}
-          aria-label="Edit workflow"
+          aria-label="Edit"
         >
-          <span className="material-symbols-outlined ab-header-cloud-btn__material" aria-hidden>edit</span>
+          <span className="material-symbols-outlined" aria-hidden>edit</span>
+          <span>Edit</span>
         </button>
-      </Tooltip>
-      <Tooltip content="Run test" variant="brief" side="bottom">
-        <button
-          type="button"
-          className="ab-header-cloud-btn"
-          onClick={() => setTestRunOpen(true)}
-          aria-label="Run test"
-        >
-          <span className="material-symbols-outlined ab-header-cloud-btn__material ab-header-cloud-btn__material--play" aria-hidden>play_arrow</span>
-        </button>
-      </Tooltip>
+      </div>
+      <button
+        type="button"
+        className="rr-chrome-run-test"
+        onClick={handleRunTest}
+        aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
+      >
+        <span className="material-symbols-outlined rr-chrome-run-test__play" aria-hidden>play_arrow</span>
+        <span>{isFrontDeskAgentName ? 'Preview' : 'Run test'}</span>
+      </button>
     </div>
   );
 
@@ -2982,6 +3070,7 @@ export default function AgentBuilder({
             setPaletteSection(null);
             if (!versionHistoryOpen) closeAiBuilderPanel();
             setVersionHistoryOpen((open) => !open);
+            setHelpCenterOpen(false);
           }}
           aria-label="Version history"
           aria-pressed={versionHistoryOpen}
@@ -2989,12 +3078,13 @@ export default function AgentBuilder({
           <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
         </button>
       </Tooltip>
-      <Tooltip content="Run test" variant="brief" side="bottom">
+      <Tooltip content={isFrontDeskAgentName ? 'Preview' : 'Run test'} variant="brief" side="bottom">
         <button
           type="button"
           className="ab-header-cloud-btn"
-          onClick={() => setTestRunOpen(true)}
-          aria-label="Run test"
+          onClick={handleRunTest}
+          aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
+          data-tour-id="test-run"
         >
           <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
         </button>
@@ -3011,6 +3101,7 @@ export default function AgentBuilder({
             type="button"
             className="ab-publish-split__main"
             aria-label="Publish"
+            data-tour-id="publish"
             disabled={publishDisabled || issueCount > 0}
             onClick={handlePublish}
           >
@@ -3093,17 +3184,32 @@ export default function AgentBuilder({
                 </button>
               )}
 
-              {viewOnly && viewChromeActions && (
-                <div className="rr-chrome-viewonly">
-                  <span className="material-symbols-outlined" aria-hidden>visibility</span>
-                  View only mode
+              {!viewOnly && (
+                <div className="rr-chrome-help-wrap">
+                  <Tooltip content="Help center" variant="brief" side="bottom">
+                    <button
+                      type="button"
+                      className={`rr-chrome-help${helpCenterOpen ? ' rr-chrome-help--active' : ''}`}
+                      aria-label="Help center"
+                      aria-pressed={helpCenterOpen}
+                      onClick={() => {
+                        setVersionHistoryOpen(false);
+                        setHelpCenterOpen((open) => !open);
+                      }}
+                    >
+                      <span className="material-symbols-outlined" aria-hidden>help</span>
+                    </button>
+                  </Tooltip>
                 </div>
               )}
 
               <div className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}`}>
                 {!(viewOnly && viewChromeActions) && (
                   <>
-                    <RrChromeAgentTitle text={agentName || 'Untitled agent'} />
+                    <RrChromeAgentTitle
+                      text={agentName || 'Untitled agent'}
+                      onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                    />
                     <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
                       {agentStatus}
                     </span>
@@ -3120,6 +3226,7 @@ export default function AgentBuilder({
                       type="button"
                       className={`rr-chrome-left-ai${rrAiPanelOpen ? ' rr-chrome-left-ai--active' : ''}`}
                       aria-label="Create with AI"
+                      data-tour-id="create-with-ai"
                       aria-pressed={rrAiPanelOpen}
                       onClick={() => {
                         setPaletteSection(null);
@@ -3147,18 +3254,19 @@ export default function AgentBuilder({
                   </Tooltip>
                   <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
                     {[
-                      { id: 'Trigger', src: iconRrTrigger, label: 'Trigger' },
+                      { id: 'Trigger', src: iconRrTrigger, label: 'Trigger', tourId: 'trigger' },
                       ...(showProceduresFloater
-                        ? [{ id: 'Procedures', src: iconRrProcedures, label: 'Procedures' }]
+                        ? [{ id: 'Procedures', src: iconRrProcedures, label: 'Procedures', tourId: null }]
                         : []),
-                      { id: 'Tasks', src: iconRrTasks, label: 'Task' },
-                      { id: 'Controls', src: iconRrControls, label: 'Controls' },
+                      { id: 'Tasks', src: iconRrTasks, label: 'Task', tourId: 'tasks' },
+                      { id: 'Controls', src: iconRrControls, label: 'Controls', tourId: 'controls' },
                     ].map((item) => (
                       <Tooltip key={item.id} content={item.label} variant="brief" side="right">
                         <button
                           type="button"
                           className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
                           aria-label={item.label}
+                          data-tour-id={item.tourId || undefined}
                           aria-pressed={paletteSection === item.id}
                           onClick={() => {
                             setVersionHistoryOpen(false);
@@ -3207,6 +3315,19 @@ export default function AgentBuilder({
 
               {versionHistoryOpen && !viewOnly && (
                 <VersionHistoryPanel onClose={() => setVersionHistoryOpen(false)} />
+              )}
+
+              {helpCenterOpen && (
+                <div className="rr-chrome-right-panel rr-chrome-right-panel--help">
+                  <HelpCenterPanel
+                    open={helpCenterOpen}
+                    onClose={() => setHelpCenterOpen(false)}
+                    onStartTour={() => {
+                      setHelpCenterOpen(false);
+                      if (!viewOnly) setCoachTourOpen(true);
+                    }}
+                  />
+                </div>
               )}
 
               {rrAiPanelRendered && !viewOnly && (
@@ -3422,6 +3543,10 @@ export default function AgentBuilder({
         className="ab-hidden-input"
         onChange={handleImport}
       />
+
+      {!viewOnly && (
+        <WorkflowCoachTour open={coachTourOpen} onClose={() => setCoachTourOpen(false)} />
+      )}
     </div>
   );
 }

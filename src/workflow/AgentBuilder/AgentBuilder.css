@@ -640,6 +640,38 @@
   min-width: 0;
 }
 
+.ab-header-title--button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.ab-header-title__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ab-header-title__edit {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+  color: #9e9e9e;
+  pointer-events: none;
+}
+
 .ab-header-status {
   flex-shrink: 0;
   display: inline-flex;
@@ -701,13 +733,78 @@
   cursor: not-allowed;
 }
 
-/* ─── Canvas chrome: view-only badge (top-left, paired with the centred action pill) ─── */
-.rr-chrome-viewonly {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 60;
+/* ─── Canvas chrome: View-only/Edit switch + separate Run test ─── */
+.ab-header-actions--view-mode {
+  gap: 8px;
+}
+
+.rr-chrome-mode-switch {
   display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  padding: 4px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.28px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.rr-chrome-mode-btn .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.rr-chrome-mode-btn:hover {
+  background: #f2f4f7;
+  color: #333;
+}
+
+.rr-chrome-mode-btn:hover .material-symbols-outlined {
+  color: #555;
+}
+
+.rr-chrome-mode-btn--active {
+  background: #e5e9f0;
+  color: #212121;
+  cursor: default;
+}
+
+.rr-chrome-mode-btn--active .material-symbols-outlined {
+  color: #212121;
+}
+
+.rr-chrome-mode-btn--active:hover {
+  background: #e5e9f0;
+  color: #212121;
+}
+
+.rr-chrome-mode-btn--active:hover .material-symbols-outlined {
+  color: #212121;
+}
+
+.rr-chrome-run-test {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 44px;
@@ -716,18 +813,33 @@
   border-radius: 6px;
   background: #fff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  cursor: pointer;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
-  color: #555;
+  font-weight: 400;
   letter-spacing: -0.28px;
+  color: #555;
   white-space: nowrap;
-  pointer-events: none;
 }
 
-.rr-chrome-viewonly .material-symbols-outlined {
+.rr-chrome-run-test .material-symbols-outlined {
   font-size: 18px;
+  line-height: 1;
   color: #888;
   flex-shrink: 0;
+}
+
+.rr-chrome-run-test__play {
+  font-size: 20px !important;
+}
+
+.rr-chrome-run-test:hover {
+  background: #f2f4f7;
+  color: #333;
+}
+
+.rr-chrome-run-test:hover .material-symbols-outlined {
+  color: #555;
 }
 
 /* ─── View-only mode ─── */
@@ -1057,6 +1169,40 @@
   background: #f2f4f7;
 }
 
+.rr-chrome-help-wrap {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  /* Below .agent-builder__rhs (56) so node-config / Agent details covers this control. */
+  z-index: 55;
+}
+
+.rr-chrome-help {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: #555;
+}
+
+.rr-chrome-help:hover,
+.rr-chrome-help--active {
+  background: #f2f4f7;
+  color: #212121;
+}
+
+.rr-chrome-help .material-symbols-outlined {
+  font-size: 20px;
+  color: inherit;
+}
+
 .rr-chrome-top {
   position: absolute;
   top: 16px;
@@ -1095,32 +1241,37 @@
   }
 }
 
-/* Actions-only pill: view-only canvases that show just Edit workflow + Run test. */
+/* Actions-only: transparent shell so switch + Run test sit as separate controls. */
 .rr-chrome-top--actions-only {
   max-width: none;
-  height: 44px;
-  padding: 0 6px;
-}
-
-/* Tighter than the editor header's 12px — these two sit alone in a small pill. */
-.rr-chrome-top--actions-only .ab-header-actions {
-  gap: 6px;
+  height: auto;
+  padding: 0;
+  gap: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .rr-chrome-top__title-tip {
   flex-shrink: 1;
   min-width: 0;
-  max-width: 22.5rem;
-  overflow: hidden;
+  max-width: calc(22.5rem + 24px);
+  overflow: visible;
 }
 
 .rr-chrome-top .ab-header-title {
-  display: block;
-  width: 100%;
-  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
   max-width: 100%;
+  min-width: 0;
   font-size: 16px;
   line-height: 22px;
+}
+
+.rr-chrome-top .ab-header-title__text {
+  max-width: 22.5rem;
 }
 
 .rr-chrome-top__spacer {
@@ -1326,6 +1477,16 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.rr-chrome-right-panel--help {
+  /* Under Help trigger; bottom aligns with canvas chrome / graph-controls inset */
+  top: 72px;
+  right: 16px;
+  bottom: 16px;
+  width: 390px;
+  max-height: calc(100% - 88px);
+  box-shadow: none;
 }
 
 .rr-chrome-ai-panel {

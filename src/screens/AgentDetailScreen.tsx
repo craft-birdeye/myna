@@ -359,7 +359,25 @@ type CreateLibraryCard = {
   steps?: AgentLibraryPreviewStep[]
 }
 
-function toLibraryPreviewData(card: CreateLibraryCard): AgentLibraryPreviewData {
+function workflowAgentNameForLibraryCard(card: CreateLibraryCard, currentAgent?: string): string {
+  const haystack = `${card.id} ${card.title} ${currentAgent ?? ''}`.toLowerCase()
+  if (haystack.includes('reminder') || haystack.includes('no-show') || haystack.includes('confirmation')) {
+    return 'Reminder agent'
+  }
+  if (haystack.includes('generation')) return 'Review generation agent'
+  if (haystack.includes('review')) return 'Review response agent'
+  if (haystack.includes('waitlist')) return 'Waitlist agent'
+  if (haystack.includes('outreach')) return 'Outreach agent'
+  if (haystack.includes('tagging')) return 'Tagging & routing agent'
+  if (haystack.includes('pre-visit') && !haystack.includes('preparation')) return 'Pre-visit agent'
+  if (currentAgent?.startsWith('Reminder')) return 'Reminder agent'
+  return 'Front desk agent'
+}
+
+function toLibraryPreviewData(
+  card: CreateLibraryCard,
+  opts?: { product?: string; agentName?: string },
+): AgentLibraryPreviewData {
   return {
     id: card.id,
     name: card.title,
@@ -368,6 +386,8 @@ function toLibraryPreviewData(card: CreateLibraryCard): AgentLibraryPreviewData 
       card.outcome ??
       'Increase coverage by automating more of this workflow across locations. Free your team to focus on exceptions while the agent handles the routine work.',
     locationsLabel: 'All locations',
+    product: opts?.product,
+    workflowAgentName: workflowAgentNameForLibraryCard(card, opts?.agentName),
     steps: card.steps ?? [
       {
         kind: 'trigger',
@@ -7495,7 +7515,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     tone: tpl.tone,
     actionLabel: 'Use agent' as const,
     onAction: () => onEditAgent?.(tpl.title),
-    onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl)),
+    onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl, { product, agentName })),
   }))
 
   const searchQ = searchQuery.trim().toLowerCase()
@@ -7583,7 +7603,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 setShowCreateFlow(false)
                 onEditAgent?.(card?.title ?? fallbackLibraryName)
               }}
-              onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card))}
+              onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card, { product, agentName }))}
             />
           </div>
         </div>
@@ -8016,7 +8036,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   const card = REVIEW_TAGGING_CREATE_CARDS.find((c) => c.id === templateId)
                   onEditAgent?.(card?.title ?? 'Review tagging agent')
                 }}
-                onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card))}
+                onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card, { product, agentName }))}
               />
             </div>
           ) : (

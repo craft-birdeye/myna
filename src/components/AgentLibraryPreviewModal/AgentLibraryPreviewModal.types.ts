@@ -11,6 +11,10 @@ export interface AgentLibraryPreviewData {
   outcome: string
   locationsLabel?: string
   steps: AgentLibraryPreviewStep[]
+  /** Product used to pick the real canvas workflow for the preview. */
+  product?: string
+  /** Key into `getAgentWorkflows(product)` — e.g. "Front desk agent". */
+  workflowAgentName?: string
 }
 
 export interface AgentLibraryPreviewModalProps {

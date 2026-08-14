@@ -1,5 +1,14 @@
 import { Fragment, useEffect, useRef, useState, type DragEvent } from 'react'
-import { Icon, TopNav, ReportHeader, MetricTiles, Tooltip, DatePickerModal, type Metric } from '../components'
+import {
+  AgentsIntroVideoModal,
+  Icon,
+  TopNav,
+  ReportHeader,
+  MetricTiles,
+  Tooltip,
+  DatePickerModal,
+  type Metric,
+} from '../components'
 import {
   getAgentDirectory,
   PERSONA_GROUPS,
@@ -523,6 +532,8 @@ export function OverviewScreen({
   // "Switch to classic overview"/"Switch to agentic overview" swap the page body in place —
   // no navigation, so the Overview rail item stays active and the URL/nav state never changes.
   const [showClassicOverview, setShowClassicOverview] = useState(false)
+  // In-product agents intro video — opens on Overview mount; dismiss for this visit, reload to retake.
+  const [agentsIntroVideoOpen, setAgentsIntroVideoOpen] = useState(true)
   const AGENT_DIRECTORY = getAgentDirectory(product)
   // No status-filter UI on this page (the dropdown was removed), so this always
   // shows every agent rather than defaulting to just the running ones.
@@ -694,6 +705,8 @@ export function OverviewScreen({
           </div>
         </div>
       </div>
+
+      <AgentsIntroVideoModal open={agentsIntroVideoOpen} onClose={() => setAgentsIntroVideoOpen(false)} />
     </div>
   )
 }

@@ -506,22 +506,6 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
   return (
     <>
       {!isEndEdge && <BaseEdge id={id} path={edgePath} style={style} />}
-      {showAddButton && viewOnly && (
-        // View-only canvases keep the + as an inert visual marker (no menu, no drop).
-        <foreignObject width={56} height={56} x={labelX - 28} y={labelY - 28} className="flow-canvas__edge-fo">
-          <div className="flow-canvas__edge-add-wrapper">
-            <button
-              type="button"
-              className="flow-canvas__edge-add"
-              disabled
-              aria-hidden
-              tabIndex={-1}
-            >
-              <span className="material-symbols-outlined">add</span>
-            </button>
-          </div>
-        </foreignObject>
-      )}
       {showAddButton && !viewOnly && (
         <foreignObject width={foW} height={foH} x={labelX - foW / 2} y={labelY - foH / 2} className="flow-canvas__edge-fo">
           <div

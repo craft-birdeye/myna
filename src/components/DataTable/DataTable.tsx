@@ -82,6 +82,8 @@ export function DataTable<T extends Record<string, unknown>>({
   rowActions,
   rowMenuItems,
   scrollOnHover = false,
+  initialSortKey,
+  initialSortDir = 'asc',
   rowClassName,
   rowHeight = 48,
 }: DataTableProps<T>) {
@@ -90,7 +92,10 @@ export function DataTable<T extends Record<string, unknown>>({
     columns.forEach((c) => (init[String(c.key)] = c.width ?? DEFAULT_WIDTH))
     return init
   })
-  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({ key: null, dir: 'asc' })
+  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({
+    key: initialSortKey ?? null,
+    dir: initialSortDir,
+  })
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ rowIndex: number; top: number; left: number } | null>(null)
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
@@ -102,6 +107,10 @@ export function DataTable<T extends Record<string, unknown>>({
       return next
     })
   }, [columns])
+
+  useEffect(() => {
+    setSort({ key: initialSortKey ?? null, dir: initialSortDir })
+  }, [initialSortKey, initialSortDir])
 
   const sortedData = useMemo(() => {
     if (!sort.key) return data
@@ -188,7 +197,9 @@ export function DataTable<T extends Record<string, unknown>>({
                       onClick={() => toggleSort(col)}
                       className={`group/hdr flex min-w-0 items-center gap-xs ${col.sortable ? '' : 'cursor-default'}`}
                     >
-                      <span className={`truncate text-small ${sorted ? 'text-text-primary' : 'text-text-icon'}`}>
+                      <span
+                        className={`min-w-0 text-small ${sorted ? 'text-text-primary' : 'truncate text-text-icon'}`}
+                      >
                         {col.label}
                       </span>
                       {col.sortable && (

@@ -20,6 +20,7 @@ export function Tooltip({
   children,
   className = '',
   interactive = false,
+  disabled = false,
 }: TooltipProps) {
   // `mounted` keeps the bubble in the DOM through the fade-out; `entered` toggles
   // the opacity/scale classes that drive the ease-in/ease-out transition.
@@ -47,7 +48,7 @@ export function Tooltip({
   }
 
   function show() {
-    if (!triggerRef.current) return
+    if (disabled || !triggerRef.current) return
     clearHideTimer()
     clearRaf()
     if (unmountTimerRef.current) {
@@ -141,6 +142,12 @@ export function Tooltip({
     document.addEventListener('mousedown', onPointerDown)
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [interactive, mounted])
+
+  useEffect(() => {
+    if (disabled && mounted) hide()
+    // hide is stable enough for this effect; only react to disabled flipping on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled])
 
   const transform =
     side === 'right'

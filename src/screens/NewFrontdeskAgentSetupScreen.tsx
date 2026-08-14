@@ -17,6 +17,7 @@ import {
   DEFAULT_TTS_MODEL_SETTINGS,
   DEFAULT_TTS_FAILOVER_SETTINGS,
   DEFAULT_STT_SETTINGS,
+  VoicePreviewButton,
   type AdditionalVoiceConfig,
   type TtsModelSettingsValue,
   type TtsFailoverSettingsValue,
@@ -447,34 +448,38 @@ function VoiceChannelSettings({
 
       <div className="flex flex-col gap-xs pt-xs">
         <label className="text-small text-text-secondary">
-          Default voice <span className="text-chip-danger-text">*</span>
+          Default persona <span className="text-chip-danger-text">*</span>
         </label>
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
-        >
-          <span
-            className={`min-w-0 flex-1 truncate text-left text-body ${
-              voice ? 'text-text-primary' : 'text-text-tertiary'
-            }`}
+        <div className="flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
           >
-            {voice || 'Select'}
-          </span>
-          <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-        </button>
+            <span
+              className={`min-w-0 flex-1 truncate text-left text-body ${
+                voice ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {voice || 'Select'}
+            </span>
+            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+          </button>
+          <VoicePreviewButton voiceLabel={voice} speed={voiceSpeed} disabled={!voice} />
+        </div>
         <DefaultVoiceDrawer
           open={drawerOpen}
           voice={voice}
           speed={voiceSpeed}
           onClose={() => setDrawerOpen(false)}
           onSave={handleDefaultVoiceSave}
+          terminology="persona"
         />
       </div>
 
       <div className="flex flex-col gap-xs">
         {additionalVoiceConfigs.length > 0 && (
-          <label className="text-small text-text-secondary">Additional voice</label>
+          <label className="text-small text-text-secondary">Additional persona</label>
         )}
         {additionalVoiceConfigs.length > 0 && (
         <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
@@ -529,7 +534,7 @@ function VoiceChannelSettings({
           className={`flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover ${additionalVoiceConfigs.length > 0 ? 'hidden' : ''}`}
         >
           <Icon name="add_circle" size={18} className="text-primary" />
-          Add additional voice
+          Add additional persona
         </button>
         <AdditionalVoiceDrawer
           open={additionalDrawerOpen}
@@ -539,6 +544,7 @@ function VoiceChannelSettings({
           defaultVoice={voice}
           onClose={closeAdditionalDrawer}
           onSave={handleSaveAdditionalVoice}
+          terminology="persona"
         />
       </div>
 

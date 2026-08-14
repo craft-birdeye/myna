@@ -16,11 +16,11 @@ export interface TestRunStep extends RunLogStep {
   nodeId: string
 }
 
-/** Canvas `flowType` → the four step types `TYPE_META` knows how to render. */
+/** Canvas `flowType` → the step types `TYPE_META` knows how to render. */
 const FLOW_TYPE_TO_STEP_TYPE: Record<string, RunLogStepType> = {
   trigger: 'trigger',
   task: 'task',
-  procedures: 'task',
+  procedures: 'procedures',
   delay: 'delay',
   branch: 'branch',
 }

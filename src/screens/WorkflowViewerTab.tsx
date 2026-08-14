@@ -68,9 +68,19 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
       {/* Scoped CSS overrides */}
       <style>{`
         .wf-viewer .faq-ab-embedded       { height: 100% !important; }
-        /* Flat, slightly darker than the page — matches the log detail canvas. */
-        .wf-viewer .agent-builder-wrapper { background-color: #eef0f4 !important; background-image: none !important; margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
-        .wf-viewer .flow-canvas { background-color: #eef0f4 !important; background-image: none !important; }
+        /* Flat canvas — #F2F4F7 (no dot grid). Cover every layer that paints bg. */
+        .wf-viewer .faq-ab-embedded--rr-chrome .agent-builder-wrapper,
+        .wf-viewer .agent-builder--rr-chrome,
+        .wf-viewer .agent-builder-wrapper,
+        .wf-viewer .agent-builder__canvas,
+        .wf-viewer .flow-canvas,
+        .wf-viewer .flow-canvas .react-flow,
+        .wf-viewer .flow-canvas .react-flow__renderer,
+        .wf-viewer .flow-canvas .react-flow__pane {
+          background-color: #f2f4f7 !important;
+          background-image: none !important;
+        }
+        .wf-viewer .agent-builder-wrapper { margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
         .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; padding: 0 !important; gap: 0 !important; }
         .wf-viewer .flow-canvas           { border-radius: 12px !important; }
         .wf-viewer .flow-canvas__toolbar-anchor--rr-chrome { top: auto !important; bottom: 16px !important; left: 16px !important; right: 16px !important; }

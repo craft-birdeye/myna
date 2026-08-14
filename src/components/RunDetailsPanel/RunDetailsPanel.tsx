@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
@@ -40,6 +40,7 @@ export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: s
   task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
   branch: { icon: 'account_tree', colorClass: 'text-[#5071CE]', label: 'Branch' },
+  procedures: { icon: 'menu_book', colorClass: 'text-[#37A248]', label: 'Procedures' },
 }
 
 const DEFAULT_STEPS: RunLogStep[] = [
@@ -195,7 +196,15 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
   const [inputsOpen, setInputsOpen] = useState(false)
   const [toolOpen, setToolOpen] = useState(false)
   const meta = TYPE_META[step.type]
-  const outputLabel = step.outputLabel ?? (step.type === 'branch' ? 'Branch output' : 'Task output')
+  const outputLabel =
+    step.outputLabel ??
+    (step.type === 'trigger'
+      ? 'Trigger output'
+      : step.type === 'procedures'
+        ? 'Procedure output'
+        : step.type === 'branch'
+          ? 'Branch output'
+          : 'Task output')
 
   return (
     <div className="relative flex gap-md">
@@ -293,7 +302,7 @@ function MetaField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="m-0 text-small text-text-tertiary">{label}</p>
-      <p className="m-0 mt-xs text-body text-text-primary">{value}</p>
+      <p className="m-0 mt-xs text-small text-text-primary">{value}</p>
     </div>
   )
 }
@@ -308,16 +317,38 @@ function CallDetailsTab({
   routedVia,
 }: NonNullable<RunDetailsPanelProps['callDetails']>) {
   return (
-    <div className="rounded-sm border border-border px-lg py-lg">
-      <div className="grid grid-cols-2 gap-x-lg gap-y-lg">
-        <MetaField label="Caller number" value={callerNumber} />
-        <MetaField label="Language detected" value={languageDetected} />
-        <MetaField label="Duration" value={duration} />
-        <MetaField label="Call SID" value={sidNumber} />
-        <MetaField label="Start time" value={startTime} />
-        <MetaField label="Call end reason" value={callEndReason} />
-        <MetaField label="Routed via" value={routedVia} />
-      </div>
+    <div className="grid grid-cols-2 gap-x-lg gap-y-md">
+      <MetaField label="Caller number" value={callerNumber} />
+      <MetaField label="Language detected" value={languageDetected} />
+      <MetaField label="Duration" value={duration} />
+      <MetaField label="Call SID" value={sidNumber} />
+      <MetaField label="Start time" value={startTime} />
+      <MetaField label="Call end reason" value={callEndReason} />
+      <MetaField label="Routed via" value={routedVia} />
+    </div>
+  )
+}
+
+/** First section on the Conversation tab — collapsed by default; arrow toggles the fields. */
+export function CollapsibleCallDetails({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="mb-lg shrink-0 rounded-sm border border-border">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-sm px-lg py-sm text-left"
+      >
+        <span className="text-[13px] tracking-[-0.26px] text-[#555]">Call details</span>
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={20}
+          className="shrink-0 text-text-icon"
+        />
+      </button>
+      {open && <div className="px-lg pb-md">{children}</div>}
     </div>
   )
 }
@@ -454,13 +485,17 @@ export function RunConversationThread({
                 <ChatSystemLabel text={entry.text} />
               </div>
               {showCallRecording && entry.insertCallRecordingAfter && (
-                <div className="sticky top-0 z-10 -mx-[15px] bg-surface px-[15px] pb-sm pt-sm">
-                  <p className="m-0 mb-lg text-[13px] tracking-[-0.26px] text-[#555]">Call recording</p>
-                  <CallRecordingPlayer
-                    audioUrl={audioUrl}
-                    durationSecs={durationSecs}
-                    padded={false}
-                  />
+                <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
+                  <div className="border border-transparent px-lg">
+                    <p className="m-0 mb-sm text-[13px] tracking-[-0.26px] text-[#555]">
+                      Call recording
+                    </p>
+                    <CallRecordingPlayer
+                      audioUrl={audioUrl}
+                      durationSecs={durationSecs}
+                      padded={false}
+                    />
+                  </div>
                 </div>
               )}
             </Fragment>
@@ -545,7 +580,8 @@ export function RunDetailsPanel({
   agentName,
   onTrackFeedback,
 }: RunDetailsPanelProps) {
-  const [tab, setTab] = useState<'logs' | 'conversation' | 'call-details'>('logs')
+  const [tab, setTab] = useState<'logs' | 'conversation'>('conversation')
+  const hasCallDetails = Boolean(callDetails || callDetailsContent)
   // The sticky waveform anchors to `top: 0` of this scroll container's padding edge — any
   // padding-top here would leave a permanent gap once it's stuck, so that spacing moves onto the
   // conversation thread's first entry instead (see `RunConversationThread`).
@@ -587,7 +623,7 @@ export function RunDetailsPanel({
   return (
     <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
       {showHeader && (
-        <div className="flex h-[60px] shrink-0 items-center justify-between px-[15px]">
+        <div className="flex h-[60px] shrink-0 items-center justify-between px-lg">
           <h2 className="m-0 text-body text-text-primary">{title}</h2>
           {onViewConversation && (
             <button
@@ -603,42 +639,56 @@ export function RunDetailsPanel({
       )}
 
       {showTabs && (
-        <div className={`shrink-0 border-b border-border px-[15px] ${showHeader ? '' : 'pt-sm'}`}>
+        <div className={`shrink-0 px-lg ${showHeader ? '' : 'pt-sm'}`}>
           <Tabs
             tabs={[
-              { id: 'logs', label: 'Logs' },
               { id: 'conversation', label: 'Conversation' },
-              ...(callDetails || callDetailsContent ? [{ id: 'call-details', label: 'Call details' }] : []),
+              { id: 'logs', label: 'Log' },
             ]}
             activeTab={tab}
-            onChange={(id) => setTab(id as 'logs' | 'conversation' | 'call-details')}
+            onChange={(id) => setTab(id as 'logs' | 'conversation')}
           />
         </div>
       )}
 
-      <div
-        className={`min-h-0 flex-1 overflow-y-auto px-[15px] pb-lg ${
-          skipContainerTopPadding ? '' : showHeader ? 'pt-lg' : 'pt-2xl'
-        }`}
-      >
-        {(!showTabs || tab === 'logs') ? (
+      {(!showTabs || tab === 'logs') ? (
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto px-lg pb-lg ${
+            skipContainerTopPadding ? '' : 'pt-lg'
+          }`}
+        >
           <LogsTab steps={steps} />
-        ) : tab === 'call-details' && (callDetails || callDetailsContent) ? (
-          callDetailsContent ?? (callDetails && <CallDetailsTab {...callDetails} />)
-        ) : conversationContent ? (
-          conversationContent
-        ) : (
-          <RunConversationThread
-            entries={conversation}
-            showCallRecording={showCallRecording}
-            audioUrl={audioUrl}
-            durationSecs={durationSecs}
-            recIdByMessage={recIdByMessage}
-            onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
-            onTrackFeedback={onTrackFeedback}
-          />
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className={`flex min-h-0 flex-1 flex-col overflow-hidden px-lg pb-lg ${
+            skipContainerTopPadding ? '' : 'pt-lg'
+          }`}
+        >
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            {conversationContent ? (
+              conversationContent
+            ) : (
+              <div className="h-full overflow-y-auto">
+                {hasCallDetails && (
+                  <CollapsibleCallDetails>
+                    {callDetailsContent ?? (callDetails && <CallDetailsTab {...callDetails} />)}
+                  </CollapsibleCallDetails>
+                )}
+                <RunConversationThread
+                  entries={conversation}
+                  showCallRecording={showCallRecording}
+                  audioUrl={audioUrl}
+                  durationSecs={durationSecs}
+                  recIdByMessage={recIdByMessage}
+                  onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
+                  onTrackFeedback={onTrackFeedback}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {agentName && (
         <>

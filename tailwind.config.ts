@@ -19,6 +19,7 @@ export default {
           hover: '#f2f4f7',         // bg/primary/hover (hover states)
           selected: '#e5e9f0',      // New/Selected · bg/primary/Selected
           subtle: '#f7f7f7',        // neutral light grey (no blue cast) — section header bands
+          muted: '#fafafa',         // secondary surface — settings section cards
           'selected-l1': '#c7d6f6', // New/Selected (L1)
         },
         accent: {

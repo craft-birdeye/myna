@@ -12,6 +12,7 @@ import {
   VoiceCallEngineSettings,
   TtsModelSettings,
   TtsFailoverSettings,
+  VoicePreviewButton,
   type AdditionalVoiceConfig,
 } from '../components'
 import {
@@ -813,22 +814,25 @@ function ReminderSettings() {
 
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
-          Default voice <span className="text-chip-danger-text">*</span>
+          Default persona <span className="text-chip-danger-text">*</span>
         </label>
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="flex h-9 w-full items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
-        >
-          <span
-            className={`min-w-0 flex-1 truncate text-left text-body ${
-              voice ? 'text-text-primary' : 'text-text-tertiary'
-            }`}
+        <div className="flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
           >
-            {voice || 'Select'}
-          </span>
-          <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-        </button>
+            <span
+              className={`min-w-0 flex-1 truncate text-left text-body ${
+                voice ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {voice || 'Select'}
+            </span>
+            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+          </button>
+          <VoicePreviewButton voiceLabel={voice} speed={voiceSpeed} disabled={!voice} />
+        </div>
         <DefaultVoiceDrawer
           open={drawerOpen}
           voice={voice}
@@ -840,7 +844,7 @@ function ReminderSettings() {
 
       <div className="flex flex-col gap-xs">
         {additionalVoiceConfigs.length > 0 && (
-          <label className="text-small text-text-secondary">Additional voice</label>
+          <label className="text-small text-text-secondary">Additional persona</label>
         )}
         {additionalVoiceConfigs.length > 0 ? (
           <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
@@ -895,7 +899,7 @@ function ReminderSettings() {
             className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
           >
             <Icon name="add_circle" size={18} className="text-primary" />
-            Add additional voice
+            Add additional persona
           </button>
         )}
         <AdditionalVoiceDrawer
@@ -970,75 +974,45 @@ function ReminderSettings() {
 /** Flat Front desk settings (system prompt → language → voice → greeting → recording). */
 /* ── Front desk settings shell ─────────────────────────────────────────────
  * Three levels of separation, no font-weight (§6.6):
- *   card (white on tinted ground) → header band → sub-panel → 12px field label.
+ *   card (white on tinted ground) → section title → sub-panel → 12px field label.
  * Local to the Front desk page; other agents keep the flat layout.
  */
 
-/** Level 1 — a titled section card with a tinted header band. */
+/** Level 1 — a titled section card. */
 function SettingsCard({
   title,
   description,
   children,
-  defaultOpen = true,
 }: {
   title: string
   description?: string
   children: React.ReactNode
-  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(defaultOpen)
   return (
-    <section className="rounded-lg border border-border bg-surface">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className={`flex w-full items-center gap-md bg-surface-subtle px-2xl py-lg text-left transition-colors hover:bg-surface-selected ${
-          open ? 'border-b border-border' : ''
-        }`}
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</span>
-          {description && <span className="mt-xs block text-small text-text-secondary">{description}</span>}
-        </span>
-        <Icon
-          name={open ? 'expand_less' : 'expand_more'}
-          size={20}
-          className="shrink-0 text-text-icon"
-        />
-      </button>
-      {open && <div className="flex flex-col gap-2xl p-2xl">{children}</div>}
+    <section className="rounded-lg border border-border bg-[var(--s-bg-secondary)]">
+      <div className="px-2xl pt-lg">
+        <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h3>
+        {description && (
+          <p className="m-0 mt-xs text-small text-text-secondary">{description}</p>
+        )}
+      </div>
+      <div className="flex flex-col gap-2xl px-2xl pb-2xl pt-lg">{children}</div>
     </section>
   )
 }
 
-/** Level 2 — a bordered sub-panel inside a card (TTS / STT). */
+/** Level 2 — a titled sub-panel inside a card (TTS / STT). */
 function SettingsSubPanel({
   title,
   children,
-  defaultOpen = true,
 }: {
   title: string
   children: React.ReactNode
-  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="flex flex-col">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-md py-xs text-left"
-      >
-        <span className="min-w-0 flex-1 text-body text-text-primary">{title}</span>
-        <Icon
-          name={open ? 'expand_less' : 'expand_more'}
-          size={20}
-          className="shrink-0 text-text-icon"
-        />
-      </button>
-      {open && <div className="mt-lg flex flex-col gap-lg">{children}</div>}
+    <div className="flex flex-col gap-lg">
+      <h4 className="m-0 text-body text-text-primary">{title}</h4>
+      <div className="flex flex-col gap-lg">{children}</div>
     </div>
   )
 }
@@ -1203,7 +1177,7 @@ function FrontDeskSettings() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-2xl">
+    <div className="flex w-full max-w-[720px] flex-col gap-2xl">
       <SettingsCard title="General" description="Core behaviour and language for this agent">
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
@@ -1377,34 +1351,38 @@ function FrontDeskSettings() {
 
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
-            Default voice <span className="text-chip-danger-text">*</span>
+            Default persona <span className="text-chip-danger-text">*</span>
           </label>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flex h-9 w-full items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
-          >
-            <span
-              className={`min-w-0 flex-1 truncate text-left text-body ${
-                voice ? 'text-text-primary' : 'text-text-tertiary'
-              }`}
+          <div className="flex items-center gap-sm">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
             >
-              {voice || 'Select'}
-            </span>
-            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-          </button>
+              <span
+                className={`min-w-0 flex-1 truncate text-left text-body ${
+                  voice ? 'text-text-primary' : 'text-text-tertiary'
+                }`}
+              >
+                {voice || 'Select'}
+              </span>
+              <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+            </button>
+            <VoicePreviewButton voiceLabel={voice} speed={voiceSpeed} disabled={!voice} />
+          </div>
           <DefaultVoiceDrawer
             open={drawerOpen}
             voice={voice}
             speed={voiceSpeed}
             onClose={() => setDrawerOpen(false)}
             onSave={handleDefaultVoiceSave}
+            terminology="persona"
           />
         </div>
 
         <div className="flex flex-col gap-xs">
           {additionalVoiceConfigs.length > 0 && (
-            <label className="text-small text-text-secondary">Additional voice</label>
+            <label className="text-small text-text-secondary">Additional persona</label>
           )}
           {additionalVoiceConfigs.length > 0 ? (
             <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
@@ -1459,7 +1437,7 @@ function FrontDeskSettings() {
               className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
             >
               <Icon name="add_circle" size={18} className="text-primary" />
-              Add additional voice
+              Add additional persona
             </button>
           )}
           <AdditionalVoiceDrawer
@@ -1470,17 +1448,19 @@ function FrontDeskSettings() {
             defaultVoice={voice}
             onClose={closeAdditionalDrawer}
             onSave={handleSaveAdditionalVoice}
+            terminology="persona"
           />
         </div>
 
         <TtsFailoverSettings />
         </SettingsSubPanel>
 
-        <SettingsSubPanel title="Speech-to-text (STT)">
-        <VoiceCallEngineSettings hideHeading />
+        <div className="border-t border-border pt-2xl">
+          <SettingsSubPanel title="Speech-to-text (STT)">
+          <VoiceCallEngineSettings hideHeading />
 
-        {/* Engine config above, call behaviour below */}
-        <div className="flex flex-col gap-lg border-t border-border pt-lg">
+          {/* Engine config above, call behaviour below */}
+          <div className="flex flex-col gap-lg border-t border-border pt-lg">
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">Greeting message</label>
             <p className="text-small text-text-tertiary">
@@ -1524,6 +1504,7 @@ function FrontDeskSettings() {
           </div>
         </div>
         </SettingsSubPanel>
+        </div>
       </SettingsCard>
     </div>
   )

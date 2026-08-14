@@ -17,4 +17,6 @@ export interface TooltipProps {
   className?: string
   /** Keep open while hovering the panel; enables clicks inside (e.g. links). */
   interactive?: boolean
+  /** When true, hover never opens the bubble (e.g. ellipsized text that isn't truncated). */
+  disabled?: boolean
 }

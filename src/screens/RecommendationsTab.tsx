@@ -15,8 +15,8 @@ interface RecommendationsTabProps {
 }
 
 /** Row shape rendered by the table — adds a sortable numeric age alongside the raw `timeAgo`
- *  string, so the Date column (and the default order) can sort chronologically instead of
- *  alphabetically sorting strings like "15m ago" vs "2h ago". */
+ *  string, so the Date column can sort chronologically instead of alphabetically sorting
+ *  strings like "15m ago" vs "2h ago". */
 type RecommendationRow = Recommendation & { ageMinutes: number }
 
 const COLUMNS: Column<RecommendationRow>[] = [
@@ -89,8 +89,9 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty
       status: overrides[rec.id]?.status ?? 'open',
       ageMinutes: recommendationAgeMinutes(rec.timeAgo),
     }))
-    // Default order: most recent first — the table's own column sort takes over once a header is clicked.
-    .sort((a, b) => a.ageMinutes - b.ageMinutes)
+    // Default order: highest conversations affected first — DataTable also starts sorted on
+    // that column so the header chevron stays visible.
+    .sort((a, b) => b.conversationCount - a.conversationCount)
 
   if (isDraft || empty) {
     return (
@@ -113,6 +114,8 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty
         columns={COLUMNS}
         data={data}
         rowHeight={64}
+        initialSortKey="conversationCount"
+        initialSortDir="desc"
         onRowClick={(rec) => onSelect(rec.id)}
         scrollOnHover
       />

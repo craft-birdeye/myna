@@ -50,6 +50,7 @@ export {
   AGENT_VOICE_OPTIONS,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
 } from './VoiceSettingsDrawers/VoiceSettingsDrawers'
 export type {
   AdditionalVoiceConfig,
@@ -117,6 +118,23 @@ export { ShareFeedbackModal } from './ShareFeedbackModal/ShareFeedbackModal'
 export type { ShareFeedbackModalProps } from './ShareFeedbackModal/ShareFeedbackModal.types'
 export { EstimateSavingsModal, REVIEW_RESPONSE_SAVINGS_COPY, parseTimeSavedHours } from './EstimateSavingsModal/EstimateSavingsModal'
 export type { EstimateSavingsCopy, EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { AgentsIntroVideoModal } from './AgentsIntroVideoModal/AgentsIntroVideoModal'
+export type { AgentsIntroVideoModalProps } from './AgentsIntroVideoModal/AgentsIntroVideoModal.types'
+export { WorkflowCoachTour } from './WorkflowCoachTour/WorkflowCoachTour'
+export { WORKFLOW_COACH_STEPS } from './WorkflowCoachTour/WorkflowCoachTour.types'
+export type {
+  WorkflowCoachTourProps,
+  WorkflowCoachStep,
+  WorkflowCoachPlacement,
+} from './WorkflowCoachTour/WorkflowCoachTour.types'
+export { HelpCenterPanel } from './HelpCenterPanel/HelpCenterPanel'
+export type {
+  HelpCenterPanelProps,
+  HelpCenterView,
+  HelpVideoItem,
+  HelpTourItem,
+  HelpArticleItem,
+} from './HelpCenterPanel/HelpCenterPanel.types'
 export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
 export type {
   AgentLibraryPreviewData,

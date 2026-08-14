@@ -266,6 +266,15 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Las Vegas, NV',    count: '1', reviewsReceived: '20', contactsReached: '10', clickThroughRate: '4.7%', timeSaved: '20m' },
     { location: 'Chicago, IL',      count: '1', reviewsReceived: '7',  contactsReached: '10', clickThroughRate: '4.8%', timeSaved: '20m' },
   ],
+  'Review response agent': [
+    { location: 'Atlanta, GA',       count: '1', reviewsResponded: '19', responseRate: '90%', avgResponseTime: '1h 48m', timeSaved: '4h 20m' },
+    { location: 'Stamford, CT',      count: '1', reviewsResponded: '9',  responseRate: '92%', avgResponseTime: '2h 05m', timeSaved: '2h 10m' },
+    { location: 'Los Angeles, CA',   count: '1', reviewsResponded: '22', responseRate: '90%', avgResponseTime: '2h 22m', timeSaved: '2h 05m' },
+    { location: 'New York City, NY', count: '1', reviewsResponded: '18', responseRate: '90%', avgResponseTime: '2h 10m', timeSaved: '2h 40m' },
+    { location: 'San Diego, CA',     count: '1', reviewsResponded: '7',  responseRate: '95%', avgResponseTime: '2h 40m', timeSaved: '3h 05m' },
+    { location: 'Las Vegas, NV',     count: '1', reviewsResponded: '3',  responseRate: '94%', avgResponseTime: '3h 05m', timeSaved: '2h 10m' },
+    { location: 'Chicago, IL',       count: '1', reviewsResponded: '10', responseRate: '92%', avgResponseTime: '3h 05m', timeSaved: '3h 05m' },
+  ],
 }
 
 const FRONTDESK_COLUMNS: Column<LocationRow>[] = [
@@ -381,6 +390,14 @@ const REVIEW_GENERATION_COLUMNS: Column<LocationRow>[] = [
   { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
 ]
 
+const REVIEW_RESPONSE_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location', label: 'Location', width: 220, sortable: true },
+  { key: 'reviewsResponded', label: 'Reviews responded', width: 180, sortable: true },
+  { key: 'responseRate', label: 'Response rate', width: 150, sortable: true },
+  { key: 'avgResponseTime', label: 'Average response time', width: 190, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
+]
+
 export function AgentInstanceScreen({
   instanceName,
   displayName,
@@ -478,11 +495,14 @@ export function AgentInstanceScreen({
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
     : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
+    : isReviewResponse                    ? REVIEW_RESPONSE_COLUMNS
     : DEFAULT_COLUMNS
   const locations = (
     isReviewGeneration
       ? LOCATIONS_BY_AGENT[reviewGenerationKey]
-      : LOCATIONS_BY_AGENT[agentName]
+      : isReviewResponse
+        ? LOCATIONS_BY_AGENT['Review response agent']
+        : LOCATIONS_BY_AGENT[agentName]
   ) ?? LOCATIONS_BY_AGENT['Front desk agent']
 
   /* ─── Header search + filters (Outcomes and Logs tabs only) ─── */
@@ -633,6 +653,16 @@ export function AgentInstanceScreen({
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
                         onClick={() => {
+                          setActionsOpen(false)
+                          onEditAgent?.(instanceName, undefined, { instanceName, tab: activeTab })
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                        onClick={() => {
                           setInstanceStatus('Paused')
                           setActionsOpen(false)
                         }}
@@ -747,7 +777,13 @@ export function AgentInstanceScreen({
                     }}
                   />
                   <div className="px-lg py-lg">
-                    <DataTable columns={COLUMNS} data={visibleLocations} scrollOnHover />
+                    <DataTable
+                      columns={COLUMNS}
+                      data={visibleLocations}
+                      scrollOnHover
+                      initialSortKey={isReviewResponse ? 'reviewsResponded' : undefined}
+                      initialSortDir={isReviewResponse ? 'desc' : undefined}
+                    />
                   </div>
                 </>
               ) : showEmptyDraftLogs ? (
