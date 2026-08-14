@@ -20,15 +20,6 @@ export interface V2Section {
   actionNeeded?: V2Stat[]
 }
 
-export interface V2FrontDeskAgentSummary {
-  id: string
-  name: string
-  outcome: V2Stat
-  timeSaved: string
-  costSaved: string
-  status: string
-}
-
 export interface V2FrontDeskSubArea {
   id: string
   label: string
@@ -37,41 +28,6 @@ export interface V2FrontDeskSubArea {
   agentOutcomes: V2Stat[]
   humanActions: V2Stat[]
 }
-
-export const OVERVIEW_V2_FRONTDESK_AGENTS: V2FrontDeskAgentSummary[] = [
-  {
-    id: 'front-desk',
-    name: 'Front desk agent',
-    outcome: { id: 'conversations-resolved', value: '16.2K', label: 'Conversations resolved' },
-    timeSaved: '40h',
-    costSaved: '$2.8K',
-    status: '2 running · 3 issues',
-  },
-  {
-    id: 'waitlist',
-    name: 'Waitlist agent',
-    outcome: { id: 'slots-filled', value: '7.9K', label: 'Slots filled' },
-    timeSaved: '2.5h',
-    costSaved: '$0.2K',
-    status: '2 running',
-  },
-  {
-    id: 'pre-visit',
-    name: 'Pre-visit agent',
-    outcome: { id: 'intakes-completed', value: '2.7K', label: 'Intakes completed' },
-    timeSaved: '1h',
-    costSaved: '$0.1K',
-    status: '2 running',
-  },
-  {
-    id: 'reminder',
-    name: 'Reminder agent',
-    outcome: { id: 'appointments-confirmed', value: '100', label: 'Appointments confirmed' },
-    timeSaved: '13h',
-    costSaved: '$0.9K',
-    status: '2 running',
-  },
-]
 
 export const OVERVIEW_V2_FRONTDESK_SUBAREAS: V2FrontDeskSubArea[] = [
   {

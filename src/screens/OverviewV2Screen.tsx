@@ -6,7 +6,6 @@ import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import {
   OVERVIEW_V2_SECTIONS,
-  OVERVIEW_V2_FRONTDESK_AGENTS,
   OVERVIEW_V2_FRONTDESK_SUBAREAS,
   type V2Agent,
   type V2Stat,
@@ -180,29 +179,8 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 
 // Front desk (owner: Myna) spans 4 sub-areas that share one date filter — each sub-area gets its
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
-// sections above.
-function FrontDeskAgentSummaryRow() {
-  return (
-    <div className="flex flex-wrap gap-lg">
-      {OVERVIEW_V2_FRONTDESK_AGENTS.map((a) => (
-        <div key={a.id} className="flex min-w-[220px] flex-1 flex-col gap-sm rounded-sm border border-border p-lg">
-          <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-            <img src={mynaIcon} alt="" className="size-6 shrink-0 rounded-full" />
-            {a.name}
-          </h4>
-          <p className="m-0 whitespace-nowrap text-display text-text-action">{a.outcome.value}</p>
-          <p className="m-0 whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{a.outcome.label}</p>
-          <div className="flex flex-wrap gap-md text-small text-text-secondary">
-            <span>{a.timeSaved} time saved</span>
-            <span>{a.costSaved} cost saved</span>
-          </div>
-          <p className="m-0 text-small text-text-tertiary">{a.status}</p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
+// sections above. Business metrics and agents each stack one per row (rather than wrapping side
+// by side) so every row's KPI tiles start at the same x position and read as clean columns.
 function FrontDeskSection() {
   const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
 
@@ -213,18 +191,16 @@ function FrontDeskSection() {
         Front desk
       </h3>
 
-      <FrontDeskAgentSummaryRow />
-
-      <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
+      <div className="flex flex-col gap-lg border-t border-border pt-lg">
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
-          <div key={area.id} className="flex flex-none flex-col gap-md">
+          <div key={area.id} className="flex flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-            <V2StatGroup stats={area.businessMetrics} nowrap />
+            <V2StatGroup stats={area.businessMetrics} />
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
+      <div className="flex flex-col gap-lg border-t border-border pt-lg">
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
           <AgentRow
             key={area.id}
