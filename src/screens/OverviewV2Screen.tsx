@@ -369,7 +369,7 @@ function DataStateSwitcher({ value, onChange }: { value: 'filled' | 'empty'; onC
 
 export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
-  const [dataState, setDataState] = useState<'filled' | 'empty'>('filled')
+  const [dataState, setDataState] = useState<'filled' | 'empty'>('empty')
   const showAgents = dataState === 'filled'
 
   return (
