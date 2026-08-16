@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon, TopNav } from '../components'
+import { Icon, InfoTooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
   FigmaIconSurveys,
@@ -208,7 +208,7 @@ function AiWorkforceSummaryCard() {
             <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
             <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
               {s.label}
-              {s.muted && <Icon name="info" size={14} className="text-text-icon" />}
+              {s.muted && <InfoTooltip text="Estimates from similar businesses" variant="detail" />}
             </p>
           </div>
         ))}
