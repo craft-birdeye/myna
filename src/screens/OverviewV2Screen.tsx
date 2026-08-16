@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon, InfoTooltip, TopNav } from '../components'
+import { Icon, Tooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
   FigmaIconSurveys,
@@ -196,6 +196,23 @@ function formatTimeSaved(hours: number, dateRange: string): string {
   return dateRange === 'Today' || dateRange === 'Last week' ? `${hours}h` : `${(hours / 24).toFixed(1)} days`
 }
 
+// Same info-hover affordance as the shared InfoTooltip, but built on the Material Symbol `Icon`
+// (already used everywhere else on this page) instead of InfoTooltip's own bundled SVG image —
+// avoids a broken-icon glyph some browsers render for that standalone <img>.
+function EstimateTooltip() {
+  return (
+    <Tooltip content="Estimates from similar businesses" variant="detail">
+      <button
+        type="button"
+        className="flex items-center justify-center text-text-tertiary hover:text-text-secondary"
+        aria-label="More info"
+      >
+        <Icon name="info" size={14} />
+      </button>
+    </Tooltip>
+  )
+}
+
 // Shown in both states — empty state keeps its estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; filled state assumes the co-workers are live, so the same card
 // shows the real totals in full-strength black instead of grey.
@@ -227,7 +244,7 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
             <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
             <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
               {s.label}
-              {s.tooltip && <InfoTooltip text="Estimates from similar businesses" variant="detail" />}
+              {s.tooltip && <EstimateTooltip />}
             </p>
           </div>
         ))}
