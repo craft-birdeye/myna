@@ -284,8 +284,8 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
       {!filled && (
         <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md bg-ai-summary p-lg">
           <div className="flex shrink-0 items-center">
-            <img src={mynaIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
-            <img src={jayIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+            <img src={jayIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
+            <img src={mynaIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
             <img src={robinIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
           </div>
           <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
