@@ -269,7 +269,7 @@ export const OVERVIEW_V2_SECTIONS: V2Section[] = [
         stats: [
           { id: 'surveys-responded', value: '18', label: 'Surveys responded' },
           { id: 'response-rate', value: '7', label: 'Response rate' },
-          { id: 'time-saved', value: '7', label: 'Time saved' },
+          { id: 'time-saved', value: '7h', label: 'Time saved' },
         ],
       },
     ],
@@ -292,6 +292,7 @@ export const OVERVIEW_V2_SECTIONS: V2Section[] = [
         stats: [
           { id: 'tickets-created', value: '212', label: 'Tickets created' },
           { id: 'tickets-escalated', value: '5', label: 'Tickets escalated' },
+          { id: 'time-saved', value: '3h', label: 'Time saved' },
         ],
       },
       {

@@ -8,7 +8,6 @@ import {
   FigmaIconRecommendations,
 } from '../components/l1Icons'
 import jayIcon from '../assets/icon-jay.svg'
-import actionNeededIcon from '../assets/icon-action-needed.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
@@ -64,7 +63,7 @@ function ActionNeeded({ stats, bordered = true }: { stats: V2Stat[]; bordered?: 
   return (
     <div className={`flex flex-col gap-md ${bordered ? 'border-t border-border pt-lg' : ''}`}>
       <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <img src={actionNeededIcon} alt="" className="size-5 shrink-0" />
+        <Icon name="warning" size={20} className="text-text-icon" />
         Action needed
       </h4>
       <div className={KPI_ROW_CLASS}>
@@ -213,6 +212,39 @@ function EstimateTooltip() {
   )
 }
 
+// Picks the one agent+stat a section's empty-state setup banner should lead with: the first
+// time-saved or cost-saved figure found across the section's agents (a real "why bother" number),
+// falling back to that agent's first stat if none of them save time or cost.
+function pickFeaturedStat(agents: V2Agent[]): { agentName: string; value: string; metricLabel: string } {
+  for (const agent of agents) {
+    const savedStat = agent.stats.find((s) => s.id === 'time-saved' || s.id === 'cost-saved')
+    if (savedStat) return { agentName: agent.name, value: savedStat.value, metricLabel: savedStat.label.toLowerCase() }
+  }
+  const [first] = agents
+  const [firstStat] = first.stats
+  return { agentName: first.name, value: firstStat.value, metricLabel: firstStat.label.toLowerCase() }
+}
+
+// Empty-state-only footer banner for a product section — assumes no agent is enabled yet, so it
+// promotes setting one up instead of showing the (hidden) agent rows. Bleeds edge-to-edge like the
+// AI workforce summary's own promo banner.
+function AgentSetupBanner({ icon, agentName, value, metricLabel }: { icon: string; agentName: string; value: string; metricLabel: string }) {
+  return (
+    <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md bg-ai-summary p-lg">
+      <img src={icon} alt="" className="size-9 shrink-0 rounded-full border-2 border-surface" />
+      <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+        Set up your {agentName} to save up to {value} in {metricLabel}.
+      </p>
+      <button
+        type="button"
+        className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+      >
+        Create agent
+      </button>
+    </div>
+  )
+}
+
 // Shown in both states — empty state keeps its estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; filled state assumes the co-workers are live, so the same card
 // shows the real totals in full-strength black instead of grey.
@@ -250,7 +282,7 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
         ))}
       </div>
       {!filled && (
-        <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md border-t border-ai-summary-border bg-ai-summary p-lg">
+        <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md bg-ai-summary p-lg">
           <div className="flex shrink-0 items-center">
             <img src={mynaIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
             <img src={jayIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
@@ -271,6 +303,9 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
 function FrontDeskSection({ showAgents }: { showAgents: boolean }) {
   const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
+  const featuredStat = pickFeaturedStat(
+    OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({ id: area.id, name: area.agentName, stats: area.agentOutcomes }))
+  )
 
   return (
     <SectionCard>
@@ -301,6 +336,8 @@ function FrontDeskSection({ showAgents }: { showAgents: boolean }) {
       )}
 
       <ActionNeeded stats={allHumanActions} />
+
+      {!showAgents && <AgentSetupBanner icon={mynaIcon} {...featuredStat} />}
     </SectionCard>
   )
 }
@@ -354,8 +391,9 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
             const NavIcon = SECTION_NAV_ICON[section.id]
             const isCx = CX_SECTION_IDS.has(section.id)
             const showAgentRows = showAgents && section.agents.length > 0
+            const showSetupBanner = !showAgents && section.agents.length > 0
             const hasBodyContent = Boolean(section.stats) || section.id === 'reviews' || showAgentRows
-            const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded)
+            const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded) || showSetupBanner
             if (!hasAnyContent) return null
             return (
               <SectionCard key={section.id}>
@@ -377,6 +415,8 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
                 )}
 
                 {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} bordered={hasBodyContent} />}
+
+                {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(section.agents)} />}
               </SectionCard>
             )
           })}
