@@ -189,6 +189,44 @@ function SectionCard({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col gap-xl rounded-md border border-border bg-surface p-xl">{children}</div>
 }
 
+// Shown only in empty state, in place of the co-worker/agent rows this toggle otherwise hides —
+// same "AI workforce summary" card + promo banner as Classic Overview's zero state, so switching
+// to Empty state still promotes setting the co-workers up instead of leaving a content void.
+function AiWorkforceSummaryCard() {
+  const stats: { id: string; value: string; label: string; muted?: boolean }[] = [
+    { id: 'co-workers', value: '3', label: 'Co-workers' },
+    { id: 'agents', value: '0', label: 'Agents' },
+    { id: 'time-saved', value: '~13.8 days', label: 'Time saved', muted: true },
+    { id: 'cost-saved', value: '~$25.0K', label: 'Cost saved', muted: true },
+  ]
+  return (
+    <SectionCard>
+      <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
+      <div className={KPI_ROW_CLASS}>
+        {stats.map((s) => (
+          <div key={s.id} className={KPI_TILE_CLASS}>
+            <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
+            <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
+              {s.label}
+              {s.muted && <Icon name="info" size={14} className="text-text-icon" />}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-lg rounded-md border border-ai-summary-border bg-ai-summary p-lg">
+        <div className="flex shrink-0 items-center">
+          <img src={mynaIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
+          <img src={jayIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+          <img src={robinIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+        </div>
+        <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+          AI co-workers save up to 20 hours a week — set up yours and start saving today.
+        </p>
+      </div>
+    </SectionCard>
+  )
+}
+
 // Front desk (owner: Myna) spans 4 sub-areas that share one date filter — each sub-area gets its
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
@@ -271,6 +309,8 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
             </div>
             <DateRangeDropdown value={dateRange} onChange={setDateRange} />
           </div>
+
+          {!showAgents && <AiWorkforceSummaryCard />}
 
           {OVERVIEW_V2_SECTIONS.map((section) => {
             const NavIcon = SECTION_NAV_ICON[section.id]
