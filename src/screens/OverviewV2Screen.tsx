@@ -11,6 +11,7 @@ import jayIcon from '../assets/icon-jay.svg'
 import actionNeededIcon from '../assets/icon-action-needed.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
+import { getAgentDirectory } from '../data/agentDirectoryData'
 import {
   OVERVIEW_V2_SECTIONS,
   OVERVIEW_V2_FRONTDESK_SUBAREAS,
@@ -59,9 +60,9 @@ function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) 
   )
 }
 
-function ActionNeeded({ stats }: { stats: V2Stat[] }) {
+function ActionNeeded({ stats, bordered = true }: { stats: V2Stat[]; bordered?: boolean }) {
   return (
-    <div className="flex flex-col gap-md border-t border-border pt-lg">
+    <div className={`flex flex-col gap-md ${bordered ? 'border-t border-border pt-lg' : ''}`}>
       <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
         <img src={actionNeededIcon} alt="" className="size-5 shrink-0" />
         Action needed
@@ -193,9 +194,10 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 // same "AI workforce summary" card + promo banner as Classic Overview's zero state, so switching
 // to Empty state still promotes setting the co-workers up instead of leaving a content void.
 function AiWorkforceSummaryCard() {
+  const totalAgents = getAgentDirectory('healthcare').length
   const stats: { id: string; value: string; label: string; muted?: boolean }[] = [
     { id: 'co-workers', value: '3', label: 'Co-workers' },
-    { id: 'agents', value: '0', label: 'Agents' },
+    { id: 'agents', value: String(totalAgents), label: 'Agents', muted: true },
     { id: 'time-saved', value: '~13.8 days', label: 'Time saved', muted: true },
     { id: 'cost-saved', value: '~$25.0K', label: 'Cost saved', muted: true },
   ]
@@ -208,12 +210,12 @@ function AiWorkforceSummaryCard() {
             <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
             <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
               {s.label}
-              {s.muted && <InfoTooltip text="Estimates from similar businesses" variant="detail" />}
+              {s.id !== 'agents' && s.muted && <InfoTooltip text="Estimates from similar businesses" variant="detail" />}
             </p>
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-lg rounded-md border border-ai-summary-border bg-ai-summary p-lg">
+      <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md border-t border-ai-summary-border bg-ai-summary p-lg">
         <div className="flex shrink-0 items-center">
           <img src={mynaIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
           <img src={jayIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
@@ -241,7 +243,7 @@ function FrontDeskSection({ showAgents }: { showAgents: boolean }) {
         Front desk
       </h3>
 
-      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg border-t border-border pt-lg">
+      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg">
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
           <div key={area.id} className="flex flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
@@ -315,6 +317,10 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
           {OVERVIEW_V2_SECTIONS.map((section) => {
             const NavIcon = SECTION_NAV_ICON[section.id]
             const isCx = CX_SECTION_IDS.has(section.id)
+            const showAgentRows = showAgents && section.agents.length > 0
+            const hasBodyContent = Boolean(section.stats) || section.id === 'reviews' || showAgentRows
+            const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded)
+            if (!hasAnyContent) return null
             return (
               <SectionCard key={section.id}>
                 <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
@@ -326,7 +332,7 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
 
                 {section.id === 'reviews' && <ReviewsOverview />}
 
-                {showAgents && section.agents.length > 0 && (
+                {showAgentRows && (
                   <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
                     {section.agents.map((agent) => (
                       <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
@@ -334,7 +340,7 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
                   </div>
                 )}
 
-                {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} />}
+                {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} bordered={hasBodyContent} />}
               </SectionCard>
             )
           })}
