@@ -239,7 +239,7 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
           <img src={robinIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
         </div>
         <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
-          AI co-workers save up to 20 hours a week — set up yours and start saving today.
+          {totalAgents} AI agents can save you up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up yours and start saving today.
         </p>
       </div>
     </SectionCard>
