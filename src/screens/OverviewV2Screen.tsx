@@ -193,7 +193,7 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
-function FrontDeskSection() {
+function FrontDeskSection({ showAgents }: { showAgents: boolean }) {
   const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
 
   return (
@@ -212,23 +212,52 @@ function FrontDeskSection() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg border-t border-border pt-lg">
-        {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
-          <AgentRow
-            key={area.id}
-            icon={mynaIcon}
-            agent={{ id: `${area.id}-agent-outcomes`, name: area.agentName, stats: area.agentOutcomes }}
-          />
-        ))}
-      </div>
+      {showAgents && (
+        <div className="grid grid-cols-2 gap-x-3xl gap-y-lg border-t border-border pt-lg">
+          {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
+            <AgentRow
+              key={area.id}
+              icon={mynaIcon}
+              agent={{ id: `${area.id}-agent-outcomes`, name: area.agentName, stats: area.agentOutcomes }}
+            />
+          ))}
+        </div>
+      )}
 
       <ActionNeeded stats={allHumanActions} />
     </SectionCard>
   )
 }
 
+// Floating switcher (fixed to the viewport, always visible) between the fully-populated demo
+// data and an "empty state" preview that drops every co-worker/agent row from each product area.
+function DataStateSwitcher({ value, onChange }: { value: 'filled' | 'empty'; onChange: (value: 'filled' | 'empty') => void }) {
+  const OPTIONS: { id: 'empty' | 'filled'; label: string }[] = [
+    { id: 'empty', label: 'Empty state' },
+    { id: 'filled', label: 'Filled state' },
+  ]
+  return (
+    <div className="fixed bottom-xl right-2xl z-50 flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface p-xs shadow-dropdown">
+      {OPTIONS.map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          onClick={() => onChange(opt.id)}
+          className={`flex h-7 items-center rounded-sm px-md text-body ${
+            value === opt.id ? 'bg-surface-selected text-text-primary' : 'text-text-icon hover:bg-surface-hover'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
+  const [dataState, setDataState] = useState<'filled' | 'empty'>('filled')
+  const showAgents = dataState === 'filled'
 
   return (
     <div className="flex h-full flex-col">
@@ -257,7 +286,7 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
 
                 {section.id === 'reviews' && <ReviewsOverview />}
 
-                {section.agents.length > 0 && (
+                {showAgents && section.agents.length > 0 && (
                   <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
                     {section.agents.map((agent) => (
                       <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
@@ -270,9 +299,11 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
             )
           })}
 
-          <FrontDeskSection />
+          <FrontDeskSection showAgents={showAgents} />
         </div>
       </div>
+
+      <DataStateSwitcher value={dataState} onChange={setDataState} />
     </div>
   )
 }
