@@ -190,17 +190,34 @@ function SectionCard({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col gap-xl rounded-md border border-border bg-surface p-xl">{children}</div>
 }
 
-// Shown only in empty state, in place of the co-worker/agent rows this toggle otherwise hides —
-// same "AI workforce summary" card + promo banner as Classic Overview's zero state, so switching
-// to Empty state still promotes setting the co-workers up instead of leaving a content void.
-function AiWorkforceSummaryCard() {
-  const totalAgents = getAgentDirectory('healthcare').length
-  const stats: { id: string; value: string; label: string; muted?: boolean }[] = [
-    { id: 'co-workers', value: '3', label: 'Co-workers' },
-    { id: 'agents', value: String(totalAgents), label: 'Agents', muted: true },
-    { id: 'time-saved', value: '~13.8 days', label: 'Time saved', muted: true },
-    { id: 'cost-saved', value: '~$25.0K', label: 'Cost saved', muted: true },
-  ]
+// "Today"/"Last week" are short enough that hours read naturally; anything longer accumulates
+// enough hours that days is the more readable unit. Mirrors Classic Overview's own helper.
+function formatTimeSaved(hours: number, dateRange: string): string {
+  return dateRange === 'Today' || dateRange === 'Last week' ? `${hours}h` : `${(hours / 24).toFixed(1)} days`
+}
+
+// Shown in both states — empty state keeps its estimate framing ("~" values, muted, tooltip)
+// since nothing's running yet; filled state assumes the co-workers are live, so the same card
+// shows the real totals in full-strength black instead of grey.
+function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRange: string }) {
+  const agents = getAgentDirectory('healthcare')
+  const totalAgents = agents.length
+  const totalHours = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const totalCostK = agents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+
+  const stats: { id: string; value: string; label: string; muted?: boolean; tooltip?: boolean }[] = filled
+    ? [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: String(totalAgents), label: 'Agents' },
+        { id: 'time-saved', value: formatTimeSaved(totalHours, dateRange), label: 'Time saved' },
+        { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
+      ]
+    : [
+        { id: 'co-workers', value: '3', label: 'Co-workers' },
+        { id: 'agents', value: String(totalAgents), label: 'Agents', muted: true },
+        { id: 'time-saved', value: `~${formatTimeSaved(totalHours, dateRange)}`, label: 'Time saved', muted: true, tooltip: true },
+        { id: 'cost-saved', value: `~$${totalCostK.toFixed(1)}K`, label: 'Cost saved', muted: true, tooltip: true },
+      ]
   return (
     <SectionCard>
       <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
@@ -210,7 +227,7 @@ function AiWorkforceSummaryCard() {
             <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
             <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
               {s.label}
-              {s.id !== 'agents' && s.muted && <InfoTooltip text="Estimates from similar businesses" variant="detail" />}
+              {s.tooltip && <InfoTooltip text="Estimates from similar businesses" variant="detail" />}
             </p>
           </div>
         ))}
@@ -312,7 +329,7 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
             <DateRangeDropdown value={dateRange} onChange={setDateRange} />
           </div>
 
-          {!showAgents && <AiWorkforceSummaryCard />}
+          <AiWorkforceSummaryCard filled={showAgents} dateRange={dateRange} />
 
           {OVERVIEW_V2_SECTIONS.map((section) => {
             const NavIcon = SECTION_NAV_ICON[section.id]
