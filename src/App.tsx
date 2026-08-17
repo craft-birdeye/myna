@@ -95,8 +95,7 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'marketing',
-    header: 'Marketing · Jay',
-    headerIcon: jayIcon,
+    header: 'Marketing',
     items: [
       { id: 'search',               label: 'Search AI',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
       { id: 'listings',             label: 'Listings AI',             icon: <FigmaIconListings size={ICON_SIZE} />,        kind: 'element' },
@@ -109,8 +108,7 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'operations',
-    header: 'Operations · Myna',
-    headerIcon: mynaIcon,
+    header: 'Operations',
     items: [
       { id: 'inbox',     label: 'Inbox',      icon: <FigmaIconInbox size={ICON_SIZE} />,        kind: 'element' },
       { id: 'frontdesk', label: 'Front desk', icon: <FigmaIconFrontDesk size={ICON_SIZE} />, kind: 'element' },
@@ -118,8 +116,7 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'cx',
-    header: 'Customer experience · Robin',
-    headerIcon: robinIcon,
+    header: 'Customer experience',
     items: [
       { id: 'surveys',   label: 'Surveys AI',  icon: <FigmaIconSurveys size={ICON_SIZE} />,   kind: 'element' },
       { id: 'ticketing', label: 'Ticketing',   icon: <FigmaIconTicketing size={ICON_SIZE} />, kind: 'element' },
