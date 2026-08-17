@@ -110,6 +110,8 @@ function FieldGroupDrawer({ open, group, availableServiceIds, onCancel, onSave }
   const [extraFields, setExtraFields] = useState<TemplateField[]>([])
   const [addingField, setAddingField] = useState(false)
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
+  const [draggingFieldId, setDraggingFieldId] = useState<string | null>(null)
+  const dragFieldIndex = useRef<number | null>(null)
 
   // (Re)initialise the draft whenever the drawer opens, mirroring CustomizeColumnsDrawer.
   useEffect(() => {
@@ -127,6 +129,18 @@ function FieldGroupDrawer({ open, group, availableServiceIds, onCancel, onSave }
 
   function toggleService(id: string) {
     setMappedServiceIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
+  }
+
+  function reorderExtraField(targetIndex: number) {
+    const from = dragFieldIndex.current
+    if (from === null || from === targetIndex) return
+    setExtraFields((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(targetIndex, 0, moved)
+      return next
+    })
+    dragFieldIndex.current = targetIndex
   }
 
   return createPortal(
@@ -188,7 +202,7 @@ function FieldGroupDrawer({ open, group, availableServiceIds, onCancel, onSave }
           <div className="mb-xl">
             <label className="mb-xs block text-small text-text-secondary">Appointment types</label>
             <p className="mb-md text-small text-text-tertiary">Only appointment types on this template appear here.</p>
-            <div className="flex flex-col rounded-sm border border-border px-lg py-sm">
+            <div className="flex flex-col">
               {services.map((s) => (
                 <CheckboxRow key={s.id} checked={mappedServiceIds.includes(s.id)} label={s.label} description={s.description} onChange={() => toggleService(s.id)} />
               ))}
@@ -212,7 +226,18 @@ function FieldGroupDrawer({ open, group, availableServiceIds, onCancel, onSave }
                     }}
                   />
                 ) : (
-                  <div key={f.id} className="flex items-center gap-md border-b border-border py-sm last:border-0">
+                  <div
+                    key={f.id}
+                    onDragOver={(e) => {
+                      if (dragFieldIndex.current === null) return
+                      e.preventDefault()
+                      reorderExtraField(extraFields.indexOf(f))
+                    }}
+                    onDrop={(e) => e.preventDefault()}
+                    className={`flex items-center gap-md border-b border-border py-sm transition-[opacity,background-color] duration-150 ease-out last:border-0 ${
+                      draggingFieldId === f.id ? 'opacity-40' : ''
+                    }`}
+                  >
                     <FieldTypeIcon type={f.type} />
                     <div className="min-w-0 flex-1 leading-tight">
                       <span className="text-body text-text-primary">
@@ -241,6 +266,22 @@ function FieldGroupDrawer({ open, group, availableServiceIds, onCancel, onSave }
                     >
                       <Icon name="close" size={16} />
                     </button>
+                    <span
+                      role="button"
+                      aria-label="Drag to reorder"
+                      draggable
+                      onDragStart={() => {
+                        dragFieldIndex.current = extraFields.indexOf(f)
+                        setDraggingFieldId(f.id)
+                      }}
+                      onDragEnd={() => {
+                        dragFieldIndex.current = null
+                        setDraggingFieldId(null)
+                      }}
+                      className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover active:cursor-grabbing"
+                    >
+                      <Icon name="drag_indicator" size={16} />
+                    </span>
                   </div>
                 )
               ))}

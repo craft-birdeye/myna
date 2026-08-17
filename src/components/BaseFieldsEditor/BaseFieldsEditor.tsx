@@ -265,6 +265,8 @@ export function BaseFieldsEditor({ value, onChange, readOnly = false }: BaseFiel
   const [tab, setTab] = useState<'myself' | 'someone-else'>('myself')
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const dragIndex = useRef<number | null>(null)
 
   const activeList = tab === 'myself' ? value.myself : value.someoneElse
 
@@ -280,6 +282,19 @@ export function BaseFieldsEditor({ value, onChange, readOnly = false }: BaseFiel
   function startEdit(id: string) {
     setAdding(false)
     setEditingId(id)
+  }
+
+  /** Custom fields always sit after the fixed system fields — dragging can only reorder within that tail. */
+  function reorderCustomField(targetIndex: number) {
+    const from = dragIndex.current
+    if (from === null || from === targetIndex) return
+    const firstCustomIndex = activeList.findIndex((f) => !f.system)
+    if (firstCustomIndex === -1 || targetIndex < firstCustomIndex) return
+    const next = [...activeList]
+    const [moved] = next.splice(from, 1)
+    next.splice(targetIndex, 0, moved)
+    setActiveList(next)
+    dragIndex.current = targetIndex
   }
 
   return (
@@ -308,7 +323,18 @@ export function BaseFieldsEditor({ value, onChange, readOnly = false }: BaseFiel
               />
             </div>
           ) : (
-            <div key={f.id} className={`flex items-center gap-md border-b border-border py-sm last:border-0 ${readOnly ? 'opacity-60' : ''}`}>
+            <div
+              key={f.id}
+              onDragOver={(e) => {
+                if (dragIndex.current === null) return
+                e.preventDefault()
+                reorderCustomField(activeList.indexOf(f))
+              }}
+              onDrop={(e) => e.preventDefault()}
+              className={`flex items-center gap-md border-b border-border py-sm transition-[opacity,background-color] duration-150 ease-out last:border-0 ${
+                readOnly ? 'opacity-60' : ''
+              } ${draggingId === f.id ? 'opacity-40' : ''}`}
+            >
               <FieldTypeIcon type={f.type} />
               <div className="min-w-0 flex-1 leading-tight">
                 <span className="text-body text-text-primary">
@@ -346,6 +372,22 @@ export function BaseFieldsEditor({ value, onChange, readOnly = false }: BaseFiel
                       >
                         <Icon name="close" size={16} />
                       </button>
+                      <span
+                        role="button"
+                        aria-label="Drag to reorder"
+                        draggable
+                        onDragStart={() => {
+                          dragIndex.current = activeList.indexOf(f)
+                          setDraggingId(f.id)
+                        }}
+                        onDragEnd={() => {
+                          dragIndex.current = null
+                          setDraggingId(null)
+                        }}
+                        className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover active:cursor-grabbing"
+                      >
+                        <Icon name="drag_indicator" size={16} />
+                      </span>
                     </>
                   )}
                 </>
