@@ -264,7 +264,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
         { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
       ]
     : [
-        { id: 'co-workers', value: '3', label: 'Co-workers', muted: true },
+        { id: 'co-workers', value: '3', label: 'Co-workers', muted: dataState === 'empty' },
         { id: 'agents', value: String(totalAgents), label: 'Agents', muted: true },
         { id: 'time-saved', value: `~${formatTimeSaved(totalHours, dateRange)}`, label: 'Time saved', muted: true, tooltip: true },
         { id: 'cost-saved', value: `~$${totalCostK.toFixed(1)}K`, label: 'Cost saved', muted: true, tooltip: true },
