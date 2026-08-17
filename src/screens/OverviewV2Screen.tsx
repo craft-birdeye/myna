@@ -212,10 +212,45 @@ function EstimateTooltip() {
   )
 }
 
-// Shown in both states — empty state keeps its estimate framing ("~" values, muted, tooltip)
-// since nothing's running yet; filled state assumes the co-workers are live, so the same card
-// shows the real totals in full-strength black instead of grey.
-function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRange: string }) {
+// Picks the one agent+stat a section's FTU setup banner should lead with: the first time-saved
+// or cost-saved figure found across the section's agents (a real "why bother" number), falling
+// back to that agent's first stat if none of them save time or cost.
+function pickFeaturedStat(agents: V2Agent[]): { agentName: string; value: string; metricLabel: string } {
+  for (const agent of agents) {
+    const savedStat = agent.stats.find((s) => s.id === 'time-saved' || s.id === 'cost-saved')
+    if (savedStat) return { agentName: agent.name, value: savedStat.value, metricLabel: savedStat.label.toLowerCase() }
+  }
+  const [first] = agents
+  const [firstStat] = first.stats
+  return { agentName: first.name, value: firstStat.value, metricLabel: firstStat.label.toLowerCase() }
+}
+
+// FTU-only footer banner for a product section — assumes no agent is enabled yet, so it promotes
+// setting one up instead of showing the (hidden) agent rows. Bleeds edge-to-edge like the AI
+// workforce summary's own promo banner. Empty/Filled states never show this.
+function AgentSetupBanner({ icon, agentName, value, metricLabel }: { icon: string; agentName: string; value: string; metricLabel: string }) {
+  return (
+    <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md bg-ai-summary p-lg">
+      <img src={icon} alt="" className="size-9 shrink-0 rounded-full border-2 border-surface" />
+      <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+        Set up your {agentName} to save up to {value} in {metricLabel}.
+      </p>
+      <button
+        type="button"
+        className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+      >
+        Create agent
+      </button>
+    </div>
+  )
+}
+
+// Shown in all three states — Empty/FTU keep the estimate framing ("~" values, muted, tooltip)
+// since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
+// real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
+// bled to the card's top edge; Empty additionally gets a "Schedule demo" CTA that FTU omits.
+function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState; dateRange: string }) {
+  const filled = dataState === 'filled'
   const agents = getAgentDirectory('healthcare')
   const totalAgents = agents.length
   const totalHours = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
@@ -236,6 +271,26 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
       ]
   return (
     <SectionCard>
+      {!filled && (
+        <div className="-mx-xl -mt-xl flex items-center gap-lg rounded-t-md bg-ai-summary p-lg">
+          <div className="flex shrink-0 items-center">
+            <img src={jayIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
+            <img src={mynaIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+            <img src={robinIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+          </div>
+          <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+            Introducing AI co-workers - Jay, Myna and Robin. Together they can save up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up your agents and start saving today.
+          </p>
+          {dataState === 'empty' && (
+            <button
+              type="button"
+              className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              Schedule demo
+            </button>
+          )}
+        </div>
+      )}
       <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
       <div className={KPI_ROW_CLASS}>
         {stats.map((s) => (
@@ -248,24 +303,6 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
           </div>
         ))}
       </div>
-      {!filled && (
-        <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md bg-ai-summary p-lg">
-          <div className="flex shrink-0 items-center">
-            <img src={jayIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
-            <img src={mynaIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
-            <img src={robinIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
-          </div>
-          <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
-            Introducing AI co-workers - Jay, Myna and Robin. Together they can save up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up your agents and start saving today.
-          </p>
-          <button
-            type="button"
-            className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-          >
-            Schedule demo
-          </button>
-        </div>
-      )}
     </SectionCard>
   )
 }
@@ -274,8 +311,11 @@ function AiWorkforceSummaryCard({ filled, dateRange }: { filled: boolean; dateRa
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
-function FrontDeskSection({ showAgents }: { showAgents: boolean }) {
+function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean; showSetupBanner: boolean }) {
   const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
+  const featuredStat = pickFeaturedStat(
+    OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({ id: area.id, name: area.agentName, stats: area.agentOutcomes }))
+  )
 
   return (
     <SectionCard>
@@ -306,6 +346,8 @@ function FrontDeskSection({ showAgents }: { showAgents: boolean }) {
       )}
 
       <ActionNeeded stats={allHumanActions} />
+
+      {showSetupBanner && <AgentSetupBanner icon={mynaIcon} {...featuredStat} />}
     </SectionCard>
   )
 }
@@ -358,14 +400,15 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
             <DateRangeDropdown value={dateRange} onChange={setDateRange} />
           </div>
 
-          <AiWorkforceSummaryCard filled={showAgents} dateRange={dateRange} />
+          <AiWorkforceSummaryCard dataState={dataState} dateRange={dateRange} />
 
           {OVERVIEW_V2_SECTIONS.map((section) => {
             const NavIcon = SECTION_NAV_ICON[section.id]
             const isCx = CX_SECTION_IDS.has(section.id)
             const showAgentRows = showAgents && section.agents.length > 0
+            const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
             const hasBodyContent = Boolean(section.stats) || section.id === 'reviews' || showAgentRows
-            const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded)
+            const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded) || showSetupBanner
             if (!hasAnyContent) return null
             return (
               <SectionCard key={section.id}>
@@ -387,11 +430,13 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
                 )}
 
                 {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} bordered={hasBodyContent} />}
+
+                {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(section.agents)} />}
               </SectionCard>
             )
           })}
 
-          <FrontDeskSection showAgents={showAgents} />
+          <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} />
         </div>
       </div>
 
