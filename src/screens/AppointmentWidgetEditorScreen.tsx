@@ -1,6 +1,18 @@
 import { useState } from 'react'
+import birdeyeLogoUrl from '../assets/birdeye-logo.svg'
 import { BookingTemplateSelectField, Icon, Link, SimpleSelect, TopNav } from '../components'
 import { useBookingTemplateStore } from '../data/BookingTemplateStoreContext'
+
+const PREVIEW_TIME_SLOTS = [
+  '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
+  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
+]
+/** Aug 2026 grid — Aug 1 falls on a Saturday, so 6 leading blanks. */
+const PREVIEW_CALENDAR_CELLS: Array<number | null> = [
+  ...Array.from({ length: 6 }, () => null),
+  ...Array.from({ length: 31 }, (_, i) => i + 1),
+  ...Array.from({ length: 5 }, () => null),
+]
 
 interface WidgetRow {
   name: string
@@ -170,7 +182,7 @@ export function AppointmentWidgetEditorScreen({ widget, onBack, onOpenBookingTem
             <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Widget settings</h2>
             <p className="mt-xs text-small text-text-tertiary">Customize the information you want to display on the widget.</p>
 
-            <div className="mt-lg grid grid-cols-1 gap-2xl lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="mt-lg grid grid-cols-1 gap-2xl lg:grid-cols-2">
               {/* Left column — settings */}
               <div className="divide-y divide-border rounded-md border border-border">
                 {/* Widget title and description */}
@@ -281,59 +293,120 @@ export function AppointmentWidgetEditorScreen({ widget, onBack, onOpenBookingTem
               </div>
 
               {/* Right column — preview */}
-              <div className="rounded-md border border-border bg-surface-l2 p-lg lg:sticky lg:top-[140px] lg:self-start">
-                <div className="mb-md flex items-center justify-between">
-                  <h3 className="text-body text-text-primary">Preview</h3>
-                  <div className="flex items-center gap-xs">
-                    <button
-                      type="button"
-                      aria-label="Desktop preview"
-                      onClick={() => setPreviewDevice('desktop')}
-                      className={`flex size-7 items-center justify-center rounded-sm ${previewDevice === 'desktop' ? 'bg-surface-selected text-text-primary' : 'text-text-icon hover:bg-surface-hover'}`}
-                    >
-                      <Icon name="computer" size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Mobile preview"
-                      onClick={() => setPreviewDevice('mobile')}
-                      className={`flex size-7 items-center justify-center rounded-sm ${previewDevice === 'mobile' ? 'bg-surface-selected text-text-primary' : 'text-text-icon hover:bg-surface-hover'}`}
-                    >
-                      <Icon name="smartphone" size={18} />
-                    </button>
-                    <button type="button" aria-label="Expand preview" className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-                      <Icon name="open_in_full" size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className={`mx-auto rounded-md border border-border bg-surface p-lg transition-all ${previewDevice === 'mobile' ? 'max-w-[280px]' : 'max-w-full'}`}>
-                  <div className="flex items-center gap-xs text-small text-text-secondary">
-                    <Icon name="storefront" size={16} className="text-text-icon" />
-                    {widget.location}
-                  </div>
-                  <h4 className="mt-md text-h3 text-text-primary">{bookingHeader || 'Schedule a visit'}</h4>
-                  <p className="mt-xs text-small text-text-secondary">{bookingDescription}</p>
-                  <div className="mt-md flex h-9 items-center rounded-sm border border-border-input px-md text-body text-text-tertiary">
-                    Appointment type
-                  </div>
-                  <div className="mt-lg grid grid-cols-7 gap-[3px] text-center text-small text-text-tertiary">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                      <span key={i}>{d}</span>
-                    ))}
-                    {Array.from({ length: 28 }, (_, i) => (
-                      <span
-                        key={i}
-                        className={`rounded-sm py-xs ${i === 14 ? 'bg-primary text-white' : 'text-text-secondary'}`}
+              <div className="rounded-md bg-surface-l2 p-2xl">
+                <div className="lg:sticky lg:top-[140px]">
+                  <div className="mb-md flex items-center justify-between">
+                    <h3 className="text-body text-text-primary">Preview</h3>
+                    <div className="flex items-center gap-xs">
+                      <button
+                        type="button"
+                        aria-label="Desktop preview"
+                        onClick={() => setPreviewDevice('desktop')}
+                        className={`flex size-7 items-center justify-center rounded-sm ${previewDevice === 'desktop' ? 'bg-surface-selected text-text-primary' : 'text-text-icon hover:bg-surface-hover'}`}
                       >
-                        {i + 1}
-                      </span>
-                    ))}
+                        <Icon name="computer" size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Mobile preview"
+                        onClick={() => setPreviewDevice('mobile')}
+                        className={`flex size-7 items-center justify-center rounded-sm ${previewDevice === 'mobile' ? 'bg-surface-selected text-text-primary' : 'text-text-icon hover:bg-surface-hover'}`}
+                      >
+                        <Icon name="smartphone" size={18} />
+                      </button>
+                      <button type="button" aria-label="Expand preview" className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
+                        <Icon name="open_in_full" size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="mt-lg flex h-9 items-center justify-center rounded-sm bg-surface-selected text-body text-text-tertiary">
-                    Next
+
+                  <div className={`mx-auto rounded-md border border-border bg-surface p-lg transition-all ${previewDevice === 'mobile' ? 'max-w-[280px]' : 'max-w-full'}`}>
+                    {/* Brand header */}
+                    <div className="flex items-center justify-between gap-md">
+                      <div className="flex min-w-0 items-center gap-sm">
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+                          <Icon name="storefront" size={16} />
+                        </span>
+                        <span className="truncate text-body text-text-primary">{widget.location}</span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-xs">
+                        <span className="flex items-center gap-xs rounded-sm border border-border px-sm py-xs text-small text-text-secondary">
+                          <Icon name="call" size={14} className="text-text-icon" />
+                          Call
+                        </span>
+                        <span className="flex items-center gap-xs rounded-sm border border-border px-sm py-xs text-small text-text-secondary">
+                          <Icon name="mail" size={14} className="text-text-icon" />
+                          Email
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Booking fields + calendar */}
+                    <div className={`mt-lg grid grid-cols-1 gap-lg ${previewDevice === 'mobile' ? '' : 'sm:grid-cols-2'}`}>
+                      <div className="flex flex-col gap-sm">
+                        <h4 className="text-body text-text-primary">{bookingHeader || 'Schedule a visit'}</h4>
+                        <p className="text-small text-text-secondary">{bookingDescription}</p>
+                        <div className="mt-xs flex flex-col gap-sm">
+                          {['Select location', 'Appointment type', 'Provider'].map((placeholder) => (
+                            <div
+                              key={placeholder}
+                              className="flex h-9 items-center justify-between rounded-sm border border-border-input px-md text-small text-text-tertiary"
+                            >
+                              {placeholder}
+                              <Icon name="expand_more" size={16} className="text-text-icon" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between text-small text-text-primary">
+                          <button type="button" className="flex size-6 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
+                            <Icon name="chevron_left" size={16} />
+                          </button>
+                          <span>Aug 2026</span>
+                          <div className="flex items-center gap-xs">
+                            <span className="text-text-action">Today</span>
+                            <button type="button" className="flex size-6 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
+                              <Icon name="chevron_right" size={16} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-sm grid grid-cols-7 gap-[2px] text-center text-small text-text-tertiary">
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                            <span key={i}>{d}</span>
+                          ))}
+                          {PREVIEW_CALENDAR_CELLS.map((day, i) => (
+                            <span
+                              key={i}
+                              className={`rounded-sm py-xs ${day === 15 ? 'bg-primary text-white' : day ? 'text-text-secondary' : ''}`}
+                            >
+                              {day ?? ''}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-md grid grid-cols-2 gap-xs">
+                          {PREVIEW_TIME_SLOTS.map((slot) => (
+                            <span
+                              key={slot}
+                              className="rounded-sm border border-border-input py-xs text-center text-small text-text-action"
+                            >
+                              {slot}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-lg flex h-9 items-center justify-center rounded-sm bg-surface-selected text-body text-text-tertiary">
+                      Next
+                    </div>
+                    <div className="mt-sm flex items-center justify-center gap-xs text-small text-text-tertiary">
+                      <span>Powered by</span>
+                      <img src={birdeyeLogoUrl} alt="" className="size-4 shrink-0" />
+                      <span>Birdeye</span>
+                    </div>
                   </div>
-                  <p className="mt-sm text-center text-small text-text-tertiary">Powered by Birdeye</p>
                 </div>
               </div>
             </div>
