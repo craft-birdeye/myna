@@ -34,7 +34,7 @@ export function SummaryStats({ title = 'Summary', stats }: SummaryStatsProps) {
                 <span className="text-[24px] leading-8 text-text-primary">{display}</span>
                 {s.delta && (
                   <span
-                    className={`mb-[2px] text-small font-medium ${
+                    className={`mb-[2px] text-small ${
                       s.trend === 'down' ? 'text-chip-danger-text' : 'text-chip-success-text'
                     }`}
                   >

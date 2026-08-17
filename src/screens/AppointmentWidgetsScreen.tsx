@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { DataTable, HeaderSearchField, Icon, Link, TopNav } from '../components'
-import { AppointmentWidgetEditorScreen } from './AppointmentWidgetEditorScreen'
+import { DataTable, HeaderSearchField, Link, TopNav } from '../components'
+import { ArrowLeft, ChevronRight, Settings } from 'lucide-react'
 
 interface ApptWidgetRow {
   name: string
@@ -58,25 +58,13 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 
 interface AppointmentWidgetsScreenProps {
   onBack: () => void
-  onOpenBookingTemplates?: (templateId: string) => void
 }
 
-export function AppointmentWidgetsScreen({ onBack, onOpenBookingTemplates }: AppointmentWidgetsScreenProps) {
+export function AppointmentWidgetsScreen({ onBack }: AppointmentWidgetsScreenProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [toggles, setToggles] = useState<boolean[]>(TOGGLES.map(() => true))
-  const [editingWidget, setEditingWidget] = useState<ApptWidgetRow | null>(null)
-
-  if (editingWidget) {
-    return (
-      <AppointmentWidgetEditorScreen
-        widget={editingWidget}
-        onBack={() => setEditingWidget(null)}
-        onOpenBookingTemplates={onOpenBookingTemplates}
-      />
-    )
-  }
 
   const filtered = search.trim()
     ? DATA.filter(
@@ -100,16 +88,16 @@ export function AppointmentWidgetsScreen({ onBack, onOpenBookingTemplates }: App
         <Link as="button" onClick={onBack} className="text-body">
           Settings
         </Link>
-        <Icon name="chevron_right" size={16} className="text-text-tertiary" />
+        <ChevronRight className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
         <Link as="button" onClick={onBack} className="text-body">
           Widgets
         </Link>
-        <Icon name="chevron_right" size={16} className="text-text-tertiary" />
+        <ChevronRight className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
         <span className="text-body text-text-primary">Appointment widgets</span>
       </div>
 
       {/* Header bar */}
-      <div className="flex items-center justify-between bg-surface px-2xl py-xl">
+      <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
         <h1 className="text-h3 text-text-primary">{DATA.length} Appointment widgets</h1>
 
         <div className="flex items-center gap-sm">
@@ -118,13 +106,13 @@ export function AppointmentWidgetsScreen({ onBack, onOpenBookingTemplates }: App
             type="button"
             aria-label="Settings"
             onClick={() => setSettingsOpen(true)}
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
-            <Icon name="settings" size={20} />
+            <Settings className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
           <button
             type="button"
-            className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
           >
             Create widget
           </button>
@@ -137,9 +125,8 @@ export function AppointmentWidgetsScreen({ onBack, onOpenBookingTemplates }: App
           columns={COLUMNS}
           data={filtered as unknown as Record<string, unknown>[]}
           rowAction={{ icon: 'content_copy', label: 'Copy widget URL', onClick: () => {} }}
-          onRowClick={(row) => setEditingWidget(row as unknown as ApptWidgetRow)}
           rowMenuItems={[
-            { label: 'Edit',      onClick: (row) => setEditingWidget(row as unknown as ApptWidgetRow) },
+            { label: 'Edit',      onClick: () => {} },
             { label: 'Duplicate', onClick: () => {} },
             { label: 'Delete',    onClick: () => {}, variant: 'danger' },
           ]}
@@ -149,13 +136,13 @@ export function AppointmentWidgetsScreen({ onBack, onOpenBookingTemplates }: App
       {/* Settings drawer */}
       {settingsOpen && (
         <>
-          <div className="absolute inset-0 z-[200] bg-black/20" onClick={() => setSettingsOpen(false)} />
-          <div className="absolute right-0 top-0 z-[210] flex h-full w-[650px] flex-col bg-surface shadow-modal">
+          <div className="absolute inset-0 z-[200] bg-black/20 backdrop-blur-sm" onClick={() => setSettingsOpen(false)} />
+          <div className="absolute right-2 top-2 z-[210] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
             {/* Drawer header */}
             <div className="flex items-center justify-between px-2xl py-xl">
               <div className="flex items-center gap-sm">
                 <button type="button" onClick={() => setSettingsOpen(false)} className="flex items-center justify-center text-text-icon hover:text-text-primary">
-                  <Icon name="arrow_back" size={20} />
+                  <ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
                 <span className="text-h3 text-text-primary">Settings</span>
               </div>
@@ -163,7 +150,7 @@ export function AppointmentWidgetsScreen({ onBack, onOpenBookingTemplates }: App
                 <button type="button" onClick={() => setSettingsOpen(false)} className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover">
                   Cancel
                 </button>
-                <button type="button" className="flex h-9 items-center rounded-sm bg-surface-selected px-lg text-body text-text-tertiary cursor-not-allowed">
+                <button type="button" className="flex h-[34px] items-center rounded-md bg-surface-selected px-lg text-body text-text-tertiary cursor-not-allowed">
                   Save
                 </button>
               </div>

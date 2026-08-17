@@ -1,20 +1,20 @@
-import { Icon } from '../Icon/Icon'
+import { type LucideIcon } from 'lucide-react'
 
 export interface ChartCardButtonProps {
-  icon: string
+  icon: LucideIcon
   label: string
   onClick?: () => void
 }
 
-export function ChartCardButton({ icon, label, onClick }: ChartCardButtonProps) {
+export function ChartCardButton({ icon: IconComponent, label, onClick }: ChartCardButtonProps) {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex size-8 shrink-0 items-center justify-center rounded-sm border border-border-chart-btn bg-surface text-text-icon transition-colors hover:bg-surface-hover"
+      className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border-chart-btn bg-surface text-text-icon transition-colors hover:bg-surface-hover"
     >
-      <Icon name={icon} size={18} />
+      <IconComponent className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
     </button>
   )
 }

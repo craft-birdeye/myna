@@ -1,0 +1,240 @@
+/* ─── Dropdown outer wrapper ─── */
+.dropdownOuter {
+  position: relative;
+  width: 100%;
+}
+
+/* ─── Equal left/right padding on the trigger button ─── */
+.dropdownOuter :global(.tc-dropdown__trigger) {
+  padding-right: 12px;
+}
+
+/* ─── Trigger button — needed as hover ancestor for pencil icon ─── */
+.dropdownTrigger {
+  position: relative;
+}
+
+/* ─── Edit pencil icon — flex item inside trigger, left of chevron ─── */
+.editTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  color: #8f8f8f;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s, color 0.1s;
+  cursor: pointer;
+}
+
+.dropdownTrigger:hover .editTrigger {
+  opacity: 1;
+  visibility: visible;
+}
+
+.editTrigger:hover {
+  color: #1976d2;
+  background: #e8f0fd;
+}
+
+.editTriggerIcon {
+  font-size: 14px !important;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* ─── Options editor panel ─── */
+.optionsEditor {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(33, 33, 33, 0.15);
+  overflow: hidden;
+}
+
+.optionsEditorList {
+  padding: 6px 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px 3px 10px;
+}
+
+.optionInput {
+  flex: 1;
+  font-size: 13px;
+  font-family: 'Roboto', arial, sans-serif;
+  color: #212121;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  padding: 2px 0;
+  min-width: 0;
+  line-height: 18px;
+  transition: border-color 0.1s;
+}
+
+.optionInput:focus {
+  border-bottom-color: #1976d2;
+}
+
+.optionRemoveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  color: #c0c5ce;
+}
+
+.optionRemoveBtn:hover {
+  color: #de1b0c;
+  background: #fef0ef;
+}
+
+.optionRemoveBtnIcon {
+  font-size: 14px !important;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.editorFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.addOptionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Roboto', arial, sans-serif;
+  color: #1976d2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.addOptionBtn:hover {
+  text-decoration: underline;
+}
+
+.addOptionIcon {
+  font-size: 14px !important;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.applyBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: #e8f0fd;
+  cursor: pointer;
+  color: #1976d2;
+}
+
+.applyBtn:hover {
+  background: #1976d2;
+  color: #fff;
+}
+
+.applyBtnIcon {
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* ─── Connector row: AND badge + delete icon on the same line ─── */
+/* Delete icon is 8px from AND, revealed only on row hover          */
+.connectorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  color: #8f8f8f;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.connectorRow:hover .removeBtn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.removeBtn:hover {
+  color: #de1b0c;
+  background: #fef0ef;
+}
+
+.removeBtnIcon {
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* ─── Condition dropdowns: full-width column stack ─── */
+.conditionDropdowns {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

@@ -1,4 +1,5 @@
-import { Icon, Link, TopNav } from '../components'
+import { Link, TopNav } from '../components'
+import { ChevronRight } from 'lucide-react'
 import { getHealthcareIntegration } from '../data/healthcareIntegrations'
 
 interface IntegrationDetailScreenProps {
@@ -21,7 +22,7 @@ export function IntegrationDetailScreen({ integrationId, onBack }: IntegrationDe
         >
           Settings
         </Link>
-        <Icon name="chevron_right" size={16} className="text-text-icon" />
+        <ChevronRight className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
         <Link
           as="button"
           onClick={onBack}
@@ -29,7 +30,7 @@ export function IntegrationDetailScreen({ integrationId, onBack }: IntegrationDe
         >
           Integrations
         </Link>
-        <Icon name="chevron_right" size={16} className="text-text-icon" />
+        <ChevronRight className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
         <span className="text-body text-text-primary">{title}</span>
       </div>
       <div className="flex flex-1 items-center justify-center px-2xl text-body text-text-secondary">

@@ -23,6 +23,7 @@ import {
 } from '../workflow/flowLayoutConstants'
 import '../workflow/FlowCanvas/FlowCanvas.css'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
+import '../workflow/AgentBuilder/AgentBuilder.css'
 
 interface RunDetailViewProps {
   row: HealthcareLogRow
@@ -407,6 +408,34 @@ function getExecutedNodeIds(
   return ids
 }
 
+/* ── View-only / Edit switch — log canvas chrome (no Run test) ── */
+function LogViewWorkflowChrome({ onEdit }: { onEdit?: () => void }) {
+  return (
+    <div className="log-view-workflow-chrome">
+      <div className="rr-chrome-mode-switch" role="group" aria-label="Workflow mode">
+        <button
+          type="button"
+          className="rr-chrome-mode-btn rr-chrome-mode-btn--active"
+          aria-current="true"
+          aria-label="View-only"
+        >
+          <span className="material-symbols-outlined" aria-hidden>visibility</span>
+          <span>View-only</span>
+        </button>
+        <button
+          type="button"
+          className="rr-chrome-mode-btn"
+          onClick={onEdit}
+          aria-label="Edit"
+        >
+          <span className="material-symbols-outlined" aria-hidden>edit</span>
+          <span>Edit</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ── run canvas — same AgentBuilder viewer as the Workflow tab, executed nodes in green ── */
 function AgentWorkflowRunCanvas({
   instanceName,
@@ -436,21 +465,30 @@ function AgentWorkflowRunCanvas({
   return (
     <div className="run-wf-bg absolute inset-0 overflow-hidden">
       <style>{`
-        /* Dot grid spans the full run view, including under the details panel */
-        .run-wf-bg { background-color: #f8f9fb; background-image: radial-gradient(circle, #c8cdd8 1px, transparent 1px); background-size: 28px 28px; }
-        /* Canvas itself stays clear of the overlaid 600px details panel */
-        .run-wf-viewer { height: 100%; width: calc(100% - 600px); }
+        .run-wf-bg { background-color: #f2f4f7; }
+        /* Canvas stays clear of the overlaid details panel — must match the 480px float wrap
+           in PreviewPanel.css (this previously reserved 600px against a 550px wrap). */
+        .run-wf-viewer { height: 100%; width: calc(100% - 480px); }
         .run-wf-viewer .agent-builder__lhs    { display: none !important; }
         .run-wf-viewer .faq-ab-header         { display: none !important; }
-        .run-wf-viewer .ab-view-banner        { display: none !important; }
         .run-wf-viewer .faq-ab-embedded       { height: 100% !important; }
         .run-wf-viewer .agent-builder-wrapper { background: transparent !important; background-image: none !important; }
         .run-wf-viewer .agent-builder         { padding: 0 !important; gap: 0 !important; }
-        .run-wf-viewer .flow-canvas__toolbar-anchor { top: 16px !important; }
-        /* Hide orientation toggle — view-only run context */
+        /* Bottom-left zoom floater — same as Workflow tab. */
+        .run-wf-viewer .flow-canvas__toolbar-anchor--rr-chrome {
+          top: auto !important;
+          bottom: 16px !important;
+          left: 16px !important;
+          right: 16px !important;
+          display: flex !important;
+          transform: none !important;
+          z-index: 50;
+        }
+        .run-wf-viewer .graph-controls--rr-chrome { display: flex !important; }
         .run-wf-viewer .graph-controls__toggle { display: none !important; }
-        /* No add-step buttons on edges — run views are read-only history */
         .run-wf-viewer .flow-canvas__edge-add  { display: none !important; }
+        /* Logs are a historical run — no Run test. */
+        .run-wf-viewer .rr-chrome-run-test { display: none !important; }
         ${executedCss}
       `}</style>
       <div className="run-wf-viewer">
@@ -459,6 +497,7 @@ function AgentWorkflowRunCanvas({
           pageTitle={instanceName}
           appTitle={instanceName}
           viewOnly
+          viewChromeActions
           product={product ?? 'healthcare'}
           moduleSlug="myna"
           moduleContext="myna"
@@ -470,7 +509,7 @@ function AgentWorkflowRunCanvas({
           defaultOpenSection="Tasks"
           initialZoom={0.85}
           onEdit={onEditWorkflow}
-          runDisabled
+          nodesInteractive={false}
         />
       </div>
     </div>
@@ -481,9 +520,11 @@ function AgentWorkflowRunCanvas({
 function WorkflowCanvas({
   instanceName,
   implementedSteps,
+  onEditWorkflow,
 }: {
   instanceName: string
   implementedSteps: LogStepId[]
+  onEditWorkflow?: () => void
 }) {
   const triggerImplemented = implementedSteps.includes('trigger')
   const proceduresImplemented = implementedSteps.includes('procedures')
@@ -491,20 +532,18 @@ function WorkflowCanvas({
 
   return (
     <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
-      <div
-        className="flow-canvas__toolbar-anchor"
-        style={{ left: 'calc((100% - 620px) / 2)' }}
-      >
+      <div className="log-view-workflow-chrome-anchor">
+        <LogViewWorkflowChrome onEdit={onEditWorkflow} />
+      </div>
+
+      <div className="log-view-zoom-anchor">
         <GraphControls
+          rrChrome
           viewOnly
-          runDisabled
           zoom={zoom}
-          onRun={() => {}}
-          onEdit={() => {}}
-          onView={() => {}}
-          onOrientationChange={() => {}}
           onZoomSelect={(fraction: number) => setZoom(Math.round(fraction * 100))}
-          onFitView={() => {}}
+          onFitView={() => setZoom(85)}
+          onFillView={() => setZoom(100)}
         />
       </div>
 
@@ -586,8 +625,61 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
   const useRunDetailsPanel = isReminder || isReviewAgent
 
   return (
-    <div className="relative flex h-full flex-col bg-surface">
-      {/* Header — title + status chip with agent name subtitle (matches recommendation detail) */}
+    <div className="log-detail-view relative flex h-full flex-col bg-surface">
+      {/* Visual chrome shared by both canvas paths (AgentBuilder run canvas and the plain
+          WorkflowCanvas) so every agent's log view looks identical, whatever data it shows.
+          Scoped to .log-detail-view — .flow-canvas is shared with the workflow editor. */}
+      <style>{`
+        .log-detail-view .flow-canvas,
+        .log-detail-view .run-wf-bg,
+        .log-detail-view .agent-builder-wrapper {
+          background-color: #f2f4f7 !important;
+          background-image: none !important;
+        }
+        /* Centered View-only/Edit + Run test chrome (fallback WorkflowCanvas path). */
+        .log-detail-view .log-view-workflow-chrome-anchor {
+          /* Center in the visible canvas (full width minus the 480px details panel),
+             same optical center as the Workflow tab chrome. */
+          position: absolute;
+          top: 16px;
+          left: calc((100% - 480px) / 2);
+          transform: translateX(-50%);
+          z-index: 60;
+          pointer-events: none;
+        }
+        .log-detail-view .log-view-workflow-chrome {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          pointer-events: auto;
+        }
+        /* Bottom-left zoom floater (fallback WorkflowCanvas path). */
+        .log-detail-view .log-view-zoom-anchor {
+          position: absolute;
+          bottom: 16px;
+          left: 16px;
+          z-index: 50;
+          pointer-events: none;
+        }
+        .log-detail-view .log-view-zoom-anchor .graph-controls--rr-chrome {
+          width: auto;
+          pointer-events: none;
+        }
+        .log-detail-view .log-view-zoom-anchor .graph-controls__rr-zoom {
+          pointer-events: auto;
+        }
+
+        /* Node cards are a read-only record here — fully inert: no pointer, no hover
+           affordances, no selection ring. Clicks are already a no-op via nodesInteractive. */
+        .log-detail-view .canvas-node-wrap,
+        .log-detail-view .canvas-node,
+        .log-detail-view .react-flow__node { cursor: default !important; }
+        .log-detail-view .canvas-node__hover-actions { display: none !important; }
+        .log-detail-view .canvas-node--hover,
+        .log-detail-view .canvas-node--selected { border-color: transparent !important; }
+      `}</style>
+
+      {/* Header — title + status chip with agent name subtitle */}
       <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
         <button
           type="button"
@@ -599,7 +691,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-sm">
-            <h1 className="text-h3 text-text-primary">Log - {row.timestamp}</h1>
+            <h1 className="min-w-0 truncate text-h3 text-text-primary">Log - {row.timestamp}</h1>
             <Chip label={row.status} variant={statusVariant} />
           </div>
           <p className="mt-xs text-small text-text-secondary">{instanceName}</p>
@@ -619,6 +711,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
           <WorkflowCanvas
             instanceName={canvasInstanceName}
             implementedSteps={getImplementedSteps(row)}
+            onEditWorkflow={onEditAgent}
           />
         )}
 

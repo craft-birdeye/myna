@@ -1,6 +1,6 @@
 import { DateChange } from '../DateChange/DateChange'
-import { Icon } from '../Icon/Icon'
 import { AppointmentTimescale, AppointmentView, PageHeaderProps } from './PageHeader.types'
+import { CalendarDays, ChevronDown, Columns3, ListFilter, Rows3 } from 'lucide-react'
 
 function ViewToggle({
   view,
@@ -11,7 +11,7 @@ function ViewToggle({
 }) {
   const base = 'flex size-6 items-center justify-center rounded-sm transition-colors'
   return (
-    <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
+    <div className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-sm">
       <button
         type="button"
         aria-label="Table view"
@@ -20,7 +20,7 @@ function ViewToggle({
           view === 'table' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
         }`}
       >
-        <Icon name="table_rows" size={18} />
+        <Rows3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       <button
         type="button"
@@ -30,7 +30,7 @@ function ViewToggle({
           view === 'calendar' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
         }`}
       >
-        <Icon name="calendar_month" size={18} />
+        <CalendarDays className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
     </div>
   )
@@ -45,7 +45,7 @@ function TimescaleToggle({
 }) {
   const base = 'px-sm py-xs text-body rounded-sm transition-colors'
   return (
-    <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-xs">
+    <div className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-xs">
       <button
         type="button"
         onClick={() => onTimescaleChange?.('day')}
@@ -93,10 +93,10 @@ export function PageHeader({
           <button
             type="button"
             onClick={onStatusClick}
-            className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2"
+            className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2"
           >
             {statusLabel}
-            <Icon name="expand_more" size={20} className="text-text-icon" />
+            <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         )}
 
@@ -110,7 +110,7 @@ export function PageHeader({
           <button
             type="button"
             onClick={onPrimaryAction}
-            className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
           >
             {primaryActionLabel}
           </button>
@@ -121,9 +121,9 @@ export function PageHeader({
             type="button"
             aria-label="Customize columns"
             onClick={onCustomizeColumns}
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
-            <Icon name="view_column" size={20} />
+            <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         )}
 
@@ -131,9 +131,9 @@ export function PageHeader({
           type="button"
           aria-label="Filters"
           onClick={onFilter}
-          className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+          className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
         >
-          <Icon name="filter_list" size={20} />
+          <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
     </div>

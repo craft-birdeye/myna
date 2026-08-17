@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
+import { ListFilter } from 'lucide-react'
 import {
   ChartCard,
   DataTable,
   DateRangeSelector,
   DonutChart,
   FilterPanel,
-  Icon,
   ReportHeader,
   SankeyChart,
   StackedBarChart,
@@ -151,8 +151,8 @@ export function DentalRevenueScreen() {
                   onChange={setDateRange}
                 />
                 <button type="button" aria-label="Filters" onClick={() => setFilterOpen(o => !o)}
-                  className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                  <Icon name="filter_list" size={20} />
+                  className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                  <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
             }

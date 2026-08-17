@@ -2,7 +2,11 @@ export { CoachAgentPanel } from './CoachAgentPanel/CoachAgentPanel'
 export type { CoachAgentPanelProps } from './CoachAgentPanel/CoachAgentPanel.types'
 export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
 export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
+export { AiBuilderPanel } from './AiBuilderPanel/AiBuilderPanel'
+export type { AiBuilderPanelProps } from './AiBuilderPanel/AiBuilderPanel.types'
 export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
+export { TestRunPanel } from './TestRunPanel/TestRunPanel'
+export type { TestRunPanelProps, TestRunStepStatus } from './TestRunPanel/TestRunPanel.types'
 export type {
   RunConversationEntry,
   RunDetailsPanelProps,
@@ -27,7 +31,7 @@ export { EmptyState } from './EmptyState/EmptyState'
 export type { EmptyStateProps } from './EmptyState/EmptyState.types'
 export { InfoTooltip } from './InfoTooltip/InfoTooltip'
 export { Tooltip } from './Tooltip/Tooltip'
-export type { TooltipProps, TooltipVariant } from './Tooltip/Tooltip.types'
+export type { TooltipProps, TooltipVariant, TooltipSide } from './Tooltip/Tooltip.types'
 export {
   VoiceCallEngineSettings,
   TtsModelSettings,
@@ -46,6 +50,7 @@ export {
   AGENT_VOICE_OPTIONS,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
 } from './VoiceSettingsDrawers/VoiceSettingsDrawers'
 export type {
   AdditionalVoiceConfig,
@@ -79,6 +84,8 @@ export type { IntegrationSelectCardProps } from './IntegrationSelectCard/Integra
 export { IntakeFormPreviewDrawer } from './IntakeFormPreviewDrawer/IntakeFormPreviewDrawer'
 export { InfoCard } from './InfoCard/InfoCard'
 export { InfoCardListItem } from './InfoCard/InfoCardListItem'
+export { LibraryCardIcon } from './LibraryCardIcon/LibraryCardIcon'
+export type { LibraryCardGlyph, LibraryCardTone } from './LibraryCardIcon/LibraryCardIcon'
 export { Link } from './Link/Link'
 export { LogDetailsPanel } from './LogDetailsPanel/LogDetailsPanel'
 export type {
@@ -112,8 +119,31 @@ export { QuickSendModal } from './QuickSendModal/QuickSendModal'
 export { Toast } from './Toast/Toast'
 export { ShareFeedbackModal } from './ShareFeedbackModal/ShareFeedbackModal'
 export type { ShareFeedbackModalProps } from './ShareFeedbackModal/ShareFeedbackModal.types'
-export { EstimateSavingsModal } from './EstimateSavingsModal/EstimateSavingsModal'
-export type { EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { EstimateSavingsModal, REVIEW_RESPONSE_SAVINGS_COPY, parseTimeSavedHours } from './EstimateSavingsModal/EstimateSavingsModal'
+export type { EstimateSavingsCopy, EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { AgentsIntroVideoModal } from './AgentsIntroVideoModal/AgentsIntroVideoModal'
+export type { AgentsIntroVideoModalProps } from './AgentsIntroVideoModal/AgentsIntroVideoModal.types'
+export { WorkflowCoachTour } from './WorkflowCoachTour/WorkflowCoachTour'
+export { WORKFLOW_COACH_STEPS } from './WorkflowCoachTour/WorkflowCoachTour.types'
+export type {
+  WorkflowCoachTourProps,
+  WorkflowCoachStep,
+  WorkflowCoachPlacement,
+} from './WorkflowCoachTour/WorkflowCoachTour.types'
+export { HelpCenterPanel } from './HelpCenterPanel/HelpCenterPanel'
+export type {
+  HelpCenterPanelProps,
+  HelpCenterView,
+  HelpVideoItem,
+  HelpTourItem,
+  HelpArticleItem,
+} from './HelpCenterPanel/HelpCenterPanel.types'
+export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
+export type {
+  AgentLibraryPreviewData,
+  AgentLibraryPreviewModalProps,
+  AgentLibraryPreviewStep,
+} from './AgentLibraryPreviewModal/AgentLibraryPreviewModal.types'
 export { ViewActivityDrawer } from './ViewActivityDrawer/ViewActivityDrawer'
 export { WeekCalendar } from './WeekCalendar/WeekCalendar'
 export { DayCalendar } from './DayCalendar/DayCalendar'

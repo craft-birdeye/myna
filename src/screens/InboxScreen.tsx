@@ -619,11 +619,11 @@ function ConversationManagedPanel() {
           <p className="mt-xs text-body text-text-secondary">Insights into conversation management outcomes across different channels and locations</p>
         </div>
         <div className="flex items-center gap-sm">
-          <button type="button" className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
+          <button type="button" className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-l2">
             <Icon name="calendar_today" size={16} className="text-text-icon" />
             Last 3 months
           </button>
-          <button type="button" className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+          <button type="button" className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
             <Icon name="filter_list" size={20} />
           </button>
         </div>
@@ -779,6 +779,7 @@ export function InboxScreen({
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
+  const [inboxAiBuilderPanelOpen, setInboxAiBuilderPanelOpen] = useState(false)
   // Maps a chat-bubble message id to the recommendation id its feedback landed on, once known —
   // that bubble's "Coach agent" link switches to "Track your feedback" pointing at it.
   const [recIdByMessage, setRecIdByMessage] = useState<Record<string, string>>({})
@@ -960,10 +961,22 @@ export function InboxScreen({
           <WorkflowEditorScreen
             agentName={editingAgentName}
             product="healthcare"
-            onClose={() => setEditingAgentName(null)}
+            onClose={() => {
+              setEditingAgentName(null)
+              setInboxAiBuilderPanelOpen(false)
+            }}
+            aiBuilderPanelOpen={inboxAiBuilderPanelOpen}
+            onAiBuilderPanelOpenChange={setInboxAiBuilderPanelOpen}
           />
         ) : activeNav === 'tagging-routing-agent' ? (
-          <AgentDetailScreen agentName="Tagging & routing agent" product="healthcare" onEditAgent={setEditingAgentName} />
+          <AgentDetailScreen
+            agentName="Tagging & routing agent"
+            product="healthcare"
+            onEditAgent={(name) => {
+              setInboxAiBuilderPanelOpen(false)
+              setEditingAgentName(name)
+            }}
+          />
         ) : (
         <>
         <TopNav initials="S" />
@@ -975,7 +988,16 @@ export function InboxScreen({
           {/* Middle panel — conversation list */}
           <div className="flex w-[370px] shrink-0 flex-col border-r border-border">
             <div className="shrink-0 border-b border-border bg-surface px-lg pt-lg pb-md transition-colors focus-within:border-primary">
-              {searchOpen ? (
+              {isInternalChat ? (
+                <div className="flex items-center justify-end gap-sm">
+                  <button type="button" aria-label="Search" className="flex size-9 items-center justify-center text-text-icon hover:text-text-primary">
+                    <Icon name="search" size={20} />
+                  </button>
+                  <button type="button" className="flex h-9 items-center rounded-sm bg-[#4CAE3D] px-lg text-body text-white hover:opacity-90">
+                    New
+                  </button>
+                </div>
+              ) : searchOpen ? (
                 <div className="flex h-9 items-center gap-xs">
                   <Icon name="search" size={20} className="shrink-0 text-text-icon" />
                   <input

@@ -1,0 +1,106 @@
+/* Inline chips inside contentEditable prompt areas — matches OptionDataType SVG design */
+
+.prompt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 1px 5px 1px 0;
+  background: #fff;
+  border: 1px solid #d1e5f9;
+  border-radius: 4px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin: 0 2px;
+  cursor: default;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+/* Left swatch: blue tint + right divider */
+.prompt-chip-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 22px;
+  background: #ecf5fd;
+  border-right: 1px solid #d1e5f9;
+  flex-shrink: 0;
+}
+
+.prompt-chip-swatch svg {
+  display: block;
+}
+
+.prompt-chip-label {
+  font-size: 12px;
+  line-height: 16px;
+  color: #555;
+  white-space: nowrap;
+  font-family: 'Inter', 'Roboto', sans-serif;
+}
+
+.prompt-chip-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.prompt-chip--editing {
+  border-color: #1976d2;
+}
+
+.prompt-chip-input {
+  font-size: 12px;
+  color: #555;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  min-width: 40px;
+  max-width: 120px;
+  padding: 0;
+  width: 80px;
+  line-height: 16px;
+}
+
+.prompt-chip-input::placeholder {
+  color: #bbb;
+}
+
+/* ─── Per-type chip variants ─── */
+
+.prompt-chip--attachment { border-color: #c8e6c9; }
+.prompt-chip--link       { border-color: #f48fb1; }
+.prompt-chip--address    { border-color: #9fa8da; }
+.prompt-chip--product    { border-color: #ffe082; }
+
+.prompt-chip-swatch--attachment { background: #e8f5e9; border-right-color: #c8e6c9; }
+.prompt-chip-swatch--link       { background: #fce4ec; border-right-color: #f48fb1; }
+.prompt-chip-swatch--address    { background: #e8eaf6; border-right-color: #9fa8da; }
+.prompt-chip-swatch--product    { background: #fff8e1; border-right-color: #ffe082; }
+
+/* Material icon inside swatch */
+.prompt-chip-mat-icon {
+  font-family: 'Material Symbols Outlined';
+  font-size: 13px;
+  line-height: 1;
+  display: block;
+  font-weight: normal;
+  font-style: normal;
+}
+
+.prompt-chip-swatch--attachment .prompt-chip-mat-icon { color: #2e7d32; }
+.prompt-chip-swatch--link       .prompt-chip-mat-icon { color: #c2185b; }
+.prompt-chip-swatch--address    .prompt-chip-mat-icon { color: #3949ab; }
+.prompt-chip-swatch--product    .prompt-chip-mat-icon { color: #f57f17; }

@@ -40,6 +40,27 @@ type DraftStore = Record<string, CreateAiDraftSession>
 let memoryStore: Store = readStore()
 let draftMemoryStore: DraftStore = readDraftStore()
 
+type DraftListener = (agentKey: string) => void
+const draftListeners = new Set<DraftListener>()
+
+function notifyDraftListeners(agentKey: string) {
+  draftListeners.forEach((listener) => {
+    try {
+      listener(agentKey)
+    } catch {
+      // Ignore subscriber errors so one bad listener can't break writers.
+    }
+  })
+}
+
+/** Subscribe to Create-with-AI draft trail writes (LHS create flow ↔ AI Builder panel). */
+export function subscribeCreateAiDraft(listener: DraftListener): () => void {
+  draftListeners.add(listener)
+  return () => {
+    draftListeners.delete(listener)
+  }
+}
+
 function readStore(): Store {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY)
@@ -110,6 +131,14 @@ export function getCreateAiDraftSession(agentKey: string): CreateAiDraftSession 
 
 export function setCreateAiDraftTrail(agentKey: string, trail: CreateChatTurn[]): CreateAiDraftSession {
   const key = normalizeAgentKey(agentKey)
+  const existing = getCreateAiDraftSession(agentKey)
+  if (
+    existing &&
+    existing.trail.length === trail.length &&
+    JSON.stringify(existing.trail) === JSON.stringify(trail)
+  ) {
+    return existing
+  }
   const next: CreateAiDraftSession = {
     agentKey: key,
     trail,
@@ -117,6 +146,7 @@ export function setCreateAiDraftTrail(agentKey: string, trail: CreateChatTurn[])
   }
   draftMemoryStore = { ...readDraftStore(), ...draftMemoryStore, [key]: next }
   writeDraftStore(draftMemoryStore)
+  notifyDraftListeners(key)
   return next
 }
 
@@ -134,6 +164,7 @@ export function clearCreateAiDraftSession(agentKey: string) {
   delete store[key]
   draftMemoryStore = store
   writeDraftStore(draftMemoryStore)
+  notifyDraftListeners(key)
 }
 
 /** Prefer an in-progress LHS draft; fall back to the last saved create chat. */

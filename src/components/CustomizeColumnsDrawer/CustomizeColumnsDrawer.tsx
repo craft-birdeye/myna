@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Icon } from '../Icon/Icon'
 import { BackArrowIcon } from '../../assets/BackArrowIcon'
 import { ColumnOption, CustomizeColumnsDrawerProps } from './CustomizeColumnsDrawer.types'
+import { Check, GripVertical, Search } from 'lucide-react'
 
 interface DraftItem extends ColumnOption {
   checked: boolean
@@ -18,7 +18,7 @@ function Checkbox({ checked, disabled }: { checked: boolean; disabled?: boolean 
           : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
+      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
     </span>
   )
 }
@@ -85,15 +85,15 @@ export function CustomizeColumnsDrawer({
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${
+        className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-200 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
       />
 
       {/* Panel */}
       <aside
-        className={`absolute right-0 top-0 flex h-full w-[650px] max-w-[92vw] flex-col bg-surface shadow-dropdown transition-transform duration-200 ${
-          open ? 'translate-x-0' : 'translate-x-full'
+        className={`absolute right-2 top-2 flex h-[calc(100%-16px)] w-[650px] max-w-[calc(92vw-8px)] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal transition-transform duration-200 ${
+          open ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'
         }`}
       >
         {/* Header */}
@@ -103,7 +103,7 @@ export function CustomizeColumnsDrawer({
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
             >
               <BackArrowIcon />
             </button>
@@ -122,7 +122,7 @@ export function CustomizeColumnsDrawer({
             <button
               type="button"
               onClick={save}
-              className="rounded-sm bg-primary px-lg py-[7px] text-body font-medium text-white transition-colors hover:bg-primary-hover"
+              className="rounded-md bg-primary px-lg py-[7px] text-body font-medium text-white transition-colors hover:bg-primary-hover"
             >
               Save
             </button>
@@ -136,8 +136,8 @@ export function CustomizeColumnsDrawer({
           </p>
 
           {/* Search */}
-          <div className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md">
-            <Icon name="search" size={20} className="text-text-icon" />
+          <div className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
+            <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -163,7 +163,7 @@ export function CustomizeColumnsDrawer({
                   }}
                   onDragEnd={() => (dragIndex.current = null)}
                   onClick={() => toggle(item.key)}
-                  className={`flex h-[38px] items-center gap-[9px] rounded-sm border border-border-selected px-md transition-colors ${
+                  className={`flex h-[38px] items-center gap-[9px] rounded-md border border-border-selected px-md transition-colors ${
                     item.locked ? 'cursor-default' : 'cursor-pointer hover:bg-surface-hover'
                   }`}
                 >
@@ -172,11 +172,7 @@ export function CustomizeColumnsDrawer({
                     {item.label}
                   </span>
                   {!item.locked && (
-                    <Icon
-                      name="drag_indicator"
-                      size={16}
-                      className={`shrink-0 text-text-icon ${draggable ? 'cursor-grab' : ''}`}
-                    />
+                    <GripVertical className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                   )}
                 </div>
               )

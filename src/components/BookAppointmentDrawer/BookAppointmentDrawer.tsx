@@ -3,10 +3,10 @@ import { BackArrowIcon } from '../../assets/BackArrowIcon'
 import iconGoogle from '../../assets/icon-google.svg'
 import iconIcal from '../../assets/icon-ical.svg'
 import iconOutlook from '../../assets/icon-outlook.svg'
-import { Icon } from '../Icon/Icon'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
 import { DatePickerModal } from '../DatePickerModal/DatePickerModal'
 import { BookAppointmentDrawerProps } from './BookAppointmentDrawer.types'
+import { ChevronDown, ChevronUp, Phone } from 'lucide-react'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -151,7 +151,7 @@ function TextInput({ value, onChange, placeholder = 'Enter input' }: {
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-9 w-full rounded-sm border border-border-selected bg-surface px-[12px] text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
+      className="h-[34px] w-full rounded-md border border-border-selected bg-surface px-[12px] text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none"
     />
   )
 }
@@ -163,12 +163,12 @@ function DropdownButton({ value, open, onClick, placeholder = 'Select' }: {
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-[12px] pr-sm hover:bg-surface-l2 ${open ? 'border-primary' : 'border-border-selected'}`}
+      className={`flex h-[34px] w-full items-center gap-sm rounded-md border bg-surface pl-[12px] pr-sm hover:bg-surface-l2 ${open ? 'border-primary' : 'border-border-selected'}`}
     >
       <span className={`min-w-0 flex-1 truncate text-left text-body ${value ? 'text-text-primary' : 'text-text-tertiary'}`}>
         {value || placeholder}
       </span>
-      <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+      <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
     </button>
   )
 }
@@ -187,7 +187,7 @@ const Accordion = forwardRef<HTMLDivElement, {
         className="flex w-full items-center justify-between py-[14px] pr-sm"
       >
         <span className="text-body text-text-primary">{title}</span>
-        <Icon name={open ? 'expand_less' : 'expand_more'} size={20} className="shrink-0 text-text-icon" />
+        {open ? <ChevronUp className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
       </button>
       {open && (
         <div className="pb-[16px]">
@@ -327,12 +327,12 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
     <div className={`fixed inset-0 z-[100] ${open ? '' : 'pointer-events-none'}`} aria-hidden={!open}>
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/20 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
       />
 
       <aside
-        className={`absolute right-0 top-0 flex h-full w-[650px] max-w-[92vw] flex-col bg-surface shadow-dropdown transition-transform duration-200 ${
-          open ? 'translate-x-0' : 'translate-x-full'
+        className={`absolute right-2 top-2 flex h-[calc(100%-16px)] w-[650px] max-w-[calc(92vw-8px)] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal transition-transform duration-200 ${
+          open ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'
         }`}
       >
         {/* Header */}
@@ -342,7 +342,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
               type="button"
               aria-label="Back"
               onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
             >
               <BackArrowIcon />
             </button>
@@ -387,14 +387,14 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
                 ref={widgetBtnRef}
                 type="button"
                 onClick={openWidgetMenu}
-                className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
+                className={`flex h-[34px] w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
                   widgetMenuOpen ? 'border-primary' : 'border-border-selected'
                 }`}
               >
                 <span className={`min-w-0 flex-1 truncate text-left text-body ${widget ? 'text-text-primary' : 'text-text-tertiary'}`}>
                   {widget || 'Select'}
                 </span>
-                <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+                <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
 
@@ -466,11 +466,11 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
                     {/* Phone number */}
                     <div className="flex flex-col gap-xs">
                       <FieldLabel label="Phone number" required />
-                      <div className="flex h-9 w-full items-center rounded-sm border border-border-selected bg-surface focus-within:border-primary">
+                      <div className="flex h-[34px] w-full items-center rounded-md border border-border-selected bg-surface focus-within:border-primary">
                         <div className="flex shrink-0 items-center gap-[4px] border-r border-border-selected px-[12px]">
-                          <Icon name="call" size={20} className="text-text-icon" />
+                          <Phone className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                           <span className="text-body text-text-primary">+1</span>
-                          <Icon name="expand_more" size={16} className="text-text-tertiary" />
+                          <ChevronDown className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
                         </div>
                         <input
                           type="tel"

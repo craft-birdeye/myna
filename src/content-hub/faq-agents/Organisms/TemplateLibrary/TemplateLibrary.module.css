@@ -1,0 +1,224 @@
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card {
+  position: relative;
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.cardBody {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.description {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.clampTitle,
+.clampDescription {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+.clampTitle {
+  -webkit-line-clamp: 2;
+}
+
+.clampDescription {
+  -webkit-line-clamp: 4;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── Hover-reveal button (Use agent + menu trigger) ─── */
+.useAgentBtn,
+.hoverBtn {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.card:hover .useAgentBtn,
+.card:hover .hoverBtn,
+.row:hover .useAgentBtn,
+.row:hover .hoverBtn {
+  opacity: 1;
+}
+
+/* ─── Template form ─── */
+.form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* ─── Add template card ─── */
+.addCard {
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  gap: 8px;
+}
+
+.addCard:hover {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+.addIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ─── List view ─── */
+.list {
+  width: 100%;
+}
+
+.listHeader {
+  display: flex;
+  height: 40px;
+  align-items: center;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.listHeaderName {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+  transition: background 0.1s;
+}
+
+.row:hover {
+  background: var(--muted);
+}
+
+.rowBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowTitle,
+.rowDescription {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowTitle {
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.rowDescription {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── See more ─── */
+.seeMore {
+  align-self: center;
+  padding: 5px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 20px;
+  transition: background 0.12s;
+}
+
+.seeMore:hover {
+  background: var(--muted);
+}
+
+/* ─── View-only mode ─── */
+.rowViewOnly {
+  cursor: default;
+}

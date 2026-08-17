@@ -33,16 +33,18 @@
   font-size: 12px;
   font-weight: 400;
   line-height: 1.5;
-  color: #212121;
+  color: #757575;
 }
 
 .trigger-conditions__card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 12px;
   background: #f2f4f7;
-  border-radius: 4px;
+  border-radius: 12px;
   width: 100%;
 }
 
@@ -51,6 +53,10 @@
   flex-direction: column;
   gap: 8px;
   width: 100%;
+}
+
+.trigger-conditions__conditions:empty {
+  display: none;
 }
 
 .trigger-conditions__condition {
@@ -261,7 +267,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 40px;
+  height: 32px;
   padding: 0;
   background: none;
   border: none;
@@ -273,6 +279,7 @@
   letter-spacing: -0.28px;
   color: #1976d2;
   white-space: nowrap;
+  align-self: flex-start;
 }
 
 .trigger-conditions__add-btn:hover {

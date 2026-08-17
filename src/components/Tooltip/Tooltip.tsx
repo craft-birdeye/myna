@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { TooltipProps } from './Tooltip.types'
 
 const VARIANT_MAX_WIDTH = {
@@ -8,13 +9,18 @@ const VARIANT_MAX_WIDTH = {
 
 const HIDE_DELAY_MS = 120
 const TRANSITION_MS = 120
+const OFFSET_BOTTOM_PX = 8
+/** Gap from trigger edge to bubble; caret sits in this space. */
+const OFFSET_RIGHT_PX = 6
 
 export function Tooltip({
   content,
   variant = 'detail',
+  side = 'bottom',
   children,
   className = '',
   interactive = false,
+  disabled = false,
 }: TooltipProps) {
   // `mounted` keeps the bubble in the DOM through the fade-out; `entered` toggles
   // the opacity/scale classes that drive the ease-in/ease-out transition.
@@ -42,15 +48,24 @@ export function Tooltip({
   }
 
   function show() {
-    if (!triggerRef.current) return
+    if (disabled || !triggerRef.current) return
     clearHideTimer()
     clearRaf()
     if (unmountTimerRef.current) {
       clearTimeout(unmountTimerRef.current)
       unmountTimerRef.current = null
     }
-    const r = triggerRef.current.getBoundingClientRect()
-    setPos({ x: r.left + r.width / 2, y: r.bottom + 8 })
+    // Prefer the interactive child (button/icon) so we hug the glyph, not a wider wrapper.
+    const anchor =
+      (triggerRef.current.firstElementChild as HTMLElement | null) ?? triggerRef.current
+    const r = anchor.getBoundingClientRect()
+    if (side === 'right') {
+      setPos({ x: r.right + OFFSET_RIGHT_PX, y: r.top + r.height / 2 })
+    } else if (side === 'top') {
+      setPos({ x: r.left + r.width / 2, y: r.top - OFFSET_BOTTOM_PX })
+    } else {
+      setPos({ x: r.left + r.width / 2, y: r.bottom + OFFSET_BOTTOM_PX })
+    }
     setMounted(true)
     // Double rAF: setMounted and this call both happen inside the same mouseenter
     // handler, so a single rAF can land in the same paint and skip the transition
@@ -86,6 +101,35 @@ export function Tooltip({
   }, [])
 
   useEffect(() => {
+    if (!mounted) return
+
+    function reposition() {
+      if (!triggerRef.current) return
+      const anchor =
+        (triggerRef.current.firstElementChild as HTMLElement | null) ?? triggerRef.current
+      const r = anchor.getBoundingClientRect()
+      if (side === 'right') {
+        setPos({ x: r.right + OFFSET_RIGHT_PX, y: r.top + r.height / 2 })
+      } else if (side === 'top') {
+        setPos({ x: r.left + r.width / 2, y: r.top - OFFSET_BOTTOM_PX })
+      } else {
+        setPos({ x: r.left + r.width / 2, y: r.bottom + OFFSET_BOTTOM_PX })
+      }
+    }
+
+    function onScroll() {
+      hide()
+    }
+
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [mounted, side])
+
+  useEffect(() => {
     if (!interactive || !mounted) return
 
     function onPointerDown(e: MouseEvent) {
@@ -99,6 +143,43 @@ export function Tooltip({
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [interactive, mounted])
 
+  useEffect(() => {
+    if (disabled && mounted) hide()
+    // hide is stable enough for this effect; only react to disabled flipping on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled])
+
+  const transform =
+    side === 'right'
+      ? `translateY(-50%) scale(${entered ? 1 : 0.95})`
+      : side === 'top'
+        ? `translate(-50%, -100%) scale(${entered ? 1 : 0.95})`
+        : `translateX(-50%) scale(${entered ? 1 : 0.95})`
+
+  // Portal to body so `position: fixed` uses the viewport. Ancestors with
+  // `transform` (e.g. the left floater's translateY(-50%)) otherwise become the
+  // containing block and push the bubble far from the icon.
+  const bubble =
+    mounted && pos
+      ? createPortal(
+          <span
+            ref={panelRef}
+            role="tooltip"
+            className={`fixed z-[120] w-max ${VARIANT_MAX_WIDTH[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white transition-all duration-150 ease-out ${
+              entered ? 'opacity-100' : 'opacity-0'
+            } ${interactive ? 'pointer-events-auto' : 'pointer-events-none'} ${
+              side === 'right' ? 'tooltip-caret-left' : ''
+            }`}
+            style={{ left: pos.x, top: pos.y, transform }}
+            onMouseEnter={interactive ? clearHideTimer : undefined}
+            onMouseLeave={interactive ? scheduleHide : undefined}
+          >
+            {content}
+          </span>,
+          document.body,
+        )
+      : null
+
   return (
     <span
       ref={triggerRef}
@@ -107,20 +188,7 @@ export function Tooltip({
       onMouseLeave={scheduleHide}
     >
       {children}
-      {mounted && pos && (
-        <span
-          ref={panelRef}
-          role="tooltip"
-          className={`fixed z-[120] w-max ${VARIANT_MAX_WIDTH[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white transition-all duration-150 ease-out ${
-            entered ? 'opacity-100' : 'opacity-0'
-          } ${interactive ? 'pointer-events-auto' : 'pointer-events-none'}`}
-          style={{ left: pos.x, top: pos.y, transform: `translateX(-50%) scale(${entered ? 1 : 0.95})` }}
-          onMouseEnter={interactive ? clearHideTimer : undefined}
-          onMouseLeave={interactive ? scheduleHide : undefined}
-        >
-          {content}
-        </span>
-      )}
+      {bubble}
     </span>
   )
 }

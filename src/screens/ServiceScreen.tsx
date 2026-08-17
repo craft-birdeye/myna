@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Info } from 'lucide-react'
 import {
   ChartCard,
   ChartStatRow,
@@ -7,7 +8,6 @@ import {
   DateRangeSelector,
   DonutChart,
   HBarList,
-  Icon,
   RatingBarChart,
   ReportHeader,
   StackedBarChart,
@@ -176,7 +176,7 @@ export function ServiceScreen() {
               showActions={false}
               titleSuffix={
                 <div className="group relative flex items-center">
-                  <Icon name="info" size={16} className="cursor-help text-text-icon" />
+                  <Info className="size-4 cursor-help text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                   <div className="pointer-events-none absolute left-0 top-6 z-50 hidden w-72 rounded-sm border border-border bg-surface p-sm text-small leading-5 text-text-secondary shadow-dropdown group-hover:block">
                     Shows the percentage of customers confirmed per channel touchpoint
                   </div>
@@ -196,7 +196,7 @@ export function ServiceScreen() {
               showActions={false}
               titleSuffix={
                 <div className="group relative flex items-center">
-                  <Icon name="info" size={16} className="cursor-help text-text-icon" />
+                  <Info className="size-4 cursor-help text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                   <div className="pointer-events-none absolute left-0 top-6 z-50 hidden w-80 rounded-sm border border-border bg-surface p-sm text-small leading-5 text-text-secondary shadow-dropdown group-hover:block">
                     Concurrent sends all channels simultaneously. Sequential waits for a non-response before trying the next channel.
                   </div>

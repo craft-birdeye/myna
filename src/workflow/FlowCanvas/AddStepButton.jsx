@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import AddStepMenu from './AddStepMenu';
 import './AddStepMenu.css';
 
 /**
  * Shared canvas "+" control: click opens AddStepMenu, or (when a node is copied)
- * a Paste/Add-step FAB.
+ * hover reveals inline Paste / Add step pills flanking the "+".
  */
 export default function AddStepButton({
   className = '',
@@ -24,15 +23,11 @@ export default function AddStepButton({
 }) {
   const btnRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  // fabOpen drives the open/closing CSS state; fabVisible keeps the row mounted
-  // for the short exit animation before it's actually removed from the DOM.
-  const [fabOpen, setFabOpen] = useState(false);
-  const [fabVisible, setFabVisible] = useState(false);
-  const [fabTooltip, setFabTooltip] = useState(null);
+  const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState(null);
-  const fabCloseTimeoutRef = useRef(null);
+  const hoverCloseTimeoutRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(fabCloseTimeoutRef.current), []);
+  useEffect(() => () => clearTimeout(hoverCloseTimeoutRef.current), []);
 
   const updateAnchor = useCallback(() => {
     if (!btnRef.current) return null;
@@ -41,23 +36,23 @@ export default function AddStepButton({
     return r;
   }, []);
 
-  const openFab = useCallback(() => {
-    clearTimeout(fabCloseTimeoutRef.current);
-    const r = updateAnchor();
-    setFabVisible(true);
-    setFabOpen(true);
-    if (r) setAnchorRect(r);
-  }, [updateAnchor]);
-
-  const closeFab = useCallback(() => {
-    setFabOpen(false);
-    setFabTooltip(null);
-    clearTimeout(fabCloseTimeoutRef.current);
-    fabCloseTimeoutRef.current = setTimeout(() => setFabVisible(false), 160);
+  const openPasteCues = useCallback(() => {
+    clearTimeout(hoverCloseTimeoutRef.current);
+    setShortcutMenuOpen(true);
   }, []);
 
+  const closePasteCues = useCallback(() => {
+    clearTimeout(hoverCloseTimeoutRef.current);
+    setShortcutMenuOpen(false);
+  }, []);
+
+  const scheduleClosePasteCues = useCallback(() => {
+    clearTimeout(hoverCloseTimeoutRef.current);
+    hoverCloseTimeoutRef.current = setTimeout(() => closePasteCues(), 180);
+  }, [closePasteCues]);
+
   useEffect(() => {
-    if (!menuOpen && !fabVisible) return undefined;
+    if (!menuOpen) return undefined;
     function onScroll() {
       updateAnchor();
     }
@@ -67,18 +62,18 @@ export default function AddStepButton({
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onScroll);
     };
-  }, [menuOpen, fabVisible, updateAnchor]);
+  }, [menuOpen, updateAnchor]);
+
+  useEffect(() => {
+    if (!showPasteOption || isDraggingFromLHS) closePasteCues();
+  }, [showPasteOption, isDraggingFromLHS, closePasteCues]);
 
   function handleClick(e) {
     e.preventDefault();
     e.stopPropagation();
     if (disableClick) return;
     if (showPasteOption) {
-      if (fabOpen) {
-        closeFab();
-        return;
-      }
-      openFab();
+      setShortcutMenuOpen((open) => !open);
       return;
     }
     if (menuOpen) {
@@ -90,39 +85,47 @@ export default function AddStepButton({
     if (r) setAnchorRect(r);
   }
 
-  function handleFabPasteClick(e) {
+  function handlePlusMouseEnter() {
+    if (disableClick || !showPasteOption || isDraggingFromLHS) return;
+    openPasteCues();
+  }
+
+  function handleInteractionMouseLeave() {
+    if (!showPasteOption) return;
+    scheduleClosePasteCues();
+  }
+
+  function handleCueMouseEnter() {
+    if (!showPasteOption) return;
+    openPasteCues();
+  }
+
+  function handlePasteClick(e) {
     e.preventDefault();
     e.stopPropagation();
-    closeFab();
+    closePasteCues();
     onPaste?.();
   }
 
-  function handleFabStepClick(e) {
+  function handleAddStepClick(e) {
     e.preventDefault();
     e.stopPropagation();
-    closeFab();
+    closePasteCues();
     const r = updateAnchor();
     setMenuOpen(true);
     if (r) setAnchorRect(r);
   }
 
-  function handleFabHover(key) {
-    return (e) => {
-      const r = e.currentTarget.getBoundingClientRect();
-      setFabTooltip({ key, top: r.top + r.height / 2, left: r.right + 8 });
-    };
-  }
-
-  function handleFabUnhover() {
-    setFabTooltip(null);
-  }
+  const showPasteCues = showPasteOption && shortcutMenuOpen && !disableClick && !isDraggingFromLHS;
+  const isEmptySlot = className.includes('add-step-btn--empty-slot');
 
   const btnClass = [
     'add-step-btn',
     'nodrag',
     'nopan',
     className,
-    (menuOpen || fabOpen) ? 'add-step-btn--open' : '',
+    menuOpen ? 'add-step-btn--open' : '',
+    showPasteCues ? 'add-step-btn--paste-active' : '',
     isDraggingFromLHS ? 'add-step-btn--lhs-drag' : '',
     isDragOver ? 'add-step-btn--drop-target' : '',
     disableClick ? 'add-step-btn--noninteractive' : '',
@@ -130,8 +133,23 @@ export default function AddStepButton({
     .filter(Boolean)
     .join(' ');
 
+  const wrapClass = [
+    'add-step-btn-wrap',
+    isDragOver ? 'add-step-btn-wrap--drop-target' : '',
+    isDraggingFromLHS ? 'add-step-btn-wrap--lhs-drag' : '',
+    showPasteCues ? 'add-step-btn-wrap--paste-cues' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className="add-step-btn-wrap">
+    <div
+      className={wrapClass}
+      onMouseLeave={handleInteractionMouseLeave}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <button
         ref={btnRef}
         type="button"
@@ -140,66 +158,40 @@ export default function AddStepButton({
         aria-disabled={disableClick || undefined}
         tabIndex={disableClick ? -1 : undefined}
         onClick={handleClick}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
+        onMouseEnter={handlePlusMouseEnter}
       >
         <span className="material-symbols-outlined">add</span>
+        {isDragOver && !isEmptySlot && (
+          <span className="add-step-btn__drop-label">Drop here</span>
+        )}
       </button>
 
-      {fabVisible &&
-        anchorRect &&
-        createPortal(
-          <>
-            <div className="add-step-fab-backdrop" onClick={closeFab} />
-            <div
-              className={`add-step-fab-row${fabOpen ? ' add-step-fab-row--open' : ' add-step-fab-row--closing'}`}
-              style={{
-                top: anchorRect.top + anchorRect.height / 2,
-                left: anchorRect.left + anchorRect.width / 2,
-              }}
-            >
-              <button
-                type="button"
-                className="add-step-fab-btn add-step-fab-btn--paste"
-                aria-label="Paste"
-                onClick={handleFabPasteClick}
-                onMouseEnter={handleFabHover('paste')}
-                onMouseLeave={handleFabUnhover}
-              >
-                <span className="material-symbols-outlined">content_paste</span>
-              </button>
-              <button
-                type="button"
-                className="add-step-fab-btn add-step-fab-btn--step"
-                aria-label="Add step"
-                onClick={handleFabStepClick}
-                onMouseEnter={handleFabHover('step')}
-                onMouseLeave={handleFabUnhover}
-              >
-                <span className="material-symbols-outlined">checklist</span>
-              </button>
-            </div>
-            {fabTooltip &&
-              (() => {
-                const isPaste = fabTooltip.key === 'paste';
-                return (
-                  <span
-                    className="add-step-tooltip"
-                    role="tooltip"
-                    style={{
-                      top: fabTooltip.top,
-                      left: fabTooltip.left,
-                      transform: 'translateY(-50%)',
-                    }}
-                  >
-                    {isPaste ? 'Paste' : 'Add step'}
-                  </span>
-                );
-              })()}
-          </>,
-          document.body,
-        )}
+      {showPasteCues && (
+        <div
+          className="add-step-shortcuts-menu"
+          onMouseEnter={handleCueMouseEnter}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="add-step-shortcuts-menu__item"
+            aria-label="Add step"
+            onClick={handleAddStepClick}
+          >
+            <span className="material-symbols-outlined" aria-hidden>add</span>
+            <span className="add-step-shortcuts-menu__label">Add step</span>
+          </button>
+          <button
+            type="button"
+            className="add-step-shortcuts-menu__item"
+            aria-label="Paste"
+            onClick={handlePasteClick}
+          >
+            <span className="material-symbols-outlined" aria-hidden>content_paste</span>
+            <span className="add-step-shortcuts-menu__label">Paste</span>
+          </button>
+        </div>
+      )}
 
       <AddStepMenu
         open={menuOpen}

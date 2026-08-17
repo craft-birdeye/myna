@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Icon } from '../Icon/Icon'
+import { Check, MoreVertical } from 'lucide-react'
 import { Link } from '../Link/Link'
 
 function ProcedureBookIcon({ size = 20, className = '' }: { size?: number; className?: string }) {
@@ -20,7 +20,7 @@ function Checkbox({ checked }: { checked: boolean }) {
         checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={11} fill weight={600} className="text-white" />}
+      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
     </span>
   )
 }
@@ -55,7 +55,7 @@ function ThreeDotMenu({
         onClick={() => setOpen((v) => !v)}
         className="flex size-6 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-selected"
       >
-        <Icon name="more_vert" size={16} />
+        <MoreVertical className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-xs min-w-[140px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">

@@ -36,12 +36,6 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
     onFieldChange?.('description', val);
   };
 
-  const handleRemoveTool = (toolId) => {
-    const next = selectedTools.filter((id) => id !== toolId);
-    setSelectedTools(next);
-    onFieldChange?.('selectedTools', next);
-  };
-
   const displayedTools = allTools.filter((t) => selectedTools.includes(t.id));
 
   return (
@@ -61,67 +55,73 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
         placeholder="Enter description"
         value={description}
         onChange={handleDescription}
+        required
         noFloatingLabel
       />
 
       <div className={styles.toolsSection}>
-        <div className={styles.sectionLabelWrapper}>
-          <span className={styles.sectionLabelText}>Tools</span>
-          <span className={`material-symbols-outlined ${styles.sectionLabelIcon}`}>info</span>
-        </div>
+        <span className={styles.sectionLabelText}>Tool</span>
 
-        <div className={styles.addBox}>
-          {displayedTools.map((tool) => (
-            <div
-              key={tool.id}
-              className={styles.toolRow}
-              onClick={() => onOpenTool?.(tool.id)}
-              style={{ cursor: onOpenTool ? 'pointer' : 'default' }}
-            >
-              <div className={styles.toolRowMain}>
-                <div className={styles.toolIconWrap}>
-                  {tool.isBirdeye ? (
-                    <img src={birdeyeLogoUrl} alt="Birdeye" style={{ width: 16, height: 16 }} />
-                  ) : tool.icon ? (
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: 16, color: '#555', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
-                    >
-                      {tool.icon}
-                    </span>
-                  ) : tool.iconDataUrl ? (
-                    <img src={tool.iconDataUrl} alt={tool.name} className={styles.toolIconImg} />
-                  ) : (
-                    <span className={`material-symbols-outlined ${styles.toolIconFallback}`}>build</span>
-                  )}
+        {displayedTools.length > 0 && (
+          <div className={styles.toolCard}>
+            {displayedTools.map((tool) => (
+              <div
+                key={tool.id}
+                className={styles.toolRow}
+                onClick={() => onOpenTool?.(tool.id)}
+                style={{ cursor: onOpenTool ? 'pointer' : 'default' }}
+              >
+                <div className={styles.toolRowMain}>
+                  <div
+                    className={`${styles.toolIconWrap}${tool.isBirdeye ? ` ${styles.toolIconWrapBirdeye}` : ''}`}
+                  >
+                    {tool.isBirdeye ? (
+                      <img
+                        src={birdeyeLogoUrl}
+                        alt=""
+                        className={styles.toolIconBirdeye}
+                      />
+                    ) : tool.icon ? (
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ fontSize: 16, color: '#555', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
+                      >
+                        {tool.icon}
+                      </span>
+                    ) : tool.iconDataUrl ? (
+                      <img src={tool.iconDataUrl} alt={tool.name} className={styles.toolIconImg} />
+                    ) : (
+                      <span className={`material-symbols-outlined ${styles.toolIconFallback}`}>build</span>
+                    )}
+                  </div>
+                  <span className={styles.toolName}>{tool.name}</span>
                 </div>
-                <span className={styles.toolName}>{tool.name}</span>
+                <div className={styles.toolRowActions}>
+                  <button
+                    type="button"
+                    className={styles.toolActionBtn}
+                    onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
+                    title="Edit tool configuration"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                      edit
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.toolActionBtn}
+                    onClick={(e) => { e.stopPropagation(); onSwapTool?.(); }}
+                    title="Replace tool"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                      swap_horiz
+                    </span>
+                  </button>
+                </div>
               </div>
-              <div className={styles.toolRowActions}>
-                <button
-                  type="button"
-                  className={styles.toolActionBtn}
-                  onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
-                  title="Edit tool configuration"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                    edit
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.toolActionBtn}
-                  onClick={(e) => { e.stopPropagation(); onSwapTool?.(); }}
-                  title="Replace tool"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                    swap_horiz
-                  </span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

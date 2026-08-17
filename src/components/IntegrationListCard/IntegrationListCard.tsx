@@ -1,4 +1,4 @@
-import { Icon } from '../Icon/Icon'
+import { ExternalLink } from 'lucide-react'
 import { Link } from '../Link/Link'
 
 function SelectRadio({ checked }: { checked: boolean }) {
@@ -70,7 +70,7 @@ export function IntegrationListCard({
             className="flex items-center gap-xs text-small"
           >
             Connect
-            <Icon name="open_in_new" size={12} />
+            <ExternalLink className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
           </Link>
         )}
       </div>
@@ -93,7 +93,7 @@ export function IntegrationListCard({
         <p className={`truncate text-body transition-colors ${onView ? 'text-text-primary group-hover:text-primary' : 'text-text-primary'}`}>{name}</p>
         {onView && (
           <span className="hidden size-5 shrink-0 items-center justify-center rounded-full bg-primary group-hover:flex">
-            <Icon name="open_in_new" size={11} className="text-white" />
+            <ExternalLink className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />
           </span>
         )}
       </div>

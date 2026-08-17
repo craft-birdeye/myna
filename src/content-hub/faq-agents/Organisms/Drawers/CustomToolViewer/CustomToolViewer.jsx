@@ -1,0 +1,289 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { FormInput, TextArea, Toggle } from '../../../elemental-stubs';
+function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
+  React.useEffect(() => {
+    if (isOpen) { document.body.style.overflow = 'hidden'; }
+    else { document.body.style.overflow = ''; }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+  if (!isOpen) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
+      <div style={{ position: 'relative', width, maxWidth: '95vw', height: '100%', background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+const CommonSideDrawer = ({ isOpen, onClose, children }) => <NativeDrawer isOpen={isOpen} onClose={onClose} width={960}>{children}</NativeDrawer>;
+/* Select/SelectItem stubs */
+function Select({ value, onChange, children }) {
+  return <select value={value} onChange={(e) => onChange?.(e.target.value)} style={{ height: 36, padding: '0 12px', border: '1px solid #c5cad3', borderRadius: 4, fontSize: 14, width: '100%', fontFamily: '"Roboto", sans-serif' }}>{children}</select>;
+}
+function SelectItem({ value, children }) { return <option value={value}>{children}</option>; }
+import { OPTION_FIELD_TYPES } from '../CustomToolBuilder/CustomToolBuilder.jsx';
+import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
+import styles from './CustomToolViewer.module.css';
+
+// ─── Interactive field ────────────────────────────────────────────────────────
+
+function InteractiveField({ field }) {
+  const [textValue, setTextValue] = useState('');
+  const [radioValue, setRadioValue] = useState('');
+  const [checkValues, setCheckValues] = useState([]);
+  const [selectValue, setSelectValue] = useState(undefined);
+  const [toggled, setToggled] = useState(false);
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+
+  const label = field.label || 'Untitled field';
+  const required = field.required;
+
+  switch (field.type) {
+    case 'text':
+    case 'number':
+    case 'date':
+      return (
+        <div className={styles.fieldWrap}>
+          <FormInput
+            name={`view_${field.id}`}
+            type={field.type}
+            label={label}
+            placeholder={field.placeholder || ''}
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            required={required}
+          />
+        </div>
+      );
+
+    case 'textarea':
+      return (
+        <div className={styles.fieldWrap}>
+          <TextArea
+            name={`view_${field.id}`}
+            label={label}
+            placeholder={field.placeholder || ''}
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            noFloatingLabel
+            required={required}
+          />
+        </div>
+      );
+
+    case 'dropdown':
+      return (
+        <div className={styles.fieldWrap}>
+          <span className={styles.fieldLabel}>
+            {label}{required && <span className={styles.required}> *</span>}
+          </span>
+          <Select
+            value={selectValue}
+            onChange={(e, v) => setSelectValue(v)}
+            placeHolder="Select..."
+          >
+            {field.options.map((opt) => (
+              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+            ))}
+          </Select>
+        </div>
+      );
+
+    case 'radio':
+      return (
+        <div className={styles.fieldWrap}>
+          <span className={styles.fieldLabel}>
+            {label}{required && <span className={styles.required}> *</span>}
+          </span>
+          <div className={styles.optionGroup}>
+            {field.options.map((opt) => (
+              <label key={opt} className={styles.optionLabel}>
+                <input
+                  type="radio"
+                  name={`view_radio_${field.id}`}
+                  value={opt}
+                  checked={radioValue === opt}
+                  onChange={() => setRadioValue(opt)}
+                  className={styles.optionInput}
+                />
+                <span>{opt}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'checkbox':
+      return (
+        <div className={styles.fieldWrap}>
+          {!field.hideLabel && (
+            <span className={styles.fieldLabel}>
+              {label}{required && <span className={styles.required}> *</span>}
+            </span>
+          )}
+          <div className={styles.optionGroup}>
+            {field.options.map((opt) => (
+              <label key={opt} className={styles.optionLabel}>
+                <input
+                  type="checkbox"
+                  value={opt}
+                  checked={checkValues.includes(opt)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setCheckValues((prev) => [...prev, opt]);
+                    } else {
+                      setCheckValues((prev) => prev.filter((o) => o !== opt));
+                    }
+                  }}
+                  className={styles.optionInput}
+                />
+                <span>{opt}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'toggle':
+      return (
+        <div className={styles.toggleRow}>
+          <span className={styles.fieldLabel}>{label}</span>
+          <Toggle
+            name={`view_toggle_${field.id}`}
+            checked={toggled}
+            onChange={(instance, e) => setToggled(e.target.checked)}
+          />
+        </div>
+      );
+
+    case 'variable':
+      return (
+        <div className={styles.fieldWrap}>
+          <span className={styles.fieldLabel}>
+            {label}{required && <span className={styles.required}> *</span>}
+          </span>
+          <VariableChip
+            value={textValue || field.placeholder || 'variable_name'}
+            type="variable"
+            onChange={setTextValue}
+            onDelete={() => setTextValue('')}
+          />
+        </div>
+      );
+
+    case 'tags':
+      return (
+        <div className={styles.fieldWrap}>
+          <span className={styles.fieldLabel}>
+            {label}{required && <span className={styles.required}> *</span>}
+          </span>
+          <div className={styles.tagsInput}>
+            {tags.map((tag, i) => (
+              <span key={i} className={styles.tagChip}>
+                {tag}
+                <button
+                  type="button"
+                  className={styles.tagChipRemove}
+                  onClick={() => setTags((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </span>
+            ))}
+            <input
+              className={styles.tagInputInner}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && tagInput.trim()) {
+                  e.preventDefault();
+                  setTags((prev) => [...prev, tagInput.trim()]);
+                  setTagInput('');
+                }
+              }}
+              placeholder={tags.length === 0 ? (field.placeholder || 'Type and press Enter...') : ''}
+            />
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function CustomToolViewer({ isOpen, tool, onClose, onEditTool }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  if (!tool) return null;
+
+  const handleEdit = () => {
+    setMenuOpen(false);
+    onEditTool?.(tool);
+  };
+
+  return (
+    <CommonSideDrawer
+      isOpen={isOpen}
+      title=""
+      onClose={onClose}
+      width="650px"
+      shouldScroll={false}
+      buttonPosition="right"
+      headerRightContent={<span className={styles.drawerSuppress} />}
+    >
+      <div className={styles.outer}>
+        {/* ─── Custom header ─── */}
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
+            <button className={styles.backBtn} type="button" onClick={onClose}>
+              <span className="material-symbols-outlined">arrow_left_alt</span>
+            </button>
+            <span className={styles.headerTitle}>{tool.name}</span>
+          </div>
+          <div className={styles.headerRight} ref={menuRef}>
+            <button
+              className={styles.moreBtn}
+              type="button"
+              onClick={() => setMenuOpen((m) => !m)}
+              title="More options"
+            >
+              <span className="material-symbols-outlined">more_vert</span>
+            </button>
+            {menuOpen && (
+              <div className={styles.moreMenu}>
+                <button className={styles.moreMenuItem} type="button" onClick={handleEdit}>
+                  <span className="material-symbols-outlined">edit</span>
+                  Edit tool
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Interactive fields ─── */}
+        <div className={styles.body}>
+          {tool.fields?.map((f) => (
+            <InteractiveField key={f.id} field={f} />
+          ))}
+        </div>
+      </div>
+    </CommonSideDrawer>
+  );
+}

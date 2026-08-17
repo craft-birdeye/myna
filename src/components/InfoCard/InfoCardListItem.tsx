@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon } from '../Icon/Icon'
+import { MoreVertical } from 'lucide-react'
 import { INFO_CARD_LIST_ITEM_LAYOUT } from './InfoCard.types'
 import type { InfoCardListItemProps } from './InfoCard.types'
 
@@ -8,6 +8,8 @@ export function InfoCardListItem({
   description,
   actionLabel = 'Use agent',
   onAction,
+  previewLabel = 'Preview',
+  onPreview,
   first = false,
 }: InfoCardListItemProps) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -33,13 +35,25 @@ export function InfoCardListItem({
           }}
           className={INFO_CARD_LIST_ITEM_LAYOUT.menuTrigger}
         >
-          <Icon name="more_vert" size={20} />
+          <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
 
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-[105]" onClick={() => setMenuOpen(false)} />
             <div className={INFO_CARD_LIST_ITEM_LAYOUT.menu}>
+              {onPreview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPreview()
+                    setMenuOpen(false)
+                  }}
+                  className={INFO_CARD_LIST_ITEM_LAYOUT.menuItem}
+                >
+                  {previewLabel}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

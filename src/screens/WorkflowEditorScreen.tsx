@@ -7,12 +7,13 @@ import {
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { getLastSavedCreateChat, createChatVariantForAgent } from '../data/createAgentChatStore'
-import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
+import { AGENT_INSTANCE_ISSUE_COUNTS, getAgentIssues } from '../data/agentIssues'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
+import { isFrontDeskCanvasAgent } from '../workflow/LHSDrawer/LHSDrawer'
 
 // Cast to accept any props so TypeScript doesn't complain about JSX prop types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,6 +85,9 @@ interface WorkflowEditorScreenProps {
   onPreviewProcedureIdChange?: (id: string | null) => void
   /** Opens the full-page Create with AI experience. */
   onOpenAiFullscreen?: () => void
+  /** Docked "AI Builder" side panel (review-response chrome). */
+  aiBuilderPanelOpen?: boolean
+  onAiBuilderPanelOpenChange?: (open: boolean) => void
   /** Initial LHS tab when the editor mounts. */
   lhsDefaultTab?: 'Create with AI' | 'Create manually'
   /** Saved co-pilot transcript shown in the Create with AI tab after Save agent. */
@@ -107,6 +111,8 @@ export function WorkflowEditorScreen({
   previewProcedureDetail = null,
   onPreviewProcedureIdChange,
   onOpenAiFullscreen,
+  aiBuilderPanelOpen = false,
+  onAiBuilderPanelOpenChange,
   lhsDefaultTab = 'Create manually',
   aiTranscript = null,
   existingAgent,
@@ -120,17 +126,14 @@ export function WorkflowEditorScreen({
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'
-  const HC_FRONTDESK_SIDEBAR_NAMES = new Set([
-    'General inquiry',
-    'Talk to human',
-    'Book, cancel, reschedule appointment',
-    'Reschedule appointment',
-  ])
+  // Any Front desk canvas (base agent, regional instance, create-flow title, or library template).
+  const isFrontDeskAgent = isFrontDeskCanvasAgent(agentBaseName, agentName, shownName)
   const filteredProcedures = procedures.filter((p) => {
     if (!isHCProduct) return p.category !== 'Healthcare Frontdesk' && p.category !== 'Healthcare Pre-visit'
     if (isPreVisit) return p.category === 'Healthcare Pre-visit'
     if (isWaitlist) return p.category === 'Healthcare Waitlist'
-    return p.category === 'Healthcare Frontdesk' && HC_FRONTDESK_SIDEBAR_NAMES.has(p.name)
+    // Front desk (+ other HC agents using this canvas): full Healthcare Frontdesk library.
+    return p.category === 'Healthcare Frontdesk'
   })
 
   // For healthcare / dental, patch the __start__ node details directly here
@@ -233,44 +236,52 @@ export function WorkflowEditorScreen({
     'Outreach agent': 'marketing',
     'Pre-visit agent': 'frontdesk',
     'Waitlist agent': 'frontdesk',
+    'Review response agent': 'reviews',
+    'Review generation agent': 'reviews',
   }
-  const activeNavId = AGENT_NAV_MAP[agentName] ?? 'frontdesk'
+  const activeNavId = AGENT_NAV_MAP[agentBaseName] ?? 'frontdesk'
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-      <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>}>
-        <AgentBuilder
-          key={`${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}`}
-          pageTitle={shownName}
-          appTitle={shownName}
-          onClose={onClose}
-          product={product}
-          activeNavId={activeNavId}
-          moduleSlug="myna"
-          moduleContext="myna"
-          sectionContext="workflow"
-          navItems={[]}
-          initialNodes={workflow.nodes}
-          initialNodeDetails={workflow.nodeDetails}
-          procedures={filteredProcedures}
-          onAddProcedure={addProcedure}
-          initialStatus={resolvedStatus}
-          publishDisabled={publishDisabled}
-          issueCount={issueCount}
-          defaultOpenSection={isEmptyScratch ? 'Trigger' : 'Tasks'}
-          aiAssistOpen={aiAssistOpen}
-          onAiAssistOpenChange={onAiAssistOpenChange}
-          hideLhs={hideLhs}
-          createAiPanelOpen={createAiPanelOpen}
-          previewProcedureId={previewProcedureId}
-          previewProcedureDetail={previewProcedureDetail}
-          onPreviewProcedureIdChange={onPreviewProcedureIdChange}
-          onOpenAiFullscreen={onOpenAiFullscreen}
-          lhsDefaultTab={lhsDefaultTab}
-          aiTranscript={resolvedAiTranscript}
-          existingAgent={resolvedExistingAgent}
-        />
-      </Suspense>
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>}>
+          <AgentBuilder
+            key={`${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}`}
+            pageTitle={shownName}
+            appTitle={shownName}
+            onClose={onClose}
+            product={product}
+            activeNavId={activeNavId}
+            moduleSlug="myna"
+            moduleContext="myna"
+            sectionContext="workflow"
+            navItems={[]}
+            initialNodes={workflow.nodes}
+            initialNodeDetails={workflow.nodeDetails}
+            procedures={filteredProcedures}
+            showProceduresPalette={isFrontDeskAgent}
+            onAddProcedure={addProcedure}
+            initialStatus={resolvedStatus}
+            publishDisabled={publishDisabled}
+            issueCount={issueCount}
+            issues={getAgentIssues(agentName)}
+            defaultOpenSection={isEmptyScratch ? 'Trigger' : 'Tasks'}
+            aiAssistOpen={aiAssistOpen}
+            onAiAssistOpenChange={onAiAssistOpenChange}
+            hideLhs={hideLhs}
+            createAiPanelOpen={createAiPanelOpen}
+            previewProcedureId={previewProcedureId}
+            previewProcedureDetail={previewProcedureDetail}
+            onPreviewProcedureIdChange={onPreviewProcedureIdChange}
+            onOpenAiFullscreen={onOpenAiFullscreen}
+            aiBuilderPanelOpen={aiBuilderPanelOpen}
+            onAiBuilderPanelOpenChange={onAiBuilderPanelOpenChange}
+            lhsDefaultTab={lhsDefaultTab}
+            aiTranscript={resolvedAiTranscript}
+            existingAgent={resolvedExistingAgent}
+          />
+        </Suspense>
+      </div>
     </div>
   )
 }

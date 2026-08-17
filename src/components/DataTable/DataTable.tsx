@@ -1,7 +1,74 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
-import { Icon } from '../Icon/Icon'
+import type { LucideIcon } from 'lucide-react'
+import {
+  ChevronDown, ChevronUp, MoreVertical,
+  Pencil, Trash2, Eye, EyeOff, Check, X, Phone, Mail,
+  Settings, User, Plus, Minus, Copy, Download, Upload,
+  Search, ListFilter, Calendar, Clock, RefreshCw, Send,
+  Paperclip, Headphones, AlertCircle, AlertTriangle, Info,
+  BookOpen, FileText, Star, Tag, Link, ExternalLink,
+  MessageSquare, CalendarPlus, Wrench,
+} from 'lucide-react'
 import { Column, DataTableProps, SortDir } from './DataTable.types'
+
+/** Map from legacy Material Symbols names → Lucide components, for dynamic icon props. */
+const LUCIDE_ICON_MAP: Record<string, LucideIcon> = {
+  edit: Pencil,
+  delete: Trash2,
+  visibility: Eye,
+  visibility_off: EyeOff,
+  check: Check,
+  close: X,
+  cancel: X,
+  more_vert: MoreVertical,
+  phone: Phone,
+  phone_in_talk: Phone, // TODO: check icon
+  call: Phone,
+  email: Mail,
+  settings: Settings,
+  person: User,
+  add: Plus,
+  remove: Minus,
+  content_copy: Copy,
+  copy_all: Copy,
+  download: Download,
+  upload: Upload,
+  search: Search,
+  filter_list: ListFilter,
+  calendar_today: Calendar,
+  event: Calendar,
+  schedule: Clock,
+  access_time: Clock,
+  refresh: RefreshCw,
+  send: Send,
+  attach_file: Paperclip,
+  headset: Headphones,
+  support_agent: Headphones,
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+  menu_book: BookOpen,
+  description: FileText,
+  article: FileText,
+  star: Star,
+  label: Tag,
+  link: Link,
+  open_in_new: ExternalLink,
+  chat: MessageSquare,
+  chat_bubble: MessageSquare,
+  chat_bubble_outline: MessageSquare,
+  calendar_add_on: CalendarPlus,
+  sms: MessageSquare,
+  build: Wrench,
+}
+
+/** Renders a Lucide icon looked up by Material Symbols name. Returns null for unmapped names. */
+function DynamicIcon({ name, className }: { name: string; className?: string }) {
+  const Component = LUCIDE_ICON_MAP[name]
+  if (!Component) return null
+  return <Component className={className ?? 'size-5'} strokeWidth={1.6} absoluteStrokeWidth />
+}
 
 const DEFAULT_WIDTH = 160
 const DEFAULT_MIN_WIDTH = 80
@@ -15,6 +82,8 @@ export function DataTable<T extends Record<string, unknown>>({
   rowActions,
   rowMenuItems,
   scrollOnHover = false,
+  initialSortKey,
+  initialSortDir = 'asc',
   rowClassName,
   rowHeight = 48,
 }: DataTableProps<T>) {
@@ -23,7 +92,10 @@ export function DataTable<T extends Record<string, unknown>>({
     columns.forEach((c) => (init[String(c.key)] = c.width ?? DEFAULT_WIDTH))
     return init
   })
-  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({ key: null, dir: 'asc' })
+  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({
+    key: initialSortKey ?? null,
+    dir: initialSortDir,
+  })
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ rowIndex: number; top: number; left: number } | null>(null)
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
@@ -35,6 +107,10 @@ export function DataTable<T extends Record<string, unknown>>({
       return next
     })
   }, [columns])
+
+  useEffect(() => {
+    setSort({ key: initialSortKey ?? null, dir: initialSortDir })
+  }, [initialSortKey, initialSortDir])
 
   const sortedData = useMemo(() => {
     if (!sort.key) return data
@@ -121,15 +197,21 @@ export function DataTable<T extends Record<string, unknown>>({
                       onClick={() => toggleSort(col)}
                       className={`group/hdr flex min-w-0 items-center gap-xs ${col.sortable ? '' : 'cursor-default'}`}
                     >
-                      <span className={`truncate text-small ${sorted ? 'text-text-primary' : 'text-text-secondary'}`}>
+                      <span
+                        className={`min-w-0 text-small ${sorted ? 'text-text-primary' : 'truncate text-text-icon'}`}
+                      >
                         {col.label}
                       </span>
                       {col.sortable && (
-                        <Icon
-                          name={sorted && sort.dir === 'asc' ? 'expand_less' : 'expand_more'}
-                          size={16}
-                          className={`shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`}
-                        />
+                        sorted && sort.dir === 'asc'
+                          ? <ChevronUp
+                              className={`size-4 shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`}
+                              strokeWidth={1.6} absoluteStrokeWidth
+                            />
+                          : <ChevronDown
+                              className={`size-4 shrink-0 transition-opacity ${sorted ? 'text-text-primary opacity-100' : 'text-text-icon opacity-0 group-hover/hdr:opacity-100'}`}
+                              strokeWidth={1.6} absoluteStrokeWidth
+                            />
                       )}
                     </button>
                   )}
@@ -189,9 +271,9 @@ export function DataTable<T extends Record<string, unknown>>({
                               onClick={(e) => { e.stopPropagation(); rowAction.onClick(row) }}
                               onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTooltip({ text: tooltipText, x: r.left + r.width / 2, y: r.bottom + 6 }) }}
                               onMouseLeave={() => setTooltip(null)}
-                              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                             >
-                              {rowAction.iconElement ?? <Icon name={rowAction.icon!} size={20} />}
+                              {rowAction.iconElement ?? (rowAction.icon && <DynamicIcon name={rowAction.icon} />)}
                             </button>
                           )
                         })()}
@@ -206,9 +288,9 @@ export function DataTable<T extends Record<string, unknown>>({
                               onClick={(e) => { e.stopPropagation(); action.onClick(row) }}
                               onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTooltip({ text: tip, x: r.left + r.width / 2, y: r.bottom + 6 }) }}
                               onMouseLeave={() => setTooltip(null)}
-                              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                             >
-                              {action.iconElement ?? <Icon name={action.icon!} size={20} />}
+                              {action.iconElement ?? (action.icon && <DynamicIcon name={action.icon} />)}
                             </button>
                           )
                         })}
@@ -225,9 +307,9 @@ export function DataTable<T extends Record<string, unknown>>({
                                   : { rowIndex: i, top: r.bottom + 4, left: r.right - 216 },
                               )
                             }}
-                            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                           >
-                            <Icon name="more_vert" size={20} />
+                            <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                           </button>
                         )}
                       </div>
@@ -276,7 +358,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   }`}
                 >
                   {item.label}
-                  {item.icon && <Icon name={item.icon} size={16} className="shrink-0 text-text-icon" />}
+                  {item.icon && <DynamicIcon name={item.icon} className="size-4 shrink-0 text-text-icon" />}
                 </button>
               ))}
           </div>

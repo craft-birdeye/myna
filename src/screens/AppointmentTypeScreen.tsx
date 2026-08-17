@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { DataTable, HeaderSearchField, Icon, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
-import { APPOINTMENT_TYPES } from '../data/appointmentTypesData'
+import { ArrowLeft, ChevronDown, ChevronUp, RefreshCw, X } from 'lucide-react'
+import { DataTable, HeaderSearchField, InfoTooltip, SelectMenu, Toast, TopNav, type Column, type SelectOption } from '../components'
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
 interface ToggleProps { value: boolean; onChange: (v: boolean) => void }
@@ -30,20 +30,18 @@ interface ApptTypeRow {
   [key: string]: string | boolean | undefined
 }
 
-const AT = Object.fromEntries(APPOINTMENT_TYPES.map((t) => [t.id, t]))
-
 const APPT_TYPES: ApptTypeRow[] = [
-  { name: AT['new-patient-exam'].name,         description: AT['new-patient-exam'].description,         duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"new patient"', recognitionExtra: '+1 more', active: true  },
-  { name: AT['routine-cleaning'].name,         description: AT['routine-cleaning'].description,         duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: AT['emergency-visit'].name,          description: AT['emergency-visit'].description,          duration: '30 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: AT['invisalign-consultation'].name,  description: AT['invisalign-consultation'].description,  duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: AT['tooth-filling'].name,            description: AT['tooth-filling'].description,            duration: '45 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: AT['whitening-treatment'].name,      description: AT['whitening-treatment'].description,      duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: false },
-  { name: AT['invisalign-consultation'].name,  description: AT['invisalign-consultation'].description,  duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: AT['emergency-visit'].name,          description: AT['emergency-visit'].description,          duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"new patient"',  recognitionExtra: '+1 more', active: true  },
-  { name: AT['routine-cleaning'].name,         description: AT['routine-cleaning'].description,         duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
-  { name: AT['new-patient-exam'].name,         description: AT['new-patient-exam'].description,         duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
-  { name: AT['tooth-filling'].name,            description: AT['tooth-filling'].description,            duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: 'New Patient Exam',         description: 'Comprehensive initial exam + X-rays',       duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"new patient"', recognitionExtra: '+1 more', active: true  },
+  { name: 'Routine Cleaning',         description: 'Prophylaxis + polishing',                   duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: 'Emergency Visit',          description: 'Urgent pain or dental injury',              duration: '30 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: 'Invisalign Consultation',  description: 'Orthodontic assessment + treatment plan',  duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: 'Tooth Filling',            description: 'Composite or amalgam restoration',          duration: '45 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: 'Whitening Treatment',      description: 'In-office bleaching session',               duration: '60 min', providers: 'Dr. Sarah Chen, +1 more', pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: false },
+  { name: 'Invisalign Consultation',  description: 'Orthodontic assessment + treatment plan',  duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: 'Emergency Visit',          description: 'Urgent pain or dental injury',              duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"new patient"',  recognitionExtra: '+1 more', active: true  },
+  { name: 'Routine Cleaning',         description: 'Prophylaxis + polishing',                   duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
+  { name: 'New Patient Exam',         description: 'Comprehensive initial exam + X-rays',       duration: '60 min', providers: 'Dr. Marcus Rivera',       pmsMapping: 'D0210', recognitionHints: '"emergency"',    recognitionExtra: '+1 more', active: true  },
+  { name: 'Tooth Filling',            description: 'Composite or amalgam restoration',          duration: '45 min', providers: 'All',                     pmsMapping: 'D0210', recognitionHints: '"filling"',                              active: true  },
 ]
 
 // ── Dropdown data ─────────────────────────────────────────────────────────────
@@ -134,10 +132,10 @@ function ATDropdownField({ label, required, infoIcon, tooltip, options, value, m
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
-          className={`flex h-9 w-full items-center justify-between rounded-sm border px-md text-body text-text-primary transition-colors hover:bg-surface-hover ${open ? 'border-primary' : 'border-border'}`}
+          className={`flex h-[34px] w-full items-center justify-between rounded-md border px-md text-body text-text-primary transition-colors hover:bg-surface-hover ${open ? 'border-primary' : 'border-border'}`}
         >
           <span className={value.length === 0 ? 'text-text-tertiary' : ''}>{displayLabel}</span>
-          <Icon name={open ? 'expand_less' : 'expand_more'} size={18} className="shrink-0 text-text-icon" />
+          {open ? <ChevronUp className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
         </button>
         {open && (
           <div className="absolute left-0 top-[calc(100%+4px)] z-[60] w-full">
@@ -196,17 +194,17 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-50 flex h-full w-[650px] flex-col bg-surface shadow-modal">
+      <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed right-2 top-2 z-50 flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
         {/* Header */}
         <div className="flex items-center justify-between px-2xl py-lg">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover">
-              <Icon name="arrow_back" size={18} />
+            <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover">
+              <ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
             <span className="text-h3 text-text-primary">{isEdit ? 'Edit' : 'Create new'}</span>
           </div>
-          <button type="button" className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
+          <button type="button" className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">
             Save
           </button>
         </div>
@@ -219,7 +217,7 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
           <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">Display name <span className="text-danger">*</span></label>
             <input
-              className="h-9 rounded-sm border border-border px-md text-body text-text-primary focus:border-primary focus:outline-none"
+              className="h-[34px] rounded-md border border-border px-md text-body text-text-primary focus:border-primary focus:outline-none"
               placeholder="Enter"
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
@@ -248,7 +246,7 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
                 <span key={i} className="flex items-center gap-xs rounded-full bg-surface-selected px-sm py-0.5 text-small text-text-primary">
                   {tag}
                   <button type="button" onClick={() => removeTag(i)} className="text-text-tertiary hover:text-text-primary">
-                    <Icon name="close" size={12} />
+                    <X className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
                 </span>
               ))}
@@ -271,7 +269,7 @@ function ApptTypeDrawer({ open, mode, onClose }: DrawerProps) {
               onClick={() => setPmsExpanded(v => !v)}
             >
               <span className="text-body text-text-primary">PMS mapping</span>
-              <Icon name={pmsExpanded ? 'expand_less' : 'expand_more'} size={18} className="text-text-icon" />
+              {pmsExpanded ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
             </button>
             {pmsExpanded && (
               <div className="flex flex-col gap-md border-t border-border p-md">
@@ -380,21 +378,21 @@ export function AppointmentTypeScreen() {
           </div>
           <div className="flex items-center gap-sm">
             <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
-            <select className="h-9 rounded-sm border border-border-selected bg-surface pl-md pr-2xl text-body text-text-primary hover:bg-surface-l2 focus:outline-none">
+            <select className="h-9 rounded-md border border-border-selected bg-surface pl-md pr-2xl text-body text-text-primary hover:bg-surface-l2 focus:outline-none">
               <option>All locations</option>
             </select>
             <button
               type="button"
               onClick={() => setToastVisible(true)}
-              className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+              className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
             >
-              <Icon name="refresh" size={18} />
+              <RefreshCw className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               Sync from PMS
             </button>
             <button
               type="button"
               onClick={() => setCreateDrawerOpen(true)}
-              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
             >
               Create new
             </button>

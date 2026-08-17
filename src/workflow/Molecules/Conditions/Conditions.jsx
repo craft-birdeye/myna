@@ -190,11 +190,13 @@ export default function Conditions({
   onAdvancedFilters,
   conditionOptions,
   onOptionsChange,
+  label = 'Conditions',
+  showAdvancedFilters = true,
 }) {
   return (
     <div className="trigger-conditions">
       <div className="trigger-conditions__section">
-        <span className="trigger-conditions__label">Conditions</span>
+        <span className="trigger-conditions__label">{label}</span>
         <div className="trigger-conditions__card">
           <div className="trigger-conditions__conditions">
             {conditions.map((condition, index) => {
@@ -284,9 +286,11 @@ export default function Conditions({
           </button>
         </div>
       </div>
-      <button type="button" className="trigger-conditions__advanced-filters" onClick={onAdvancedFilters}>
-        Advanced filters
-      </button>
+      {showAdvancedFilters && (
+        <button type="button" className="trigger-conditions__advanced-filters" onClick={onAdvancedFilters}>
+          Advanced filters
+        </button>
+      )}
     </div>
   );
 }

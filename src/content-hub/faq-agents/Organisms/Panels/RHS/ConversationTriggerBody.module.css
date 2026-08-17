@@ -1,0 +1,76 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Channel section: header above the shared trigger-conditions__card ─── */
+.channelSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.channelHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.channelIcon {
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+  color: #424242;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.channelTitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: #212121;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ─── AND connector between rows ─── */
+.connectorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.connectorLabel {
+  font-size: 12px;
+  color: #8f8f8f;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+}
+
+/* ─── Remove row button ─── */
+.removeRowBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  color: #8f8f8f;
+}
+
+.removeRowBtn:hover {
+  color: #de1b0c;
+  background: #fef0ef;
+}
+
+.removeRowBtn .material-symbols-outlined {
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}

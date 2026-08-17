@@ -1,0 +1,211 @@
+.wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ─── Header ─── */
+.th {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  border-bottom: 1px solid #eaeaea;
+  text-align: left;
+  white-space: nowrap;
+  position: relative;
+}
+
+.thInner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+  user-select: none;
+}
+
+.thEditIcon,
+.thDeleteIcon {
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+  line-height: 1 !important;
+  color: #aaa;
+  cursor: pointer;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.th:hover .thEditIcon,
+.th:hover .thDeleteIcon {
+  opacity: 1;
+}
+
+.thEditIcon:hover {
+  color: #555;
+}
+
+.thDeleteIcon:hover {
+  color: #b42318;
+}
+
+.thInput {
+  border: none;
+  border-bottom: 1px solid #1976d2;
+  outline: none;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Roboto', sans-serif;
+  color: #555;
+  background: transparent;
+  width: 100%;
+  min-width: 60px;
+  padding: 0;
+}
+
+/* ─── Rows ─── */
+.tr {
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.tr:hover {
+  background: #f5f8ff;
+}
+
+.td {
+  padding: 12px;
+  font-size: 13px;
+  color: #212121;
+  vertical-align: middle;
+}
+
+/* ─── Name cell ─── */
+.nameCell {
+  transition: color 0.1s;
+}
+
+.tr:hover .nameCell {
+  color: #1976d2;
+}
+
+.nameValue {
+  color: inherit;
+}
+
+.nameLink {
+  color: inherit;
+  cursor: pointer;
+}
+
+.tr:hover .nameLink {
+  color: #1976d2;
+}
+
+.emptyCell {
+  color: #ccc;
+}
+
+/* ─── Status cell ─── */
+.statusCell {
+  cursor: pointer;
+}
+
+/* ─── Cell edit ─── */
+.cellValue {
+  display: block;
+  min-height: 18px;
+}
+
+.cellInput {
+  border: none;
+  border-bottom: 1px solid #1976d2;
+  outline: none;
+  font-size: 13px;
+  font-family: 'Roboto', sans-serif;
+  color: #212121;
+  background: transparent;
+  width: 100%;
+  min-width: 60px;
+  padding: 0;
+}
+
+/* ─── Delete row ─── */
+.deleteColHeader {
+  width: 40px;
+  padding: 10px 4px;
+}
+
+.deleteCell {
+  width: 40px;
+  padding: 4px;
+  text-align: center;
+}
+
+.deleteRowBtn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+  padding: 0;
+}
+
+.tr:hover .deleteRowBtn {
+  opacity: 1;
+}
+
+.deleteRowBtn:hover {
+  background: #fde8e8;
+}
+
+.deleteRowBtnIcon {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  line-height: 1 !important;
+  color: #b42318;
+}
+
+/* ─── Add row ─── */
+.addRowBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  background: #fff;
+  color: #555;
+  font-size: 13px;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.12s, color 0.12s;
+}
+
+.addRowBtn:hover {
+  border-color: #c5d8fc;
+  background: #f5f8ff;
+  color: #212121;
+}
+
+.addRowBtn span {
+  font-size: 16px !important;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}

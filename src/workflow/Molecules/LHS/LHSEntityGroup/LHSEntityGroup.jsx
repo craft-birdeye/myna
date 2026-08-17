@@ -20,6 +20,11 @@ function getItemHasAi(item) {
   return Boolean(item?.ai);
 }
 
+function getItemIcon(item) {
+  if (typeof item === 'string') return '';
+  return item?.icon || '';
+}
+
 function isTextTruncated(el) {
   if (!el) return false;
   const clone = el.cloneNode(true);
@@ -127,6 +132,12 @@ export default function LHSEntityGroup({
   readOnly = false,
   dragAlwaysVisible = false,
   disabledItems = null,
+  /** Renders as a plain inline block (no card shadow, bold titles, single-line desc)
+   *  for use directly under an expanded category row, instead of the floating
+   *  flyout's own boxed card look. */
+  inline = false,
+  /** When inline, still show the section title (e.g. "Reviews" / "Inbox"). */
+  showTitle = false,
 }) {
   const disabledSet = disabledItems instanceof Set ? disabledItems : new Set(disabledItems ?? []);
   const canEdit = !viewOnly && !readOnly && !!onItemsChange;
@@ -143,6 +154,15 @@ export default function LHSEntityGroup({
       label: parentLabel,
       description: label,
     });
+
+    // Native drag ghost: label only (not description / drag handle).
+    const ghost = document.createElement('div');
+    ghost.className = 'lhs-entity-group__drag-ghost';
+    ghost.textContent = label;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 16, 16);
+    requestAnimationFrame(() => ghost.remove());
+
     onDragStartItem?.(item);
   };
 
@@ -170,14 +190,15 @@ export default function LHSEntityGroup({
   };
 
   return (
-    <div className={`lhs-entity-group${hasDescriptions ? ' lhs-entity-group--described' : ''}`}>
-      <p className="lhs-entity-group__title">{title}</p>
+    <div className={`lhs-entity-group${hasDescriptions ? ' lhs-entity-group--described' : ''}${inline ? ' lhs-entity-group--inline' : ''}`}>
+      {(!inline || showTitle) && title ? <p className="lhs-entity-group__title">{title}</p> : null}
 
       <div className="lhs-entity-group__items">
         {items.map((item, idx) => {
           const label = getItemLabel(item);
           const description = getItemDescription(item);
           const hasAi = getItemHasAi(item);
+          const icon = getItemIcon(item);
           const isDisabled = disabledSet.has(label) || disabledSet.has(item);
           return (
           <div
@@ -187,6 +208,11 @@ export default function LHSEntityGroup({
             onDragStart={(e) => !viewOnly && !isDisabled && (readOnly || editingIdx !== idx) && handleDragStart(e, item)}
             aria-disabled={isDisabled || undefined}
           >
+            {icon ? (
+              <span className="material-symbols-outlined lhs-entity-group__item-icon" aria-hidden>
+                {icon}
+              </span>
+            ) : null}
             {editingIdx === idx ? (
               <input
                 className="lhs-entity-group__item-input"

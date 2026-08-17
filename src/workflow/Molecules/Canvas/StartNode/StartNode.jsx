@@ -12,7 +12,14 @@ export default function StartNode({
   return (
     <div className={`start-node${selected ? ' start-node--selected' : ''}`}>
       <div className="start-node__icon">
-        <img src={iconAgentsPurple} alt="" className="start-node__icon-img" />
+        <span
+          className="ai-gradient-icon start-node__icon-gradient"
+          style={{
+            WebkitMaskImage: `url("${iconAgentsPurple}")`,
+            maskImage: `url("${iconAgentsPurple}")`,
+          }}
+          aria-hidden
+        />
       </div>
       <div className="start-node__content">
         <span className="start-node__title">{title}</span>

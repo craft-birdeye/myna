@@ -1,21 +1,27 @@
 import { useEffect, useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import {
   Chip,
   DataTable,
   EmptyState,
   EstimateSavingsModal,
+  REVIEW_RESPONSE_SAVINGS_COPY,
+  parseTimeSavedHours,
+  FilterPanel,
+  HeaderSearchField,
   Icon,
   MetricTiles,
   Tabs,
   TopNav,
   type ChipVariant,
   type Column,
+  type FilterField,
   type EstimateSavingsValues,
   type Metric,
   type Tab,
 } from '../components'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { AgentLogsTab } from './AgentLogsTab'
+import { AgentLogsTab, getLogFilterFields } from './AgentLogsTab'
 import { OutboundAgentLogsTab } from './OutboundAgentLogsTab'
 import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
@@ -32,10 +38,16 @@ interface AgentInstanceScreenProps {
   displayName?: string
   status?: string
   onBack: () => void
-  onEditAgent?: (agentName: string) => void
+  /** `returnTo` tells the host where to navigate back to when the editor closes. */
+  onEditAgent?: (
+    agentName: string,
+    draft?: unknown,
+    returnTo?: { instanceName: string; tab: string },
+  ) => void
   onNavigateToInbox?: (conversationId?: string) => void
-  /** Settings tab's Booking template "Edit template" link — opens that template's editor. */
-  onOpenBookingTemplates?: (templateId: string) => void
+  /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
+   *  (threaded through to `AgentSettingsTab`'s Integrations section). */
+  onOpenIntegrationSettings?: (integrationId: string) => void
   /** Hide L2 SideNav while a full-bleed view (e.g. View log) is open. */
   onFullBleedChange?: (active: boolean) => void
   product?: string
@@ -154,6 +166,21 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'conversationsManaged', value: '95%', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Share of conversations tagged and routed end-to-end at this location.' },
     { id: 'timeSaved', value: '32m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing at this location.' },
   ],
+  // Registered under both the plural (agent-group) and singular (per-instance) keys, matching
+  // the Review generation pattern below. Without a `timeSaved` tile the drilled-in screen would
+  // fall back to DEFAULT_METRICS and have nothing to hang the Configure action on.
+  'Review response agents': [
+    { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+    { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+    { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+    { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+  ],
+  'Review response agent': [
+    { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+    { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+    { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+    { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+  ],
   'Review generation agents': [
     { id: 'reviewsReceived', value: '137', label: 'Reviews received', delta: '1.3%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
     { id: 'contactsReached', value: '150', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
@@ -239,6 +266,15 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Las Vegas, NV',    count: '1', reviewsReceived: '20', contactsReached: '10', clickThroughRate: '4.7%', timeSaved: '20m' },
     { location: 'Chicago, IL',      count: '1', reviewsReceived: '7',  contactsReached: '10', clickThroughRate: '4.8%', timeSaved: '20m' },
   ],
+  'Review response agent': [
+    { location: 'Atlanta, GA',       count: '1', reviewsResponded: '19', responseRate: '90%', avgResponseTime: '1h 48m', timeSaved: '4h 20m' },
+    { location: 'Stamford, CT',      count: '1', reviewsResponded: '9',  responseRate: '92%', avgResponseTime: '2h 05m', timeSaved: '2h 10m' },
+    { location: 'Los Angeles, CA',   count: '1', reviewsResponded: '22', responseRate: '90%', avgResponseTime: '2h 22m', timeSaved: '2h 05m' },
+    { location: 'New York City, NY', count: '1', reviewsResponded: '18', responseRate: '90%', avgResponseTime: '2h 10m', timeSaved: '2h 40m' },
+    { location: 'San Diego, CA',     count: '1', reviewsResponded: '7',  responseRate: '95%', avgResponseTime: '2h 40m', timeSaved: '3h 05m' },
+    { location: 'Las Vegas, NV',     count: '1', reviewsResponded: '3',  responseRate: '94%', avgResponseTime: '3h 05m', timeSaved: '2h 10m' },
+    { location: 'Chicago, IL',       count: '1', reviewsResponded: '10', responseRate: '92%', avgResponseTime: '3h 05m', timeSaved: '3h 05m' },
+  ],
 }
 
 const FRONTDESK_COLUMNS: Column<LocationRow>[] = [
@@ -255,7 +291,7 @@ const FRONTDESK_COLUMNS: Column<LocationRow>[] = [
     render: (v) => (
       <span className="inline-flex items-center gap-xs">
         {String(v)}
-        <Icon name="expand_more" size={16} className="text-text-icon" />
+        <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
       </span>
     ),
   },
@@ -275,7 +311,7 @@ const DEFAULT_COLUMNS: Column<LocationRow>[] = [
     render: (v) => (
       <span className="inline-flex items-center gap-xs">
         {String(v)}
-        <Icon name="expand_more" size={16} className="text-text-icon" />
+        <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
       </span>
     ),
   },
@@ -354,6 +390,14 @@ const REVIEW_GENERATION_COLUMNS: Column<LocationRow>[] = [
   { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
 ]
 
+const REVIEW_RESPONSE_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location', label: 'Location', width: 220, sortable: true },
+  { key: 'reviewsResponded', label: 'Reviews responded', width: 180, sortable: true },
+  { key: 'responseRate', label: 'Response rate', width: 150, sortable: true },
+  { key: 'avgResponseTime', label: 'Average response time', width: 190, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
+]
+
 export function AgentInstanceScreen({
   instanceName,
   displayName,
@@ -361,7 +405,7 @@ export function AgentInstanceScreen({
   onBack,
   onEditAgent,
   onNavigateToInbox,
-  onOpenBookingTemplates,
+  onOpenIntegrationSettings,
   onFullBleedChange,
   product,
   initialTab = 'outcomes',
@@ -376,6 +420,17 @@ export function AgentInstanceScreen({
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
+
+  // Header search + filters. Outcomes and Logs each keep their own state — the two tabs search
+  // different tables, so a query typed on one would be meaningless on the other.
+  const [outcomesSearchOpen, setOutcomesSearchOpen] = useState(false)
+  const [outcomesQuery, setOutcomesQuery] = useState('')
+  const [outcomesFilterOpen, setOutcomesFilterOpen] = useState(false)
+  const [outcomesFilters, setOutcomesFilters] = useState<Record<string, string[]>>({})
+  const [logsSearchOpen, setLogsSearchOpen] = useState(false)
+  const [logsQuery, setLogsQuery] = useState('')
+  const [logsFilterOpen, setLogsFilterOpen] = useState(false)
+  const [logsFilters, setLogsFilters] = useState<Record<string, string[]>>({})
 
   useEffect(() => {
     onFullBleedDetailActiveChange?.(selectedRecommendationId !== null || selectedRun !== null)
@@ -417,10 +472,10 @@ export function AgentInstanceScreen({
       : METRICS_BY_AGENT[agentName]
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
-  const displayMetrics: Metric[] = isFrontdeskAgent
+  const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
-        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const hours = parseTimeSavedHours(String(m.value))
         const cost = hours * savingsSettings.hourlyWage
         const formattedCost = new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -440,12 +495,46 @@ export function AgentInstanceScreen({
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
     : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
+    : isReviewResponse                    ? REVIEW_RESPONSE_COLUMNS
     : DEFAULT_COLUMNS
   const locations = (
     isReviewGeneration
       ? LOCATIONS_BY_AGENT[reviewGenerationKey]
-      : LOCATIONS_BY_AGENT[agentName]
+      : isReviewResponse
+        ? LOCATIONS_BY_AGENT['Review response agent']
+        : LOCATIONS_BY_AGENT[agentName]
   ) ?? LOCATIONS_BY_AGENT['Front desk agent']
+
+  /* ─── Header search + filters (Outcomes and Logs tabs only) ─── */
+  // Front desk and the two review agents get the header controls; other agents are unchanged.
+  const supportsHeaderSearch = isFrontdeskAgent || isReviewResponse || isReviewGeneration
+  const isOutcomesTab = activeTab === 'outcomes'
+  const isLogsTab = activeTab === 'logs'
+  const showHeaderSearch = supportsHeaderSearch && (isOutcomesTab || isLogsTab)
+
+  // Outcomes filters by location, sourced from the rows actually on screen.
+  const outcomesFilterFields: FilterField[] = [
+    {
+      id: 'location',
+      label: 'Location',
+      options: Array.from(new Set(locations.map((l) => String(l.location)))).map((v) => ({
+        value: v,
+        label: v,
+      })),
+    },
+  ]
+  const outcomesQ = outcomesQuery.trim().toLowerCase()
+  const visibleLocations = locations.filter((row) => {
+    if (
+      outcomesQ &&
+      !Object.values(row).some((v) => typeof v === 'string' && v.toLowerCase().includes(outcomesQ))
+    ) {
+      return false
+    }
+    const picked = outcomesFilters.location
+    return !picked?.length || picked.includes(String(row.location))
+  })
+
   const isTaggingRouting = agentName === 'Tagging & routing agent'
   const tabs = isTaggingRouting
     ? TAGGING_ROUTING_TABS
@@ -515,13 +604,13 @@ export function AgentInstanceScreen({
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex h-16 shrink-0 items-center justify-between bg-surface px-2xl">
+          <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-surface px-2xl py-xl">
             <div className="flex items-center gap-sm">
               <button
                 type="button"
                 aria-label="Back"
                 onClick={onBack}
-                className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+                className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
               >
                 <BackArrowIcon />
               </button>
@@ -535,18 +624,22 @@ export function AgentInstanceScreen({
                   {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                 </span>
               )}
+              {showHeaderSearch && (
+                <HeaderSearchField
+                  open={isOutcomesTab ? outcomesSearchOpen : logsSearchOpen}
+                  value={isOutcomesTab ? outcomesQuery : logsQuery}
+                  onOpenChange={isOutcomesTab ? setOutcomesSearchOpen : setLogsSearchOpen}
+                  onChange={isOutcomesTab ? setOutcomesQuery : setLogsQuery}
+                />
+              )}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setActionsOpen((open) => !open)}
-                  className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                  className="flex h-[34px] items-center gap-sm rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
                 >
                   Actions
-                  <Icon
-                    name={actionsOpen ? 'expand_less' : 'expand_more'}
-                    size={20}
-                    className="text-text-icon"
-                  />
+                  {actionsOpen ? <ChevronUp className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
                 </button>
                 {actionsOpen && (
                   <>
@@ -556,6 +649,16 @@ export function AgentInstanceScreen({
                       aria-hidden
                     />
                     <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+                      <button
+                        type="button"
+                        className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                        onClick={() => {
+                          setActionsOpen(false)
+                          onEditAgent?.(instanceName, undefined, { instanceName, tab: activeTab })
+                        }}
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
@@ -590,9 +693,22 @@ export function AgentInstanceScreen({
               {activeTab === 'settings' && (
                 <button
                   type="button"
-                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                  className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
                 >
                   Save
+                </button>
+              )}
+              {/* Filters always sits last in the header row. */}
+              {showHeaderSearch && (
+                <button
+                  type="button"
+                  aria-label="Filters"
+                  onClick={() =>
+                    isOutcomesTab ? setOutcomesFilterOpen((o) => !o) : setLogsFilterOpen((o) => !o)
+                  }
+                  className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                >
+                  <Icon name="filter_list" size={20} />
                 </button>
               )}
             </div>
@@ -614,7 +730,7 @@ export function AgentInstanceScreen({
             <WorkflowViewerTab
               instanceName={instanceName}
               displayName={shownName}
-              onEdit={() => onEditAgent?.(instanceName)}
+              onEdit={() => onEditAgent?.(instanceName, undefined, { instanceName, tab: 'workflow' })}
               product={product}
             />
           ) : isRecommendationTab ? (
@@ -634,12 +750,12 @@ export function AgentInstanceScreen({
                     <MetricTiles
                       metrics={displayMetrics}
                       renderTileAction={
-                        isFrontdeskAgent
+                        isFrontdeskAgent || isReviewResponse
                           ? (metric) =>
                               metric.id === 'timeSaved' ? (
                                 <button
                                   type="button"
-                                  aria-label="Estimate savings"
+                                  aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
                                   onClick={() => setSavingsModalOpen(true)}
                                   className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                                 >
@@ -654,13 +770,20 @@ export function AgentInstanceScreen({
                     open={savingsModalOpen}
                     onClose={() => setSavingsModalOpen(false)}
                     initialValues={savingsSettings}
+                    copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
                     onSave={(values) => {
                       setSavingsSettings(values)
                       setSavingsModalOpen(false)
                     }}
                   />
                   <div className="px-lg py-lg">
-                    <DataTable columns={COLUMNS} data={locations} scrollOnHover />
+                    <DataTable
+                      columns={COLUMNS}
+                      data={visibleLocations}
+                      scrollOnHover
+                      initialSortKey={isReviewResponse ? 'reviewsResponded' : undefined}
+                      initialSortDir={isReviewResponse ? 'desc' : undefined}
+                    />
                   </div>
                 </>
               ) : showEmptyDraftLogs ? (
@@ -675,14 +798,16 @@ export function AgentInstanceScreen({
                   agentName={agentName}
                   onNavigateToInbox={onNavigateToInbox}
                   onViewRun={setSelectedRun}
+                  searchQuery={supportsHeaderSearch ? logsQuery : ''}
+                  filters={supportsHeaderSearch ? logsFilters : undefined}
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
               ) : activeTab === 'settings' ? (
                 <AgentSettingsTab
                   product={product}
-                  onOpenBookingTemplates={onOpenBookingTemplates}
                   agentName={agentName}
+                  onOpenIntegrationSettings={onOpenIntegrationSettings}
                 />
               ) : (
                 <div className="flex h-64 items-center justify-center text-body text-text-secondary">
@@ -692,6 +817,19 @@ export function AgentInstanceScreen({
             </div>
           )}
         </div>
+
+        {/* Push-panel filter, sibling of the content column so it squeezes rather than overlays. */}
+        {showHeaderSearch && (
+          <FilterPanel
+            open={isOutcomesTab ? outcomesFilterOpen : logsFilterOpen}
+            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName)}
+            selections={isOutcomesTab ? outcomesFilters : logsFilters}
+            onSelectionsChange={isOutcomesTab ? setOutcomesFilters : setLogsFilters}
+            onClose={() =>
+              isOutcomesTab ? setOutcomesFilterOpen(false) : setLogsFilterOpen(false)
+            }
+          />
+        )}
       </div>
     </div>
   )

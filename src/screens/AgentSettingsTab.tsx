@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef, type MouseEvent } from 'react'
+import { Check, ChevronDown, ChevronUp, MoreVertical, Pencil, Smile, Square, Volume2 } from 'lucide-react'
 import {
   AdditionalVoiceDrawer,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
   Icon,
+  IntegrationsPickerDrawer,
   LanguageFlag,
   LanguageSelectMenu,
   RefChip,
-  BookingTemplateSelectField,
   VoiceCallEngineSettings,
   TtsModelSettings,
   TtsFailoverSettings,
@@ -18,7 +20,12 @@ import {
   getAgentLanguage,
   type AgentLanguageId,
 } from '../data/agentLanguages'
-import { useBookingTemplateStore } from '../data/BookingTemplateStoreContext'
+import {
+  DEFAULT_AUTO_ACCOUNT_CONNECTED_INTEGRATION_IDS,
+  DEFAULT_AUTO_AGENT_SELECTED_INTEGRATION_ID,
+  getAutomotiveIntegration,
+  AUTOMOTIVE_INTEGRATION_CATALOG,
+} from '../data/automotiveIntegrations'
 import {
   BuildIcon,
   VariableIcon,
@@ -28,7 +35,7 @@ import FieldPickerModal from '../workflow/Organisms/Modals/FieldPickerModal/Fiel
 interface AgentSettingsTabProps {
   product?: string
   agentName?: string
-  onOpenBookingTemplates?: (templateId: string) => void
+  onOpenIntegrationSettings?: (integrationId: string) => void
 }
 
 const FRONTDESK_SYSTEM_PROMPT = `# Personality
@@ -102,7 +109,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 // ── Field borders (shared focus ring via primary border) ─────────
 const FIELD_BORDER_CLASS =
-  'rounded-sm border border-border-input transition-colors focus:border-primary focus:outline-none focus-visible:border-primary'
+  'rounded-md border border-border-input transition-colors focus:border-primary focus:outline-none focus-visible:border-primary'
 
 const INPUT_CLASS = `w-full bg-surface px-md text-body text-text-primary ${FIELD_BORDER_CLASS}`
 
@@ -143,7 +150,7 @@ function FallbackField({ prefix, chipLabel, suffix }: FallbackFieldProps) {
         <button
           type="button"
           title="AI personalize"
-          className="flex h-7 items-center gap-[3px] rounded-sm px-[6px] text-text-icon hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+          className="flex h-7 items-center gap-[3px] rounded-md px-[6px] text-text-icon hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <rect x="1.5" y="1.5" width="13" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.25"/>
@@ -156,17 +163,17 @@ function FallbackField({ prefix, chipLabel, suffix }: FallbackFieldProps) {
         <button
           type="button"
           title="Emoji"
-          className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+          className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
         >
-          <Icon name="sentiment_satisfied" size={18} />
+          <Smile className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
         {/* Personalize */}
         <button
           type="button"
-          className="flex items-center gap-[3px] rounded-sm px-[6px] py-[3px] text-body text-primary hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+          className="flex items-center gap-[3px] rounded-md px-[6px] py-[3px] text-body text-primary hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
         >
           Personalize
-          <Icon name="expand_more" size={16} className="text-primary" />
+          <ChevronDown className="size-4 text-primary" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
     </div>
@@ -201,13 +208,7 @@ function SettingsCheckboxBox({ checked }: { checked: boolean }) {
       }`}
     >
       {checked && (
-        <Icon
-          name="check"
-          size={11}
-          fill
-          weight={600}
-          className="text-white"
-        />
+        <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />
       )}
     </span>
   )
@@ -329,7 +330,7 @@ function VoiceSelect({ value, options, onChange, chevron = 'down' }: VoiceSelect
       <button
         type="button"
         onClick={openMenu}
-        className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
+        className={`flex h-[34px] w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
           open ? 'border-primary' : 'border-border-input'
         }`}
       >
@@ -363,9 +364,9 @@ function VoiceSelect({ value, options, onChange, chevron = 'down' }: VoiceSelect
                     type="button"
                     onClick={(e) => togglePreview(opt, e)}
                     title={isPlaying ? 'Stop preview' : 'Preview voice'}
-                    className="flex size-7 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2 hover:text-primary"
+                    className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2 hover:text-primary"
                   >
-                    <Icon name={isPlaying ? 'stop' : 'volume_up'} size={16} />
+                    {isPlaying ? <Square className="size-4" strokeWidth={1.6} absoluteStrokeWidth /> : <Volume2 className="size-4" strokeWidth={1.6} absoluteStrokeWidth />}
                   </button>
                 </div>
               )
@@ -566,10 +567,7 @@ function ChannelAccordion({
             className="flex items-center justify-center text-text-icon"
             aria-label={open ? 'Collapse' : 'Expand'}
           >
-            <Icon
-              name={open ? 'expand_less' : 'expand_more'}
-              size={20}
-            />
+            {open ? <ChevronUp className="size-5" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronDown className="size-5" strokeWidth={1.6} absoluteStrokeWidth />}
           </button>
         </div>
       </div>
@@ -578,6 +576,146 @@ function ChannelAccordion({
           {children}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Settings section header with add action ─────────────────────
+function SettingsSectionHeader({
+  title,
+  addAriaLabel,
+  onAdd,
+  addDisabled,
+}: {
+  title: string
+  addAriaLabel: string
+  onAdd: (e: MouseEvent<HTMLButtonElement>) => void
+  addDisabled?: boolean
+}) {
+  return (
+    <div className="mb-md flex items-center gap-xs">
+      <h2 className="text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h2>
+      <button
+        type="button"
+        onClick={onAdd}
+        disabled={addDisabled}
+        aria-label={addAriaLabel}
+        className="flex size-6 shrink-0 items-center justify-center rounded-sm text-text-icon transition-colors hover:bg-surface-hover hover:text-primary focus:outline-none disabled:cursor-not-allowed disabled:text-text-tertiary"
+      >
+        <Pencil className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
+      </button>
+    </div>
+  )
+}
+
+// ── Card 3-dot menu (edit / delete) ───────────────────────────
+interface CardMenuProps {
+  itemLabel: string
+  onEdit?: () => void
+  onDelete?: () => void
+  /** When true, skip absolute positioning (for use inside a positioned parent). */
+  inline?: boolean
+}
+
+function CardMenu({ itemLabel, onEdit, onDelete, inline = false }: CardMenuProps) {
+  const [open, setOpen] = useState(false)
+
+  if (!onEdit && !onDelete) return null
+
+  return (
+    <div className={`z-10 ${inline ? 'relative' : 'absolute right-md top-md'}`}>
+      <button
+        type="button"
+        aria-label={`${itemLabel} actions`}
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
+      >
+        <MoreVertical className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[105]" onClick={() => setOpen(false)} aria-hidden />
+          <div className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+            {onEdit && (
+              <button
+                type="button"
+                className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit()
+                  setOpen(false)
+                }}
+              >
+                Edit
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                className="block w-full px-md py-sm text-left text-body text-chip-danger-text hover:bg-surface-hover"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete()
+                  setOpen(false)
+                }}
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Integration card ─────────────────────────────────────────────
+interface IntegrationCardProps {
+  iconBg: string
+  iconLabel: string
+  name: string
+  description: string
+  connected?: boolean
+  onEdit?: () => void
+  onRemove?: () => void
+}
+
+function IntegrationCard({
+  iconBg,
+  iconLabel,
+  name,
+  description,
+  connected,
+  onEdit,
+  onRemove,
+}: IntegrationCardProps) {
+  return (
+    <div className="group relative flex min-h-[148px] flex-col rounded-md border border-border-selected bg-surface p-xl transition-colors hover:bg-surface-selected">
+      <div className="absolute right-md top-md z-10 flex items-center gap-sm">
+        {connected && (
+          <div className="flex items-center gap-xs text-small text-text-secondary">
+            <span className="size-2 rounded-full bg-accent-positive" />
+            Connected
+          </div>
+        )}
+        <CardMenu itemLabel={name} onEdit={onEdit} onDelete={onRemove} inline />
+      </div>
+      <div className="mb-md">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface p-[2px]">
+          <div
+            className="flex size-full items-center justify-center rounded-full text-[10px] leading-none text-white"
+            style={{ backgroundColor: iconBg }}
+          >
+            {iconLabel}
+          </div>
+        </div>
+      </div>
+      <h3 className="mb-xs truncate text-body text-text-primary">{name}</h3>
+      <p className="line-clamp-2 text-body text-text-secondary">{description}</p>
     </div>
   )
 }
@@ -676,22 +814,25 @@ function ReminderSettings() {
 
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
-          Default voice <span className="text-chip-danger-text">*</span>
+          Default persona <span className="text-chip-danger-text">*</span>
         </label>
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
-        >
-          <span
-            className={`min-w-0 flex-1 truncate text-left text-body ${
-              voice ? 'text-text-primary' : 'text-text-tertiary'
-            }`}
+        <div className="flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
           >
-            {voice || 'Select'}
-          </span>
-          <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-        </button>
+            <span
+              className={`min-w-0 flex-1 truncate text-left text-body ${
+                voice ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {voice || 'Select'}
+            </span>
+            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+          </button>
+          <VoicePreviewButton voiceLabel={voice} speed={voiceSpeed} disabled={!voice} />
+        </div>
         <DefaultVoiceDrawer
           open={drawerOpen}
           voice={voice}
@@ -703,7 +844,7 @@ function ReminderSettings() {
 
       <div className="flex flex-col gap-xs">
         {additionalVoiceConfigs.length > 0 && (
-          <label className="text-small text-text-secondary">Additional voice</label>
+          <label className="text-small text-text-secondary">Additional persona</label>
         )}
         {additionalVoiceConfigs.length > 0 ? (
           <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
@@ -758,7 +899,7 @@ function ReminderSettings() {
             className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
           >
             <Icon name="add_circle" size={18} className="text-primary" />
-            Add additional voice
+            Add additional persona
           </button>
         )}
         <AdditionalVoiceDrawer
@@ -831,11 +972,88 @@ function ReminderSettings() {
 }
 
 /** Flat Front desk settings (system prompt → language → voice → greeting → recording). */
-function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?: (templateId: string) => void }) {
-  const { templates } = useBookingTemplateStore()
-  const [bookingTemplateId, setBookingTemplateId] = useState(
-    templates.find((t) => t.id === 'general-intake')?.id ?? templates[0]?.id ?? '',
+/* ── Front desk settings shell ─────────────────────────────────────────────
+ * Three levels of separation, no font-weight (§6.6):
+ *   card (white on tinted ground) → section title → sub-panel → 12px field label.
+ * Local to the Front desk page; other agents keep the flat layout.
+ */
+
+/** Level 1 — a titled section card. */
+function SettingsCard({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-[var(--s-bg-secondary)]">
+      <div className="px-2xl pt-lg">
+        <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h3>
+        {description && (
+          <p className="m-0 mt-xs text-small text-text-secondary">{description}</p>
+        )}
+      </div>
+      <div className="flex flex-col gap-2xl px-2xl pb-2xl pt-lg">{children}</div>
+    </section>
   )
+}
+
+/** Level 2 — a titled sub-panel inside a card (TTS / STT). */
+function SettingsSubPanel({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-lg">
+      <h4 className="m-0 text-body text-text-primary">{title}</h4>
+      <div className="flex flex-col gap-lg">{children}</div>
+    </div>
+  )
+}
+
+/** Level 4 — a selectable option row; the selected one tints and hosts its own detail field. */
+function SettingsOptionRow({
+  name,
+  checked,
+  onSelect,
+  label,
+  description,
+  children,
+}: {
+  name: string
+  checked: boolean
+  onSelect: () => void
+  label: string
+  description?: string
+  children?: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="flex cursor-pointer items-start gap-sm">
+        <input
+          type="radio"
+          name={name}
+          checked={checked}
+          onChange={onSelect}
+          className="mt-[3px] accent-primary"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-body text-text-primary">{label}</span>
+          {description && <span className="mt-[2px] block text-small text-text-tertiary">{description}</span>}
+        </span>
+      </label>
+      {checked && children && <div className="mt-sm pl-2xl">{children}</div>}
+    </div>
+  )
+}
+
+function FrontDeskSettings() {
   const [systemPrompt, setSystemPrompt] = useState(FRONTDESK_SYSTEM_PROMPT)
   const [language, setLanguage] = useState<AgentLanguageId>('en')
   const [additionalLanguages, setAdditionalLanguages] = useState<AgentLanguageId[]>([])
@@ -959,12 +1177,13 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
   }
 
   return (
-    <div className="flex w-full max-w-[720px] flex-col gap-md">
+    <div className="flex w-full max-w-[720px] flex-col gap-2xl">
+      <SettingsCard title="General" description="Core behaviour and language for this agent">
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
         <div className="flex items-center gap-xs">
-          <label className="text-body text-text-primary">System prompt</label>
-          <span className="text-body text-chip-danger-text" aria-hidden>
+          <label className="text-small text-text-secondary">System prompt</label>
+          <span className="text-small text-chip-danger-text" aria-hidden>
             *
           </span>
         </div>
@@ -1019,29 +1238,11 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
         )}
       </div>
 
-      {/* Booking template */}
-      <div className="flex flex-col gap-sm pt-lg">
-        <div>
-          <label className="text-body text-text-primary">Booking template</label>
-          <p className="mt-[2px] text-small text-text-secondary">
-            Form fields, appointment types, and providers this agent uses to book.
-          </p>
-        </div>
-        <BookingTemplateSelectField
-          label=""
-          value={bookingTemplateId}
-          onChange={setBookingTemplateId}
-          templates={templates}
-          onEditTemplate={onOpenBookingTemplates}
-          fullWidth
-        />
-      </div>
-
       {/* Language */}
       <div className="flex flex-col gap-md pt-sm">
         <div className="flex flex-col gap-sm">
           <div>
-            <label className="text-body text-text-primary">Language</label>
+            <label className="text-small text-text-secondary">Language</label>
             <p className="mt-[2px] text-small text-text-secondary">
               Choose the default and additional languages the agent will communicate in.
             </p>
@@ -1073,10 +1274,10 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
 
         {additionalFieldVisible ? (
           <div className="flex flex-col gap-sm">
-            <label className="text-body text-text-primary">Additional language</label>
+            <label className="text-small text-text-secondary">Additional language</label>
             <div ref={additionalRef} className="relative">
               <div
-                className={`flex min-h-9 w-full items-center gap-sm rounded-sm border bg-surface py-xs pr-sm transition-colors ${
+                className={`flex min-h-9 w-full items-center gap-sm rounded-md border bg-surface py-xs pr-sm transition-colors ${
                   selectedAdditional.length === 0 ? 'pl-md' : 'pl-xs'
                 } ${additionalMenuOpen ? 'border-primary' : 'border-border-input'}`}
               >
@@ -1142,44 +1343,46 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
         )}
       </div>
 
-      {/* Voice call settings */}
-      <div className="flex flex-col gap-md pt-3xl">
-        <h2 className="text-[16px] font-medium leading-6 tracking-[-0.32px] text-text-primary">
-          Voice call settings
-        </h2>
+      </SettingsCard>
 
-        <TtsModelSettings />
+      <SettingsCard title="Voice call settings" description="Speech engines, voice and call behaviour">
+        <SettingsSubPanel title="Text-to-speech (TTS)">
+        <TtsModelSettings hideHeading />
 
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
-            Default voice <span className="text-chip-danger-text">*</span>
+            Default persona <span className="text-chip-danger-text">*</span>
           </label>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flex h-9 w-full items-center gap-sm rounded-sm border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
-          >
-            <span
-              className={`min-w-0 flex-1 truncate text-left text-body ${
-                voice ? 'text-text-primary' : 'text-text-tertiary'
-              }`}
+          <div className="flex items-center gap-sm">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
             >
-              {voice || 'Select'}
-            </span>
-            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-          </button>
+              <span
+                className={`min-w-0 flex-1 truncate text-left text-body ${
+                  voice ? 'text-text-primary' : 'text-text-tertiary'
+                }`}
+              >
+                {voice || 'Select'}
+              </span>
+              <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+            </button>
+            <VoicePreviewButton voiceLabel={voice} speed={voiceSpeed} disabled={!voice} />
+          </div>
           <DefaultVoiceDrawer
             open={drawerOpen}
             voice={voice}
             speed={voiceSpeed}
             onClose={() => setDrawerOpen(false)}
             onSave={handleDefaultVoiceSave}
+            terminology="persona"
           />
         </div>
 
         <div className="flex flex-col gap-xs">
           {additionalVoiceConfigs.length > 0 && (
-            <label className="text-small text-text-secondary">Additional voice</label>
+            <label className="text-small text-text-secondary">Additional persona</label>
           )}
           {additionalVoiceConfigs.length > 0 ? (
             <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
@@ -1234,7 +1437,7 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
               className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
             >
               <Icon name="add_circle" size={18} className="text-primary" />
-              Add additional voice
+              Add additional persona
             </button>
           )}
           <AdditionalVoiceDrawer
@@ -1245,52 +1448,50 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
             defaultVoice={voice}
             onClose={closeAdditionalDrawer}
             onSave={handleSaveAdditionalVoice}
+            terminology="persona"
           />
         </div>
 
         <TtsFailoverSettings />
+        </SettingsSubPanel>
 
-        <VoiceCallEngineSettings />
-      </div>
+        <div className="border-t border-border pt-2xl">
+          <SettingsSubPanel title="Speech-to-text (STT)">
+          <VoiceCallEngineSettings hideHeading />
 
-      {/* Greeting message */}
-      <div className="flex flex-col gap-xs">
-        <label className="text-body text-text-primary">Greeting message</label>
-        <textarea
-          value={greeting}
-          onChange={(e) => setGreeting(e.target.value)}
-          rows={4}
-          className={`${INPUT_CLASS} resize-none py-sm`}
-        />
-      </div>
-
-      {/* Recording */}
-      <div className="pt-sm">
-        <p className="text-body text-text-primary">Call recording</p>
-        <div className="mt-sm flex flex-col gap-sm">
-          <label className="flex cursor-pointer items-center gap-sm">
-            <input
-              type="radio"
-              name="frontdesk-recording"
-              checked={recording === 'off'}
-              onChange={() => setRecording('off')}
-              className="accent-primary"
+          {/* Engine config above, call behaviour below */}
+          <div className="flex flex-col gap-lg border-t border-border pt-lg">
+          <div className="flex flex-col gap-xs">
+            <label className="text-small text-text-secondary">Greeting message</label>
+            <p className="text-small text-text-tertiary">
+              First thing the agent says when a call connects.
+            </p>
+            <textarea
+              value={greeting}
+              onChange={(e) => setGreeting(e.target.value)}
+              rows={4}
+              className={`${INPUT_CLASS} resize-none py-sm`}
             />
-            <span className="text-body text-text-primary">Off</span>
-          </label>
-          <div>
-            <label className="flex cursor-pointer items-center gap-sm">
-              <input
-                type="radio"
+          </div>
+
+          {/* Call recording — option rows so the consent field clearly belongs to its option */}
+          <div className="flex flex-col gap-xs">
+            <label className="text-small text-text-secondary">Call recording</label>
+            <div className="mt-xs flex flex-col gap-md">
+              <SettingsOptionRow
+                name="frontdesk-recording"
+                checked={recording === 'off'}
+                onSelect={() => setRecording('off')}
+                label="Off"
+                description="Calls are never recorded."
+              />
+              <SettingsOptionRow
                 name="frontdesk-recording"
                 checked={recording === 'announced'}
-                onChange={() => setRecording('announced')}
-                className="accent-primary"
-              />
-              <span className="text-body text-text-primary">Record only after obtaining consent</span>
-            </label>
-            {recording === 'announced' && (
-              <div className="mt-sm pl-2xl">
+                onSelect={() => setRecording('announced')}
+                label="Record only after obtaining consent"
+                description="Plays a consent line before recording starts."
+              >
                 <label className="mb-xs block text-small text-text-secondary">Consent message</label>
                 <textarea
                   value={consent}
@@ -1298,18 +1499,209 @@ function FrontDeskSettings({ onOpenBookingTemplates }: { onOpenBookingTemplates?
                   rows={3}
                   className={`${INPUT_CLASS} resize-none py-sm`}
                 />
-              </div>
-            )}
+              </SettingsOptionRow>
+            </div>
           </div>
         </div>
-      </div>
+        </SettingsSubPanel>
+        </div>
+      </SettingsCard>
+    </div>
+  )
+}
+
+/** Automotive Front desk agent settings — channel accordion (voice/web chat/text) plus the
+ *  agent's connected CRM/DMS integration. Distinct from the healthcare/dental `FrontDeskSettings`
+ *  (system prompt + language editor) above; automotive agents don't use those concepts. */
+function AutomotiveFrontDeskSettings({
+  onOpenIntegrationSettings,
+}: {
+  onOpenIntegrationSettings?: (integrationId: string) => void
+}) {
+  const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
+  const [greeting, setGreeting] = useState(
+    'Thank you for calling — my name is Myna, your virtual assistant. How can I help you today?'
+  )
+  const [recording, setRecording] = useState<RecordingMode>('announced')
+  const [consent, setConsent] = useState(
+    'This call may be recorded for quality and training purposes.'
+  )
+  const [accountConnectedIntegrationIds, setAccountConnectedIntegrationIds] = useState<string[]>(
+    DEFAULT_AUTO_ACCOUNT_CONNECTED_INTEGRATION_IDS,
+  )
+  const [agentSelectedIntegrationId, setAgentSelectedIntegrationId] = useState<string | null>(
+    DEFAULT_AUTO_AGENT_SELECTED_INTEGRATION_ID,
+  )
+  const [voiceCallEnabled, setVoiceCallEnabled] = useState(true)
+  const [webChatEnabled, setWebChatEnabled] = useState(true)
+  const [textEnabled, setTextEnabled] = useState(true)
+  const [integrationDrawerOpen, setIntegrationDrawerOpen] = useState(false)
+
+  const agentIntegration = agentSelectedIntegrationId
+    ? getAutomotiveIntegration(agentSelectedIntegrationId)
+    : undefined
+
+  const removeAgentIntegration = () => {
+    setAgentSelectedIntegrationId(null)
+  }
+
+  const navigateToIntegrationSettings = (integrationId: string) => {
+    setIntegrationDrawerOpen(false)
+    onOpenIntegrationSettings?.(integrationId)
+  }
+
+  return (
+    <div className="w-full max-w-[700px] space-y-xl">
+
+      {/* Channel settings */}
+      <section>
+        <h2 className="mb-md text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Channel settings</h2>
+        <div className="space-y-8">
+
+          {/* Voice call */}
+          <ChannelAccordion
+            title="Voice call"
+            defaultOpen
+            enabled={voiceCallEnabled}
+            onEnabledChange={setVoiceCallEnabled}
+          >
+            <div className="flex flex-col gap-lg">
+              <div>
+                <label className="block text-small text-text-secondary">Voice</label>
+                <VoiceSelect value={voice} options={VOICE_OPTIONS} onChange={setVoice} />
+              </div>
+
+              <div>
+                <label className="mb-xs block text-small text-text-secondary">
+                  Greeting message <span className="text-chip-danger-text">*</span>
+                </label>
+                <textarea
+                  value={greeting}
+                  onChange={(e) => setGreeting(e.target.value)}
+                  rows={4}
+                  className={`${INPUT_CLASS} resize-none py-sm`}
+                />
+              </div>
+
+              <div>
+                <p className="text-small text-text-secondary">Recording</p>
+                <SettingSubtext tone="tertiary">
+                  Configure consent wording in each channel settings below
+                </SettingSubtext>
+                <div className="mt-sm flex flex-col gap-sm">
+                  <label className="flex cursor-pointer items-center gap-sm">
+                    <input
+                      type="radio"
+                      name="recording"
+                      value="off"
+                      checked={recording === 'off'}
+                      onChange={() => setRecording('off')}
+                      className="accent-primary"
+                    />
+                    <span className="text-body text-text-primary">Off</span>
+                  </label>
+                  <div>
+                    <label className="flex cursor-pointer items-center gap-sm">
+                      <input
+                        type="radio"
+                        name="recording"
+                        value="announced"
+                        checked={recording === 'announced'}
+                        onChange={() => setRecording('announced')}
+                        className="accent-primary"
+                      />
+                      <span className="text-body text-text-primary">Record with announced consent</span>
+                    </label>
+                    {recording === 'announced' && (
+                      <div className="mt-sm pl-2xl">
+                        <label className="mb-xs block text-small text-text-secondary">
+                          Consent message
+                        </label>
+                        <textarea
+                          value={consent}
+                          onChange={(e) => setConsent(e.target.value)}
+                          rows={3}
+                          className={`${INPUT_CLASS} resize-none py-sm`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ChannelAccordion>
+
+          {/* Web chat */}
+          <ChannelAccordion
+            title="Web chat"
+            enabled={webChatEnabled}
+            onEnabledChange={setWebChatEnabled}
+          >
+            <WebChatSettings />
+          </ChannelAccordion>
+
+          {/* Text */}
+          <ChannelAccordion
+            title="Text"
+            enabled={textEnabled}
+            onEnabledChange={setTextEnabled}
+          >
+            <TextSettings />
+          </ChannelAccordion>
+
+        </div>
+      </section>
+
+      {/* Integrations */}
+      <section>
+        <SettingsSectionHeader
+          title="Integrations"
+          addAriaLabel="Edit integrations"
+          onAdd={() => setIntegrationDrawerOpen(true)}
+        />
+        <p className="mb-lg text-body text-text-secondary">
+          Integration connected to this front desk agent.
+        </p>
+        {!agentIntegration ? (
+          <div className="flex h-32 items-center justify-center rounded-sm border border-border-selected bg-surface text-body text-text-tertiary">
+            No integration selected. Use Edit integrations to connect one.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-lg">
+            <IntegrationCard
+              iconBg={agentIntegration.iconBg}
+              iconLabel={agentIntegration.iconLabel}
+              name={agentIntegration.name}
+              description={agentIntegration.description}
+              connected
+              onEdit={() => navigateToIntegrationSettings(agentIntegration.id)}
+              onRemove={removeAgentIntegration}
+            />
+          </div>
+        )}
+        <IntegrationsPickerDrawer
+          open={integrationDrawerOpen}
+          integrations={AUTOMOTIVE_INTEGRATION_CATALOG}
+          connectedIds={accountConnectedIntegrationIds}
+          selectedId={agentSelectedIntegrationId}
+          onClose={() => setIntegrationDrawerOpen(false)}
+          onSave={({ selectedId, connectedIds }) => {
+            setAccountConnectedIntegrationIds(connectedIds)
+            setAgentSelectedIntegrationId(selectedId)
+            setIntegrationDrawerOpen(false)
+          }}
+          onOpenIntegrationSettings={navigateToIntegrationSettings}
+        />
+      </section>
+
     </div>
   )
 }
 
 export function AgentSettingsTab({
   agentName,
-  onOpenBookingTemplates,
+  product,
+  onOpenIntegrationSettings,
 }: AgentSettingsTabProps) {
   const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
   const [greeting, setGreeting] = useState(
@@ -1324,13 +1716,23 @@ export function AgentSettingsTab({
   const [textEnabled, setTextEnabled] = useState(true)
 
   if (isFrontDeskAgent(agentName)) {
-    return (
-      <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <FrontDeskSettings onOpenBookingTemplates={onOpenBookingTemplates} />
+    if (product === 'automotive') {
+      return (
+        <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
+          <AutomotiveFrontDeskSettings onOpenIntegrationSettings={onOpenIntegrationSettings} />
+          {/* Same right-column width as ProcedureDetailScreen Context panel */}
+          <div className="w-[400px] shrink-0" aria-hidden />
         </div>
-        {/* Same right-column width as ProcedureDetailScreen Context panel */}
-        <div className="w-[400px] shrink-0" aria-hidden />
+      )
+    }
+    return (
+      // White ground; cards are separated by their border + header hairline. The cards fill the
+      // width left of a 350px reserved gutter, so the whitespace is constant at any viewport.
+      <div className="flex min-h-full bg-surface px-2xl pt-lg pb-2xl">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <FrontDeskSettings />
+        </div>
+        <div className="w-[350px] shrink-0" aria-hidden />
       </div>
     )
   }

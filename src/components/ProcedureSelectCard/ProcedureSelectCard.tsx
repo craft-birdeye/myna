@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 import type { ProcedureSelectCardProps } from './ProcedureSelectCard.types'
+import { Check } from 'lucide-react'
 
 function SelectCheckbox({ checked }: { checked: boolean }) {
   return (
@@ -10,7 +10,7 @@ function SelectCheckbox({ checked }: { checked: boolean }) {
         checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={11} fill weight={600} className="text-white" />}
+      {checked && <Check className="size-4 text-white" strokeWidth={1.6} absoluteStrokeWidth />}
     </span>
   )
 }

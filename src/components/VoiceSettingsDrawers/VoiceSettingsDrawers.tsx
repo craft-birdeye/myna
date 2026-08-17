@@ -18,7 +18,7 @@ import type {
 export type { AdditionalVoiceConfig, VoiceOption } from './VoiceSettingsDrawers.types'
 
 const FIELD_BORDER_CLASS =
-  'rounded-sm border border-border-input transition-colors focus:border-primary focus:outline-none focus-visible:border-primary'
+  'rounded-md border border-border-input transition-colors focus:border-primary focus:outline-none focus-visible:border-primary'
 
 const INPUT_CLASS = `w-full bg-surface px-md text-body text-text-primary ${FIELD_BORDER_CLASS}`
 
@@ -66,7 +66,7 @@ function playVoicePreview(text: string, speed = 1, onEnd?: () => void) {
   window.speechSynthesis.speak(utter)
 }
 
-function VoicePreviewButton({
+export function VoicePreviewButton({
   voiceLabel,
   speed = 1,
   disabled = false,
@@ -102,13 +102,13 @@ function VoicePreviewButton({
   }
 
   return (
-    <Tooltip content={playing ? 'Stop preview' : 'Preview voice'} variant="brief">
+    <Tooltip content="Preview" variant="brief">
       <button
         type="button"
         onClick={toggle}
         disabled={disabled || !voiceLabel}
-        aria-label={playing ? 'Stop preview' : 'Preview voice'}
-        className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-input bg-surface text-text-icon transition-colors hover:bg-surface-l2 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label="Preview"
+        className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface text-text-icon transition-colors hover:bg-surface-l2 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Icon name={playing ? 'stop' : 'volume_up'} size={20} fill={playing} />
       </button>
@@ -168,7 +168,7 @@ function VoiceDropdown({
       <button
         type="button"
         onClick={openMenu}
-        className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
+        className={`flex h-9 w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary ${
           open ? 'border-primary' : 'border-border-input'
         }`}
       >
@@ -236,9 +236,11 @@ export function DefaultVoiceDrawer({
   speed,
   onClose,
   onSave,
+  terminology = 'persona',
 }: DefaultVoiceDrawerProps) {
   const [draftVoice, setDraftVoice] = useState(voice)
   const [draftSpeed, setDraftSpeed] = useState(speed)
+  const isPersona = terminology === 'persona'
 
   useEffect(() => {
     if (open) {
@@ -277,13 +279,15 @@ export function DefaultVoiceDrawer({
             >
               <BackArrowIcon />
             </button>
-            <h2 className="text-h3 text-text-primary">Default voice</h2>
+            <h2 className="text-h3 text-text-primary">
+              {isPersona ? 'Default persona' : 'Default voice'}
+            </h2>
           </div>
           <button
             type="button"
             onClick={() => onSave({ voice: draftVoice, speed: draftSpeed })}
             disabled={!draftVoice}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-9 items-center rounded-md px-lg text-body transition-colors ${
               draftVoice
                 ? 'bg-primary text-white hover:bg-primary-hover'
                 : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
@@ -295,7 +299,9 @@ export function DefaultVoiceDrawer({
 
         <div className="flex flex-1 flex-col gap-xl overflow-y-auto px-2xl pb-2xl pt-md">
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Voice</label>
+            <label className="text-small text-text-secondary">
+              {isPersona ? 'Select persona' : 'Voice'}
+            </label>
             <div className="flex items-center gap-sm">
               <div className="min-w-0 flex-1">
                 <VoiceDropdown value={draftVoice} onChange={setDraftVoice} speed={draftSpeed} />
@@ -327,7 +333,7 @@ export function DefaultVoiceDrawer({
                     step={VOICE_SPEED_STEP}
                     value={draftSpeed}
                     onChange={(e) => setDraftSpeed(Number(e.target.value))}
-                    aria-label="Voice speed"
+                    aria-label={isPersona ? 'Persona speed' : 'Voice speed'}
                     className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                   />
                 </div>
@@ -336,7 +342,7 @@ export function DefaultVoiceDrawer({
                   <span className="text-small text-text-tertiary">Faster</span>
                 </div>
               </div>
-              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-sm border border-border-input bg-surface text-body text-text-primary">
+              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface text-body text-text-primary">
                 {formatVoiceSpeed(draftSpeed)}
               </div>
             </div>
@@ -355,6 +361,7 @@ export function AdditionalVoiceDrawer({
   defaultVoice,
   onClose,
   onSave,
+  terminology = 'persona',
 }: AdditionalVoiceDrawerProps) {
   const [draftLabel, setDraftLabel] = useState('')
   const [draftVoice, setDraftVoice] = useState('')
@@ -367,6 +374,7 @@ export function AdditionalVoiceDrawer({
   const [langQuery, setLangQuery] = useState('')
   const langRef = useRef<HTMLDivElement>(null)
   const isEditing = initialConfig != null
+  const isPersona = terminology === 'persona'
 
   useEffect(() => {
     if (!open) {
@@ -421,6 +429,104 @@ export function AdditionalVoiceDrawer({
     })
   }
 
+  const languageField = (
+    <div className="flex flex-col gap-xs">
+      <label className="text-small text-text-secondary">Language</label>
+      <div ref={langRef} className="relative">
+        <button
+          type="button"
+          onClick={() => {
+            setLangMenuOpen((o) => !o)
+            setLangQuery('')
+          }}
+          className={`flex h-9 w-full items-center gap-sm px-md text-left ${FIELD_BORDER_CLASS}`}
+          aria-haspopup="listbox"
+          aria-expanded={langMenuOpen}
+        >
+          {draftLanguage !== SAME_AS_AGENT_LANGUAGE && (
+            <LanguageFlag countryCode={selectedLang.countryCode} label={selectedLang.label} />
+          )}
+          <span className={`flex-1 text-body ${draftLanguage === SAME_AS_AGENT_LANGUAGE ? 'text-text-tertiary' : 'text-text-primary'}`}>
+            {draftLanguage === SAME_AS_AGENT_LANGUAGE ? (defaultVoice ? 'Same as agent' : 'Select') : selectedLang.label}
+          </span>
+          <Icon name="expand_more" size={18} className="text-text-icon" />
+        </button>
+        {langMenuOpen && (
+          <div
+            className="absolute left-0 right-0 top-full z-20 mt-xs flex max-h-[320px] flex-col overflow-hidden rounded-sm border border-border bg-surface p-md shadow-dropdown"
+            role="listbox"
+          >
+            <div className="flex h-9 shrink-0 items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
+              <Icon name="search" size={20} className="text-text-icon" />
+              <input
+                value={langQuery}
+                onChange={(e) => setLangQuery(e.target.value)}
+                placeholder="Search"
+                className="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
+              />
+            </div>
+
+            <div className="mt-sm min-h-0 flex-1 overflow-y-auto">
+              {defaultVoice && (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={draftLanguage === SAME_AS_AGENT_LANGUAGE}
+                  onClick={() => {
+                    setDraftLanguage(SAME_AS_AGENT_LANGUAGE)
+                    setLangMenuOpen(false)
+                    setLangQuery('')
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-sm py-sm text-left hover:bg-surface-hover ${
+                    draftLanguage === SAME_AS_AGENT_LANGUAGE ? 'bg-surface-selected' : ''
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">
+                    Same as agent
+                  </span>
+                  {draftLanguage === SAME_AS_AGENT_LANGUAGE && (
+                    <Icon name="check" size={18} className="shrink-0 text-text-primary" />
+                  )}
+                </button>
+              )}
+              {filteredLanguageOptions.map((lang) => {
+                const isSelected = draftLanguage === lang.id
+                return (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      setDraftLanguage(lang.id as AgentLanguageId)
+                      setLangMenuOpen(false)
+                      setLangQuery('')
+                    }}
+                    className={`flex w-full items-center gap-sm rounded-sm px-sm py-sm text-left hover:bg-surface-hover ${
+                      isSelected ? 'bg-surface-selected' : ''
+                    }`}
+                  >
+                    <LanguageFlag countryCode={lang.countryCode} label={lang.label} />
+                    <span className="min-w-0 flex-1 truncate text-body text-text-primary">
+                      {lang.label}
+                    </span>
+                    {isSelected && (
+                      <Icon name="check" size={18} className="shrink-0 text-text-primary" />
+                    )}
+                  </button>
+                )
+              })}
+
+              {filteredLanguageOptions.length === 0 && (
+                <p className="px-sm py-sm text-body text-text-tertiary">No results.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
   return (
     <div className={`fixed inset-0 z-[100] ${open ? '' : 'pointer-events-none'}`} aria-hidden={!open}>
       <div
@@ -446,14 +552,20 @@ export function AdditionalVoiceDrawer({
               <BackArrowIcon />
             </button>
             <h2 className="text-h3 text-text-primary">
-              {isEditing ? 'Additional voice' : 'Add additional voice'}
+              {isPersona
+                ? isEditing
+                  ? 'Additional persona'
+                  : 'Add additional persona'
+                : isEditing
+                  ? 'Additional voice'
+                  : 'Add additional voice'}
             </h2>
           </div>
           <button
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-9 items-center rounded-md px-lg text-body transition-colors ${
               canSave
                 ? 'bg-primary text-white hover:bg-primary-hover'
                 : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
@@ -465,7 +577,9 @@ export function AdditionalVoiceDrawer({
 
         <div className="flex flex-1 flex-col gap-xl overflow-y-auto px-2xl pb-2xl pt-md">
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Voice label</label>
+            <label className="text-small text-text-secondary">
+              {isPersona ? 'Label' : 'Voice label'}
+            </label>
             <input
               type="text"
               value={draftLabel}
@@ -475,8 +589,12 @@ export function AdditionalVoiceDrawer({
             />
           </div>
 
+          {languageField}
+
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Voice</label>
+            <label className="text-small text-text-secondary">
+              {isPersona ? 'Select persona' : 'Voice'}
+            </label>
             <div className="flex items-center gap-sm">
               <div className="min-w-0 flex-1">
                 <VoiceDropdown value={draftVoice} onChange={setDraftVoice} speed={draftSpeed} />
@@ -486,110 +604,20 @@ export function AdditionalVoiceDrawer({
           </div>
 
           <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">Language</label>
-            <div ref={langRef} className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setLangMenuOpen((o) => !o)
-                  setLangQuery('')
-                }}
-                className={`flex h-9 w-full items-center gap-sm px-md text-left ${FIELD_BORDER_CLASS}`}
-                aria-haspopup="listbox"
-                aria-expanded={langMenuOpen}
-              >
-                {draftLanguage !== SAME_AS_AGENT_LANGUAGE && (
-                  <LanguageFlag countryCode={selectedLang.countryCode} label={selectedLang.label} />
-                )}
-                <span className={`flex-1 text-body ${draftLanguage === SAME_AS_AGENT_LANGUAGE ? 'text-text-tertiary' : 'text-text-primary'}`}>
-                  {draftLanguage === SAME_AS_AGENT_LANGUAGE ? (defaultVoice ? 'Same as agent' : 'Select') : selectedLang.label}
-                </span>
-                <Icon name="expand_more" size={18} className="text-text-icon" />
-              </button>
-              {langMenuOpen && (
-                <div
-                  className="absolute left-0 right-0 top-full z-20 mt-xs flex max-h-[320px] flex-col overflow-hidden rounded-sm border border-border bg-surface p-md shadow-dropdown"
-                  role="listbox"
-                >
-                  <div className="flex h-9 shrink-0 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md">
-                    <Icon name="search" size={20} className="text-text-icon" />
-                    <input
-                      value={langQuery}
-                      onChange={(e) => setLangQuery(e.target.value)}
-                      placeholder="Search"
-                      className="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
-                    />
-                  </div>
-
-                  <div className="mt-sm min-h-0 flex-1 overflow-y-auto">
-                    {defaultVoice && (
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={draftLanguage === SAME_AS_AGENT_LANGUAGE}
-                        onClick={() => {
-                          setDraftLanguage(SAME_AS_AGENT_LANGUAGE)
-                          setLangMenuOpen(false)
-                          setLangQuery('')
-                        }}
-                        className={`flex w-full items-center gap-sm rounded-sm px-sm py-sm text-left hover:bg-surface-hover ${
-                          draftLanguage === SAME_AS_AGENT_LANGUAGE ? 'bg-surface-selected' : ''
-                        }`}
-                      >
-                        <span className="min-w-0 flex-1 truncate text-body text-text-primary">
-                          Same as agent
-                        </span>
-                        {draftLanguage === SAME_AS_AGENT_LANGUAGE && (
-                          <Icon name="check" size={18} className="shrink-0 text-text-primary" />
-                        )}
-                      </button>
-                    )}
-                    {filteredLanguageOptions.map((lang) => {
-                      const isSelected = draftLanguage === lang.id
-                      return (
-                        <button
-                          key={lang.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          onClick={() => {
-                            setDraftLanguage(lang.id as AgentLanguageId)
-                            setLangMenuOpen(false)
-                            setLangQuery('')
-                          }}
-                          className={`flex w-full items-center gap-sm rounded-sm px-sm py-sm text-left hover:bg-surface-hover ${
-                            isSelected ? 'bg-surface-selected' : ''
-                          }`}
-                        >
-                          <LanguageFlag countryCode={lang.countryCode} label={lang.label} />
-                          <span className="min-w-0 flex-1 truncate text-body text-text-primary">
-                            {lang.label}
-                          </span>
-                          {isSelected && (
-                            <Icon name="check" size={18} className="shrink-0 text-text-primary" />
-                          )}
-                        </button>
-                      )
-                    })}
-
-                    {filteredLanguageOptions.length === 0 && (
-                      <p className="px-sm py-sm text-body text-text-tertiary">No results.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-xs">
             <label className="text-small text-text-secondary">
-              When should the agent use this voice?
+              {isPersona
+                ? 'When should the agent use this persona?'
+                : 'When should the agent use this voice?'}
             </label>
             <textarea
               value={whenToUse}
               onChange={(e) => setWhenToUse(e.target.value)}
               rows={4}
-              placeholder="E.g. use this voice when the caller speaks Spanish or starts the conversation in Spanish"
+              placeholder={
+                isPersona
+                  ? 'E.g. use this persona when the caller speaks Spanish or starts the conversation in Spanish'
+                  : 'E.g. use this voice when the caller speaks Spanish or starts the conversation in Spanish'
+              }
               className={`${INPUT_CLASS} resize-none py-sm placeholder:text-text-tertiary`}
             />
           </div>
@@ -628,7 +656,7 @@ export function AdditionalVoiceDrawer({
                     step={VOICE_SPEED_STEP}
                     value={draftSpeed}
                     onChange={(e) => setDraftSpeed(Number(e.target.value))}
-                    aria-label="Voice speed"
+                    aria-label={isPersona ? 'Persona speed' : 'Voice speed'}
                     className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                   />
                 </div>
@@ -637,7 +665,7 @@ export function AdditionalVoiceDrawer({
                   <span className="text-small text-text-tertiary">Faster</span>
                 </div>
               </div>
-              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-sm border border-border-input bg-surface text-body text-text-primary">
+              <div className="flex h-9 w-14 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface text-body text-text-primary">
                 {formatVoiceSpeed(draftSpeed)}
               </div>
             </div>

@@ -105,7 +105,7 @@ function ReviewsSortDropdown({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+        className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
       >
         {selectedLabel}
         <Icon name="expand_more" size={18} className="text-text-icon" />
@@ -156,7 +156,7 @@ function ReviewsMoreMenu() {
         aria-label="More options"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+        className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
       >
         <Icon name="more_vert" size={20} />
       </button>
@@ -302,14 +302,14 @@ function ReviewCard({ review }: { review: Review }) {
           <div className="mt-lg flex items-center justify-end gap-sm">
             <button
               type="button"
-              className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+              className="flex h-9 items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
             >
               Edit reply
             </button>
             <button
               type="button"
               aria-label="More options"
-              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
             >
               <Icon name="more_vert" size={20} />
             </button>
@@ -319,21 +319,21 @@ function ReviewCard({ review }: { review: Review }) {
         <div className="mt-lg flex items-center justify-end gap-sm">
           <button
             type="button"
-            className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+            className="flex h-9 items-center rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
           >
             Reply
           </button>
           <button
             type="button"
             aria-label="Comment"
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
             <Icon name="chat_bubble" size={20} />
           </button>
           <button
             type="button"
             aria-label="More options"
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+            className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
           >
             <Icon name="more_vert" size={20} />
           </button>
@@ -407,7 +407,7 @@ export function AllReviewsScreen({
                 <button
                   type="button"
                   aria-label="Summarize using BirdAI"
-                  className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface hover:bg-surface-l2"
+                  className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface hover:bg-surface-l2"
                 >
                   <img src={iconAgentsPurple} alt="" className="size-6" />
                 </button>
@@ -417,7 +417,7 @@ export function AllReviewsScreen({
                 type="button"
                 aria-label="Filters"
                 onClick={() => setFilterOpen((current) => !current)}
-                className={`flex size-9 items-center justify-center rounded-sm border border-border-selected text-text-icon hover:bg-surface-l2 ${
+                className={`flex size-9 items-center justify-center rounded-md border border-border-selected text-text-icon hover:bg-surface-l2 ${
                   filterOpen ? 'bg-surface-selected' : 'bg-surface'
                 }`}
               >

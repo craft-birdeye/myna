@@ -1184,9 +1184,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   'rr-1': {
     triggerName: 'When a new review is received or updated',
     description: 'Agent triggers on new or updated reviews across all sources and locations.',
-    conditions: [
-      { id: 1, fieldValue: 'review_event', operatorValue: 'equals', valueValue: 'created_or_updated' },
-    ],
+    conditions: [],
     conditionOptions: {
       field: [
         { value: 'review_event',  label: 'Review event' },

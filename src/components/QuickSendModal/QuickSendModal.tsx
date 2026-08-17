@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Icon } from '../Icon/Icon'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
 import { QuickSendModalProps } from './QuickSendModal.types'
+import { ChevronDown, Info, X } from 'lucide-react'
 
 const TYPE_OPTIONS = [
   'Review request',
@@ -49,19 +49,19 @@ export function QuickSendModal({ open, patient, email = '', onClose, onSend }: Q
   return (
     <div className="fixed inset-0 z-[120]">
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal card */}
-      <div className="absolute left-1/2 top-[60px] w-[590px] -translate-x-1/2 rounded-md bg-surface shadow-modal">
+      <div className="absolute left-1/2 top-[60px] w-[590px] -translate-x-1/2 rounded-xl bg-surface shadow-modal">
         {/* Header */}
         <div className="flex items-center justify-between px-2xl pb-lg pt-2xl">
           <span className="text-h3 text-text-primary">Quick send</span>
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
           >
-            <Icon name="close" size={20} />
+            <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
           </button>
         </div>
 
@@ -73,14 +73,14 @@ export function QuickSendModal({ open, patient, email = '', onClose, onSend }: Q
             <button
               type="button"
               onClick={(e) => openMenu('type', e)}
-              className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
+              className={`flex h-[34px] w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
                 openField === 'type' ? 'border-primary' : 'border-border-input'
               }`}
             >
               <span className={`min-w-0 flex-1 truncate text-left text-body ${type ? 'text-text-primary' : 'text-text-tertiary'}`}>
                 {type || 'Select request type'}
               </span>
-              <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+              <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
 
@@ -93,7 +93,7 @@ export function QuickSendModal({ open, patient, email = '', onClose, onSend }: Q
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="h-9 w-full rounded-sm border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                  className="h-[34px] w-full rounded-md border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
                 />
               </div>
 
@@ -103,7 +103,7 @@ export function QuickSendModal({ open, patient, email = '', onClose, onSend }: Q
                 <input
                   value={emailVal}
                   onChange={(e) => setEmailVal(e.target.value)}
-                  className="h-9 w-full rounded-sm border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+                  className="h-[34px] w-full rounded-md border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
                 />
               </div>
 
@@ -113,27 +113,27 @@ export function QuickSendModal({ open, patient, email = '', onClose, onSend }: Q
                 <button
                   type="button"
                   onClick={(e) => openMenu('location', e)}
-                  className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
+                  className={`flex h-[34px] w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
                     openField === 'location' ? 'border-primary' : 'border-border-input'
                   }`}
                 >
                   <span className={`min-w-0 flex-1 truncate text-left text-body ${location ? 'text-text-primary' : 'text-text-tertiary'}`}>
                     {location || 'Select location'}
                   </span>
-                  <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+                  <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               </div>
 
               {/* Info banner */}
               <div className="flex items-center gap-sm rounded-sm border border-[#bfdbfe] bg-[#eff6ff] px-md py-sm">
-                <Icon name="info" size={16} className="shrink-0 text-[#3b82f6]" />
+                <Info className="size-4 shrink-0 text-[#3b82f6]" strokeWidth={1.6} absoluteStrokeWidth />
                 <span className="text-small text-text-primary">The last templates are preselected. Change if needed.</span>
               </div>
 
               {/* More toggle */}
               <button type="button" className="flex w-fit items-center gap-xs text-body text-text-action">
                 More
-                <Icon name="expand_more" size={16} />
+                <ChevronDown className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </>
           )}
@@ -152,7 +152,7 @@ export function QuickSendModal({ open, patient, email = '', onClose, onSend }: Q
             type="button"
             disabled={!type}
             onClick={() => { onClose(); onSend?.() }}
-            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            className={`flex h-[34px] items-center rounded-md px-lg text-body transition-colors ${
               type
                 ? 'bg-primary text-white hover:bg-primary-hover'
                 : 'cursor-not-allowed bg-surface-selected text-text-tertiary'

@@ -1,7 +1,7 @@
-import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 import { Chip } from '../Chip/Chip'
 import { Tooltip } from '../Tooltip/Tooltip'
+import { Icon } from '../Icon/Icon'
 import type { QuickViewDrawerProps, QuickViewDrawerIntakeProps } from './QuickViewDrawer.types'
 import type { ChipVariant } from '../Chip/Chip.types'
 import aiIcon from '../../assets/ai-icon.svg'
@@ -63,8 +63,8 @@ function DrawerShell({ patient, status, onClose, onViewDetails, onQuickSend, onM
 
   return (
     <>
-      <div className="fixed inset-0 z-[150] bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-[160] flex h-full w-[650px] flex-col bg-white shadow-modal">
+      <div className="fixed inset-0 z-[150] bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed right-2 top-2 z-[160] flex h-[calc(100%-16px)] w-[650px] flex-col overflow-hidden rounded-2xl bg-surface shadow-modal">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between px-2xl pb-lg pt-2xl">
           <div className="flex items-center gap-sm">
@@ -226,7 +226,7 @@ export function QuickViewDrawer(props: QuickViewDrawerProps) {
                   <img src={aiIcon} alt="AI" className="size-5 opacity-50" />
                   <p className="text-body text-text-secondary">Get insights and actions for {name}</p>
                 </div>
-                <button type="button" className="flex h-9 items-center rounded-sm bg-[#6834B7] px-lg text-body text-white hover:bg-[#5a2c9e]">Generate summary</button>
+                <button type="button" className="flex h-[34px] items-center rounded-md bg-[#6834B7] px-lg text-body text-white hover:bg-[#5a2c9e]">Generate summary</button>
               </div>
             )}
             <div className="mx-2xl mb-xl">

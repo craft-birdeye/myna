@@ -93,19 +93,85 @@ const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
 ]
 
+/**
+ * Rows this agent's Logs tab shows. Mirrors the branch order in `AgentLogsTab` below — keep the
+ * two in step if a new agent branch is added.
+ */
+function logRowsForAgent(agentName?: string): Record<string, unknown>[] {
+  if (agentName === 'Reminder agent') return REMINDER_LOGS_ROWS
+  if (agentName?.startsWith('Review response agent')) return REVIEW_RESPONSE_LOGS_ROWS
+  if (agentName && /review generation agent/i.test(agentName)) return REVIEW_GENERATION_LOGS_ROWS
+  if (agentName === 'Pre-visit agent' || agentName === 'Waitlist agent') return PREVISIT_LOGS_ROWS
+  if (agentName === 'Tagging & routing agent') return PREVISIT_LOGS_ROWS
+  return HEALTHCARE_LOGS_ROWS
+}
+
+/**
+ * Filter fields for the Logs tab, with options derived from the agent's own rows so the panel
+ * can never offer a value that filters to nothing. Ids match the row keys they filter on.
+ */
+export function getLogFilterFields(agentName?: string) {
+  const rows = logRowsForAgent(agentName)
+  const distinct = (pick: (r: Record<string, unknown>) => unknown) =>
+    Array.from(
+      new Set(rows.map(pick).filter((v): v is string => typeof v === 'string' && v.length > 0)),
+    ).sort()
+  const asOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }))
+
+  return [
+    { id: 'status', label: 'Status', options: asOptions(distinct((r) => r.status)) },
+    // The two log shapes name this column `source` (reviews) or `channel` (conversations).
+    { id: 'source', label: 'Source', options: asOptions(distinct((r) => r.source ?? r.channel)) },
+  ]
+}
+
+/**
+ * Applies the header search + filter selections to a log table's rows.
+ *
+ * Search matches any string field on the row (contact, source, timestamp, …). Filters match by
+ * key; a row missing the filtered key is left in rather than silently dropped. `source` also
+ * checks `channel`, because the two log shapes name that column differently.
+ */
+function applyLogFilters<T extends Record<string, unknown>>(
+  rows: T[],
+  query: string,
+  filters: Record<string, string[]>,
+): T[] {
+  const q = query.trim().toLowerCase()
+  return rows.filter((row) => {
+    if (q && !Object.values(row).some((v) => typeof v === 'string' && v.toLowerCase().includes(q))) {
+      return false
+    }
+    return Object.entries(filters).every(([key, values]) => {
+      if (!values?.length) return true
+      const cell = key === 'source' ? (row.source ?? row.channel) : row[key]
+      if (cell == null) return true
+      return values.includes(String(cell))
+    })
+  })
+}
+
 interface AgentLogsTabProps {
   agentName?: string
   onNavigateToInbox?: (conversationId?: string) => void
   onViewRun?: (row: HealthcareLogRow) => void
+  /** Header search query — matches any string field on a row. */
+  searchQuery?: string
+  /** Header filter selections, keyed by `LOG_FILTER_FIELDS` id. */
+  filters?: Record<string, string[]>
 }
 
-export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
+export function AgentLogsTab({ agentName, onViewRun, searchQuery = '', filters = {} }: AgentLogsTabProps) {
+  /** Narrows a row set by the header search + filters. */
+  const f = <T extends Record<string, unknown>>(rows: T[]) => applyLogFilters(rows, searchQuery, filters)
+
+
   if (agentName === 'Reminder agent') {
     return (
       <div className="px-lg py-lg">
         <DataTable
           columns={REMINDER_LOG_COLUMNS}
-          data={REMINDER_LOGS_ROWS}
+          data={f(REMINDER_LOGS_ROWS)}
           onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',
@@ -122,7 +188,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={REVIEW_RESPONSE_LOG_COLUMNS}
-          data={REVIEW_RESPONSE_LOGS_ROWS}
+          data={f(REVIEW_RESPONSE_LOGS_ROWS)}
           rowAction={{
             icon: 'visibility',
             label: 'View log',
@@ -138,7 +204,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={REVIEW_RESPONSE_LOG_COLUMNS}
-          data={REVIEW_GENERATION_LOGS_ROWS}
+          data={f(REVIEW_GENERATION_LOGS_ROWS)}
           rowAction={{
             icon: 'visibility',
             label: 'View log',
@@ -154,7 +220,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={PREVISIT_COLUMNS}
-          data={PREVISIT_LOGS_ROWS}
+          data={f(PREVISIT_LOGS_ROWS)}
           rowAction={{ icon: 'visibility', label: 'View log', onClick: () => {} }}
         />
       </div>
@@ -166,7 +232,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={TAGGING_ROUTING_LOG_COLUMNS}
-          data={PREVISIT_LOGS_ROWS}
+          data={f(PREVISIT_LOGS_ROWS)}
           rowAction={{ icon: 'visibility', label: 'View details', onClick: () => {} }}
         />
       </div>
@@ -178,7 +244,7 @@ export function AgentLogsTab({ agentName, onViewRun }: AgentLogsTabProps) {
       <div className="px-lg py-lg">
         <DataTable
           columns={LOG_COLUMNS}
-          data={agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS}
+          data={f(agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS)}
           onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',

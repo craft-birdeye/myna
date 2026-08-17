@@ -71,7 +71,7 @@ export function FormInput({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#212121',
+            color: '#757575',
             fontFamily: font,
           }}
         >
@@ -134,7 +134,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#212121',
+            color: '#757575',
             fontFamily: font,
           }}
         >
@@ -150,7 +150,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#212121',
+            color: '#757575',
             fontFamily: font,
           }}
         >

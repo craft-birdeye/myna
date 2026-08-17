@@ -5,7 +5,7 @@
  * Sections: reminder schedule, message content, schedule, on a response.
  */
 import { useState } from 'react'
-import { Icon } from '../Icon/Icon'
+import { X } from 'lucide-react'
 
 interface Props {
   open: boolean
@@ -260,7 +260,7 @@ export function ReminderToolDrawer({ open, onClose }: Props) {
               onClick={onClose}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}
             >
-              <Icon name="close" size={20} className="text-text-icon" />
+              <X className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           </div>
         </div>

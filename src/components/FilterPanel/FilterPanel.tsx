@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { X, ChevronDown } from 'lucide-react'
 import { Icon } from '../Icon/Icon'
 import { Link } from '../Link/Link'
 import { SelectMenu } from '../SelectMenu/SelectMenu'
@@ -50,7 +51,6 @@ export function FilterPanel({
       aria-hidden={!open}
     >
       <div className="flex h-full w-[280px] flex-col">
-        {/* Header */}
         <div className="flex h-[68px] shrink-0 items-center justify-between px-xl py-lg">
           <h2 className="text-h3 text-text-primary">Filter</h2>
           {onClose && (
@@ -58,16 +58,16 @@ export function FilterPanel({
               type="button"
               aria-label="Close filter"
               onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              className="flex size-7 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"
             >
-              <Icon name="close" size={20} />
+              <X className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
             </button>
           )}
         </div>
 
         {/* Search filters */}
         <div className="shrink-0 px-xl pb-lg">
-          <div className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md">
+          <div className="flex h-9 items-center gap-sm rounded-md border border-border-selected bg-surface px-md">
             <Icon name="search" size={20} className="text-text-icon" />
             <input
               value={query}
@@ -79,7 +79,7 @@ export function FilterPanel({
         </div>
 
         {/* Fields — scrollable */}
-        <div className="flex flex-1 flex-col gap-sm overflow-y-auto px-xl pb-xl">
+        <div className={`flex flex-1 flex-col gap-sm overflow-y-auto px-xl ${onAdvancedFilters ? 'pb-[56px]' : 'pb-xl'}`}>
           <div className="flex flex-col gap-sm">
             {visibleFields.length === 0 && (
               <p className="py-sm text-body text-text-tertiary">No results.</p>
@@ -91,7 +91,7 @@ export function FilterPanel({
                   key={field.id}
                   type="button"
                   onClick={(e) => openField(field, e)}
-                  className={`flex h-9 w-full items-center gap-sm rounded-sm border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
+                  className={`flex h-[34px] w-full items-center gap-sm rounded-md border bg-surface pl-md pr-sm hover:bg-surface-l2 ${
                     openId === field.id ? 'border-primary' : 'border-border-input'
                   }`}
                 >
@@ -103,7 +103,7 @@ export function FilterPanel({
                     {field.label}
                     {count > 0 && ` (${count})`}
                   </span>
-                  <Icon name="expand_more" size={20} className="shrink-0 text-text-icon" />
+                  <ChevronDown className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
                 </button>
               )
             })}
@@ -121,7 +121,6 @@ export function FilterPanel({
         </div>
       </div>
 
-      {/* Select menu popover */}
       {activeField && anchor && (
         <>
           <div className="fixed inset-0 z-[105]" onClick={() => setOpenId(null)} />

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Icon, SelectMenu, Toast, TopNav } from '../components'
+import { SelectMenu, Toast, TopNav } from '../components'
+import { ArrowLeft, ChevronDown, ChevronRight, Copy, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
 import type { SelectOption } from '../components'
 
 // ── Toggle (exact copy from AvailabilityScreen) ────────────────────────────────
@@ -164,10 +165,10 @@ function DropdownField({ label, required, options, value, multi, searchable, pla
         </label>
       )}
       <button type="button" onClick={() => setOpen(v => !v)}
-        className="flex h-9 w-full items-center justify-between rounded-sm border border-border bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-hover focus:outline-none"
+        className="flex h-[34px] w-full items-center justify-between rounded-md border border-border bg-surface pl-md pr-sm text-body text-text-primary hover:bg-surface-hover focus:outline-none"
       >
         <span className={value.length === 0 ? 'text-text-tertiary' : ''}>{triggerLabel}</span>
-        <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+        <ChevronDown className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
       </button>
       {open && (
         <div className="absolute top-full z-[60] mt-xs w-full">
@@ -192,16 +193,16 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }: {
   if (!open) return null
   return (
     <>
-      <div className="fixed inset-0 z-[200] bg-black/20" onClick={onCancel} />
-      <div className="fixed left-1/2 top-[72px] z-[201] w-[520px] -translate-x-1/2 rounded-sm border border-border bg-surface shadow-modal">
+      <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm" onClick={onCancel} />
+      <div className="fixed left-1/2 top-[72px] z-[201] w-[520px] -translate-x-1/2 rounded-xl bg-surface shadow-modal">
         <div className="flex items-center justify-between px-2xl pt-xl pb-md">
           <span className="text-body text-text-primary">{title}</span>
-          <button type="button" onClick={onCancel} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"><Icon name="close" size={18} /></button>
+          <button type="button" onClick={onCancel} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"><X className="size-4" strokeWidth={1.6} absoluteStrokeWidth /></button>
         </div>
         <p className="px-2xl pb-xl text-body text-text-secondary">{message}</p>
         <div className="flex justify-end gap-sm px-2xl pb-xl">
           <button type="button" onClick={onCancel} className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover">No, keep it</button>
-          <button type="button" onClick={onConfirm} className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">Yes, delete</button>
+          <button type="button" onClick={onConfirm} className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">Yes, delete</button>
         </div>
       </div>
     </>
@@ -227,14 +228,14 @@ function AddWindowDrawer({ open, dayLabel, onClose, onSave }: {
   }
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-black/20" onClick={onClose} />
-      <div className="flex w-[600px] flex-col bg-surface shadow-modal overflow-y-auto">
+      <div className="flex-1 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="flex w-[600px] flex-col overflow-y-auto rounded-2xl bg-surface shadow-modal">
         <div className="flex items-center justify-between px-2xl py-xl">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"><Icon name="arrow_back" size={20} /></button>
+            <button type="button" onClick={onClose} className="flex size-[34px] items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"><ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
             <h2 className="text-[18px] text-text-primary">Add window</h2>
           </div>
-          <button type="button" onClick={handleSave} className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">Save</button>
+          <button type="button" onClick={handleSave} className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">Save</button>
         </div>
         <div className="flex flex-col gap-2xl p-2xl">
           <div>
@@ -245,7 +246,7 @@ function AddWindowDrawer({ open, dayLabel, onClose, onSave }: {
                 { id: 'specific' as const, title: 'A specific date', sub: 'One-off availability' },
               ]).map(opt => (
                 <button key={opt.id} type="button" onClick={() => setRecurrence(opt.id)}
-                  className={`flex items-start gap-sm rounded-sm border p-md text-left transition-colors ${recurrence === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-hover'}`}
+                  className={`flex items-start gap-sm rounded-md border p-md text-left transition-colors ${recurrence === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-hover'}`}
                 >
                   <div className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${recurrence === opt.id ? 'border-primary' : 'border-border-selected'}`}>
                     {recurrence === opt.id && <div className="size-2 rounded-full bg-primary" />}
@@ -267,7 +268,7 @@ function AddWindowDrawer({ open, dayLabel, onClose, onSave }: {
           <div className="flex flex-col gap-sm">
             <label className="text-body text-text-primary">Note</label>
             <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="eg. Express lane only"
-              className="h-9 rounded-sm border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none" />
+              className="h-[34px] rounded-md border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none" />
           </div>
         </div>
       </div>
@@ -293,31 +294,31 @@ function AddTimeOffDrawer({ open, onClose, onSave }: {
   }
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-black/20" onClick={onClose} />
-      <div className="flex w-[600px] flex-col bg-surface shadow-modal overflow-y-auto">
+      <div className="flex-1 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="flex w-[600px] flex-col overflow-y-auto rounded-2xl bg-surface shadow-modal">
         <div className="flex items-center justify-between px-2xl py-xl">
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={onClose} className="flex size-9 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"><Icon name="arrow_back" size={20} /></button>
+            <button type="button" onClick={onClose} className="flex size-[34px] items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"><ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth /></button>
             <h2 className="text-[18px] text-text-primary">Add time off</h2>
           </div>
-          <button type="button" onClick={handleSave} className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">Save</button>
+          <button type="button" onClick={handleSave} className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover">Save</button>
         </div>
         <div className="flex flex-col gap-2xl p-2xl">
           <div className="grid grid-cols-2 gap-lg">
             <div className="flex flex-col gap-sm">
               <label className="text-body text-text-primary">From <span className="text-danger">*</span></label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 rounded-sm border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-[34px] rounded-md border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
             </div>
             <div className="flex flex-col gap-sm">
               <label className="text-body text-text-primary">To</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 rounded-sm border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-[34px] rounded-md border border-border bg-surface pl-md pr-xl text-body text-text-primary focus:border-primary focus:outline-none" />
             </div>
           </div>
           <DropdownField label="Advisor" options={DEPT_OPTIONS} value={advisor} multi searchable placeholder="All advisors" onChange={setAdvisor} />
           <div className="flex flex-col gap-sm">
             <label className="text-body text-text-primary">Label <span className="text-danger">*</span></label>
             <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="eg. Independence Day — dealership closed"
-              className="h-9 rounded-sm border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none" />
+              className="h-[34px] rounded-md border border-border bg-surface px-md text-body text-text-primary placeholder:text-text-tertiary focus:border-primary focus:outline-none" />
           </div>
           <div className="flex flex-col gap-md">
             <label className="flex cursor-pointer items-center gap-sm">
@@ -344,11 +345,11 @@ function CopyToModal({ sourceId, sourceName, onApply, onClose }: {
   const allSel = selected.length === others.length
   return (
     <>
-      <div className="fixed inset-0 z-[200] bg-black/30" onClick={onClose} />
-      <div className="fixed left-1/2 top-[88px] z-[201] w-[520px] -translate-x-1/2 rounded-sm border border-border bg-surface shadow-modal">
+      <div className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-[88px] z-[201] w-[520px] -translate-x-1/2 rounded-xl bg-surface shadow-modal">
         <div className="flex items-center justify-between px-2xl pt-xl pb-sm">
           <span className="text-body text-text-primary">Copy settings to other locations</span>
-          <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"><Icon name="close" size={18} /></button>
+          <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"><X className="size-4" strokeWidth={1.6} absoluteStrokeWidth /></button>
         </div>
         <p className="px-2xl pb-lg text-small text-text-secondary">Each location gets an independent copy of <strong className="font-normal text-text-primary">{sourceName}</strong>'s settings.</p>
         <div className="mx-2xl mb-sm">
@@ -368,7 +369,7 @@ function CopyToModal({ sourceId, sourceName, onApply, onClose }: {
         <div className="flex items-center justify-between px-2xl pb-xl">
           <button type="button" onClick={onClose} className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover">Cancel</button>
           <button type="button" disabled={selected.length === 0} onClick={() => { onApply(selected); onClose() }}
-            className={`flex h-9 items-center rounded-sm px-lg text-body text-white transition-colors ${selected.length > 0 ? 'bg-primary hover:bg-primary-hover' : 'cursor-not-allowed bg-surface-selected text-text-tertiary'}`}
+            className={`flex h-[34px] items-center rounded-md px-lg text-body text-white transition-colors ${selected.length > 0 ? 'bg-primary hover:bg-primary-hover' : 'cursor-not-allowed bg-surface-selected text-text-tertiary'}`}
           >Copy to {selected.length > 0 ? `${selected.length} location${selected.length > 1 ? 's' : ''}` : 'selected'}</button>
         </div>
       </div>
@@ -435,7 +436,7 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
       {/* Accordion header */}
       <div className="flex w-full items-center px-2xl py-lg hover:bg-surface-hover">
         <button type="button" onClick={onToggle} className="flex flex-1 items-center gap-sm text-left">
-          <Icon name={expanded ? 'expand_more' : 'chevron_right'} size={18} className="shrink-0 text-text-tertiary" />
+          {expanded ? <ChevronDown className="size-4 shrink-0 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth /> : <ChevronRight className="size-4 shrink-0 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />}
           <div className="flex flex-col">
             <span className="text-body text-text-primary">{location.name}</span>
             <span className="text-small text-text-tertiary">{location.address}</span>
@@ -443,9 +444,9 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
         </button>
         {expanded && (
           <button type="button" onClick={e => { e.stopPropagation(); onCopyTo() }}
-            className="flex h-9 shrink-0 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+            className="flex h-[34px] shrink-0 items-center gap-xs rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
           >
-            <Icon name="content_copy" size={16} />Copy to locations
+            <Copy className="size-4" strokeWidth={1.6} absoluteStrokeWidth />Copy to locations
           </button>
         )}
       </div>
@@ -463,7 +464,7 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
               <div className="grid grid-cols-2 gap-md">
                 {SOURCE_OPTIONS.map(opt => (
                   <button key={opt.id} type="button" onClick={() => { setSource(opt.id); setDirty(true) }}
-                    className={`flex items-start gap-sm rounded-sm border p-lg text-left transition-colors ${source === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-hover'}`}
+                    className={`flex items-start gap-sm rounded-md border p-lg text-left transition-colors ${source === opt.id ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-hover'}`}
                   >
                     <div className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${source === opt.id ? 'border-primary' : 'border-border-selected'}`}>
                       {source === opt.id && <div className="size-2 rounded-full bg-primary" />}
@@ -479,7 +480,7 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
 
             {source === 'dms' ? (
               <div className="flex items-center gap-sm rounded-sm border border-blue-200 bg-blue-50 px-lg py-md">
-                <Icon name="info" size={18} className="shrink-0 text-blue-500" />
+                <Info className="size-4 shrink-0 text-blue-500" strokeWidth={1.6} absoluteStrokeWidth />
                 <p className="text-body text-blue-700">Fetching data from the DMS. This may take some time.</p>
               </div>
             ) : (
@@ -507,7 +508,7 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
                             >
                               <button type="button" onClick={() => setConfirmDelete({ type: 'window', day: key, winId: win.id })}
                                 className="absolute right-1 top-1 hidden size-5 items-center justify-center rounded text-text-tertiary hover:text-danger group-hover:flex"
-                              ><Icon name="close" size={14} /></button>
+                              ><X className="size-4" strokeWidth={1.6} absoluteStrokeWidth /></button>
                               <span className="text-small text-primary">{win.startTime} - {win.endTime}</span>
                               <span className="text-xs text-text-secondary">{win.bay}</span>
                               <span className="inline-flex w-fit items-center rounded-sm border border-border bg-surface px-sm py-0.5 text-xs text-text-secondary">{win.serviceType}</span>
@@ -515,7 +516,7 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
                           ))}
                           <button type="button" onClick={() => setAddWindowDay(key)}
                             className="flex h-8 items-center gap-xs rounded-sm border border-dashed border-border px-sm text-body text-text-secondary hover:border-primary hover:text-primary"
-                          ><Icon name="add" size={16} />Add window</button>
+                          ><Plus className="size-4" strokeWidth={1.6} absoluteStrokeWidth />Add window</button>
                         </div>
                         <div className="shrink-0">
                           <Toggle value={day.enabled} onChange={val => handleToggleDay(key, val)} />
@@ -538,9 +539,9 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
                         <div key={f.key} className="flex flex-col gap-xs px-lg py-lg">
                           <div className="flex items-center gap-xs">
                             <label className="text-small text-text-secondary">{f.label}</label>
-                            <span title={f.info}><Icon name="info" size={13} className="cursor-help text-text-tertiary" /></span>
+                            <span title={f.info}><Info className="size-4 cursor-help text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth /></span>
                           </div>
-                          <div className="flex h-9 items-center overflow-hidden rounded-sm border border-border focus-within:border-primary">
+                          <div className="flex h-[34px] items-center overflow-hidden rounded-md border border-border focus-within:border-primary">
                             <input type="number" min="0" value={constraints[f.key]}
                               onChange={e => { setConstraints(p => ({ ...p, [f.key]: e.target.value })); setDirty(true) }}
                               className="h-full flex-1 px-md text-body text-text-primary outline-none"
@@ -563,9 +564,9 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
                       </p>
                     </div>
                     <button type="button" onClick={() => setShowTimeOffDrawer(true)}
-                      className="flex h-9 shrink-0 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                      className="flex h-[34px] shrink-0 items-center gap-xs rounded-md border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
                     >
-                      <Icon name="add" size={16} />Add time off
+                      <Plus className="size-4" strokeWidth={1.6} absoluteStrokeWidth />Add time off
                     </button>
                   </div>
                   <div className="flex flex-col divide-y divide-border rounded-sm border border-border">
@@ -581,10 +582,10 @@ function LocationAccordion({ location, config, expanded, onToggle, onCopyTo }: {
                         <div className="flex items-center gap-sm">
                           {entry.allAdvisors  && <span className="rounded-sm bg-chip-warning-bg px-sm py-0.5 text-xs text-chip-warning-text">All advisors</span>}
                           {entry.allLocations && <span className="rounded-sm bg-chip-warning-bg px-sm py-0.5 text-xs text-chip-warning-text">All locations</span>}
-                          <button type="button" className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"><Icon name="edit" size={18} /></button>
+                          <button type="button" className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover"><Pencil className="size-4" strokeWidth={1.6} absoluteStrokeWidth /></button>
                           <button type="button" onClick={() => setConfirmDelete({ type: 'timeoff', id: entry.id })}
-                            className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover hover:text-danger"
-                          ><Icon name="delete" size={18} /></button>
+                            className="flex size-8 items-center justify-center rounded-md text-text-icon hover:bg-surface-hover hover:text-danger"
+                          ><Trash2 className="size-4" strokeWidth={1.6} absoluteStrokeWidth /></button>
                         </div>
                       </div>
                     ))}
@@ -641,7 +642,7 @@ export function AutoAvailabilityScreen() {
           <span className="text-h3 text-text-primary">Availability</span>
           <div className="flex items-center gap-sm">
             <button type="button" onClick={() => showToast('All availability settings saved.')}
-              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
             >Save</button>
           </div>
         </div>

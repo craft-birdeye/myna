@@ -201,6 +201,128 @@
   pointer-events: none;
 }
 
+/* ─── Review response chrome: split bottom floaters ─── */
+.graph-controls--rr-chrome {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.graph-controls__rr-zoom,
+.graph-controls__rr-edit {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 40px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #f0f2f5;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.graph-controls__rr-edit {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+}
+
+.graph-controls__rr-divider {
+  width: 1px;
+  height: 18px;
+  background: #cacaca;
+  margin: 0;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.graph-controls__rr-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+/* Layout-orientation arrows sit beside 18px SVG icons in this group, so they render at 18px
+   rather than the 16px used by the legacy (non-chrome) toolbar. */
+.graph-controls__rr-edit .graph-controls__toggle-btn .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+}
+
+.graph-controls__rr-zoom .graph-controls__zoom-btn,
+.graph-controls__rr-edit .graph-controls__zoom-btn {
+  border: none;
+  height: 24px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 4px;
+  gap: 0;
+}
+
+.graph-controls__rr-zoom-label {
+  flex-shrink: 0;
+  min-width: 40px;
+  text-align: center;
+  color: #212121;
+  font-family: 'Roboto', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: -0.32px;
+  user-select: none;
+}
+
+.graph-controls__rr-zoom .graph-controls__zoom-label {
+  min-width: 0;
+  color: #212121;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.32px;
+}
+
+.graph-controls__rr-zoom .graph-controls__toggle-btn,
+.graph-controls__rr-edit .graph-controls__toggle-btn {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.graph-controls__rr-zoom .graph-controls__toggle-btn:hover,
+.graph-controls__rr-edit .graph-controls__toggle-btn:hover {
+  background: #f0f2f5;
+}
+
+.graph-controls__rr-edit .graph-controls__toggle-btn--active {
+  background: #f0f2f5;
+}
+
+.graph-controls__rr-zoom .graph-controls__toggle-btn:disabled,
+.graph-controls__rr-edit .graph-controls__toggle-btn:disabled,
+.graph-controls__rr-zoom .graph-controls__toggle-btn[aria-disabled='true'],
+.graph-controls__rr-edit .graph-controls__toggle-btn[aria-disabled='true'] {
+  opacity: 0.4;
+}
+
+.graph-controls__zoom-dropdown--up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
 .graph-controls__run:disabled:hover,
 .graph-controls__run[aria-disabled='true']:hover {
   background: #fff;
