@@ -12,6 +12,7 @@ import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
 import { DonutChart } from '../components/charts/DonutChart'
+import { StackedBarChart } from '../components/charts/StackedBarChart'
 import { ChartCard } from '../components/charts/ChartCard'
 import { chartColors } from '../components/charts/chartColors'
 import {
@@ -59,37 +60,88 @@ const SEARCH_AI_STATS: V2Stat[] = [{ id: 'search-ai-score', value: '33.6%', labe
 // "Understanding the Birdeye Score" widget — not a grouped bar chart. Most are 0-100
 // percentages; Average rank uses its own max (top-10 search positions) since it's a position,
 // not a percentage — ScoreBar takes an explicit max so both scale correctly.
-const SEARCH_AI_SCORE_BARS: { id: string; label: string; value: number; topCompetitor: number; max?: number; color: string }[] = [
+const SEARCH_AI_SCORE_BARS: { id: string; label: string; value: number; topCompetitor: number; max?: number; color: string; note?: string }[] = [
   { id: 'citation-share', label: 'Citation share', value: 17.6, topCompetitor: 25, color: '#0f8b8d' },
   { id: 'visibility-score', label: 'Visibility score', value: 60.2, topCompetitor: 55, color: '#c2185b' },
   { id: 'sentiment-score', label: 'Sentiment score', value: 78, topCompetitor: 82, color: '#5c4b99' },
-  { id: 'average-rank', label: 'Average rank', value: 4, topCompetitor: 1, max: 10, color: '#e0631c' },
+  {
+    id: 'average-rank',
+    label: 'Average rank',
+    value: 4,
+    topCompetitor: 1,
+    max: 10,
+    color: '#e0631c',
+    note: 'This is your rank across ChatGPT, Claude, Copilot, Gemini, and more.',
+  },
 ]
 
-function ScoreBar({ label, value, topCompetitor, max = 100, color }: { label: string; value: number; topCompetitor: number; max?: number; color: string }) {
+function ScoreBar({
+  label,
+  value,
+  topCompetitor,
+  max = 100,
+  color,
+  note,
+}: {
+  label: string
+  value: number
+  topCompetitor: number
+  max?: number
+  color: string
+  note?: string
+}) {
   return (
     <div className="flex flex-col gap-sm">
       <div>
         <p className="m-0 text-display text-text-primary">{value}</p>
         <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">{label}</p>
       </div>
-      <div className="relative h-[6px] w-full rounded-full" style={{ backgroundColor: color }}>
-        <span
-          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-primary ring-2 ring-surface"
-          style={{ left: `${(value / max) * 100}%` }}
-        />
-        <span
-          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-tertiary ring-2 ring-surface"
-          style={{ left: `${(topCompetitor / max) * 100}%` }}
-        />
-      </div>
-      <p className="m-0 flex items-center gap-xs text-small text-text-secondary">
-        <span className="inline-block size-2 shrink-0 rounded-full bg-text-tertiary" />
-        Top competitor: {topCompetitor}
-      </p>
+      {note ? (
+        <p className="m-0 text-small text-text-secondary">{note}</p>
+      ) : (
+        <>
+          <div className="relative h-[6px] w-full rounded-full" style={{ backgroundColor: color }}>
+            <span
+              className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-primary ring-2 ring-surface"
+              style={{ left: `${(value / max) * 100}%` }}
+            />
+            <span
+              className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-tertiary ring-2 ring-surface"
+              style={{ left: `${(topCompetitor / max) * 100}%` }}
+            />
+          </div>
+          <p className="m-0 flex items-center gap-xs text-small text-text-secondary">
+            <span className="inline-block size-2 shrink-0 rounded-full bg-text-tertiary" />
+            Top competitor: {topCompetitor}
+          </p>
+        </>
+      )}
     </div>
   )
 }
+
+// Reviews' own KPI set — Average rating leads (left to right), followed by Request sent and
+// Reviews received; 3 star or less is dropped. Kept local to v3 rather than editing the shared
+// OVERVIEW_V2_SECTIONS file, since v2 shouldn't pick up the reorder/removal.
+const REVIEWS_STATS: V2Stat[] = [
+  { id: 'average-rating', value: String(OVERVIEW_REVIEWS_RATING), label: 'Average rating' },
+  { id: 'requests-sent', value: '1.9K', label: 'Request sent' },
+  { id: 'reviews-received', value: '7', label: 'Reviews received' },
+]
+
+// Replaces the per-star horizontal breakdown bars with a single "Reviews by rating" bar chart
+// (No rating -> 5 star), each bar its own color, matching the reference report widget.
+function ratingCount(stars: number): number {
+  return OVERVIEW_REVIEWS_BREAKDOWN.find((b) => b.stars === stars)?.count ?? 0
+}
+const REVIEWS_BY_RATING: { rating: string; count: number; color: string }[] = [
+  { rating: 'No rating', count: 1850, color: '#cfe4f7' },
+  { rating: '1 star', count: ratingCount(1), color: '#de1b0c' },
+  { rating: '2 star', count: ratingCount(2), color: '#f5765a' },
+  { rating: '3 star', count: ratingCount(3), color: '#f5a623' },
+  { rating: '4 star', count: ratingCount(4), color: '#8bc34a' },
+  { rating: '5 star', count: ratingCount(5), color: '#4cae3d' },
+]
 
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app.
@@ -143,54 +195,23 @@ function ActionNeeded({ stats, bordered = true }: { stats: V2Stat[]; bordered?: 
 // generic top-stats row every other section uses — same content as Classic Overview's Reviews
 // section, kept as an independent copy rather than a cross-import.
 function ReviewsOverview() {
-  const maxCount = Math.max(...OVERVIEW_REVIEWS_BREAKDOWN.map((b) => b.count))
   return (
-    <div className="flex flex-col gap-lg">
-      <div className="flex items-center gap-sm">
-        <span className="text-display text-text-primary">{OVERVIEW_REVIEWS_RATING}</span>
-        <div className="flex items-center gap-[2px] text-[#f5a623]">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Icon key={i} name="star" size={18} fill />
-          ))}
+    <div className="flex flex-wrap items-start gap-md">
+      {OVERVIEW_REVIEW_SOURCES.map((s) => (
+        <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
+          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
+            {s.icon === 'G' ? 'G' : <Icon name={s.icon} size={18} />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
+            <p className="m-0 flex items-center gap-xs text-body text-text-primary">
+              {s.rating}
+              <Icon name="star" size={14} fill className="text-[#f5a623]" />
+              <span className="text-small text-text-tertiary">{s.reviewCount}</span>
+            </p>
+          </div>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-start gap-3xl">
-        <div className="flex min-w-[320px] max-w-[50%] flex-1 flex-col gap-sm">
-          {OVERVIEW_REVIEWS_BREAKDOWN.map((b) => (
-            <div key={b.stars} className="flex items-center gap-md">
-              <span className="w-[28px] shrink-0 text-small text-text-secondary">{b.stars} ★</span>
-              <div className="flex flex-1 items-center gap-sm">
-                <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-surface-selected">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-[#f5a623]"
-                    style={{ width: `${(b.count / maxCount) * 100}%` }}
-                  />
-                </div>
-                <span className="w-[64px] shrink-0 text-right text-small text-text-secondary">{b.count.toLocaleString()}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex min-w-[280px] flex-1 flex-wrap items-start gap-md">
-          {OVERVIEW_REVIEW_SOURCES.map((s) => (
-            <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
-              <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
-                {s.icon === 'G' ? 'G' : <Icon name={s.icon} size={18} />}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
-                <p className="m-0 flex items-center gap-xs text-body text-text-primary">
-                  {s.rating}
-                  <Icon name="star" size={14} fill className="text-[#f5a623]" />
-                  <span className="text-small text-text-tertiary">{s.reviewCount}</span>
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      ))}
     </div>
   )
 }
@@ -503,17 +524,31 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                 ) : section.id === 'search-ai' ? (
                   <>
                     <V2StatGroup stats={SEARCH_AI_STATS} />
-                    <div className="grid grid-cols-4 gap-3xl">
+                    <div className="grid grid-cols-4 gap-[56px]">
                       {SEARCH_AI_SCORE_BARS.map((bar) => (
                         <ScoreBar key={bar.id} {...bar} />
                       ))}
                     </div>
                   </>
+                ) : section.id === 'reviews' ? (
+                  <>
+                    <V2StatGroup stats={REVIEWS_STATS} />
+                    <ChartCard title="Reviews by rating">
+                      <StackedBarChart
+                        data={REVIEWS_BY_RATING.map((r) => ({ rating: r.rating, count: r.count }))}
+                        series={[{ key: 'count', label: 'Reviews', color: chartColors.blue }]}
+                        xKey="rating"
+                        height={280}
+                        showBarLabels
+                        hideLegend
+                        barColors={REVIEWS_BY_RATING.map((r) => r.color)}
+                      />
+                    </ChartCard>
+                    <ReviewsOverview />
+                  </>
                 ) : (
                   section.stats && <V2StatGroup stats={section.stats} />
                 )}
-
-                {section.id === 'reviews' && <ReviewsOverview />}
 
                 {showAgentRows && (
                   <div className="flex flex-wrap gap-xl border-t border-border pt-lg">

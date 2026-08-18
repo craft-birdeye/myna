@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   LabelList,
   Legend,
   ResponsiveContainer,
@@ -31,6 +32,8 @@ export interface StackedBarChartProps {
   wrapXLabels?: boolean
   /** Show value labels above each bar and hide the Y-axis + horizontal grid lines. */
   showBarLabels?: boolean
+  /** Color each bar individually (single-series only) instead of one fill for the whole series — one color per data point, in order. */
+  barColors?: string[]
   /** Hide the bottom legend. */
   hideLegend?: boolean
   /** Fix the Y-axis range instead of auto-scaling to the data (e.g. [0, 100] for percentages). */
@@ -103,7 +106,7 @@ function StackedBarTooltip({
   )
 }
 
-export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend, yDomain }: StackedBarChartProps) {
+export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend, yDomain, barColors }: StackedBarChartProps) {
   const xTick = xAxisAngle
     ? { ...axisTick, angle: xAxisAngle, textAnchor: 'end' as const, dy: 4 }
     : axisTick
@@ -155,6 +158,7 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
             maxBarSize={24}
             isAnimationActive={false}
           >
+            {barColors && series.length === 1 && data.map((_, idx) => <Cell key={idx} fill={barColors[idx % barColors.length]} />)}
             {showBarLabels && i === series.length - 1 && (
               <LabelList
                 dataKey={s.key}
