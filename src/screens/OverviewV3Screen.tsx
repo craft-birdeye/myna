@@ -55,7 +55,7 @@ const LISTINGS_SYNC_STATUS_COLORS: Record<string, string> = {
 
 // Search AI's own KPI set — adds Sentiment score alongside the shared OVERVIEW_V2_SECTIONS data
 // (kept local to v3 rather than editing the shared file, since v2 shouldn't pick up the new KPI).
-const SEARCH_AI_STATS: V2Stat[] = [{ id: 'search-ai-score', value: '33.6%', label: 'Search AI score' }]
+const SEARCH_AI_STATS: V2Stat[] = [{ id: 'search-ai-score', value: '33.6%', label: 'AI Search score' }]
 
 // One bar per KPI (value + top-competitor marker on a single-color track), like the app's
 // "Understanding the Birdeye Score" widget — not a grouped bar chart. Most are 0-100
@@ -445,6 +445,12 @@ const SECTION_NAV_ICON: Record<string, (props: { size?: number; className?: stri
 }
 const CX_SECTION_IDS = new Set(['surveys', 'ticketing'])
 
+// v3-only section label override — the shared data calls this section "Search AI"; kept local
+// rather than editing OVERVIEW_V2_SECTIONS since v2 shouldn't pick up the rename.
+const SECTION_LABEL_OVERRIDES: Record<string, string> = {
+  'search-ai': 'AI Search',
+}
+
 const DATE_RANGE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
 function DateRangeDropdown({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -655,7 +661,7 @@ function ProductSectionCard({ section, showAgents, dataState }: { section: V2Sec
     <SectionCard>
       <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
         {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
-        {section.label}
+        {SECTION_LABEL_OVERRIDES[section.id] ?? section.label}
       </h3>
 
       {section.id === 'listings' ? (
