@@ -331,6 +331,41 @@ function AgentRow({ agent }: { agent: V2Agent }) {
   )
 }
 
+// One-line descriptions per agent id, sourced from the PDF requirements doc where it covered
+// that agent, and from agentDirectoryData.ts's existing copy for agents shared across both
+// (kept local since v2's AgentRow doesn't need them).
+const AGENT_DESCRIPTIONS: Record<string, string> = {
+  'listing-optimizer': 'Reviews your business listings for accuracy and completeness, then recommends and applies fixes to keep profiles synced.',
+  'recommendations-agent': 'Generates and applies recommendations to improve how your business is surfaced across AI answer engines.',
+  'review-marketing': 'Shares your best reviews across marketing channels and campaigns to build social proof.',
+  'review-tagging': 'Automatically tags incoming reviews by topic and sentiment for easier reporting and routing.',
+  'review-generation': 'Sends review requests to customers after transactions complete.',
+  'review-response': 'Drafts replies to incoming reviews based on sentiment and brand voice.',
+  'social-publishing': 'Schedules and publishes social posts across connected channels.',
+  'social-engagement': 'Monitors and responds to comments and mentions in real time.',
+  'faq-agent': 'Generates FAQ content for your website based on common customer questions.',
+  'blog-agent': 'Generates blog posts to support your content and search visibility strategy.',
+  'survey-distribution': 'Sends surveys to customers across email, text, and QR touchpoints after a qualifying interaction.',
+  'survey-response': 'Collects and scores incoming survey responses, flagging detractors for follow-up.',
+  'ticketing-surveys': 'Opens a support ticket automatically when a survey response flags a detractor or unresolved issue.',
+  'ticketing-reviews': 'Sends a ticket to the right team whenever a low-star review comes in, routed by location and topic.',
+}
+
+// One card per agent (name + description on the left, all its KPIs on the right), stacked
+// vertically under the coworker-performance header — replaces the side-by-side AgentRow layout
+// for the main product sections.
+function AgentCard({ agent }: { agent: V2Agent }) {
+  return (
+    <div className="flex items-start justify-between gap-3xl rounded-sm border border-border p-lg">
+      <div className="flex w-[240px] shrink-0 flex-col gap-xs">
+        <h4 className="m-0 text-body text-text-primary">{agent.name}</h4>
+        {AGENT_DESCRIPTIONS[agent.id] && <p className="m-0 text-small text-text-secondary">{AGENT_DESCRIPTIONS[agent.id]}</p>}
+      </div>
+      <V2StatGroup stats={agent.stats} />
+    </div>
+  )
+}
+
 function ActionNeeded({ stats, bordered = true }: { stats: V2Stat[]; bordered?: boolean }) {
   return (
     <div className={`flex flex-col gap-md ${bordered ? 'border-t border-border pt-lg' : ''}`}>
@@ -707,9 +742,9 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                       coworkerName={isCx ? 'Robin' : 'Jay'}
                       {...aggregateAgentSavings(agents)}
                     />
-                    <div className="flex flex-wrap gap-xl">
+                    <div className="flex flex-col gap-md">
                       {agents.map((agent) => (
-                        <AgentRow key={agent.id} agent={agent} />
+                        <AgentCard key={agent.id} agent={agent} />
                       ))}
                     </div>
                   </div>
