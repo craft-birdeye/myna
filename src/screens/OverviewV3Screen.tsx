@@ -135,6 +135,13 @@ const REVIEWS_STATS: V2Stat[] = [
   { id: 'reviews-received', value: '7', label: 'Reviews received' },
 ]
 
+// Surveys has no top-level business-metric stats in the shared data (only agents/actionNeeded) —
+// these two are v3-only.
+const SURVEYS_STATS: V2Stat[] = [
+  { id: 'active-surveys', value: '24', label: 'Active surveys' },
+  { id: 'response-rate', value: '68%', label: 'Response rate' },
+]
+
 // Replaces the per-star horizontal breakdown bars with a single "Reviews by rating" bar chart
 // (No rating -> 5 star), each bar its own color, matching the reference report widget.
 function ratingCount(stars: number): number {
@@ -270,6 +277,47 @@ function V2StatGroup({ stats, nowrap = false }: { stats: (V2Stat & { danger?: bo
 
 function withDanger(stats: V2Stat[] | undefined): (V2Stat & { danger: true })[] {
   return (stats ?? []).map((s) => ({ ...s, danger: true }))
+}
+
+// Rough $/hour used to turn each section's summed "Time saved" into a "Cost saved" figure for
+// the coworker-performance summary — none of these agents carry their own cost-saved stat.
+const COST_SAVED_PER_HOUR = 25
+
+function aggregateAgentSavings(agents: V2Agent[]): { timeSaved: string; costSaved: string } {
+  const totalHours = agents.reduce((sum, agent) => {
+    const stat = agent.stats.find((s) => s.id === 'time-saved')
+    return sum + (stat ? parseFloat(stat.value) || 0 : 0)
+  }, 0)
+  return { timeSaved: `${totalHours}h`, costSaved: `$${totalHours * COST_SAVED_PER_HOUR}` }
+}
+
+// Sits just above a section's agent rows — the owning coworker's icon, a "{Name} performance"
+// title, and that coworker's aggregate time/cost saved across every agent in the section.
+function CoworkerPerformanceHeader({
+  icon,
+  coworkerName,
+  timeSaved,
+  costSaved,
+}: {
+  icon: string
+  coworkerName: string
+  timeSaved: string
+  costSaved: string
+}) {
+  return (
+    <div className="flex flex-col gap-md">
+      <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
+        <img src={icon} alt="" className="size-5 shrink-0 rounded-full" />
+        {coworkerName} performance
+      </h4>
+      <V2StatGroup
+        stats={[
+          { id: 'time-saved', value: timeSaved, label: 'Time saved' },
+          { id: 'cost-saved', value: costSaved, label: 'Cost saved' },
+        ]}
+      />
+    </div>
+  )
 }
 
 // flex-none (rather than flex-1/min-w) sizes each agent to its own content width — all of its
@@ -645,15 +693,29 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                       />
                     </ChartCard>
                   </>
+                ) : section.id === 'surveys' ? (
+                  <V2StatGroup stats={[...SURVEYS_STATS, ...withDanger(section.actionNeeded)]} />
                 ) : (
-                  <V2StatGroup stats={[...(section.stats ?? []), ...withDanger(section.actionNeeded)]} />
+                  <V2StatGroup
+                    stats={[
+                      ...(section.stats ?? []).filter((s) => !(section.id === 'social' && s.id === 'new-follower')),
+                      ...withDanger(section.actionNeeded),
+                    ]}
+                  />
                 )}
 
                 {showAgentRows && (
-                  <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
-                    {agents.map((agent) => (
-                      <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
-                    ))}
+                  <div className="flex flex-col gap-lg pt-lg">
+                    <CoworkerPerformanceHeader
+                      icon={isCx ? robinIcon : jayIcon}
+                      coworkerName={isCx ? 'Robin' : 'Jay'}
+                      {...aggregateAgentSavings(agents)}
+                    />
+                    <div className="flex flex-wrap gap-xl">
+                      {agents.map((agent) => (
+                        <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
+                      ))}
+                    </div>
                   </div>
                 )}
 
