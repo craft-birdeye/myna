@@ -885,7 +885,7 @@ function DataStateSwitcher({ value, onChange }: { value: DataState; onChange: (v
 
 export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
-  const [dataState, setDataState] = useState<DataState>('empty')
+  const [dataState, setDataState] = useState<DataState>('filled')
   const showAgents = dataState === 'filled'
 
   return (
