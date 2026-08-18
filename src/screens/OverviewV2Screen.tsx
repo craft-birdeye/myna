@@ -21,6 +21,7 @@ import {
   OVERVIEW_REVIEWS_BREAKDOWN,
   OVERVIEW_REVIEWS_RATING,
   OVERVIEW_REVIEW_SOURCES,
+  OVERVIEW_LISTINGS_GOOGLE_REPORT,
 } from '../data/overviewData'
 
 interface OverviewV2ScreenProps {
@@ -284,7 +285,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           {dataState === 'empty' && (
             <button
               type="button"
-              className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              className="flex h-9 shrink-0 items-center rounded-sm bg-ai-brand px-lg text-body text-white transition-colors hover:opacity-90"
             >
               Schedule demo
             </button>
@@ -418,6 +419,13 @@ export function OverviewV2Screen({ userName = 'Rupa' }: OverviewV2ScreenProps = 
                 </h3>
 
                 {section.stats && <V2StatGroup stats={section.stats} />}
+
+                {section.id === 'listings' && (
+                  <div className="flex flex-col gap-md">
+                    <h4 className="m-0 text-body text-text-primary">Google report</h4>
+                    <V2StatGroup stats={OVERVIEW_LISTINGS_GOOGLE_REPORT} />
+                  </div>
+                )}
 
                 {section.id === 'reviews' && <ReviewsOverview />}
 
