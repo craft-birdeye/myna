@@ -750,6 +750,7 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
   const rescheduled = parseKValue(appointmentsArea.businessMetrics.find((s) => s.id === 'rescheduled')!.value)
   const cancelled = parseKValue(appointmentsArea.businessMetrics.find((s) => s.id === 'cancelled')!.value)
   const unconfirmed = parseKValue(appointmentsArea.humanActions.find((s) => s.id === 'unconfirmed')!.value)
+  const noShows = appointmentsArea.humanActions.find((s) => s.id === 'no-shows')!
   const confirmed = parseKValue(totalBookings.value) - rescheduled - cancelled - unconfirmed
   const appointmentStatusData = [
     { name: 'Confirmed', value: confirmed, color: APPOINTMENT_STATUS_COLORS.confirmed },
@@ -769,7 +770,7 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
       <div className="grid grid-cols-2 gap-x-3xl gap-y-lg">
         <div className="flex flex-col gap-md">
           <h4 className="m-0 text-body text-text-primary">{appointmentsArea.label}</h4>
-          <V2StatGroup stats={[totalBookings]} />
+          <V2StatGroup stats={[totalBookings, ...withDanger([noShows])]} />
           <ChartCard title="Appointment status" showActions={false}>
             <DonutChart data={appointmentStatusData} height={260} />
           </ChartCard>
