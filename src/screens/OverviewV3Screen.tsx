@@ -20,6 +20,7 @@ import {
   OVERVIEW_V2_FRONTDESK_SUBAREAS,
   type V2Agent,
   type V2Stat,
+  type V2Section,
 } from '../data/overviewV2Data'
 import {
   OVERVIEW_REVIEWS_BREAKDOWN,
@@ -613,6 +614,114 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
   )
 }
 
+// Front desk isn't one of OVERVIEW_V2_SECTIONS — it's rendered separately and interleaved right
+// above Surveys, so the section list is split at that boundary rather than reordered in place.
+const FRONTDESK_SPLIT_INDEX = OVERVIEW_V2_SECTIONS.findIndex((s) => s.id === 'surveys')
+const SECTIONS_BEFORE_FRONTDESK = OVERVIEW_V2_SECTIONS.slice(0, FRONTDESK_SPLIT_INDEX)
+const SECTIONS_FROM_FRONTDESK = OVERVIEW_V2_SECTIONS.slice(FRONTDESK_SPLIT_INDEX)
+
+// One card per OVERVIEW_V2_SECTIONS entry — extracted out of the page's render so Front desk can
+// be interleaved between two slices of this list (it isn't itself one of these sections).
+function ProductSectionCard({ section, showAgents, dataState }: { section: V2Section; showAgents: boolean; dataState: DataState }) {
+  const NavIcon = SECTION_NAV_ICON[section.id]
+  const isCx = CX_SECTION_IDS.has(section.id)
+  const agents = AGENT_OVERRIDES[section.id] ?? section.agents
+  const showAgentRows = showAgents && agents.length > 0
+  const showSetupBanner = dataState === 'ftu' && agents.length > 0
+  const hasBodyContent = Boolean(section.stats) || section.id === 'reviews' || showAgentRows
+  const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded) || showSetupBanner
+  if (!hasAnyContent) return null
+  return (
+    <SectionCard>
+      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
+        {section.label}
+      </h3>
+
+      {section.id === 'listings' ? (
+        <>
+          <V2StatGroup
+            stats={[
+              ...(section.stats ?? []).filter((s) => !LISTINGS_SYNC_STATUS_IDS.includes(s.id)),
+              ...withDanger(section.actionNeeded),
+            ]}
+          />
+          <div className="grid grid-cols-2 gap-lg">
+            <ChartCard title="Sync status" showActions={false}>
+              <DonutChart
+                data={(section.stats ?? [])
+                  .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
+                  .map((s) => ({ name: s.label, value: parseFloat(s.value), color: LISTINGS_SYNC_STATUS_COLORS[s.id] }))}
+                height={310}
+              />
+            </ChartCard>
+            <ChartCard title="Google report" showActions={false}>
+              <DonutChart
+                data={OVERVIEW_LISTINGS_GOOGLE_REPORT.map((s, i) => ({
+                  name: s.label,
+                  value: parseKValue(s.value),
+                  color: chartColors.categorical[i],
+                }))}
+                height={310}
+              />
+            </ChartCard>
+          </div>
+        </>
+      ) : section.id === 'search-ai' ? (
+        <>
+          <V2StatGroup stats={[...SEARCH_AI_STATS, ...withDanger(section.actionNeeded)]} />
+          <div className="grid grid-cols-4 gap-[56px]">
+            {SEARCH_AI_SCORE_BARS.map((bar) => (
+              <ScoreBar key={bar.id} {...bar} />
+            ))}
+          </div>
+        </>
+      ) : section.id === 'reviews' ? (
+        <>
+          <V2StatGroup stats={[...REVIEWS_STATS, ...withDanger(section.actionNeeded)]} />
+          <ChartCard title="Reviews by rating" showActions={false}>
+            <StackedBarChart
+              data={REVIEWS_BY_RATING.map((r) => ({ rating: r.rating, count: r.count }))}
+              series={[{ key: 'count', label: 'Reviews', color: chartColors.blue }]}
+              xKey="rating"
+              height={280}
+              showBarLabels
+              hideLegend
+              barColors={REVIEWS_BY_RATING.map((r) => r.color)}
+            />
+          </ChartCard>
+        </>
+      ) : section.id === 'surveys' ? (
+        <V2StatGroup stats={[...SURVEYS_STATS, ...withDanger(section.actionNeeded)]} />
+      ) : (
+        <V2StatGroup
+          stats={[
+            ...(section.stats ?? []).filter((s) => !(section.id === 'social' && s.id === 'new-follower')),
+            ...withDanger(section.actionNeeded),
+          ]}
+        />
+      )}
+
+      {showAgentRows && (
+        <div className="flex flex-col gap-lg pt-lg">
+          <CoworkerPerformanceHeader
+            icon={isCx ? robinIcon : jayIcon}
+            coworkerName={isCx ? 'Robin' : 'Jay'}
+            {...aggregateAgentSavings(agents)}
+          />
+          <div className="flex flex-col gap-md">
+            {agents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(agents)} />}
+    </SectionCard>
+  )
+}
+
 // Front desk (owner: Myna) spans 4 sub-areas that share one date filter — each sub-area gets its
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
@@ -708,107 +817,15 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
 
           <AiWorkforceSummaryCard dataState={dataState} dateRange={dateRange} />
 
-          {OVERVIEW_V2_SECTIONS.map((section) => {
-            const NavIcon = SECTION_NAV_ICON[section.id]
-            const isCx = CX_SECTION_IDS.has(section.id)
-            const agents = AGENT_OVERRIDES[section.id] ?? section.agents
-            const showAgentRows = showAgents && agents.length > 0
-            const showSetupBanner = dataState === 'ftu' && agents.length > 0
-            const hasBodyContent = Boolean(section.stats) || section.id === 'reviews' || showAgentRows
-            const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded) || showSetupBanner
-            if (!hasAnyContent) return null
-            return (
-              <SectionCard key={section.id}>
-                <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-                  {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
-                  {section.label}
-                </h3>
-
-                {section.id === 'listings' ? (
-                  <>
-                    <V2StatGroup
-                      stats={[
-                        ...(section.stats ?? []).filter((s) => !LISTINGS_SYNC_STATUS_IDS.includes(s.id)),
-                        ...withDanger(section.actionNeeded),
-                      ]}
-                    />
-                    <div className="grid grid-cols-2 gap-lg">
-                      <ChartCard title="Sync status" showActions={false}>
-                        <DonutChart
-                          data={(section.stats ?? [])
-                            .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
-                            .map((s) => ({ name: s.label, value: parseFloat(s.value), color: LISTINGS_SYNC_STATUS_COLORS[s.id] }))}
-                          height={310}
-                        />
-                      </ChartCard>
-                      <ChartCard title="Google report" showActions={false}>
-                        <DonutChart
-                          data={OVERVIEW_LISTINGS_GOOGLE_REPORT.map((s, i) => ({
-                            name: s.label,
-                            value: parseKValue(s.value),
-                            color: chartColors.categorical[i],
-                          }))}
-                          height={310}
-                        />
-                      </ChartCard>
-                    </div>
-                  </>
-                ) : section.id === 'search-ai' ? (
-                  <>
-                    <V2StatGroup stats={[...SEARCH_AI_STATS, ...withDanger(section.actionNeeded)]} />
-                    <div className="grid grid-cols-4 gap-[56px]">
-                      {SEARCH_AI_SCORE_BARS.map((bar) => (
-                        <ScoreBar key={bar.id} {...bar} />
-                      ))}
-                    </div>
-                  </>
-                ) : section.id === 'reviews' ? (
-                  <>
-                    <V2StatGroup stats={[...REVIEWS_STATS, ...withDanger(section.actionNeeded)]} />
-                    <ChartCard title="Reviews by rating" showActions={false}>
-                      <StackedBarChart
-                        data={REVIEWS_BY_RATING.map((r) => ({ rating: r.rating, count: r.count }))}
-                        series={[{ key: 'count', label: 'Reviews', color: chartColors.blue }]}
-                        xKey="rating"
-                        height={280}
-                        showBarLabels
-                        hideLegend
-                        barColors={REVIEWS_BY_RATING.map((r) => r.color)}
-                      />
-                    </ChartCard>
-                  </>
-                ) : section.id === 'surveys' ? (
-                  <V2StatGroup stats={[...SURVEYS_STATS, ...withDanger(section.actionNeeded)]} />
-                ) : (
-                  <V2StatGroup
-                    stats={[
-                      ...(section.stats ?? []).filter((s) => !(section.id === 'social' && s.id === 'new-follower')),
-                      ...withDanger(section.actionNeeded),
-                    ]}
-                  />
-                )}
-
-                {showAgentRows && (
-                  <div className="flex flex-col gap-lg pt-lg">
-                    <CoworkerPerformanceHeader
-                      icon={isCx ? robinIcon : jayIcon}
-                      coworkerName={isCx ? 'Robin' : 'Jay'}
-                      {...aggregateAgentSavings(agents)}
-                    />
-                    <div className="flex flex-col gap-md">
-                      {agents.map((agent) => (
-                        <AgentCard key={agent.id} agent={agent} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(agents)} />}
-              </SectionCard>
-            )
-          })}
+          {SECTIONS_BEFORE_FRONTDESK.map((section) => (
+            <ProductSectionCard key={section.id} section={section} showAgents={showAgents} dataState={dataState} />
+          ))}
 
           <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} />
+
+          {SECTIONS_FROM_FRONTDESK.map((section) => (
+            <ProductSectionCard key={section.id} section={section} showAgents={showAgents} dataState={dataState} />
+          ))}
         </div>
       </div>
 
