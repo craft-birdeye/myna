@@ -14,6 +14,7 @@ import { getAgentDirectory } from '../data/agentDirectoryData'
 import { DonutChart } from '../components/charts/DonutChart'
 import { StackedBarChart } from '../components/charts/StackedBarChart'
 import { ChartCard } from '../components/charts/ChartCard'
+import { ChartTooltip } from '../components/charts/ChartTooltip'
 import { chartColors } from '../components/charts/chartColors'
 import {
   OVERVIEW_V2_SECTIONS,
@@ -739,13 +740,38 @@ const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
 // A single bar split into proportional colored segments (rather than a per-category pie/donut) —
 // used for Appointments' status breakdown, with a legend of name + share below.
 function SplitBar({ data }: { data: { name: string; value: number; color: string }[] }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const total = data.reduce((sum, d) => sum + d.value, 0)
+  let cumulative = 0
+  const segments = data.map((d) => {
+    const pct = (d.value / total) * 100
+    const segment = { ...d, pct, start: cumulative }
+    cumulative += pct
+    return segment
+  })
+  const hovered = hoveredIndex !== null ? segments[hoveredIndex] : null
+
   return (
-    <div className="flex flex-col gap-lg">
-      <div className="flex h-6 w-full overflow-hidden rounded-sm">
-        {data.map((d) => (
-          <div key={d.name} style={{ width: `${(d.value / total) * 100}%`, backgroundColor: d.color }} />
-        ))}
+    <div className="flex h-full flex-col justify-between">
+      <div className="relative">
+        <div className="flex h-6 w-full overflow-hidden rounded-sm">
+          {segments.map((s, i) => (
+            <div
+              key={s.name}
+              style={{ width: `${s.pct}%`, backgroundColor: s.color }}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex((h) => (h === i ? null : h))}
+            />
+          ))}
+        </div>
+        {hovered && (
+          <div
+            className="pointer-events-none absolute bottom-full z-10 -translate-x-1/2 pb-xs"
+            style={{ left: `${hovered.start + hovered.pct / 2}%` }}
+          >
+            <ChartTooltip items={[{ color: hovered.color, label: hovered.name, value: hovered.value }]} />
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap gap-lg">
         {data.map((d) => (
@@ -794,8 +820,8 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
         <div className="flex flex-col gap-md">
           <h4 className="m-0 text-body text-text-primary">{appointmentsArea.label}</h4>
           <V2StatGroup stats={[totalBookings, ...withDanger([noShows])]} />
-          <ChartCard title="Appointment status" showActions={false}>
-            <div className="flex flex-1 flex-col justify-center">
+          <ChartCard title="Appointment status" showActions={false} minHeight={220}>
+            <div className="flex-1">
               <SplitBar data={appointmentStatusData} />
             </div>
           </ChartCard>
