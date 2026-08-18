@@ -306,8 +306,8 @@ function CoworkerPerformanceHeader({
 }) {
   return (
     <div className="flex flex-col gap-md">
-      <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <img src={icon} alt="" className="size-5 shrink-0 rounded-full" />
+      <h4 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <img src={icon} alt="" className="size-9 shrink-0 rounded-full" />
         {coworkerName} performance
       </h4>
       <V2StatGroup
@@ -322,13 +322,10 @@ function CoworkerPerformanceHeader({
 
 // flex-none (rather than flex-1/min-w) sizes each agent to its own content width — all of its
 // KPIs stay on one line, and the whole block wraps to the next row as a unit when it doesn't fit.
-function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) {
+function AgentRow({ agent }: { agent: V2Agent }) {
   return (
     <div className="flex flex-none flex-col gap-md">
-      <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <img src={icon} alt="" className="size-5 shrink-0 rounded-full" />
-        {agent.name}
-      </h4>
+      <h4 className="m-0 text-body text-text-primary">{agent.name}</h4>
       <V2StatGroup stats={agent.stats} nowrap />
     </div>
   )
@@ -560,7 +557,6 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
           {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
             <AgentRow
               key={area.id}
-              icon={mynaIcon}
               agent={{ id: `${area.id}-agent-outcomes`, name: area.agentName, stats: area.agentOutcomes }}
             />
           ))}
@@ -713,7 +709,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                     />
                     <div className="flex flex-wrap gap-xl">
                       {agents.map((agent) => (
-                        <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
+                        <AgentRow key={agent.id} agent={agent} />
                       ))}
                     </div>
                   </div>
