@@ -61,17 +61,19 @@ const SEARCH_AI_STATS: V2Stat[] = [
   { id: 'average-rank', value: '4', label: 'Average rank' },
 ]
 
-// One bar per KPI (value + industry-average marker on a single-color track), like the app's
-// "Understanding the Birdeye Score" widget — not a grouped bar chart. Average rank is excluded
-// since it isn't a 0-100 percentage; it stays a plain KPI tile above.
-const SEARCH_AI_SCORE_BARS: { id: string; label: string; value: number; industryAverage: number; color: string }[] = [
-  { id: 'search-ai-score', label: 'Search AI score', value: 33.6, industryAverage: 45, color: '#1976d2' },
-  { id: 'citation-share', label: 'Citation share', value: 17.6, industryAverage: 25, color: '#0f8b8d' },
-  { id: 'visibility-score', label: 'Visibility score', value: 60.2, industryAverage: 55, color: '#c2185b' },
-  { id: 'sentiment-score', label: 'Sentiment score', value: 78, industryAverage: 82, color: '#5c4b99' },
+// One bar per KPI (value + top-competitor marker on a single-color track), like the app's
+// "Understanding the Birdeye Score" widget — not a grouped bar chart. Most are 0-100
+// percentages; Average rank uses its own max (top-10 search positions) since it's a position,
+// not a percentage — ScoreBar takes an explicit max so both scale correctly.
+const SEARCH_AI_SCORE_BARS: { id: string; label: string; value: number; topCompetitor: number; max?: number; color: string }[] = [
+  { id: 'search-ai-score', label: 'Search AI score', value: 33.6, topCompetitor: 45, color: '#1976d2' },
+  { id: 'citation-share', label: 'Citation share', value: 17.6, topCompetitor: 25, color: '#0f8b8d' },
+  { id: 'visibility-score', label: 'Visibility score', value: 60.2, topCompetitor: 55, color: '#c2185b' },
+  { id: 'sentiment-score', label: 'Sentiment score', value: 78, topCompetitor: 82, color: '#5c4b99' },
+  { id: 'average-rank', label: 'Average rank', value: 4, topCompetitor: 1, max: 10, color: '#e0631c' },
 ]
 
-function ScoreBar({ label, value, industryAverage, color }: { label: string; value: number; industryAverage: number; color: string }) {
+function ScoreBar({ label, value, topCompetitor, max = 100, color }: { label: string; value: number; topCompetitor: number; max?: number; color: string }) {
   return (
     <div className="flex flex-col gap-sm">
       <div>
@@ -81,16 +83,16 @@ function ScoreBar({ label, value, industryAverage, color }: { label: string; val
       <div className="relative h-[6px] w-full rounded-full" style={{ backgroundColor: color }}>
         <span
           className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-primary ring-2 ring-surface"
-          style={{ left: `${value}%` }}
+          style={{ left: `${(value / max) * 100}%` }}
         />
         <span
           className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-tertiary ring-2 ring-surface"
-          style={{ left: `${industryAverage}%` }}
+          style={{ left: `${(topCompetitor / max) * 100}%` }}
         />
       </div>
       <p className="m-0 flex items-center gap-xs text-small text-text-secondary">
         <span className="inline-block size-2 shrink-0 rounded-full bg-text-tertiary" />
-        Industry average: {industryAverage}
+        Top competitor: {topCompetitor}
       </p>
     </div>
   )
@@ -508,7 +510,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                 ) : section.id === 'search-ai' ? (
                   <>
                     <V2StatGroup stats={SEARCH_AI_STATS} />
-                    <div className="grid grid-cols-4 gap-3xl">
+                    <div className="grid grid-cols-5 gap-3xl">
                       {SEARCH_AI_SCORE_BARS.map((bar) => (
                         <ScoreBar key={bar.id} {...bar} />
                       ))}
