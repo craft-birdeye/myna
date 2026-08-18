@@ -742,11 +742,11 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
         Front desk
       </h3>
 
-      <div className="flex flex-wrap gap-x-3xl gap-y-lg">
+      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg">
         {subareas.map((area) => (
-          <div key={area.id} className={`flex flex-col gap-md ${area.id === 'conversations' ? 'w-full' : 'flex-none'}`}>
+          <div key={area.id} className="flex flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-            <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} nowrap />
+            <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} />
           </div>
         ))}
       </div>
