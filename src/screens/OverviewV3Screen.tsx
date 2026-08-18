@@ -11,6 +11,8 @@ import jayIcon from '../assets/icon-jay.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
+import { DonutChart } from '../components/charts/DonutChart'
+import { chartColors } from '../components/charts/chartColors'
 import {
   OVERVIEW_V2_SECTIONS,
   OVERVIEW_V2_FRONTDESK_SUBAREAS,
@@ -30,6 +32,22 @@ interface OverviewV3ScreenProps {
 
 const KPI_ROW_CLASS = 'flex flex-wrap gap-xl'
 const KPI_TILE_CLASS = 'min-w-[140px] shrink-0'
+
+// "18.3K" -> 18300, "151" -> 151 — lets the donut charts below size slices off the same
+// display strings already shown elsewhere, instead of maintaining a second set of raw numbers.
+function parseKValue(value: string): number {
+  return value.endsWith('K') ? parseFloat(value) * 1000 : parseFloat(value)
+}
+
+// Listings sync-status breakdown, reusing the app's semantic chart colors (resolved/escalated/
+// unresolved/unresponded) so "healthy vs. needs attention" reads the same way it does elsewhere.
+const LISTINGS_SYNC_STATUS_IDS = ['synced', 'not-synced', 'not-connected', 'opted-out']
+const LISTINGS_SYNC_STATUS_COLORS: Record<string, string> = {
+  synced: chartColors.resolved,
+  'not-synced': chartColors.escalated,
+  'not-connected': chartColors.unresolved,
+  'opted-out': chartColors.unresponded,
+}
 
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app.
@@ -418,13 +436,32 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                   {section.label}
                 </h3>
 
-                {section.stats && <V2StatGroup stats={section.stats} />}
-
-                {section.id === 'listings' && (
-                  <div className="flex flex-col gap-md">
-                    <h4 className="m-0 text-body text-text-primary">Google report</h4>
-                    <V2StatGroup stats={OVERVIEW_LISTINGS_GOOGLE_REPORT} />
-                  </div>
+                {section.id === 'listings' ? (
+                  <>
+                    <V2StatGroup stats={(section.stats ?? []).filter((s) => !LISTINGS_SYNC_STATUS_IDS.includes(s.id))} />
+                    <div className="flex flex-col gap-md">
+                      <h4 className="m-0 text-body text-text-primary">Sync status</h4>
+                      <DonutChart
+                        data={(section.stats ?? [])
+                          .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
+                          .map((s) => ({ name: s.label, value: parseFloat(s.value), color: LISTINGS_SYNC_STATUS_COLORS[s.id] }))}
+                        height={240}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-md">
+                      <h4 className="m-0 text-body text-text-primary">Google report</h4>
+                      <DonutChart
+                        data={OVERVIEW_LISTINGS_GOOGLE_REPORT.map((s, i) => ({
+                          name: s.label,
+                          value: parseKValue(s.value),
+                          color: chartColors.categorical[i],
+                        }))}
+                        height={240}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  section.stats && <V2StatGroup stats={section.stats} />
                 )}
 
                 {section.id === 'reviews' && <ReviewsOverview />}
