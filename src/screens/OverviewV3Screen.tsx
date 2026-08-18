@@ -142,6 +142,63 @@ const REVIEWS_BY_RATING: { rating: string; count: number; color: string }[] = [
   { rating: '5 star', count: ratingCount(5), color: '#4cae3d' },
 ]
 
+// Per-agent KPI overrides for sections whose agent stats differ from the shared
+// OVERVIEW_V2_SECTIONS data (renamed labels, added/fixed KPIs) — kept local to v3 rather than
+// editing the shared file, since v2 shouldn't pick up these changes. Sections not listed here
+// (Social, Content hub, Surveys, Ticketing, Front desk) keep using the shared agent data as-is.
+const AGENT_OVERRIDES: Record<string, V2Agent[]> = {
+  'search-ai': [
+    {
+      id: 'recommendations-agent',
+      name: 'Recommendations agent',
+      stats: [
+        { id: 'recs-generated', value: '18', label: 'Generated' },
+        { id: 'recs-accepted', value: '7', label: 'Accepted' },
+        { id: 'recs-completed', value: '2', label: 'Completed' },
+        { id: 'time-saved', value: '4h', label: 'Time saved' },
+      ],
+    },
+  ],
+  reviews: [
+    {
+      id: 'review-marketing',
+      name: 'Review marketing agent',
+      stats: [
+        { id: 'reviews-shared', value: '18', label: 'Reviews shared' },
+        { id: 'time-saved', value: '7h', label: 'Time saved' },
+      ],
+    },
+    {
+      id: 'review-tagging',
+      name: 'Review tagging agent',
+      stats: [
+        { id: 'reviews-tagged', value: '18', label: 'Reviews tagged' },
+        { id: 'tagging-rate', value: '7', label: 'Tagging rate' },
+        { id: 'time-saved', value: '5h', label: 'Time saved' },
+      ],
+    },
+    {
+      id: 'review-generation',
+      name: 'Review generation agent',
+      stats: [
+        { id: 'reviews-received', value: '18', label: 'Reviews received' },
+        { id: 'contacts-reached', value: '7', label: 'Contacts reached' },
+        { id: 'click-through-rate', value: '7', label: 'Click through rate' },
+        { id: 'time-saved', value: '6h', label: 'Time saved' },
+      ],
+    },
+    {
+      id: 'review-response',
+      name: 'Review response agent',
+      stats: [
+        { id: 'review-responded', value: '18', label: 'Reviews responded' },
+        { id: 'response-rate', value: '7', label: 'Response rate' },
+        { id: 'time-saved', value: '7h', label: 'Time saved' },
+      ],
+    },
+  ],
+}
+
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app.
 function V2StatGroup({ stats, nowrap = false }: { stats: V2Stat[]; nowrap?: boolean }) {
@@ -464,8 +521,9 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
           {OVERVIEW_V2_SECTIONS.map((section) => {
             const NavIcon = SECTION_NAV_ICON[section.id]
             const isCx = CX_SECTION_IDS.has(section.id)
-            const showAgentRows = showAgents && section.agents.length > 0
-            const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
+            const agents = AGENT_OVERRIDES[section.id] ?? section.agents
+            const showAgentRows = showAgents && agents.length > 0
+            const showSetupBanner = dataState === 'ftu' && agents.length > 0
             const hasBodyContent = Boolean(section.stats) || section.id === 'reviews' || showAgentRows
             const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded) || showSetupBanner
             if (!hasAnyContent) return null
@@ -530,7 +588,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
 
                 {showAgentRows && (
                   <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
-                    {section.agents.map((agent) => (
+                    {agents.map((agent) => (
                       <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
                     ))}
                   </div>
@@ -538,7 +596,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
 
                 {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} bordered={hasBodyContent} />}
 
-                {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(section.agents)} />}
+                {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(agents)} />}
               </SectionCard>
             )
           })}
