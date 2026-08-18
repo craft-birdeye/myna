@@ -197,6 +197,50 @@ const AGENT_OVERRIDES: Record<string, V2Agent[]> = {
       ],
     },
   ],
+  surveys: [
+    {
+      id: 'survey-distribution',
+      name: 'Survey distribution agent',
+      stats: [
+        { id: 'unique-contacts-reached', value: '1.2K', label: 'Unique contacts reached' },
+        { id: 'responses-received', value: '18', label: 'Responses received' },
+        { id: 'conversion-rate', value: '22%', label: 'Conversion rate' },
+        { id: 'time-saved', value: '5h', label: 'Time saved' },
+      ],
+    },
+    {
+      id: 'survey-response',
+      name: 'Survey response agent',
+      stats: [
+        { id: 'survey-responded', value: '18', label: 'Survey responded' },
+        { id: 'response-rate', value: '72%', label: 'Response rate' },
+        { id: 'average-response-time', value: '2h', label: 'Average response time' },
+        { id: 'time-saved', value: '7h', label: 'Time saved' },
+      ],
+    },
+  ],
+  ticketing: [
+    {
+      id: 'ticketing-surveys',
+      name: 'Ticketing agent · Surveys',
+      stats: [
+        { id: 'tickets-created', value: '212', label: 'Tickets created' },
+        { id: 'tickets-opened', value: '45', label: 'Tickets opened' },
+        { id: 'tickets-escalated', value: '5', label: 'Tickets escalated' },
+        { id: 'time-saved', value: '3h', label: 'Time saved' },
+      ],
+    },
+    {
+      id: 'ticketing-reviews',
+      name: 'Ticketing agent · Reviews',
+      stats: [
+        { id: 'tickets-created', value: '158', label: 'Tickets created' },
+        { id: 'tickets-opened', value: '32', label: 'Tickets opened' },
+        { id: 'tickets-escalated', value: '4', label: 'Tickets escalated' },
+        { id: 'time-saved', value: '2h', label: 'Time saved' },
+      ],
+    },
+  ],
 }
 
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
