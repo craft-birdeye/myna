@@ -364,7 +364,7 @@ const AGENT_DESCRIPTIONS: Record<string, string> = {
   'survey-distribution': 'Sends surveys to customers across email, text, and QR touchpoints after a qualifying interaction.',
   'survey-response': 'Collects and scores incoming survey responses, flagging detractors for follow-up.',
   'ticketing-agent': 'Opens and routes a support ticket automatically whenever a survey response or review flags an issue that needs follow-up.',
-  'front-desk': 'Handles inbound voice, chat, and text — answering questions, booking visits, and verifying insurance.',
+  'front-desk': 'Handles inbound voice, chat, and text, answering questions, booking visits, and verifying insurance.',
   waitlist: 'Reaches out to waitlisted patients to fill cancelled or newly opened appointment slots.',
   'pre-visit': 'Sends pre-visit outreach and collects completed intake forms ahead of the appointment.',
   reminder: 'Sends automated appointment reminders and collects confirmations via text and email.',
@@ -516,25 +516,39 @@ function EstimateTooltip() {
 // Picks the one agent+stat a section's FTU setup banner should lead with: the first time-saved
 // or cost-saved figure found across the section's agents (a real "why bother" number), falling
 // back to that agent's first stat if none of them save time or cost.
-function pickFeaturedStat(agents: V2Agent[]): { agentName: string; value: string; metricLabel: string } {
+function pickFeaturedStat(agents: V2Agent[]): { agentName: string; description: string; value: string; metricLabel: string } {
   for (const agent of agents) {
     const savedStat = agent.stats.find((s) => s.id === 'time-saved' || s.id === 'cost-saved')
-    if (savedStat) return { agentName: agent.name, value: savedStat.value, metricLabel: savedStat.label.toLowerCase() }
+    if (savedStat) {
+      return { agentName: agent.name, description: AGENT_DESCRIPTIONS[agent.id] ?? '', value: savedStat.value, metricLabel: savedStat.label.toLowerCase() }
+    }
   }
   const [first] = agents
   const [firstStat] = first.stats
-  return { agentName: first.name, value: firstStat.value, metricLabel: firstStat.label.toLowerCase() }
+  return { agentName: first.name, description: AGENT_DESCRIPTIONS[first.id] ?? '', value: firstStat.value, metricLabel: firstStat.label.toLowerCase() }
 }
 
 // FTU-only footer banner for a product section — assumes no agent is enabled yet, so it promotes
 // setting one up instead of showing the (hidden) agent rows. Bleeds edge-to-edge like the AI
-// workforce summary's own promo banner. Empty/Filled states never show this.
-function AgentSetupBanner({ icon, agentName, value, metricLabel }: { icon: string; agentName: string; value: string; metricLabel: string }) {
+// workforce summary's own promo banner. Empty/Filled states never show this. Leads with the same
+// agent description shown on its (hidden) AgentCard, so the banner explains what the agent does
+// as well as what it saves, instead of savings alone.
+function AgentSetupBanner({
+  icon,
+  description,
+  value,
+  metricLabel,
+}: {
+  icon: string
+  description: string
+  value: string
+  metricLabel: string
+}) {
   return (
     <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md bg-ai-summary p-lg">
       <img src={icon} alt="" className="size-9 shrink-0 rounded-full border-2 border-surface" />
-      <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
-        Set up your {agentName} to save up to {value} in {metricLabel}.
+      <p className="m-0 min-w-0 flex-1 text-body text-text-primary">
+        {description} Set it up to save up to {value} in {metricLabel}.
       </p>
       <button
         type="button"
