@@ -33,6 +33,8 @@ export interface StackedBarChartProps {
   showBarLabels?: boolean
   /** Hide the bottom legend. */
   hideLegend?: boolean
+  /** Fix the Y-axis range instead of auto-scaling to the data (e.g. [0, 100] for percentages). */
+  yDomain?: [number, number]
 }
 
 const axisTick = { fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }
@@ -101,7 +103,7 @@ function StackedBarTooltip({
   )
 }
 
-export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend }: StackedBarChartProps) {
+export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend, yDomain }: StackedBarChartProps) {
   const xTick = xAxisAngle
     ? { ...axisTick, angle: xAxisAngle, textAnchor: 'end' as const, dy: 4 }
     : axisTick
@@ -119,7 +121,7 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
         <XAxis dataKey={xKey} tick={resolvedTick} tickLine={false} axisLine={{ stroke: chartColors.grid }} height={xAxisHeight} />
         {showBarLabels
           ? <YAxis hide width={0} />
-          : <YAxis tick={axisTick} tickLine={false} axisLine={false} width={40} />
+          : <YAxis tick={axisTick} tickLine={false} axisLine={false} width={40} domain={yDomain} />
         }
         <Tooltip
           cursor={{ fill: 'rgba(0,0,0,0.04)' }}

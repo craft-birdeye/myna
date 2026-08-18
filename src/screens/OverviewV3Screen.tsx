@@ -12,6 +12,7 @@ import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
 import { DonutChart } from '../components/charts/DonutChart'
+import { StackedBarChart } from '../components/charts/StackedBarChart'
 import { ChartCard } from '../components/charts/ChartCard'
 import { chartColors } from '../components/charts/chartColors'
 import {
@@ -50,6 +51,18 @@ const LISTINGS_SYNC_STATUS_COLORS: Record<string, string> = {
   'not-connected': chartColors.unresolved,
   'opted-out': chartColors.unresponded,
 }
+
+// Search AI's own KPI set — adds Sentiment score alongside the shared OVERVIEW_V2_SECTIONS data
+// (kept local to v3 rather than editing the shared file, since v2 shouldn't pick up the new KPI).
+// Average rank is excluded from the percent-of-100 bar chart below since it isn't a percentage.
+const SEARCH_AI_STATS: V2Stat[] = [
+  { id: 'search-ai-score', value: '33.6%', label: 'Search AI score' },
+  { id: 'citation-share', value: '17.6%', label: 'Citation share' },
+  { id: 'visibility-score', value: '60.2%', label: 'Visibility score' },
+  { id: 'sentiment-score', value: '78%', label: 'Sentiment score' },
+  { id: 'average-rank', value: '4', label: 'Average rank' },
+]
+const SEARCH_AI_PERCENT_IDS = ['search-ai-score', 'citation-share', 'visibility-score', 'sentiment-score']
 
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app.
@@ -459,6 +472,23 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                         />
                       </ChartCard>
                     </div>
+                  </>
+                ) : section.id === 'search-ai' ? (
+                  <>
+                    <V2StatGroup stats={SEARCH_AI_STATS} />
+                    <ChartCard title="Search AI KPIs" tooltip="Each KPI shown as a percentage of 100.">
+                      <StackedBarChart
+                        data={SEARCH_AI_STATS.filter((s) => SEARCH_AI_PERCENT_IDS.includes(s.id)).map((s) => ({
+                          metric: s.label,
+                          value: parseFloat(s.value),
+                        }))}
+                        series={[{ key: 'value', label: 'Score', color: chartColors.blue }]}
+                        xKey="metric"
+                        height={280}
+                        yDomain={[0, 100]}
+                        hideLegend
+                      />
+                    </ChartCard>
                   </>
                 ) : (
                   section.stats && <V2StatGroup stats={section.stats} />
