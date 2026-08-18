@@ -53,20 +53,13 @@ const LISTINGS_SYNC_STATUS_COLORS: Record<string, string> = {
 
 // Search AI's own KPI set — adds Sentiment score alongside the shared OVERVIEW_V2_SECTIONS data
 // (kept local to v3 rather than editing the shared file, since v2 shouldn't pick up the new KPI).
-const SEARCH_AI_STATS: V2Stat[] = [
-  { id: 'search-ai-score', value: '33.6%', label: 'Search AI score' },
-  { id: 'citation-share', value: '17.6%', label: 'Citation share' },
-  { id: 'visibility-score', value: '60.2%', label: 'Visibility score' },
-  { id: 'sentiment-score', value: '78%', label: 'Sentiment score' },
-  { id: 'average-rank', value: '4', label: 'Average rank' },
-]
+const SEARCH_AI_STATS: V2Stat[] = [{ id: 'search-ai-score', value: '33.6%', label: 'Search AI score' }]
 
 // One bar per KPI (value + top-competitor marker on a single-color track), like the app's
 // "Understanding the Birdeye Score" widget — not a grouped bar chart. Most are 0-100
 // percentages; Average rank uses its own max (top-10 search positions) since it's a position,
 // not a percentage — ScoreBar takes an explicit max so both scale correctly.
 const SEARCH_AI_SCORE_BARS: { id: string; label: string; value: number; topCompetitor: number; max?: number; color: string }[] = [
-  { id: 'search-ai-score', label: 'Search AI score', value: 33.6, topCompetitor: 45, color: '#1976d2' },
   { id: 'citation-share', label: 'Citation share', value: 17.6, topCompetitor: 25, color: '#0f8b8d' },
   { id: 'visibility-score', label: 'Visibility score', value: 60.2, topCompetitor: 55, color: '#c2185b' },
   { id: 'sentiment-score', label: 'Sentiment score', value: 78, topCompetitor: 82, color: '#5c4b99' },
@@ -510,7 +503,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                 ) : section.id === 'search-ai' ? (
                   <>
                     <V2StatGroup stats={SEARCH_AI_STATS} />
-                    <div className="grid grid-cols-5 gap-3xl">
+                    <div className="grid grid-cols-4 gap-3xl">
                       {SEARCH_AI_SCORE_BARS.map((bar) => (
                         <ScoreBar key={bar.id} {...bar} />
                       ))}
