@@ -132,7 +132,7 @@ function ScoreBar({
 // Reviews received; 3 star or less is dropped. Kept local to v3 rather than editing the shared
 // OVERVIEW_V2_SECTIONS file, since v2 shouldn't pick up the reorder/removal.
 const REVIEWS_STATS: V2Stat[] = [
-  { id: 'average-rating', value: String(OVERVIEW_REVIEWS_RATING), label: 'Average rating' },
+  { id: 'average-rating', value: String(OVERVIEW_REVIEWS_RATING), label: 'Rating' },
   { id: 'requests-sent', value: '1.9K', label: 'Request sent' },
   { id: 'reviews-received', value: '7', label: 'Reviews received' },
 ]
@@ -268,7 +268,12 @@ function V2StatGroup({
     <div className={`flex ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-xl`}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
-          <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : valueClassName ?? 'text-text-action'}`}>{s.value}</p>
+          <p
+            className={`m-0 flex items-center gap-xs whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : valueClassName ?? 'text-text-action'}`}
+          >
+            {s.value}
+            {s.id === 'average-rating' && <Icon name="star" size={16} fill className="text-rating-star" />}
+          </p>
           <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
         </div>
       ))}
