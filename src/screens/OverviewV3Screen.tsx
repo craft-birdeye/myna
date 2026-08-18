@@ -12,6 +12,7 @@ import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
 import { DonutChart } from '../components/charts/DonutChart'
+import { ChartCard } from '../components/charts/ChartCard'
 import { chartColors } from '../components/charts/chartColors'
 import {
   OVERVIEW_V2_SECTIONS,
@@ -41,10 +42,11 @@ function parseKValue(value: string): number {
 
 // Listings sync-status breakdown, reusing the app's semantic chart colors (resolved/escalated/
 // unresolved/unresponded) so "healthy vs. needs attention" reads the same way it does elsewhere.
-const LISTINGS_SYNC_STATUS_IDS = ['synced', 'not-synced', 'not-connected', 'opted-out']
+const LISTINGS_SYNC_STATUS_IDS = ['synced', 'not-synced', 'submitted', 'not-connected', 'opted-out']
 const LISTINGS_SYNC_STATUS_COLORS: Record<string, string> = {
   synced: chartColors.resolved,
   'not-synced': chartColors.escalated,
+  submitted: chartColors.blue,
   'not-connected': chartColors.unresolved,
   'opted-out': chartColors.unresponded,
 }
@@ -439,25 +441,23 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                 {section.id === 'listings' ? (
                   <>
                     <V2StatGroup stats={(section.stats ?? []).filter((s) => !LISTINGS_SYNC_STATUS_IDS.includes(s.id))} />
-                    <div className="flex flex-col gap-md">
-                      <h4 className="m-0 text-body text-text-primary">Sync status</h4>
-                      <DonutChart
-                        data={(section.stats ?? [])
-                          .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
-                          .map((s) => ({ name: s.label, value: parseFloat(s.value), color: LISTINGS_SYNC_STATUS_COLORS[s.id] }))}
-                        height={240}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-md">
-                      <h4 className="m-0 text-body text-text-primary">Google report</h4>
-                      <DonutChart
-                        data={OVERVIEW_LISTINGS_GOOGLE_REPORT.map((s, i) => ({
-                          name: s.label,
-                          value: parseKValue(s.value),
-                          color: chartColors.categorical[i],
-                        }))}
-                        height={240}
-                      />
+                    <div className="grid grid-cols-2 gap-lg">
+                      <ChartCard title="Sync status">
+                        <DonutChart
+                          data={(section.stats ?? [])
+                            .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
+                            .map((s) => ({ name: s.label, value: parseFloat(s.value), color: LISTINGS_SYNC_STATUS_COLORS[s.id] }))}
+                        />
+                      </ChartCard>
+                      <ChartCard title="Google report">
+                        <DonutChart
+                          data={OVERVIEW_LISTINGS_GOOGLE_REPORT.map((s, i) => ({
+                            name: s.label,
+                            value: parseKValue(s.value),
+                            color: chartColors.categorical[i],
+                          }))}
+                        />
+                      </ChartCard>
                     </div>
                   </>
                 ) : (
