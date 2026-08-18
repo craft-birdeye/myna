@@ -59,17 +59,19 @@ const SEARCH_AI_STATS: V2Stat[] = [{ id: 'search-ai-score', value: '33.6%', labe
 // "Understanding the Birdeye Score" widget — not a grouped bar chart. Most are 0-100
 // percentages; Average rank uses its own max (top-10 search positions) since it's a position,
 // not a percentage — ScoreBar takes an explicit max so both scale correctly.
+const SEARCH_AI_SCORE_BAR_COLOR = '#1976d2'
+const SEARCH_AI_SCORE_BAR_TRACK_COLOR = '#d9d9d9'
 const SEARCH_AI_SCORE_BARS: { id: string; label: string; value: number; topCompetitor: number; max?: number; color: string; note?: string }[] = [
-  { id: 'citation-share', label: 'Citation share', value: 17.6, topCompetitor: 25, color: '#0f8b8d' },
-  { id: 'visibility-score', label: 'Visibility score', value: 60.2, topCompetitor: 55, color: '#c2185b' },
-  { id: 'sentiment-score', label: 'Sentiment score', value: 78, topCompetitor: 82, color: '#5c4b99' },
+  { id: 'citation-share', label: 'Citation share', value: 17.6, topCompetitor: 25, color: SEARCH_AI_SCORE_BAR_COLOR },
+  { id: 'visibility-score', label: 'Visibility score', value: 60.2, topCompetitor: 55, color: SEARCH_AI_SCORE_BAR_COLOR },
+  { id: 'sentiment-score', label: 'Sentiment score', value: 78, topCompetitor: 82, color: SEARCH_AI_SCORE_BAR_COLOR },
   {
     id: 'average-rank',
     label: 'Average rank',
     value: 4,
     topCompetitor: 1,
     max: 10,
-    color: '#e0631c',
+    color: SEARCH_AI_SCORE_BAR_COLOR,
     note: 'This is your rank across ChatGPT, Claude, Copilot, Gemini, and more.',
   },
 ]
@@ -99,7 +101,12 @@ function ScoreBar({
         <p className="m-0 text-small text-text-secondary">{note}</p>
       ) : (
         <>
-          <div className="relative h-[6px] w-full rounded-full" style={{ backgroundColor: color }}>
+          <div
+            className="relative h-[6px] w-full rounded-full"
+            style={{
+              background: `linear-gradient(to right, ${color} ${(value / max) * 100}%, ${SEARCH_AI_SCORE_BAR_TRACK_COLOR} ${(value / max) * 100}%)`,
+            }}
+          >
             <span
               className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-primary ring-2 ring-surface"
               style={{ left: `${(value / max) * 100}%` }}
@@ -245,17 +252,24 @@ const AGENT_OVERRIDES: Record<string, V2Agent[]> = {
 
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app.
-function V2StatGroup({ stats, nowrap = false }: { stats: V2Stat[]; nowrap?: boolean }) {
+// Action-needed stats are merged in here (flagged via `danger`) instead of getting their own
+// "Action needed" block, so they sit inline beside the section's other KPIs — same tile, just
+// red instead of blue.
+function V2StatGroup({ stats, nowrap = false }: { stats: (V2Stat & { danger?: boolean })[]; nowrap?: boolean }) {
   return (
     <div className={`flex ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-xl`}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
-          <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+          <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-action'}`}>{s.value}</p>
           <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
         </div>
       ))}
     </div>
   )
+}
+
+function withDanger(stats: V2Stat[] | undefined): (V2Stat & { danger: true })[] {
+  return (stats ?? []).map((s) => ({ ...s, danger: true }))
 }
 
 // flex-none (rather than flex-1/min-w) sizes each agent to its own content width — all of its
@@ -580,7 +594,12 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
 
                 {section.id === 'listings' ? (
                   <>
-                    <V2StatGroup stats={(section.stats ?? []).filter((s) => !LISTINGS_SYNC_STATUS_IDS.includes(s.id))} />
+                    <V2StatGroup
+                      stats={[
+                        ...(section.stats ?? []).filter((s) => !LISTINGS_SYNC_STATUS_IDS.includes(s.id)),
+                        ...withDanger(section.actionNeeded),
+                      ]}
+                    />
                     <div className="grid grid-cols-2 gap-lg">
                       <ChartCard title="Sync status">
                         <DonutChart
@@ -604,7 +623,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                   </>
                 ) : section.id === 'search-ai' ? (
                   <>
-                    <V2StatGroup stats={SEARCH_AI_STATS} />
+                    <V2StatGroup stats={[...SEARCH_AI_STATS, ...withDanger(section.actionNeeded)]} />
                     <div className="grid grid-cols-4 gap-[56px]">
                       {SEARCH_AI_SCORE_BARS.map((bar) => (
                         <ScoreBar key={bar.id} {...bar} />
@@ -613,7 +632,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                   </>
                 ) : section.id === 'reviews' ? (
                   <>
-                    <V2StatGroup stats={REVIEWS_STATS} />
+                    <V2StatGroup stats={[...REVIEWS_STATS, ...withDanger(section.actionNeeded)]} />
                     <ChartCard title="Reviews by rating">
                       <StackedBarChart
                         data={REVIEWS_BY_RATING.map((r) => ({ rating: r.rating, count: r.count }))}
@@ -627,7 +646,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                     </ChartCard>
                   </>
                 ) : (
-                  section.stats && <V2StatGroup stats={section.stats} />
+                  <V2StatGroup stats={[...(section.stats ?? []), ...withDanger(section.actionNeeded)]} />
                 )}
 
                 {showAgentRows && (
@@ -637,8 +656,6 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                     ))}
                   </div>
                 )}
-
-                {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} bordered={hasBodyContent} />}
 
                 {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(agents)} />}
               </SectionCard>
