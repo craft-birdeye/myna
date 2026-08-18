@@ -24,7 +24,6 @@ import {
 import {
   OVERVIEW_REVIEWS_BREAKDOWN,
   OVERVIEW_REVIEWS_RATING,
-  OVERVIEW_REVIEW_SOURCES,
   OVERVIEW_LISTINGS_GOOGLE_REPORT,
 } from '../data/overviewData'
 
@@ -194,28 +193,6 @@ function ActionNeeded({ stats, bordered = true }: { stats: V2Stat[]; bordered?: 
 // Reviews gets its own richer layout (rating + breakdown bars + source cards) instead of the
 // generic top-stats row every other section uses — same content as Classic Overview's Reviews
 // section, kept as an independent copy rather than a cross-import.
-function ReviewsOverview() {
-  return (
-    <div className="flex flex-wrap items-start gap-md">
-      {OVERVIEW_REVIEW_SOURCES.map((s) => (
-        <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
-          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
-            {s.icon === 'G' ? 'G' : <Icon name={s.icon} size={18} />}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
-            <p className="m-0 flex items-center gap-xs text-body text-text-primary">
-              {s.rating}
-              <Icon name="star" size={14} fill className="text-[#f5a623]" />
-              <span className="text-small text-text-tertiary">{s.reviewCount}</span>
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // Surveys and Ticketing are owned by Robin (Customer experience), not Jay (Marketing) — their
 // section heading uses the same icon as the L1 nav item, and their agent rows use Robin's icon.
 const SECTION_NAV_ICON: Record<string, (props: { size?: number; className?: string }) => React.ReactNode> = {
@@ -508,6 +485,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                           data={(section.stats ?? [])
                             .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
                             .map((s) => ({ name: s.label, value: parseFloat(s.value), color: LISTINGS_SYNC_STATUS_COLORS[s.id] }))}
+                          height={310}
                         />
                       </ChartCard>
                       <ChartCard title="Google report">
@@ -517,6 +495,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                             value: parseKValue(s.value),
                             color: chartColors.categorical[i],
                           }))}
+                          height={310}
                         />
                       </ChartCard>
                     </div>
@@ -544,7 +523,6 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                         barColors={REVIEWS_BY_RATING.map((r) => r.color)}
                       />
                     </ChartCard>
-                    <ReviewsOverview />
                   </>
                 ) : (
                   section.stats && <V2StatGroup stats={section.stats} />
