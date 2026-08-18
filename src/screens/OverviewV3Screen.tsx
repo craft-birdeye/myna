@@ -283,12 +283,32 @@ function withDanger(stats: V2Stat[] | undefined): (V2Stat & { danger: true })[] 
 // the coworker-performance summary — none of these agents carry their own cost-saved stat.
 const COST_SAVED_PER_HOUR = 25
 
+function parseDollarValue(value: string): number {
+  const n = parseFloat(value.replace(/[$,]/g, ''))
+  if (isNaN(n)) return 0
+  return value.includes('K') ? n * 1000 : n
+}
+
+function formatDollars(n: number): string {
+  return n >= 1000 ? `$${(n / 1000).toFixed(1)}K` : `$${Math.round(n)}`
+}
+
+// Prefers each agent's own cost-saved stat when present (e.g. Front desk's agents already carry
+// real $ figures); otherwise derives cost from summed time-saved hours at a flat rate, since most
+// of these agents don't have their own cost-saved stat.
 function aggregateAgentSavings(agents: V2Agent[]): { timeSaved: string; costSaved: string } {
   const totalHours = agents.reduce((sum, agent) => {
     const stat = agent.stats.find((s) => s.id === 'time-saved')
     return sum + (stat ? parseFloat(stat.value) || 0 : 0)
   }, 0)
-  return { timeSaved: `${totalHours}h`, costSaved: `$${totalHours * COST_SAVED_PER_HOUR}` }
+  const hasCostStat = agents.some((agent) => agent.stats.some((s) => s.id === 'cost-saved'))
+  const totalCost = hasCostStat
+    ? agents.reduce((sum, agent) => {
+        const stat = agent.stats.find((s) => s.id === 'cost-saved')
+        return sum + (stat ? parseDollarValue(stat.value) : 0)
+      }, 0)
+    : totalHours * COST_SAVED_PER_HOUR
+  return { timeSaved: `${totalHours}h`, costSaved: formatDollars(totalCost) }
 }
 
 // Sits just above a section's agent rows — the owning coworker's icon, a "{Name} performance"
@@ -320,17 +340,6 @@ function CoworkerPerformanceHeader({
   )
 }
 
-// flex-none (rather than flex-1/min-w) sizes each agent to its own content width — all of its
-// KPIs stay on one line, and the whole block wraps to the next row as a unit when it doesn't fit.
-function AgentRow({ agent }: { agent: V2Agent }) {
-  return (
-    <div className="flex flex-none flex-col gap-md">
-      <h4 className="m-0 text-body text-text-primary">{agent.name}</h4>
-      <V2StatGroup stats={agent.stats} nowrap />
-    </div>
-  )
-}
-
 // One-line descriptions per agent id, sourced from the PDF requirements doc where it covered
 // that agent, and from agentDirectoryData.ts's existing copy for agents shared across both
 // (kept local since v2's AgentRow doesn't need them).
@@ -349,6 +358,19 @@ const AGENT_DESCRIPTIONS: Record<string, string> = {
   'survey-response': 'Collects and scores incoming survey responses, flagging detractors for follow-up.',
   'ticketing-surveys': 'Opens a support ticket automatically when a survey response flags a detractor or unresolved issue.',
   'ticketing-reviews': 'Sends a ticket to the right team whenever a low-star review comes in, routed by location and topic.',
+  'front-desk': 'Handles inbound voice, chat, and text — answering questions, booking visits, and verifying insurance.',
+  waitlist: 'Reaches out to waitlisted patients to fill cancelled or newly opened appointment slots.',
+  'pre-visit': 'Sends pre-visit outreach and collects completed intake forms ahead of the appointment.',
+  reminder: 'Sends automated appointment reminders and collects confirmations via text and email.',
+}
+
+// Maps each Front desk sub-area to the real agentDirectoryData.ts id behind it, so its card can
+// share that agent's description and running count with the rest of the app.
+const FRONTDESK_AGENT_ID: Record<string, string> = {
+  conversations: 'front-desk',
+  appointments: 'reminder',
+  waitlist: 'waitlist',
+  intake: 'pre-visit',
 }
 
 // Fixed (not Math.random — would reshuffle on every render) per-agent instance counts for the
@@ -368,6 +390,10 @@ const AGENT_RUNNING_COUNT: Record<string, number> = {
   'survey-response': 1,
   'ticketing-surveys': 1,
   'ticketing-reviews': 2,
+  'front-desk': 2,
+  waitlist: 2,
+  'pre-visit': 2,
+  reminder: 2,
 }
 
 // One card per agent (name + description on the left, all its KPIs on the right), stacked
@@ -382,25 +408,6 @@ function AgentCard({ agent }: { agent: V2Agent }) {
         {AGENT_DESCRIPTIONS[agent.id] && <p className="m-0 text-small text-text-secondary">{AGENT_DESCRIPTIONS[agent.id]}</p>}
       </div>
       <V2StatGroup stats={stats} />
-    </div>
-  )
-}
-
-function ActionNeeded({ stats, bordered = true }: { stats: V2Stat[]; bordered?: boolean }) {
-  return (
-    <div className={`flex flex-col gap-md ${bordered ? 'border-t border-border pt-lg' : ''}`}>
-      <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <Icon name="warning" size={20} className="text-text-icon" />
-        Action needed
-      </h4>
-      <div className={KPI_ROW_CLASS}>
-        {stats.map((s) => (
-          <div key={s.id} className={KPI_TILE_CLASS}>
-            <p className="m-0 whitespace-nowrap text-display text-chip-danger-text">{s.value}</p>
-            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
@@ -586,10 +593,12 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
 function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean; showSetupBanner: boolean }) {
-  const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
-  const featuredStat = pickFeaturedStat(
-    OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({ id: area.id, name: area.agentName, stats: area.agentOutcomes }))
-  )
+  const frontDeskAgents: V2Agent[] = OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({
+    id: FRONTDESK_AGENT_ID[area.id] ?? area.id,
+    name: area.agentName,
+    stats: area.agentOutcomes,
+  }))
+  const featuredStat = pickFeaturedStat(frontDeskAgents)
 
   return (
     <SectionCard>
@@ -598,27 +607,25 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
         Front desk
       </h3>
 
-      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg">
+      <div className="flex flex-wrap gap-x-3xl gap-y-lg">
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
-          <div key={area.id} className="flex flex-col gap-md">
+          <div key={area.id} className="flex flex-none flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-            <V2StatGroup stats={area.businessMetrics} />
+            <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} nowrap />
           </div>
         ))}
       </div>
 
       {showAgents && (
-        <div className="grid grid-cols-2 gap-x-3xl gap-y-lg border-t border-border pt-lg">
-          {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
-            <AgentRow
-              key={area.id}
-              agent={{ id: `${area.id}-agent-outcomes`, name: area.agentName, stats: area.agentOutcomes }}
-            />
-          ))}
+        <div className="flex flex-col gap-lg pt-lg">
+          <CoworkerPerformanceHeader icon={mynaIcon} coworkerName="Myna" {...aggregateAgentSavings(frontDeskAgents)} />
+          <div className="flex flex-col gap-md">
+            {frontDeskAgents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} />
+            ))}
+          </div>
         </div>
       )}
-
-      <ActionNeeded stats={allHumanActions} />
 
       {showSetupBanner && <AgentSetupBanner icon={mynaIcon} {...featuredStat} />}
     </SectionCard>
