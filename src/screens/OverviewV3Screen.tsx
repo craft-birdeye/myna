@@ -262,12 +262,21 @@ const AGENT_OVERRIDES: Record<string, V2Agent[]> = {
 // Action-needed stats are merged in here (flagged via `danger`) instead of getting their own
 // "Action needed" block, so they sit inline beside the section's other KPIs — same tile, just
 // red instead of blue.
-function V2StatGroup({ stats, nowrap = false }: { stats: (V2Stat & { danger?: boolean })[]; nowrap?: boolean }) {
+function V2StatGroup({
+  stats,
+  nowrap = false,
+  valueClassName,
+}: {
+  stats: (V2Stat & { danger?: boolean })[]
+  nowrap?: boolean
+  /** Overrides the default action-blue value color (e.g. dark grey for coworker/agent KPIs). Danger stats stay red regardless. */
+  valueClassName?: string
+}) {
   return (
     <div className={`flex ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-xl`}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
-          <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-action'}`}>{s.value}</p>
+          <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : valueClassName ?? 'text-text-action'}`}>{s.value}</p>
           <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
         </div>
       ))}
@@ -335,6 +344,7 @@ function CoworkerPerformanceHeader({
           { id: 'time-saved', value: timeSaved, label: 'Time saved' },
           { id: 'cost-saved', value: costSaved, label: 'Cost saved' },
         ]}
+        valueClassName="text-text-secondary"
       />
     </div>
   )
@@ -375,7 +385,7 @@ const FRONTDESK_AGENT_ID: Record<string, string> = {
 
 // Display order for the Front desk sub-areas, and the Waitlist human-action label trimmed of its
 // "(5 high priority)" detail — kept local to v3, the shared data/order is untouched for v2.
-const FRONTDESK_SUBAREA_ORDER = ['appointments', 'intake', 'waitlist', 'conversations']
+const FRONTDESK_SUBAREA_ORDER = ['appointments', 'intake', 'conversations', 'waitlist']
 function frontDeskSubareasForDisplay() {
   return FRONTDESK_SUBAREA_ORDER.map((id) => {
     const area = OVERVIEW_V2_FRONTDESK_SUBAREAS.find((a) => a.id === id)
@@ -417,12 +427,12 @@ const AGENT_RUNNING_COUNT: Record<string, number> = {
 function AgentCard({ agent }: { agent: V2Agent }) {
   const stats = [{ id: 'agent-running', value: String(AGENT_RUNNING_COUNT[agent.id] ?? 1), label: 'Agent running' }, ...agent.stats]
   return (
-    <div className="flex items-start justify-between gap-3xl rounded-sm border border-border p-lg">
+    <div className="group flex items-start justify-between gap-3xl rounded-sm border border-border p-lg">
       <div className="flex w-[420px] shrink-0 flex-col gap-xs">
-        <h4 className="m-0 text-body text-text-primary">{agent.name}</h4>
+        <h4 className="m-0 text-body text-text-primary transition-colors group-hover:text-text-action">{agent.name}</h4>
         {AGENT_DESCRIPTIONS[agent.id] && <p className="m-0 text-small text-text-secondary">{AGENT_DESCRIPTIONS[agent.id]}</p>}
       </div>
-      <V2StatGroup stats={stats} />
+      <V2StatGroup stats={stats} valueClassName="text-text-secondary" />
     </div>
   )
 }
@@ -625,7 +635,7 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
 
       <div className="flex flex-wrap gap-x-3xl gap-y-lg">
         {subareas.map((area) => (
-          <div key={area.id} className="flex flex-none flex-col gap-md">
+          <div key={area.id} className={`flex flex-col gap-md ${area.id === 'conversations' ? 'w-full' : 'flex-none'}`}>
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
             <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} nowrap />
           </div>
