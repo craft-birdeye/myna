@@ -545,7 +545,7 @@ function AgentSetupBanner({ icon, agentName, value, metricLabel }: { icon: strin
       </p>
       <button
         type="button"
-        className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+        className="flex h-9 shrink-0 items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
       >
         Create agent
       </button>
@@ -592,7 +592,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           {dataState === 'empty' && (
             <button
               type="button"
-              className="flex h-9 shrink-0 items-center rounded-sm bg-ai-brand px-lg text-body text-white transition-colors hover:opacity-90"
+              className="flex h-9 shrink-0 items-center rounded-md bg-ai-brand px-lg text-body text-white transition-colors hover:opacity-90"
             >
               Schedule demo
             </button>
