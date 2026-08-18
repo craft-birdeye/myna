@@ -346,7 +346,7 @@ function CoworkerPerformanceHeader({
           { id: 'time-saved', value: timeSaved, label: 'Time saved' },
           { id: 'cost-saved', value: costSaved, label: 'Cost saved' },
         ]}
-        valueClassName="text-text-secondary"
+        valueClassName="text-text-primary"
       />
     </div>
   )
@@ -434,7 +434,7 @@ function AgentCard({ agent }: { agent: V2Agent }) {
         <h4 className="m-0 text-body text-text-primary transition-colors group-hover:text-text-action">{agent.name}</h4>
         {AGENT_DESCRIPTIONS[agent.id] && <p className="m-0 text-small text-text-secondary">{AGENT_DESCRIPTIONS[agent.id]}</p>}
       </div>
-      <V2StatGroup stats={stats} valueClassName="text-text-secondary" />
+      <V2StatGroup stats={stats} valueClassName="text-text-primary" />
     </div>
   )
 }
