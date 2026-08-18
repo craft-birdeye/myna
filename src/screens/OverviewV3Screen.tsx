@@ -726,6 +726,16 @@ function ProductSectionCard({ section, showAgents, dataState }: { section: V2Sec
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
+// Appointments' own status breakdown (Rescheduled/Cancelled/Unconfirmed) doesn't include a
+// "Confirmed" count in the shared data, so it's derived as the remainder of Total bookings —
+// keeps the donut a true partition of all bookings instead of an arbitrary 4th number.
+const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
+  confirmed: chartColors.resolved,
+  rescheduled: chartColors.blue,
+  cancelled: chartColors.unresolved,
+  unconfirmed: chartColors.escalated,
+}
+
 function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean; showSetupBanner: boolean }) {
   const subareas = frontDeskSubareasForDisplay()
   const frontDeskAgents: V2Agent[] = subareas.map((area) => ({
@@ -735,6 +745,20 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
   }))
   const featuredStat = pickFeaturedStat(frontDeskAgents)
 
+  const appointmentsArea = subareas.find((a) => a.id === 'appointments')!
+  const totalBookings = appointmentsArea.businessMetrics.find((s) => s.id === 'total-bookings')!
+  const rescheduled = parseKValue(appointmentsArea.businessMetrics.find((s) => s.id === 'rescheduled')!.value)
+  const cancelled = parseKValue(appointmentsArea.businessMetrics.find((s) => s.id === 'cancelled')!.value)
+  const unconfirmed = parseKValue(appointmentsArea.humanActions.find((s) => s.id === 'unconfirmed')!.value)
+  const confirmed = parseKValue(totalBookings.value) - rescheduled - cancelled - unconfirmed
+  const appointmentStatusData = [
+    { name: 'Confirmed', value: confirmed, color: APPOINTMENT_STATUS_COLORS.confirmed },
+    { name: 'Rescheduled', value: rescheduled, color: APPOINTMENT_STATUS_COLORS.rescheduled },
+    { name: 'Cancelled', value: cancelled, color: APPOINTMENT_STATUS_COLORS.cancelled },
+    { name: 'Unconfirmed', value: unconfirmed, color: APPOINTMENT_STATUS_COLORS.unconfirmed },
+  ]
+  const stackedAreas = ['intake', 'waitlist', 'conversations'].map((id) => subareas.find((a) => a.id === id)!)
+
   return (
     <SectionCard>
       <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
@@ -743,12 +767,22 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
       </h3>
 
       <div className="grid grid-cols-2 gap-x-3xl gap-y-lg">
-        {subareas.map((area) => (
-          <div key={area.id} className="flex flex-col gap-md">
-            <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-            <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} />
-          </div>
-        ))}
+        <div className="flex flex-col gap-md">
+          <h4 className="m-0 text-body text-text-primary">{appointmentsArea.label}</h4>
+          <V2StatGroup stats={[totalBookings]} />
+          <ChartCard title="Appointment status" showActions={false}>
+            <DonutChart data={appointmentStatusData} height={260} />
+          </ChartCard>
+        </div>
+
+        <div className="flex flex-col gap-lg">
+          {stackedAreas.map((area) => (
+            <div key={area.id} className="flex flex-col gap-md">
+              <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
+              <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {showAgents && (
