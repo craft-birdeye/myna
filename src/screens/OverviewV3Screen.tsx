@@ -351,17 +351,37 @@ const AGENT_DESCRIPTIONS: Record<string, string> = {
   'ticketing-reviews': 'Sends a ticket to the right team whenever a low-star review comes in, routed by location and topic.',
 }
 
+// Fixed (not Math.random — would reshuffle on every render) per-agent instance counts for the
+// new "Agent running" KPI, varied enough to not look like a placeholder constant.
+const AGENT_RUNNING_COUNT: Record<string, number> = {
+  'listing-optimizer': 1,
+  'recommendations-agent': 2,
+  'review-marketing': 1,
+  'review-tagging': 2,
+  'review-generation': 1,
+  'review-response': 2,
+  'social-publishing': 1,
+  'social-engagement': 1,
+  'faq-agent': 2,
+  'blog-agent': 1,
+  'survey-distribution': 2,
+  'survey-response': 1,
+  'ticketing-surveys': 1,
+  'ticketing-reviews': 2,
+}
+
 // One card per agent (name + description on the left, all its KPIs on the right), stacked
 // vertically under the coworker-performance header — replaces the side-by-side AgentRow layout
 // for the main product sections.
 function AgentCard({ agent }: { agent: V2Agent }) {
+  const stats = [{ id: 'agent-running', value: String(AGENT_RUNNING_COUNT[agent.id] ?? 1), label: 'Agent running' }, ...agent.stats]
   return (
     <div className="flex items-start justify-between gap-3xl rounded-sm border border-border p-lg">
-      <div className="flex w-[240px] shrink-0 flex-col gap-xs">
+      <div className="flex w-[420px] shrink-0 flex-col gap-xs">
         <h4 className="m-0 text-body text-text-primary">{agent.name}</h4>
         {AGENT_DESCRIPTIONS[agent.id] && <p className="m-0 text-small text-text-secondary">{AGENT_DESCRIPTIONS[agent.id]}</p>}
       </div>
-      <V2StatGroup stats={agent.stats} />
+      <V2StatGroup stats={stats} />
     </div>
   )
 }
@@ -680,7 +700,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                       ]}
                     />
                     <div className="grid grid-cols-2 gap-lg">
-                      <ChartCard title="Sync status">
+                      <ChartCard title="Sync status" showActions={false}>
                         <DonutChart
                           data={(section.stats ?? [])
                             .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
@@ -688,7 +708,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                           height={310}
                         />
                       </ChartCard>
-                      <ChartCard title="Google report">
+                      <ChartCard title="Google report" showActions={false}>
                         <DonutChart
                           data={OVERVIEW_LISTINGS_GOOGLE_REPORT.map((s, i) => ({
                             name: s.label,
@@ -712,7 +732,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                 ) : section.id === 'reviews' ? (
                   <>
                     <V2StatGroup stats={[...REVIEWS_STATS, ...withDanger(section.actionNeeded)]} />
-                    <ChartCard title="Reviews by rating">
+                    <ChartCard title="Reviews by rating" showActions={false}>
                       <StackedBarChart
                         data={REVIEWS_BY_RATING.map((r) => ({ rating: r.rating, count: r.count }))}
                         series={[{ key: 'count', label: 'Reviews', color: chartColors.blue }]}
