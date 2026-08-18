@@ -373,6 +373,21 @@ const FRONTDESK_AGENT_ID: Record<string, string> = {
   intake: 'pre-visit',
 }
 
+// Display order for the Front desk sub-areas, and the Waitlist human-action label trimmed of its
+// "(5 high priority)" detail — kept local to v3, the shared data/order is untouched for v2.
+const FRONTDESK_SUBAREA_ORDER = ['appointments', 'intake', 'waitlist', 'conversations']
+function frontDeskSubareasForDisplay() {
+  return FRONTDESK_SUBAREA_ORDER.map((id) => {
+    const area = OVERVIEW_V2_FRONTDESK_SUBAREAS.find((a) => a.id === id)
+    if (!area) return null
+    if (area.id !== 'waitlist') return area
+    return {
+      ...area,
+      humanActions: area.humanActions.map((s) => (s.id === 'waitlisted' ? { ...s, label: 'Waitlisted patients' } : s)),
+    }
+  }).filter((area): area is NonNullable<typeof area> => area !== null)
+}
+
 // Fixed (not Math.random — would reshuffle on every render) per-agent instance counts for the
 // new "Agent running" KPI, varied enough to not look like a placeholder constant.
 const AGENT_RUNNING_COUNT: Record<string, number> = {
@@ -593,7 +608,8 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
 function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean; showSetupBanner: boolean }) {
-  const frontDeskAgents: V2Agent[] = OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({
+  const subareas = frontDeskSubareasForDisplay()
+  const frontDeskAgents: V2Agent[] = subareas.map((area) => ({
     id: FRONTDESK_AGENT_ID[area.id] ?? area.id,
     name: area.agentName,
     stats: area.agentOutcomes,
@@ -608,7 +624,7 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
       </h3>
 
       <div className="flex flex-wrap gap-x-3xl gap-y-lg">
-        {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
+        {subareas.map((area) => (
           <div key={area.id} className="flex flex-none flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
             <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} nowrap />
