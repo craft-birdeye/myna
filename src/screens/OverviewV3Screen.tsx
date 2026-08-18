@@ -626,11 +626,19 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
   )
 }
 
+// v3-only section order — Search AI leads ahead of Listings; everything else keeps the shared
+// data's order. Kept local rather than reordering OVERVIEW_V2_SECTIONS itself, since v2 shouldn't
+// pick up the reorder.
+const V3_SECTION_ORDER = OVERVIEW_V2_SECTIONS.map((s) => s.id)
+  .filter((id) => id !== 'search-ai')
+  .flatMap((id) => (id === 'listings' ? ['search-ai', id] : [id]))
+const ORDERED_SECTIONS = V3_SECTION_ORDER.map((id) => OVERVIEW_V2_SECTIONS.find((s) => s.id === id)!)
+
 // Front desk isn't one of OVERVIEW_V2_SECTIONS — it's rendered separately and interleaved right
 // above Surveys, so the section list is split at that boundary rather than reordered in place.
-const FRONTDESK_SPLIT_INDEX = OVERVIEW_V2_SECTIONS.findIndex((s) => s.id === 'surveys')
-const SECTIONS_BEFORE_FRONTDESK = OVERVIEW_V2_SECTIONS.slice(0, FRONTDESK_SPLIT_INDEX)
-const SECTIONS_FROM_FRONTDESK = OVERVIEW_V2_SECTIONS.slice(FRONTDESK_SPLIT_INDEX)
+const FRONTDESK_SPLIT_INDEX = ORDERED_SECTIONS.findIndex((s) => s.id === 'surveys')
+const SECTIONS_BEFORE_FRONTDESK = ORDERED_SECTIONS.slice(0, FRONTDESK_SPLIT_INDEX)
+const SECTIONS_FROM_FRONTDESK = ORDERED_SECTIONS.slice(FRONTDESK_SPLIT_INDEX)
 
 // One card per OVERVIEW_V2_SECTIONS entry — extracted out of the page's render so Front desk can
 // be interleaved between two slices of this list (it isn't itself one of these sections).
