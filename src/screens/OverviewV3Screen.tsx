@@ -531,24 +531,28 @@ function pickFeaturedStat(agents: V2Agent[]): { agentName: string; description: 
 // FTU-only footer banner for a product section — assumes no agent is enabled yet, so it promotes
 // setting one up instead of showing the (hidden) agent rows. Bleeds edge-to-edge like the AI
 // workforce summary's own promo banner. Empty/Filled states never show this. Leads with the same
-// agent description shown on its (hidden) AgentCard, so the banner explains what the agent does
+// agent description shown on its (hidden) AgentCard (agent name as the sentence's subject, so it
+// reads as one sentence rather than a "Name: description" label), explaining what the agent does
 // as well as what it saves, instead of savings alone.
 function AgentSetupBanner({
   icon,
+  agentName,
   description,
   value,
   metricLabel,
 }: {
   icon: string
+  agentName: string
   description: string
   value: string
   metricLabel: string
 }) {
+  const action = description.charAt(0).toLowerCase() + description.slice(1)
   return (
     <div className="-mx-xl -mb-xl flex items-center gap-lg rounded-b-md bg-ai-summary p-lg">
       <img src={icon} alt="" className="size-9 shrink-0 rounded-full border-2 border-surface" />
       <p className="m-0 min-w-0 flex-1 text-body text-text-primary">
-        {description} Set it up to save up to {value} in {metricLabel}.
+        {agentName} {action} Set it up to save up to {value} in {metricLabel}.
       </p>
       <button
         type="button"
