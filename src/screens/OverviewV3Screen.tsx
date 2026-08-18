@@ -12,7 +12,6 @@ import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
 import { DonutChart } from '../components/charts/DonutChart'
-import { StackedBarChart } from '../components/charts/StackedBarChart'
 import { ChartCard } from '../components/charts/ChartCard'
 import { chartColors } from '../components/charts/chartColors'
 import {
@@ -54,7 +53,6 @@ const LISTINGS_SYNC_STATUS_COLORS: Record<string, string> = {
 
 // Search AI's own KPI set — adds Sentiment score alongside the shared OVERVIEW_V2_SECTIONS data
 // (kept local to v3 rather than editing the shared file, since v2 shouldn't pick up the new KPI).
-// Average rank is excluded from the percent-of-100 bar chart below since it isn't a percentage.
 const SEARCH_AI_STATS: V2Stat[] = [
   { id: 'search-ai-score', value: '33.6%', label: 'Search AI score' },
   { id: 'citation-share', value: '17.6%', label: 'Citation share' },
@@ -62,7 +60,41 @@ const SEARCH_AI_STATS: V2Stat[] = [
   { id: 'sentiment-score', value: '78%', label: 'Sentiment score' },
   { id: 'average-rank', value: '4', label: 'Average rank' },
 ]
-const SEARCH_AI_PERCENT_IDS = ['search-ai-score', 'citation-share', 'visibility-score', 'sentiment-score']
+
+// One bar per KPI (value + industry-average marker on a single-color track), like the app's
+// "Understanding the Birdeye Score" widget — not a grouped bar chart. Average rank is excluded
+// since it isn't a 0-100 percentage; it stays a plain KPI tile above.
+const SEARCH_AI_SCORE_BARS: { id: string; label: string; value: number; industryAverage: number; color: string }[] = [
+  { id: 'search-ai-score', label: 'Search AI score', value: 33.6, industryAverage: 45, color: '#1976d2' },
+  { id: 'citation-share', label: 'Citation share', value: 17.6, industryAverage: 25, color: '#0f8b8d' },
+  { id: 'visibility-score', label: 'Visibility score', value: 60.2, industryAverage: 55, color: '#c2185b' },
+  { id: 'sentiment-score', label: 'Sentiment score', value: 78, industryAverage: 82, color: '#5c4b99' },
+]
+
+function ScoreBar({ label, value, industryAverage, color }: { label: string; value: number; industryAverage: number; color: string }) {
+  return (
+    <div className="flex flex-col gap-sm">
+      <div>
+        <p className="m-0 text-display text-text-primary">{value}</p>
+        <p className="m-0 mt-xs text-small uppercase tracking-wide text-text-tertiary">{label}</p>
+      </div>
+      <div className="relative h-[6px] w-full rounded-full" style={{ backgroundColor: color }}>
+        <span
+          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-primary ring-2 ring-surface"
+          style={{ left: `${value}%` }}
+        />
+        <span
+          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text-tertiary ring-2 ring-surface"
+          style={{ left: `${industryAverage}%` }}
+        />
+      </div>
+      <p className="m-0 flex items-center gap-xs text-small text-text-secondary">
+        <span className="inline-block size-2 shrink-0 rounded-full bg-text-tertiary" />
+        Industry average: {industryAverage}
+      </p>
+    </div>
+  )
+}
 
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app.
@@ -476,19 +508,11 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
                 ) : section.id === 'search-ai' ? (
                   <>
                     <V2StatGroup stats={SEARCH_AI_STATS} />
-                    <ChartCard title="Search AI KPIs" tooltip="Each KPI shown as a percentage of 100.">
-                      <StackedBarChart
-                        data={SEARCH_AI_STATS.filter((s) => SEARCH_AI_PERCENT_IDS.includes(s.id)).map((s) => ({
-                          metric: s.label,
-                          value: parseFloat(s.value),
-                        }))}
-                        series={[{ key: 'value', label: 'Score', color: chartColors.blue }]}
-                        xKey="metric"
-                        height={280}
-                        yDomain={[0, 100]}
-                        hideLegend
-                      />
-                    </ChartCard>
+                    <div className="grid grid-cols-4 gap-3xl">
+                      {SEARCH_AI_SCORE_BARS.map((bar) => (
+                        <ScoreBar key={bar.id} {...bar} />
+                      ))}
+                    </div>
                   </>
                 ) : (
                   section.stats && <V2StatGroup stats={section.stats} />
