@@ -736,6 +736,29 @@ const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
   unconfirmed: chartColors.escalated,
 }
 
+// A single bar split into proportional colored segments (rather than a per-category pie/donut) —
+// used for Appointments' status breakdown, with a legend of name + share below.
+function SplitBar({ data }: { data: { name: string; value: number; color: string }[] }) {
+  const total = data.reduce((sum, d) => sum + d.value, 0)
+  return (
+    <div className="flex flex-col gap-lg">
+      <div className="flex h-6 w-full overflow-hidden rounded-sm">
+        {data.map((d) => (
+          <div key={d.name} style={{ width: `${(d.value / total) * 100}%`, backgroundColor: d.color }} />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-lg">
+        {data.map((d) => (
+          <div key={d.name} className="flex items-center gap-xs text-small text-text-secondary">
+            <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
+            {d.name} · {Math.round((d.value / total) * 100)}%
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean; showSetupBanner: boolean }) {
   const subareas = frontDeskSubareasForDisplay()
   const frontDeskAgents: V2Agent[] = subareas.map((area) => ({
@@ -772,7 +795,9 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
           <h4 className="m-0 text-body text-text-primary">{appointmentsArea.label}</h4>
           <V2StatGroup stats={[totalBookings, ...withDanger([noShows])]} />
           <ChartCard title="Appointment status" showActions={false}>
-            <DonutChart data={appointmentStatusData} height={260} />
+            <div className="flex flex-1 flex-col justify-center">
+              <SplitBar data={appointmentStatusData} />
+            </div>
           </ChartCard>
         </div>
 
