@@ -54,8 +54,9 @@ function deltaForStat(id: string): { delta: string; trend: 'up' | 'down' } {
 
 function DeltaBadge({ id }: { id: string }) {
   const { delta, trend } = deltaForStat(id)
+  const isBad = NEGATIVE_METRIC_IDS.has(id) ? trend === 'up' : trend === 'down'
   return (
-    <span className={`mb-[2px] whitespace-nowrap text-small ${trend === 'down' ? 'text-chip-danger-text' : 'text-chip-success-text'}`}>
+    <span className={`mb-[2px] whitespace-nowrap text-small ${isBad ? 'text-chip-danger-text' : 'text-chip-success-text'}`}>
       {trend === 'down' ? '-' : '+'}
       {delta}
     </span>
@@ -206,6 +207,22 @@ const NO_DELTA_IDS = new Set([
   'post-awaiting-approval',
   'survey-approval-pending',
   'open-recommendations',
+  'co-workers',
+  'agents',
+])
+
+// KPI ids where an increase is actually bad news (more escalations/no-shows/cancellations etc.) —
+// their delta badge flips to red on "up" and green on "down" instead of the usual polarity.
+const NEGATIVE_METRIC_IDS = new Set([
+  '3-star-or-less',
+  'failed-posts',
+  'rejected-posts',
+  'tickets-escalated',
+  'no-shows',
+  'conversations-no-shows',
+  'conversations-transferred',
+  'conversations-disconnected',
+  'appointment-cancelled',
 ])
 
 // Social's own top-level KPI set — replaces the shared data's lone "New follower" stat with the
@@ -548,10 +565,10 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI Co-worker Summary</h3>
           <div className={KPI_ROW_CLASS}>
             {stats.map((s) => (
-              <div key={s.id} className={KPI_TILE_CLASS}>
+              <div key={s.id} className={`${KPI_TILE_CLASS} ${s.id === 'time-saved' ? 'mr-lg' : ''}`}>
                 <div className="flex items-end gap-xs">
                   <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
-                  {!s.muted && <DeltaBadge id={s.id} />}
+                  {!s.muted && !NO_DELTA_IDS.has(s.id) && <DeltaBadge id={s.id} />}
                 </div>
                 <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
                   {s.label}
