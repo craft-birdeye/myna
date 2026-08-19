@@ -36,7 +36,15 @@ const KPI_TILE_CLASS = 'min-w-[140px] shrink-0'
 // Deterministic (not Math.random — would reshuffle on every render) period-over-period delta per
 // KPI, keyed off the stat's own id so the same tile always shows the same figure. Framed as
 // "vs. the selected date range" — this is a prototype without real historical data to diff against.
+// Explicit deltas for KPIs where a specific figure was given, rather than the deterministic
+// generic one — e.g. Social's Messages sent/received.
+const DELTA_OVERRIDES: Record<string, { delta: string; trend: 'up' | 'down' }> = {
+  'messages-sent': { delta: '153.9%', trend: 'up' },
+  'messages-received': { delta: '1250%', trend: 'up' },
+}
+
 function deltaForStat(id: string): { delta: string; trend: 'up' | 'down' } {
+  if (DELTA_OVERRIDES[id]) return DELTA_OVERRIDES[id]
   let hash = 0
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
   const pct = 1 + (hash % 24)
@@ -206,7 +214,8 @@ const SOCIAL_STATS: V2Stat[] = [
   { id: 'posts', value: '36', label: 'Posts' },
   { id: 'impressions', value: '128.4K', label: 'Impressions' },
   { id: 'engagement-rate', value: '4.8%', label: 'Engagement rate' },
-  { id: 'post-link-clicks', value: '1.2K', label: 'Post link clicks' },
+  { id: 'messages-sent', value: '1.5K', label: 'Messages sent' },
+  { id: 'messages-received', value: '675', label: 'Messages received' },
   { id: 'audience-growth', value: '5.2%', label: 'Audience growth' },
 ]
 
@@ -465,6 +474,68 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
   )
 }
 
+const EMPTY_STATE_APPOINTMENTS_STATS = [
+  { id: 'total-appointments', value: '149', label: 'Total appointments' },
+  { id: 'booked-via-birdeye', value: '122', label: 'Booked via Birdeye' },
+  { id: 'confirmation-rate-birdeye', value: '14.1%', label: 'Confirmation rate via Birdeye' },
+  { id: 'confirmation-rate-office', value: '2%', label: 'Confirmation rate via office' },
+]
+
+// No-show rate reads in black rather than the usual action-blue — kept as a plain flag rather
+// than a whole extra danger/highlight system just for this one stat.
+const EMPTY_STATE_NO_SHOW_RATE = { id: 'no-show-rate', value: '0%', label: 'No-show rate' }
+
+const EMPTY_STATE_INBOX_STATS = [
+  { id: 'unread-messages', value: '526', label: 'Unread messages' },
+  { id: 'open-leads', value: '682', label: 'Open leads' },
+]
+
+// Empty state only: replaces Front desk with the two simpler cards a brand-new business would
+// actually see before any co-worker is set up — plain KPIs pulled straight from Birdeye's
+// existing Appointments/Inbox surfaces, no deltas (there's no history yet to compare against).
+function EmptyStateAppointmentsAndInbox() {
+  return (
+    <>
+      <SectionCard>
+        <div className="flex items-center justify-between">
+          <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Appointments</h3>
+          <button
+            type="button"
+            aria-label="Filter"
+            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+          >
+            <Icon name="tune" size={20} />
+          </button>
+        </div>
+        <div className={KPI_ROW_CLASS}>
+          {EMPTY_STATE_APPOINTMENTS_STATS.map((s) => (
+            <div key={s.id} className={KPI_TILE_CLASS}>
+              <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+              <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+            </div>
+          ))}
+          <div className={KPI_TILE_CLASS}>
+            <p className="m-0 whitespace-nowrap text-display text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.value}</p>
+            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.label}</p>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard>
+        <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+        <div className={KPI_ROW_CLASS}>
+          {EMPTY_STATE_INBOX_STATS.map((s) => (
+            <div key={s.id} className={KPI_TILE_CLASS}>
+              <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+              <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+    </>
+  )
+}
+
 type DataState = 'filled' | 'empty' | 'ftu'
 
 // Floating switcher (fixed to the viewport, always visible) between the fully-populated demo
@@ -565,7 +636,11 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
             )
           })}
 
-          <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} />
+          {dataState === 'empty' ? (
+            <EmptyStateAppointmentsAndInbox />
+          ) : (
+            <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} />
+          )}
         </div>
       </div>
 
