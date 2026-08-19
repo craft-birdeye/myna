@@ -10,6 +10,8 @@ import {
 import jayIcon from '../assets/icon-jay.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
+import googleIcon from '../assets/icon-google.svg'
+import googlePlayIcon from '../assets/icon-google-play.svg'
 import { getAgentDirectory } from '../data/agentDirectoryData'
 import {
   OVERVIEW_V2_SECTIONS,
@@ -62,7 +64,7 @@ function V2StatGroup({ stats, nowrap = false }: { stats: (V2Stat & { danger?: bo
         <div key={s.id} className={KPI_TILE_CLASS}>
           <div className="flex items-end gap-xs">
             <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-action'}`}>{s.value}</p>
-            <DeltaBadge id={s.id} />
+            {!NO_DELTA_IDS.has(s.id) && <DeltaBadge id={s.id} />}
           </div>
           <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
         </div>
@@ -87,6 +89,13 @@ function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) 
       <V2StatGroup stats={agent.stats} nowrap />
     </div>
   )
+}
+
+// Real brand marks for Google/Google Play (ShopperApproved keeps the shared data's icon+color)
+// — kept local rather than editing OVERVIEW_REVIEW_SOURCES since v2 shouldn't pick up the swap.
+const REVIEW_SOURCE_LOGO: Record<string, string> = {
+  google: googleIcon,
+  'google-play': googlePlayIcon,
 }
 
 // Reviews gets its own richer layout (rating + breakdown bars + source cards) instead of the
@@ -124,21 +133,34 @@ function ReviewsOverview() {
         </div>
 
         <div className="flex min-w-[280px] flex-1 flex-wrap items-start gap-md">
-          {OVERVIEW_REVIEW_SOURCES.map((s) => (
-            <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
-              <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
-                {s.icon === 'G' ? 'G' : <Icon name={s.icon} size={18} />}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
-                <p className="m-0 flex items-center gap-xs text-body text-text-primary">
-                  {s.rating}
-                  <Icon name="star" size={14} fill className="text-[#f5a623]" />
-                  <span className="text-small text-text-tertiary">{s.reviewCount}</span>
-                </p>
+          {OVERVIEW_REVIEW_SOURCES.map((s) => {
+            const logoSrc = REVIEW_SOURCE_LOGO[s.id]
+            return (
+              <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
+                {logoSrc ? (
+                  <img src={logoSrc} alt="" className="size-9 shrink-0" />
+                ) : (
+                  <span className={`flex size-9 shrink-0 items-center justify-center rounded-full text-body ${s.iconColorClassName}`}>
+                    <Icon name={s.icon} size={18} />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
+                  <div className="flex items-center gap-xs">
+                    <span className="flex items-center gap-xs text-body text-text-primary">
+                      {s.rating}
+                      <Icon name="star" size={14} fill className="text-[#f5a623]" />
+                    </span>
+                    <DeltaBadge id={`${s.id}-rating`} />
+                  </div>
+                  <div className="flex items-center gap-xs">
+                    <span className="text-small text-text-tertiary">{s.reviewCount}</span>
+                    <DeltaBadge id={`${s.id}-reviews`} />
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
@@ -154,6 +176,26 @@ const SECTION_NAV_ICON: Record<string, (props: { size?: number; className?: stri
   'search-ai': FigmaIconRecommendations,
 }
 const CX_SECTION_IDS = new Set(['surveys', 'ticketing'])
+
+// v2.1-only section order — Search AI leads ahead of Listings; everything else keeps the shared
+// data's order. Kept local rather than reordering OVERVIEW_V2_SECTIONS itself, since v2/v3
+// shouldn't pick up the reorder.
+const ORDERED_SECTIONS = OVERVIEW_V2_SECTIONS.map((s) => s.id)
+  .filter((id) => id !== 'search-ai')
+  .flatMap((id) => (id === 'listings' ? ['search-ai', id] : [id]))
+  .map((id) => OVERVIEW_V2_SECTIONS.find((s) => s.id === id)!)
+
+// KPI ids that show a value but no period-over-period delta — the "Listings" headline count and
+// every action-needed stat (they're already flagged red; a delta on top reads as noise).
+const NO_DELTA_IDS = new Set([
+  'listings',
+  'awaiting-review',
+  'pending-review',
+  'replies-awaiting-approval',
+  'post-awaiting-approval',
+  'survey-approval-pending',
+  'open-recommendations',
+])
 
 const DATE_RANGE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
@@ -423,7 +465,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
 
           <AiWorkforceSummaryCard dataState={dataState} dateRange={dateRange} />
 
-          {OVERVIEW_V2_SECTIONS.map((section) => {
+          {ORDERED_SECTIONS.map((section) => {
             const NavIcon = SECTION_NAV_ICON[section.id]
             const isCx = CX_SECTION_IDS.has(section.id)
             const showAgentRows = showAgents && section.agents.length > 0
