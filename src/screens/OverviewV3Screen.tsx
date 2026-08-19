@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon, Tooltip, TopNav } from '../components'
+import { Icon, ScheduleDemoPanel, Tooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
   FigmaIconSurveys,
@@ -574,7 +574,15 @@ function AgentSetupBanner({
 // since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
 // real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
 // bled to the card's top edge; Empty additionally gets a "Schedule demo" CTA that FTU omits.
-function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState; dateRange: string }) {
+function AiWorkforceSummaryCard({
+  dataState,
+  dateRange,
+  onScheduleDemo,
+}: {
+  dataState: DataState
+  dateRange: string
+  onScheduleDemo: () => void
+}) {
   const filled = dataState === 'filled'
   const agents = getAgentDirectory('healthcare')
   const totalAgents = agents.length
@@ -609,6 +617,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           {dataState === 'empty' && (
             <button
               type="button"
+              onClick={onScheduleDemo}
               className="flex h-9 shrink-0 items-center rounded-md bg-ai-brand px-lg text-body text-white transition-colors hover:opacity-90"
             >
               Schedule demo
@@ -911,6 +920,7 @@ function DataStateSwitcher({ value, onChange }: { value: DataState; onChange: (v
 export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
   const [dataState, setDataState] = useState<DataState>('filled')
+  const [scheduleDemoOpen, setScheduleDemoOpen] = useState(false)
   const showAgents = dataState === 'filled'
 
   return (
@@ -926,7 +936,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
             <DateRangeDropdown value={dateRange} onChange={setDateRange} />
           </div>
 
-          <AiWorkforceSummaryCard dataState={dataState} dateRange={dateRange} />
+          <AiWorkforceSummaryCard dataState={dataState} dateRange={dateRange} onScheduleDemo={() => setScheduleDemoOpen(true)} />
 
           {SECTIONS_BEFORE_FRONTDESK.map((section) => (
             <ProductSectionCard key={section.id} section={section} showAgents={showAgents} dataState={dataState} />
@@ -941,6 +951,7 @@ export function OverviewV3Screen({ userName = 'Rupa' }: OverviewV3ScreenProps = 
       </div>
 
       <DataStateSwitcher value={dataState} onChange={setDataState} />
+      <ScheduleDemoPanel open={scheduleDemoOpen} onClose={() => setScheduleDemoOpen(false)} />
     </div>
   )
 }
