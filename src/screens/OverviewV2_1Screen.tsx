@@ -31,19 +31,48 @@ interface OverviewV2_1ScreenProps {
 const KPI_ROW_CLASS = 'flex flex-wrap gap-xl'
 const KPI_TILE_CLASS = 'min-w-[140px] shrink-0'
 
+// Deterministic (not Math.random — would reshuffle on every render) period-over-period delta per
+// KPI, keyed off the stat's own id so the same tile always shows the same figure. Framed as
+// "vs. the selected date range" — this is a prototype without real historical data to diff against.
+function deltaForStat(id: string): { delta: string; trend: 'up' | 'down' } {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  const pct = 1 + (hash % 24)
+  return { delta: `${pct}%`, trend: hash % 3 === 0 ? 'down' : 'up' }
+}
+
+function DeltaBadge({ id }: { id: string }) {
+  const { delta, trend } = deltaForStat(id)
+  return (
+    <span className={`mb-[2px] whitespace-nowrap text-small ${trend === 'down' ? 'text-chip-danger-text' : 'text-chip-success-text'}`}>
+      {trend === 'down' ? '-' : '+'}
+      {delta}
+    </span>
+  )
+}
+
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
-// to visually separate "automated by an agent" metrics from the rest of the app.
-function V2StatGroup({ stats, nowrap = false }: { stats: V2Stat[]; nowrap?: boolean }) {
+// to visually separate "automated by an agent" metrics from the rest of the app. Action-needed
+// stats are merged in here (flagged via `danger`) instead of getting their own bordered block, so
+// they sit inline beside the section's other KPIs — same tile, just red.
+function V2StatGroup({ stats, nowrap = false }: { stats: (V2Stat & { danger?: boolean })[]; nowrap?: boolean }) {
   return (
     <div className={`flex ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-xl`}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
-          <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+          <div className="flex items-end gap-xs">
+            <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-action'}`}>{s.value}</p>
+            <DeltaBadge id={s.id} />
+          </div>
           <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
         </div>
       ))}
     </div>
   )
+}
+
+function withDanger(stats: V2Stat[] | undefined): (V2Stat & { danger: true })[] {
+  return (stats ?? []).map((s) => ({ ...s, danger: true }))
 }
 
 // flex-none (rather than flex-1/min-w) sizes each agent to its own content width — all of its
@@ -56,25 +85,6 @@ function AgentRow({ agent, icon = jayIcon }: { agent: V2Agent; icon?: string }) 
         {agent.name}
       </h4>
       <V2StatGroup stats={agent.stats} nowrap />
-    </div>
-  )
-}
-
-function ActionNeeded({ stats, bordered = true }: { stats: V2Stat[]; bordered?: boolean }) {
-  return (
-    <div className={`flex flex-col gap-md ${bordered ? 'border-t border-border pt-lg' : ''}`}>
-      <h4 className="m-0 flex items-center gap-sm text-body text-text-primary">
-        <Icon name="warning" size={20} className="text-text-icon" />
-        Action needed
-      </h4>
-      <div className={KPI_ROW_CLASS}>
-        {stats.map((s) => (
-          <div key={s.id} className={KPI_TILE_CLASS}>
-            <p className="m-0 whitespace-nowrap text-display text-chip-danger-text">{s.value}</p>
-            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
@@ -304,7 +314,10 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           <div className={KPI_ROW_CLASS}>
             {stats.map((s) => (
               <div key={s.id} className={KPI_TILE_CLASS}>
-                <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
+                <div className="flex items-end gap-xs">
+                  <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
+                  {!s.muted && <DeltaBadge id={s.id} />}
+                </div>
                 <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
                   {s.label}
                   {s.tooltip && <EstimateTooltip />}
@@ -323,7 +336,6 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
 function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean; showSetupBanner: boolean }) {
-  const allHumanActions = OVERVIEW_V2_FRONTDESK_SUBAREAS.flatMap((area) => area.humanActions)
   const featuredStat = pickFeaturedStat(
     OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({ id: area.id, name: area.agentName, stats: area.agentOutcomes }))
   )
@@ -339,7 +351,7 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
           <div key={area.id} className="flex flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-            <V2StatGroup stats={area.businessMetrics} />
+            <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} />
           </div>
         ))}
       </div>
@@ -355,8 +367,6 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
           ))}
         </div>
       )}
-
-      <ActionNeeded stats={allHumanActions} />
 
       {showSetupBanner && <AgentSetupBanner icon={mynaIcon} {...featuredStat} />}
     </SectionCard>
@@ -418,8 +428,8 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
             const isCx = CX_SECTION_IDS.has(section.id)
             const showAgentRows = showAgents && section.agents.length > 0
             const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
-            const hasBodyContent = Boolean(section.stats) || section.id === 'reviews' || showAgentRows
-            const hasAnyContent = hasBodyContent || Boolean(section.actionNeeded) || showSetupBanner
+            const hasBodyContent = Boolean(section.stats) || Boolean(section.actionNeeded) || section.id === 'reviews' || showAgentRows
+            const hasAnyContent = hasBodyContent || showSetupBanner
             if (!hasAnyContent) return null
             return (
               <SectionCard key={section.id}>
@@ -428,7 +438,9 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
                   {section.label}
                 </h3>
 
-                {section.stats && <V2StatGroup stats={section.stats} />}
+                {(section.stats || section.actionNeeded) && (
+                  <V2StatGroup stats={[...(section.stats ?? []), ...withDanger(section.actionNeeded)]} />
+                )}
 
                 {section.id === 'listings' && (
                   <div className="flex flex-col gap-md">
@@ -446,8 +458,6 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
                     ))}
                   </div>
                 )}
-
-                {section.actionNeeded && <ActionNeeded stats={section.actionNeeded} bordered={hasBodyContent} />}
 
                 {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(section.agents)} />}
               </SectionCard>
