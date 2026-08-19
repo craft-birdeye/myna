@@ -185,10 +185,12 @@ const ORDERED_SECTIONS = OVERVIEW_V2_SECTIONS.map((s) => s.id)
   .flatMap((id) => (id === 'listings' ? ['search-ai', id] : [id]))
   .map((id) => OVERVIEW_V2_SECTIONS.find((s) => s.id === id)!)
 
-// KPI ids that show a value but no period-over-period delta — the "Listings" headline count and
-// every action-needed stat (they're already flagged red; a delta on top reads as noise).
+// KPI ids that show a value but no period-over-period delta — the "Listings" headline count,
+// Average rank (already its own rank number, a delta doesn't read meaningfully), and every
+// action-needed stat (they're already flagged red; a delta on top reads as noise).
 const NO_DELTA_IDS = new Set([
   'listings',
+  'average-rank',
   'awaiting-review',
   'pending-review',
   'replies-awaiting-approval',
@@ -207,6 +209,43 @@ const SOCIAL_STATS: V2Stat[] = [
   { id: 'post-link-clicks', value: '1.2K', label: 'Post link clicks' },
   { id: 'audience-growth', value: '5.2%', label: 'Audience growth' },
 ]
+
+// Search AI's own top-level KPI set — adds Sentiment score between Visibility score and Average
+// rank, and renames the headline stat to match the "AI Search" section rename below. Kept local
+// rather than editing the shared OVERVIEW_V2_SECTIONS file, since v2/v3 shouldn't pick it up.
+const SEARCH_AI_STATS: V2Stat[] = [
+  { id: 'search-ai-score', value: '33.6%', label: 'AI Search score' },
+  { id: 'citation-share', value: '17.6%', label: 'Citation share' },
+  { id: 'visibility-score', value: '60.2%', label: 'Visibility score' },
+  { id: 'sentiment-score', value: '78', label: 'Sentiment score' },
+  { id: 'average-rank', value: '4', label: 'Average rank' },
+]
+
+// v2.1-only section label override — the shared data calls this section "Search AI"; kept local
+// rather than editing OVERVIEW_V2_SECTIONS since v2/v3 shouldn't pick up the rename.
+const SECTION_LABEL_OVERRIDES: Record<string, string> = {
+  'search-ai': 'AI Search',
+}
+
+// v2.1-only action-needed label overrides, and a per-state override of which stats even show.
+// - Search AI: "Recommendations pending review" -> "Recommendations pending".
+// - Listings: "Recommendations awaiting review" is dropped in Empty state, and renamed to
+//   "Recommendation sizing" in FTU/Filled.
+// - Reviews: "Replies awaiting approval" is dropped in Empty state only.
+function getSectionActionNeeded(section: { id: string; actionNeeded?: V2Stat[] }, dataState: DataState): V2Stat[] {
+  const stats = section.actionNeeded ?? []
+  if (section.id === 'search-ai') {
+    return stats.map((s) => (s.id === 'pending-review' ? { ...s, label: 'Recommendations pending' } : s))
+  }
+  if (section.id === 'listings') {
+    if (dataState === 'empty') return stats.filter((s) => s.id !== 'awaiting-review')
+    return stats.map((s) => (s.id === 'awaiting-review' ? { ...s, label: 'Recommendation sizing' } : s))
+  }
+  if (section.id === 'reviews' && dataState === 'empty') {
+    return stats.filter((s) => s.id !== 'replies-awaiting-approval')
+  }
+  return stats
+}
 
 const DATE_RANGE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
@@ -488,12 +527,19 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
               <SectionCard key={section.id}>
                 <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
                   {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
-                  {section.label}
+                  {SECTION_LABEL_OVERRIDES[section.id] ?? section.label}
                 </h3>
 
                 {(section.stats || section.actionNeeded) && (
                   <V2StatGroup
-                    stats={[...(section.id === 'social' ? SOCIAL_STATS : (section.stats ?? [])), ...withDanger(section.actionNeeded)]}
+                    stats={[
+                      ...(section.id === 'social'
+                        ? SOCIAL_STATS
+                        : section.id === 'search-ai'
+                          ? SEARCH_AI_STATS
+                          : (section.stats ?? [])),
+                      ...withDanger(getSectionActionNeeded(section, dataState)),
+                    ]}
                   />
                 )}
 

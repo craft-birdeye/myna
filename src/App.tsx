@@ -451,7 +451,7 @@ function openDetailInNewTab(view: string, args: unknown) {
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('overview-v3')
+  const [railActive, setRailActive] = useState('overview-v2-1')
   const [navActive, setNavActive] = useState(
     () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
   )
