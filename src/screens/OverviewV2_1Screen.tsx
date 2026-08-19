@@ -261,11 +261,12 @@ const TICKETING_STATS: V2Stat[] = [
 
 // Front desk's "Conversations" sub-area, Filled state only — replaces the shared data's
 // AI-handled share/Insurance verification rate/Resolution rate with the full channel + outcome
-// breakdown (matches the call/chat classification taxonomy: channel counts, then Resolved
-// sub-outcomes Scheduled/Rescheduled/Cancelled/FAQs and Not-resolved sub-outcomes
-// Transferred/Disconnected, plus No-shows). Cancelled/No-shows/Transferred/Disconnected stay red
-// as the "didn't go well" outcomes; FTU keeps the original KPIs.
+// breakdown (matches the call/chat classification taxonomy: a Conversations total aggregating
+// Call+Text+Chat, then Resolved sub-outcomes Scheduled/Rescheduled/Cancelled/FAQs and
+// Not-resolved sub-outcomes Transferred/Disconnected, plus No-shows). Cancelled/No-shows/
+// Transferred/Disconnected stay red as the "didn't go well" outcomes; FTU keeps the original KPIs.
 const CONVERSATIONS_FILLED_STATS: (V2Stat & { danger?: boolean })[] = [
+  { id: 'conversations-total', value: '16.3K', label: 'Conversations' },
   { id: 'channel-call', value: '8.2K', label: 'Call' },
   { id: 'channel-text', value: '5.1K', label: 'Text' },
   { id: 'channel-chat', value: '3.0K', label: 'Chat' },
@@ -533,7 +534,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
             <button
               type="button"
               onClick={() => setShowAgentPerformance((v) => !v)}
-              className="flex w-fit items-center gap-xs text-body text-text-action hover:underline"
+              className="flex w-fit items-center gap-xs text-body text-text-action"
             >
               View agent performance
               <Icon name={showAgentPerformance ? 'expand_less' : 'expand_more'} size={18} />
