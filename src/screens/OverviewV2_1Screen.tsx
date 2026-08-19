@@ -258,6 +258,26 @@ const TICKETING_STATS: V2Stat[] = [
   { id: 'avg-resolution-time', value: '6h', label: 'Average resolution time' },
 ]
 
+// Front desk's "Conversations" sub-area, Filled state only — replaces the shared data's
+// AI-handled share/Insurance verification rate/Resolution rate with the full channel + outcome
+// breakdown (matches the call/chat classification taxonomy: channel counts, then Resolved
+// sub-outcomes Scheduled/Rescheduled/Cancelled/FAQs and Not-resolved sub-outcomes
+// Transferred/Disconnected, plus No-shows). Cancelled/No-shows/Transferred/Disconnected stay red
+// as the "didn't go well" outcomes; FTU keeps the original KPIs.
+const CONVERSATIONS_FILLED_STATS: (V2Stat & { danger?: boolean })[] = [
+  { id: 'channel-call', value: '8.2K', label: 'Call' },
+  { id: 'channel-text', value: '5.1K', label: 'Text' },
+  { id: 'channel-chat', value: '3.0K', label: 'Chat' },
+  { id: 'appointment-scheduled', value: '6.5K', label: 'Appointment scheduled' },
+  { id: 'appointment-rescheduled', value: '1.2K', label: 'Rescheduled' },
+  { id: 'appointment-cancelled', value: '450', label: 'Cancelled', danger: true },
+  { id: 'conversations-no-shows', value: '320', label: 'No shows', danger: true },
+  { id: 'conversations-faqs', value: '4.8K', label: 'FAQs' },
+  { id: 'conversations-transferred', value: '380', label: 'Transferred', danger: true },
+  { id: 'conversations-disconnected', value: '210', label: 'Disconnected', danger: true },
+  { id: 'resolution-rate', value: '88%', label: 'Resolution rate' },
+]
+
 // Per-section top-level KPI overrides — sections not listed here just use the shared data's own
 // section.stats unchanged.
 const SECTION_STATS_OVERRIDES: Partial<Record<string, V2Stat[]>> = {
@@ -475,7 +495,15 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
 // own business-metrics / agent-outcomes / human-actions rows, same visual vocabulary as the other
 // sections above. Business metrics and agents lay out in a 2-column grid so rows align into clean
 // columns AND use the card's full width, instead of either a jagged wrap or a single narrow column.
-function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean; showSetupBanner: boolean }) {
+function FrontDeskSection({
+  showAgents,
+  showSetupBanner,
+  dataState,
+}: {
+  showAgents: boolean
+  showSetupBanner: boolean
+  dataState: DataState
+}) {
   const featuredStat = pickFeaturedStat(
     OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({ id: area.id, name: area.agentName, stats: area.agentOutcomes }))
   )
@@ -491,7 +519,13 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
         {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
           <div key={area.id} className="flex flex-col gap-md">
             <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-            <V2StatGroup stats={[...area.businessMetrics, ...withDanger(area.humanActions)]} />
+            <V2StatGroup
+              stats={
+                area.id === 'conversations' && dataState === 'filled'
+                  ? CONVERSATIONS_FILLED_STATS
+                  : [...area.businessMetrics, ...withDanger(area.humanActions)]
+              }
+            />
           </div>
         ))}
       </div>
@@ -677,7 +711,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
           {dataState === 'empty' ? (
             <EmptyStateAppointmentsAndInbox />
           ) : (
-            <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} />
+            <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} dataState={dataState} />
           )}
         </div>
       </div>
