@@ -223,11 +223,14 @@ const SOCIAL_STATS: V2Stat[] = [
 // Reviews' own top-level KPI set — adds Response rate alongside the shared data's Request
 // sent/Reviews received/3 star or less. Kept local rather than editing the shared
 // OVERVIEW_V2_SECTIONS file, since v2/v3 shouldn't pick it up.
+// Values form a consistent waterfall (sent -> received -> negative -> awaiting approval) instead
+// of the shared data's placeholder numbers, which read as arbitrary next to each other (e.g.
+// "1.9K requests sent" next to "7 reviews received").
 const REVIEWS_STATS: V2Stat[] = [
   { id: 'requests-sent', value: '1.9K', label: 'Request sent' },
-  { id: 'reviews-received', value: '7', label: 'Reviews received' },
+  { id: 'reviews-received', value: '342', label: 'Reviews received' },
   { id: 'reviews-response-rate', value: '72%', label: 'Response rate' },
-  { id: '3-star-or-less', value: '2', label: '3 star or less' },
+  { id: '3-star-or-less', value: '34', label: '3 star or less' },
 ]
 
 // Search AI's own top-level KPI set — adds Sentiment score between Visibility score and Average
@@ -265,6 +268,8 @@ const TICKETING_STATS: V2Stat[] = [
 // Call+Text+Chat, then Resolved sub-outcomes Scheduled/Rescheduled/Cancelled/FAQs and
 // Not-resolved sub-outcomes Transferred/Disconnected, plus No-shows). Cancelled/No-shows/
 // Transferred/Disconnected stay red as the "didn't go well" outcomes; FTU keeps the original KPIs.
+// All non-danger (blue) KPIs first, then every red/danger one — rather than interleaved by
+// Resolved/Not-resolved sub-outcome grouping.
 const CONVERSATIONS_FILLED_STATS: (V2Stat & { danger?: boolean })[] = [
   { id: 'conversations-total', value: '16.3K', label: 'Conversations' },
   { id: 'channel-call', value: '8.2K', label: 'Call' },
@@ -272,12 +277,12 @@ const CONVERSATIONS_FILLED_STATS: (V2Stat & { danger?: boolean })[] = [
   { id: 'channel-chat', value: '3.0K', label: 'Chat' },
   { id: 'appointment-scheduled', value: '6.5K', label: 'Appointment scheduled' },
   { id: 'appointment-rescheduled', value: '1.2K', label: 'Rescheduled' },
+  { id: 'conversations-faqs', value: '4.8K', label: 'FAQs answered' },
+  { id: 'resolution-rate', value: '88%', label: 'Resolution rate' },
   { id: 'appointment-cancelled', value: '450', label: 'Cancelled', danger: true },
   { id: 'conversations-no-shows', value: '320', label: 'No shows', danger: true },
-  { id: 'conversations-faqs', value: '4.8K', label: 'FAQs' },
   { id: 'conversations-transferred', value: '380', label: 'Transferred', danger: true },
   { id: 'conversations-disconnected', value: '210', label: 'Disconnected', danger: true },
-  { id: 'resolution-rate', value: '88%', label: 'Resolution rate' },
 ]
 
 // Per-section top-level KPI overrides — sections not listed here just use the shared data's own
@@ -312,8 +317,10 @@ function getSectionActionNeeded(section: { id: string; actionNeeded?: V2Stat[] }
     const label = dataState === 'filled' ? 'Recommendation pending' : 'Recommendation sizing'
     return stats.map((s) => (s.id === 'awaiting-review' ? { ...s, label } : s))
   }
-  if (section.id === 'reviews' && dataState === 'empty') {
-    return stats.filter((s) => s.id !== 'replies-awaiting-approval')
+  if (section.id === 'reviews') {
+    if (dataState === 'empty') return stats.filter((s) => s.id !== 'replies-awaiting-approval')
+    // Normalized to fit under the new Reviews received/3 star or less waterfall (was "4").
+    return stats.map((s) => (s.id === 'replies-awaiting-approval' ? { ...s, value: '9' } : s))
   }
   if (section.id === 'surveys') {
     return stats.map((s) => (s.id === 'survey-approval-pending' ? { ...s, label: 'Approval pending' } : s))
