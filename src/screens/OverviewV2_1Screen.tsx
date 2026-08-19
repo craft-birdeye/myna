@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Icon, Tooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
+  FigmaIconInbox,
   FigmaIconSurveys,
   FigmaIconTicketing,
   FigmaIconContentHub,
@@ -626,7 +627,10 @@ function EmptyStateAppointmentsAndInbox() {
     <>
       <SectionCard>
         <div className="flex items-center justify-between">
-          <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Appointments</h3>
+          <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+            <FigmaIconFrontDesk size={20} className="text-text-icon" />
+            Appointments
+          </h3>
           <button
             type="button"
             aria-label="Filter"
@@ -650,7 +654,10 @@ function EmptyStateAppointmentsAndInbox() {
       </SectionCard>
 
       <SectionCard>
-        <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">Inbox</h3>
+        <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+          <FigmaIconInbox size={20} className="text-text-icon" />
+          Inbox
+        </h3>
         <div className={KPI_ROW_CLASS}>
           {EMPTY_STATE_INBOX_STATS.map((s) => (
             <div key={s.id} className={KPI_TILE_CLASS}>
