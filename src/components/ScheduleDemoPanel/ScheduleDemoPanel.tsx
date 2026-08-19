@@ -92,7 +92,7 @@ export function ScheduleDemoPanel({ open, onClose, onScheduled }: ScheduleDemoPa
 
           <div className="flex overflow-hidden rounded-md border border-border">
             {/* Calendar */}
-            <div className="flex w-[300px] shrink-0 flex-col border-r border-border bg-surface-l2 p-lg">
+            <div className="flex w-[300px] shrink-0 flex-col border-r border-border bg-surface p-lg">
               <h3 className="m-0 text-body text-text-primary">Select a Date &amp; Time</h3>
               <div className="mt-sm flex items-center gap-xs text-small text-text-secondary">
                 <Clock className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
