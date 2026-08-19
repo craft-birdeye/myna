@@ -247,6 +247,17 @@ const SURVEYS_STATS: V2Stat[] = [
   { id: 'surveys-response-rate', value: '68%', label: 'Response rate' },
 ]
 
+// Ticketing's own top-level KPI set — promotes Tickets created/opened/escalated up from the
+// (now-hidden) agent rows, drops New and In progress, keeps Assigned and Average resolution time
+// from the shared data. Kept local rather than editing OVERVIEW_V2_SECTIONS.
+const TICKETING_STATS: V2Stat[] = [
+  { id: 'tickets-created', value: '370', label: 'Tickets created' },
+  { id: 'tickets-opened', value: '77', label: 'Tickets open' },
+  { id: 'tickets-escalated', value: '9', label: 'Tickets escalated' },
+  { id: 'assigned-tickets', value: '14', label: 'Assigned' },
+  { id: 'avg-resolution-time', value: '6h', label: 'Average resolution time' },
+]
+
 // Per-section top-level KPI overrides — sections not listed here just use the shared data's own
 // section.stats unchanged.
 const SECTION_STATS_OVERRIDES: Partial<Record<string, V2Stat[]>> = {
@@ -254,6 +265,7 @@ const SECTION_STATS_OVERRIDES: Partial<Record<string, V2Stat[]>> = {
   'search-ai': SEARCH_AI_STATS,
   reviews: REVIEWS_STATS,
   surveys: SURVEYS_STATS,
+  ticketing: TICKETING_STATS,
 }
 
 // v2.1-only section label override — the shared data calls this section "Search AI"; kept local
@@ -438,7 +450,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
       )}
       {!bannerOnly && (
         <>
-          <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
+          <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI Co-worker Summary</h3>
           <div className={KPI_ROW_CLASS}>
             {stats.map((s) => (
               <div key={s.id} className={KPI_TILE_CLASS}>
@@ -596,7 +608,10 @@ function DataStateSwitcher({ value, onChange }: { value: DataState; onChange: (v
 export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
   const [dataState, setDataState] = useState<DataState>('empty')
-  const showAgents = dataState === 'filled'
+  // Agent-level rows (per-section coworker cards) are hidden in every state now — Filled used to
+  // be the one state that showed them; the AI workforce summary card is the only agent-related
+  // content left on the page.
+  const showAgents = false
 
   return (
     <div className="flex h-full flex-col">
