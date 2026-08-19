@@ -53,6 +53,7 @@ import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { OverviewV2Screen } from './screens/OverviewV2Screen'
+import { OverviewV2_1Screen } from './screens/OverviewV2_1Screen'
 import { OverviewV3Screen } from './screens/OverviewV3Screen'
 import logoSrc from './assets/birdeye-logo.svg'
 import jayIcon from './assets/icon-jay.svg'
@@ -95,6 +96,7 @@ const RAIL_GROUPS: RailGroup[] = [
     items: [
       { id: 'overview', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
       { id: 'overview-v2', label: 'Overview v2', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
+      { id: 'overview-v2-1', label: 'Overview v2.1', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
       { id: 'overview-v3', label: 'Overview v3', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
       { id: 'agents',   label: 'Co-workers',   icon: <FigmaIconBirdAI size={ICON_SIZE + 2} />,   kind: 'element', badge: 'New' },
     ],
@@ -391,6 +393,7 @@ const RAIL_TITLE: Record<string, string> = {
   settings:              'Settings',
   overview:              'Overview',
   'overview-v2':         'Overview v2',
+  'overview-v2-1':       'Overview v2.1',
   'overview-v3':         'Overview v3',
   agents:                'Co-workers',
   search:                'Search AI',
@@ -554,6 +557,7 @@ export function App() {
     railActive !== 'agents' &&
     railActive !== 'overview' &&
     railActive !== 'overview-v2' &&
+    railActive !== 'overview-v2-1' &&
     railActive !== 'overview-v3' &&
     railActive !== 'content-hub' &&
     railActive !== 'search' &&
@@ -832,6 +836,8 @@ export function App() {
                   />
                 ) : railActive === 'overview-v2' ? (
                   <OverviewV2Screen />
+                ) : railActive === 'overview-v2-1' ? (
+                  <OverviewV2_1Screen />
                 ) : railActive === 'overview-v3' ? (
                   <OverviewV3Screen />
                 ) : railActive === 'agents' ? (
