@@ -771,6 +771,7 @@ const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
   rescheduled: chartColors.blue,
   cancelled: chartColors.unresolved,
   unconfirmed: chartColors.escalated,
+  'no-shows': chartColors.categorical[6],
 }
 
 // A single bar split into proportional colored segments (rather than a per-category pie/donut) —
@@ -788,7 +789,7 @@ function SplitBar({ data }: { data: { name: string; value: number; color: string
   const hovered = hoveredIndex !== null ? segments[hoveredIndex] : null
 
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex h-full flex-col justify-center gap-lg">
       <div className="relative">
         <div className="flex h-6 w-full overflow-hidden rounded-sm">
           {segments.map((s, i) => (
@@ -836,12 +837,14 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
   const cancelled = parseKValue(appointmentsArea.businessMetrics.find((s) => s.id === 'cancelled')!.value)
   const unconfirmed = parseKValue(appointmentsArea.humanActions.find((s) => s.id === 'unconfirmed')!.value)
   const noShows = appointmentsArea.humanActions.find((s) => s.id === 'no-shows')!
-  const confirmed = parseKValue(totalBookings.value) - rescheduled - cancelled - unconfirmed
+  const noShowsCount = parseKValue(noShows.value)
+  const confirmed = parseKValue(totalBookings.value) - rescheduled - cancelled - unconfirmed - noShowsCount
   const appointmentStatusData = [
     { name: 'Confirmed', value: confirmed, color: APPOINTMENT_STATUS_COLORS.confirmed },
     { name: 'Rescheduled', value: rescheduled, color: APPOINTMENT_STATUS_COLORS.rescheduled },
     { name: 'Cancelled', value: cancelled, color: APPOINTMENT_STATUS_COLORS.cancelled },
     { name: 'Unconfirmed', value: unconfirmed, color: APPOINTMENT_STATUS_COLORS.unconfirmed },
+    { name: 'No-shows', value: noShowsCount, color: APPOINTMENT_STATUS_COLORS['no-shows'] },
   ]
   const stackedAreas = ['intake', 'waitlist', 'conversations'].map((id) => subareas.find((a) => a.id === id)!)
 
