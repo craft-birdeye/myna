@@ -12,7 +12,7 @@ import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
 import googleIcon from '../assets/icon-google.svg'
 import googlePlayIcon from '../assets/icon-google-play.svg'
-import { getAgentDirectory } from '../data/agentDirectoryData'
+import { getAgentDirectory, type AgentDirectoryEntry } from '../data/agentDirectoryData'
 import {
   OVERVIEW_V2_SECTIONS,
   OVERVIEW_V2_FRONTDESK_SUBAREAS,
@@ -416,6 +416,47 @@ function AgentSetupBanner({ icon, agentName, value, metricLabel }: { icon: strin
   )
 }
 
+function formatAgentOutcome(raw: string): string {
+  const numeric = parseFloat(raw.replace(/,/g, ''))
+  if (!isNaN(numeric) && numeric >= 1000) return `${parseFloat((numeric / 1000).toFixed(1))}K`
+  return raw
+}
+
+function AgentPerformanceMetric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="min-w-0">
+      <div className="truncate text-h3 text-text-primary">{value}</div>
+      <div className="truncate text-small text-text-tertiary">{label}</div>
+    </div>
+  )
+}
+
+// Same card layout as the Agent directory's "All" tab (AgentDirectoryScreen's AgentCard) — kept as
+// an independent copy rather than a cross-import, per this file's fork-don't-import convention.
+function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
+  return (
+    <div className="flex flex-col rounded-md border border-border bg-surface p-xl">
+      <div className="mb-xs flex items-center justify-between gap-sm">
+        <span className="truncate text-small text-text-tertiary">{agent.category}</span>
+        {agent.running > 0 ? (
+          <span className="shrink-0 rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
+            {agent.running} running
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Paused</span>
+        )}
+      </div>
+      <h4 className="m-0 mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
+      <p className="m-0 mb-lg line-clamp-2 text-small text-text-tertiary">{agent.description}</p>
+      <div className="grid grid-cols-3 gap-md">
+        <AgentPerformanceMetric value={formatAgentOutcome(agent.outcome.value)} label={agent.outcome.label} />
+        <AgentPerformanceMetric value={agent.timeSaved} label="Time saved" />
+        <AgentPerformanceMetric value={agent.costSaved} label="Cost saved" />
+      </div>
+    </div>
+  )
+}
+
 // Shown in all three states — Empty/FTU keep the estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
 // real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
@@ -424,6 +465,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
   const filled = dataState === 'filled'
   // Empty state shows only the promo banner — no "AI workforce summary" KPI row below it.
   const bannerOnly = dataState === 'empty'
+  const [showAgentPerformance, setShowAgentPerformance] = useState(false)
   const agents = getAgentDirectory('healthcare')
   const totalAgents = agents.length
   const totalHours = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
@@ -485,6 +527,25 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
               </div>
             ))}
           </div>
+
+          {filled && (
+            <button
+              type="button"
+              onClick={() => setShowAgentPerformance((v) => !v)}
+              className="flex w-fit items-center gap-xs text-body text-text-action hover:underline"
+            >
+              View agent performance
+              <Icon name={showAgentPerformance ? 'expand_less' : 'expand_more'} size={18} />
+            </button>
+          )}
+
+          {filled && showAgentPerformance && (
+            <div className="grid grid-cols-3 gap-lg">
+              {agents.map((agent) => (
+                <AgentPerformanceCard key={agent.id} agent={agent} />
+              ))}
+            </div>
+          )}
         </>
       )}
     </SectionCard>
