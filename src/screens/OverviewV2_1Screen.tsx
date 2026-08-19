@@ -504,9 +504,13 @@ function FrontDeskSection({
   showSetupBanner: boolean
   dataState: DataState
 }) {
-  const featuredStat = pickFeaturedStat(
-    OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => ({ id: area.id, name: area.agentName, stats: area.agentOutcomes }))
-  )
+  // Appointments/Intake/Waitlist sub-areas were dropped entirely — Conversations is the only
+  // sub-area left, so it no longer needs its own "Conversations" title (redundant next to the
+  // "Front desk" section heading right above it).
+  const conversations = OVERVIEW_V2_FRONTDESK_SUBAREAS.find((area) => area.id === 'conversations')!
+  const featuredStat = pickFeaturedStat([
+    { id: conversations.id, name: conversations.agentName, stats: conversations.agentOutcomes },
+  ])
 
   return (
     <SectionCard>
@@ -515,30 +519,20 @@ function FrontDeskSection({
         Front desk
       </h3>
 
-      <div className="grid grid-cols-2 gap-x-3xl gap-y-lg">
-        {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
-          <div key={area.id} className="flex flex-col gap-md">
-            <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
-            <V2StatGroup
-              stats={
-                area.id === 'conversations' && dataState === 'filled'
-                  ? CONVERSATIONS_FILLED_STATS
-                  : [...area.businessMetrics, ...withDanger(area.humanActions)]
-              }
-            />
-          </div>
-        ))}
-      </div>
+      <V2StatGroup
+        stats={
+          dataState === 'filled'
+            ? CONVERSATIONS_FILLED_STATS
+            : [...conversations.businessMetrics, ...withDanger(conversations.humanActions)]
+        }
+      />
 
       {showAgents && (
-        <div className="grid grid-cols-2 gap-x-3xl gap-y-lg border-t border-border pt-lg">
-          {OVERVIEW_V2_FRONTDESK_SUBAREAS.map((area) => (
-            <AgentRow
-              key={area.id}
-              icon={mynaIcon}
-              agent={{ id: `${area.id}-agent-outcomes`, name: area.agentName, stats: area.agentOutcomes }}
-            />
-          ))}
+        <div className="border-t border-border pt-lg">
+          <AgentRow
+            icon={mynaIcon}
+            agent={{ id: `${conversations.id}-agent-outcomes`, name: conversations.agentName, stats: conversations.agentOutcomes }}
+          />
         </div>
       )}
 
