@@ -145,7 +145,7 @@ function ReviewsOverview() {
           {OVERVIEW_REVIEW_SOURCES.map((s) => {
             const logoSrc = REVIEW_SOURCE_LOGO[s.id]
             return (
-              <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border px-lg py-md">
+              <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border py-md pl-2xl pr-lg">
                 {logoSrc ? (
                   <img src={logoSrc} alt="" className="size-9 shrink-0" />
                 ) : (
@@ -301,6 +301,7 @@ const SECTION_LABEL_OVERRIDES: Record<string, string> = {
 // - Listings: "Recommendations awaiting review" is dropped in Empty state, renamed to
 //   "Recommendation sizing" in FTU, and "Recommendation pending" in Filled.
 // - Reviews: "Replies awaiting approval" is dropped in Empty state only.
+// - Surveys: "Survey approval pending" -> "Approval pending".
 function getSectionActionNeeded(section: { id: string; actionNeeded?: V2Stat[] }, dataState: DataState): V2Stat[] {
   const stats = section.actionNeeded ?? []
   if (section.id === 'search-ai') {
@@ -313,6 +314,9 @@ function getSectionActionNeeded(section: { id: string; actionNeeded?: V2Stat[] }
   }
   if (section.id === 'reviews' && dataState === 'empty') {
     return stats.filter((s) => s.id !== 'replies-awaiting-approval')
+  }
+  if (section.id === 'surveys') {
+    return stats.map((s) => (s.id === 'survey-approval-pending' ? { ...s, label: 'Approval pending' } : s))
   }
   return stats
 }
@@ -467,8 +471,10 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
           )}
         </div>
       </div>
-      <p className="m-0 mb-lg line-clamp-2 text-small text-text-tertiary">{agent.description}</p>
-      <div className="grid grid-cols-3 gap-md">
+      {/* min-h reserves space for 2 lines (text-small line-height 18px) even when the
+          description is shorter, so the KPI row below always starts at the same height. */}
+      <p className="m-0 mb-lg line-clamp-2 min-h-[36px] text-small text-text-tertiary">{agent.description}</p>
+      <div className="mt-auto grid grid-cols-3 gap-md">
         <AgentPerformanceMetric value={formatAgentOutcome(agent.outcome.value)} label={agent.outcome.label} />
         <AgentPerformanceMetric value={agent.timeSaved} label="Time saved" />
         <AgentPerformanceMetric value={agent.costSaved} label="Cost saved" />
