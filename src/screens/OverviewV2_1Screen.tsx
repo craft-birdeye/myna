@@ -123,7 +123,7 @@ function ReviewsOverview() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-start gap-3xl">
+      <div className="flex flex-wrap items-stretch gap-3xl">
         <div className="flex min-w-[320px] max-w-[50%] flex-1 flex-col gap-sm">
           {OVERVIEW_REVIEWS_BREAKDOWN.map((b) => (
             <div key={b.stars} className="flex items-center gap-md">
@@ -141,7 +141,7 @@ function ReviewsOverview() {
           ))}
         </div>
 
-        <div className="flex min-w-[280px] flex-1 flex-wrap items-start gap-md">
+        <div className="flex min-w-[280px] flex-1 flex-wrap items-stretch gap-md">
           {OVERVIEW_REVIEW_SOURCES.map((s) => {
             const logoSrc = REVIEW_SOURCE_LOGO[s.id]
             return (
@@ -424,6 +424,16 @@ function formatAgentOutcome(raw: string): string {
   return raw
 }
 
+// Extra "N issues" badges for agents that don't already carry a real alert in the shared
+// directory data — kept local to this grid rather than editing agentDirectoryData.ts, since that
+// data also feeds the real Agent directory screen.
+const AGENT_ISSUE_OVERRIDES: Record<string, number> = {
+  'review-response': 1,
+  waitlist: 2,
+  'social-engagement': 1,
+  'survey-response': 1,
+}
+
 function AgentPerformanceMetric({ value, label }: { value: string; label: string }) {
   return (
     <div className="min-w-0">
@@ -436,15 +446,15 @@ function AgentPerformanceMetric({ value, label }: { value: string; label: string
 // Same card layout as the Agent directory's "All" tab (AgentDirectoryScreen's AgentCard) — kept as
 // an independent copy rather than a cross-import, per this file's fork-don't-import convention.
 function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
+  const issueCount = agent.alert ? parseInt(agent.alert.message, 10) : AGENT_ISSUE_OVERRIDES[agent.id]
   return (
     <div className="flex flex-col rounded-md border border-border bg-surface p-xl">
-      <div className="mb-xs flex items-center justify-between gap-sm">
-        <span className="truncate text-small text-text-tertiary">{agent.category}</span>
+      <div className="mb-xs flex items-center justify-end gap-sm">
         <div className="flex shrink-0 items-center gap-xs">
-          {agent.alert && (
+          {issueCount && (
             <span className="flex items-center gap-xs text-small text-text-secondary">
               <Icon name="error" size={14} className="text-chip-danger-text" />
-              {parseInt(agent.alert.message, 10)} {parseInt(agent.alert.message, 10) === 1 ? 'issue' : 'issues'}
+              {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
             </span>
           )}
           {agent.running > 0 ? (
