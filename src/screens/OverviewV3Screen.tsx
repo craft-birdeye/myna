@@ -688,6 +688,7 @@ function ProductSectionCard({ section, showAgents, dataState }: { section: V2Sec
                   .filter((s) => LISTINGS_SYNC_STATUS_IDS.includes(s.id))
                   .map((s) => ({ name: s.label, value: parseFloat(s.value), color: LISTINGS_SYNC_STATUS_COLORS[s.id] }))}
                 height={310}
+                autoContrastLabels
               />
             </ChartCard>
             <ChartCard title="Google report" showActions={false}>
@@ -698,6 +699,7 @@ function ProductSectionCard({ section, showAgents, dataState }: { section: V2Sec
                   color: chartColors.categorical[i],
                 }))}
                 height={310}
+                autoContrastLabels
               />
             </ChartCard>
           </div>

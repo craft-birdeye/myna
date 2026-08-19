@@ -14,24 +14,36 @@ export interface DonutChartProps {
   height?: number
   /** Show percentage labels inside each segment */
   showLabels?: boolean
+  /** Use dark text on light-colored slices instead of always-white, so labels stay readable on e.g. grey segments */
+  autoContrastLabels?: boolean
+}
+
+function contrastTextColor(hex: string): string {
+  const c = hex.replace('#', '')
+  const r = parseInt(c.substring(0, 2), 16)
+  const g = parseInt(c.substring(2, 4), 16)
+  const b = parseInt(c.substring(4, 6), 16)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.6 ? '#0d0d12' : '#fff'
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function PctLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) {
+function PctLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, payload, autoContrast }: any) {
   const RADIAN = Math.PI / 180
   const radius = innerRadius + (outerRadius - innerRadius) * 0.55
   const x = cx + radius * Math.cos(-midAngle * RADIAN)
   const y = cy + radius * Math.sin(-midAngle * RADIAN)
   const pct = Math.round(percent * 100)
   if (pct < 5) return null
+  const textColor = autoContrast && payload?.color ? contrastTextColor(payload.color) : '#fff'
   return (
-    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontFamily="Inter, sans-serif">
+    <text x={x} y={y} fill={textColor} textAnchor="middle" dominantBaseline="central" fontSize={11} fontFamily="Inter, sans-serif">
       {pct}%
     </text>
   )
 }
 
-export function DonutChart({ data, centerValue, centerLabel, height = 260, showLabels = true }: DonutChartProps) {
+export function DonutChart({ data, centerValue, centerLabel, height = 260, showLabels = true, autoContrastLabels = false }: DonutChartProps) {
   return (
     <div className="relative" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -46,7 +58,8 @@ export function DonutChart({ data, centerValue, centerLabel, height = 260, showL
             stroke="none"
             isAnimationActive={false}
             labelLine={false}
-            label={showLabels ? PctLabel : undefined}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            label={showLabels ? (props: any) => <PctLabel {...props} autoContrast={autoContrastLabels} /> : undefined}
           >
             {data.map((d) => (
               <Cell key={d.name} fill={d.color} />
