@@ -806,7 +806,7 @@ function SplitBar({ data }: { data: { name: string; value: number; color: string
             className="pointer-events-none absolute bottom-full z-10 -translate-x-1/2 pb-xs"
             style={{ left: `${hovered.start + hovered.pct / 2}%` }}
           >
-            <ChartTooltip items={[{ color: hovered.color, label: hovered.name, value: hovered.value }]} />
+            <ChartTooltip items={[{ color: hovered.color, label: `${hovered.name} · ${Math.round(hovered.pct)}%`, value: hovered.value }]} />
           </div>
         )}
       </div>
@@ -814,7 +814,7 @@ function SplitBar({ data }: { data: { name: string; value: number; color: string
         {data.map((d) => (
           <div key={d.name} className="flex items-center gap-xs text-small text-text-secondary">
             <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
-            {d.name} · {Math.round((d.value / total) * 100)}%
+            {d.name}
           </div>
         ))}
       </div>
@@ -858,7 +858,7 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
       <div className="grid grid-cols-2 gap-x-3xl gap-y-lg">
         <div className="flex flex-col gap-md">
           <h4 className="m-0 text-body text-text-primary">{appointmentsArea.label}</h4>
-          <V2StatGroup stats={[totalBookings, ...withDanger([noShows])]} />
+          <V2StatGroup stats={[totalBookings]} />
           <ChartCard title="Appointment status" showActions={false} minHeight={220}>
             <div className="flex-1">
               <SplitBar data={appointmentStatusData} />
@@ -866,7 +866,7 @@ function FrontDeskSection({ showAgents, showSetupBanner }: { showAgents: boolean
           </ChartCard>
         </div>
 
-        <div className="flex flex-col gap-lg">
+        <div className="flex h-full flex-col justify-between">
           {stackedAreas.map((area) => (
             <div key={area.id} className="flex flex-col gap-md">
               <h4 className="m-0 text-body text-text-primary">{area.label}</h4>
