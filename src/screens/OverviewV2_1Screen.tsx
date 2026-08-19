@@ -679,9 +679,10 @@ type DataState = 'filled' | 'empty' | 'ftu'
 // FTU (first-time user) is a duplicate of Empty state — same "no agents yet" view, kept as its
 // own option so it can diverge later without touching Empty state's behavior.
 function DataStateSwitcher({ value, onChange }: { value: DataState; onChange: (value: DataState) => void }) {
+  // FTU is hidden from the switcher — dataState can still be 'ftu' internally, it's just not
+  // reachable from this toggle anymore.
   const OPTIONS: { id: DataState; label: string }[] = [
     { id: 'empty', label: 'Empty state' },
-    { id: 'ftu', label: 'FTU' },
     { id: 'filled', label: 'Filled state' },
   ]
   return (
