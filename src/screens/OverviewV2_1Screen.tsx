@@ -440,13 +440,21 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
     <div className="flex flex-col rounded-md border border-border bg-surface p-xl">
       <div className="mb-xs flex items-center justify-between gap-sm">
         <span className="truncate text-small text-text-tertiary">{agent.category}</span>
-        {agent.running > 0 ? (
-          <span className="shrink-0 rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
-            {agent.running} running
-          </span>
-        ) : (
-          <span className="shrink-0 rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Paused</span>
-        )}
+        <div className="flex shrink-0 items-center gap-xs">
+          {agent.alert && (
+            <span className="flex items-center gap-xs text-small text-text-secondary">
+              <Icon name="error" size={14} className="text-chip-danger-text" />
+              {parseInt(agent.alert.message, 10)} {parseInt(agent.alert.message, 10) === 1 ? 'issue' : 'issues'}
+            </span>
+          )}
+          {agent.running > 0 ? (
+            <span className="rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
+              {agent.running} running
+            </span>
+          ) : (
+            <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Paused</span>
+          )}
+        </div>
       </div>
       <h4 className="m-0 mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
       <p className="m-0 mb-lg line-clamp-2 text-small text-text-tertiary">{agent.description}</p>
