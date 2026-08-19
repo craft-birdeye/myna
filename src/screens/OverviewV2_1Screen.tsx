@@ -449,7 +449,8 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
   const issueCount = agent.alert ? parseInt(agent.alert.message, 10) : AGENT_ISSUE_OVERRIDES[agent.id]
   return (
     <div className="flex flex-col rounded-md border border-border bg-surface p-xl">
-      <div className="mb-xs flex items-center justify-end gap-sm">
+      <div className="mb-xs flex items-center justify-between gap-sm">
+        <h4 className="m-0 min-w-0 truncate text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
         <div className="flex shrink-0 items-center gap-xs">
           {issueCount && (
             <span className="flex items-center gap-xs text-small text-text-secondary">
@@ -466,7 +467,6 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
           )}
         </div>
       </div>
-      <h4 className="m-0 mb-xs text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
       <p className="m-0 mb-lg line-clamp-2 text-small text-text-tertiary">{agent.description}</p>
       <div className="grid grid-cols-3 gap-md">
         <AgentPerformanceMetric value={formatAgentOutcome(agent.outcome.value)} label={agent.outcome.label} />
