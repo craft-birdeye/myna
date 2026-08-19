@@ -197,6 +197,17 @@ const NO_DELTA_IDS = new Set([
   'open-recommendations',
 ])
 
+// Social's own top-level KPI set — replaces the shared data's lone "New follower" stat with the
+// fuller business-metric set. Kept local to v2.1 rather than editing the shared
+// OVERVIEW_V2_SECTIONS file, since v2/v3 shouldn't pick up the change.
+const SOCIAL_STATS: V2Stat[] = [
+  { id: 'posts', value: '36', label: 'Posts' },
+  { id: 'impressions', value: '128.4K', label: 'Impressions' },
+  { id: 'engagement-rate', value: '4.8%', label: 'Engagement rate' },
+  { id: 'post-link-clicks', value: '1.2K', label: 'Post link clicks' },
+  { id: 'audience-growth', value: '5.2%', label: 'Audience growth' },
+]
+
 const DATE_RANGE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
 function DateRangeDropdown({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -481,7 +492,9 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
                 </h3>
 
                 {(section.stats || section.actionNeeded) && (
-                  <V2StatGroup stats={[...(section.stats ?? []), ...withDanger(section.actionNeeded)]} />
+                  <V2StatGroup
+                    stats={[...(section.id === 'social' ? SOCIAL_STATS : (section.stats ?? [])), ...withDanger(section.actionNeeded)]}
+                  />
                 )}
 
                 {section.id === 'listings' && (
