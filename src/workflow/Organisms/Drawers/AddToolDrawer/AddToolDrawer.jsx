@@ -188,7 +188,7 @@ const BRAND_TOOL_CONFIGS = {
 /* ─── Entity options (Birdeye nav entities) ─── */
 const ENTITY_OPTIONS = [
   { id: 'conversation', label: 'Conversation' },
-  { id: 'search',       label: 'Search AI' },
+  { id: 'search',       label: 'AI Search' },
   { id: 'listings',     label: 'Listings AI' },
   { id: 'reviews',      label: 'Reviews AI' },
   { id: 'social',       label: 'Social AI' },

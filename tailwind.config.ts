@@ -47,6 +47,7 @@ export default {
           primary: '#0d0d12', // text/onLightSurface/Primary (Birdeye brand near-black)
           secondary: '#717182', // text/onLightSurface/Secondary
           tertiary: '#9ca3af', // text/onLightSurface/Tertiary
+          muted: '#8F8F8F', // L1 rail section headers (Marketing / Operations / Customer experience)
           action: '#1976D2', // text/onLightSurface/action/primary
           icon: '#303030', // icon/primary/default
         },

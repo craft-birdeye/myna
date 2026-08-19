@@ -97,7 +97,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'marketing',
     header: 'Marketing',
     items: [
-      { id: 'search',               label: 'Search AI',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
+      { id: 'search',               label: 'AI Search',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
       { id: 'listings',             label: 'Listings AI',             icon: <FigmaIconListings size={ICON_SIZE} />,        kind: 'element' },
       { id: 'reviews',              label: 'Reviews AI',              icon: <FigmaIconReviews size={ICON_SIZE} />,         kind: 'element' },
       { id: 'social',               label: 'Social AI',               icon: <FigmaIconSocial size={ICON_SIZE} />,          kind: 'element' },
@@ -384,7 +384,7 @@ const RAIL_TITLE: Record<string, string> = {
   settings:              'Settings',
   overview:              'Overview',
   agents:                'Co-workers',
-  search:                'Search AI',
+  search:                'AI Search',
   listings:              'Listings AI',
   reviews:               'Reviews AI',
   social:                'Social AI',

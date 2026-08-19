@@ -69,7 +69,7 @@ export interface SearchAIL2NavPanelProps {
 export function SearchAIL2NavPanel({ activeItem, onActiveItemChange }: SearchAIL2NavPanelProps) {
   return (
     <SideNav
-      title="Search AI"
+      title="AI Search"
       sections={SECTIONS}
       activeId={fromL2Key(activeItem)}
       onSelect={(id) => onActiveItemChange(toL2Key(id))}

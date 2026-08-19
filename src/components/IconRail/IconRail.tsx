@@ -488,7 +488,7 @@ export function IconRail({
                     className="flex min-h-0 items-center overflow-hidden"
                     style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
                   >
-                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-tertiary">
+                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-muted">
                       {group.header}
                     </p>
                   </div>
@@ -526,7 +526,7 @@ export function IconRail({
                     className="flex min-h-0 items-center overflow-hidden"
                     style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
                   >
-                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-tertiary">
+                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-muted">
                       {group.header}
                     </p>
                   </div>
