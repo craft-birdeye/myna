@@ -252,6 +252,8 @@ function AgentSetupBanner({ icon, agentName, value, metricLabel }: { icon: strin
 // bled to the card's top edge; Empty additionally gets a "Schedule demo" CTA that FTU omits.
 function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState; dateRange: string }) {
   const filled = dataState === 'filled'
+  // Empty state shows only the promo banner — no "AI workforce summary" KPI row below it.
+  const bannerOnly = dataState === 'empty'
   const agents = getAgentDirectory('healthcare')
   const totalAgents = agents.length
   const totalHours = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
@@ -273,7 +275,11 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
   return (
     <SectionCard>
       {!filled && (
-        <div className="-mx-xl -mt-xl flex items-center gap-lg rounded-t-md bg-ai-summary p-lg">
+        <div
+          className={`-mx-xl -mt-xl flex items-center gap-lg rounded-t-md bg-ai-summary p-lg ${
+            bannerOnly ? '-mb-xl rounded-b-md' : ''
+          }`}
+        >
           <div className="flex shrink-0 items-center">
             <img src={jayIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
             <img src={mynaIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
@@ -292,18 +298,22 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           )}
         </div>
       )}
-      <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
-      <div className={KPI_ROW_CLASS}>
-        {stats.map((s) => (
-          <div key={s.id} className={KPI_TILE_CLASS}>
-            <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
-            <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
-              {s.label}
-              {s.tooltip && <EstimateTooltip />}
-            </p>
+      {!bannerOnly && (
+        <>
+          <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI workforce summary</h3>
+          <div className={KPI_ROW_CLASS}>
+            {stats.map((s) => (
+              <div key={s.id} className={KPI_TILE_CLASS}>
+                <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
+                <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
+                  {s.label}
+                  {s.tooltip && <EstimateTooltip />}
+                </p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </SectionCard>
   )
 }
