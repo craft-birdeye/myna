@@ -240,12 +240,20 @@ const SEARCH_AI_STATS: V2Stat[] = [
   { id: 'average-rank', value: '4', label: 'Average rank' },
 ]
 
+// Surveys has no top-level business-metric stats in the shared data (only agents/actionNeeded) —
+// these two are v2.1-only.
+const SURVEYS_STATS: V2Stat[] = [
+  { id: 'active-surveys', value: '24', label: 'Active surveys' },
+  { id: 'surveys-response-rate', value: '68%', label: 'Response rate' },
+]
+
 // Per-section top-level KPI overrides — sections not listed here just use the shared data's own
 // section.stats unchanged.
 const SECTION_STATS_OVERRIDES: Partial<Record<string, V2Stat[]>> = {
   social: SOCIAL_STATS,
   'search-ai': SEARCH_AI_STATS,
   reviews: REVIEWS_STATS,
+  surveys: SURVEYS_STATS,
 }
 
 // v2.1-only section label override — the shared data calls this section "Search AI"; kept local
@@ -256,8 +264,8 @@ const SECTION_LABEL_OVERRIDES: Record<string, string> = {
 
 // v2.1-only action-needed label overrides, and a per-state override of which stats even show.
 // - Search AI: "Recommendations pending review" -> "Recommendations pending".
-// - Listings: "Recommendations awaiting review" is dropped in Empty state, and renamed to
-//   "Recommendation sizing" in FTU/Filled.
+// - Listings: "Recommendations awaiting review" is dropped in Empty state, renamed to
+//   "Recommendation sizing" in FTU, and "Recommendation pending" in Filled.
 // - Reviews: "Replies awaiting approval" is dropped in Empty state only.
 function getSectionActionNeeded(section: { id: string; actionNeeded?: V2Stat[] }, dataState: DataState): V2Stat[] {
   const stats = section.actionNeeded ?? []
@@ -266,7 +274,8 @@ function getSectionActionNeeded(section: { id: string; actionNeeded?: V2Stat[] }
   }
   if (section.id === 'listings') {
     if (dataState === 'empty') return stats.filter((s) => s.id !== 'awaiting-review')
-    return stats.map((s) => (s.id === 'awaiting-review' ? { ...s, label: 'Recommendation sizing' } : s))
+    const label = dataState === 'filled' ? 'Recommendation pending' : 'Recommendation sizing'
+    return stats.map((s) => (s.id === 'awaiting-review' ? { ...s, label } : s))
   }
   if (section.id === 'reviews' && dataState === 'empty') {
     return stats.filter((s) => s.id !== 'replies-awaiting-approval')
