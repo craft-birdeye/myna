@@ -219,6 +219,16 @@ const SOCIAL_STATS: V2Stat[] = [
   { id: 'audience-growth', value: '5.2%', label: 'Audience growth' },
 ]
 
+// Reviews' own top-level KPI set — adds Response rate alongside the shared data's Request
+// sent/Reviews received/3 star or less. Kept local rather than editing the shared
+// OVERVIEW_V2_SECTIONS file, since v2/v3 shouldn't pick it up.
+const REVIEWS_STATS: V2Stat[] = [
+  { id: 'requests-sent', value: '1.9K', label: 'Request sent' },
+  { id: 'reviews-received', value: '7', label: 'Reviews received' },
+  { id: 'reviews-response-rate', value: '72%', label: 'Response rate' },
+  { id: '3-star-or-less', value: '2', label: '3 star or less' },
+]
+
 // Search AI's own top-level KPI set — adds Sentiment score between Visibility score and Average
 // rank, and renames the headline stat to match the "AI Search" section rename below. Kept local
 // rather than editing the shared OVERVIEW_V2_SECTIONS file, since v2/v3 shouldn't pick it up.
@@ -229,6 +239,14 @@ const SEARCH_AI_STATS: V2Stat[] = [
   { id: 'sentiment-score', value: '78', label: 'Sentiment score' },
   { id: 'average-rank', value: '4', label: 'Average rank' },
 ]
+
+// Per-section top-level KPI overrides — sections not listed here just use the shared data's own
+// section.stats unchanged.
+const SECTION_STATS_OVERRIDES: Partial<Record<string, V2Stat[]>> = {
+  social: SOCIAL_STATS,
+  'search-ai': SEARCH_AI_STATS,
+  reviews: REVIEWS_STATS,
+}
 
 // v2.1-only section label override — the shared data calls this section "Search AI"; kept local
 // rather than editing OVERVIEW_V2_SECTIONS since v2/v3 shouldn't pick up the rename.
@@ -604,11 +622,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
                 {(section.stats || section.actionNeeded) && (
                   <V2StatGroup
                     stats={[
-                      ...(section.id === 'social'
-                        ? SOCIAL_STATS
-                        : section.id === 'search-ai'
-                          ? SEARCH_AI_STATS
-                          : (section.stats ?? [])),
+                      ...(SECTION_STATS_OVERRIDES[section.id] ?? section.stats ?? []),
                       ...withDanger(getSectionActionNeeded(section, dataState)),
                     ]}
                   />
