@@ -577,6 +577,7 @@ const HEALTHCARE_REMINDER_DEFAULT_WORKFLOW: AgentWorkflow = {
 
 export const AUTOMOTIVE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,           nodeDetails: FRONTDESK_NODE_DETAILS           },
+  'Front desk agent (exploration)': { nodes: FRONTDESK_NODES, nodeDetails: FRONTDESK_NODE_DETAILS },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,             nodeDetails: OUTREACH_NODE_DETAILS            },
 }
@@ -1545,6 +1546,7 @@ export const REVIEW_GENERATION_WORKFLOW: AgentWorkflow = {
 
 export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,             nodeDetails: FRONTDESK_HC_NODE_DETAILS          },
+  'Front desk agent (exploration)': { nodes: FRONTDESK_NODES, nodeDetails: FRONTDESK_HC_NODE_DETAILS },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,              nodeDetails: OUTREACH_NODE_DETAILS              },
   'Pre-visit agent':  { nodes: PREVISIT_NODES,             nodeDetails: PREVISIT_NODE_DETAILS              },
@@ -1557,6 +1559,7 @@ export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Review response agent replying after human approval': REVIEW_RESPONSE_WORKFLOW,
   'Review response agent suggesting replies in dashboard': REVIEW_RESPONSE_WORKFLOW,
   'Review response agents': REVIEW_RESPONSE_WORKFLOW,
+  'Review response agents (exploration)': REVIEW_RESPONSE_WORKFLOW,
   'Review generation agent': REVIEW_GENERATION_WORKFLOW,
   'Review generation agent with A/B testing': REVIEW_GENERATION_WORKFLOW,
   'Review generation agents': REVIEW_GENERATION_WORKFLOW,

@@ -1,6 +1,6 @@
 import type { Metric } from '../components/MetricTiles/MetricTiles.types'
 
-export type LogStatus = 'Complete' | 'Failed' | 'In progress'
+export type LogStatus = 'Complete' | 'Failed' | 'In progress' | 'Resolved' | 'Not resolved'
 
 export type LogStepId = 'trigger' | 'procedures'
 

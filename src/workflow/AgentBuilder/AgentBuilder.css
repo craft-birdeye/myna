@@ -1040,6 +1040,8 @@
   letter-spacing: -0.28px;
 }
 
+/* Legacy flex preview column — Preview now uses the absolute `.agent-builder__rhs`
+ * slot (same inset / radius as trigger & Test details). Kept for any external refs. */
 .agent-builder__preview {
   flex-shrink: 0;
   padding: 10px;
@@ -1511,8 +1513,9 @@
 /* Actions-only: transparent shell so switch + Run test sit as separate controls. */
 /*
  * Exploration: the actions pill is right-aligned rather than centred, and slides left to
- * clear whatever opens in the 390px right slot (node config / Help center / Test details).
- * Easing matches `agent-builder-rhs-slide-in` so the pill and the panel move together.
+ * clear whatever opens in the 390px right slot (node config / Help center / Test details /
+ * Front desk Preview). Easing matches `agent-builder-rhs-slide-in` so the pill and the
+ * panel move together.
  */
 .rr-chrome-top--right {
   left: auto;
@@ -1521,7 +1524,8 @@
   transition: right 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 390px panel + its 8px inset from the canvas edge + a 12px gap. */
+/* 390px panel + its 8px inset from the canvas edge + a 12px gap.
+ * Same footprint for trigger / Help / Test details / Front desk Preview. */
 .rr-chrome-top--right.rr-chrome-top--rhs-open {
   right: calc(390px + 8px + 12px);
 }

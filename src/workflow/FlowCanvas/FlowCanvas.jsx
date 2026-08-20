@@ -267,10 +267,11 @@ function SubAgentNodeWrapper(props) {
 const BRANCH_CHIP_LABEL_MAX = 24;
 
 function BranchPathNodeWrapper({ id, data }) {
-  const isSelected = id === data.selectedNodeId;
+  const isSelected = id === data.selectedNodeId || id === data.focusBranchPathId;
   const canDelete = !data.viewOnly && !data.isFallback && !data.isVoiceCallBranch && !!data.onDelete;
   const fullLabel = String(data.label ?? '').trim();
-  const description = String(data.description || '').trim();
+  // Fallback path has no description tooltip on the canvas.
+  const description = data.isFallback ? '' : String(data.description || '').trim();
   const isTruncated = fullLabel.length > BRANCH_CHIP_LABEL_MAX;
   const displayLabel = isTruncated
     ? `${fullLabel.slice(0, BRANCH_CHIP_LABEL_MAX)}…`
@@ -302,7 +303,9 @@ function BranchPathNodeWrapper({ id, data }) {
         <Handle type="target" position={Position.Top} />
         <div className={branchStyles.chipRow}>
           <div className={chipClass}>
-            {isTruncated ? (
+            {data.isFallback ? (
+              labelEl
+            ) : isTruncated ? (
               <Tooltip content={truncatedTooltip} variant="detail" side="top">
                 {labelEl}
               </Tooltip>

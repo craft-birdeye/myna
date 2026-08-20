@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { FormInput, TextArea, Tooltip } from '../../../elemental-stubs';
+import { FormInput, TextArea } from '../../../elemental-stubs';
 import Conditions from '../../../Molecules/Conditions/Conditions';
+import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import styles from './ControlBranchBody.module.css';
+
+const FALLBACK_PATH_INFO =
+  'This path runs when none of the branch conditions above are met.';
 
 const DEFAULT_CONDITION_OPTIONS = {
   field: [
@@ -155,7 +159,7 @@ function BranchAccordionItem({
 
   const header = (
     <div
-      className={`${styles.accordionHeader}${expanded ? ` ${styles.accordionHeaderOpen}` : ''}`}
+      className={`${styles.accordionHeader}${expanded ? ` ${styles.accordionHeaderOpen}` : ''}${isFallback ? ` ${styles.accordionHeaderFallback}` : ''}`}
       onClick={() => onToggle?.()}
       role="button"
       tabIndex={0}
@@ -166,50 +170,67 @@ function BranchAccordionItem({
         }
       }}
     >
-      <span
-        className={`${styles.dragHandle}${canReorder ? '' : ` ${styles.dragHandleDisabled}`}`}
-        draggable={canReorder}
-        onDragStart={(e) => {
-          if (!canReorder) return;
-          e.stopPropagation();
-          const card = itemRef.current;
-          if (card && e.dataTransfer) {
-            const rect = card.getBoundingClientRect();
-            e.dataTransfer.effectAllowed = 'move';
-            // Show the full branch card as the drag ghost (not just the handle icon).
-            e.dataTransfer.setDragImage(card, e.clientX - rect.left, e.clientY - rect.top);
-          }
-          setIsDragging(true);
-          onDragStart?.(e);
-        }}
-        onDragEnd={(e) => {
-          setIsDragging(false);
-          onDragEnd?.(e);
-        }}
-        onClick={(e) => e.stopPropagation()}
-        aria-hidden
-      >
-        <span className="material-symbols-outlined">drag_indicator</span>
-      </span>
-      <span className={styles.accordionTitle}>{headerTitle}</span>
-      <div className={styles.accordionActions}>
-        {canDelete && (
-          <button
-            type="button"
-            className={styles.deleteBtn}
-            aria-label="Delete branch"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete?.();
-            }}
-          >
-            <span className="material-symbols-outlined">delete</span>
-          </button>
-        )}
-        <span className="material-symbols-outlined" aria-hidden>
-          {expanded ? 'expand_less' : 'expand_more'}
+      {!isFallback && (
+        <span
+          className={`${styles.dragHandle}${canReorder ? '' : ` ${styles.dragHandleDisabled}`}`}
+          draggable={canReorder}
+          onDragStart={(e) => {
+            if (!canReorder) return;
+            e.stopPropagation();
+            const card = itemRef.current;
+            if (card && e.dataTransfer) {
+              const rect = card.getBoundingClientRect();
+              e.dataTransfer.effectAllowed = 'move';
+              // Show the full branch card as the drag ghost (not just the handle icon).
+              e.dataTransfer.setDragImage(card, e.clientX - rect.left, e.clientY - rect.top);
+            }
+            setIsDragging(true);
+            onDragStart?.(e);
+          }}
+          onDragEnd={(e) => {
+            setIsDragging(false);
+            onDragEnd?.(e);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-hidden
+        >
+          <span className="material-symbols-outlined">drag_indicator</span>
         </span>
-      </div>
+      )}
+      {isFallback ? (
+        <span className={styles.fallbackTitleRow}>
+          <span className={styles.accordionTitle}>{headerTitle}</span>
+          <span
+            className={styles.fallbackInfo}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <InfoTooltip text={FALLBACK_PATH_INFO} variant="detail" />
+          </span>
+        </span>
+      ) : (
+        <span className={styles.accordionTitle}>{headerTitle}</span>
+      )}
+      {!isFallback && (
+        <div className={styles.accordionActions}>
+          {canDelete && (
+            <button
+              type="button"
+              className={styles.deleteBtn}
+              aria-label="Delete branch"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.();
+              }}
+            >
+              <span className="material-symbols-outlined">delete</span>
+            </button>
+          )}
+          <span className="material-symbols-outlined" aria-hidden>
+            {expanded ? 'expand_less' : 'expand_more'}
+          </span>
+        </div>
+      )}
     </div>
   );
 
@@ -224,88 +245,74 @@ function BranchAccordionItem({
       onDragOver={canReorder || onDragOver ? onDragOver : undefined}
       onDrop={canReorder || onDrop ? onDrop : undefined}
     >
-      {isFallback ? (
-        <Tooltip text="This branch runs last when no conditions match." position="top" display="block">
-          {header}
-        </Tooltip>
-      ) : (
-        header
-      )}
+      {header}
 
-      {expanded && (
+      {expanded && !isFallback && (
         <div className={styles.accordionBody}>
-          {isFallback ? (
-            <p className={styles.fallbackNote}>
-              This path runs when none of the branch conditions above are met.
-            </p>
-          ) : (
-            <>
-              <FormInput
-                name={`branch-name-${branch.id}`}
-                type="text"
-                placeholder="Enter name"
-                value={name}
-                onChange={(e) => onPathFieldChange?.(branch.id, 'branchName', e.target.value)}
+          <FormInput
+            name={`branch-name-${branch.id}`}
+            type="text"
+            placeholder="Enter name"
+            value={name}
+            onChange={(e) => onPathFieldChange?.(branch.id, 'branchName', e.target.value)}
+          />
+          <div className={styles.fieldBlock}>
+            <SectionLabel label="Description" />
+            <TextArea
+              name={`branch-desc-${branch.id}`}
+              placeholder="Enter branch description"
+              value={description}
+              onChange={(e) => onPathFieldChange?.(branch.id, 'description', e.target.value)}
+              noFloatingLabel
+              rows={3}
+            />
+          </div>
+          <div className={styles.conditionsBlock}>
+            {filledConditions.length === 0 ? (
+              <>
+                <SectionLabel label="Condition" />
+                {addConditionControl}
+              </>
+            ) : (
+              <Conditions
+                conditions={filledConditions}
+                logic={logic}
+                label="Condition"
+                showAdvancedFilters={false}
+                onConditionChange={(id, field, value) => {
+                  updateConditions(
+                    filledConditions.map((c) =>
+                      c.id === id ? { ...c, [`${field}Value`]: value } : c,
+                    ),
+                  );
+                }}
+                onLogicChange={(val) => onPathFieldChange?.(branch.id, 'logic', val)}
+                onAddCondition={() => setAddMenuOpen(true)}
+                onRemoveCondition={(id) =>
+                  updateConditions(filledConditions.filter((c) => c.id !== id))
+                }
+                onAdvancedFilters={() => {}}
+                conditionOptions={conditionOptions}
               />
-              <div className={styles.fieldBlock}>
-                <SectionLabel label="Description" />
-                <TextArea
-                  name={`branch-desc-${branch.id}`}
-                  placeholder="Enter branch description"
-                  value={description}
-                  onChange={(e) => onPathFieldChange?.(branch.id, 'description', e.target.value)}
-                  noFloatingLabel
-                  rows={3}
-                />
+            )}
+            {filledConditions.length > 0 && addMenuOpen && (
+              <div className={styles.addConditionWrap} ref={addMenuRef}>
+                <div className={`${styles.addConditionMenu} ${styles.addConditionMenuBelowConditions}`} role="listbox">
+                  {fieldOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={styles.addConditionMenuItem}
+                      role="option"
+                      onClick={() => handlePickConditionField(opt)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className={styles.conditionsBlock}>
-                {filledConditions.length === 0 ? (
-                  <>
-                    <SectionLabel label="Condition" />
-                    {addConditionControl}
-                  </>
-                ) : (
-                  <Conditions
-                    conditions={filledConditions}
-                    logic={logic}
-                    label="Condition"
-                    showAdvancedFilters={false}
-                    onConditionChange={(id, field, value) => {
-                      updateConditions(
-                        filledConditions.map((c) =>
-                          c.id === id ? { ...c, [`${field}Value`]: value } : c,
-                        ),
-                      );
-                    }}
-                    onLogicChange={(val) => onPathFieldChange?.(branch.id, 'logic', val)}
-                    onAddCondition={() => setAddMenuOpen(true)}
-                    onRemoveCondition={(id) =>
-                      updateConditions(filledConditions.filter((c) => c.id !== id))
-                    }
-                    onAdvancedFilters={() => {}}
-                    conditionOptions={conditionOptions}
-                  />
-                )}
-                {filledConditions.length > 0 && addMenuOpen && (
-                  <div className={styles.addConditionWrap} ref={addMenuRef}>
-                    <div className={`${styles.addConditionMenu} ${styles.addConditionMenuBelowConditions}`} role="listbox">
-                      {fieldOptions.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          className={styles.addConditionMenuItem}
-                          role="option"
-                          onClick={() => handlePickConditionField(opt)}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -317,6 +324,7 @@ export default function ControlBranchBody({
   onFieldChange,
   onPathFieldChange,
   onDeleteBranch,
+  onFocusBranchPath,
 }) {
   const basedOn = initialValues.basedOn ?? 'conditions';
   const [branches, setBranches] = useState(() => {
@@ -343,12 +351,15 @@ export default function ControlBranchBody({
       ]),
     );
   });
-  // Match design: rows start collapsed.
-  const [expandedId, setExpandedId] = useState(null);
+  // Match design: rows start collapsed, unless a canvas path chip requested one open.
+  const [expandedId, setExpandedId] = useState(
+    () => initialValues.initialExpandedPathId || null,
+  );
   const [dragIndex, setDragIndex] = useState(null);
   /** @type {[{ index: number, position: 'before' | 'after' } | null, Function]} */
   const [dropIndicator, setDropIndicator] = useState(null);
   const didSeedDefaultsRef = React.useRef(false);
+  const accordionListRef = React.useRef(null);
 
   const branchIdsKey = (initialValues.branches ?? []).map((b) => b.id).join('|');
   React.useEffect(() => {
@@ -383,6 +394,27 @@ export default function ControlBranchBody({
     );
     onFieldChange?.('branches', defaults);
   }, [branchIdsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the requested path expanded when opening from a canvas chip. Clearing
+  // the prop (e.g. opening the parent Branch card) collapses all rows again.
+  // `expandNonce` re-applies expand when the same chip is clicked again.
+  // Fallback ("No conditions met") has no editable body — never expand it.
+  React.useEffect(() => {
+    const pathId = initialValues.initialExpandedPathId || null;
+    if (!pathId) {
+      setExpandedId(null);
+      return undefined;
+    }
+    const fromDetails = initialValues.pathDetails?.[pathId];
+    const fromBranches = (initialValues.branches || []).find((b) => b.id === pathId);
+    const isFallbackPath = !!(fromDetails?.isFallback || fromBranches?.isFallback);
+    setExpandedId(isFallbackPath ? null : pathId);
+    const frame = requestAnimationFrame(() => {
+      const el = accordionListRef.current?.querySelector(`[data-branch-path-id="${pathId}"]`);
+      el?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [initialValues.initialExpandedPathId, initialValues.expandNonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canReorderOrDelete = branches.length > 2;
 
@@ -423,6 +455,7 @@ export default function ControlBranchBody({
     }));
     setExpandedId(newId);
     onFieldChange?.('branches', next);
+    onFocusBranchPath?.(newId);
   }
 
   function clearDragState() {
@@ -527,7 +560,7 @@ export default function ControlBranchBody({
         </div>
         <p className={styles.branchesHint}>Branches run in the order listed</p>
 
-        <div className={styles.accordionList}>
+        <div className={styles.accordionList} ref={accordionListRef}>
           {branches.map((b, i) =>
             basedOn === 'percentage' ? (
               <div key={b.id} className={styles.pctItem}>
@@ -548,7 +581,7 @@ export default function ControlBranchBody({
                 </div>
               </div>
             ) : (
-              <div key={b.id} className={styles.accordionSlot}>
+              <div key={b.id} className={styles.accordionSlot} data-branch-path-id={b.id}>
                 {dropIndicator?.index === i && dropIndicator.position === 'before' && (
                   <div className={`${styles.dropLine} ${styles.dropLineBefore}`} aria-hidden />
                 )}
@@ -558,7 +591,15 @@ export default function ControlBranchBody({
                   expanded={expandedId === b.id}
                   canReorder={canReorderOrDelete && !b.isFallback}
                   canDelete={canReorderOrDelete && !b.isFallback}
-                  onToggle={() => setExpandedId((id) => (id === b.id ? null : b.id))}
+                  onToggle={() => {
+                    if (b.isFallback) {
+                      onFocusBranchPath?.(b.id);
+                      return;
+                    }
+                    const next = expandedId === b.id ? null : b.id;
+                    setExpandedId(next);
+                    onFocusBranchPath?.(next);
+                  }}
                   onDragStart={() => setDragIndex(i)}
                   onDragOver={(e) => handleItemDragOver(e, i)}
                   onDrop={handleItemDrop}

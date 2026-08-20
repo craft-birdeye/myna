@@ -73,4 +73,10 @@ export interface LogDetailsPanelProps {
   routedVia?: string
   /** Whether to show the "Call details" tab at all — some agents (e.g. Reminder) don't have one. */
   showCallDetails?: boolean
+  /** Front desk exploration: show status chip above the call-end-reason copy. */
+  callEndResultBadge?: string
+  /** Front desk exploration: e.g. "4 of 5". */
+  userRating?: string
+  /** Front desk exploration: language / translate control under AI summary. */
+  showTranscriptTranslation?: boolean
 }

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SingleSelect } from '../../../elemental-stubs';
-import UserPromptInput from '../../../Molecules/Inputs/UserPromptInput/UserPromptInput';
+import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal';
+import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons';
 import './HandleResponseDrawer.css';
 
 export const RESPONSE_HANDLING_OPTIONS = [
@@ -66,18 +67,23 @@ function NativeDrawer({ isOpen, onClose, children }) {
  */
 export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSave }) {
   const [responseText, setResponseText] = useState('');
+  const [responseLabel, setResponseLabel] = useState('');
   const [responseHandling, setResponseHandling] = useState('post-directly');
   const [postAfter, setPostAfter] = useState('');
+  const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
+  const fieldTriggerRef = useRef(null);
 
   // Re-seed from the saved config each time the drawer opens.
   useEffect(() => {
     if (!isOpen) return;
     setResponseText(value.responseText ?? '');
+    setResponseLabel(value.responseLabel ?? value.responseText ?? '');
     setResponseHandling(value.responseHandling ?? 'post-directly');
     setPostAfter(value.postAfter ?? '');
+    setFieldPickerOpen(false);
   }, [isOpen]);
 
-  const draft = { responseText, responseHandling, postAfter };
+  const draft = { responseText, responseLabel, responseHandling, postAfter };
   const canSave = isHandleResponseConfigComplete(draft);
 
   return (
@@ -105,13 +111,43 @@ export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSa
             <span className="hrd__label">
               Response text<span className="hrd__required"> *</span>
             </span>
-            <UserPromptInput
-              hideLabel
-              fieldsOnly
-              value={responseText}
-              onChange={setResponseText}
-              placeholder=""
-            />
+            <button
+              ref={fieldTriggerRef}
+              type="button"
+              className={`hrd__select${fieldPickerOpen ? ' hrd__select--open' : ''}`}
+              onClick={() => setFieldPickerOpen((open) => !open)}
+              aria-haspopup="dialog"
+              aria-expanded={fieldPickerOpen}
+              aria-label="Fields"
+            >
+              <span className="hrd__select-value">
+                {responseText ? (
+                  <span className="hrd__field-chip">
+                    <span className="hrd__field-chip-swatch">{'{}'}</span>
+                    <span className="hrd__field-chip-label">{responseLabel || responseText}</span>
+                  </span>
+                ) : (
+                  <span className="hrd__select-placeholder">Select response text</span>
+                )}
+              </span>
+              <span className={`hrd__select-fields-icon${fieldPickerOpen ? ' hrd__select-fields-icon--active' : ''}`}>
+                <VariableIcon />
+              </span>
+            </button>
+            {fieldPickerOpen && (
+              <FieldPickerModal
+                onClose={() => setFieldPickerOpen(false)}
+                onSelectField={(fieldValue, name) => {
+                  setResponseText(fieldValue);
+                  setResponseLabel(name || fieldValue);
+                  setFieldPickerOpen(false);
+                }}
+                anchorEl={fieldTriggerRef.current}
+                showTriggerFields
+                placement="dropdown"
+                overlayZIndex={10050}
+              />
+            )}
           </div>
 
           <div className="hrd__field">

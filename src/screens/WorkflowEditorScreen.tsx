@@ -215,7 +215,7 @@ export function WorkflowEditorScreen({
             },
           },
         }
-    : isHC && agentBaseName === 'Front desk agent'
+    : isHC && (agentBaseName === 'Front desk agent' || agentBaseName === 'Front desk agent (exploration)')
       ? {
           nodes: baseWorkflow.nodes,
           nodeDetails: {
@@ -235,6 +235,7 @@ export function WorkflowEditorScreen({
 
   const AGENT_NAV_MAP: Record<string, string> = {
     'Front desk agent': 'frontdesk',
+    'Front desk agent (exploration)': 'frontdesk',
     'Reminder agent': 'inbox',
     'Outreach agent': 'marketing',
     'Pre-visit agent': 'frontdesk',

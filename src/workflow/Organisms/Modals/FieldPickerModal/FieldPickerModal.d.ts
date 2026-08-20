@@ -6,6 +6,7 @@ export interface FieldPickerModalProps {
   anchorEl?: HTMLElement | null
   overlayZIndex?: number
   showTriggerFields?: boolean
+  placement?: 'dock' | 'dropdown'
 }
 
 declare const FieldPickerModal: FC<FieldPickerModalProps>
