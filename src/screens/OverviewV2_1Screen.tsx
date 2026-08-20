@@ -16,7 +16,6 @@ import robinIcon from '../assets/icon-robin.svg'
 import woodenBirdJay from '../assets/wooden-bird-jay.png'
 import woodenBirdMyna from '../assets/wooden-bird-myna.png'
 import woodenBirdRobin from '../assets/wooden-bird-robin.png'
-import woodenBirdsFlying from '../assets/wooden-birds-flying.png'
 import googleIcon from '../assets/icon-google.svg'
 import googlePlayIcon from '../assets/icon-google-play.svg'
 import { getAgentDirectory, type AgentDirectoryEntry } from '../data/agentDirectoryData'
@@ -526,6 +525,10 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
 // keeps.
 const EMPTY_BANNER_GRADIENT = 'linear-gradient(135deg, #3fae6a 0%, #4a72d0 35%, #7c5cc9 65%, #c98a7e 100%)'
 
+// Thin magenta -> indigo -> magenta accent strip bled across the top edge of the AI Co-worker
+// summary card, in every data state.
+const SUMMARY_TOP_BAR_GRADIENT = 'linear-gradient(90deg, #c026d3 0%, #ec4899 18%, #8b5cf6 50%, #6366f1 78%, #c026d3 100%)'
+
 // Shown in all three states — Empty/FTU keep the estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
 // real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
@@ -555,6 +558,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
       ]
   return (
     <SectionCard>
+      <div className="-mx-xl -mt-xl h-1 rounded-t-md" style={{ background: SUMMARY_TOP_BAR_GRADIENT }} />
       {!filled && (
         <div
           className={`-mx-xl -mt-xl flex items-center gap-lg rounded-t-md p-lg ${bannerOnly ? '-mb-xl rounded-b-md' : ''} ${
@@ -586,23 +590,20 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
       )}
       {!bannerOnly && (
         <>
-          <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI Co-worker Summary</h3>
-          <div className="flex items-center justify-between gap-lg">
-            <div className={KPI_ROW_CLASS}>
-              {stats.map((s) => (
-                <div key={s.id} className={`${KPI_TILE_CLASS} ${s.id === 'time-saved' ? 'mr-lg' : ''}`}>
-                  <div className="flex items-end gap-xs">
-                    <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
-                    {!s.muted && !NO_DELTA_IDS.has(s.id) && <DeltaBadge id={s.id} />}
-                  </div>
-                  <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
-                    {s.label}
-                    {s.tooltip && <EstimateTooltip />}
-                  </p>
+          <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI Co-worker summary</h3>
+          <div className={KPI_ROW_CLASS}>
+            {stats.map((s) => (
+              <div key={s.id} className={`${KPI_TILE_CLASS} ${s.id === 'time-saved' ? 'mr-lg' : ''}`}>
+                <div className="flex items-end gap-xs">
+                  <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
+                  {!s.muted && !NO_DELTA_IDS.has(s.id) && <DeltaBadge id={s.id} />}
                 </div>
-              ))}
-            </div>
-            <img src={woodenBirdsFlying} alt="" className="h-12 w-auto shrink-0" />
+                <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
+                  {s.label}
+                  {s.tooltip && <EstimateTooltip />}
+                </p>
+              </div>
+            ))}
           </div>
 
           {filled && (
