@@ -1316,17 +1316,6 @@
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
 }
 
-.rr-chrome-back-cluster--identity:has(.rr-chrome-identity--needs-details) {
-  height: auto;
-  min-height: 40px;
-  align-items: flex-start;
-  padding: 8px 16px 8px 12px;
-}
-
-.rr-chrome-back-cluster--identity:has(.rr-chrome-identity--needs-details) .rr-chrome-back {
-  margin-top: 2px;
-}
-
 .rr-chrome-back-cluster--identity .ab-header-status {
   flex-shrink: 0;
 }
@@ -1353,7 +1342,6 @@
   flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
 }
 
 .rr-chrome-identity__row {
@@ -1361,36 +1349,14 @@
   min-width: 0;
   width: 100%;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.rr-chrome-identity__hint {
+.rr-chrome-identity__name-group {
   display: inline-flex;
+  min-width: 0;
   align-items: center;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: -0.24px;
-  color: #c45500;
-  text-align: left;
-}
-
-.rr-chrome-identity__hint-icon {
-  flex-shrink: 0;
-  font-size: 14px !important;
-  line-height: 1;
-  color: inherit;
-}
-
-.rr-chrome-identity__hint:hover {
-  color: #a34600;
-  text-decoration: underline;
+  gap: 2px;
 }
 
 .rr-chrome-identity__title {
@@ -1398,7 +1364,6 @@
   min-width: 0;
   max-width: 100%;
   align-items: center;
-  gap: 6px;
   margin: 0;
   padding: 0;
   border: none;
@@ -1406,6 +1371,34 @@
   cursor: pointer;
   font: inherit;
   color: #212121;
+}
+
+.rr-chrome-identity__hint {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  color: #c45500;
+}
+
+.rr-chrome-identity__hint:hover {
+  background: #f2f4f7;
+  color: #a34600;
+}
+
+.rr-chrome-identity__hint-icon {
+  font-size: 16px !important;
+  line-height: 1;
+  color: inherit;
 }
 
 .rr-chrome-identity__title:disabled {

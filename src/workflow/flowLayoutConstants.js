@@ -1,6 +1,14 @@
 /** Measured height of a standard trigger/task/control card (header + step + description). */
 export const FLOW_STANDARD_NODE_HEIGHT = 116;
 
+/**
+ * Width of the centered spine / branch-arm card wrapper (matches canvas node shells).
+ * Passed to React Flow as `initialWidth` (with `initialHeight`) so nodes pass
+ * `nodeHasDimensions` immediately — XYFlow keeps undimensioned nodes
+ * `visibility:hidden`, which made freshly dropped cards vanish on scratch create.
+ */
+export const FLOW_CARD_WIDTH = 432;
+
 export const FLOW_START_GAP = 150;
 /** Measured height of the Start pill (icon + title + locations link). */
 export const FLOW_START_NODE_HEIGHT = 74;

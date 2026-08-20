@@ -87,7 +87,7 @@ const VARIANTS = {
   },
   controlBranch: {
     body: ControlBranchBody,
-    showActions: true,
+    showActions: false,
     showPromptStrength: false,
   },
   conversationTrigger: {
