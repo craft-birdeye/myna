@@ -24,7 +24,8 @@
 .chip {
   min-width: 0;
   width: max-content;
-  max-width: 160px;
+  /* Fits ~24-char labels + optional collapse control; character truncation is the primary clamp. */
+  max-width: 220px;
   height: 28px;
   border-radius: 4px;
   border: 1px solid #c5d0e6;
@@ -56,7 +57,22 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+}
+
+.tooltipBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipTitle {
+  display: block;
+}
+
+.tooltipDescription {
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .chipCollapse {
