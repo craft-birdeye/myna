@@ -16,6 +16,7 @@ import robinIcon from '../assets/icon-robin.svg'
 import woodenBirdJay from '../assets/wooden-bird-jay.png'
 import woodenBirdMyna from '../assets/wooden-bird-myna.png'
 import woodenBirdRobin from '../assets/wooden-bird-robin.png'
+import woodenBirdsFlying from '../assets/wooden-birds-flying.png'
 import googleIcon from '../assets/icon-google.svg'
 import googlePlayIcon from '../assets/icon-google-play.svg'
 import { getAgentDirectory, type AgentDirectoryEntry } from '../data/agentDirectoryData'
@@ -586,19 +587,22 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
       {!bannerOnly && (
         <>
           <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">AI Co-worker Summary</h3>
-          <div className={KPI_ROW_CLASS}>
-            {stats.map((s) => (
-              <div key={s.id} className={`${KPI_TILE_CLASS} ${s.id === 'time-saved' ? 'mr-lg' : ''}`}>
-                <div className="flex items-end gap-xs">
-                  <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
-                  {!s.muted && !NO_DELTA_IDS.has(s.id) && <DeltaBadge id={s.id} />}
+          <div className="flex items-center justify-between gap-lg">
+            <div className={KPI_ROW_CLASS}>
+              {stats.map((s) => (
+                <div key={s.id} className={`${KPI_TILE_CLASS} ${s.id === 'time-saved' ? 'mr-lg' : ''}`}>
+                  <div className="flex items-end gap-xs">
+                    <p className={`m-0 whitespace-nowrap text-display ${s.muted ? 'text-text-tertiary' : 'text-text-primary'}`}>{s.value}</p>
+                    {!s.muted && !NO_DELTA_IDS.has(s.id) && <DeltaBadge id={s.id} />}
+                  </div>
+                  <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
+                    {s.label}
+                    {s.tooltip && <EstimateTooltip />}
+                  </p>
                 </div>
-                <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
-                  {s.label}
-                  {s.tooltip && <EstimateTooltip />}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
+            <img src={woodenBirdsFlying} alt="" className="h-12 w-auto shrink-0" />
           </div>
 
           {filled && (
