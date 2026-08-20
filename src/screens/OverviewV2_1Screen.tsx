@@ -3,6 +3,7 @@ import { Icon, Tooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
   FigmaIconInbox,
+  FigmaIconReferrals,
   FigmaIconSurveys,
   FigmaIconTicketing,
   FigmaIconContentHub,
@@ -19,6 +20,7 @@ import {
   OVERVIEW_V2_FRONTDESK_SUBAREAS,
   type V2Agent,
   type V2Stat,
+  type V2Section,
 } from '../data/overviewV2Data'
 import {
   OVERVIEW_REVIEWS_BREAKDOWN,
@@ -194,6 +196,13 @@ const ORDERED_SECTIONS = OVERVIEW_V2_SECTIONS.map((s) => s.id)
   .filter((id) => id !== 'search-ai')
   .flatMap((id) => (id === 'listings' ? ['search-ai', id] : [id]))
   .map((id) => OVERVIEW_V2_SECTIONS.find((s) => s.id === id)!)
+
+// Empty state only — matches the main nav's product order (Inbox, Listings AI, Reviews AI,
+// Search AI, Referrals, Payments, Appointments, Social AI, Surveys AI, Ticketing, ...), skipping
+// entries this page has no widget for (Payments, Contacts, Marketing Automation AI, Reports,
+// Insights AI). Inbox/Referrals/Appointments are bespoke cards, not OVERVIEW_V2_SECTIONS entries.
+const EMPTY_STATE_SECTION_ORDER = ['listings', 'reviews', 'search-ai']
+const EMPTY_STATE_SECTION_ORDER_AFTER_APPOINTMENTS = ['social', 'surveys', 'ticketing']
 
 // KPI ids that show a value but no period-over-period delta — the "Listings" headline count,
 // Average rank (already its own rank number, a delta doesn't read meaningfully), and every
@@ -668,55 +677,153 @@ const EMPTY_STATE_INBOX_STATS = [
   { id: 'open-leads', value: '682', label: 'Open leads' },
 ]
 
-// Empty state only: replaces Front desk with the two simpler cards a brand-new business would
-// actually see before any co-worker is set up — plain KPIs pulled straight from Birdeye's
-// existing Appointments/Inbox surfaces, no deltas (there's no history yet to compare against).
-function EmptyStateAppointmentsAndInbox() {
+// Empty state only: replaces Front desk with a simpler card a brand-new business would actually
+// see before any co-worker is set up — plain KPIs pulled straight from Birdeye's existing
+// Appointments surface, no deltas (there's no history yet to compare against).
+function EmptyStateAppointmentsCard() {
   return (
-    <>
-      <SectionCard>
-        <div className="flex items-center justify-between">
-          <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-            <FigmaIconFrontDesk size={20} className="text-text-icon" />
-            Appointments
-          </h3>
-          <button
-            type="button"
-            aria-label="Filter"
-            className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-          >
-            <Icon name="tune" size={20} />
-          </button>
-        </div>
-        <div className={KPI_ROW_CLASS}>
-          {EMPTY_STATE_APPOINTMENTS_STATS.map((s) => (
-            <div key={s.id} className={KPI_TILE_CLASS}>
-              <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
-              <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
-            </div>
-          ))}
-          <div className={KPI_TILE_CLASS}>
-            <p className="m-0 whitespace-nowrap text-display text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.value}</p>
-            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.label}</p>
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard>
+    <SectionCard>
+      <div className="flex items-center justify-between">
         <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-          <FigmaIconInbox size={20} className="text-text-icon" />
-          Inbox
+          <FigmaIconFrontDesk size={20} className="text-text-icon" />
+          Appointments
         </h3>
-        <div className={KPI_ROW_CLASS}>
-          {EMPTY_STATE_INBOX_STATS.map((s) => (
-            <div key={s.id} className={KPI_TILE_CLASS}>
-              <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
-              <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
-            </div>
+        <button
+          type="button"
+          aria-label="Filter"
+          className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+        >
+          <Icon name="tune" size={20} />
+        </button>
+      </div>
+      <div className={KPI_ROW_CLASS}>
+        {EMPTY_STATE_APPOINTMENTS_STATS.map((s) => (
+          <div key={s.id} className={KPI_TILE_CLASS}>
+            <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+          </div>
+        ))}
+        <div className={KPI_TILE_CLASS}>
+          <p className="m-0 whitespace-nowrap text-display text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.value}</p>
+          <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.label}</p>
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
+// Empty state only — same plain-KPI treatment as Appointments, pulled from Birdeye's Inbox
+// surface. Rendered first in Empty state, matching the main nav's product order.
+function EmptyStateInboxCard() {
+  return (
+    <SectionCard>
+      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <FigmaIconInbox size={20} className="text-text-icon" />
+        Inbox
+      </h3>
+      <div className={KPI_ROW_CLASS}>
+        {EMPTY_STATE_INBOX_STATS.map((s) => (
+          <div key={s.id} className={KPI_TILE_CLASS}>
+            <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  )
+}
+
+const EMPTY_STATE_REFERRALS_STATS = [
+  { id: 'referral-requests-sent', value: '125K', label: 'Requests sent' },
+  { id: 'referral-shared', value: '563', label: 'Shared' },
+  { id: 'referral-leads', value: '504', label: 'Leads' },
+]
+
+// Empty state only — Birdeye's Referrals product doesn't have its own OVERVIEW_V2_SECTIONS
+// entry, so this is a bespoke card (same plain-KPI, no-delta treatment as Appointments/Inbox),
+// slotted into the main nav's product order between Search AI and Appointments.
+function EmptyStateReferralsCard() {
+  return (
+    <SectionCard>
+      <div className="flex items-center justify-between">
+        <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+          <FigmaIconReferrals size={20} className="text-text-icon" />
+          Referrals
+        </h3>
+        <button
+          type="button"
+          aria-label="Filter"
+          className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+        >
+          <Icon name="tune" size={20} />
+        </button>
+      </div>
+      <div className={KPI_ROW_CLASS}>
+        {EMPTY_STATE_REFERRALS_STATS.map((s) => (
+          <div key={s.id} className={KPI_TILE_CLASS}>
+            <p className="m-0 whitespace-nowrap text-display text-text-action">{s.value}</p>
+            <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  )
+}
+
+// One card per OVERVIEW_V2_SECTIONS entry — extracted out of the page's render so Empty state can
+// interleave Inbox/Referrals/Appointments between specific sections instead of appending them
+// all at the end.
+function ProductSectionCard({
+  section,
+  showAgents,
+  dataState,
+}: {
+  section: V2Section
+  showAgents: boolean
+  dataState: DataState
+}) {
+  const NavIcon = SECTION_NAV_ICON[section.id]
+  const isCx = CX_SECTION_IDS.has(section.id)
+  const showAgentRows = showAgents && section.agents.length > 0
+  const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
+  const hasBodyContent = Boolean(section.stats) || Boolean(section.actionNeeded) || section.id === 'reviews' || showAgentRows
+  const hasAnyContent = hasBodyContent || showSetupBanner
+  if (!hasAnyContent) return null
+  return (
+    <SectionCard>
+      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
+        {SECTION_LABEL_OVERRIDES[section.id] ?? section.label}
+      </h3>
+
+      {(section.stats || section.actionNeeded) && (
+        <V2StatGroup
+          stats={[
+            ...(SECTION_STATS_OVERRIDES[section.id] ?? section.stats ?? []),
+            ...withDanger(getSectionActionNeeded(section, dataState)),
+          ]}
+        />
+      )}
+
+      {section.id === 'listings' && (
+        <div className="flex flex-col gap-md">
+          <h4 className="m-0 text-body text-text-primary">Google report</h4>
+          <V2StatGroup stats={OVERVIEW_LISTINGS_GOOGLE_REPORT} />
+        </div>
+      )}
+
+      {section.id === 'reviews' && <ReviewsOverview />}
+
+      {showAgentRows && (
+        <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
+          {section.agents.map((agent) => (
+            <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
           ))}
         </div>
-      </SectionCard>
-    </>
+      )}
+
+      {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(section.agents)} />}
+    </SectionCard>
   )
 }
 
@@ -769,61 +876,48 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
               <h1 className="m-0 text-display text-text-primary">Welcome, {userName}!</h1>
               <p className="m-0 mt-xs text-body text-text-secondary">Here are the things which need your attention.</p>
             </div>
-            <DateRangeDropdown value={dateRange} onChange={setDateRange} />
+            <div className="flex shrink-0 items-center gap-sm">
+              <DateRangeDropdown value={dateRange} onChange={setDateRange} />
+              <button
+                type="button"
+                aria-label="Download"
+                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              >
+                <Icon name="download" size={20} />
+              </button>
+              <button
+                type="button"
+                aria-label="Filter"
+                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+              >
+                <Icon name="tune" size={20} />
+              </button>
+            </div>
           </div>
 
           <AiWorkforceSummaryCard dataState={dataState} dateRange={dateRange} />
 
-          {ORDERED_SECTIONS.map((section) => {
-            const NavIcon = SECTION_NAV_ICON[section.id]
-            const isCx = CX_SECTION_IDS.has(section.id)
-            const showAgentRows = showAgents && section.agents.length > 0
-            const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
-            const hasBodyContent = Boolean(section.stats) || Boolean(section.actionNeeded) || section.id === 'reviews' || showAgentRows
-            const hasAnyContent = hasBodyContent || showSetupBanner
-            if (!hasAnyContent) return null
-            return (
-              <SectionCard key={section.id}>
-                <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-                  {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
-                  {SECTION_LABEL_OVERRIDES[section.id] ?? section.label}
-                </h3>
-
-                {(section.stats || section.actionNeeded) && (
-                  <V2StatGroup
-                    stats={[
-                      ...(SECTION_STATS_OVERRIDES[section.id] ?? section.stats ?? []),
-                      ...withDanger(getSectionActionNeeded(section, dataState)),
-                    ]}
-                  />
-                )}
-
-                {section.id === 'listings' && (
-                  <div className="flex flex-col gap-md">
-                    <h4 className="m-0 text-body text-text-primary">Google report</h4>
-                    <V2StatGroup stats={OVERVIEW_LISTINGS_GOOGLE_REPORT} />
-                  </div>
-                )}
-
-                {section.id === 'reviews' && <ReviewsOverview />}
-
-                {showAgentRows && (
-                  <div className="flex flex-wrap gap-xl border-t border-border pt-lg">
-                    {section.agents.map((agent) => (
-                      <AgentRow key={agent.id} agent={agent} icon={isCx ? robinIcon : jayIcon} />
-                    ))}
-                  </div>
-                )}
-
-                {showSetupBanner && <AgentSetupBanner icon={isCx ? robinIcon : jayIcon} {...pickFeaturedStat(section.agents)} />}
-              </SectionCard>
-            )
-          })}
-
           {dataState === 'empty' ? (
-            <EmptyStateAppointmentsAndInbox />
+            <>
+              <EmptyStateInboxCard />
+              {EMPTY_STATE_SECTION_ORDER.map((id) => {
+                const section = ORDERED_SECTIONS.find((s) => s.id === id)
+                return section && <ProductSectionCard key={id} section={section} showAgents={showAgents} dataState={dataState} />
+              })}
+              <EmptyStateReferralsCard />
+              <EmptyStateAppointmentsCard />
+              {EMPTY_STATE_SECTION_ORDER_AFTER_APPOINTMENTS.map((id) => {
+                const section = ORDERED_SECTIONS.find((s) => s.id === id)
+                return section && <ProductSectionCard key={id} section={section} showAgents={showAgents} dataState={dataState} />
+              })}
+            </>
           ) : (
-            <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} dataState={dataState} />
+            <>
+              {ORDERED_SECTIONS.map((section) => (
+                <ProductSectionCard key={section.id} section={section} showAgents={showAgents} dataState={dataState} />
+              ))}
+              <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} dataState={dataState} />
+            </>
           )}
         </div>
       </div>
