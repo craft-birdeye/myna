@@ -4,7 +4,7 @@ import svgPaths from './imports/svg-zf6pg056p3';
 import svgMain from './imports/svg-q05k7ytov1';
 import { imgHelp } from './imports/svg-ss3mz';
 import { FacebookIcon, InstagramIcon, LinkedInIcon } from './PlatformIcons';
-import { Tabs } from '../components';
+import { Tabs, Tooltip } from '../components';
 import {
   Grid3X3, List, Trash2, Upload,
   Camera, Smile, Hash, Lightbulb, X, Plus, ChevronDown, ArrowLeft
@@ -143,6 +143,8 @@ function GoogleIcon() {
 
 type GooglePublishAs = 'updates' | 'offers' | 'events';
 type GoogleRecurrence = 'none' | 'daily' | 'weekly' | 'custom_weekly' | 'monthly_last' | 'monthly_nth';
+type InstagramPublishAs = 'post' | 'reel' | 'story';
+const INSTAGRAM_MAX_COLLABORATORS = 3;
 
 // ─── Platform icon assets (from Figma, ~7-day CDN URLs) ──────────────────────
 const PLATFORM_ICON_SRCS: Record<Platform, string> = {
@@ -165,6 +167,24 @@ const DEMO_LOCATIONS = [
 ];
 const DEMO_CONTENT_STREAMS = [
   'Review site', 'Motto mortgage - Holidays', 'Summer campaign 2026', 'Weekly updates',
+];
+
+// ── Instagram collaborator lookup (public profiles only) ──────────────────────
+interface InstagramCollaboratorProfile {
+  handle: string;
+  name: string;
+  initials: string;
+  color: string;
+}
+const INSTAGRAM_COLLABORATOR_PROFILES: InstagramCollaboratorProfile[] = [
+  { handle: '@sproutcoffeeco',   name: 'Sprout Coffee Company',  initials: 'SC', color: '#6b4226' },
+  { handle: '@lushgreeneats',    name: 'Lushgreen Eats',         initials: 'LE', color: '#2e7d32' },
+  { handle: '@mottomortgage',    name: 'Motto Mortgage',         initials: 'MM', color: '#1565c0' },
+  { handle: '@urbanbrewhouse',   name: 'Urban Brew House',       initials: 'UB', color: '#8d6e63' },
+  { handle: '@thebakerytable',   name: 'The Bakery Table',       initials: 'BT', color: '#c62828' },
+  { handle: '@fitwell.studio',   name: 'FitWell Studio',         initials: 'FW', color: '#6a1b9a' },
+  { handle: '@greenleaf.market', name: 'Greenleaf Market',       initials: 'GM', color: '#00695c' },
+  { handle: '@westside.diner',   name: 'Westside Diner',         initials: 'WD', color: '#e65100' },
 ];
 
 const GOOGLE_BUTTON_TYPES = ['Book', 'Order online', 'Buy', 'Learn more', 'Sign up', 'Get offer', 'Call now'] as const;
@@ -747,6 +767,14 @@ function BrandAvatar({ size = 38, radius = '50%' }: { size?: number; radius?: st
   );
 }
 
+function ProfileAvatar({ initials, color, size = 28 }: { initials: string; color: string; size?: number }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: size * 0.36, letterSpacing: '0.3px' }}>
+      {initials}
+    </div>
+  );
+}
+
 function FacebookPreview({ content, mediaItems, contentStream }: { content: string; mediaItems: MediaItem[]; contentStream: string }) {
   const [expanded, setExpanded] = useState(true);
   const imgSrc = mediaItems.length > 0 ? mediaItems[0].url : 'https://picsum.photos/seed/fb1/800/420';
@@ -1167,6 +1195,14 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
   const [googleEventRecurrenceOpen, setGoogleEventRecurrenceOpen] = useState(false);
   const [googleEventRecurrenceEndDate, setGoogleEventRecurrenceEndDate] = useState('');
   const [googleEventRecurrenceCustomDays, setGoogleEventRecurrenceCustomDays] = useState<number[]>([]);
+
+  // ── Instagram post settings ──
+  const [instagramPublishAs, setInstagramPublishAs] = useState<InstagramPublishAs>('post');
+  const [instagramFirstComment, setInstagramFirstComment] = useState('');
+  const [instagramCollaborators, setInstagramCollaborators] = useState<string[]>([]);
+  const [instagramCollaboratorInput, setInstagramCollaboratorInput] = useState('');
+  const [instagramCollaboratorDropdownOpen, setInstagramCollaboratorDropdownOpen] = useState(false);
+  const [instagramSettingsExpanded, setInstagramSettingsExpanded] = useState(true);
 
   // ── Channel selector dropdown ──────────────────────────────────────────────
   const channelSelectorRef = useRef<HTMLDivElement>(null);
@@ -1934,6 +1970,169 @@ export function CreatePostView({ onBack, onPublish }: CreatePostViewProps) {
 
             {/* ── Media Section ── */}
             <MediaSection mediaItems={mediaItems} setMediaItems={setMediaItems} />
+
+
+            {/* ── Instagram Post Settings ── shown only on instagram tab */}
+            {selectedPlatforms.includes('instagram') && activeTab === 'instagram' && (
+              <div className="border border-border rounded-[8px] bg-background">
+                {/* Section header */}
+                <div
+                  className="w-full flex items-center justify-between px-[16px] py-[12px] cursor-pointer hover:bg-muted/80 transition-colors rounded-t-[8px]"
+                  onClick={() => setInstagramSettingsExpanded(v => !v)}
+                >
+                  <div className="flex items-center gap-[8px]">
+                    <InstagramIcon />
+                    <p className="font-normal text-foreground text-[16px] tracking-[-0.32px]">
+                      Instagram post settings
+                    </p>
+                  </div>
+                  {instagramSettingsExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                </div>
+
+                {instagramSettingsExpanded && (
+                  <div className="px-[20px] py-[16px] flex flex-col gap-[16px]" style={{ borderTop: '1px solid var(--s-border)' }}>
+
+                    {/* Publish as radio */}
+                    <div className="flex flex-col gap-[8px]">
+                      <label className="font-normal text-[13px] tracking-[-0.26px]" style={{ color: 'var(--s-text-secondary)' }}>Publish as</label>
+                      <div className="flex items-center gap-[20px]">
+                        {(['post', 'reel', 'story'] as InstagramPublishAs[]).map(type => (
+                          <label key={type} className="flex items-center gap-[6px] cursor-pointer">
+                            <input
+                              type="radio"
+                              name="instagramPublishAs"
+                              value={type}
+                              checked={instagramPublishAs === type}
+                              onChange={() => setInstagramPublishAs(type)}
+                              style={{ accentColor: 'var(--s-blue)', width: 14, height: 14 }}
+                            />
+                            <span className="font-normal text-[13px] tracking-[-0.26px]" style={{ color: 'var(--s-text-primary)' }}>
+                              {type === 'post' ? 'Post' : type === 'reel' ? 'Reel' : 'Story'}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* First comment */}
+                    <div className="flex flex-col gap-[6px]">
+                      <div className="flex items-center gap-[5px]">
+                        <label className="font-normal text-[13px] tracking-[-0.26px]" style={{ color: 'var(--s-text-secondary)' }}>First comment</label>
+                        <Tooltip content="Posted automatically right after your Instagram post goes live. Useful for hashtags or links you don't want cluttering the caption.">
+                          <InfoIcon />
+                        </Tooltip>
+                      </div>
+                      <textarea
+                        value={instagramFirstComment}
+                        onChange={e => setInstagramFirstComment(e.target.value.slice(0, 2200))}
+                        rows={3}
+                        maxLength={2200}
+                        className="w-full outline-none bg-transparent resize-none"
+                        style={{ border: '1px solid var(--s-border)', borderRadius: 4, padding: '8px 10px', fontSize: 14, color: 'var(--s-text-primary)' }}
+                        placeholder="Write a comment"
+                      />
+                      <p className="font-normal leading-[normal] text-[13px] tracking-[-0.26px]" style={{ color: 'var(--s-text-secondary)' }}>
+                        {2200 - instagramFirstComment.length} characters left
+                      </p>
+                    </div>
+
+                    {/* Collaborators */}
+                    <div className="flex flex-col gap-[6px]">
+                      <div className="flex items-center gap-[5px]">
+                        <label className="font-normal text-[13px] tracking-[-0.26px]" style={{ color: 'var(--s-text-secondary)' }}>Collaborators</label>
+                        <Tooltip content="Invite up to 3 public Instagram profiles to co-author this post. Only public (non-private) profiles can be invited — pick the right account from the list so the invite reaches the intended partner.">
+                          <InfoIcon />
+                        </Tooltip>
+                      </div>
+                      <div className="relative">
+                        <div className="flex items-center gap-[6px] flex-wrap" style={{ border: '1px solid var(--s-border)', borderRadius: 8, padding: '8px 10px', minHeight: 40 }}>
+                          {instagramCollaborators.map(handle => (
+                            <TagChip
+                              key={handle}
+                              label={handle}
+                              onRemove={() => setInstagramCollaborators(prev => prev.filter(h => h !== handle))}
+                            />
+                          ))}
+                          {instagramCollaborators.length < INSTAGRAM_MAX_COLLABORATORS && (
+                            <input
+                              type="text"
+                              value={instagramCollaboratorInput}
+                              onChange={e => { setInstagramCollaboratorInput(e.target.value); setInstagramCollaboratorDropdownOpen(true); }}
+                              onFocus={() => setInstagramCollaboratorDropdownOpen(true)}
+                              onBlur={() => setTimeout(() => setInstagramCollaboratorDropdownOpen(false), 120)}
+                              onKeyDown={e => {
+                                if ((e.key === 'Enter' || e.key === ',') && instagramCollaboratorInput.trim()) {
+                                  e.preventDefault();
+                                  const handle = instagramCollaboratorInput.trim().replace(/^@?/, '@');
+                                  setInstagramCollaborators(prev => prev.includes(handle) ? prev : [...prev, handle].slice(0, INSTAGRAM_MAX_COLLABORATORS));
+                                  setInstagramCollaboratorInput('');
+                                  setInstagramCollaboratorDropdownOpen(false);
+                                } else if (e.key === 'Backspace' && !instagramCollaboratorInput && instagramCollaborators.length > 0) {
+                                  setInstagramCollaborators(prev => prev.slice(0, -1));
+                                }
+                              }}
+                              className="flex-1 outline-none bg-transparent min-w-[120px]"
+                              style={{ fontSize: 14, color: 'var(--s-text-primary)' }}
+                              placeholder="Invite collaborators"
+                            />
+                          )}
+                        </div>
+
+                        {/* Suggested public profiles dropdown */}
+                        {instagramCollaboratorDropdownOpen && instagramCollaboratorInput.trim().length > 0 && instagramCollaborators.length < INSTAGRAM_MAX_COLLABORATORS && (() => {
+                          const query = instagramCollaboratorInput.trim().toLowerCase().replace(/^@/, '');
+                          const matches = INSTAGRAM_COLLABORATOR_PROFILES.filter(p =>
+                            !instagramCollaborators.includes(p.handle) &&
+                            (p.handle.toLowerCase().includes(query) || p.name.toLowerCase().includes(query))
+                          ).slice(0, 5);
+                          if (matches.length === 0) {
+                            return (
+                              <div
+                                className="absolute left-0 right-0 bg-background z-20"
+                                style={{ top: '100%', marginTop: 4, border: '1px solid var(--s-border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px' }}
+                              >
+                                <span className="font-normal text-[13px]" style={{ color: 'var(--s-text-muted)' }}>No public profiles found</span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div
+                              className="absolute left-0 right-0 bg-background z-20"
+                              style={{ top: '100%', marginTop: 4, border: '1px solid var(--s-border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '6px', maxHeight: 240, overflowY: 'auto' }}
+                            >
+                              {matches.map(profile => (
+                                <button
+                                  key={profile.handle}
+                                  type="button"
+                                  onMouseDown={e => {
+                                    e.preventDefault();
+                                    setInstagramCollaborators(prev => prev.includes(profile.handle) ? prev : [...prev, profile.handle].slice(0, INSTAGRAM_MAX_COLLABORATORS));
+                                    setInstagramCollaboratorInput('');
+                                    setInstagramCollaboratorDropdownOpen(false);
+                                  }}
+                                  className="w-full flex items-center gap-[10px] text-left hover:bg-muted transition-colors"
+                                  style={{ padding: '7px 8px', borderRadius: 6 }}
+                                >
+                                  <ProfileAvatar initials={profile.initials} color={profile.color} />
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-normal text-[13px] tracking-[-0.26px] truncate" style={{ color: 'var(--s-text-primary)' }}>{profile.name}</span>
+                                    <span className="font-normal text-[12px] truncate" style={{ color: 'var(--s-text-muted)' }}>{profile.handle}</span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <p className="font-normal text-[12px]" style={{ color: 'var(--s-text-muted)' }}>
+                        Invite up to {INSTAGRAM_MAX_COLLABORATORS} public profiles. They'll be asked to accept once the post is published.
+                      </p>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+            )}
 
 
             {/* ── Apple Post Settings ── shown only on apple tab */}
