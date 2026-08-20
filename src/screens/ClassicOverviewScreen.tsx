@@ -308,7 +308,7 @@ function AgentPerformanceCard({
   const [videoOpen, setVideoOpen] = useState(false)
   const extraKpis = AGENT_EXTRA_KPIS[agent.name] ?? []
   return (
-    <div className="rounded-md border border-border bg-surface p-xl">
+    <div className="rounded-md border border-[#E9E9E9] bg-white p-xl">
       <div className="flex items-center justify-between gap-3xl">
         <div className="min-w-[220px] max-w-[320px] shrink-0 pr-3xl">
           <p className="m-0 truncate text-small text-text-tertiary">{agent.category}</p>

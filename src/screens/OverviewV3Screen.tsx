@@ -422,7 +422,7 @@ const AGENT_RUNNING_COUNT: Record<string, number> = {
 function AgentCard({ agent }: { agent: V2Agent }) {
   const stats = [{ id: 'agent-running', value: String(AGENT_RUNNING_COUNT[agent.id] ?? 1), label: 'Agent running' }, ...agent.stats]
   return (
-    <div className="group flex items-start justify-between gap-3xl rounded-sm border border-border p-lg">
+    <div className="group flex items-start justify-between gap-3xl rounded-sm border border-[#E9E9E9] bg-white p-lg">
       <div className="flex w-[420px] shrink-0 flex-col gap-xs">
         <h4 className="m-0 text-body text-text-primary transition-colors group-hover:text-text-action">{agent.name}</h4>
         {AGENT_DESCRIPTIONS[agent.id] && <p className="m-0 text-small text-text-secondary">{AGENT_DESCRIPTIONS[agent.id]}</p>}

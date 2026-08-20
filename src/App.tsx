@@ -94,8 +94,7 @@ const RAIL_GROUPS: RailGroup[] = [
   {
     id: 'main',
     items: [
-      { id: 'overview-v2-1', label: 'Overview v2.1', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
-      { id: 'agents',   label: 'Co-workers',   icon: <FigmaIconBirdAI size={ICON_SIZE + 2} />,   kind: 'element', badge: 'New' },
+      { id: 'overview-v2-1', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
     ],
   },
   {
@@ -390,7 +389,7 @@ const RAIL_TITLE: Record<string, string> = {
   settings:              'Settings',
   overview:              'Overview',
   'overview-v2':         'Overview v2',
-  'overview-v2-1':       'Overview v2.1',
+  'overview-v2-1':       'Overview',
   'overview-v3':         'Overview v3',
   agents:                'Co-workers',
   search:                'Search AI',

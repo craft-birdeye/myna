@@ -489,7 +489,7 @@ function AgentPerformanceMetric({ value, label }: { value: string; label: string
 function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
   const issueCount = agent.alert ? parseInt(agent.alert.message, 10) : AGENT_ISSUE_OVERRIDES[agent.id]
   return (
-    <div className="flex flex-col rounded-md border border-border bg-surface p-xl">
+    <div className="flex flex-col rounded-md border border-[#E9E9E9] bg-white p-xl">
       <div className="mb-xs flex items-center justify-between gap-sm">
         <h4 className="m-0 min-w-0 truncate text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
         <div className="flex shrink-0 items-center gap-xs">
@@ -888,7 +888,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
   return (
     <div className="flex h-full flex-col">
       <TopNav title="Overview" initials="S" />
-      <div className="flex-1 overflow-y-auto bg-surface-l2 px-2xl py-xl">
+      <div className="flex-1 overflow-y-auto bg-white px-2xl py-xl">
         <div className="flex flex-col gap-lg">
           <div className="flex items-start justify-between">
             <div>
