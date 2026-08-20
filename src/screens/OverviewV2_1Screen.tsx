@@ -475,15 +475,6 @@ const AGENT_ISSUE_OVERRIDES: Record<string, number> = {
   'survey-response': 1,
 }
 
-// Mirrors agentDirectoryData's PERSONA_GROUPS (Jay/marketing, Myna/operations, Robin/cx) — used
-// to split the "View agent performance" grid into one section per coworker.
-const PERSONA_DISPLAY: Record<string, { name: string; icon: string; domain: string }> = {
-  marketing: { name: 'Jay', icon: jayIcon, domain: 'Marketing' },
-  operations: { name: 'Myna', icon: mynaIcon, domain: 'Operations' },
-  cx: { name: 'Robin', icon: robinIcon, domain: 'Customer experience' },
-}
-const PERSONA_ORDER = ['marketing', 'operations', 'cx']
-
 function AgentPerformanceMetric({ value, label }: { value: string; label: string }) {
   return (
     <div className="min-w-0">
@@ -618,28 +609,10 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           )}
 
           {filled && showAgentPerformance && (
-            <div className="flex flex-col gap-xl">
-              {PERSONA_ORDER.map((persona) => {
-                const personaAgents = agents.filter((a) => a.persona === persona)
-                if (personaAgents.length === 0) return null
-                const display = PERSONA_DISPLAY[persona]
-                return (
-                  <div key={persona} className="flex flex-col gap-md">
-                    <div className="flex items-center gap-sm">
-                      <img src={display.icon} alt="" className="size-9 shrink-0 rounded-full" />
-                      <div className="flex flex-col">
-                        <span className="text-body text-text-primary">{display.name}</span>
-                        <span className="text-small text-text-tertiary">{display.domain}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-md">
-                      {personaAgents.map((agent) => (
-                        <AgentPerformanceCard key={agent.id} agent={agent} />
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="grid grid-cols-3 gap-lg">
+              {agents.map((agent) => (
+                <AgentPerformanceCard key={agent.id} agent={agent} />
+              ))}
             </div>
           )}
         </>
