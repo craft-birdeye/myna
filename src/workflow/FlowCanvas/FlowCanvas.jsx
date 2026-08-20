@@ -20,7 +20,7 @@ import AddStepButton from './AddStepButton';
 import './FlowCanvas.css';
 import branchStyles from './BranchPath.module.css';
 import collapseStyles from './BranchCollapse.module.css';
-import { FLOW_CONNECTOR_GAP } from '../flowLayoutConstants';
+import { FLOW_CARD_WIDTH, FLOW_CONNECTOR_GAP, FLOW_STANDARD_NODE_HEIGHT, FLOW_TRIGGER_PLACEHOLDER_HEIGHT } from '../flowLayoutConstants';
 import { getDraggingFlowKind, getFlowDragPayload, isDraggingFlowKind } from '../flowDragData';
 import { Tooltip } from '../../components/Tooltip/Tooltip';
 
@@ -291,23 +291,25 @@ function BranchPathNodeWrapper({ id, data }) {
             ) : (
               <span className={branchStyles.chipLabel}>{data.label}</span>
             )}
-            <Tooltip content={collapsed ? 'Expand branch' : 'Collapse branch'} variant="brief" side="top">
-              <button
-                type="button"
-                className={`nodrag nopan ${branchStyles.chipCollapse}`}
-                aria-label={collapsed ? 'Expand branch' : 'Collapse branch'}
-                aria-expanded={!collapsed}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  data.onToggleCollapse?.();
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <span className="material-symbols-outlined" aria-hidden>
-                  {collapsed ? 'expand_more' : 'expand_less'}
-                </span>
-              </button>
-            </Tooltip>
+            {hiddenCount > 0 && (
+              <Tooltip content={collapsed ? 'Expand branch' : 'Collapse branch'} variant="brief" side="top">
+                <button
+                  type="button"
+                  className={`nodrag nopan ${branchStyles.chipCollapse}`}
+                  aria-label={collapsed ? 'Expand branch' : 'Collapse branch'}
+                  aria-expanded={!collapsed}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    data.onToggleCollapse?.();
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <span className="material-symbols-outlined" aria-hidden>
+                    {collapsed ? 'expand_more' : 'expand_less'}
+                  </span>
+                </button>
+              </Tooltip>
+            )}
           </div>
           {canDelete && (
             <div className={`nodrag nopan ${branchStyles.hoverActions}`}>
@@ -655,6 +657,19 @@ function FlowCanvasInner({
   const styledNodes = useMemo(
     () => nodes.map((n) => ({
       ...n,
+      // XYFlow keeps nodes `visibility:hidden` until both width and height are known
+      // (`nodeHasDimensions`). Without seeds, newly dropped cards never paint — and with
+      // the start node hidden on exploration scratch, the canvas looks empty.
+      initialWidth: n.initialWidth ?? n.width ?? (
+        n.type === 'branchCollapse' ? 40 : FLOW_CARD_WIDTH
+      ),
+      initialHeight: n.initialHeight ?? n.height ?? (
+        n.type === 'triggerPlaceholder' ? FLOW_TRIGGER_PLACEHOLDER_HEIGHT
+          : n.type === 'branchCollapse' ? 36
+            : n.type === 'branchPath' ? 40
+              : n.type === 'end' || n.type === 'branchEnd' ? 102
+                : FLOW_STANDARD_NODE_HEIGHT
+      ),
       data: {
         ...n.data,
         selectedNodeId,
@@ -724,10 +739,32 @@ function FlowCanvasInner({
     [nodes, selectedNodeId, viewOnly, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName, hasClipboard]
   );
 
-  // Pin the flow entry 24px below the controls bar, horizontally centered, at the
-  // configured initial zoom (default 1). Prefer the start card when present; otherwise
-  // the trigger placeholder / first trigger (exploration canvas hides the start node).
+  // Pin the flow entry 24px below the controls bar, horizontally centered in the
+  // *visible* canvas (excluding absolute RHS / left palette overlays), at the
+  // configured initial zoom (default 1). Prefer the start card when present;
+  // otherwise the trigger placeholder / first trigger (exploration hides start).
   // Controls: top=8px + height≈52px → bottom≈60px → target top = 60+24 = 84px.
+  const getVisibleCenterX = useCallback((canvas) => {
+    const canvasRect = canvas.getBoundingClientRect();
+    const width = canvasRect.width;
+    const rhs = canvas.closest('.agent-builder')?.querySelector('.agent-builder__rhs');
+    const palette = canvas.closest('.agent-builder')?.querySelector(
+      '.rr-chrome-palette, .agent-builder__lhs-ai',
+    );
+    let leftClip = 0;
+    let rightClip = 0;
+    if (palette) {
+      const pr = palette.getBoundingClientRect();
+      leftClip = Math.max(0, Math.min(width, pr.right - canvasRect.left));
+    }
+    if (rhs) {
+      const rr = rhs.getBoundingClientRect();
+      rightClip = Math.max(0, Math.min(width, canvasRect.right - rr.left));
+    }
+    const visibleWidth = Math.max(120, width - leftClip - rightClip);
+    return leftClip + visibleWidth / 2;
+  }, []);
+
   const positionToStart = useCallback(() => {
     const entryNode =
       nodes.find((n) => n.type === 'start') ||
@@ -736,16 +773,15 @@ function FlowCanvasInner({
       nodes[0];
     const canvas = canvasRef.current;
     if (!entryNode || !canvas) return;
-    const { width } = canvas.getBoundingClientRect();
     setViewport(
       {
-        x: width / 2 - entryNode.position.x * initialZoom,
+        x: getVisibleCenterX(canvas) - entryNode.position.x * initialZoom,
         y: 84 - entryNode.position.y * initialZoom,
         zoom: initialZoom,
       },
       { duration: 0 },
     );
-  }, [nodes, setViewport, initialZoom]);
+  }, [nodes, setViewport, initialZoom, getVisibleCenterX]);
 
   // Run once on initial load. Do not re-pin when nodes are later added/removed
   // (e.g. branch expand/collapse) — the viewport should stay where the user left it.
@@ -758,22 +794,37 @@ function FlowCanvasInner({
     return () => clearTimeout(timer);
   }, [nodes.length, positionToStart]);
 
-  // Keep the flow horizontally centered whenever the canvas container resizes
-  // (LHS drawer collapse/expand, RHS panel open/close, window resize). CSS
-  // transitions the LHS width, so ResizeObserver fires continuously through
-  // the animation, keeping the canvas centered as the panel moves.
+  // Keep the flow horizontally centered in the visible area whenever the canvas
+  // container resizes (LHS drawer collapse/expand, RHS panel open/close, window
+  // resize). CSS transitions the LHS width, so ResizeObserver fires continuously
+  // through the animation, keeping the canvas centered as the panel moves.
+  // Also watch the agent-builder shell: the RHS is absolutely positioned so it
+  // does not change canvas width — MutationObserver catches overlay open/close.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const observer = new ResizeObserver(() => {
+    const shell = canvas.closest('.agent-builder');
+    const recenter = () => {
       if (!initialPositioned.current) return;
-      const { width } = canvas.getBoundingClientRect();
-      const { y, zoom: currentZoom } = getViewport();
-      setViewport({ x: width / 2, y, zoom: currentZoom }, { duration: 0 });
-    });
+      requestAnimationFrame(() => {
+        const { y, zoom: currentZoom } = getViewport();
+        setViewport({ x: getVisibleCenterX(canvas), y, zoom: currentZoom }, { duration: 0 });
+      });
+    };
+    const observer = new ResizeObserver(recenter);
     observer.observe(canvas);
-    return () => observer.disconnect();
-  }, [getViewport, setViewport]);
+    let mutationObserver;
+    if (shell) {
+      // RHS is a direct child of .agent-builder (absolute overlay). Watching only
+      // childList avoids re-centering on every keystroke inside the panel.
+      mutationObserver = new MutationObserver(recenter);
+      mutationObserver.observe(shell, { childList: true, subtree: false });
+    }
+    return () => {
+      observer.disconnect();
+      mutationObserver?.disconnect();
+    };
+  }, [getViewport, setViewport, getVisibleCenterX]);
 
   // Detect LHS drag start/end (HTML5 drag API).
   // Do NOT clear on pointerup — it fires before `drop` and a re-render can
@@ -821,17 +872,16 @@ function FlowCanvasInner({
       // the recentre below, which would otherwise pan on every click for no reason.
       if (!onNodeClick) return;
       onNodeClick(node);
-      // Read width after React has flushed the re-render (RHS panel may open,
-      // making the canvas narrower). Using rAF gives us the post-layout width.
+      // Read layout after React has flushed the re-render (RHS panel may open).
+      // Using rAF gives us the post-layout width / overlay rects.
       requestAnimationFrame(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const { width } = canvas.getBoundingClientRect();
         const { y, zoom: currentZoom } = getViewport();
-        setViewport({ x: width / 2, y, zoom: currentZoom }, { duration: 300 });
+        setViewport({ x: getVisibleCenterX(canvas), y, zoom: currentZoom }, { duration: 300 });
       });
     },
-    [onNodeClick, getViewport, setViewport]
+    [onNodeClick, getViewport, setViewport, getVisibleCenterX]
   );
 
   const handleDragOver = useCallback((event) => {

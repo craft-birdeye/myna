@@ -206,7 +206,20 @@ function makeNodeDetails(type, label) {
     const firstId = label && label !== 'Custom' ? label : null;
     return { procedureIds: firstId ? [firstId] : [] };
   }
-  if (type === 'branch') return { basedOn: 'conditions', branches: [] };
+  if (type === 'branch') {
+    return {
+      basedOn: 'conditions',
+      branchNodeTitle: 'Based on conditions',
+      description: 'Build condition-specific flows',
+      mergeBranches: true,
+      // Paths are fully seeded on drop (with node-scoped ids). Keep a named
+      // placeholder here so the RHS never opens on an empty Branches list.
+      branches: [
+        { id: 'pending-path-1', name: 'Branch 1' },
+        { id: 'pending-path-fallback', name: 'No conditions met', isFallback: true },
+      ],
+    };
+  }
   if (type === 'subagent') return { selectedAgent: '', name: '', description: '' };
   if (type === 'delay') return { name: '', duration: '', unit: '' };
   if (type === 'parallel') return { nodeName: '', description: '', branches: [{ name: '' }, { name: '' }] };
@@ -741,6 +754,8 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
               isVoiceCallBranch: isVoiceCall || !!branch.isVoiceCallBranch,
               collapsed: pathCollapsed,
               hiddenCount: branchNodes.length,
+              // Keep at least two paths (e.g. Branch 1 + No conditions met).
+              canDeletePath: !isVoiceCall && !branch.isVoiceCallBranch && !branch.isFallback && branches.length > 2,
             },
           });
           edges.push({ id: `e-${fanSourceId}-${branch.id}`, source: fanSourceId, target: branch.id, type: 'branchFan' });
@@ -840,6 +855,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                       isVoiceCallBranch: false,
                       collapsed: innerPathCollapsed,
                       hiddenCount: innerBranchNodes.length,
+                      canDeletePath: !innerBranch.isFallback && innerBranches.length > 2,
                     },
                   });
                   edges.push({ id: `e-${innerStemId}-${innerBranch.id}`, source: innerStemId, target: innerBranch.id, type: 'branchFan' });
@@ -2052,6 +2068,10 @@ export default function AgentBuilder({
     setNodeDetails((prev) => {
       const copy = { ...prev };
       const parentId = copy[branchPathId]?.parentId;
+      const siblingCount = parentId ? (copy[parentId]?.branches || []).length : 0;
+      // Never drop below two paths on a condition branch.
+      if (parentId && siblingCount <= 2) return prev;
+      if (copy[branchPathId]?.isFallback) return prev;
       if (parentId) {
         copy[parentId] = {
           ...copy[parentId],
@@ -2213,7 +2233,7 @@ export default function AgentBuilder({
           ...n.data,
           viewOnly,
           onDelete:
-            viewOnly || n.data.isFallback || n.data.isVoiceCallBranch
+            viewOnly || n.data.isFallback || n.data.isVoiceCallBranch || !n.data.canDeletePath
               ? undefined
               : () => handleDeleteBranchPath(n.id),
           onToggleCollapse: () => handleToggleBranchPathCollapse(n.id),
@@ -3289,11 +3309,7 @@ export default function AgentBuilder({
         </Tooltip>
       )}
       <Tooltip
-        content={
-          isScratchCreate
-            ? 'Available after the agent is created'
-            : (isFrontDeskAgentName ? 'Preview' : 'Run test')
-        }
+        content={isFrontDeskAgentName ? 'Preview' : 'Run test'}
         variant="brief"
         side="bottom"
       >
@@ -3448,23 +3464,39 @@ export default function AgentBuilder({
                   {hideTopIdentity && !versionHistoryMode && (
                     <div className={`rr-chrome-identity${agentDetailsIncomplete ? ' rr-chrome-identity--needs-details' : ''}`}>
                       <div className="rr-chrome-identity__row">
-                        <button
-                          type="button"
-                          className="rr-chrome-identity__title"
-                          onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
-                          aria-label={`Open agent details for ${agentName || 'Untitled agent'}`}
-                        >
-                          <span className="rr-chrome-identity__name">
-                            {agentName || 'Untitled agent'}
-                          </span>
-                        </button>
+                        <div className="rr-chrome-identity__name-group">
+                          <button
+                            type="button"
+                            className="rr-chrome-identity__title"
+                            onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                            aria-label={`Open agent details for ${agentName || 'Untitled agent'}`}
+                          >
+                            <span className="rr-chrome-identity__name">
+                              {agentName || 'Untitled agent'}
+                            </span>
+                          </button>
+                          {nodesInteractive && agentDetailsIncomplete && (
+                            <Tooltip content="Add agent details" variant="brief" side="bottom">
+                              <button
+                                type="button"
+                                className="rr-chrome-identity__hint"
+                                onClick={handleOpenAgentDetails}
+                                aria-label="Add agent details"
+                              >
+                                <span className="material-symbols-outlined rr-chrome-identity__hint-icon" aria-hidden>
+                                  error
+                                </span>
+                              </button>
+                            </Tooltip>
+                          )}
+                        </div>
                         {nodesInteractive && (
-                          <Tooltip content="Edit agent details" variant="brief" side="bottom">
+                          <Tooltip content="Edit" variant="brief" side="bottom">
                             <button
                               type="button"
                               className="ab-header-cloud-btn"
                               onClick={handleOpenAgentDetails}
-                              aria-label="Edit agent details"
+                              aria-label="Edit"
                             >
                               <span className="material-symbols-outlined ab-header-cloud-btn__material" aria-hidden>
                                 edit
@@ -3490,18 +3522,6 @@ export default function AgentBuilder({
                           </span>
                         )}
                       </div>
-                      {nodesInteractive && agentDetailsIncomplete && (
-                        <button
-                          type="button"
-                          className="rr-chrome-identity__hint"
-                          onClick={handleOpenAgentDetails}
-                        >
-                          <span className="material-symbols-outlined rr-chrome-identity__hint-icon" aria-hidden>
-                            error
-                          </span>
-                          Complete agent details
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
