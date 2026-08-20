@@ -235,7 +235,7 @@ export function TestRunPanel({
         <button
           type="button"
           onClick={onExit}
-          className="flex h-9 w-full items-center justify-center rounded-sm border border-border-selected bg-surface text-body text-text-primary hover:bg-surface-l2"
+          className="flex h-9 w-full items-center justify-center rounded-sm bg-primary text-body text-white transition-colors hover:bg-primary-hover"
         >
           Exit test
         </button>
