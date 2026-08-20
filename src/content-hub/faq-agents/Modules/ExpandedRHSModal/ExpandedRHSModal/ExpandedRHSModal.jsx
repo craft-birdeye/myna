@@ -2,7 +2,7 @@ import React from 'react';
 import ExpandedRHSHeader from '../../../Molecules/ExpandedRHS/ExpandedRHSHeader/ExpandedRHSHeader';
 import ExpandedRHSFooter from '../../../Molecules/ExpandedRHS/ExpandedRHSFooter/ExpandedRHSFooter';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const DIVIDER = (
   <div style={{ width: 1, background: '#e5e9f0', flexShrink: 0 }} />

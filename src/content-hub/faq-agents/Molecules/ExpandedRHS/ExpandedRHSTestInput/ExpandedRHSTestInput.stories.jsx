@@ -8,7 +8,7 @@ export default {
 };
 
 const wrap = (children) => (
-  <div style={{ width: 484, fontFamily: '"Roboto", arial, sans-serif' }}>
+  <div style={{ width: 484, fontFamily: '"Inter", arial, sans-serif' }}>
     {children}
   </div>
 );

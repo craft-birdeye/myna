@@ -5,7 +5,7 @@ import TableContainer from '@birdeye/elemental/core/components/TableContainer/in
 import { Chip } from '../elemental-stubs';
 import EmptyWorkspace from '../Organisms/EmptyWorkspace/EmptyWorkspace';
 
-const font = '"Roboto", sans-serif';
+const font = '"Inter", sans-serif';
 
 const STATUS_COLOR = {
   Running: 'green',

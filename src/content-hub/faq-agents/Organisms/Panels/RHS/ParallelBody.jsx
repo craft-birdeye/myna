@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 function BranchRow({ branch, index, onChange, onRemove }) {
   return (

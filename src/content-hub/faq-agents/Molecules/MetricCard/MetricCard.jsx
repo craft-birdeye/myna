@@ -170,7 +170,7 @@ export default function MetricCard({
                 lineHeight: '18px',
                 color: '#377e2c',
                 whiteSpace: 'nowrap',
-                fontFamily: 'Roboto, sans-serif',
+                fontFamily: 'Inter, sans-serif',
               }}>
                 {dollarValue}
               </span>

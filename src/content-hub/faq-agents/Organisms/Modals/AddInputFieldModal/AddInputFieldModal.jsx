@@ -8,7 +8,7 @@ import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
 import DataType from '../../../Molecules/DataType/DataType';
 import VariableSelectionModal from '../VariableSelectionModal/VariableSelectionModal';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 export default function AddInputFieldModal({ onClose, onAdd }) {
   const [fieldName, setFieldName] = useState('');

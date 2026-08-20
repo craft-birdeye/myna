@@ -19,7 +19,7 @@ function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
 const CommonSideDrawer = ({ isOpen, onClose, children }) => <NativeDrawer isOpen={isOpen} onClose={onClose} width={960}>{children}</NativeDrawer>;
 /* Select/SelectItem stubs */
 function Select({ value, onChange, children }) {
-  return <select value={value} onChange={(e) => onChange?.(e.target.value)} style={{ height: 36, padding: '0 12px', border: '1px solid #c5cad3', borderRadius: 4, fontSize: 14, width: '100%', fontFamily: '"Roboto", sans-serif' }}>{children}</select>;
+  return <select value={value} onChange={(e) => onChange?.(e.target.value)} style={{ height: 36, padding: '0 12px', border: '1px solid #c5cad3', borderRadius: 4, fontSize: 14, width: '100%', fontFamily: '"Inter", sans-serif' }}>{children}</select>;
 }
 function SelectItem({ value, children }) { return <option value={value}>{children}</option>; }
 import { OPTION_FIELD_TYPES } from '../CustomToolBuilder/CustomToolBuilder.jsx';

@@ -36,7 +36,7 @@ class RHSErrorBoundary extends React.Component {
           padding: 24, boxSizing: 'border-box',
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#de1b0c' }}>error</span>
-          <span style={{ fontSize: 13, color: '#555', fontFamily: '"Roboto", sans-serif', textAlign: 'center' }}>
+          <span style={{ fontSize: 13, color: '#555', fontFamily: '"Inter", sans-serif', textAlign: 'center' }}>
             Could not render this panel.
           </span>
           <button

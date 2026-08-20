@@ -476,6 +476,15 @@
   background: #f2f4f7;
 }
 
+.ab-header-cloud-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ab-header-cloud-btn:disabled:hover {
+  background: none;
+}
+
 .ab-header-cloud-btn__icon {
   width: 18px;
   height: 18px;
@@ -1238,13 +1247,30 @@
 }
 
 .rr-chrome-back-cluster--identity {
-  gap: 6px;
+  gap: 8px;
+  align-items: center;
   height: 40px;
-  padding: 0 12px 0 10px;
+  min-width: 300px;
+  padding: 0 16px 0 12px;
   border: 1px solid #e5e9f0;
   border-radius: 6px;
   background: #fff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-back-cluster--identity:has(.rr-chrome-identity--needs-details) {
+  height: auto;
+  min-height: 40px;
+  align-items: flex-start;
+  padding: 8px 16px 8px 12px;
+}
+
+.rr-chrome-back-cluster--identity:has(.rr-chrome-identity--needs-details) .rr-chrome-back {
+  margin-top: 2px;
+}
+
+.rr-chrome-back-cluster--identity .ab-header-status {
+  flex-shrink: 0;
 }
 
 .rr-chrome-back-cluster--identity .rr-chrome-back {
@@ -1254,6 +1280,8 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  align-self: center;
+  margin-top: 0;
 }
 
 .rr-chrome-back-cluster--identity .rr-chrome-back:hover {
@@ -1261,9 +1289,56 @@
   color: #555;
 }
 
+.rr-chrome-identity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.rr-chrome-identity__row {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.rr-chrome-identity__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.24px;
+  color: #c45500;
+  text-align: left;
+}
+
+.rr-chrome-identity__hint-icon {
+  flex-shrink: 0;
+  font-size: 14px !important;
+  line-height: 1;
+  color: inherit;
+}
+
+.rr-chrome-identity__hint:hover {
+  color: #a34600;
+  text-decoration: underline;
+}
+
 .rr-chrome-identity__title {
   display: inline-flex;
   min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 6px;
   margin: 0;
@@ -1289,13 +1364,6 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #212121;
-}
-
-.rr-chrome-identity__edit {
-  flex-shrink: 0;
-  font-size: 16px !important;
-  line-height: 1;
-  color: #555;
 }
 
 .rr-chrome-help-wrap {

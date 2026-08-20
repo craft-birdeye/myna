@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../elemental-stubs';
 
-const font = '"Roboto", sans-serif';
+const font = '"Inter", sans-serif';
 
 export default function TemplateCard({ title, description, onUse }) {
   const [hovered, setHovered] = useState(false);

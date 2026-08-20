@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../elemental-stubs';
 import { SelectMenu } from '../../components/SelectMenu/SelectMenu';
@@ -190,13 +190,14 @@ export default function LocationsDrawer({
 
   useEffect(() => {
     if (flyoutMode === 'closed') return;
+    // Use click (not mousedown) so the same gesture that opens the menu
+    // cannot immediately close it; ignore events from the trigger button.
     const handleOutsideClick = (e) => {
       const inTrigger = selectByRef.current?.contains(e.target);
       const inFlyout = flyoutRef.current?.contains(e.target);
-      if (!inTrigger && !inFlyout) {
-        setFlyoutMode('closed');
-        setPopoverSearch('');
-      }
+      if (inTrigger || inFlyout) return;
+      setFlyoutMode('closed');
+      setPopoverSearch('');
     };
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
@@ -204,13 +205,41 @@ export default function LocationsDrawer({
         setPopoverSearch('');
       }
     };
-    document.addEventListener('mousedown', handleOutsideClick);
+    // Defer attach so the opening click does not count as an outside click.
+    const timer = window.setTimeout(() => {
+      document.addEventListener('click', handleOutsideClick);
+    }, 0);
     document.addEventListener('keydown', handleEsc);
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
+      window.clearTimeout(timer);
+      document.removeEventListener('click', handleOutsideClick);
       document.removeEventListener('keydown', handleEsc);
     };
   }, [flyoutMode]);
+
+  const measureFlyoutPos = useCallback((mode, categoryId) => {
+    if (!innerRef.current || !selectByRef.current) return null;
+    const inner = innerRef.current.getBoundingClientRect();
+    const trigger = selectByRef.current.getBoundingClientRect();
+    const top = trigger.bottom - inner.top + 4;
+    const wantsPanel = mode === 'picker' && CUSTOM_FIELD_VALUES.has(categoryId);
+    if (mode === 'picker' && wantsPanel) {
+      const width = Math.min(520, inner.width);
+      const preferredLeft = trigger.left - inner.left;
+      const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
+      return { top, left, width };
+    }
+    if (mode === 'picker') {
+      const width = Math.min(220, inner.width);
+      const preferredLeft = trigger.left - inner.left;
+      const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
+      return { top, left, width };
+    }
+    const width = 168;
+    const preferredLeft = trigger.left - inner.left;
+    const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
+    return { top, left, width };
+  }, []);
 
   const locationUniverse = useMemo(() => {
     if (!scopedLocationIds) return ALL_LOCATIONS;
@@ -244,6 +273,8 @@ export default function LocationsDrawer({
   };
 
   const openPicker = (categoryId) => {
+    const pos = measureFlyoutPos('picker', categoryId);
+    if (pos) setFlyoutPos(pos);
     setPopoverCategory(categoryId);
     setPopoverSearch('');
     setPopoverDraftByCategory((prev) => {
@@ -359,36 +390,16 @@ export default function LocationsDrawer({
 
   // Keep the flyout fully inside the drawer — no horizontal page scroll.
   useLayoutEffect(() => {
-    if (!flyoutOpen || !innerRef.current || !selectByRef.current) return;
-
-    const updatePosition = () => {
-      const inner = innerRef.current.getBoundingClientRect();
-      const trigger = selectByRef.current.getBoundingClientRect();
-      const top = trigger.bottom - inner.top + 4;
-      const wantsPanel = flyoutMode === 'picker' && CUSTOM_FIELD_VALUES.has(popoverCategory);
-      if (flyoutMode === 'picker' && wantsPanel) {
-        const width = Math.min(520, Math.max(inner.width, 320));
-        const preferredLeft = trigger.left - inner.left;
-        const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - Math.min(width, inner.width)));
-        setFlyoutPos({ top, left, width: Math.min(width, inner.width) });
-      } else if (flyoutMode === 'picker') {
-        // Nav-only (Location…Zip list still visible, no right panel yet).
-        const width = Math.min(220, inner.width);
-        const preferredLeft = trigger.left - inner.left;
-        const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
-        setFlyoutPos({ top, left, width });
-      } else {
-        const width = 168;
-        const preferredLeft = trigger.left - inner.left;
-        const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
-        setFlyoutPos({ top, left, width });
-      }
+    if (!flyoutOpen) return;
+    const pos = measureFlyoutPos(flyoutMode, popoverCategory);
+    if (pos) setFlyoutPos(pos);
+    const onResize = () => {
+      const next = measureFlyoutPos(flyoutMode, popoverCategory);
+      if (next) setFlyoutPos(next);
     };
-
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    return () => window.removeEventListener('resize', updatePosition);
-  }, [flyoutOpen, flyoutMode, popoverCategory]);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [flyoutOpen, flyoutMode, popoverCategory, measureFlyoutPos]);
 
   return createPortal(
     <div className="loc-overlay">
@@ -415,7 +426,12 @@ export default function LocationsDrawer({
                 <button
                   type="button"
                   className="loc-select-by"
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    // Keep document outside-click from treating this as a dismiss.
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setPopoverSearch('');
                     if (flyoutMode !== 'closed') {
                       setFlyoutMode('closed');
@@ -424,6 +440,8 @@ export default function LocationsDrawer({
                     if (includeCustomFields) {
                       // Combined list: Location…Zip stay visible; custom fields open the right panel.
                       const initial = CUSTOM_FIELD_VALUES.has(selectBy) ? selectBy : selectBy;
+                      const pos = measureFlyoutPos('picker', initial);
+                      if (pos) setFlyoutPos(pos);
                       setPopoverCategory(initial);
                       if (CUSTOM_FIELD_VALUES.has(initial)) {
                         openPicker(initial);
@@ -432,6 +450,8 @@ export default function LocationsDrawer({
                       }
                       return;
                     }
+                    const pos = measureFlyoutPos('menu', selectBy);
+                    if (pos) setFlyoutPos(pos);
                     setFlyoutMode('menu');
                   }}
                 >
@@ -489,6 +509,8 @@ export default function LocationsDrawer({
                               setPopoverCategory(category.id);
                               setPopoverSearch('');
                               setSelectBy(category.id);
+                              const pos = measureFlyoutPos('picker', category.id);
+                              if (pos) setFlyoutPos(pos);
                               setPopoverDraftByCategory((prev) => {
                                 if (prev[category.id]?.length) return prev;
                                 const applied = appliedByCategory[category.id];

@@ -35,7 +35,7 @@
   flex: 1;
   border: none;
   outline: none;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   color: #212121;
   background: transparent;
@@ -71,7 +71,7 @@
 }
 
 .tsd-section-header__label {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
@@ -179,7 +179,7 @@
 }
 
 .tsd-card__name {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
@@ -189,7 +189,7 @@
 }
 
 .tsd-card__desc {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -228,7 +228,7 @@
 }
 
 .tsd-ext-card__name {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
@@ -238,7 +238,7 @@
 }
 
 .tsd-ext-card__desc {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -262,7 +262,7 @@
 }
 
 .tsd-ext-card__connected {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   line-height: 18px;
   letter-spacing: -0.24px;

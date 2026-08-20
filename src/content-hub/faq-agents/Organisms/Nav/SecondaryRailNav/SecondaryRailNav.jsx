@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
-const font = '"Roboto", sans-serif';
+const font = '"Inter", sans-serif';
 
 const DEFAULT_MENU_ITEMS = [
   { id: 'actions',     label: 'Actions' },

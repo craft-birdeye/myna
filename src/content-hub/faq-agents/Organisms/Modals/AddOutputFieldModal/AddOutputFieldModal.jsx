@@ -6,7 +6,7 @@ import {
 } from '@birdeye/elemental/core/sass/js/colors.js';
 import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const FIELD_TYPE_OPTIONS = [
   'Text', 'Number', 'Boolean', 'Email', 'Phone number',

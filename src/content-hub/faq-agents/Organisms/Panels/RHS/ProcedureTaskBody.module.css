@@ -46,14 +46,14 @@
   font-size: 13px;
   font-weight: 400;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   line-height: 18px;
 }
 
 .rowDesc {
   font-size: 12px;
   color: #757575;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   line-height: 16px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -110,7 +110,7 @@
   padding: 0;
   font-size: 13px;
   color: #1976d2;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 400;
 }
 
@@ -154,7 +154,7 @@
   cursor: pointer;
   font-size: 13px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   text-align: left;
   transition: background 0.1s;
 }

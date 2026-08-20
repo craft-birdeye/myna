@@ -717,18 +717,23 @@ function FlowCanvasInner({
     [nodes, selectedNodeId, viewOnly, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName, hasClipboard]
   );
 
-  // Pin start node 24px below the controls bar, horizontally centered, at the
-  // configured initial zoom (default 1).
+  // Pin the flow entry 24px below the controls bar, horizontally centered, at the
+  // configured initial zoom (default 1). Prefer the start card when present; otherwise
+  // the trigger placeholder / first trigger (exploration canvas hides the start node).
   // Controls: top=8px + height≈52px → bottom≈60px → target top = 60+24 = 84px.
   const positionToStart = useCallback(() => {
-    const startNode = nodes.find(n => n.type === 'start');
+    const entryNode =
+      nodes.find((n) => n.type === 'start') ||
+      nodes.find((n) => n.type === 'triggerPlaceholder') ||
+      nodes.find((n) => n.type === 'trigger') ||
+      nodes[0];
     const canvas = canvasRef.current;
-    if (!startNode || !canvas) return;
+    if (!entryNode || !canvas) return;
     const { width } = canvas.getBoundingClientRect();
     setViewport(
       {
-        x: width / 2 - startNode.position.x * initialZoom,
-        y: 84 - startNode.position.y * initialZoom,
+        x: width / 2 - entryNode.position.x * initialZoom,
+        y: 84 - entryNode.position.y * initialZoom,
         zoom: initialZoom,
       },
       { duration: 0 },

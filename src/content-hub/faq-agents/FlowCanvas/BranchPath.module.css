@@ -18,7 +18,7 @@
   gap: 6px;
   padding: 0 12px;
   font-size: 13px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   cursor: pointer;
   white-space: nowrap;
@@ -89,7 +89,7 @@
   background: none;
   cursor: pointer;
   font-size: 13px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   text-align: left;
 }

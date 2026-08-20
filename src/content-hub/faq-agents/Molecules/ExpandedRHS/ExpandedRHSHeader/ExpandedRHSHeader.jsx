@@ -1,7 +1,7 @@
 import React from 'react';
 import CloseIcon from './icons/close.svg';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 export default function ExpandedRHSHeader({ title = 'Title', onClose }) {
   return (

@@ -43,7 +43,7 @@
   line-height: 18px;
   letter-spacing: -0.24px;
   color: #555;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   white-space: nowrap;
 }
 
@@ -105,7 +105,7 @@
   font-weight: 400;
   line-height: 18px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   word-break: break-word;
   white-space: pre-wrap;
   width: 100%;
@@ -117,7 +117,7 @@
   line-height: 18px;
   color: #aaa;
   font-style: italic;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   user-select: none;
 }
 
@@ -127,7 +127,7 @@
   font-weight: 400;
   line-height: 18px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   border: none;
   outline: none;
   resize: none;
@@ -261,7 +261,7 @@
   border: none;
   cursor: pointer;
   font-size: 12px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   text-align: left;
   box-sizing: border-box;
@@ -317,7 +317,7 @@
   font-size: 12px;
   line-height: 16px;
   color: #555;
-  font-family: 'Inter', 'Roboto', sans-serif;
+  font-family: 'Inter', 'Inter', sans-serif;
   border: none;
   outline: none;
   background: transparent;
@@ -373,7 +373,7 @@
   font-weight: 400;
   line-height: 18px;
   color: #1976d2;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 0;
 }
 
@@ -409,7 +409,7 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   transition: background 0.1s;
 }
 
@@ -440,5 +440,5 @@
   font-size: 13px;
   color: #212121;
   line-height: 18px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }

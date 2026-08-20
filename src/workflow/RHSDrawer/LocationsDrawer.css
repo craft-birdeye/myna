@@ -141,8 +141,6 @@
   border: 1px solid #e5e9f0;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(33, 33, 33, 0.16);
-  transform-origin: top left;
-  transition: width 160ms ease, left 160ms ease, max-height 160ms ease;
 }
 
 .loc-flyout--menu {

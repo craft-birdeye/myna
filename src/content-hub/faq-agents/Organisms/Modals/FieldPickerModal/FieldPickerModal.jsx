@@ -3,7 +3,7 @@ import Modal from '@birdeye/elemental/core/atoms/Modal/index.js';
 import { gray900, gray90, gray2000, white } from '@birdeye/elemental/core/sass/js/colors.js';
 import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const MOCK_NODES = [
   {

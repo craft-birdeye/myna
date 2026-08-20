@@ -23,7 +23,7 @@
   line-height: 26px;
   letter-spacing: -0.36px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   white-space: nowrap;
 }
 
@@ -58,7 +58,7 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   text-align: left;
 }
 
@@ -118,7 +118,7 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   text-align: left;
 }
 
@@ -199,7 +199,7 @@
   line-height: normal;
   letter-spacing: -0.28px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   text-align: left;
 }
 
@@ -262,7 +262,7 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   text-align: left;
 }
 
@@ -297,7 +297,7 @@
   outline: none;
   background: transparent;
   font-size: 13px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   padding: 0 2px;
   letter-spacing: -0.26px;
@@ -325,7 +325,7 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   display: flex;
   flex-direction: column;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   overflow: hidden;
 }
 
@@ -367,7 +367,7 @@
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -385,7 +385,7 @@
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: background 0.15s;
 }

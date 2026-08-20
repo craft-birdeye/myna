@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../../elemental-stubs';
 
-const font = '"Roboto", sans-serif';
+const font = '"Inter", sans-serif';
 
 const SearchIcon = () => (
   <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#616161', lineHeight: 1 }}>

@@ -18,7 +18,7 @@
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
-  font-family: 'Roboto', arial, sans-serif;
+  font-family: 'Inter', arial, sans-serif;
 }
 
 .locationsLabelText {
@@ -65,7 +65,7 @@
   border: none;
   cursor: pointer;
   padding: 0;
-  font-family: 'Roboto', arial, sans-serif;
+  font-family: 'Inter', arial, sans-serif;
 }
 
 .moreLink:hover {
@@ -83,7 +83,7 @@
   cursor: pointer;
   padding: 0;
   text-align: left;
-  font-family: 'Roboto', arial, sans-serif;
+  font-family: 'Inter', arial, sans-serif;
 }
 
 .addLink:hover {

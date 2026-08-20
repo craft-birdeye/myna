@@ -8,7 +8,7 @@
   letter-spacing: -0.24px;
   color: #555;
   white-space: nowrap;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   border: 2px solid transparent;
   transition: border-color 0.15s ease;
 }

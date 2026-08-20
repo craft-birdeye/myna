@@ -430,7 +430,8 @@ function mapProcedureItems(procedureIds = [], nodeDetails, nodeId, product) {
   });
 }
 
-function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive', collapsedBranches = {}, collapsedBranchPaths = {}) {
+function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive', collapsedBranches = {}, collapsedBranchPaths = {}, options = {}) {
+  const { hideStartNode = false } = options;
   let y = 0;
   const nodes = [];
   const edges = [];
@@ -441,21 +442,23 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   // Shared sequential step counter — incremented for every rendered content node
   let stepCounter = hasTrigger ? 0 : 1;
 
-  nodes.push({
-    id: START_NODE_ID,
-    type: 'start',
-    position: { x: 0, y },
-    data: {
-      title: startData.title,
-      subtitle: startData.subtitle,
-      subtitleIsLink: startData.subtitleIsLink,
-      onSubtitleClick: startData.onSubtitleClick,
-    },
-  });
-  y += FLOW_START_GAP;
+  if (!hideStartNode) {
+    nodes.push({
+      id: START_NODE_ID,
+      type: 'start',
+      position: { x: 0, y },
+      data: {
+        title: startData.title,
+        subtitle: startData.subtitle,
+        subtitleIsLink: startData.subtitleIsLink,
+        onSubtitleClick: startData.onSubtitleClick,
+      },
+    });
+    y += FLOW_START_GAP;
+  }
 
   let lastNodeY = 0;
-  let lastNodeBlockHeight = FLOW_START_NODE_HEIGHT;
+  let lastNodeBlockHeight = hideStartNode ? 0 : FLOW_START_NODE_HEIGHT;
 
   // Trigger placeholder — sits at step 1's position, above any tasks, until a trigger lands.
   if (!hasTrigger) {
@@ -465,18 +468,22 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       position: { x: 0, y },
       data: {},
     });
-    edges.push({
-      id: `e-${START_NODE_ID}-${TRIGGER_PLACEHOLDER_ID}`,
-      source: START_NODE_ID,
-      target: TRIGGER_PLACEHOLDER_ID,
-      type: 'addButton',
-    });
+    if (!hideStartNode) {
+      edges.push({
+        id: `e-${START_NODE_ID}-${TRIGGER_PLACEHOLDER_ID}`,
+        source: START_NODE_ID,
+        target: TRIGGER_PLACEHOLDER_ID,
+        type: 'addButton',
+      });
+    }
     lastNodeY = y;
     lastNodeBlockHeight = FLOW_TRIGGER_PLACEHOLDER_HEIGHT;
     y += FLOW_TRIGGER_PLACEHOLDER_HEIGHT + FLOW_CONNECTOR_GAP;
   }
 
-  const entryId = hasTrigger ? START_NODE_ID : TRIGGER_PLACEHOLDER_ID;
+  const entryId = hasTrigger
+    ? (hideStartNode ? null : START_NODE_ID)
+    : TRIGGER_PLACEHOLDER_ID;
 
   nodeList.forEach((item, i) => {
     const nodeId = item.id;
@@ -582,13 +589,15 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
     // No "+" between the trigger placeholder and the first task — that slot is reserved for
     // the trigger, so nothing may be inserted above the first real node there.
     const fromPlaceholder = i === 0 && prevId === TRIGGER_PLACEHOLDER_ID;
-    edges.push({
-      id: `e-${prevId}-${nodeId}`,
-      source: prevId,
-      target: nodeId,
-      type: 'addButton',
-      data: { betweenCards: true, ...((prevIsProcedures || fromPlaceholder) ? { hideAddButton: true } : {}) },
-    });
+    if (prevId != null) {
+      edges.push({
+        id: `e-${prevId}-${nodeId}`,
+        source: prevId,
+        target: nodeId,
+        type: 'addButton',
+        data: { betweenCards: true, ...((prevIsProcedures || fromPlaceholder) ? { hideAddButton: true } : {}) },
+      });
+    }
 
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
       const isVoiceCall = item.flowType === 'voiceCall';
@@ -2085,6 +2094,13 @@ export default function AgentBuilder({
     subtitleIsLink: locationCount === 0,
     onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
   };
+  // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
+  const isScratchCreate = hideTopIdentity && !existingAgent;
+  const startDetails = nodeDetails[START_NODE_ID] || {};
+  const agentDetailsIncomplete = hideTopIdentity && (
+    !(String(startDetails.goals || '').trim())
+    || !((startDetails.locations || []).length)
+  );
   const { nodes: rawNodes, edges } = buildFlow(
     nodeList,
     startData,
@@ -2092,6 +2108,7 @@ export default function AgentBuilder({
     product,
     collapsedBranches,
     collapsedBranchPaths,
+    { hideStartNode: hideTopIdentity },
   );
 
   const nodes = rawNodes.map((n) => {
@@ -3095,33 +3112,44 @@ export default function AgentBuilder({
         </div>
       )}
       {/* Cloud save / version history — matches Figma 15324:121197 */}
+      {!isScratchCreate && (
+        <Tooltip
+          content="Version history"
+          variant="brief"
+          side="bottom"
+        >
+          <button
+            type="button"
+            className="ab-header-cloud-btn"
+            onClick={() => {
+              setPaletteSection(null);
+              if (!versionHistoryOpen) closeAiBuilderPanel();
+              setVersionHistoryOpen((open) => !open);
+              setHelpCenterOpen(false);
+            }}
+            aria-label="Version history"
+            aria-pressed={versionHistoryOpen}
+          >
+            <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
+          </button>
+        </Tooltip>
+      )}
       <Tooltip
-        content="Version history"
+        content={
+          isScratchCreate
+            ? 'Available after the agent is created'
+            : (isFrontDeskAgentName ? 'Preview' : 'Run test')
+        }
         variant="brief"
         side="bottom"
       >
         <button
           type="button"
           className="ab-header-cloud-btn"
-          onClick={() => {
-            setPaletteSection(null);
-            if (!versionHistoryOpen) closeAiBuilderPanel();
-            setVersionHistoryOpen((open) => !open);
-            setHelpCenterOpen(false);
-          }}
-          aria-label="Version history"
-          aria-pressed={versionHistoryOpen}
-        >
-          <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
-        </button>
-      </Tooltip>
-      <Tooltip content={isFrontDeskAgentName ? 'Preview' : 'Run test'} variant="brief" side="bottom">
-        <button
-          type="button"
-          className="ab-header-cloud-btn"
           onClick={handleRunTest}
           aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
           data-tour-id="test-run"
+          disabled={isScratchCreate}
         >
           <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
         </button>
@@ -3246,40 +3274,63 @@ export default function AgentBuilder({
                     </button>
                   )}
                   {hideTopIdentity && (
-                    <>
-                      <button
-                        type="button"
-                        className="rr-chrome-identity__title"
-                        onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
-                        aria-label={`Open agent details for ${agentName || 'Untitled agent'}`}
-                      >
-                        <span className="rr-chrome-identity__name">
-                          {agentName || 'Untitled agent'}
-                        </span>
+                    <div className={`rr-chrome-identity${agentDetailsIncomplete ? ' rr-chrome-identity--needs-details' : ''}`}>
+                      <div className="rr-chrome-identity__row">
+                        <button
+                          type="button"
+                          className="rr-chrome-identity__title"
+                          onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                          aria-label={`Open agent details for ${agentName || 'Untitled agent'}`}
+                        >
+                          <span className="rr-chrome-identity__name">
+                            {agentName || 'Untitled agent'}
+                          </span>
+                        </button>
                         {nodesInteractive && (
-                          <span className="material-symbols-outlined rr-chrome-identity__edit" aria-hidden>
-                            edit
+                          <Tooltip content="Edit agent details" variant="brief" side="bottom">
+                            <button
+                              type="button"
+                              className="ab-header-cloud-btn"
+                              onClick={handleOpenAgentDetails}
+                              aria-label="Edit agent details"
+                            >
+                              <span className="material-symbols-outlined ab-header-cloud-btn__material" aria-hidden>
+                                edit
+                              </span>
+                            </button>
+                          </Tooltip>
+                        )}
+                        {agentStatus === 'Draft' && existingAgent ? (
+                          <span className="ab-header-status ab-header-status--draft ab-header-status--with-live">
+                            <span>Draft</span>
+                            <span className="ab-header-status__divider" aria-hidden />
+                            <button
+                              type="button"
+                              className="ab-header-status__view-live"
+                              onClick={() => setAgentStatus('Running')}
+                            >
+                              View live
+                            </button>
+                          </span>
+                        ) : (
+                          <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                            {agentStatus}
                           </span>
                         )}
-                      </button>
-                      {agentStatus === 'Draft' && existingAgent ? (
-                        <span className="ab-header-status ab-header-status--draft ab-header-status--with-live">
-                          <span>Draft</span>
-                          <span className="ab-header-status__divider" aria-hidden />
-                          <button
-                            type="button"
-                            className="ab-header-status__view-live"
-                            onClick={() => setAgentStatus('Running')}
-                          >
-                            View live
-                          </button>
-                        </span>
-                      ) : (
-                        <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
-                          {agentStatus}
-                        </span>
+                      </div>
+                      {nodesInteractive && agentDetailsIncomplete && (
+                        <button
+                          type="button"
+                          className="rr-chrome-identity__hint"
+                          onClick={handleOpenAgentDetails}
+                        >
+                          <span className="material-symbols-outlined rr-chrome-identity__hint-icon" aria-hidden>
+                            error
+                          </span>
+                          Complete agent details
+                        </button>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               )}

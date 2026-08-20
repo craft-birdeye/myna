@@ -7,7 +7,7 @@
   border-radius: 4px;
   width: 100%;
   box-sizing: border-box;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   transition: border-color 0.15s;
 }
 
@@ -117,7 +117,7 @@
   background: #333;
   color: #fff;
   font-size: 12px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 6px 10px;
   border-radius: 4px;
   white-space: normal;
@@ -140,7 +140,7 @@
   border-bottom: 1px solid #1976d2;
   outline: none;
   background: transparent;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 0;
   color: #212121;
   width: 100%;
@@ -185,7 +185,7 @@
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -203,7 +203,7 @@
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: background 0.15s;
 }

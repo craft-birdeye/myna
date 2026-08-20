@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  font-family: var(--sans, 'Roboto', sans-serif);
+  font-family: var(--sans, 'Inter', sans-serif);
 }
 
 .cnb__step {

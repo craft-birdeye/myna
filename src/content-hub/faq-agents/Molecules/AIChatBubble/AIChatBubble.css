@@ -28,7 +28,7 @@
 }
 
 .ai-chat-bubble__message {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
@@ -52,7 +52,7 @@
   background: #fff;
   border: 1px solid #e5e9f0;
   border-radius: 4px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;

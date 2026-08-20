@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormInput, SingleSelect } from '../../../elemental-stubs';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const UNIT_OPTIONS = [
   { value: 'minutes', label: 'Minutes' },

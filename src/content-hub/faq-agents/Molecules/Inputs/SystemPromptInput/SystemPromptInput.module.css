@@ -17,7 +17,7 @@
   line-height: 18px;
   letter-spacing: -0.24px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   white-space: nowrap;
 }
 
@@ -25,7 +25,7 @@
   font-size: 12px;
   line-height: 18px;
   color: #de1b0c;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .inputBox {
@@ -52,7 +52,7 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
   word-break: break-word;
   white-space: pre-wrap;
@@ -124,7 +124,7 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   transition: background 0.1s;
 }
 
@@ -155,5 +155,5 @@
   font-size: 13px;
   color: #212121;
   line-height: 18px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }

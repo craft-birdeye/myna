@@ -3,7 +3,7 @@ import { Button } from '../../../elemental-stubs';
 import CloseIcon from '../RHSHeader/icons/close.svg';
 import PromptStrength from '../../PromptStrength/PromptStrength';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const SUGGESTIONS = [
   'Add examples of reviews and expected outputs to improve accuracy',

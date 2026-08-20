@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormInput, TextArea, SingleSelect } from '../../../elemental-stubs';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const helpTextStyle = { fontSize: 11, lineHeight: '16px', color: '#8f8f8f', fontFamily: font };
 

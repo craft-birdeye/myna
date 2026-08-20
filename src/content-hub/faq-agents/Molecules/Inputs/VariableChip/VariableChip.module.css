@@ -54,7 +54,7 @@
   font-size: 12px;
   line-height: 16px;
   color: #555;
-  font-family: 'Inter', 'Roboto', sans-serif;
+  font-family: 'Inter', 'Inter', sans-serif;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -89,7 +89,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-family: 'Inter', 'Roboto', sans-serif;
+  font-family: 'Inter', 'Inter', sans-serif;
   min-width: 60px;
   max-width: 160px;
   width: 100px;

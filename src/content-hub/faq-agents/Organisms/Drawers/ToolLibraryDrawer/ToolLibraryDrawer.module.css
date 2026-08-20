@@ -95,7 +95,7 @@
 .toolName {
   font-size: 14px;
   color: #212121;
-  font-family: "Roboto", sans-serif;
+  font-family: "Inter", sans-serif;
   font-weight: 500;
   letter-spacing: -0.28px;
   line-height: 20px;
@@ -107,7 +107,7 @@
 .toolDesc {
   font-size: 12px;
   color: #8f8f8f;
-  font-family: "Roboto", sans-serif;
+  font-family: "Inter", sans-serif;
   letter-spacing: -0.24px;
   line-height: 18px;
   white-space: nowrap;
@@ -178,7 +178,7 @@
 .deleteConfirmText {
   font-size: 12px;
   color: #b42318;
-  font-family: "Roboto", sans-serif;
+  font-family: "Inter", sans-serif;
   white-space: nowrap;
 }
 
@@ -238,7 +238,7 @@
 .emptyStateTitle {
   font-size: 16px;
   color: #555;
-  font-family: "Roboto", sans-serif;
+  font-family: "Inter", sans-serif;
   margin: 0;
   font-weight: 400;
 }
@@ -246,7 +246,7 @@
 .emptyStateDesc {
   font-size: 14px;
   color: #8f8f8f;
-  font-family: "Roboto", sans-serif;
+  font-family: "Inter", sans-serif;
   margin: 0;
   text-align: center;
   letter-spacing: -0.28px;

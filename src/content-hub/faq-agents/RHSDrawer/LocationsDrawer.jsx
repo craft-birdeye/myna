@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '../elemental-stubs';
 import './LocationsDrawer.css';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const ALL_LOCATIONS = [
   { id: '1001', name: 'Mountain view, CA' },
