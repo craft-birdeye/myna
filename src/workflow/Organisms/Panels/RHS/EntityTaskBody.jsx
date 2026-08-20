@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import { subscribeToCustomTools } from '../../../services/agentService';
+import { isHandleResponseConfigComplete } from '../../Drawers/HandleResponseDrawer/HandleResponseDrawer';
+import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import birdeyeLogoUrl from '../../../../assets/birdeye-logo.svg';
 import styles from './EntityTaskBody.module.css';
 
@@ -37,6 +39,11 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
   };
 
   const displayedTools = allTools.filter((t) => selectedTools.includes(t.id));
+
+  // Tools whose own config drawer has mandatory fields flag an inline error icon beside
+  // their name until that config is saved. `handle-response` is the only such tool today.
+  const toolHasMissingFields = (toolId) =>
+    toolId === 'handle-response' && !isHandleResponseConfigComplete(initialValues.handleResponse);
 
   return (
     <div className={styles.formContainer}>
@@ -95,6 +102,13 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
                     )}
                   </div>
                   <span className={styles.toolName}>{tool.name}</span>
+                  {toolHasMissingFields(tool.id) && (
+                    <Tooltip content="Missing mandatory fields" variant="brief" side="top">
+                      <span className={styles.toolErrorIcon} role="img" aria-label="Missing mandatory fields">
+                        <span className="material-symbols-outlined" aria-hidden>error</span>
+                      </span>
+                    </Tooltip>
+                  )}
                 </div>
                 <div className={styles.toolRowActions}>
                   <button

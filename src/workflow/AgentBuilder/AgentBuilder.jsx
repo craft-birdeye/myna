@@ -26,6 +26,7 @@ import QueryConfigDrawer from '../Organisms/Drawers/QueryConfigDrawer/QueryConfi
 import AssignContactStatusDrawer from '../Organisms/Drawers/AssignContactStatusDrawer/AssignContactStatusDrawer';
 import AssignConversationDrawer from '../Organisms/Drawers/AssignConversationDrawer/AssignConversationDrawer';
 import AssignConversationStatusDrawer from '../Organisms/Drawers/AssignConversationStatusDrawer/AssignConversationStatusDrawer';
+import HandleResponseDrawer, { isHandleResponseConfigComplete } from '../Organisms/Drawers/HandleResponseDrawer/HandleResponseDrawer';
 import ToolLibraryDrawer from '../Organisms/Drawers/ToolLibraryDrawer/ToolLibraryDrawer';
 import AddToolDrawer from '../Organisms/Drawers/AddToolDrawer/AddToolDrawer';
 import {
@@ -274,6 +275,11 @@ const TASK_DROP_DEFAULTS = {
     description: 'Add tags to a review',
     selectedTools: ['assign-tags'],
   },
+  'Handle response': {
+    description:
+      'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
+    selectedTools: ['handle-response'],
+  },
 };
 
 function makeNodeConfig(id, type, label, description) {
@@ -395,6 +401,15 @@ function computeLoopFlowWidth(nodes, nodeDetails) {
 /** Task incomplete warning — hidden for design; re-enable checks below when needed. */
 function isTaskConfigIncomplete(_item, _details = {}) {
   return false;
+}
+
+/**
+ * True when a task's tool still has unfilled mandatory config. Checked on RHS Save (not on
+ * drop), so the canvas card only flags an error once the user has tried to commit the task.
+ */
+function taskHasToolConfigError(details = {}) {
+  const tools = details.selectedTools || [];
+  return tools.includes('handle-response') && !isHandleResponseConfigComplete(details.handleResponse);
 }
 
 function getNodeBlockHeight(item, nodeId, nodeDetails, product = 'automotive') {
@@ -1103,6 +1118,9 @@ export default function AgentBuilder({
   const [assignContactStatusToolOpen, setAssignContactStatusToolOpen] = useState(false);
   const [assignConversationToolOpen, setAssignConversationToolOpen] = useState(false);
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
+  const [handleResponseToolOpen, setHandleResponseToolOpen] = useState(false);
+  /** Node ids whose Task details were saved while a tool still had missing mandatory config. */
+  const [taskErrorNodeIds, setTaskErrorNodeIds] = useState(() => new Set());
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // RHS panel stays mounted a beat past `drawerOpen` turning false so it can
@@ -2214,6 +2232,8 @@ export default function AgentBuilder({
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
+      // Set once Task details is saved with a tool still missing mandatory config.
+      hasError: hideTopIdentity && taskErrorNodeIds.has(n.id),
       // Exploration only: swap the header glyph for a spinner/check while Run test walks
       // this node, matching the Test details panel's own stepper animation.
       runStatus: !hideTopIdentity || !testRunOpen
@@ -2600,6 +2620,25 @@ export default function AgentBuilder({
   }, []);
 
   const currentDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
+
+  /**
+   * Task details Save — validates the node's tool config and flags the canvas card when a
+   * mandatory field is still missing (cleared again once the tool is configured and re-saved).
+   */
+  const handleSaveTaskDetails = () => {
+    const id = selectedNodeId;
+    if (id) {
+      const hasError = taskHasToolConfigError(nodeDetails[id]);
+      setTaskErrorNodeIds((prev) => {
+        if (hasError === prev.has(id)) return prev;
+        const next = new Set(prev);
+        if (hasError) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
+    handleCloseDrawer();
+  };
 
   /* ─── Shared onFieldChange for the active node ─── */
   const activeFieldChange = useCallback(
@@ -3067,6 +3106,7 @@ export default function AgentBuilder({
             if (toolId === 'assign-contact-status') { setAssignContactStatusToolOpen(true); return; }
             if (toolId === 'assign-conversation') { setAssignConversationToolOpen(true); return; }
             if (toolId === 'assign-conversation-status') { setAssignConversationStatusToolOpen(true); return; }
+            if (toolId === 'handle-response') { setHandleResponseToolOpen(true); return; }
             getCustomToolsByIds([toolId]).then((tools) => {
               if (tools[0]) setViewingTool(tools[0]);
             });
@@ -3074,7 +3114,7 @@ export default function AgentBuilder({
           onSwapTool: () => setToolPickerOpen(true),
         }}
         onClose={handleCloseDrawer}
-        onSave={handleCloseDrawer}
+        onSave={handleSaveTaskDetails}
       />
     );
   };
@@ -3801,6 +3841,16 @@ export default function AgentBuilder({
 
       {/* ─── Assign conversation status tool drawer ─── */}
       <AssignConversationStatusDrawer isOpen={assignConversationStatusToolOpen} onClose={() => setAssignConversationStatusToolOpen(false)} />
+
+      <HandleResponseDrawer
+        isOpen={handleResponseToolOpen}
+        value={currentDetails.handleResponse}
+        onClose={() => setHandleResponseToolOpen(false)}
+        onSave={(config) => {
+          activeFieldChange('handleResponse', config);
+          setHandleResponseToolOpen(false);
+        }}
+      />
 
       {/* ─── Tool configuration overlay ─── */}
       {viewingTool && (

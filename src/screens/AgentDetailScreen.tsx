@@ -7533,6 +7533,43 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     [order],
   )
 
+  /**
+   * Row menu → Download: writes the agent out as a Markdown file the browser saves locally.
+   * Fields come from the full column set (not just the visible ones) so hiding a column in
+   * Customize columns doesn't silently drop it from the export.
+   */
+  const handleDownloadAgent = (row: AgentInstance) => {
+    const fileName = `${row.name}.md`
+    const fields = order
+      .filter((k) => k !== 'name')
+      .map((k) => ({ label: DEF_BY_KEY.get(k)?.label, value: row[k as keyof AgentInstance] }))
+      .filter(
+        (f): f is { label: string; value: string | number } =>
+          !!f.label && (typeof f.value === 'string' || typeof f.value === 'number') && f.value !== '',
+      )
+    const markdown = [
+      `# ${row.name}`,
+      '',
+      '| Field | Value |',
+      '| --- | --- |',
+      ...fields.map((f) => `| ${f.label} | ${f.value} |`),
+      '',
+    ].join('\n')
+
+    const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    // Revoking synchronously can cancel the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    setToastMessage(`${fileName} has been downloaded`)
+    setToastVisible(true)
+  }
+
   const FILTER_FIELDS: FilterField[] = [
     { id: 'status', label: 'Status', options: opts('Running', 'Paused', 'Draft') },
     { id: 'channels', label: 'Channels', options: opts('Voice call', 'Web chat', 'Text', 'Email', 'Facebook'), multi: true },
@@ -8227,6 +8264,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                             setSelectedInstance(row.name)
                           } },
                           { label: 'Reports', onClick: () => {} },
+                          ...(isExplorationResponseAgents
+                            ? [{ label: 'Download', onClick: handleDownloadAgent }]
+                            : []),
                           { label: 'Delete', onClick: () => {}, variant: 'danger' },
                         ]}
                       />
@@ -8272,6 +8312,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           setLibraryPreview(null)
           onEditAgent?.(name)
         }}
+      />
+
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
       />
 
     </div>

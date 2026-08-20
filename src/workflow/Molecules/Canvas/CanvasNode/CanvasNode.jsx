@@ -29,6 +29,8 @@ export default function CanvasNode({
   state = 'default',
   showConfigWarning = false,
   runStatus,
+  /** Task details was saved with a tool still missing mandatory config. */
+  hasError = false,
 }) {
   const [on, setOn] = useState(toggleEnabled);
   const [copied, setCopied] = useState(false);
@@ -56,7 +58,7 @@ export default function CanvasNode({
   };
 
   const isOff = hasToggle && !on;
-  const stateClass = state !== 'default' ? ` canvas-node--${state}` : '';
+  const stateClass = `${state !== 'default' ? ` canvas-node--${state}` : ''}${hasError ? ' canvas-node--error' : ''}`;
   const showHeaderAdd = hasAddButton && !viewOnly && nodeType !== 'branch';
   const showFooterAdd = hasAddButton && !viewOnly && nodeType === 'branch';
 
@@ -67,6 +69,7 @@ export default function CanvasNode({
           nodeType={nodeType}
           label={label}
           runStatus={runStatus}
+          hasError={hasError}
           hasAiIcon={hasAiIcon}
           hasToggle={hasToggle}
           toggleEnabled={on}

@@ -12,6 +12,9 @@ export default function SystemPromptInput({ value, onChange, required, showTrigg
 
   const lastEmittedRef = useRef(null);
   const savedRangeRef = useRef(null);
+  // Anchors the Fields picker so it docks left of the panel, level with this icon —
+  // without it the picker has no anchor and pins itself to the top of the viewport.
+  const fieldsBtnRef = useRef(null);
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
 
   const emitChange = useCallback(() => {
@@ -76,6 +79,7 @@ export default function SystemPromptInput({ value, onChange, required, showTrigg
           />
           <div className={styles.toolbar}>
             <button
+              ref={fieldsBtnRef}
               type="button"
               className={`${styles.toolbarBtn} ${fieldModalOpen ? styles.toolbarBtnActive : ''}`}
               onMouseDown={(e) => e.preventDefault()}
@@ -99,6 +103,7 @@ export default function SystemPromptInput({ value, onChange, required, showTrigg
         <FieldPickerModal
           onClose={() => setFieldModalOpen(false)}
           onSelectField={handleFieldSelect}
+          anchorEl={fieldsBtnRef.current}
           showTriggerFields={showTriggerFields}
         />
       )}

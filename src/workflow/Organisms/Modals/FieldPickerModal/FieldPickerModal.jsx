@@ -91,7 +91,7 @@ const TRIGGER_CATEGORY = {
 };
 
 const POPOVER_WIDTH = 600;
-const POPOVER_MAX_HEIGHT = 400;
+const POPOVER_MAX_HEIGHT = 520;
 const DRAWER_GAP = 0;
 
 function FieldChip({ name }) {
@@ -122,29 +122,32 @@ function FieldRow({ field, onClick }) {
   );
 }
 
+/** Panels the picker docks to the left of — slide-in drawers and the workflow node-config RHS. */
+const PANEL_SELECTOR = 'aside, .agent-builder__rhs';
+
 /**
- * Positions the popover to the LEFT of the nearest ancestor <aside> (a slide-in
- * drawer, e.g. the New procedure drawer) so it never overlaps the drawer's own
- * content. Falls back to anchoring near the triggering icon when there's no
- * enclosing drawer (e.g. the standalone Procedures page).
+ * Positions the popover to the LEFT of the nearest enclosing panel (a slide-in drawer, or the
+ * workflow canvas's node-config RHS) so it opens over the canvas and never overlaps the panel
+ * it was launched from. Falls back to anchoring near the triggering icon when there's no
+ * enclosing panel (e.g. the standalone Procedures page).
  */
 function computePosition(anchorEl) {
   const margin = 12;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const asideEl = anchorEl?.closest ? anchorEl.closest('aside') : null;
+  const panelEl = anchorEl?.closest ? anchorEl.closest(PANEL_SELECTOR) : null;
   const anchorRect = anchorEl?.getBoundingClientRect ? anchorEl.getBoundingClientRect() : null;
 
-  if (asideEl) {
-    const asideRect = asideEl.getBoundingClientRect();
-    const availableWidth = Math.max(320, asideRect.left - DRAWER_GAP - margin);
+  if (panelEl) {
+    const panelRect = panelEl.getBoundingClientRect();
+    const availableWidth = Math.max(320, panelRect.left - DRAWER_GAP - margin);
     const width = Math.min(POPOVER_WIDTH, availableWidth);
-    const left = Math.max(margin, asideRect.left - DRAWER_GAP - width);
-    const maxHeight = Math.min(POPOVER_MAX_HEIGHT, asideRect.height - margin * 2);
+    const left = Math.max(margin, panelRect.left - DRAWER_GAP - width);
+    const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2, panelRect.height - margin * 2);
     // Open level with the triggering icon (parallel to the Steps field) instead
-    // of always snapping to the top of the drawer.
-    const idealTop = anchorRect ? anchorRect.top : asideRect.top;
-    const top = Math.min(Math.max(margin, idealTop), vh - maxHeight - margin);
+    // of always snapping to the top of the panel.
+    const idealTop = anchorRect ? anchorRect.top : panelRect.top;
+    const top = Math.min(Math.max(margin, idealTop), Math.max(margin, vh - maxHeight - margin));
     return { top, left, width, maxHeight };
   }
 
@@ -184,6 +187,12 @@ export default function FieldPickerModal({
 }) {
   const [search, setSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('business');
+  /**
+   * Category drilled into *while a search is active*. Kept separate from
+   * `selectedCategoryId` so clearing the search restores whatever was selected before it.
+   * null = show every matching section stacked.
+   */
+  const [searchSelectedId, setSearchSelectedId] = useState(null);
   const [pos, setPos] = useState(() => computePosition(anchorEl));
   const rootRef = useRef(null);
 
@@ -193,17 +202,54 @@ export default function FieldPickerModal({
   );
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) ?? categories[0];
+  const query = search.trim();
+  const isSearching = query.length > 0;
 
-  const filteredFields = useMemo(() => {
-    if (!selectedCategory) return [];
-    const q = search.toLowerCase();
-    return selectedCategory.fields.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q)
-        || f.value.toLowerCase().includes(q)
-        || f.sample.toLowerCase().includes(q.replace(/"/g, '')),
-    );
-  }, [selectedCategory, search]);
+  /** Every category with its fields narrowed to the current query; empties dropped. */
+  const matchingCategories = useMemo(() => {
+    if (!isSearching) return [];
+    const q = query.toLowerCase();
+    const unquoted = q.replace(/"/g, '');
+    return categories
+      .map((cat) => ({
+        ...cat,
+        fields: cat.fields.filter(
+          (f) =>
+            f.name.toLowerCase().includes(q)
+            || f.value.toLowerCase().includes(q)
+            || f.sample.toLowerCase().includes(unquoted),
+        ),
+      }))
+      .filter((cat) => cat.fields.length > 0);
+  }, [categories, isSearching, query]);
+
+  /**
+   * Idle: the selected category. Searching: every matching section stacked, or just one when
+   * the user has drilled into a section from the sidebar (the search stays active either way).
+   */
+  const visibleSections = useMemo(() => {
+    if (!isSearching) return selectedCategory ? [selectedCategory] : [];
+    if (searchSelectedId) return matchingCategories.filter((c) => c.id === searchSelectedId);
+    return matchingCategories;
+  }, [isSearching, selectedCategory, matchingCategories, searchSelectedId]);
+
+  // Sidebar mirrors the search: matching categories only, counts become match counts.
+  const sidebarCategories = useMemo(
+    () =>
+      (isSearching ? matchingCategories : categories).map((c) => ({ ...c, count: c.fields.length })),
+    [categories, matchingCategories, isSearching],
+  );
+
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    // A new query starts from "all matching sections" again.
+    setSearchSelectedId(null);
+  };
+
+  const clearSearch = () => {
+    setSearch('');
+    setSearchSelectedId(null);
+  };
 
   useEffect(() => {
     if (!showTriggerFields && selectedCategoryId === 'trigger') {
@@ -261,11 +307,26 @@ export default function FieldPickerModal({
             </span>
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search"
               className={styles.searchInput}
               aria-label="Search fields"
             />
+            {isSearching && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className={styles.searchClear}
+                aria-label="Clear search"
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 18, fontVariationSettings: "'FILL' 0, 'wght' 300" }}
+                >
+                  close
+                </span>
+              </button>
+            )}
           </div>
           <button type="button" onClick={onClose} className={styles.closeBtn} aria-label="Close">
             <img src={CloseIcon} alt="" width={24} height={24} />
@@ -275,19 +336,25 @@ export default function FieldPickerModal({
 
       <div className={styles.body}>
         <div className={styles.sidebar}>
-          {categories.map((cat) => {
-            const isSelected = cat.id === selectedCategoryId;
+          {sidebarCategories.map((cat) => {
+            const isSelected = isSearching
+              ? cat.id === searchSelectedId
+              : cat.id === selectedCategoryId;
             return (
               <button
                 key={cat.id}
                 type="button"
                 className={`${styles.catBtn} ${isSelected ? styles.catBtnSelected : ''}`}
-                onClick={() => setSelectedCategoryId(cat.id)}
+                onClick={() => {
+                  // Drilling into a section must not cancel the search — only the ✕ does.
+                  if (isSearching) setSearchSelectedId((prev) => (prev === cat.id ? null : cat.id));
+                  else setSelectedCategoryId(cat.id);
+                }}
                 title={cat.label}
               >
                 <span className={styles.catLabel}>{cat.label}</span>
                 <span className={styles.catMeta}>
-                  <span className={styles.catCount}>{cat.fields.length}</span>
+                  <span className={styles.catCount}>{cat.count}</span>
                   <span
                     className="material-symbols-outlined"
                     style={{ fontSize: 16, color: '#8f8f8f', fontVariationSettings: "'FILL' 0, 'wght' 300" }}
@@ -304,22 +371,22 @@ export default function FieldPickerModal({
 
         <div className={styles.content}>
           <div className={styles.card}>
-            <div className={styles.section}>
-              <div className={styles.sectionBody}>
-                <div className={styles.sectionLabel}>
-                  {selectedCategory?.sectionLabel ?? 'Trigger output'}
+            {visibleSections.length === 0 ? (
+              <span className={styles.empty}>{`No fields match "${query}"`}</span>
+            ) : (
+              visibleSections.map((section) => (
+                <div key={section.id} className={styles.section}>
+                  <div className={styles.sectionBody}>
+                    <div className={styles.sectionLabel}>{section.sectionLabel}</div>
+                    <div className={styles.fieldList}>
+                      {section.fields.map((field) => (
+                        <FieldRow key={field.value} field={field} onClick={onSelectField} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className={styles.fieldList}>
-                  {filteredFields.length === 0 ? (
-                    <span className={styles.empty}>No fields match your search.</span>
-                  ) : (
-                    filteredFields.map((field) => (
-                      <FieldRow key={field.value} field={field} onClick={onSelectField} />
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>

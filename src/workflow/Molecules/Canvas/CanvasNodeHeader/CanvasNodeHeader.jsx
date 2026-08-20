@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Toggle } from '../../../elemental-stubs';
 import { Button } from '../../../elemental-stubs';
 import { AiSparkleGlyphIcon } from '../../../../assets/AiSparkleGlyphIcon';
+import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import './CanvasNodeHeader.css';
 
 const AddIcon = () => <span className="material-symbols-outlined cnh__btn-icon">add_circle</span>;
@@ -92,6 +93,8 @@ export default function CanvasNodeHeader({
    * animate in lockstep. Exploration-only (`response-agents-exploration`); undefined
    * everywhere else, so every other agent's header is unaffected. */
   runStatus,
+  /** Task saved with a tool still missing mandatory config — flags an icon before the toggle. */
+  hasError = false,
 }) {
   const config = ICON_CONFIG[nodeType] || ICON_CONFIG.task;
   const NodeSvg = config.Component || null;
@@ -166,6 +169,23 @@ export default function CanvasNodeHeader({
           <div className="cnh__ai-icon">
             <AiSparkleGlyphIcon size={14} />
           </div>
+        )}
+        {hasError && (
+          <Tooltip
+            content="Some of the variables referenced in this task does not exist"
+            variant="detail"
+            side="top"
+          >
+            <span
+              className="cnh__error-icon"
+              role="img"
+              aria-label="Some of the variables referenced in this task does not exist"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <span className="material-symbols-outlined" aria-hidden>error</span>
+            </span>
+          </Tooltip>
         )}
         {hasToggle && (
           <div

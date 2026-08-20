@@ -35,6 +35,8 @@ export default function UserPromptInput({
   showProcedureButton = false,
   enableToolSlash = true,
   showTriggerFields = false,
+  /** Fields-only toolbar: hides Tools + Rephrase, leaving just the `{x}` field picker. */
+  fieldsOnly = false,
 }) {
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -224,20 +226,22 @@ export default function UserPromptInput({
                 onClick={handleOpenFieldModal}
               />
             </div>
-            <ToolbarButton
-              icon={<BuildIcon />}
-              tooltip="Tools"
-              onClick={() => {
-                if (enableToolSlash) {
-                  openSlashMenu(() => {
-                    const rect = editorRef.current?.getBoundingClientRect();
-                    return rect ? { top: rect.bottom - 8, left: rect.left + 12 } : null;
-                  });
-                  return;
-                }
-                onOpenToolDrawer?.();
-              }}
-            />
+            {!fieldsOnly && (
+              <ToolbarButton
+                icon={<BuildIcon />}
+                tooltip="Tools"
+                onClick={() => {
+                  if (enableToolSlash) {
+                    openSlashMenu(() => {
+                      const rect = editorRef.current?.getBoundingClientRect();
+                      return rect ? { top: rect.bottom - 8, left: rect.left + 12 } : null;
+                    });
+                    return;
+                  }
+                  onOpenToolDrawer?.();
+                }}
+              />
+            )}
             {showProcedureButton && (
               <ToolbarButton
                 icon={<ProcedureIcon />}
@@ -245,11 +249,13 @@ export default function UserPromptInput({
                 onClick={handleInsertProcedure}
               />
             )}
-            <ToolbarButton
-              icon={<ExpandIcon />}
-              tooltip="Rephrase"
-              disabled={isEmpty}
-            />
+            {!fieldsOnly && (
+              <ToolbarButton
+                icon={<ExpandIcon />}
+                tooltip="Rephrase"
+                disabled={isEmpty}
+              />
+            )}
           </div>
           )}
         </div>

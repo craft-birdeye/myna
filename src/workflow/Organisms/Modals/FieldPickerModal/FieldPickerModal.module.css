@@ -45,13 +45,33 @@
   align-items: center;
   gap: 8px;
   height: 36px;
-  width: 240px;
+  width: 200px;
   max-width: 100%;
-  padding: 0 12px;
+  padding: 0 8px 0 12px;
   border: 1px solid #d0d5dd;
   border-radius: 4px;
   box-sizing: border-box;
   background: #fff;
+}
+
+.searchClear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #8f8f8f;
+  cursor: pointer;
+}
+
+.searchClear:hover {
+  background: #f2f4f7;
+  color: #212121;
 }
 
 .search:focus-within {
@@ -181,6 +201,11 @@
   display: flex;
   align-items: flex-start;
   gap: 6px;
+}
+
+/* Search shows several sections stacked in one card. */
+.section + .section {
+  margin-top: 20px;
 }
 
 .sectionBody {

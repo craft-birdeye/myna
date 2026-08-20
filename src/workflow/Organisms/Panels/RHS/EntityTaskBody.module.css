@@ -56,6 +56,27 @@
   background: #fff;
 }
 
+/*
+ * Tool whose own config drawer still has unfilled mandatory fields — an inline icon beside
+ * the name, with the reason in a hover tooltip so the error costs no vertical space.
+ */
+.toolErrorIcon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: #d32f2f;
+}
+
+/* `:global` — CSS Modules scopes every bare class, so an unwrapped
+   `.material-symbols-outlined` would be hashed and never match the glyph. */
+.toolErrorIcon :global(.material-symbols-outlined) {
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
+}
+
 .toolRow {
   display: flex;
   align-items: center;
@@ -137,7 +158,9 @@
 }
 
 .toolName {
-  flex: 1;
+  /* Not `flex: 1` — the name must hug its text so the error icon sits beside it rather
+     than being pushed to the far edge of the row. `.toolRowMain` still owns the space. */
+  flex: 0 1 auto;
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.28px;

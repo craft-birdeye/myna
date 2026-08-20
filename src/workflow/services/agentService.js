@@ -355,6 +355,24 @@ const _SEED_TOOLS = [
     outputs: [{ name: 'tagged', type: 'boolean' }],
   },
   {
+    id: 'handle-response',
+    name: 'Handle response',
+    icon: 'reply',
+    isBirdeye: true,
+    description:
+      'Decide what the agent does with the composed response — post it directly, hold it for human approval, or surface it as a suggestion.',
+    category: 'Reviews',
+    modules: ['Reviews'],
+    products: ['healthcare', 'dental', 'automotive'],
+    entities: ['review'],
+    inputs: [
+      { name: 'responseText', type: 'string' },
+      { name: 'responseHandling', type: 'string', description: 'post-directly | post-after-approval | show-as-suggested' },
+      { name: 'postAfter', type: 'string', description: 'Delay before the response is posted' },
+    ],
+    outputs: [{ name: 'status', type: 'string', description: 'posted | pending-approval | suggested' }],
+  },
+  {
     id: 'assign-contact-status',
     name: 'Assign contact status',
     icon: 'how_to_reg',
