@@ -36,6 +36,24 @@ const ProcedureIcon = () => (
   </svg>
 );
 
+/*
+ * Same SVG used by the Test details panel's step stepper (TestRunPanel.tsx) — a font glyph
+ * sits off-centre in its line-box, so `animate-spin` would make it orbit instead of spin. This
+ * circle is centred at 8,8 of a 16×16 box (this header's icon size), so it rotates in place.
+ */
+const RunSpinnerIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="cnh__run-spinner" aria-hidden>
+    <circle cx="8" cy="8" r="6.4" stroke="#1976d2" strokeOpacity="0.2" strokeWidth="1.6" />
+    <path d="M14.4 8a6.4 6.4 0 0 0-6.4-6.4" stroke="#1976d2" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+const RunDoneIcon = () => (
+  <span className="material-symbols-outlined cnh__run-done" aria-hidden>
+    check_circle
+  </span>
+);
+
 const ICON_CONFIG = {
   trigger:    { Component: TriggerIcon   },
   task:       { Component: TaskIcon      },
@@ -69,6 +87,11 @@ export default function CanvasNodeHeader({
   onMoveDown,
   canMoveUp = false,
   canMoveDown = false,
+  /** Set while a "Run test" pass is executing/has finished this node — swaps the type
+   * glyph for the same spinner/check the Test details panel shows, so canvas and panel
+   * animate in lockstep. Exploration-only (`response-agents-exploration`); undefined
+   * everywhere else, so every other agent's header is unaffected. */
+  runStatus,
 }) {
   const config = ICON_CONFIG[nodeType] || ICON_CONFIG.task;
   const NodeSvg = config.Component || null;
@@ -126,10 +149,15 @@ export default function CanvasNodeHeader({
     <div className="cnh">
       <div className="cnh__left">
         <span className={`cnh__node-icon${nodeType === 'subagent' ? ' cnh__node-icon--subagent' : ''}`}>
-          {NodeSvg
-            ? <NodeSvg />
-            : <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{config.icon}</span>
-          }
+          {runStatus === 'running' ? (
+            <RunSpinnerIcon />
+          ) : runStatus === 'done' ? (
+            <RunDoneIcon />
+          ) : NodeSvg ? (
+            <NodeSvg />
+          ) : (
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{config.icon}</span>
+          )}
         </span>
         <span className="cnh__label">{label}</span>
       </div>

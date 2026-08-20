@@ -20,6 +20,91 @@
   font-family: 'Roboto', sans-serif;
 }
 
+/*
+ * Exploration only: header lives in the canvas chrome instead (Cancel / Restore),
+ * so the panel is a bare list flush-left with the identity card above it, with
+ * collapsible year › month groups.
+ */
+.rr-version-history--canvas {
+  left: 16px;
+}
+
+.rr-version-history__groups {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px 16px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.rr-version-history__year + .rr-version-history__year {
+  margin-top: 4px;
+}
+
+.rr-version-history__group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.rr-version-history__group-toggle:hover {
+  background: #f2f4f7;
+}
+
+.rr-version-history__group-toggle--year {
+  padding: 8px 8px 8px 12px;
+}
+
+.rr-version-history__group-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rr-version-history__group-label--year {
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.rr-version-history__group-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: #9aa4b2;
+}
+
+.rr-version-history__group-chevron {
+  flex-shrink: 0;
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  overflow: hidden;
+  color: #757575;
+}
+
+/* Rows sit directly under their year; the group container owns the scroll. */
+.rr-version-history__list--grouped {
+  padding: 2px 0 4px;
+  overflow: visible;
+  flex: none;
+  min-height: 0;
+}
+
 .rr-version-history__header {
   display: flex;
   align-items: center;

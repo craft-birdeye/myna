@@ -57,10 +57,11 @@ import iconAgentsPurple from '../../assets/icon-agents-purple.svg';
 import { Tooltip } from '../../components/Tooltip/Tooltip';
 import { AiBuilderPanel } from '../../components/AiBuilderPanel/AiBuilderPanel';
 import { TestRunPanel } from '../../components/TestRunPanel/TestRunPanel';
+import { Toast } from '../../components/Toast/Toast';
 import { buildTestRunSteps } from '../../data/testRunSteps';
 import { useTestRun } from '../../hooks/useTestRun';
 import { getAgentIssues } from '../../data/agentIssues';
-import VersionHistoryPanel from './VersionHistoryPanel';
+import VersionHistoryPanel, { DEFAULT_VERSIONS as VERSION_HISTORY_VERSIONS } from './VersionHistoryPanel';
 import './AgentBuilder.css';
 
 const START_NODE_ID = '__start__';
@@ -1110,12 +1111,24 @@ export default function AgentBuilder({
   const [rhsClosing, setRhsClosing] = useState(false);
   const rhsRenderedRef = useRef(false);
   const rhsCloseTimeoutRef = useRef(null);
+  // Exploration: Help center shares the node-config RHS slot, so it needs the same
+  // stay-mounted-through-the-slide-out treatment.
+  const [helpRendered, setHelpRendered] = useState(false);
+  const [helpClosing, setHelpClosing] = useState(false);
+  const helpRenderedRef = useRef(false);
+  const helpCloseTimeoutRef = useRef(null);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
   /** Review-response left floater: which palette section is open (Trigger / Tasks / Controls). */
   const [paletteSection, setPaletteSection] = useState(
     defaultOpenSection === 'Trigger' ? 'Trigger' : null,
   );
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  /** Which version the history panel is previewing (first entry = the live one). */
+  const [versionHistorySelectedId, setVersionHistorySelectedId] = useState(
+    () => VERSION_HISTORY_VERSIONS[0]?.id ?? null,
+  );
+  /** Version id the "Version restored" toast can send you back to via Undo. */
+  const [restoredVersionId, setRestoredVersionId] = useState(null);
   const [rrAiPanelOpen, setRrAiPanelOpen] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelRendered, setRrAiPanelRendered] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelClosing, setRrAiPanelClosing] = useState(false);
@@ -1213,6 +1226,29 @@ export default function AgentBuilder({
       if (rhsCloseTimeoutRef.current) clearTimeout(rhsCloseTimeoutRef.current);
     };
   }, [drawerOpen]);
+
+  /* ─── Help center panel: same slide in/out lifecycle as the node RHS ─── */
+  useEffect(() => {
+    if (helpCenterOpen) {
+      if (helpCloseTimeoutRef.current) {
+        clearTimeout(helpCloseTimeoutRef.current);
+        helpCloseTimeoutRef.current = null;
+      }
+      setHelpClosing(false);
+      setHelpRendered(true);
+      helpRenderedRef.current = true;
+    } else if (helpRenderedRef.current) {
+      setHelpClosing(true);
+      helpCloseTimeoutRef.current = setTimeout(() => {
+        helpRenderedRef.current = false;
+        setHelpRendered(false);
+        setHelpClosing(false);
+      }, 260);
+    }
+    return () => {
+      if (helpCloseTimeoutRef.current) clearTimeout(helpCloseTimeoutRef.current);
+    };
+  }, [helpCenterOpen]);
 
   /* ─── Review-response AI panel slide in/out ─── */
   useEffect(() => {
@@ -2096,6 +2132,36 @@ export default function AgentBuilder({
   };
   // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
   const isScratchCreate = hideTopIdentity && !existingAgent;
+  /**
+   * Exploration only: while the version history panel is open the canvas turns into a
+   * read-only "browsing an old version" surface — no add-node palette, no build/run
+   * actions, and Publish is swapped for a Restore CTA.
+   */
+  const versionHistoryMode = versionHistoryOpen && hideTopIdentity;
+  const selectedVersion =
+    VERSION_HISTORY_VERSIONS.find((v) => v.id === versionHistorySelectedId)
+    || VERSION_HISTORY_VERSIONS[0];
+  /** The live version can't be restored onto itself, so Restore stays disabled there. */
+  const viewingLiveVersion = selectedVersion?.status === 'Running';
+  const rhsViewOnly = viewOnly || versionHistoryMode;
+  const closeVersionHistory = () => {
+    setVersionHistoryOpen(false);
+    setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
+  };
+  /**
+   * Anything occupying the 390px right slot — node config, Help center, or Test details.
+   * Drives the exploration actions pill sliding left so the panel never covers it.
+   */
+  const rightPanelOpen = rhsRendered || helpRendered || testRunOpen;
+  /** Shared by the top-right floater and (exploration) the bottom editor-row pill. */
+  const toggleHelpCenter = () => {
+    setVersionHistoryOpen(false);
+    setHelpCenterOpen((open) => {
+      // Exploration: help occupies the node-config RHS slot, so the two can't coexist.
+      if (!open && hideTopIdentity) handleCloseDrawer();
+      return !open;
+    });
+  };
   const startDetails = nodeDetails[START_NODE_ID] || {};
   const agentDetailsIncomplete = hideTopIdentity && (
     !(String(startDetails.goals || '').trim())
@@ -2148,6 +2214,15 @@ export default function AgentBuilder({
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
+      // Exploration only: swap the header glyph for a spinner/check while Run test walks
+      // this node, matching the Test details panel's own stepper animation.
+      runStatus: !hideTopIdentity || !testRunOpen
+        ? undefined
+        : n.id === testRunActiveId
+          ? 'running'
+          : testRun.doneNodeIds.includes(n.id)
+            ? 'done'
+            : undefined,
     };
     if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
@@ -2496,20 +2571,24 @@ export default function AgentBuilder({
     // Start node shares the Agent details panel with the chrome header title.
     if (node.type === 'start' || node.id === START_NODE_ID) {
       setPaletteSection(null);
-      setVersionHistoryOpen(false);
+      // Exploration: version history docks on the left, so it stays open and the
+      // node config opens read-only beside it.
+      if (!hideTopIdentity) setVersionHistoryOpen(false);
       setSelectedNodeId(START_NODE_ID);
       setDrawerOpen(true);
       return;
     }
     // AI Builder docks on the left; node config uses the right pane — both can stay open.
     setPaletteSection(null);
-    setVersionHistoryOpen(false);
+    if (!hideTopIdentity) setVersionHistoryOpen(false);
+    // Exploration: help shares the node-config RHS slot, so opening a node closes it.
+    if (hideTopIdentity) setHelpCenterOpen(false);
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
     if (node.data?.title) {
       setAiNodeContext({ id: node.id, type: node.type, title: node.data.title });
     }
-  }, []);
+  }, [hideTopIdentity]);
 
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
@@ -2625,7 +2704,7 @@ export default function AgentBuilder({
           key={`lhs-preview-${lhsPreviewProcedureId}`}
           variant="procedureDetail"
           title={mergedProc.name}
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           onBack={closeLhsPreview}
           bodyProps={{
@@ -2662,7 +2741,7 @@ export default function AgentBuilder({
         <RHS
           variant="agentDetails"
           title="Agent details"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{
             values: startDetails,
@@ -2686,7 +2765,7 @@ export default function AgentBuilder({
         <RHS
           variant="branch"
           title="Branch"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2731,7 +2810,7 @@ export default function AgentBuilder({
         <RHS
           variant="conversationTrigger"
           title="Trigger"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2745,7 +2824,7 @@ export default function AgentBuilder({
         <RHS
           variant={(isReviewResponseAgent || isReviewGenerationAgent) ? 'reviewTrigger' : 'entityTrigger'}
           title="Trigger"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2762,7 +2841,7 @@ export default function AgentBuilder({
         <RHS
           variant="controlBranch"
           title="Branch"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{
             initialValues: {
@@ -2787,7 +2866,7 @@ export default function AgentBuilder({
         <RHS
           variant="subagent"
           title="Sub-agent"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2801,7 +2880,7 @@ export default function AgentBuilder({
         <RHS
           variant="delay"
           title="Delay"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2815,7 +2894,7 @@ export default function AgentBuilder({
         <RHS
           variant="parallel"
           title="Parallel tasks"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2829,7 +2908,7 @@ export default function AgentBuilder({
         <RHS
           variant="loop"
           title="Loop"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2850,7 +2929,7 @@ export default function AgentBuilder({
               key="proc-create-custom"
               variant="createCustomProcedure"
               title="Create custom procedure"
-              viewOnly={viewOnly}
+              viewOnly={rhsViewOnly}
               product={product}
               onBack={() => setActiveProcedureId(null)}
               bodyProps={{
@@ -2881,7 +2960,7 @@ export default function AgentBuilder({
             key={`proc-detail-${activeProcedureId}`}
             variant="procedureDetail"
             title={mergedProc.name}
-            viewOnly={viewOnly}
+            viewOnly={rhsViewOnly}
             product={product}
             onBack={() => setActiveProcedureId(null)}
             bodyProps={{
@@ -2905,7 +2984,7 @@ export default function AgentBuilder({
           key="proc-list"
           variant="procedureTask"
           title="Procedures"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2923,7 +3002,7 @@ export default function AgentBuilder({
         <RHS
           variant="llmTask"
           title="Task"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, onOpenToolDrawer: () => setToolPickerOpen(true), onOpenTool: openToolByName }}
           onClose={handleCloseDrawer}
@@ -2937,7 +3016,7 @@ export default function AgentBuilder({
         <RHS
           variant="voiceCallTask"
           title="Task"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2962,7 +3041,7 @@ export default function AgentBuilder({
         <RHS
           variant="sendResponseTask"
           title="Task"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2978,7 +3057,7 @@ export default function AgentBuilder({
       <RHS
         variant="entityTask"
         title="Task details"
-        viewOnly={viewOnly}
+        viewOnly={rhsViewOnly}
         bodyProps={{
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
@@ -3049,6 +3128,19 @@ export default function AgentBuilder({
     </div>
   );
 
+  // Restore applies straight away (no confirm step), drops back to the live editor
+  // and confirms with a toast whose Undo reopens history on the same version.
+  const handleRestoreVersion = () => {
+    setRestoredVersionId(versionHistorySelectedId);
+    closeVersionHistory();
+  };
+
+  const handleUndoRestore = () => {
+    setVersionHistorySelectedId(restoredVersionId);
+    setRestoredVersionId(null);
+    setVersionHistoryOpen(true);
+  };
+
   const headerActions = viewOnly ? (
     viewChromeActions ? viewChromeButtons : (
       <div className="ab-view-badge">
@@ -3056,6 +3148,26 @@ export default function AgentBuilder({
         View only
       </div>
     )
+  ) : versionHistoryMode ? (
+    <div className="ab-header-actions">
+      <button
+        type="button"
+        className="ab-header-cancel-btn"
+        aria-label="Cancel"
+        onClick={closeVersionHistory}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        className="ab-header-restore-btn"
+        aria-label="Restore this version"
+        disabled={viewingLiveVersion}
+        onClick={handleRestoreVersion}
+      >
+        Restore
+      </button>
+    </div>
   ) : (
     <div className="ab-header-actions">
       {issueCount > 0 && (
@@ -3124,6 +3236,8 @@ export default function AgentBuilder({
             onClick={() => {
               setPaletteSection(null);
               if (!versionHistoryOpen) closeAiBuilderPanel();
+              // Always reopen on the live version rather than the last one browsed.
+              setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
               setVersionHistoryOpen((open) => !open);
               setHelpCenterOpen(false);
             }}
@@ -3264,7 +3378,9 @@ export default function AgentBuilder({
                     <button
                       type="button"
                       className="rr-chrome-back"
-                      onClick={onClose}
+                      // Browsing version history: Back returns to the canvas rather
+                      // than leaving the editor for the agent list.
+                      onClick={versionHistoryMode ? closeVersionHistory : onClose}
                       aria-label="Back"
                     >
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -3273,7 +3389,23 @@ export default function AgentBuilder({
                       {!hideTopIdentity && <span>Back</span>}
                     </button>
                   )}
-                  {hideTopIdentity && (
+                  {hideTopIdentity && versionHistoryMode && (
+                    <div className="rr-chrome-identity">
+                      <div className="rr-chrome-identity__row">
+                        <span className="rr-chrome-identity__name">Version history</span>
+                        <span className="rr-chrome-identity__version-sep" aria-hidden>·</span>
+                        <span className="rr-chrome-identity__version-stamp">
+                          {selectedVersion?.stamp || selectedVersion?.title}
+                        </span>
+                        {viewingLiveVersion && (
+                          <span className="ab-header-status ab-header-status--running ab-header-status--dot">
+                            Running
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {hideTopIdentity && !versionHistoryMode && (
                     <div className={`rr-chrome-identity${agentDetailsIncomplete ? ' rr-chrome-identity--needs-details' : ''}`}>
                       <div className="rr-chrome-identity__row">
                         <button
@@ -3335,7 +3467,8 @@ export default function AgentBuilder({
                 </div>
               )}
 
-              {!viewOnly && (
+              {/* Exploration renders this trigger in the bottom editor row instead (GraphControls). */}
+              {!viewOnly && !hideTopIdentity && (
                 <div className="rr-chrome-help-wrap">
                   <Tooltip content="Help center" variant="brief" side="bottom">
                     <button
@@ -3343,10 +3476,7 @@ export default function AgentBuilder({
                       className={`rr-chrome-help${helpCenterOpen ? ' rr-chrome-help--active' : ''}`}
                       aria-label="Help center"
                       aria-pressed={helpCenterOpen}
-                      onClick={() => {
-                        setVersionHistoryOpen(false);
-                        setHelpCenterOpen((open) => !open);
-                      }}
+                      onClick={toggleHelpCenter}
                     >
                       <span className="material-symbols-outlined" aria-hidden>help</span>
                     </button>
@@ -3354,7 +3484,11 @@ export default function AgentBuilder({
                 </div>
               )}
 
-              <div className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}`}>
+              <div
+                className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
+                  hideTopIdentity ? ' rr-chrome-top--right' : ''
+                }${hideTopIdentity && rightPanelOpen ? ' rr-chrome-top--rhs-open' : ''}`}
+              >
                 {!(viewOnly && viewChromeActions) && !hideTopIdentity && (
                   <>
                     <RrChromeAgentTitle
@@ -3370,7 +3504,7 @@ export default function AgentBuilder({
                 {headerActions}
               </div>
 
-              {!viewOnly && (
+              {!viewOnly && !versionHistoryMode && (
                 <div className="rr-chrome-left-stack">
                   <Tooltip content="Create with AI" variant="brief" side="right">
                     <button
@@ -3465,10 +3599,26 @@ export default function AgentBuilder({
               )}
 
               {versionHistoryOpen && !viewOnly && (
-                <VersionHistoryPanel onClose={() => setVersionHistoryOpen(false)} />
+                <VersionHistoryPanel
+                  variant={versionHistoryMode ? 'canvas' : 'default'}
+                  selectedId={versionHistorySelectedId}
+                  onSelect={setVersionHistorySelectedId}
+                  onClose={closeVersionHistory}
+                />
               )}
 
-              {helpCenterOpen && (
+              {/* Clears the app nav and the canvas header pill, which the default top-6 sits on top of. */}
+              <Toast
+                message="Version restored successfully"
+                visible={!!restoredVersionId}
+                actionLabel="Undo"
+                onAction={handleUndoRestore}
+                onClose={() => setRestoredVersionId(null)}
+                className="!top-[124px]"
+              />
+
+              {/* Exploration opens Help center in the node-config RHS slot instead (below). */}
+              {helpCenterOpen && !hideTopIdentity && (
                 <div className="rr-chrome-right-panel rr-chrome-right-panel--help">
                   <HelpCenterPanel
                     open={helpCenterOpen}
@@ -3528,6 +3678,8 @@ export default function AgentBuilder({
               onRedo={handleRedo}
               canUndo={historyPast.length > 0}
               canRedo={historyFuture.length > 0}
+              onHelpToggle={hideTopIdentity ? toggleHelpCenter : null}
+              helpOpen={helpCenterOpen}
               onRun={() => {
                 if (isReviewResponseAgent) return;
                 if (isReminderAgent) {
@@ -3569,6 +3721,22 @@ export default function AgentBuilder({
               <RHSErrorBoundary key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}>
                 {renderRHSPanel()}
               </RHSErrorBoundary>
+            </div>
+          )}
+
+          {/* Exploration: Help center uses the same RHS slot + slide as the node cards. */}
+          {helpRendered && hideTopIdentity && (
+            <div
+              className={`agent-builder__rhs agent-builder__rhs--help${helpClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}
+            >
+              <HelpCenterPanel
+                open={helpCenterOpen}
+                onClose={() => setHelpCenterOpen(false)}
+                onStartTour={() => {
+                  setHelpCenterOpen(false);
+                  if (!viewOnly) setCoachTourOpen(true);
+                }}
+              />
             </div>
           )}
 

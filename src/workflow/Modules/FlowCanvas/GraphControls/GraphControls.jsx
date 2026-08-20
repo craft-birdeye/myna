@@ -32,6 +32,10 @@ export default function GraphControls({
   onRedo = () => {},
   canUndo = false,
   canRedo = false,
+  /** When set, renders the Help center trigger as its own pill beside the editor pill.
+   * Exploration-only (`response-agents-exploration`); other agents keep it top-right. */
+  onHelpToggle = null,
+  helpOpen = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   /** Sticky footer selection: 'fill' | 'fit' | null (percentage active). */
@@ -228,6 +232,24 @@ export default function GraphControls({
                 <span className="material-symbols-outlined">arrow_downward</span>
               </button>
             </GraphControlTooltip>
+
+            {/* Own pill — a DOM child only so it can anchor 12px off this pill's right edge
+                without hardcoding that pill's width. */}
+            {onHelpToggle && (
+              <div className="graph-controls__rr-help">
+                <GraphControlTooltip text="Help center" above>
+                  <button
+                    type="button"
+                    className={`graph-controls__toggle-btn${helpOpen ? ' graph-controls__toggle-btn--active' : ''}`}
+                    onClick={onHelpToggle}
+                    aria-label="Help center"
+                    aria-pressed={helpOpen}
+                  >
+                    <span className="material-symbols-outlined">help</span>
+                  </button>
+                </GraphControlTooltip>
+              </div>
+            )}
           </div>
         )}
       </div>

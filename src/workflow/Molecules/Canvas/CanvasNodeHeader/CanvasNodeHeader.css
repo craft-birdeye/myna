@@ -52,6 +52,30 @@
   height: 16px;
 }
 
+/* Run test (exploration only): swaps the type glyph while a node executes / once it's done. */
+@keyframes cnh-run-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cnh__run-spinner {
+  animation: cnh-run-spin 0.9s linear infinite;
+}
+
+/*
+ * `!important` because both `.cnh .material-symbols-outlined` (above) and
+ * `.flow-canvas .material-symbols-outlined` (FlowCanvas.css, later in bundle order) pin
+ * FILL 0 at the same specificity — same reason `.cnh__btn-icon` uses it below.
+ */
+.cnh .cnh__run-done {
+  color: #4caf50;
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+}
+
 .cnh__label {
   font-size: 12px;
   font-weight: 400;

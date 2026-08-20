@@ -217,7 +217,8 @@
 }
 
 .graph-controls__rr-zoom,
-.graph-controls__rr-edit {
+.graph-controls__rr-edit,
+.graph-controls__rr-help {
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -235,6 +236,22 @@
   left: 50%;
   transform: translateX(-50%);
   bottom: 0;
+}
+
+/*
+ * Own pill, not part of the editor pill's grouping — it sits outside that pill's border and
+ * keeps its own shell. Anchored to the editor pill's right edge (a DOM child, taken out of
+ * flow) so the 12px gap holds at any pill width and the editor pill stays dead-centre.
+ */
+.graph-controls__rr-help {
+  position: absolute;
+  /* 100% resolves against the parent's padding box, so +1px covers its right border. */
+  left: calc(100% + 1px + 12px);
+  top: -1px;
+  gap: 0;
+  padding: 8px;
+  width: 40px;
+  justify-content: center;
 }
 
 .graph-controls__rr-divider {

@@ -28,6 +28,7 @@ export default function CanvasNode({
   onPasteReplace = undefined,
   state = 'default',
   showConfigWarning = false,
+  runStatus,
 }) {
   const [on, setOn] = useState(toggleEnabled);
   const [copied, setCopied] = useState(false);
@@ -65,6 +66,7 @@ export default function CanvasNode({
         <CanvasNodeHeader
           nodeType={nodeType}
           label={label}
+          runStatus={runStatus}
           hasAiIcon={hasAiIcon}
           hasToggle={hasToggle}
           toggleEnabled={on}

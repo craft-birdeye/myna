@@ -125,6 +125,11 @@
   width: 390px;
 }
 
+/* Help center in the node-config RHS slot (exploration) — matches the node panel width. */
+.agent-builder__rhs--help {
+  width: 390px;
+}
+
 @keyframes agent-builder-rhs-slide-in {
   from {
     transform: translateX(100%);
@@ -375,6 +380,59 @@
 
 .ab-header-pause-btn:hover {
   background: #f2f4f7;
+}
+
+/* Exploration only: version-history chrome swaps Publish for Cancel + Restore. */
+.ab-header-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #1976d2;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-header-cancel-btn:hover {
+  background: #f2f4f7;
+}
+
+.ab-header-restore-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-header-restore-btn:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.ab-header-restore-btn:disabled {
+  background: #eceff3;
+  color: #9aa4b2;
+  cursor: not-allowed;
 }
 
 .ab-publish-split__main,
@@ -1366,6 +1424,25 @@
   color: #212121;
 }
 
+/* Version-history identity: "Version history · Dec 10, 2025, 10:11 AM" */
+.rr-chrome-identity__version-sep,
+.rr-chrome-identity__version-stamp {
+  flex-shrink: 0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  white-space: nowrap;
+}
+
+.rr-chrome-identity__version-sep {
+  color: #9aa4b2;
+}
+
+.rr-chrome-identity__version-stamp {
+  color: #555;
+}
+
 .rr-chrome-help-wrap {
   position: absolute;
   top: 16px;
@@ -1439,6 +1516,23 @@
 }
 
 /* Actions-only: transparent shell so switch + Run test sit as separate controls. */
+/*
+ * Exploration: the actions pill is right-aligned rather than centred, and slides left to
+ * clear whatever opens in the 390px right slot (node config / Help center / Test details).
+ * Easing matches `agent-builder-rhs-slide-in` so the pill and the panel move together.
+ */
+.rr-chrome-top--right {
+  left: auto;
+  right: 16px;
+  transform: none;
+  transition: right 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 390px panel + its 8px inset from the canvas edge + a 12px gap. */
+.rr-chrome-top--right.rr-chrome-top--rhs-open {
+  right: calc(390px + 8px + 12px);
+}
+
 .rr-chrome-top--actions-only {
   max-width: none;
   height: auto;
