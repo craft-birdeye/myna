@@ -558,7 +558,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
       ]
   return (
     <SectionCard>
-      <div className="-mx-xl -mt-xl h-1 rounded-t-md" style={{ background: SUMMARY_TOP_BAR_GRADIENT }} />
+      {filled && <div className="-mx-xl -mt-xl h-1 rounded-t-md" style={{ background: SUMMARY_TOP_BAR_GRADIENT }} />}
       {!filled && (
         <div
           className={`-mx-xl -mt-xl flex items-center gap-lg rounded-t-md p-lg ${bannerOnly ? '-mb-xl rounded-b-md' : ''} ${
