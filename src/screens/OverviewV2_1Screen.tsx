@@ -838,8 +838,8 @@ function DataStateSwitcher({ value, onChange }: { value: DataState; onChange: (v
   // FTU is hidden from the switcher — dataState can still be 'ftu' internally, it's just not
   // reachable from this toggle anymore.
   const OPTIONS: { id: DataState; label: string }[] = [
-    { id: 'empty', label: 'Empty state' },
-    { id: 'filled', label: 'Filled state' },
+    { id: 'empty', label: 'Current overview' },
+    { id: 'filled', label: 'Purchased co-worker' },
   ]
   return (
     <div className="fixed bottom-xl right-2xl z-50 flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface p-xs shadow-dropdown">
