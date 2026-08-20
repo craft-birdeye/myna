@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ListFilter } from 'lucide-react'
 import { Icon, Tooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
@@ -693,7 +694,7 @@ function EmptyStateAppointmentsCard() {
           aria-label="Filter"
           className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
         >
-          <Icon name="tune" size={20} />
+          <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
       <div className={KPI_ROW_CLASS}>
@@ -755,7 +756,7 @@ function EmptyStateReferralsCard() {
           aria-label="Filter"
           className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
         >
-          <Icon name="tune" size={20} />
+          <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
         </button>
       </div>
       <div className={KPI_ROW_CLASS}>
@@ -890,7 +891,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
                 aria-label="Filter"
                 className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
               >
-                <Icon name="tune" size={20} />
+                <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
               </button>
             </div>
           </div>
