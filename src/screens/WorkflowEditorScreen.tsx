@@ -94,6 +94,8 @@ interface WorkflowEditorScreenProps {
   aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
   /** When true, Create with AI uses help-oriented copy for an already-built agent. */
   existingAgent?: boolean
+  /** Hides the in-canvas title/status row (identity rendered by app shell). */
+  hideTopIdentity?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -116,6 +118,7 @@ export function WorkflowEditorScreen({
   lhsDefaultTab = 'Create manually',
   aiTranscript = null,
   existingAgent,
+  hideTopIdentity = false,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -279,6 +282,7 @@ export function WorkflowEditorScreen({
             lhsDefaultTab={lhsDefaultTab}
             aiTranscript={resolvedAiTranscript}
             existingAgent={resolvedExistingAgent}
+            hideTopIdentity={hideTopIdentity}
           />
         </Suspense>
       </div>

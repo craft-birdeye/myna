@@ -80,7 +80,12 @@ interface AgentDetailScreenProps {
    * the same display `agentName`.
    */
   navId?: string
-  onEditAgent?: (agentName: string, draft?: WizardAgentDraft, returnTo?: { instanceName: string; tab: string }) => void
+  onEditAgent?: (
+    agentName: string,
+    draft?: WizardAgentDraft,
+    returnTo?: { instanceName: string; tab: string },
+    status?: string,
+  ) => void
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
@@ -107,6 +112,13 @@ const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
   'response-agents-sep-1',
   'reminder-agent-sep-1',
 ])
+
+const REVIEW_RESPONSE_AGENT_NAME = 'Review response agents'
+const REVIEW_RESPONSE_EXPLORATION_AGENT_NAME = 'Review response agents (exploration)'
+
+function isReviewResponseAgentName(name: string) {
+  return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
+}
 
 interface AgentInstance {
   name: string
@@ -285,7 +297,13 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'South Region', status: 'Paused',  channels: 'Voice call, Text',       statusUpdated: '450',  conversationsAssigned: '400', conversationsManaged: '400', timeSaved: '3m',  locations: '200' },
     { region: 'West Region',  status: 'Draft',   channels: 'Chat',                   statusUpdated: '400',  conversationsAssigned: '350', conversationsManaged: '380', timeSaved: '2m',  locations: '100' },
   ],
-  'Review response agents': [
+  [REVIEW_RESPONSE_AGENT_NAME]: [
+    { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
+    { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
+    { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
+    { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+  ],
+  [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
     { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
     { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
     { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
@@ -816,7 +834,29 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       description: 'Analyze conversations to assign the right contact status, route messages to the appropriate team or user, and manage when conversations stay open or closed.',
     },
   ],
-  'Review response agents': [
+  [REVIEW_RESPONSE_AGENT_NAME]: [
+    {
+      id: 'reviews-response-templates',
+      title: 'Review response agent replying using templates',
+      description: 'Uses pre-defined templates and responds to reviews automatically',
+    },
+    {
+      id: 'reviews-response-autonomous',
+      title: 'Review response agent replying autonomously',
+      description: 'Uses AI to analyze sentiment and post unique, context-aware replies automatically',
+    },
+    {
+      id: 'reviews-response-human-approval',
+      title: 'Review response agent replying after human approval',
+      description: 'Uses AI to analyze sentiment, generate unique replies for human approval before posting',
+    },
+    {
+      id: 'reviews-response-dashboard-suggestions',
+      title: 'Review response agent suggesting replies in dashboard',
+      description: 'Uses AI to analyze review sentiment and shows unique, context-aware replies in the dashboard for one-click posting',
+    },
+  ],
+  [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
     {
       id: 'reviews-response-templates',
       title: 'Review response agent replying using templates',
@@ -7019,10 +7059,12 @@ function HistoryChatReplay({
 
 export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
+  const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('list')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const isExplorationResponseAgents = navId === 'response-agents-exploration'
   const [selectedInstance, setSelectedInstance] = useState<string | null>(
     pendingInstanceView?.instanceName ?? null,
   )
@@ -7198,7 +7240,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       { id: 'conversationsManaged', value: '2500', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations tagged and routed end-to-end by the agent.' },
       { id: 'timeSaved', value: '40m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing.' },
     ],
-    'Review response agents': [
+    [REVIEW_RESPONSE_AGENT_NAME]: [
+      { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+      { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+      { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+      { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+    ],
+    [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
       { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
       { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
       { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
@@ -7228,7 +7276,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
 
   const isFrontdeskAgent = agentName === 'Front desk agent'
-  const displayMetrics: Metric[] = isFrontdeskAgent || agentName === 'Review response agents'
+  const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponseAgentName(agentName)
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
         const hours = parseTimeSavedHours(String(m.value))
@@ -7308,7 +7356,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isRevenue         = agentName === 'Revenue agent'
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
-  const isReviewResponse  = agentName === 'Review response agents'
+  const isReviewResponse  = isReviewResponseAgentName(agentName)
   const isReviewGeneration = agentName === 'Review generation agents'
   const isReviewTagging   = agentName === 'Review tagging agents'
   const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging
@@ -7526,6 +7574,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       )
     : libraryCards
   const isReviewTaggingFirstTime = isReviewTagging && visibleData.length === 0
+  const showExplorationAgentsToggle = isExplorationResponseAgents && activeTab === 'agents'
 
   if (showSetupWizard && isFrontdesk) {
     return (
@@ -7977,6 +8026,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           }
           onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
           product={product}
+          workflowButtonOpensEditor={navId === 'response-agents-exploration'}
+          hideRecommendationTab={navId === 'response-agents-sep-1'}
         />
         <Toast
           message={toastMessage}
@@ -8001,6 +8052,30 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
                 {activeTab === 'agents' ? (
                   <>
+                    {showExplorationAgentsToggle && (
+                      <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
+                        <button
+                          type="button"
+                          aria-label="Card view"
+                          onClick={() => setAgentsViewMode('grid')}
+                          className={`flex size-6 items-center justify-center rounded-sm ${
+                            agentsViewMode === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
+                          }`}
+                        >
+                          <Icon name="grid_view" size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="List view"
+                          onClick={() => setAgentsViewMode('list')}
+                          className={`flex size-6 items-center justify-center rounded-sm ${
+                            agentsViewMode === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
+                          }`}
+                        >
+                          <Icon name="table_rows" size={18} />
+                        </button>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
@@ -8012,9 +8087,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     >
                       Create agent
                     </button>
-                    <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                      <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-                    </button>
+                    {(!isExplorationResponseAgents || agentsViewMode === 'list') && (
+                      <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                        <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                      </button>
+                    )}
                     <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                       <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                     </button>
@@ -8082,34 +8159,79 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setSavingsModalOpen(false)
                     }}
                   />
-                  <div className="px-lg py-lg">
-                    <DataTable
-                      columns={columns}
-                      data={visibleData}
-                      scrollOnHover
-                      onRowClick={(row) => {
-                        setInstanceInitialTab('outcomes')
-                        setSelectedInstanceDisplayName(null)
-                        setSelectedInstance(row.name)
-                      }}
-                      rowMenuItems={[
-                        { label: 'Edit', onClick: (row) => onEditAgent?.(row.name) },
-                        {
-                          label: 'Pause',
-                          onClick: () => {},
-                          visible: (row) => row.status === 'Running',
-                        },
-                        { label: 'Duplicate', onClick: () => {} },
-                        { label: 'View details', onClick: (row) => {
+                  {isExplorationResponseAgents && agentsViewMode === 'grid' ? (
+                    <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
+                      {visibleData.map((row) => {
+                        const cardMetrics = [
+                          { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
+                          { value: row.responseRate ?? '—', label: 'Response rate' },
+                          { value: row.avgResponseTime ?? '—', label: 'Average response time' },
+                          { value: row.timeSaved ?? '—', label: 'Time saved' },
+                        ]
+                        return (
+                          <button
+                            type="button"
+                            key={row.name}
+                            onClick={() => {
+                              setInstanceInitialTab('outcomes')
+                              setSelectedInstanceDisplayName(null)
+                              setSelectedInstance(row.name)
+                            }}
+                            className="group flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg text-left transition-colors hover:bg-surface-hover"
+                          >
+                            <div className="flex min-w-0 items-start justify-between gap-sm">
+                              <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
+                                {row.name}
+                              </h3>
+                              <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
+                            </div>
+                            <div className="mt-md grid grid-cols-3 content-start gap-md">
+                              {cardMetrics.map((metric) => (
+                                <div key={metric.label} className="min-w-0">
+                                  <div className="truncate text-h3 text-text-primary">{metric.value}</div>
+                                  <div className="truncate text-small text-text-tertiary">{metric.label}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-lg py-lg">
+                      <DataTable
+                        columns={columns}
+                        data={visibleData}
+                        scrollOnHover
+                        onRowClick={(row) => {
                           setInstanceInitialTab('outcomes')
                           setSelectedInstanceDisplayName(null)
                           setSelectedInstance(row.name)
-                        } },
-                        { label: 'Reports', onClick: () => {} },
-                        { label: 'Delete', onClick: () => {}, variant: 'danger' },
-                      ]}
-                    />
-                  </div>
+                        }}
+                        rowMenuItems={[
+                          { label: 'Edit', onClick: (row) => onEditAgent?.(
+                            row.name,
+                            undefined,
+                            undefined,
+                            isExplorationResponseAgents ? row.status : undefined,
+                          ) },
+                          {
+                            label: 'Pause',
+                            onClick: () => {},
+                            visible: (row) => row.status === 'Running',
+                          },
+                          { label: 'Duplicate', onClick: () => {} },
+                          { label: 'View details', onClick: (row) => {
+                            setInstanceInitialTab('outcomes')
+                            setSelectedInstanceDisplayName(null)
+                            setSelectedInstance(row.name)
+                          } },
+                          { label: 'Reports', onClick: () => {} },
+                          { label: 'Delete', onClick: () => {}, variant: 'danger' },
+                        ]}
+                      />
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">

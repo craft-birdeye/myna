@@ -298,8 +298,9 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
-      { id: 'response-agents-sep-1',   label: 'Response agents (Sep 1)' },
-      { id: 'response-agents',         label: 'Response agents' },
+      { id: 'response-agents-sep-1',        label: 'Response agents (Sep 1)' },
+      { id: 'response-agents',              label: 'Response agents' },
+      { id: 'response-agents-exploration',  label: 'Response agents (exploration)' },
       { id: 'generation-agents',       label: 'Generation agents' },
       { id: 'review-tagging-agent',    label: 'Review tagging agents' },
     ],
@@ -373,6 +374,7 @@ const AGENT_NAMES: Record<string, string> = {
   'review-response-agents':    'Review response agents',
   'response-agents':           'Review response agents',
   'response-agents-sep-1':     'Review response agents',
+  'response-agents-exploration': 'Review response agents (exploration)',
   'generation-agents':         'Review generation agents',
   'review-tagging-agent':      'Review tagging agents',
 }
@@ -447,6 +449,8 @@ export function App() {
   const [searchAIL2Active, setSearchAIL2Active] = useState(SEARCH_AI_L2_DEFAULT_ACTIVE)
   const [socialL2Active, setSocialL2Active] = useState('Publish/Calendar')
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
+  /** Instance status when opening the editor (e.g. Draft with a live version). */
+  const [editingAgentStatus, setEditingAgentStatus] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
   // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
   // closing the editor) knows which instance + tab to land on instead of its own defaults.
@@ -502,12 +506,21 @@ export function App() {
     name: string,
     draft?: WizardAgentDraft,
     returnTo?: { instanceName: string; tab: string },
+    status?: string,
   ) {
     // Remembered so closing the editor lands back where editing started (e.g. the instance's
     // Workflow tab) instead of dropping to the agent list.
     setEditorReturnView(returnTo ?? null)
     setWizardAgentDraft(draft ?? null)
     setEditingAgentName(name)
+    const inferredDraft =
+      name?.includes('Schedule based') || name?.includes('Event trigger based')
+    // Draft/live status chrome is exploration-only; other agents keep the prior Schedule/Event rule.
+    setEditingAgentStatus(
+      navActive === 'response-agents-exploration'
+        ? (status ?? (inferredDraft ? 'Draft' : null))
+        : (inferredDraft ? 'Draft' : null),
+    )
     setWorkflowAiCreateFullscreen(false)
     // Keep the AI Builder closed on land — user opens it via the Create with AI FAB.
     setWorkflowAiBuilderPanelOpen(false)
@@ -895,6 +908,7 @@ export function App() {
                           agentName={editingAgentName}
                           onClose={() => {
                             setEditingAgentName(null)
+                            setEditingAgentStatus(null)
                             if (editorReturnView) {
                               setPendingAgentInstanceView(editorReturnView)
                               setEditorReturnView(null)
@@ -908,9 +922,12 @@ export function App() {
                           product={activeProduct}
                           wizardDraft={wizardAgentDraft}
                           agentStatus={
-                            editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                              ? 'Draft'
-                              : undefined
+                            navActive === 'response-agents-exploration'
+                              ? (editingAgentStatus ?? undefined)
+                              : editingAgentName?.includes('Schedule based') ||
+                                  editingAgentName?.includes('Event trigger based')
+                                ? 'Draft'
+                                : undefined
                           }
                           aiAssistOpen={workflowAiAssistOpen}
                           onAiAssistOpenChange={setWorkflowAiAssistOpen}
@@ -918,6 +935,7 @@ export function App() {
                           aiBuilderPanelOpen={workflowAiBuilderPanelOpen}
                           onAiBuilderPanelOpenChange={setWorkflowAiBuilderPanelOpen}
                           lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
+                          hideTopIdentity={navActive === 'response-agents-exploration'}
                         />
                       </div>
                       {workflowAiAssistOpen && (

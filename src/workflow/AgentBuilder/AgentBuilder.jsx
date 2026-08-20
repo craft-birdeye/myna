@@ -1028,6 +1028,8 @@ export default function AgentBuilder({
   existingAgent = false,
   /** When set by the parent, forces the Procedures floater on/off (preferred over name sniffing). */
   showProceduresPalette = null,
+  /** Hides in-canvas agent name + status (parent renders identity elsewhere). */
+  hideTopIdentity = false,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -1596,6 +1598,40 @@ export default function AgentBuilder({
       onSaveAgent?.(false, payload);
     } catch (e) {
       console.error('Save as draft failed', e);
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handlePause = useCallback(async () => {
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Paused');
+    if (!payload) {
+      setAgentStatus('Paused');
+      return;
+    }
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Paused');
+      onSaveAgent?.(false, payload);
+    } catch (e) {
+      console.error('Pause failed', e);
+      setAgentStatus('Paused');
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handleResume = useCallback(async () => {
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Running');
+    if (!payload) {
+      setAgentStatus('Running');
+      return;
+    }
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Running');
+      onSaveAgent?.(true, payload);
+    } catch (e) {
+      console.error('Resume failed', e);
+      setAgentStatus('Running');
     }
   }, [buildAgentPayload, onSaveAgent]);
 
@@ -2620,6 +2656,7 @@ export default function AgentBuilder({
               }));
             },
             autoOpenLocationsToken: startLocationsOpenToken,
+            includeCustomFields: hideTopIdentity,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3096,41 +3133,64 @@ export default function AgentBuilder({
           onClick={handleSaveTemplate}
         />
       ) : (
-        <div className="ab-publish-split" ref={publishMenuRef}>
-          <button
-            type="button"
-            className="ab-publish-split__main"
-            aria-label="Publish"
-            data-tour-id="publish"
-            disabled={publishDisabled || issueCount > 0}
-            onClick={handlePublish}
-          >
-            Publish
-          </button>
-          <button
-            type="button"
-            className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
-            aria-label="More publish options"
-            aria-haspopup="menu"
-            aria-expanded={publishMenuOpen}
-            disabled={publishDisabled || issueCount > 0}
-            onClick={() => setPublishMenuOpen((open) => !open)}
-          >
-            <span className="material-symbols-outlined">expand_more</span>
-          </button>
-          {publishMenuOpen && (
-            <div className="ab-publish-split__menu" role="menu">
-              <button
-                type="button"
-                className="ab-publish-split__menu-item"
-                role="menuitem"
-                onClick={handleSaveAsDraft}
-              >
-                Save as draft
-              </button>
-            </div>
+        <>
+          {/* Exploration only: Pause / Resume beside Publish for live agents */}
+          {hideTopIdentity && agentStatus === 'Running' && (
+            <button
+              type="button"
+              className="ab-header-pause-btn"
+              aria-label="Pause"
+              onClick={handlePause}
+            >
+              Pause
+            </button>
           )}
-        </div>
+          {hideTopIdentity && agentStatus === 'Paused' && (
+            <button
+              type="button"
+              className="ab-header-pause-btn"
+              aria-label="Resume"
+              onClick={handleResume}
+            >
+              Resume
+            </button>
+          )}
+          <div className="ab-publish-split" ref={publishMenuRef}>
+            <button
+              type="button"
+              className="ab-publish-split__main"
+              aria-label="Publish"
+              data-tour-id="publish"
+              disabled={publishDisabled || issueCount > 0}
+              onClick={handlePublish}
+            >
+              Publish
+            </button>
+            <button
+              type="button"
+              className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
+              aria-label="More publish options"
+              aria-haspopup="menu"
+              aria-expanded={publishMenuOpen}
+              disabled={publishDisabled || issueCount > 0}
+              onClick={() => setPublishMenuOpen((open) => !open)}
+            >
+              <span className="material-symbols-outlined">expand_more</span>
+            </button>
+            {publishMenuOpen && (
+              <div className="ab-publish-split__menu" role="menu">
+                <button
+                  type="button"
+                  className="ab-publish-split__menu-item"
+                  role="menuitem"
+                  onClick={handleSaveAsDraft}
+                >
+                  Save as draft
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -3170,18 +3230,58 @@ export default function AgentBuilder({
         <div className={`agent-builder agent-builder--rr-chrome${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
-              {onClose && (
-                <button
-                  type="button"
-                  className="rr-chrome-back"
-                  onClick={onClose}
-                  aria-label="Back"
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-                    <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
-                  </svg>
-                  <span>Back</span>
-                </button>
+              {(onClose || hideTopIdentity) && (
+                <div className={`rr-chrome-back-cluster${hideTopIdentity ? ' rr-chrome-back-cluster--identity' : ''}`}>
+                  {onClose && (
+                    <button
+                      type="button"
+                      className="rr-chrome-back"
+                      onClick={onClose}
+                      aria-label="Back"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                        <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
+                      </svg>
+                      {!hideTopIdentity && <span>Back</span>}
+                    </button>
+                  )}
+                  {hideTopIdentity && (
+                    <>
+                      <button
+                        type="button"
+                        className="rr-chrome-identity__title"
+                        onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                        aria-label={`Open agent details for ${agentName || 'Untitled agent'}`}
+                      >
+                        <span className="rr-chrome-identity__name">
+                          {agentName || 'Untitled agent'}
+                        </span>
+                        {nodesInteractive && (
+                          <span className="material-symbols-outlined rr-chrome-identity__edit" aria-hidden>
+                            edit
+                          </span>
+                        )}
+                      </button>
+                      {agentStatus === 'Draft' && existingAgent ? (
+                        <span className="ab-header-status ab-header-status--draft ab-header-status--with-live">
+                          <span>Draft</span>
+                          <span className="ab-header-status__divider" aria-hidden />
+                          <button
+                            type="button"
+                            className="ab-header-status__view-live"
+                            onClick={() => setAgentStatus('Running')}
+                          >
+                            View live
+                          </button>
+                        </span>
+                      ) : (
+                        <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                          {agentStatus}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
 
               {!viewOnly && (
@@ -3204,7 +3304,7 @@ export default function AgentBuilder({
               )}
 
               <div className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}`}>
-                {!(viewOnly && viewChromeActions) && (
+                {!(viewOnly && viewChromeActions) && !hideTopIdentity && (
                   <>
                     <RrChromeAgentTitle
                       text={agentName || 'Untitled agent'}

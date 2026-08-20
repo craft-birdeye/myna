@@ -354,6 +354,29 @@
   overflow: visible;
 }
 
+.ab-header-pause-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  color: #212121;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  transition: background 0.12s ease;
+}
+
+.ab-header-pause-btn:hover {
+  background: #f2f4f7;
+}
+
 .ab-publish-split__main,
 .ab-publish-split__chevron {
   display: inline-flex;
@@ -698,6 +721,35 @@
 .ab-header-status--draft {
   background: #eeeeee;
   color: #212121;
+}
+
+.ab-header-status--with-live {
+  gap: 8px;
+  padding: 4px 10px;
+}
+
+.ab-header-status__divider {
+  width: 1px;
+  height: 12px;
+  flex-shrink: 0;
+  background: #bdbdbd;
+}
+
+.ab-header-status__view-live {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #1976d2;
+}
+
+.ab-header-status__view-live:hover {
+  text-decoration: underline;
 }
 
 .ab-header-status--with-info {
@@ -1167,6 +1219,83 @@
 
 .rr-chrome-back:hover {
   background: #f2f4f7;
+}
+
+.rr-chrome-back-cluster {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(50% - 24px);
+}
+
+.rr-chrome-back-cluster .rr-chrome-back {
+  position: static;
+  flex-shrink: 0;
+}
+
+.rr-chrome-back-cluster--identity {
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px 0 10px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.rr-chrome-back-cluster--identity .rr-chrome-back {
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rr-chrome-back-cluster--identity .rr-chrome-back:hover {
+  background: transparent;
+  color: #555;
+}
+
+.rr-chrome-identity__title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: #212121;
+}
+
+.rr-chrome-identity__title:disabled {
+  cursor: default;
+}
+
+.rr-chrome-identity__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.rr-chrome-identity__edit {
+  flex-shrink: 0;
+  font-size: 16px !important;
+  line-height: 1;
+  color: #555;
 }
 
 .rr-chrome-help-wrap {

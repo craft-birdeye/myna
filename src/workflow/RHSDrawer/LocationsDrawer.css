@@ -13,6 +13,7 @@
   top: 0;
   bottom: 0;
   width: 598px;
+  max-width: 100%;
   background: #fff;
   box-shadow: 0px 4px 8px 0px rgba(33, 33, 33, 0.18);
   display: flex;
@@ -70,6 +71,7 @@
 }
 
 .loc-inner {
+  position: relative;
   padding: 0 16px;
   display: flex;
   flex-direction: column;
@@ -92,7 +94,7 @@
   width: 16px;
   height: 16px;
   color: #8f8f8f;
-  margin-left: 16px;
+  margin-left: 4px;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
@@ -124,7 +126,268 @@
   left: 0;
   margin-top: 4px;
   width: 168px;
-  z-index: 10;
+  z-index: 20;
+}
+
+/* Unified flyout — positioned inside .loc-inner so it never overflows the drawer. */
+.loc-flyout {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(33, 33, 33, 0.16);
+  transform-origin: top left;
+  transition: width 160ms ease, left 160ms ease, max-height 160ms ease;
+}
+
+.loc-flyout--menu {
+  max-height: 360px;
+}
+
+.loc-flyout--menu > div {
+  box-shadow: none;
+  border-radius: 0;
+  max-width: 100%;
+}
+
+.loc-flyout--picker {
+  max-height: 420px;
+}
+
+/* ── Two-pane picker (lives inside .loc-flyout) ── */
+.loc-picker-popover__body {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.loc-picker-popover__body--nav-only .loc-picker-popover__nav {
+  width: 100%;
+  border-right: none;
+}
+
+.loc-picker-popover__check {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  color: #555;
+  flex-shrink: 0;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.loc-picker-popover__nav {
+  display: flex;
+  width: 196px;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-right: 1px solid #eaeaea;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.loc-picker-popover__nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: "Roboto", arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.loc-picker-popover__nav-item:hover {
+  background: #f2f4f7;
+}
+
+.loc-picker-popover__nav-item--active {
+  background: #f0f0f0;
+}
+
+.loc-picker-popover__nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loc-picker-popover__nav-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.loc-picker-popover__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #eeeeee;
+  color: #555;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.loc-picker-popover__chevron {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  color: #8f8f8f;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.loc-picker-popover__panel {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.loc-picker-popover__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.loc-picker-popover__search .material-symbols-outlined {
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
+  color: #8f8f8f;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.loc-picker-popover__search input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: "Roboto", arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.loc-picker-popover__search input::placeholder {
+  color: #8f8f8f;
+}
+
+.loc-picker-popover__list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.loc-picker-popover__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: "Roboto", arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.loc-picker-popover__row:hover {
+  background: #f8f9fa;
+}
+
+.loc-picker-popover__empty {
+  margin: 0;
+  padding: 12px 4px;
+  font-size: 14px;
+  line-height: 20px;
+  color: #8f8f8f;
+}
+
+.loc-picker-popover__footer {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #eaeaea;
+  background: #fff;
+}
+
+.loc-picker-popover__cancel {
+  margin: 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-family: "Roboto", arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1976d2;
+}
+
+.loc-picker-popover__cancel:hover {
+  background: #f2f4f7;
+}
+
+.loc-picker-popover__apply {
+  margin: 0;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  cursor: pointer;
+  font-family: "Roboto", arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #fff;
+}
+
+.loc-picker-popover__apply:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.loc-picker-popover__apply:disabled {
+  background: #90caf9;
+  cursor: not-allowed;
 }
 
 .loc-select-chevron {
@@ -177,6 +440,40 @@
 .loc-list {
   display: flex;
   flex-direction: column;
+}
+
+.loc-list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 160px;
+  font-family: "Roboto", arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #555;
+}
+
+.loc-list-loading__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e5e9f0;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: loc-spin 0.7s linear infinite;
+}
+
+@keyframes loc-spin {
+  to { transform: rotate(360deg); }
+}
+
+.loc-list-empty {
+  margin: 0;
+  padding: 16px 0;
+  font-family: "Roboto", arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #8f8f8f;
 }
 
 .loc-row {

@@ -43,6 +43,7 @@ interface AgentInstanceScreenProps {
     agentName: string,
     draft?: unknown,
     returnTo?: { instanceName: string; tab: string },
+    status?: string,
   ) => void
   onNavigateToInbox?: (conversationId?: string) => void
   /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
@@ -63,6 +64,10 @@ interface AgentInstanceScreenProps {
   /** When set alongside `initialRecommendationId`, the recommendation detail page immediately
    *  asks for the feedback itself (see the Taylor Brooks "Coach agent" direct-navigate flow). */
   initialFeedbackPrefill?: string | null
+  /** Exploration-only behavior: Workflow action opens editor directly. */
+  workflowButtonOpensEditor?: boolean
+  /** Sep 1 review response flow hides Recommendation. */
+  hideRecommendationTab?: boolean
 }
 
 interface LocationRow {
@@ -105,11 +110,19 @@ const TABS: Tab[] = [
   { id: 'settings', label: 'Settings' },
 ]
 
+// Exploration keeps Workflow as a separate button-style action and hides Recommendation/Settings.
+const EXPLORATION_TABS: Tab[] = TABS.filter(
+  (t) => t.id !== 'workflow' && t.id !== 'recommendation' && t.id !== 'settings',
+)
+
 // Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
 const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
 
 // Review response agents hide Settings.
 const REVIEW_RESPONSE_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings')
+const REVIEW_RESPONSE_NO_RECOMMENDATION_TABS: Tab[] = TABS.filter(
+  (t) => t.id !== 'settings' && t.id !== 'recommendation',
+)
 
 const METRICS_BY_AGENT: Record<string, Metric[]> = {
   'Front desk agent': [
@@ -413,6 +426,8 @@ export function AgentInstanceScreen({
   initialRecommendationId,
   onInitialRecommendationConsumed,
   initialFeedbackPrefill,
+  workflowButtonOpensEditor = false,
+  hideRecommendationTab = false,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -536,10 +551,14 @@ export function AgentInstanceScreen({
   })
 
   const isTaggingRouting = agentName === 'Tagging & routing agent'
-  const tabs = isTaggingRouting
+  const tabs = workflowButtonOpensEditor
+    ? EXPLORATION_TABS
+    : isTaggingRouting
     ? TAGGING_ROUTING_TABS
     : isReviewResponse || isReviewGeneration
-      ? REVIEW_RESPONSE_TABS
+      ? hideRecommendationTab
+        ? REVIEW_RESPONSE_NO_RECOMMENDATION_TABS
+        : REVIEW_RESPONSE_TABS
       : TABS
 
   const isWorkflowTab = activeTab === 'workflow'
@@ -654,7 +673,12 @@ export function AgentInstanceScreen({
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
                         onClick={() => {
                           setActionsOpen(false)
-                          onEditAgent?.(instanceName, undefined, { instanceName, tab: activeTab })
+                          onEditAgent?.(
+                            instanceName,
+                            undefined,
+                            { instanceName, tab: activeTab },
+                            workflowButtonOpensEditor ? instanceStatus : undefined,
+                          )
                         }}
                       >
                         Edit
@@ -716,13 +740,43 @@ export function AgentInstanceScreen({
 
           {/* Tabs */}
           <div className="flex shrink-0 items-center justify-between px-2xl">
-            <Tabs
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={(tabId) => {
-                setActiveTab(tabId)
-              }}
-            />
+            {workflowButtonOpensEditor ? (
+              <div className="flex items-end gap-xs">
+                <Tabs
+                  tabs={tabs}
+                  activeTab={activeTab}
+                  onChange={(tabId) => {
+                    setActiveTab(tabId)
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onEditAgent) {
+                      onEditAgent(instanceName, undefined, { instanceName, tab: 'outcomes' }, instanceStatus)
+                      return
+                    }
+                    setActiveTab('workflow')
+                  }}
+                  className={`flex h-[34px] items-center gap-xs rounded-md px-sm text-body transition-colors ${
+                    isWorkflowTab
+                      ? 'bg-surface-selected text-text-primary'
+                      : 'text-text-secondary hover:bg-surface-hover'
+                  }`}
+                >
+                  <span>Workflow</span>
+                  <Icon name="open_in_new" size={16} className={isWorkflowTab ? 'text-text-primary' : 'text-text-icon'} />
+                </button>
+              </div>
+            ) : (
+              <Tabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onChange={(tabId) => {
+                  setActiveTab(tabId)
+                }}
+              />
+            )}
           </div>
 
           {/* Tab content — workflow and recommendation tabs fill remaining height, others scroll */}
@@ -730,7 +784,14 @@ export function AgentInstanceScreen({
             <WorkflowViewerTab
               instanceName={instanceName}
               displayName={shownName}
-              onEdit={() => onEditAgent?.(instanceName, undefined, { instanceName, tab: 'workflow' })}
+              onEdit={() =>
+                onEditAgent?.(
+                  instanceName,
+                  undefined,
+                  { instanceName, tab: workflowButtonOpensEditor ? 'outcomes' : 'workflow' },
+                  workflowButtonOpensEditor ? instanceStatus : undefined,
+                )
+              }
               product={product}
             />
           ) : isRecommendationTab ? (

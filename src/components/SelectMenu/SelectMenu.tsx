@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SelectMenuProps } from './SelectMenu.types'
-import { Check, Search } from 'lucide-react'
+import { Check, ChevronRight, Search } from 'lucide-react'
 
 function CheckBox({ checked }: { checked: boolean }) {
   return (
@@ -82,7 +82,7 @@ export function SelectMenu({
 
           {filtered.map((opt) => {
             const isSel = selected.has(opt.value)
-            // Single select — label left, gray tick on the right, gray selected row.
+            // Single select — label left; chevron for drill-in rows, else gray tick when selected.
             if (!multi) {
               return (
                 <button
@@ -94,7 +94,11 @@ export function SelectMenu({
                   }`}
                 >
                   <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt.label}</span>
-                  {isSel && <Check className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
+                  {opt.showChevron ? (
+                    <ChevronRight className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+                  ) : (
+                    isSel && <Check className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+                  )}
                 </button>
               )
             }
@@ -108,6 +112,9 @@ export function SelectMenu({
               >
                 <CheckBox checked={isSel} />
                 <span className="min-w-0 flex-1 truncate text-body text-text-primary">{opt.label}</span>
+                {opt.showChevron && (
+                  <ChevronRight className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+                )}
               </button>
             )
           })}
