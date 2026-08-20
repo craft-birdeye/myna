@@ -80,20 +80,32 @@ interface WorkflowNode {
 export function buildTestRunSteps(
   nodes: WorkflowNode[],
   nodeDetails: Record<string, unknown>,
+  /** Prompt typed into the Run-test modal — threaded into the Query fanout agent's
+   *  "Collect user prompt" / "Generate fanout queries and output prompt" steps in place of
+   *  the placeholder fields. No-op for every other agent's nodes. */
+  collectedPrompt?: string,
 ): TestRunStep[] {
   const steps: TestRunStep[] = []
 
   const visit = (list: WorkflowNode[]) => {
     list.forEach((node) => {
       const type = FLOW_TYPE_TO_STEP_TYPE[node.flowType ?? ''] ?? 'task'
+      const isCollectPromptStep = collectedPrompt && node.id === 'qf-2'
+      const isGenerateFanoutStep = collectedPrompt && node.id === 'qf-4'
       steps.push({
         id: `test-${node.id}`,
         nodeId: node.id,
         type,
         stepNumber: steps.length + 1,
         title: node.data?.title || 'Untitled step',
-        output: PLACEHOLDER_OUTPUT,
-        inputs: PLACEHOLDER_INPUTS,
+        output: isCollectPromptStep
+          ? [{ key: 'User prompt', value: collectedPrompt }]
+          : PLACEHOLDER_OUTPUT,
+        inputs: isGenerateFanoutStep
+          ? [{ key: 'Prompt.userPrompt', value: collectedPrompt }]
+          : isCollectPromptStep
+            ? []
+            : PLACEHOLDER_INPUTS,
         tool: { name: 'Review responder', properties: PLACEHOLDER_TOOL_PROPERTIES },
       })
 

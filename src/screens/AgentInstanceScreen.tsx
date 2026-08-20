@@ -108,7 +108,7 @@ const TABS: Tab[] = [
 // Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
 const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
 
-// Review response agents hide Settings.
+// Review response agents and non-conversational Search AI agents hide Settings.
 const REVIEW_RESPONSE_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings')
 
 const METRICS_BY_AGENT: Record<string, Metric[]> = {
@@ -193,6 +193,18 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'clickThroughRate', value: '5.1%', label: 'Click-through rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
     { id: 'timeSaved', value: '5h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
   ],
+  'Query fanout agent': [
+    { id: 'themesExpanded', value: '46', label: 'Themes expanded', delta: '6.4%', trend: 'up', info: true, tooltip: 'Tracked themes that were fanned out into related sub-queries at this location in the selected period.' },
+    { id: 'subQueriesRun', value: '820', label: 'Sub-queries run', delta: '9.1%', trend: 'up', info: true, tooltip: 'Total fanned-out sub-queries executed across AI platforms for this location.' },
+    { id: 'newMentions', value: '54', label: 'New mentions surfaced', delta: '4.7%', trend: 'up', info: true, tooltip: 'Brand or competitor mentions found via fanout queries that exact-match tracking missed.' },
+    { id: 'timeSaved', value: '2.5h', label: 'Time saved', delta: '3.2%', trend: 'up', info: true, tooltip: 'Estimated analyst time saved by automating query fanout instead of manual keyword expansion.' },
+  ],
+  'AEO validator agent': [
+    { id: 'pagesValidated', value: '162', label: 'Pages validated', delta: '5.5%', trend: 'up', info: true, tooltip: 'Published or updated pages checked for AEO signals at this location in the selected period.' },
+    { id: 'signalsPassed', value: '91%', label: 'AEO signals passed', delta: '2.4%', trend: 'up', info: true, tooltip: 'Percentage of validated pages that passed all AEO signal checks on first run.' },
+    { id: 'citationIssues', value: '9', label: 'Citation issues found', delta: '1.1%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages where an AI-cited source no longer matched the published content.' },
+    { id: 'flaggedForReview', value: '5', label: 'Flagged for review', delta: '0.8%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages routed to the content team after failing AEO validation.' },
+  ],
 }
 
 const DEFAULT_METRICS: Metric[] = [
@@ -274,6 +286,18 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'San Diego, CA',     count: '1', reviewsResponded: '7',  responseRate: '95%', avgResponseTime: '2h 40m', timeSaved: '3h 05m' },
     { location: 'Las Vegas, NV',     count: '1', reviewsResponded: '3',  responseRate: '94%', avgResponseTime: '3h 05m', timeSaved: '2h 10m' },
     { location: 'Chicago, IL',       count: '1', reviewsResponded: '10', responseRate: '92%', avgResponseTime: '3h 05m', timeSaved: '3h 05m' },
+  ],
+  'Query fanout agent': [
+    { location: 'Atlanta, GA',      count: '124', themesExpanded: '16', subQueriesRun: '290', newMentions: '20', timeSaved: '1h' },
+    { location: 'Chicago, IL',      count: '98',  themesExpanded: '12', subQueriesRun: '220', newMentions: '16', timeSaved: '45m' },
+    { location: 'Boston, MA',       count: '76',  themesExpanded: '10', subQueriesRun: '180', newMentions: '11', timeSaved: '30m' },
+    { location: 'Philadelphia, PA', count: '60',  themesExpanded: '8',  subQueriesRun: '130', newMentions: '7',  timeSaved: '15m' },
+  ],
+  'AEO validator agent': [
+    { location: 'Atlanta, GA',      count: '124', pagesValidated: '62', signalsPassed: '92%', citationIssues: '3', flaggedForReview: '2' },
+    { location: 'Chicago, IL',      count: '98',  pagesValidated: '46', signalsPassed: '91%', citationIssues: '2', flaggedForReview: '1' },
+    { location: 'Boston, MA',       count: '76',  pagesValidated: '34', signalsPassed: '90%', citationIssues: '2', flaggedForReview: '1' },
+    { location: 'Philadelphia, PA', count: '60',  pagesValidated: '20', signalsPassed: '89%', citationIssues: '2', flaggedForReview: '1' },
   ],
 }
 
@@ -398,6 +422,22 @@ const REVIEW_RESPONSE_COLUMNS: Column<LocationRow>[] = [
   { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
 ]
 
+const QUERY_FANOUT_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location', label: 'Location', width: 220, sortable: true },
+  { key: 'themesExpanded', label: 'Themes expanded', width: 160, sortable: true },
+  { key: 'subQueriesRun', label: 'Sub-queries run', width: 160, sortable: true },
+  { key: 'newMentions', label: 'New mentions surfaced', width: 190, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
+]
+
+const AEO_VALIDATOR_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location', label: 'Location', width: 220, sortable: true },
+  { key: 'pagesValidated', label: 'Pages validated', width: 160, sortable: true },
+  { key: 'signalsPassed', label: 'AEO signals passed', width: 170, sortable: true },
+  { key: 'citationIssues', label: 'Citation issues found', width: 190, sortable: true },
+  { key: 'flaggedForReview', label: 'Flagged for review', width: 170, sortable: true },
+]
+
 export function AgentInstanceScreen({
   instanceName,
   displayName,
@@ -494,6 +534,8 @@ export function AgentInstanceScreen({
     : agentName === 'Revenue agent'       ? REVENUE_COLUMNS
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
+    : agentName === 'Query fanout agent'  ? QUERY_FANOUT_COLUMNS
+    : agentName === 'AEO validator agent' ? AEO_VALIDATOR_COLUMNS
     : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
     : isReviewResponse                    ? REVIEW_RESPONSE_COLUMNS
     : DEFAULT_COLUMNS
@@ -536,9 +578,11 @@ export function AgentInstanceScreen({
   })
 
   const isTaggingRouting = agentName === 'Tagging & routing agent'
+  const isQueryFanout = agentName === 'Query fanout agent'
+  const isAeoValidator = agentName === 'AEO validator agent'
   const tabs = isTaggingRouting
     ? TAGGING_ROUTING_TABS
-    : isReviewResponse || isReviewGeneration
+    : isReviewResponse || isReviewGeneration || isQueryFanout || isAeoValidator
       ? REVIEW_RESPONSE_TABS
       : TABS
 

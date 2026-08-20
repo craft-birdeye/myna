@@ -24,7 +24,7 @@ export const REVIEW_TRIGGER_OPTIONS = [
   },
 ];
 
-const CATEGORIES = [{ id: 'review', label: 'Reviews' }];
+const DEFAULT_CATEGORIES = [{ id: 'review', label: 'Reviews' }];
 const POPOVER_WIDTH = 560;
 const POPOVER_GAP = 8;
 
@@ -58,9 +58,11 @@ export default function ChooseTriggerModal({
   anchorRef,
   onClose,
   onSelect,
+  options = REVIEW_TRIGGER_OPTIONS,
+  categories = DEFAULT_CATEGORIES,
 }) {
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('review');
+  const [activeCategory, setActiveCategory] = useState(categories[0]?.id);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const panelRef = useRef(null);
 
@@ -79,7 +81,7 @@ export default function ChooseTriggerModal({
   useEffect(() => {
     if (!open) return undefined;
     setQuery('');
-    setActiveCategory('review');
+    setActiveCategory(categories[0]?.id);
 
     function onKeyDown(e) {
       if (e.key === 'Escape') onClose?.();
@@ -99,17 +101,17 @@ export default function ChooseTriggerModal({
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('mousedown', onPointerDown);
     };
-  }, [open, onClose, anchorRef]);
+  }, [open, onClose, anchorRef, categories]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return REVIEW_TRIGGER_OPTIONS;
-    return REVIEW_TRIGGER_OPTIONS.filter(
+    if (!q) return options;
+    return options.filter(
       (opt) =>
         opt.label.toLowerCase().includes(q) ||
         opt.description.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, options]);
 
   if (!open) return null;
 
@@ -148,7 +150,7 @@ export default function ChooseTriggerModal({
 
       <div className="choose-trigger-modal__body">
         <div className="choose-trigger-modal__nav">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               type="button"

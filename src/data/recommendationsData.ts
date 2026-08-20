@@ -1700,6 +1700,78 @@ export const RECOMMENDATIONS: Recommendation[] = [
       ],
     },
   },
+  // ─── Query fanout agent — content opportunity recommendations ──────────────
+  // Restricted via `agentName` so they only show on the Query fanout agent's Recommendation tab.
+  {
+    id: 'r-fanout-1',
+    gapType: 'knowledge',
+    title: 'Create FAQ for "dental implant financing Austin TX"',
+    procedureTitle: 'Dental implant financing FAQ',
+    summary: '0% citation coverage • High AI engine frequency',
+    priority: 'High',
+    timeAgo: '2h ago',
+    conversationCount: 0,
+    isNew: true,
+    whenToUse: 'When a tracked prompt\'s fanout sub-query has zero brand citation coverage and high AI engine frequency.',
+    steps: [
+      {
+        title: 'Publish a financing FAQ',
+        bullets: [
+          'Answer common financing questions: monthly payment plans, insurance coverage, CareCredit, and interest-free options',
+          'Include Austin-specific pricing and financing partner names so AI engines can cite a local, specific answer',
+          'Structure as FAQ schema so it is easy for AI engines to extract and cite',
+        ],
+      },
+    ],
+    outcomes: [
+      'Closes a 0% coverage fanout gap on a high-frequency sub-query.',
+      'Once published, the next fanout run will re-check citation coverage for this sub-query.',
+    ],
+    tools: [
+      { label: 'Query fanout generator', icon: 'call_split' },
+      { label: 'Citation validator', icon: 'link' },
+    ],
+    thoughts: 'The fanout run estimated "dental implant financing Austin TX" as a sub-query for the tracked prompt "How much do dental implants cost in Austin?" — checking the citation index, the brand has zero coverage on it.',
+    rationale: '"dental implant financing Austin TX" is a high-frequency estimated fanout sub-query with 0% brand citation coverage — none of the brand\'s published pages currently answer it.',
+    changeType: 'New FAQ page targeting "dental implant financing Austin TX" published and submitted for re-indexing.',
+    conversations: [],
+    agentName: 'Query fanout agent',
+  },
+  {
+    id: 'r-fanout-2',
+    gapType: 'knowledge',
+    title: 'Create comparison page for "Invisalign vs traditional braces cost"',
+    procedureTitle: 'Invisalign vs braces comparison page',
+    summary: '12% citation coverage • Medium AI engine frequency',
+    priority: 'Medium',
+    timeAgo: '1d ago',
+    conversationCount: 0,
+    isNew: true,
+    whenToUse: 'When a tracked prompt\'s fanout sub-query has low brand citation coverage relative to its AI engine frequency.',
+    steps: [
+      {
+        title: 'Publish a comparison page',
+        bullets: [
+          'Compare cost, treatment time, and appearance between Invisalign and traditional braces',
+          'Include a clear pricing table so AI engines can cite specific numbers',
+          "Link to the practice's financing FAQ for a natural next step",
+        ],
+      },
+    ],
+    outcomes: [
+      'Improves the Fanout Coverage Score for the "orthodontic treatment options" tracked prompt.',
+      'Once published, the next fanout run will re-check citation coverage for this sub-query.',
+    ],
+    tools: [
+      { label: 'Query fanout generator', icon: 'call_split' },
+      { label: 'AI platform query runner', icon: 'travel_explore' },
+    ],
+    thoughts: 'The fanout run estimated "Invisalign vs traditional braces cost" as a sub-query for the tracked prompt "What are my orthodontic treatment options?" — only 12% of the estimated sub-queries for this prompt currently have brand citations.',
+    rationale: '"Invisalign vs traditional braces cost" is an estimated fanout sub-query with low brand citation coverage relative to how often AI engines surface it.',
+    changeType: 'New comparison page targeting "Invisalign vs traditional braces cost" published and submitted for re-indexing.',
+    conversations: [],
+    agentName: 'Query fanout agent',
+  },
 ]
 
 // ── Conversation transcripts (keyed by opening customer message) ────────────

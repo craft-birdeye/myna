@@ -705,8 +705,8 @@ export function App() {
                 )
               )}
 
-              {/* Search AI L2 nav panel */}
-              {railActive === 'search' && (
+              {/* Search AI L2 nav panel — hidden while the workflow editor is open */}
+              {railActive === 'search' && !isEditingWorkflow && (
                 <SearchAIL2NavPanel
                   activeItem={searchAIL2Active}
                   onActiveItemChange={setSearchAIL2Active}
@@ -745,8 +745,97 @@ export function App() {
 
               {/* Main content */}
               <main className="flex flex-1 flex-col min-w-0 overflow-hidden bg-background">
-                {railActive === 'search' ? (
-                  <SearchAIView l2ActiveItem={searchAIL2Active} />
+                {isEditingWorkflow ? (
+                  workflowAiCreateFullscreen && editingAgentName ? (
+                    (() => {
+                      const setup = getCreateWithAiSetup(editingAgentName)
+                      const exitToAgentBuilder = () => {
+                        setWorkflowAiCreateFullscreen(false)
+                        setWorkflowLhsPreferAiTab(true)
+                        // Keep Create with AI / AI Builder docked panel open on return.
+                        setWorkflowAiBuilderPanelOpen(true)
+                      }
+                      // Shell title matches create-flow naming (drop region suffix when present).
+                      const shellTitle = editingAgentName.replace(/ - .+$/, '') || editingAgentName
+                      return (
+                        <div className="flex h-full w-full overflow-hidden">
+                          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                            <CreateAiGhostwriterShellHeader
+                              title={shellTitle}
+                              onBack={exitToAgentBuilder}
+                              onViewAgentBuilder={exitToAgentBuilder}
+                            />
+                            <div className="scrollbar-subtle flex min-h-0 flex-1 items-stretch justify-center overflow-visible px-lg pt-0">
+                              <div className="flex h-full min-h-0 w-full min-w-0 justify-center">
+                                <HealthcareFrontdeskCreateAgentScreen
+                                  key={`fullscreen-create::${editingAgentName}::welcome`}
+                                  onBack={exitToAgentBuilder}
+                                  onCreateFromScratch={exitToAgentBuilder}
+                                  onSelectFromLibrary={exitToAgentBuilder}
+                                  onViewWorkflow={exitToAgentBuilder}
+                                  onCreateAgent={exitToAgentBuilder}
+                                  pageTitle={editingAgentName}
+                                  hideHeaderBack
+                                  variant={setup.variant}
+                                  initialPrompt={setup.initialPrompt}
+                                  libraryCards={setup.libraryCards}
+                                  fromScratchLabel={setup.fromScratchLabel}
+                                  // Existing agent → expand shows welcome + pills, not a resumed thread.
+                                  autoStart={false}
+                                  workflowVisible={false}
+                                  compactGreeting
+                                  existingAgent
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()
+                  ) : (
+                    <div className="flex h-full w-full overflow-hidden">
+                      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                        <WorkflowEditorScreen
+                          agentName={editingAgentName}
+                          onClose={() => {
+                            setEditingAgentName(null)
+                            if (editorReturnView) {
+                              setPendingAgentInstanceView(editorReturnView)
+                              setEditorReturnView(null)
+                            }
+                            setWizardAgentDraft(null)
+                            setWorkflowAiAssistOpen(false)
+                            setWorkflowAiCreateFullscreen(false)
+                            setWorkflowAiBuilderPanelOpen(false)
+                            setWorkflowLhsPreferAiTab(false)
+                          }}
+                          product={activeProduct}
+                          wizardDraft={wizardAgentDraft}
+                          agentStatus={
+                            editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
+                              ? 'Draft'
+                              : undefined
+                          }
+                          aiAssistOpen={workflowAiAssistOpen}
+                          onAiAssistOpenChange={setWorkflowAiAssistOpen}
+                          onOpenAiFullscreen={() => setWorkflowAiCreateFullscreen(true)}
+                          aiBuilderPanelOpen={workflowAiBuilderPanelOpen}
+                          onAiBuilderPanelOpenChange={setWorkflowAiBuilderPanelOpen}
+                          lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
+                        />
+                      </div>
+                      {workflowAiAssistOpen && (
+                        <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
+                      )}
+                    </div>
+                  )
+                ) : railActive === 'search' ? (
+                  <SearchAIView
+                    l2ActiveItem={searchAIL2Active}
+                    onEditAgent={handleEditAgent}
+                    pendingInstanceView={pendingAgentInstanceView}
+                    onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
+                  />
                 ) : railActive === 'social' ? (
                   <SocialView activeItem={socialL2Active} onActiveItemChange={setSocialL2Active} />
                 ) : railActive === 'content-hub' ? (
@@ -844,90 +933,6 @@ export function App() {
                       setAutoOpenAgentCreateFlow(true)
                     }}
                   />
-                ) : isEditingWorkflow ? (
-                  workflowAiCreateFullscreen && editingAgentName ? (
-                    (() => {
-                      const setup = getCreateWithAiSetup(editingAgentName)
-                      const exitToAgentBuilder = () => {
-                        setWorkflowAiCreateFullscreen(false)
-                        setWorkflowLhsPreferAiTab(true)
-                        // Keep Create with AI / AI Builder docked panel open on return.
-                        setWorkflowAiBuilderPanelOpen(true)
-                      }
-                      // Shell title matches create-flow naming (drop region suffix when present).
-                      const shellTitle = editingAgentName.replace(/ - .+$/, '') || editingAgentName
-                      return (
-                        <div className="flex h-full w-full overflow-hidden">
-                          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                            <CreateAiGhostwriterShellHeader
-                              title={shellTitle}
-                              onBack={exitToAgentBuilder}
-                              onViewAgentBuilder={exitToAgentBuilder}
-                            />
-                            <div className="scrollbar-subtle flex min-h-0 flex-1 items-stretch justify-center overflow-visible px-lg pt-0">
-                              <div className="flex h-full min-h-0 w-full min-w-0 justify-center">
-                                <HealthcareFrontdeskCreateAgentScreen
-                                  key={`fullscreen-create::${editingAgentName}::welcome`}
-                                  onBack={exitToAgentBuilder}
-                                  onCreateFromScratch={exitToAgentBuilder}
-                                  onSelectFromLibrary={exitToAgentBuilder}
-                                  onViewWorkflow={exitToAgentBuilder}
-                                  onCreateAgent={exitToAgentBuilder}
-                                  pageTitle={editingAgentName}
-                                  hideHeaderBack
-                                  variant={setup.variant}
-                                  initialPrompt={setup.initialPrompt}
-                                  libraryCards={setup.libraryCards}
-                                  fromScratchLabel={setup.fromScratchLabel}
-                                  // Existing agent → expand shows welcome + pills, not a resumed thread.
-                                  autoStart={false}
-                                  workflowVisible={false}
-                                  compactGreeting
-                                  existingAgent
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })()
-                  ) : (
-                    <div className="flex h-full w-full overflow-hidden">
-                      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                        <WorkflowEditorScreen
-                          agentName={editingAgentName}
-                          onClose={() => {
-                            setEditingAgentName(null)
-                            if (editorReturnView) {
-                              setPendingAgentInstanceView(editorReturnView)
-                              setEditorReturnView(null)
-                            }
-                            setWizardAgentDraft(null)
-                            setWorkflowAiAssistOpen(false)
-                            setWorkflowAiCreateFullscreen(false)
-                            setWorkflowAiBuilderPanelOpen(false)
-                            setWorkflowLhsPreferAiTab(false)
-                          }}
-                          product={activeProduct}
-                          wizardDraft={wizardAgentDraft}
-                          agentStatus={
-                            editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                              ? 'Draft'
-                              : undefined
-                          }
-                          aiAssistOpen={workflowAiAssistOpen}
-                          onAiAssistOpenChange={setWorkflowAiAssistOpen}
-                          onOpenAiFullscreen={() => setWorkflowAiCreateFullscreen(true)}
-                          aiBuilderPanelOpen={workflowAiBuilderPanelOpen}
-                          onAiBuilderPanelOpenChange={setWorkflowAiBuilderPanelOpen}
-                          lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
-                        />
-                      </div>
-                      {workflowAiAssistOpen && (
-                        <AiAssistPanel onClose={() => setWorkflowAiAssistOpen(false)} />
-                      )}
-                    </div>
-                  )
                 ) : railActive === 'reviews' ? (
                   navActive === 'view-all-reviews' || navActive === 'all-reviews' ? (
                     <AllReviewsScreen />

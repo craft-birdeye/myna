@@ -16,8 +16,18 @@ interface RecommendationsTabProps {
 
 /** Row shape rendered by the table — adds a sortable numeric age alongside the raw `timeAgo`
  *  string, so the Date column can sort chronologically instead of alphabetically sorting
- *  strings like "15m ago" vs "2h ago". */
-type RecommendationRow = Recommendation & { ageMinutes: number }
+ *  strings like "15m ago" vs "2h ago". Also carries the owning co-worker's name for the
+ *  "From" column, since AI-sourced recommendations aren't always Myna's (e.g. Search AI
+ *  agents belong to Jay). */
+type RecommendationRow = Recommendation & { ageMinutes: number; persona: string }
+
+/** Search AI agents (Query fanout, AEO validator, …) belong to Jay (Marketing), not Myna
+ *  (Operations) — everything else on the Front desk / Inbox canvas stays Myna's. */
+function personaForAgent(agentName: string): string {
+  return agentName.startsWith('Query fanout agent') || agentName.startsWith('AEO validator agent')
+    ? 'Jay'
+    : 'Myna'
+}
 
 const COLUMNS: Column<RecommendationRow>[] = [
   {
@@ -44,7 +54,7 @@ const COLUMNS: Column<RecommendationRow>[] = [
         ) : (
           <AiAgentIcon size={16} className="shrink-0" />
         )}
-        {rec.source === 'feedback' ? (rec.reportedBy ?? 'Human feedback') : 'Myna'}
+        {rec.source === 'feedback' ? (rec.reportedBy ?? 'Human feedback') : rec.persona}
       </span>
     ),
   },
@@ -80,7 +90,15 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
   const { overrides } = useRecommendationOverridesStore()
   const feedbackForAgent = feedbackRecommendations.filter((rec) => rec.agentName === agentName)
-  const combined = [...RECOMMENDATIONS, ...feedbackForAgent]
+  // Search AI agents (Query fanout, AEO validator) don't fit the generic front-desk-style
+  // dataset below — they only see recommendations explicitly tagged with their own agentName.
+  // Every other agent keeps the pre-existing behavior: untagged rows shown everywhere.
+  const isSearchAiAgent = agentName.startsWith('Query fanout agent') || agentName.startsWith('AEO validator agent')
+  const genericRecs = isSearchAiAgent
+    ? RECOMMENDATIONS.filter((rec) => rec.agentName && agentName.startsWith(rec.agentName))
+    : RECOMMENDATIONS.filter((rec) => !rec.agentName)
+  const combined = [...genericRecs, ...feedbackForAgent]
+  const persona = personaForAgent(agentName)
   const maxConversationCount = Math.max(0, ...combined.map((rec) => rec.conversationCount))
   const data: RecommendationRow[] = combined
     .map((rec) => ({
@@ -88,6 +106,7 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty
       priority: computeImpact(rec.conversationCount, maxConversationCount),
       status: overrides[rec.id]?.status ?? 'open',
       ageMinutes: recommendationAgeMinutes(rec.timeAgo),
+      persona,
     }))
     // Default order: highest conversations affected first — DataTable also starts sorted on
     // that column so the header chevron stays visible.

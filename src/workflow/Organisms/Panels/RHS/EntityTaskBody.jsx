@@ -64,12 +64,17 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
 
         {displayedTools.length > 0 && (
           <div className={styles.toolCard}>
-            {displayedTools.map((tool) => (
+            {displayedTools.map((tool) => {
+              // Only tools that actually carry a config drawer or `fields` (custom-tool params)
+              // have anything to edit — e.g. "Query fanout estimator" is a bare API call with no
+              // configuration, so it gets no pencil / no click-to-open affordance.
+              const isConfigurable = Boolean(tool.hasDrawer || tool.fields?.length);
+              return (
               <div
                 key={tool.id}
                 className={styles.toolRow}
-                onClick={() => onOpenTool?.(tool.id)}
-                style={{ cursor: onOpenTool ? 'pointer' : 'default' }}
+                onClick={isConfigurable ? () => onOpenTool?.(tool.id) : undefined}
+                style={{ cursor: isConfigurable && onOpenTool ? 'pointer' : 'default' }}
               >
                 <div className={styles.toolRowMain}>
                   <div
@@ -97,16 +102,18 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
                   <span className={styles.toolName}>{tool.name}</span>
                 </div>
                 <div className={styles.toolRowActions}>
-                  <button
-                    type="button"
-                    className={styles.toolActionBtn}
-                    onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
-                    title="Edit tool configuration"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                      edit
-                    </span>
-                  </button>
+                  {isConfigurable && (
+                    <button
+                      type="button"
+                      className={styles.toolActionBtn}
+                      onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
+                      title="Edit tool configuration"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                        edit
+                      </span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={styles.toolActionBtn}
@@ -119,7 +126,8 @@ export default function EntityTaskBody({ initialValues = {}, onFieldChange, onOp
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

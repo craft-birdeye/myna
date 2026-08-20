@@ -28,6 +28,9 @@ import AssignConversationDrawer from '../Organisms/Drawers/AssignConversationDra
 import AssignConversationStatusDrawer from '../Organisms/Drawers/AssignConversationStatusDrawer/AssignConversationStatusDrawer';
 import ToolLibraryDrawer from '../Organisms/Drawers/ToolLibraryDrawer/ToolLibraryDrawer';
 import AddToolDrawer from '../Organisms/Drawers/AddToolDrawer/AddToolDrawer';
+import { NativeDrawer } from '../Organisms/Drawers/shared/DrawerShared';
+import CollectUserPrompt from '../Organisms/Drawers/Tools/CollectUserPrompt/CollectUserPrompt';
+import SearchAiAlert from '../Organisms/Drawers/Tools/SearchAiAlert/SearchAiAlert';
 import {
   getProcedureById,
   getProcedureDetailContent,
@@ -1091,6 +1094,8 @@ export default function AgentBuilder({
   const [assignContactStatusToolOpen, setAssignContactStatusToolOpen] = useState(false);
   const [assignConversationToolOpen, setAssignConversationToolOpen] = useState(false);
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
+  const [collectUserPromptOpen, setCollectUserPromptOpen] = useState(false);
+  const [searchAiAlertOpen, setSearchAiAlertOpen] = useState(false);
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // RHS panel stays mounted a beat past `drawerOpen` turning false so it can
@@ -1148,13 +1153,21 @@ export default function AgentBuilder({
 
   /* ─── Test run ─── */
   const [testRunOpen, setTestRunOpen] = useState(false);
+  // On-demand agents (Query fanout agent) collect their prompt via a small modal before the
+  // step animation plays, since the canvas's test-run animation has no way to collect it itself.
+  const [testPromptModalOpen, setTestPromptModalOpen] = useState(false);
+  const [testPromptModalValue, setTestPromptModalValue] = useState('');
+  const [testCollectedPrompt, setTestCollectedPrompt] = useState('');
+  const needsTestPromptModal =
+    nodeList.some((n) => n.flowType === 'trigger' && n.data?.subtype === 'On-demand') &&
+    nodeList.some((n) => n.flowType === 'task' && (nodeDetails[n.id]?.selectedTools || []).includes('collect-user-prompt'));
   // First-time coach queue on the edit canvas — Help center "Start tour" also reopens it.
   const [coachTourOpen, setCoachTourOpen] = useState(false);
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
   // Rebuilt only while the panel is open so the run isn't restarted by unrelated edits.
   const testRunSteps = useMemo(
-    () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails) : EMPTY_TEST_RUN_STEPS),
-    [testRunOpen, nodeList, nodeDetails],
+    () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails, testCollectedPrompt) : EMPTY_TEST_RUN_STEPS),
+    [testRunOpen, nodeList, nodeDetails, testCollectedPrompt],
   );
   const testRun = useTestRun(testRunSteps);
   const testRunActiveId = testRunOpen ? testRun.activeNodeId : null;
@@ -1415,6 +1428,7 @@ export default function AgentBuilder({
     isFrontDeskCanvasAgent(entryAgentName, agentName, appTitleStr);
   const isReviewResponseAgent = /review response/i.test(entryAgentName) || /review response/i.test(agentName);
   const isReviewGenerationAgent = /review generation/i.test(entryAgentName) || /review generation/i.test(agentName);
+  const isQueryFanoutAgent = /query fanout/i.test(entryAgentName) || /query fanout/i.test(agentName);
   const isReviewsAiAgent = isReviewResponseAgent || isReviewGenerationAgent;
   const hideProceduresFloater =
     isReviewsAiAgent || isWaitlistAgent || isPreVisitAgent || isReminderAgent;
@@ -2038,16 +2052,18 @@ export default function AgentBuilder({
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
   const locationCount = startLocations.length;
-  const startSubtitle = locationCount === 0
-    ? 'Add locations'
-    : locationCount === 1
-      ? '1 location'
-      : `${locationCount} locations`;
+  const startSubtitle = isQueryFanoutAgent
+    ? ''
+    : locationCount === 0
+      ? 'Add locations'
+      : locationCount === 1
+        ? '1 location'
+        : `${locationCount} locations`;
   const startData = {
     title: startAgentName,
     subtitle: startSubtitle,
-    subtitleIsLink: locationCount === 0,
-    onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
+    subtitleIsLink: !isQueryFanoutAgent && locationCount === 0,
+    onSubtitleClick: !isQueryFanoutAgent && locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
   };
   const { nodes: rawNodes, edges } = buildFlow(
     nodeList,
@@ -2620,6 +2636,7 @@ export default function AgentBuilder({
               }));
             },
             autoOpenLocationsToken: startLocationsOpenToken,
+            isQueryFanoutAgent,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -2676,6 +2693,20 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="conversationTrigger"
+          title="Trigger"
+          viewOnly={viewOnly}
+          product={product}
+          bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
+          onClose={handleCloseDrawer}
+          onSave={handleCloseDrawer}
+        />
+      );
+    }
+
+    if (flowType === 'trigger' && data.subtype === 'On-demand') {
+      return (
+        <RHS
+          variant="onDemandTrigger"
           title="Trigger"
           viewOnly={viewOnly}
           product={product}
@@ -2934,6 +2965,8 @@ export default function AgentBuilder({
             if (toolId === 'assign-contact-status') { setAssignContactStatusToolOpen(true); return; }
             if (toolId === 'assign-conversation') { setAssignConversationToolOpen(true); return; }
             if (toolId === 'assign-conversation-status') { setAssignConversationStatusToolOpen(true); return; }
+            if (toolId === 'collect-user-prompt') { setCollectUserPromptOpen(true); return; }
+            if (toolId === 'search-ai-alert') { setSearchAiAlertOpen(true); return; }
             getCustomToolsByIds([toolId]).then((tools) => {
               if (tools[0]) setViewingTool(tools[0]);
             });
@@ -2958,6 +2991,11 @@ export default function AgentBuilder({
       return;
     }
     setPreviewOpen(false);
+    if (needsTestPromptModal) {
+      setTestPromptModalValue('');
+      setTestPromptModalOpen(true);
+      return;
+    }
     setTestRunOpen(true);
   };
 
@@ -3395,6 +3433,50 @@ export default function AgentBuilder({
             </div>
           )}
 
+          {testPromptModalOpen && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(33,33,33,0.4)' }}>
+              <div style={{ width: 440, maxWidth: '92vw', background: '#fff', borderRadius: 8, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, fontFamily: '"Roboto", arial, sans-serif' }}>
+                <h2 style={{ margin: 0, fontSize: 16, lineHeight: '24px', color: '#212121' }}>Run test</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 12, lineHeight: '18px', color: '#757575' }}>Prompt</span>
+                  <textarea
+                    autoFocus
+                    rows={3}
+                    value={testPromptModalValue}
+                    onChange={(e) => setTestPromptModalValue(e.target.value)}
+                    placeholder="e.g. How much do dental implants cost in Austin?"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', border: '1px solid #ccc', borderRadius: 4, font: '400 14px/20px "Roboto", arial, sans-serif', resize: 'vertical' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setTestPromptModalOpen(false)}
+                    style={{ padding: '8px 16px', border: 'none', background: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 14, color: '#555' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!testPromptModalValue.trim()}
+                    onClick={() => {
+                      setTestCollectedPrompt(testPromptModalValue.trim());
+                      setTestPromptModalOpen(false);
+                      setTestRunOpen(true);
+                    }}
+                    style={{
+                      padding: '8px 16px', border: 'none', borderRadius: 4, fontSize: 14, color: '#fff',
+                      cursor: testPromptModalValue.trim() ? 'pointer' : 'not-allowed',
+                      background: testPromptModalValue.trim() ? '#1976d2' : '#9e9e9e',
+                    }}
+                  >
+                    Run test
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {testRunOpen && (
             <>
               <style>{testRunCss}</style>
@@ -3479,6 +3561,16 @@ export default function AgentBuilder({
 
       {/* ─── Assign conversation tool drawer ─── */}
       <AssignConversationDrawer isOpen={assignConversationToolOpen} onClose={() => setAssignConversationToolOpen(false)} />
+
+      {/* ─── Collect user prompt tool drawer (Query fanout agent) ─── */}
+      <NativeDrawer isOpen={collectUserPromptOpen} onClose={() => setCollectUserPromptOpen(false)}>
+        <CollectUserPrompt onBack={() => setCollectUserPromptOpen(false)} onSave={() => setCollectUserPromptOpen(false)} />
+      </NativeDrawer>
+
+      {/* ─── Send alert tool drawer (Query fanout agent) ─── */}
+      <NativeDrawer isOpen={searchAiAlertOpen} onClose={() => setSearchAiAlertOpen(false)}>
+        <SearchAiAlert onBack={() => setSearchAiAlertOpen(false)} onSave={() => setSearchAiAlertOpen(false)} />
+      </NativeDrawer>
 
       {/* ─── Assign conversation status tool drawer ─── */}
       <AssignConversationStatusDrawer isOpen={assignConversationStatusToolOpen} onClose={() => setAssignConversationStatusToolOpen(false)} />

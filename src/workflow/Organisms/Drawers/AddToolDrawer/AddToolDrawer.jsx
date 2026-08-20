@@ -3,9 +3,12 @@ import { getSeedTools, subscribeToCustomTools } from '../../../services/agentSer
 import { ToolViewerContent } from '../CustomToolViewer/CustomToolViewer';
 import { TransferToolContent } from '../TransferToolDrawer/TransferToolDrawer';
 import AutoFollowUp from '../Tools/AutoFollowUp/AutoFollowUp';
+import CollectUserPrompt from '../Tools/CollectUserPrompt/CollectUserPrompt';
 import EscalationNotifier from '../Tools/EscalationNotifier/EscalationNotifier';
 import LeadCapture from '../Tools/LeadCapture/LeadCapture';
 import LeadQualification from '../Tools/LeadQualification/LeadQualification';
+import SearchAiAlert from '../Tools/SearchAiAlert/SearchAiAlert';
+import SendToAiRecommendations from '../Tools/SendToAiRecommendations/SendToAiRecommendations';
 import VoicemailDetection from '../Tools/VoicemailDetection/VoicemailDetection';
 import styles from './AddToolDrawer.module.css';
 import chronoLogo from '../../../../assets/logo-chrono.svg';
@@ -13,9 +16,12 @@ import athenaLogo from '../../../../assets/logo-athena.svg';
 
 const TOOL_DRAWER_MAP = {
   'auto-follow-up':       AutoFollowUp,
+  'collect-user-prompt':  CollectUserPrompt,
   'escalation-notifier':  EscalationNotifier,
   'lead-capture':         LeadCapture,
   'lead-qualification':   LeadQualification,
+  'search-ai-alert':      SearchAiAlert,
+  'search-ai-recommendation': SendToAiRecommendations,
   'voicemail-detection':  VoicemailDetection,
 };
 

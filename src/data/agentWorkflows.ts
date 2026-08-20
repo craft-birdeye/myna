@@ -575,10 +575,137 @@ const HEALTHCARE_REMINDER_DEFAULT_WORKFLOW: AgentWorkflow = {
   nodeDetails: HEALTHCARE_REMINDER_DEFAULT_NODE_DETAILS,
 }
 
+// ─── Query Fanout Agent (Search AI) ───────────────────────────────────────────
+// Workflow: On-demand trigger → Collect user prompt → Query fanout estimator → Generate fanout queries and output prompt (Custom LLM task) → Send alert
+
+const QUERY_FANOUT_NODES = [
+  { id: 'qf-1', flowType: 'trigger' as const, data: { title: 'On demand fanout query generation', subtype: 'On-demand', headerLabel: 'Trigger', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Enter description' } },
+  { id: 'qf-2', flowType: 'task'    as const, data: { title: 'Collect user prompt', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Collects the prompt to run a fanout estimate against.' } },
+  { id: 'qf-3', flowType: 'task'    as const, data: { title: 'Query fanout estimator', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Estimates the fanout sub-queries AI engines would run to answer the collected prompt.' } },
+  { id: 'qf-4', flowType: 'task'    as const, data: { title: 'Generate fanout queries and output prompt', subtype: 'Custom', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Turns the fanout estimate into the final fanout query list and an output prompt.' } },
+  { id: 'qf-5', flowType: 'task'    as const, data: { title: 'Send alert', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Notify recipients once the fanout query run completes.' } },
+]
+
+const QUERY_FANOUT_NODE_DETAILS: Record<string, any> = {
+  '__start__': {
+    agentName: 'Query fanout agent',
+    goals: 'Generates the AI-engine fanout sub-queries for a given prompt on demand, so the resulting query list and output prompt can be reviewed and reused for content and coverage work.',
+    outcomes: [
+      '1. A user-submitted prompt gets an estimated set of fanout sub-queries an AI engine would run to answer it',
+      '2. The estimate is turned into a final fanout query list plus an output prompt ready to reuse',
+      '3. Every run is visible and re-runnable from Search AI → Actions → Fanout queries',
+      '4. Recipients are alerted once a run completes',
+    ].join('\n'),
+    locations: ['1001 - Mountain View, CA', '1002 - Seattle, WA', '1004 - Chicago, IL', '1006 - Las Vegas, NV'],
+    brandIdentity: 'Aspen Dental',
+  },
+  'qf-1': {
+    triggerName: 'On demand fanout query generation',
+    triggerType: 'on-demand-fanout-query-generation',
+    description: 'Runs when triggered manually or via Run test — no schedule.',
+  },
+  'qf-2': {
+    taskName: 'Collect user prompt',
+    description: 'Collects the prompt to run a fanout estimate against.',
+    selectedTools: ['collect-user-prompt'],
+  },
+  'qf-3': {
+    taskName: 'Query fanout estimator',
+    description: 'Estimates the fanout sub-queries AI engines would run to answer the collected prompt.',
+    selectedTools: ['query-fanout-estimator'],
+  },
+  'qf-4': {
+    taskName: 'Generate fanout queries and output prompt',
+    description: 'Turns the fanout estimate into the final fanout query list and an output prompt.',
+    llmModel: 'Fast',
+    contextFields: [
+      { value: 'Prompt.userPrompt', type: 'variable' },
+      { value: 'Prompt.fanoutEstimate', type: 'variable' },
+    ],
+    inputFields: [
+      { value: 'Prompt.userPrompt', type: 'variable' },
+      { value: 'Prompt.fanoutEstimate', type: 'variable' },
+    ],
+    systemPrompt: 'You are the Fanout Query Generator. Given a user prompt and its fanout estimate, produce the final list of fanout sub-queries and an output prompt summarizing the coverage opportunity.',
+    userPrompt:
+      'Using {{Prompt.userPrompt}} and {{Prompt.fanoutEstimate}}:\n' +
+      '1. Finalize the list of fanout sub-queries an AI engine would run to answer the prompt.\n' +
+      '2. Write an output prompt summarizing the sub-queries and the coverage opportunity they represent.',
+    outputFields: [
+      { value: 'Prompt.fanoutQueries', type: 'variable' },
+      { value: 'Prompt.outputPrompt', type: 'variable' },
+    ],
+  },
+  'qf-5': {
+    taskName: 'Send alert',
+    description: 'Notify recipients once the fanout query run completes.',
+    selectedTools: ['search-ai-alert'],
+  },
+}
+
+// ─── AEO Validator Agent (Search AI) ──────────────────────────────────────────
+// Workflow: Entity trigger → Check AEO signals → Validate citations → Flag content for review
+
+const AEO_VALIDATOR_NODES = [
+  { id: 'av-1', flowType: 'trigger' as const, data: { title: 'When content is published or updated', subtype: 'Entity trigger', headerLabel: 'Trigger', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Enter description' } },
+  { id: 'av-2', flowType: 'task'    as const, data: { title: 'Check AEO signals', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Scan for structured data, FAQ schema, and answer-friendly formatting.' } },
+  { id: 'av-3', flowType: 'task'    as const, data: { title: 'Validate citations', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Cross-check sources AI platforms cite against the published page.' } },
+  { id: 'av-4', flowType: 'task'    as const, data: { title: 'Flag content for review', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Route content that fails AEO validation to the content team.' } },
+]
+
+const AEO_VALIDATOR_NODE_DETAILS: Record<string, any> = {
+  '__start__': {
+    agentName: 'AEO validator agent',
+    goals: 'Validates that published content carries the answer engine optimization signals — structured data, FAQ schema, accurate citations — needed to stay eligible for AI-generated answers.',
+    outcomes: [
+      '1. Every new or updated page is checked for AEO signals before it is considered citation-ready',
+      '2. Citations AI platforms attribute to a page are verified against its actual published content',
+      '3. Content that fails validation is flagged for review instead of silently losing AI visibility',
+      '4. Passing content is marked AEO-compliant in the content calendar',
+    ].join('\n'),
+    locations: ['1001 - Mountain View, CA', '1002 - Seattle, WA', '1004 - Chicago, IL', '1006 - Las Vegas, NV'],
+  },
+  'av-1': {
+    triggerName: 'When content is published or updated',
+    description: 'Agent triggers whenever a page is published or its content changes.',
+    conditions: [],
+    conditionOptions: {
+      field: [
+        { value: 'content_event', label: 'Content event' },
+        { value: 'content_type',  label: 'Content type' },
+      ],
+      operator: [
+        { value: 'equals',     label: 'Equals' },
+        { value: 'not_equals', label: 'Does not equal' },
+      ],
+      value: [
+        { value: 'published_or_updated', label: 'Published or updated' },
+      ],
+    },
+  },
+  'av-2': {
+    taskName: 'Check AEO signals',
+    description: 'Scan for structured data, FAQ schema, and answer-friendly formatting.',
+    selectedTools: ['aeo-signal-checker'],
+  },
+  'av-3': {
+    taskName: 'Validate citations',
+    description: 'Cross-check sources AI platforms cite against the published page.',
+    selectedTools: ['citation-validator'],
+  },
+  'av-4': {
+    taskName: 'Flag content for review',
+    description: 'Route content that fails AEO validation to the content team.',
+    selectedTools: ['trigger-escalation'],
+  },
+}
+
 export const AUTOMOTIVE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,           nodeDetails: FRONTDESK_NODE_DETAILS           },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,             nodeDetails: OUTREACH_NODE_DETAILS            },
+  'Query fanout agent':  { nodes: QUERY_FANOUT_NODES,     nodeDetails: QUERY_FANOUT_NODE_DETAILS        },
+  'AEO validator agent': { nodes: AEO_VALIDATOR_NODES,    nodeDetails: AEO_VALIDATOR_NODE_DETAILS       },
 }
 
 // ─── Waitlist Agent ──────────────────────────────────────────────────────────
@@ -1560,6 +1687,11 @@ export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Review generation agent': REVIEW_GENERATION_WORKFLOW,
   'Review generation agent with A/B testing': REVIEW_GENERATION_WORKFLOW,
   'Review generation agents': REVIEW_GENERATION_WORKFLOW,
+  // Search AI agents aren't tied to a dealership/practice product — registered here too
+  // (dental inherits via spread) so the workflow editor resolves them regardless of
+  // whichever product context (`activeProduct`) happens to be active elsewhere in the app.
+  'Query fanout agent':  { nodes: QUERY_FANOUT_NODES,     nodeDetails: QUERY_FANOUT_NODE_DETAILS        },
+  'AEO validator agent': { nodes: AEO_VALIDATOR_NODES,    nodeDetails: AEO_VALIDATOR_NODE_DETAILS       },
 }
 
 // ─── Shared voice-call conditionOptions (reused across all three dental agents) ─

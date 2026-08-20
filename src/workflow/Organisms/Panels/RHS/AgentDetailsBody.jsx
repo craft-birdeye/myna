@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { FormInput, TextArea } from '../../../elemental-stubs';
+import { FormInput, SingleSelect, TextArea } from '../../../elemental-stubs';
 import LocationsDrawer from '../../../RHSDrawer/LocationsDrawer.jsx';
 import styles from './AgentDetailsBody.module.css';
+
+const BRAND_IDENTITY_OPTIONS = [
+  { value: 'Aspen Dental', label: 'Aspen Dental' },
+  { value: 'Bright Smiles Family Dentistry', label: 'Bright Smiles Family Dentistry' },
+  { value: 'Riverside Dental Group', label: 'Riverside Dental Group' },
+];
 
 const DEFAULT_LOCATIONS = [
   { id: '1001', name: '1001 - Mountain view, CA' },
@@ -24,6 +30,8 @@ export default function AgentDetailsBody({
   viewOnly = false,
   /** Bumped by the canvas's "Add locations" link to jump straight to the Locations picker. */
   autoOpenLocationsToken = 0,
+  /** Query fanout agent only — shows the "Brand identity" select right after Agent name. */
+  isQueryFanoutAgent = false,
 }) {
   const [internalValues, setInternalValues] = useState({
     agentName: '',
@@ -121,7 +129,28 @@ export default function AgentDetailsBody({
         readOnly={viewOnly}
       />
 
-      {/* ─── Locations ─── */}
+      {isQueryFanoutAgent && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: 18 }}>
+            <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', color: '#212121', fontFamily: '"Roboto", sans-serif' }}>Brand identity</span>
+            <span style={{ fontSize: 12, lineHeight: '18px', color: '#de1b0c', fontFamily: '"Roboto", sans-serif' }}>*</span>
+          </div>
+          <SingleSelect
+            name="brandIdentity"
+            selected={values.brandIdentity || BRAND_IDENTITY_OPTIONS[0].value}
+            options={BRAND_IDENTITY_OPTIONS}
+            onChange={(opt) => {
+              if (onChange) onChange('brandIdentity', opt.value);
+              else setInternalValues((v) => ({ ...v, brandIdentity: opt.value }));
+            }}
+            placeholder="Select"
+            disabled={viewOnly}
+          />
+        </div>
+      )}
+
+      {/* ─── Locations — hidden for the Query fanout agent (not location-scoped) ─── */}
+      {!isQueryFanoutAgent && (
       <div className={styles.locationsField}>
         <div className={styles.locationsLabel}>
           <span className={styles.locationsLabelText}>Locations</span>
@@ -180,6 +209,7 @@ export default function AgentDetailsBody({
           </>
         )}
       </div>
+      )}
     </div>
   );
 }

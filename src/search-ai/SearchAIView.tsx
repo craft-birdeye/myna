@@ -2,7 +2,10 @@ import { useState, Fragment, useMemo } from "react";
 import { ChevronDown, ChevronUp, Filter, MoreVertical, Search } from "lucide-react";
 import { MainCanvasViewHeader } from "@/contenthub-ui/MainCanvasViewHeader";
 import { RecommendationsView } from "@/search-ai/recommendations/RecommendationsView";
+import { FanoutQueriesScreen } from "./FanoutQueriesScreen";
 import { SEARCH_AI_L2_KEY_RECOMMENDATIONS } from "@/search-ai/searchAIL2Keys";
+import { AgentDetailScreen } from "../screens/AgentDetailScreen";
+import type { WizardAgentDraft } from "../data/wizardAgentConfig.types";
 import { Button } from "@/contenthub-ui/button";
 import { TextTabsRow } from "@/contenthub-ui/text-tabs";
 import {
@@ -905,14 +908,100 @@ function SearchAIVisibilityDashboard() {
   );
 }
 
+/* ═══════════════════════════════════════════
+   Search AI — Agents (Query fanout / AEO validator)
+   Same format as Operations/Front desk agents — AgentDetailScreen reads its
+   nodes/metrics from `agentWorkflows.ts` keyed by agentName.
+   ═══════════════════════════════════════════ */
+type OnEditAgent = (
+  agentName: string,
+  draft?: WizardAgentDraft,
+  returnTo?: { instanceName: string; tab: string },
+) => void;
+
+type PendingInstanceView = { instanceName: string; tab: string };
+
+function QueryFanoutAgentsView({
+  onEditAgent,
+  pendingInstanceView,
+  onPendingInstanceViewConsumed,
+}: {
+  onEditAgent?: OnEditAgent;
+  pendingInstanceView?: PendingInstanceView | null;
+  onPendingInstanceViewConsumed?: () => void;
+}) {
+  return (
+    <AgentDetailScreen
+      agentName="Query fanout agent"
+      navId="searchai-query-fanout"
+      onEditAgent={onEditAgent}
+      pendingInstanceView={pendingInstanceView}
+      onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
+    />
+  );
+}
+
+function AEOValidatorAgentsView({
+  onEditAgent,
+  pendingInstanceView,
+  onPendingInstanceViewConsumed,
+}: {
+  onEditAgent?: OnEditAgent;
+  pendingInstanceView?: PendingInstanceView | null;
+  onPendingInstanceViewConsumed?: () => void;
+}) {
+  return (
+    <AgentDetailScreen
+      agentName="AEO validator agent"
+      navId="searchai-aeo-validator"
+      onEditAgent={onEditAgent}
+      pendingInstanceView={pendingInstanceView}
+      onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
+    />
+  );
+}
+
 export type SearchAIViewProps = {
   /** L2 compound key from `L2NavLayout` (e.g. `Actions/Recommendations`). */
   l2ActiveItem: string;
+  /** Opens the AI-wizard-driven workflow editor for the given agent — same handler App.tsx
+   *  wires to Front desk agents, threaded through so Search AI agents can use it too. */
+  onEditAgent?: OnEditAgent;
+  /** Set by App.tsx after closing the editor so the agent lands back on the instance/tab
+   *  editing started from, instead of the default Agents-tab table. */
+  pendingInstanceView?: PendingInstanceView | null;
+  onPendingInstanceViewConsumed?: () => void;
 };
 
-export function SearchAIView({ l2ActiveItem }: SearchAIViewProps) {
+export function SearchAIView({
+  l2ActiveItem,
+  onEditAgent,
+  pendingInstanceView,
+  onPendingInstanceViewConsumed,
+}: SearchAIViewProps) {
   if (l2ActiveItem === SEARCH_AI_L2_KEY_RECOMMENDATIONS) {
     return <RecommendationsView />;
+  }
+  if (l2ActiveItem === "searchai-fanout-queries") {
+    return <FanoutQueriesScreen />;
+  }
+  if (l2ActiveItem === "searchai-query-fanout") {
+    return (
+      <QueryFanoutAgentsView
+        onEditAgent={onEditAgent}
+        pendingInstanceView={pendingInstanceView}
+        onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
+      />
+    );
+  }
+  if (l2ActiveItem === "searchai-aeo-validator") {
+    return (
+      <AEOValidatorAgentsView
+        onEditAgent={onEditAgent}
+        pendingInstanceView={pendingInstanceView}
+        onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
+      />
+    );
   }
   return <SearchAIVisibilityDashboard />;
 }

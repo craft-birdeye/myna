@@ -14,6 +14,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { id: 'searchai-recommendations', label: 'Recommendations' },
       { id: 'searchai-track-progress',  label: 'Track progress'  },
+      { id: 'searchai-fanout-queries',  label: 'Fanout queries'  },
     ],
   },
   {
@@ -31,9 +32,8 @@ const SECTIONS: NavSection[] = [
     id: 'agents',
     label: 'Agents',
     items: [
-      { id: 'searchai-monitor',     label: 'Monitor'     },
-      { id: 'searchai-performance', label: 'Performance' },
-      { id: 'searchai-builder',     label: 'Builder'     },
+      { id: 'searchai-query-fanout',  label: 'Query fanout agents'    },
+      { id: 'searchai-aeo-validator', label: 'AEO validator agents'   },
     ],
   },
   {

@@ -14,6 +14,7 @@ import SubAgentBody from './SubAgentBody';
 import ControlBranchBody from './ControlBranchBody';
 import StartBody from './StartBody';
 import ConversationTriggerBody from './ConversationTriggerBody';
+import OnDemandTriggerBody from './OnDemandTriggerBody';
 import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
@@ -57,6 +58,11 @@ const VARIANTS = {
   },
   reviewTrigger: {
     body: ReviewTriggerBody,
+    showActions: false,
+    showPromptStrength: false,
+  },
+  onDemandTrigger: {
+    body: OnDemandTriggerBody,
     showActions: false,
     showPromptStrength: false,
   },
