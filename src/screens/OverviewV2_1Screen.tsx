@@ -13,6 +13,9 @@ import {
 import jayIcon from '../assets/icon-jay.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
+import woodenBirdJay from '../assets/wooden-bird-jay.png'
+import woodenBirdMyna from '../assets/wooden-bird-myna.png'
+import woodenBirdRobin from '../assets/wooden-bird-robin.png'
 import googleIcon from '../assets/icon-google.svg'
 import googlePlayIcon from '../assets/icon-google-play.svg'
 import { getAgentDirectory, type AgentDirectoryEntry } from '../data/agentDirectoryData'
@@ -472,6 +475,15 @@ const AGENT_ISSUE_OVERRIDES: Record<string, number> = {
   'survey-response': 1,
 }
 
+// Mirrors agentDirectoryData's PERSONA_GROUPS (Jay/marketing, Myna/operations, Robin/cx) — used
+// to split the "View agent performance" grid into one section per coworker.
+const PERSONA_DISPLAY: Record<string, { name: string; icon: string; domain: string }> = {
+  marketing: { name: 'Jay', icon: jayIcon, domain: 'Marketing' },
+  operations: { name: 'Myna', icon: mynaIcon, domain: 'Operations' },
+  cx: { name: 'Robin', icon: robinIcon, domain: 'Customer experience' },
+}
+const PERSONA_ORDER = ['marketing', 'operations', 'cx']
+
 function AgentPerformanceMetric({ value, label }: { value: string; label: string }) {
   return (
     <div className="min-w-0">
@@ -517,6 +529,11 @@ function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
   )
 }
 
+// Empty state's promo banner background only — a diagonal green -> blue -> violet -> dusty-rose
+// gradient (matching a Birdeye event-page reference), instead of the flat bg-ai-summary tint FTU
+// keeps.
+const EMPTY_BANNER_GRADIENT = 'linear-gradient(135deg, #3fae6a 0%, #4a72d0 35%, #7c5cc9 65%, #c98a7e 100%)'
+
 // Shown in all three states — Empty/FTU keep the estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
 // real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
@@ -548,16 +565,17 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
     <SectionCard>
       {!filled && (
         <div
-          className={`-mx-xl -mt-xl flex items-center gap-lg rounded-t-md bg-ai-summary p-lg ${
-            bannerOnly ? '-mb-xl rounded-b-md' : ''
+          className={`-mx-xl -mt-xl flex items-center gap-lg rounded-t-md p-lg ${bannerOnly ? '-mb-xl rounded-b-md' : ''} ${
+            bannerOnly ? '' : 'bg-ai-summary'
           }`}
+          style={bannerOnly ? { background: EMPTY_BANNER_GRADIENT } : undefined}
         >
           <div className="flex shrink-0 items-center">
-            <img src={jayIcon} alt="" className="size-9 rounded-full border-2 border-surface" />
-            <img src={mynaIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
-            <img src={robinIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+            <img src={woodenBirdJay} alt="" className="size-9 rounded-full border-2 border-surface" />
+            <img src={woodenBirdMyna} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
+            <img src={woodenBirdRobin} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
           </div>
-          <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
+          <p className={`m-0 min-w-0 flex-1 truncate text-body ${bannerOnly ? 'text-white' : 'text-text-primary'}`}>
             Introducing AI co-workers - Jay, Myna and Robin. Together they can save up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up your agents and start saving today.
           </p>
           {dataState === 'empty' && (
@@ -600,10 +618,28 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
           )}
 
           {filled && showAgentPerformance && (
-            <div className="grid grid-cols-3 gap-lg">
-              {agents.map((agent) => (
-                <AgentPerformanceCard key={agent.id} agent={agent} />
-              ))}
+            <div className="flex flex-col gap-xl">
+              {PERSONA_ORDER.map((persona) => {
+                const personaAgents = agents.filter((a) => a.persona === persona)
+                if (personaAgents.length === 0) return null
+                const display = PERSONA_DISPLAY[persona]
+                return (
+                  <div key={persona} className="flex flex-col gap-md">
+                    <div className="flex items-center gap-sm">
+                      <img src={display.icon} alt="" className="size-9 shrink-0 rounded-full" />
+                      <div className="flex flex-col">
+                        <span className="text-body text-text-primary">{display.name}</span>
+                        <span className="text-small text-text-tertiary">{display.domain}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-md">
+                      {personaAgents.map((agent) => (
+                        <AgentPerformanceCard key={agent.id} agent={agent} />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </>
