@@ -566,13 +566,17 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
             <img src={woodenBirdMyna} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
             <img src={woodenBirdRobin} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
           </div>
-          <p className={`m-0 min-w-0 flex-1 truncate text-body ${bannerOnly ? 'text-white' : 'text-text-primary'}`}>
+          <p
+            className={`m-0 min-w-0 flex-1 truncate text-[16px] leading-6 tracking-[-0.32px] ${
+              bannerOnly ? 'text-white' : 'text-text-primary'
+            }`}
+          >
             Introducing AI co-workers - Jay, Myna and Robin. Together they can save up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up your agents and start saving today.
           </p>
           {dataState === 'empty' && (
             <button
               type="button"
-              className="flex h-9 shrink-0 items-center rounded-sm bg-ai-brand px-lg text-body text-white transition-colors hover:opacity-90"
+              className="flex h-9 shrink-0 items-center rounded-sm bg-white px-lg text-body text-ai-brand transition-colors hover:opacity-90"
             >
               Schedule demo
             </button>
