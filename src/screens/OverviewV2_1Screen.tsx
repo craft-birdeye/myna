@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState, type DragEvent, type ReactNode } from 'react'
 import { ListFilter } from 'lucide-react'
 import { Icon, Tooltip, TopNav } from '../components'
 import {
@@ -207,6 +207,65 @@ const ORDERED_SECTIONS = OVERVIEW_V2_SECTIONS.map((s) => s.id)
 // Insights AI). Inbox/Referrals/Appointments are bespoke cards, not OVERVIEW_V2_SECTIONS entries.
 const EMPTY_STATE_SECTION_ORDER = ['listings', 'reviews', 'search-ai']
 const EMPTY_STATE_SECTION_ORDER_AFTER_APPOINTMENTS = ['social', 'surveys', 'ticketing']
+const DEFAULT_EMPTY_LAYOUT_ORDER = [
+  'inbox',
+  ...EMPTY_STATE_SECTION_ORDER,
+  'referrals',
+  'appointments',
+  ...EMPTY_STATE_SECTION_ORDER_AFTER_APPOINTMENTS,
+]
+const DEFAULT_FILLED_LAYOUT_ORDER = [...ORDERED_SECTIONS.map((section) => section.id), 'front-desk']
+const EMPTY_LAYOUT_STORAGE_KEY = 'myna-overview-empty-layout-order'
+const FILLED_LAYOUT_STORAGE_KEY = 'myna-overview-filled-layout-order'
+const AGENT_LAYOUT_STORAGE_KEY = 'myna-overview-agent-layout-order'
+
+function getSavedEmptyLayoutOrder(): string[] {
+  try {
+    const savedOrder = JSON.parse(window.localStorage.getItem(EMPTY_LAYOUT_STORAGE_KEY) ?? 'null')
+    if (
+      Array.isArray(savedOrder) &&
+      savedOrder.length === DEFAULT_EMPTY_LAYOUT_ORDER.length &&
+      savedOrder.every((id) => typeof id === 'string' && DEFAULT_EMPTY_LAYOUT_ORDER.includes(id))
+    ) {
+      return savedOrder
+    }
+  } catch {
+    // Ignore unavailable or malformed browser storage and use the default layout.
+  }
+  return DEFAULT_EMPTY_LAYOUT_ORDER
+}
+
+function getSavedFilledLayoutOrder(): string[] {
+  try {
+    const savedOrder = JSON.parse(window.localStorage.getItem(FILLED_LAYOUT_STORAGE_KEY) ?? 'null')
+    if (
+      Array.isArray(savedOrder) &&
+      savedOrder.length === DEFAULT_FILLED_LAYOUT_ORDER.length &&
+      savedOrder.every((id) => typeof id === 'string' && DEFAULT_FILLED_LAYOUT_ORDER.includes(id))
+    ) {
+      return savedOrder
+    }
+  } catch {
+    // Ignore unavailable or malformed browser storage and use the default layout.
+  }
+  return DEFAULT_FILLED_LAYOUT_ORDER
+}
+
+function getSavedAgentLayoutOrder(agentIds: string[]): string[] {
+  try {
+    const savedOrder = JSON.parse(window.localStorage.getItem(AGENT_LAYOUT_STORAGE_KEY) ?? 'null')
+    if (
+      Array.isArray(savedOrder) &&
+      savedOrder.length === agentIds.length &&
+      savedOrder.every((id) => typeof id === 'string' && agentIds.includes(id))
+    ) {
+      return savedOrder
+    }
+  } catch {
+    // Ignore unavailable or malformed browser storage and use the default order.
+  }
+  return agentIds
+}
 
 // KPI ids that show a value but no period-over-period delta — the "Listings" headline count,
 // Average rank (already its own rank number, a delta doesn't read meaningfully), and every
@@ -529,19 +588,117 @@ const EMPTY_BANNER_GRADIENT = 'linear-gradient(135deg, #3fae6a 0%, #4a72d0 35%, 
 // summary card, in every data state.
 const SUMMARY_TOP_BAR_GRADIENT = 'linear-gradient(90deg, #c026d3 0%, #ec4899 18%, #8b5cf6 50%, #6366f1 78%, #c026d3 100%)'
 
+type AgentPerformanceSort = 'running' | 'timeSaved' | 'costSaved'
+
+const AGENT_PERFORMANCE_SORT_OPTIONS: { id: AgentPerformanceSort; label: string }[] = [
+  { id: 'running', label: 'Number of agents running' },
+  { id: 'timeSaved', label: 'Most time saved' },
+  { id: 'costSaved', label: 'Most cost saved' },
+]
+
+function AgentPerformanceSortDropdown({ value, onChange }: { value: AgentPerformanceSort; onChange: (value: AgentPerformanceSort) => void }) {
+  const [open, setOpen] = useState(false)
+  const selectedLabel = AGENT_PERFORMANCE_SORT_OPTIONS.find((option) => option.id === value)!.label
+  return (
+    <div className="flex items-center gap-sm">
+      <span className="text-body text-text-secondary">Sort by</span>
+      <div className="relative w-fit">
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="flex h-9 items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+        >
+          {selectedLabel}
+          <Icon name="expand_more" size={18} className="text-text-icon" />
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+            <div className="absolute left-0 top-full z-[110] mt-xs min-w-[240px] rounded-sm border border-border bg-surface p-md shadow-dropdown">
+              {AGENT_PERFORMANCE_SORT_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.id)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-md py-sm text-left ${
+                    option.id === value ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                  }`}
+                >
+                  <span className="min-w-0 flex-1 text-body text-text-primary">{option.label}</span>
+                  {option.id === value && <Icon name="check" size={18} className="shrink-0 text-text-icon" />}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // Shown in all three states — Empty/FTU keep the estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
 // real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
 // bled to the card's top edge; Empty additionally gets a "Schedule demo" CTA that FTU omits.
-function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState; dateRange: string }) {
+function AiWorkforceSummaryCard({
+  dataState,
+  dateRange,
+  editingLayout,
+  layoutSaveVersion,
+}: {
+  dataState: DataState
+  dateRange: string
+  editingLayout: boolean
+  layoutSaveVersion: number
+}) {
   const filled = dataState === 'filled'
   // Empty state shows only the promo banner — no "AI workforce summary" KPI row below it.
   const bannerOnly = dataState === 'empty'
   const [showAgentPerformance, setShowAgentPerformance] = useState(false)
+  const [agentPerformanceSort, setAgentPerformanceSort] = useState<AgentPerformanceSort>('running')
   const agents = getAgentDirectory('healthcare')
+  const agentIds = agents.map((agent) => agent.id)
+  const [savedAgentOrder, setSavedAgentOrder] = useState(() => getSavedAgentLayoutOrder(agentIds))
+  const [draftAgentOrder, setDraftAgentOrder] = useState(() => getSavedAgentLayoutOrder(agentIds))
+  const [draggedAgentId, setDraggedAgentId] = useState<string | null>(null)
   const totalAgents = agents.length
   const totalHours = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const totalCostK = agents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+  const sortedAgents = [...agents].sort((a, b) => {
+    if (agentPerformanceSort === 'timeSaved') return parseFloat(b.timeSaved) - parseFloat(a.timeSaved)
+    if (agentPerformanceSort === 'costSaved') return parseFloat(b.costSaved.replace(/[$K]/g, '')) - parseFloat(a.costSaved.replace(/[$K]/g, ''))
+    return b.running - a.running
+  })
+  const displayedAgents = editingLayout
+    ? draftAgentOrder.map((id) => agents.find((agent) => agent.id === id)!).filter(Boolean)
+    : sortedAgents
+
+  useEffect(() => {
+    if (editingLayout) setDraftAgentOrder(savedAgentOrder)
+  }, [editingLayout, savedAgentOrder])
+
+  useEffect(() => {
+    if (layoutSaveVersion === 0) return
+    setSavedAgentOrder(draftAgentOrder)
+    window.localStorage.setItem(AGENT_LAYOUT_STORAGE_KEY, JSON.stringify(draftAgentOrder))
+  }, [layoutSaveVersion]) // A parent Save action commits the current draft order.
+
+  const handleDropAgent = (targetId: string) => {
+    if (!draggedAgentId || draggedAgentId === targetId) return
+    setDraftAgentOrder((order) => {
+      const sourceIndex = order.indexOf(draggedAgentId)
+      const targetIndex = order.indexOf(targetId)
+      if (sourceIndex < 0 || targetIndex < 0) return order
+      const next = [...order]
+      next.splice(sourceIndex, 1)
+      next.splice(targetIndex, 0, draggedAgentId)
+      return next
+    })
+    setDraggedAgentId(null)
+  }
 
   const stats: { id: string; value: string; label: string; muted?: boolean; tooltip?: boolean }[] = filled
     ? [
@@ -606,7 +763,7 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
             ))}
           </div>
 
-          {filled && (
+          {filled && !editingLayout && (
             <button
               type="button"
               onClick={() => setShowAgentPerformance((v) => !v)}
@@ -617,12 +774,24 @@ function AiWorkforceSummaryCard({ dataState, dateRange }: { dataState: DataState
             </button>
           )}
 
-          {filled && showAgentPerformance && (
-            <div className="grid grid-cols-3 gap-lg">
-              {agents.map((agent) => (
-                <AgentPerformanceCard key={agent.id} agent={agent} />
-              ))}
-            </div>
+          {filled && (showAgentPerformance || editingLayout) && (
+            <>
+              {!editingLayout && <AgentPerformanceSortDropdown value={agentPerformanceSort} onChange={setAgentPerformanceSort} />}
+              <div className="grid grid-cols-3 gap-lg">
+                {displayedAgents.map((agent) => (
+                  <LayoutWidget
+                    key={agent.id}
+                    id={agent.id}
+                    editing={editingLayout}
+                    dragging={draggedAgentId === agent.id}
+                    onDragStart={setDraggedAgentId}
+                    onDrop={handleDropAgent}
+                  >
+                    <AgentPerformanceCard agent={agent} />
+                  </LayoutWidget>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
@@ -846,6 +1015,70 @@ function ProductSectionCard({
   )
 }
 
+function EmptyLayoutCard({ id, showAgents, dataState }: { id: string; showAgents: boolean; dataState: DataState }) {
+  if (id === 'inbox') return <EmptyStateInboxCard />
+  if (id === 'referrals') return <EmptyStateReferralsCard />
+  if (id === 'appointments') return <EmptyStateAppointmentsCard />
+
+  const section = ORDERED_SECTIONS.find((item) => item.id === id)
+  return section ? <ProductSectionCard section={section} showAgents={showAgents} dataState={dataState} /> : null
+}
+
+function FilledLayoutCard({ id, showAgents, dataState }: { id: string; showAgents: boolean; dataState: DataState }) {
+  if (id === 'front-desk') return <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} dataState={dataState} />
+
+  const section = ORDERED_SECTIONS.find((item) => item.id === id)
+  return section ? <ProductSectionCard section={section} showAgents={showAgents} dataState={dataState} /> : null
+}
+
+function LayoutWidget({
+  id,
+  editing,
+  dragging,
+  onDragStart,
+  onDrop,
+  children,
+}: {
+  id: string
+  editing: boolean
+  dragging: boolean
+  onDragStart: (id: string) => void
+  onDrop: (id: string) => void
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={`relative transition-opacity ${dragging ? 'opacity-40' : ''}`}
+      onDragOver={editing ? (event) => event.preventDefault() : undefined}
+      onDrop={
+        editing
+          ? (event: DragEvent<HTMLDivElement>) => {
+              event.preventDefault()
+              onDrop(id)
+            }
+          : undefined
+      }
+    >
+      {children}
+      {editing && (
+        <button
+          type="button"
+          draggable
+          aria-label="Drag to reorder card"
+          title="Drag to reorder"
+          onDragStart={(event) => {
+            event.dataTransfer.effectAllowed = 'move'
+            onDragStart(id)
+          }}
+          className="absolute left-1/2 top-1 z-10 flex size-8 -translate-x-1/2 cursor-grab items-center justify-center text-[#A3A3A3] active:cursor-grabbing"
+        >
+          <Icon name="drag_indicator" size={20} className="rotate-90" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 type DataState = 'filled' | 'empty' | 'ftu'
 
 // Floating switcher (fixed to the viewport, always visible) between the fully-populated demo
@@ -880,10 +1113,55 @@ function DataStateSwitcher({ value, onChange }: { value: DataState; onChange: (v
 export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
   const [dataState, setDataState] = useState<DataState>('empty')
+  const [editingLayout, setEditingLayout] = useState(false)
+  const [savedEmptyLayoutOrder, setSavedEmptyLayoutOrder] = useState(getSavedEmptyLayoutOrder)
+  const [draftEmptyLayoutOrder, setDraftEmptyLayoutOrder] = useState(getSavedEmptyLayoutOrder)
+  const [savedFilledLayoutOrder, setSavedFilledLayoutOrder] = useState(getSavedFilledLayoutOrder)
+  const [draftFilledLayoutOrder, setDraftFilledLayoutOrder] = useState(getSavedFilledLayoutOrder)
+  const [draggedWidgetId, setDraggedWidgetId] = useState<string | null>(null)
+  const [layoutSaveVersion, setLayoutSaveVersion] = useState(0)
   // Agent-level rows (per-section coworker cards) are hidden in every state now — Filled used to
   // be the one state that showed them; the AI workforce summary card is the only agent-related
   // content left on the page.
   const showAgents = false
+  const layoutOrder = dataState === 'empty'
+    ? (editingLayout ? draftEmptyLayoutOrder : savedEmptyLayoutOrder)
+    : (editingLayout ? draftFilledLayoutOrder : savedFilledLayoutOrder)
+
+  const handleEditLayout = () => {
+    if (dataState === 'empty') setDraftEmptyLayoutOrder(savedEmptyLayoutOrder)
+    else setDraftFilledLayoutOrder(savedFilledLayoutOrder)
+    setEditingLayout(true)
+  }
+
+  const handleDropWidget = (targetId: string) => {
+    if (!draggedWidgetId || draggedWidgetId === targetId) return
+    const reorder = (order: string[]) => {
+      const sourceIndex = order.indexOf(draggedWidgetId)
+      const targetIndex = order.indexOf(targetId)
+      if (sourceIndex < 0 || targetIndex < 0) return order
+      const next = [...order]
+      next.splice(sourceIndex, 1)
+      next.splice(targetIndex, 0, draggedWidgetId)
+      return next
+    }
+    if (dataState === 'empty') setDraftEmptyLayoutOrder(reorder)
+    else setDraftFilledLayoutOrder(reorder)
+    setDraggedWidgetId(null)
+  }
+
+  const handleSaveLayout = () => {
+    if (dataState === 'empty') {
+      setSavedEmptyLayoutOrder(draftEmptyLayoutOrder)
+      window.localStorage.setItem(EMPTY_LAYOUT_STORAGE_KEY, JSON.stringify(draftEmptyLayoutOrder))
+    } else {
+      setSavedFilledLayoutOrder(draftFilledLayoutOrder)
+      window.localStorage.setItem(FILLED_LAYOUT_STORAGE_KEY, JSON.stringify(draftFilledLayoutOrder))
+    }
+    setLayoutSaveVersion((version) => version + 1)
+    setEditingLayout(false)
+    setDraggedWidgetId(null)
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -892,56 +1170,95 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
         <div className="flex flex-col gap-lg">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="m-0 text-display text-text-primary">Welcome, {userName}!</h1>
-              <p className="m-0 mt-xs text-body text-text-secondary">Here are the things which need your attention.</p>
+              <h1 className={`m-0 text-text-primary ${editingLayout ? 'text-[16px] leading-6 tracking-[-0.32px]' : 'text-display'}`}>
+                {editingLayout ? 'Change layout' : `Welcome, ${userName}!`}
+              </h1>
+              <p className="m-0 mt-xs text-body text-text-secondary">
+                {editingLayout ? 'Drag and drop product cards to personalize your overview.' : 'Here are the things which need your attention.'}
+              </p>
             </div>
             <div className="flex shrink-0 items-center gap-sm">
-              <DateRangeDropdown value={dateRange} onChange={setDateRange} />
-              <button
-                type="button"
-                aria-label="Download"
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-              >
-                <Icon name="download" size={20} />
-              </button>
-              <button
-                type="button"
-                aria-label="Filter"
-                className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-              >
-                <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-              </button>
+              {editingLayout ? (
+                <button type="button" onClick={handleSaveLayout} className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover">
+                  Save
+                </button>
+              ) : (
+                <>
+                  <DateRangeDropdown value={dateRange} onChange={setDateRange} />
+                  <button
+                    type="button"
+                    aria-label="Edit layout"
+                    onClick={handleEditLayout}
+                    className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                  >
+                    <Icon name="edit" size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Download"
+                    className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                  >
+                    <Icon name="download" size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Filter"
+                    className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                  >
+                    <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
-          <AiWorkforceSummaryCard dataState={dataState} dateRange={dateRange} />
+          {!(editingLayout && dataState === 'empty') && (
+            <AiWorkforceSummaryCard
+              dataState={dataState}
+              dateRange={dateRange}
+              editingLayout={editingLayout}
+              layoutSaveVersion={layoutSaveVersion}
+            />
+          )}
 
           {dataState === 'empty' ? (
-            <>
-              <EmptyStateInboxCard />
-              {EMPTY_STATE_SECTION_ORDER.map((id) => {
-                const section = ORDERED_SECTIONS.find((s) => s.id === id)
-                return section && <ProductSectionCard key={id} section={section} showAgents={showAgents} dataState={dataState} />
-              })}
-              <EmptyStateReferralsCard />
-              <EmptyStateAppointmentsCard />
-              {EMPTY_STATE_SECTION_ORDER_AFTER_APPOINTMENTS.map((id) => {
-                const section = ORDERED_SECTIONS.find((s) => s.id === id)
-                return section && <ProductSectionCard key={id} section={section} showAgents={showAgents} dataState={dataState} />
-              })}
-            </>
+            layoutOrder.map((id) => (
+              <LayoutWidget
+                key={id}
+                id={id}
+                editing={editingLayout}
+                dragging={draggedWidgetId === id}
+                onDragStart={setDraggedWidgetId}
+                onDrop={handleDropWidget}
+              >
+                <EmptyLayoutCard id={id} showAgents={showAgents} dataState={dataState} />
+              </LayoutWidget>
+            ))
           ) : (
-            <>
-              {ORDERED_SECTIONS.map((section) => (
-                <ProductSectionCard key={section.id} section={section} showAgents={showAgents} dataState={dataState} />
-              ))}
-              <FrontDeskSection showAgents={showAgents} showSetupBanner={dataState === 'ftu'} dataState={dataState} />
-            </>
+            layoutOrder.map((id) => (
+              <LayoutWidget
+                key={id}
+                id={id}
+                editing={editingLayout}
+                dragging={draggedWidgetId === id}
+                onDragStart={setDraggedWidgetId}
+                onDrop={handleDropWidget}
+              >
+                <FilledLayoutCard id={id} showAgents={showAgents} dataState={dataState} />
+              </LayoutWidget>
+            ))
           )}
         </div>
       </div>
 
-      <DataStateSwitcher value={dataState} onChange={setDataState} />
+      <DataStateSwitcher
+        value={dataState}
+        onChange={(nextState) => {
+          setDataState(nextState)
+          setEditingLayout(false)
+          setDraggedWidgetId(null)
+        }}
+      />
     </div>
   )
 }
