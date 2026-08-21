@@ -3166,6 +3166,8 @@ export default function AgentBuilder({
         bodyProps={{
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
+          // Only surface tool errors once this task has been saved in that state.
+          showToolErrors: taskErrorNodeIds.has(selectedNodeId),
           onOpenTool: (toolId) => {
             if (toolId === 'reminder-tool') { setReminderToolOpen(true); return; }
             if (toolId === 'get-unscheduled-treatment-plans') { setQueryConfigOpen(true); return; }
