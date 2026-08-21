@@ -799,7 +799,7 @@ export function AgentInstanceScreen({
           {/* Tabs */}
           <div className="flex shrink-0 items-center justify-between px-2xl">
             {workflowButtonOpensEditor ? (
-              <div className="flex items-end gap-xs">
+              <div className="flex items-end gap-md">
                 <Tabs
                   tabs={tabs}
                   activeTab={activeTab}
@@ -807,6 +807,7 @@ export function AgentInstanceScreen({
                     setActiveTab(tabId)
                   }}
                 />
+                <span aria-hidden="true" className="mb-[10px] h-4 w-px shrink-0 self-end bg-border" />
                 <button
                   type="button"
                   onClick={() => {
@@ -816,14 +817,13 @@ export function AgentInstanceScreen({
                     }
                     setActiveTab('workflow')
                   }}
-                  className={`flex h-[34px] items-center gap-xs rounded-md px-sm text-body transition-colors ${
+                  className={`flex h-[34px] items-center rounded-md px-sm text-body transition-colors ${
                     isWorkflowTab
                       ? 'bg-surface-selected text-text-primary'
                       : 'text-text-secondary hover:bg-surface-hover'
                   }`}
                 >
-                  <span>Workflow</span>
-                  <Icon name="open_in_new" size={16} className={isWorkflowTab ? 'text-text-primary' : 'text-text-icon'} />
+                  Workflow
                 </button>
               </div>
             ) : (
