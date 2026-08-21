@@ -1,6 +1,6 @@
 import { useEffect, useState, type DragEvent, type ReactNode } from 'react'
 import { ListFilter } from 'lucide-react'
-import { Icon, InfoTooltip, Tooltip, TopNav } from '../components'
+import { Icon, InfoTooltip, ScheduleDemoPanel, Tooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
   FigmaIconInbox,
@@ -33,6 +33,32 @@ import {
 
 interface OverviewV2_1ScreenProps {
   userName?: string
+  onOpenAgent?: (target: { railId: string; navId?: string }) => void
+}
+
+type AgentOpenTarget = { railId: string; navId?: string }
+
+const REVIEWS_AGENT_NAV_IDS = new Set([
+  'response-agents',
+  'response-agents-sep-1',
+  'generation-agents',
+  'review-response-agents',
+])
+
+function getAgentOpenTarget(agent: AgentDirectoryEntry): AgentOpenTarget {
+  if (agent.navId) {
+    return {
+      railId: REVIEWS_AGENT_NAV_IDS.has(agent.navId) ? 'reviews' : 'frontdesk',
+      navId: agent.navId,
+    }
+  }
+  const railByCategory: Record<string, string> = {
+    'Social AI': 'social',
+    Inbox: 'inbox',
+    'Surveys AI': 'surveys',
+    Ticketing: 'ticketing',
+  }
+  return { railId: railByCategory[agent.category] ?? 'frontdesk' }
 }
 
 const KPI_ROW_CLASS = 'flex flex-wrap gap-xl'
@@ -70,14 +96,21 @@ function DeltaBadge({ id }: { id: string }) {
 // KPI numbers on this page are rendered in the brand action-blue (rather than the usual black)
 // to visually separate "automated by an agent" metrics from the rest of the app. Action-needed
 // stats are merged in here (flagged via `danger`) instead of getting their own bordered block, so
-// they sit inline beside the section's other KPIs — same tile, just red.
-function V2StatGroup({ stats, nowrap = false }: { stats: (V2Stat & { danger?: boolean })[]; nowrap?: boolean }) {
+// they sit inline beside the section's other KPIs — same tile, just red. `muted` stats use black
+// text to signal they are not clickable drill-downs (e.g. Social's impressions/engagement KPIs).
+function V2StatGroup({ stats, nowrap = false }: { stats: (V2Stat & { danger?: boolean; muted?: boolean })[]; nowrap?: boolean }) {
   return (
     <div className={`flex ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-xl`}>
       {stats.map((s) => (
         <div key={s.id} className={KPI_TILE_CLASS}>
           <div className="flex items-end gap-xs">
-            <p className={`m-0 whitespace-nowrap text-display ${s.danger ? 'text-chip-danger-text' : 'text-text-action'}`}>{s.value}</p>
+            <p
+              className={`m-0 whitespace-nowrap text-display ${
+                s.danger ? 'text-chip-danger-text' : s.muted ? 'text-text-primary' : 'text-text-action'
+              }`}
+            >
+              {s.value}
+            </p>
             {!NO_DELTA_IDS.has(s.id) && <DeltaBadge id={s.id} />}
           </div>
           <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{s.label}</p>
@@ -317,13 +350,13 @@ const NEGATIVE_METRIC_IDS = new Set([
 // Social's own top-level KPI set — replaces the shared data's lone "New follower" stat with the
 // fuller business-metric set. Kept local to v2.1 rather than editing the shared
 // OVERVIEW_V2_SECTIONS file, since v2/v3 shouldn't pick up the change.
-const SOCIAL_STATS: V2Stat[] = [
-  { id: 'posts', value: '36', label: 'Posts' },
-  { id: 'impressions', value: '128.4K', label: 'Impressions' },
-  { id: 'engagement-rate', value: '4.8%', label: 'Engagement rate' },
-  { id: 'messages-sent', value: '1.5K', label: 'Messages sent' },
-  { id: 'messages-received', value: '675', label: 'Messages received' },
-  { id: 'audience-growth', value: '5.2%', label: 'Audience growth' },
+const SOCIAL_STATS: (V2Stat & { muted?: boolean })[] = [
+  { id: 'posts', value: '36', label: 'Posts', muted: true },
+  { id: 'impressions', value: '128.4K', label: 'Impressions', muted: true },
+  { id: 'engagement-rate', value: '4.8%', label: 'Engagement rate', muted: true },
+  { id: 'messages-sent', value: '1.5K', label: 'Messages sent', muted: true },
+  { id: 'messages-received', value: '675', label: 'Messages received', muted: true },
+  { id: 'audience-growth', value: '5.2%', label: 'Audience growth', muted: true },
 ]
 
 // Reviews' own top-level KPI set — adds Response rate alongside the shared data's Request
@@ -630,14 +663,57 @@ function AgentPerformanceMetric({ value, label }: { value: string; label: string
 
 // Same card layout as the Agent directory's "All" tab (AgentDirectoryScreen's AgentCard) — kept as
 // an independent copy rather than a cross-import, per this file's fork-don't-import convention.
-function AgentPerformanceCard({ agent, editing = false }: { agent: AgentDirectoryEntry; editing?: boolean }) {
+function AgentPerformanceCard({
+  agent,
+  editing = false,
+  onOpenAgent,
+}: {
+  agent: AgentDirectoryEntry
+  editing?: boolean
+  onOpenAgent?: () => void
+}) {
   const issueCount = agent.alert ? parseInt(agent.alert.message, 10) : AGENT_ISSUE_OVERRIDES[agent.id]
+  const clickable = Boolean(onOpenAgent) && !editing
+  const nameClassName = `m-0 min-w-0 truncate text-[16px] leading-6 tracking-[-0.32px] text-text-primary transition-colors${
+    onOpenAgent ? ' group-hover:text-text-action' : ''
+  }`
+
   return (
     // While editing, LayoutWidget overlays a 32px drag handle top-1 (4px) from this card's top
-    // edge — bump the top padding so the header row clears it with an 8px gap (4 + 32 + 8 = 44px).
-    <div className={`flex flex-col rounded-md border border-[#E9E9E9] bg-white p-xl ${editing ? 'pt-[44px]' : ''}`}>
+    // edge — bump the top padding so the header row clears it with a 4px gap (4 + 32 + 4 = 40px).
+    <div
+      className={`${onOpenAgent ? 'group ' : ''}flex flex-col rounded-md border border-[#E9E9E9] bg-white p-xl transition-colors ${
+        editing ? 'pt-[40px]' : ''
+      } ${clickable ? 'cursor-pointer hover:border-border-selected hover:bg-surface-hover' : ''}`}
+      onClick={clickable ? onOpenAgent : undefined}
+      onKeyDown={
+        clickable
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onOpenAgent?.()
+              }
+            }
+          : undefined
+      }
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+    >
       <div className="mb-xs flex items-center justify-between gap-sm">
-        <h4 className="m-0 min-w-0 truncate text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
+        {onOpenAgent && editing ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              onOpenAgent()
+            }}
+            className={`text-left ${nameClassName}`}
+          >
+            {agent.name}
+          </button>
+        ) : (
+          <h4 className={nameClassName}>{agent.name}</h4>
+        )}
         <div className="flex shrink-0 items-center gap-xs">
           {issueCount && (
             <span className="flex items-center gap-xs text-small text-text-secondary">
@@ -670,17 +746,17 @@ function AgentPerformanceCard({ agent, editing = false }: { agent: AgentDirector
 // gradient (matching a Birdeye event-page reference), instead of the flat bg-ai-summary tint FTU
 // keeps.
 const EMPTY_BANNER_GRADIENT = 'linear-gradient(135deg, #3fae6a 0%, #4a72d0 35%, #7c5cc9 65%, #c98a7e 100%)'
+const EMPTY_BANNER_TEXT_CLASS = 'text-body font-[400]'
 
 // Thin magenta -> indigo -> magenta accent strip bled across the top edge of the AI Co-worker
 // summary card, in every data state.
 const SUMMARY_TOP_BAR_GRADIENT = 'linear-gradient(90deg, #c026d3 0%, #ec4899 18%, #8b5cf6 50%, #6366f1 78%, #c026d3 100%)'
 
-type AgentPerformanceSort = 'running' | 'timeSaved' | 'costSaved'
+type AgentPerformanceSort = 'runs' | 'custom'
 
 const AGENT_PERFORMANCE_SORT_OPTIONS: { id: AgentPerformanceSort; label: string }[] = [
-  { id: 'running', label: 'Number of agents running' },
-  { id: 'timeSaved', label: 'Most time saved' },
-  { id: 'costSaved', label: 'Most cost saved' },
+  { id: 'runs', label: 'Number of agent runs' },
+  { id: 'custom', label: 'Custom order' },
 ]
 
 function AgentPerformanceSortDropdown({ value, onChange }: { value: AgentPerformanceSort; onChange: (value: AgentPerformanceSort) => void }) {
@@ -767,19 +843,19 @@ function BirdsFlatInlineIcon({ className }: { className?: string }) {
 function AiWorkforceSummaryCard({
   dataState,
   dateRange,
-  editingLayout,
-  layoutSaveVersion,
+  onScheduleDemo,
+  onOpenAgent,
 }: {
   dataState: DataState
   dateRange: string
-  editingLayout: boolean
-  layoutSaveVersion: number
+  onScheduleDemo: () => void
+  onOpenAgent?: (target: AgentOpenTarget) => void
 }) {
   const filled = dataState === 'filled'
   // Empty state shows only the promo banner — no "AI workforce summary" KPI row below it.
   const bannerOnly = dataState === 'empty'
   const [showAgentPerformance, setShowAgentPerformance] = useState(false)
-  const [agentPerformanceSort, setAgentPerformanceSort] = useState<AgentPerformanceSort>('running')
+  const [agentPerformanceSort, setAgentPerformanceSort] = useState<AgentPerformanceSort>('runs')
   const agents = getAgentDirectory('healthcare')
   const agentIds = agents.map((agent) => agent.id)
   const [savedAgentOrder, setSavedAgentOrder] = useState(() => getSavedAgentLayoutOrder(agentIds))
@@ -788,27 +864,23 @@ function AiWorkforceSummaryCard({
   const totalAgents = agents.length
   const totalHours = agents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const totalCostK = agents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
-  const sortedAgents = [...agents].sort((a, b) => {
-    if (agentPerformanceSort === 'timeSaved') return parseFloat(b.timeSaved) - parseFloat(a.timeSaved)
-    if (agentPerformanceSort === 'costSaved') return parseFloat(b.costSaved.replace(/[$K]/g, '')) - parseFloat(a.costSaved.replace(/[$K]/g, ''))
-    return b.running - a.running
-  })
-  const displayedAgents = editingLayout
+  const sortedByRuns = [...agents].sort((a, b) => b.running - a.running)
+  const displayedAgents = agentPerformanceSort === 'custom'
     ? draftAgentOrder.map((id) => agents.find((agent) => agent.id === id)!).filter(Boolean)
-    : sortedAgents
+    : sortedByRuns
+  const customOrderActive = agentPerformanceSort === 'custom'
 
   useEffect(() => {
-    if (editingLayout) setDraftAgentOrder(savedAgentOrder)
-  }, [editingLayout, savedAgentOrder])
+    if (customOrderActive) setDraftAgentOrder(savedAgentOrder)
+  }, [customOrderActive, savedAgentOrder])
 
-  useEffect(() => {
-    if (layoutSaveVersion === 0) return
-    setSavedAgentOrder(draftAgentOrder)
-    window.localStorage.setItem(AGENT_LAYOUT_STORAGE_KEY, JSON.stringify(draftAgentOrder))
-  }, [layoutSaveVersion]) // A parent Save action commits the current draft order.
+  const handleAgentSortChange = (value: AgentPerformanceSort) => {
+    setAgentPerformanceSort(value)
+    if (value === 'custom') setShowAgentPerformance(true)
+  }
 
   const handleDropAgent = (targetId: string) => {
-    if (!draggedAgentId || draggedAgentId === targetId) return
+    if (!customOrderActive || !draggedAgentId || draggedAgentId === targetId) return
     setDraftAgentOrder((order) => {
       const sourceIndex = order.indexOf(draggedAgentId)
       const targetIndex = order.indexOf(targetId)
@@ -816,6 +888,8 @@ function AiWorkforceSummaryCard({
       const next = [...order]
       next.splice(sourceIndex, 1)
       next.splice(targetIndex, 0, draggedAgentId)
+      setSavedAgentOrder(next)
+      window.localStorage.setItem(AGENT_LAYOUT_STORAGE_KEY, JSON.stringify(next))
       return next
     })
     setDraggedAgentId(null)
@@ -846,8 +920,8 @@ function AiWorkforceSummaryCard({
         >
           <BirdsFlatInlineIcon className={bannerOnly ? 'text-white' : 'text-text-icon'} />
           <p
-            className={`m-0 min-w-0 flex-1 truncate text-[16px] leading-6 tracking-[-0.32px] ${
-              bannerOnly ? 'text-white' : 'text-text-primary'
+            className={`m-0 min-w-0 flex-1 truncate ${
+              bannerOnly ? `${EMPTY_BANNER_TEXT_CLASS} text-white` : 'text-[16px] leading-6 tracking-[-0.32px] text-text-primary'
             }`}
           >
             Introducing AI co-workers - Jay, Myna and Robin. Together they can save up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up your agents and start saving today.
@@ -855,7 +929,8 @@ function AiWorkforceSummaryCard({
           {dataState === 'empty' && (
             <button
               type="button"
-              className="flex h-9 shrink-0 items-center rounded-sm bg-white px-lg text-body text-ai-brand transition-colors hover:opacity-90"
+              onClick={onScheduleDemo}
+              className={`flex h-9 shrink-0 items-center rounded-sm bg-white px-lg ${EMPTY_BANNER_TEXT_CLASS} text-ai-brand transition-colors hover:opacity-90`}
             >
               Schedule demo
             </button>
@@ -880,7 +955,7 @@ function AiWorkforceSummaryCard({
             ))}
           </div>
 
-          {filled && !editingLayout && (
+          {filled && (
             <button
               type="button"
               onClick={() => setShowAgentPerformance((v) => !v)}
@@ -891,20 +966,24 @@ function AiWorkforceSummaryCard({
             </button>
           )}
 
-          {filled && (showAgentPerformance || editingLayout) && (
+          {filled && showAgentPerformance && (
             <>
-              {!editingLayout && <AgentPerformanceSortDropdown value={agentPerformanceSort} onChange={setAgentPerformanceSort} />}
+              <AgentPerformanceSortDropdown value={agentPerformanceSort} onChange={handleAgentSortChange} />
               <div className="grid grid-cols-3 gap-lg">
                 {displayedAgents.map((agent) => (
                   <LayoutWidget
                     key={agent.id}
                     id={agent.id}
-                    editing={editingLayout}
+                    editing={customOrderActive}
                     dragging={draggedAgentId === agent.id}
                     onDragStart={setDraggedAgentId}
                     onDrop={handleDropAgent}
                   >
-                    <AgentPerformanceCard agent={agent} editing={editingLayout} />
+                    <AgentPerformanceCard
+                      agent={agent}
+                      editing={customOrderActive}
+                      onOpenAgent={onOpenAgent ? () => onOpenAgent(getAgentOpenTarget(agent)) : undefined}
+                    />
                   </LayoutWidget>
                 ))}
               </div>
@@ -1234,7 +1313,7 @@ function DataStateSwitcher({ value, onChange }: { value: DataState; onChange: (v
   )
 }
 
-export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProps = {}) {
+export function OverviewV2_1Screen({ userName = 'Rupa', onOpenAgent }: OverviewV2_1ScreenProps = {}) {
   const [dateRange, setDateRange] = useState('Last month')
   const [dataState, setDataState] = useState<DataState>('empty')
   const [editingLayout, setEditingLayout] = useState(false)
@@ -1243,7 +1322,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
   const [savedFilledLayoutOrder, setSavedFilledLayoutOrder] = useState(getSavedFilledLayoutOrder)
   const [draftFilledLayoutOrder, setDraftFilledLayoutOrder] = useState(getSavedFilledLayoutOrder)
   const [draggedWidgetId, setDraggedWidgetId] = useState<string | null>(null)
-  const [layoutSaveVersion, setLayoutSaveVersion] = useState(0)
+  const [scheduleDemoOpen, setScheduleDemoOpen] = useState(false)
   // Agent-level rows (per-section coworker cards) are hidden in every state now — Filled used to
   // be the one state that showed them; the AI workforce summary card is the only agent-related
   // content left on the page.
@@ -1276,7 +1355,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
       return next
     }
     if (dataState === 'empty') setDraftEmptyLayoutOrder(reorder)
-    else setDraftFilledLayoutOrder(normalizeFilledLayoutOrder(reorder))
+    else setDraftFilledLayoutOrder((order) => normalizeFilledLayoutOrder(reorder(order)))
     setDraggedWidgetId(null)
   }
 
@@ -1289,7 +1368,6 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
       setSavedFilledLayoutOrder(normalized)
       window.localStorage.setItem(FILLED_LAYOUT_STORAGE_KEY, JSON.stringify(normalized))
     }
-    setLayoutSaveVersion((version) => version + 1)
     setEditingLayout(false)
     setDraggedWidgetId(null)
   }
@@ -1343,12 +1421,12 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
             </div>
           </div>
 
-          {!(editingLayout && dataState === 'empty') && (
+          {!editingLayout && (
             <AiWorkforceSummaryCard
               dataState={dataState}
               dateRange={dateRange}
-              editingLayout={editingLayout}
-              layoutSaveVersion={layoutSaveVersion}
+              onScheduleDemo={() => setScheduleDemoOpen(true)}
+              onOpenAgent={onOpenAgent}
             />
           )}
 
@@ -1392,6 +1470,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
           setDraggedWidgetId(null)
         }}
       />
+      <ScheduleDemoPanel open={scheduleDemoOpen} onClose={() => setScheduleDemoOpen(false)} />
     </div>
   )
 }
