@@ -44,6 +44,7 @@ import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
+import { getAgentWorkflows } from '../data/agentWorkflows'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
@@ -118,6 +119,13 @@ const REVIEW_RESPONSE_EXPLORATION_AGENT_NAME = 'Review response agents (explorat
 
 function isReviewResponseAgentName(name: string) {
   return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
+}
+
+const FRONTDESK_AGENT_NAME = 'Front desk agent'
+const FRONTDESK_EXPLORATION_AGENT_NAME = 'Front desk agent (exploration)'
+
+function isFrontdeskAgentName(name: string) {
+  return name === FRONTDESK_AGENT_NAME || name === FRONTDESK_EXPLORATION_AGENT_NAME
 }
 
 interface AgentInstance {
@@ -243,11 +251,17 @@ const LAST_UPDATED_SAMPLES = [
 const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as const
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
-  'Front desk agent': [
-    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'] },
-    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'] },
-    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140' },
+  [FRONTDESK_AGENT_NAME]: [
+    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
+    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
+    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
+  ],
+  [FRONTDESK_EXPLORATION_AGENT_NAME]: [
+    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
+    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
+    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
   ],
   'Reminder agent': [
     { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min' },
@@ -7065,6 +7079,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const isExplorationResponseAgents = navId === 'response-agents-exploration'
+  const isExplorationFrontDeskAgents = navId === 'frontdesk-agent-exploration'
+  const isExplorationAgents = isExplorationResponseAgents || isExplorationFrontDeskAgents
   const [selectedInstance, setSelectedInstance] = useState<string | null>(
     pendingInstanceView?.instanceName ?? null,
   )
@@ -7186,7 +7202,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   })
 
   const METRICS_BY_AGENT: Record<string, Metric[]> = {
-    'Front desk agent': [
+    [FRONTDESK_AGENT_NAME]: [
+      { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
+      { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
+      { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
+      { id: 'timeSaved', value: '40h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved based on average handle time for equivalent human-handled conversations.' },
+    ],
+    [FRONTDESK_EXPLORATION_AGENT_NAME]: [
       { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
       { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
       { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
@@ -7275,7 +7297,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
 
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
 
-  const isFrontdeskAgent = agentName === 'Front desk agent'
+  const isFrontdeskAgent = isFrontdeskAgentName(agentName)
   const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponseAgentName(agentName)
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
@@ -7349,7 +7371,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }, [initialRecommendationFocus])
 
   const isReminder        = agentName === 'Reminder agent'
-  const isFrontdesk       = agentName === 'Front desk agent'
+  const isFrontdesk       = isFrontdeskAgentName(agentName)
   const isWaitlist        = agentName === 'Waitlist agent'
   const isPreVisit        = agentName === 'Pre-visit agent'
   const isRecall          = agentName === 'Recall agent'
@@ -7534,29 +7556,40 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   )
 
   /**
-   * Row menu → Download: writes the agent out as a Markdown file the browser saves locally.
-   * Fields come from the full column set (not just the visible ones) so hiding a column in
-   * Customize columns doesn't silently drop it from the export.
+   * Row menu → Download: exports this agent instance as a JSON file (metadata + workflow)
+   * the browser saves locally.
    */
   const handleDownloadAgent = (row: AgentInstance) => {
-    const fileName = `${row.name}.md`
-    const fields = order
-      .filter((k) => k !== 'name')
-      .map((k) => ({ label: DEF_BY_KEY.get(k)?.label, value: row[k as keyof AgentInstance] }))
-      .filter(
-        (f): f is { label: string; value: string | number } =>
-          !!f.label && (typeof f.value === 'string' || typeof f.value === 'number') && f.value !== '',
-      )
-    const markdown = [
-      `# ${row.name}`,
-      '',
-      '| Field | Value |',
-      '| --- | --- |',
-      ...fields.map((f) => `| ${f.label} | ${f.value} |`),
-      '',
-    ].join('\n')
+    const workflows = getAgentWorkflows(product)
+    const workflow =
+      workflows[row.name]
+      ?? workflows[agentName]
+      ?? workflows['Review response agent']
+      ?? { nodes: [], nodeDetails: {} }
 
-    const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }))
+    const instanceFields = Object.fromEntries(
+      order
+        .map((key) => {
+          const value = row[key as keyof AgentInstance]
+          return [key, value] as const
+        })
+        .filter(([, value]) => value !== undefined && value !== null && value !== ''),
+    )
+
+    const payload = {
+      name: row.name,
+      agentType: agentName,
+      status: row.status,
+      exportedAt: new Date().toISOString(),
+      instance: instanceFields,
+      nodes: workflow.nodes ?? [],
+      nodeDetails: workflow.nodeDetails ?? {},
+    }
+
+    const fileName = `${row.name.replace(/\s+/g, '-').toLowerCase() || 'agent'}.json`
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }),
+    )
     const link = document.createElement('a')
     link.href = url
     link.download = fileName
@@ -7611,7 +7644,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       )
     : libraryCards
   const isReviewTaggingFirstTime = isReviewTagging && visibleData.length === 0
-  const showExplorationAgentsToggle = isExplorationResponseAgents && activeTab === 'agents'
+  const showExplorationAgentsToggle = isExplorationAgents && activeTab === 'agents'
 
   if (showSetupWizard && isFrontdesk) {
     return (
@@ -8010,6 +8043,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 onClose={closeCreateWorkflow}
                 hideLhs
                 existingAgent={false}
+                hideTopIdentity={isExplorationAgents}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}
@@ -8063,7 +8097,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           }
           onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
           product={product}
-          workflowButtonOpensEditor={navId === 'response-agents-exploration'}
+          workflowButtonOpensEditor={isExplorationAgents}
           hideRecommendationTab={navId === 'response-agents-sep-1'}
         />
         <Toast
@@ -8124,7 +8158,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     >
                       Create agent
                     </button>
-                    {(!isExplorationResponseAgents || agentsViewMode === 'list') && (
+                    {(!isExplorationAgents || agentsViewMode === 'list') && (
                       <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                         <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                       </button>
@@ -8196,15 +8230,22 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setSavingsModalOpen(false)
                     }}
                   />
-                  {isExplorationResponseAgents && agentsViewMode === 'grid' ? (
+                  {isExplorationAgents && agentsViewMode === 'grid' ? (
                     <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
-                        const cardMetrics = [
-                          { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
-                          { value: row.responseRate ?? '—', label: 'Response rate' },
-                          { value: row.avgResponseTime ?? '—', label: 'Average response time' },
-                          { value: row.timeSaved ?? '—', label: 'Time saved' },
-                        ]
+                        const cardMetrics = isExplorationFrontDeskAgents
+                          ? [
+                              { value: row.interactions ?? '—', label: 'Conversations responded' },
+                              { value: row.fcr ?? '—', label: 'Conversations resolved' },
+                              { value: row.aht ?? '—', label: 'Resolution rate' },
+                              { value: row.escalation ?? '—', label: 'Time saved' },
+                            ]
+                          : [
+                              { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
+                              { value: row.responseRate ?? '—', label: 'Response rate' },
+                              { value: row.avgResponseTime ?? '—', label: 'Average response time' },
+                              { value: row.timeSaved ?? '—', label: 'Time saved' },
+                            ]
                         return (
                           <button
                             type="button"
@@ -8250,7 +8291,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                             row.name,
                             undefined,
                             undefined,
-                            isExplorationResponseAgents ? row.status : undefined,
+                            isExplorationAgents ? row.status : undefined,
                           ) },
                           {
                             label: 'Pause',
@@ -8264,8 +8305,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                             setSelectedInstance(row.name)
                           } },
                           { label: 'Reports', onClick: () => {} },
-                          ...(isExplorationResponseAgents
-                            ? [{ label: 'Download', onClick: handleDownloadAgent }]
+                          ...(isExplorationAgents
+                            ? [{
+                                label: 'Download agent',
+                                onClick: (row: AgentInstance) => handleDownloadAgent(row),
+                              }]
                             : []),
                           { label: 'Delete', onClick: () => {}, variant: 'danger' },
                         ]}

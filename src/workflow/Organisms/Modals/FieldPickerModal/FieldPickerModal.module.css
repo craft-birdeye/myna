@@ -11,13 +11,16 @@
   height: auto;
 }
 
+.popoverDropdown {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid #e5e9f0;
+  padding: 16px 16px 8px;
   flex-shrink: 0;
 }
 
@@ -31,13 +34,28 @@
   flex-shrink: 0;
 }
 
-.headerRight {
-  display: flex;
+.titleRow {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
-  flex: 1;
-  justify-content: flex-end;
+}
+
+.titleInfo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.titleInfo :global(button) {
+  width: 16px;
+  height: 16px;
+}
+
+.searchRow {
+  padding: 0 16px 12px;
+  flex-shrink: 0;
 }
 
 .search {
@@ -45,8 +63,7 @@
   align-items: center;
   gap: 8px;
   height: 36px;
-  width: 200px;
-  max-width: 100%;
+  width: 100%;
   padding: 0 8px 0 12px;
   border: 1px solid #d0d5dd;
   border-radius: 4px;
@@ -107,7 +124,7 @@
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 16px;
+  padding: 0 16px 16px;
   box-sizing: border-box;
   gap: 0;
   overflow: hidden;
@@ -117,12 +134,12 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 180px;
+  width: 196px;
   flex-shrink: 0;
   padding-right: 8px;
-  align-self: flex-start;
-  position: sticky;
-  top: 0;
+  align-self: stretch;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .divider {
@@ -144,18 +161,22 @@
 
 .card {
   background: #f7f8fa;
+  border: 1px solid #e5e9f0;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px 12px 12px 8px;
   box-sizing: border-box;
+  min-height: 100%;
 }
 
 .catBtn {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 32px;
+  gap: 4px;
+  min-height: 32px;
+  height: auto;
   width: 100%;
-  padding: 0 8px;
+  padding: 6px 8px;
   border: none;
   border-radius: 4px;
   background: #fff;
@@ -167,17 +188,28 @@
   background: #f2f4f7;
 }
 
-.catLabel {
-  flex: 1;
+.catLabelWrap {
+  flex: 1 1 0;
   min-width: 0;
+  max-width: 100%;
+}
+
+.catLabelWrap .catLabel {
+  width: 100%;
+}
+
+.catLabel {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
   text-align: left;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
   color: #555555;
+  word-break: break-word;
 }
 
 .catBtnSelected .catLabel {
@@ -197,33 +229,60 @@
   color: #8f8f8f;
 }
 
-.section {
+.treeList {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* Search shows several sections stacked in one card. */
-.section + .section {
-  margin-top: 20px;
-}
-
-.sectionBody {
-  flex: 1;
+.treeBranch {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
-.sectionLabel {
-  margin-bottom: 10px;
-  font-family: 'Roboto', sans-serif;
-  font-size: 12px;
-  color: #8f8f8f;
+.treeToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
 }
 
-.fieldList {
+.treeToggle:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.treeGroupLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 20px;
+  color: #555555;
+  white-space: nowrap;
+}
+
+.treePropCount {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+  color: #8f8f8f;
+  white-space: nowrap;
+}
+
+.treeChildren {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  margin-left: 10px;
+  padding-left: 12px;
+  border-left: 1px solid #e5e9f0;
 }
 
 .fieldRow {
@@ -231,11 +290,18 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 0;
+  padding: 2px 4px;
   border: none;
+  border-radius: 4px;
   background: none;
   cursor: pointer;
   text-align: left;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.fieldRow:hover {
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .chip {
@@ -243,7 +309,7 @@
   align-items: center;
   gap: 4px;
   height: 26px;
-  padding: 1px 4px 1px 0;
+  padding: 1px 6px 1px 0;
   background: #fff;
   border: 1px solid #d1e5f9;
   border-radius: 4px;
@@ -280,6 +346,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .empty {

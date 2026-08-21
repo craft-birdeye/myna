@@ -264,10 +264,18 @@ function SubAgentNodeWrapper(props) {
   return <ControlNodeWrapper {...props} nodeType="subagent" label="Sub-agent" />;
 }
 
+const BRANCH_CHIP_LABEL_MAX = 24;
+
 function BranchPathNodeWrapper({ id, data }) {
-  const isSelected = id === data.selectedNodeId;
+  const isSelected = id === data.selectedNodeId || id === data.focusBranchPathId;
   const canDelete = !data.viewOnly && !data.isFallback && !data.isVoiceCallBranch && !!data.onDelete;
-  const description = String(data.description || '').trim();
+  const fullLabel = String(data.label ?? '').trim();
+  // Fallback path has no description tooltip on the canvas.
+  const description = data.isFallback ? '' : String(data.description || '').trim();
+  const isTruncated = fullLabel.length > BRANCH_CHIP_LABEL_MAX;
+  const displayLabel = isTruncated
+    ? `${fullLabel.slice(0, BRANCH_CHIP_LABEL_MAX)}…`
+    : fullLabel;
   const collapsed = !!data.collapsed;
   const hiddenCount = data.hiddenCount ?? 0;
 
@@ -278,18 +286,35 @@ function BranchPathNodeWrapper({ id, data }) {
     data.isVoiceCallBranch ? branchStyles.chipNoPointer : '',
   ].filter(Boolean).join(' ');
 
+  const truncatedTooltip = isTruncated ? (
+    <span className={branchStyles.tooltipBody}>
+      <span className={branchStyles.tooltipTitle}>{fullLabel}</span>
+      {description ? (
+        <span className={branchStyles.tooltipDescription}>{description}</span>
+      ) : null}
+    </span>
+  ) : null;
+
+  const labelEl = <span className={branchStyles.chipLabel}>{displayLabel}</span>;
+
   return (
     <div className="flow-canvas__node-center">
       <div className={branchStyles.pathWrapper}>
         <Handle type="target" position={Position.Top} />
         <div className={branchStyles.chipRow}>
           <div className={chipClass}>
-            {description ? (
+            {data.isFallback ? (
+              labelEl
+            ) : isTruncated ? (
+              <Tooltip content={truncatedTooltip} variant="detail" side="top">
+                {labelEl}
+              </Tooltip>
+            ) : description ? (
               <Tooltip content={description} variant="detail" side="top">
-                <span className={branchStyles.chipLabel}>{data.label}</span>
+                {labelEl}
               </Tooltip>
             ) : (
-              <span className={branchStyles.chipLabel}>{data.label}</span>
+              labelEl
             )}
             {hiddenCount > 0 && (
               <Tooltip content={collapsed ? 'Expand branch' : 'Collapse branch'} variant="brief" side="top">

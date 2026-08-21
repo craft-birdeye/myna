@@ -12,6 +12,7 @@ import {
   Icon,
   MetricTiles,
   Tabs,
+  Toast,
   TopNav,
   type ChipVariant,
   type Column,
@@ -21,7 +22,7 @@ import {
   type Tab,
 } from '../components'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
-import { AgentLogsTab, getLogFilterFields } from './AgentLogsTab'
+import { AgentLogsTab, getLogFilterFields, getNavigableLogRows } from './AgentLogsTab'
 import { OutboundAgentLogsTab } from './OutboundAgentLogsTab'
 import { DENTAL_OUTBOUND_LOGS } from '../data/dentalOutboundLogs'
 import { AgentSettingsTab } from './AgentSettingsTab'
@@ -31,6 +32,7 @@ import { RecommendationDetailScreen } from './RecommendationDetailScreen'
 import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
+import { getAgentWorkflows } from '../data/agentWorkflows'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -110,10 +112,12 @@ const TABS: Tab[] = [
   { id: 'settings', label: 'Settings' },
 ]
 
-// Exploration keeps Workflow as a separate button-style action and hides Recommendation/Settings.
+// Exploration keeps Workflow as a separate button-style action.
+// Review response exploration also hides Recommendation/Settings; Front desk keeps both.
 const EXPLORATION_TABS: Tab[] = TABS.filter(
   (t) => t.id !== 'workflow' && t.id !== 'recommendation' && t.id !== 'settings',
 )
+const EXPLORATION_FRONTDESK_TABS: Tab[] = TABS.filter((t) => t.id !== 'workflow')
 
 // Tagging & routing agent hides Recommendation and Settings — only Outcomes / Workflow / Logs apply.
 const TAGGING_ROUTING_TABS: Tab[] = TABS.filter((t) => t.id !== 'settings' && t.id !== 'recommendation')
@@ -432,6 +436,8 @@ export function AgentInstanceScreen({
   const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [instanceStatus, setInstanceStatus] = useState(status)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
   const [selectedRun, setSelectedRun] = useState<HealthcareLogRow | null>(null)
   const [selectedRecommendationId, setSelectedRecommendationId] = useState<string | null>(null)
   const [pendingFeedbackPrefill, setPendingFeedbackPrefill] = useState<string | null>(null)
@@ -477,6 +483,39 @@ export function AgentInstanceScreen({
   const isReviewGeneration = /review generation agent/i.test(agentName)
   const reviewGenerationKey = 'Review generation agent'
 
+  const handleDownloadAgent = () => {
+    const workflows = getAgentWorkflows(product)
+    const workflow =
+      workflows[instanceName]
+      ?? workflows[agentName]
+      ?? workflows['Review response agent']
+      ?? { nodes: [], nodeDetails: {} }
+
+    const payload = {
+      name: shownName,
+      agentType: agentName,
+      status: instanceStatus,
+      exportedAt: new Date().toISOString(),
+      nodes: workflow.nodes ?? [],
+      nodeDetails: workflow.nodeDetails ?? {},
+    }
+
+    const fileName = `${shownName.replace(/\s+/g, '-').toLowerCase() || 'agent'}.json`
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }),
+    )
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    setToastMessage(`${fileName} has been downloaded`)
+    setToastVisible(true)
+  }
+
   useEffect(() => {
     onFullBleedChange?.(Boolean(selectedRun) && (isReviewResponse || isReviewGeneration))
     return () => onFullBleedChange?.(false)
@@ -487,6 +526,7 @@ export function AgentInstanceScreen({
       : METRICS_BY_AGENT[agentName]
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
+  const explorationFrontDeskStatus = workflowButtonOpensEditor && isFrontdeskAgent
   const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
@@ -552,7 +592,7 @@ export function AgentInstanceScreen({
 
   const isTaggingRouting = agentName === 'Tagging & routing agent'
   const tabs = workflowButtonOpensEditor
-    ? EXPLORATION_TABS
+    ? (isFrontdeskAgent ? EXPLORATION_FRONTDESK_TABS : EXPLORATION_TABS)
     : isTaggingRouting
     ? TAGGING_ROUTING_TABS
     : isReviewResponse || isReviewGeneration
@@ -580,6 +620,9 @@ export function AgentInstanceScreen({
   const showEmptyDraftLogs = activeTab === 'logs' && isDraftInstance
 
   if (selectedRun) {
+    const navigableRuns = getNavigableLogRows(agentName, logsQuery, logsFilters, {
+      explorationFrontDeskStatus,
+    })
     return (
       <div className="flex h-full flex-col">
         <TopNav title={topNavTitle} initials="S" />
@@ -587,8 +630,11 @@ export function AgentInstanceScreen({
           <RunDetailView
             row={selectedRun}
             instanceName={instanceName}
+            runs={navigableRuns}
+            onSelectRun={setSelectedRun}
             onBack={() => setSelectedRun(null)}
             onEditAgent={() => onEditAgent?.(instanceName)}
+            explorationFrontDeskStatus={explorationFrontDeskStatus}
             onTrackFeedback={(recommendationId) => {
               setSelectedRun(null)
               setActiveTab('recommendation')
@@ -700,6 +746,18 @@ export function AgentInstanceScreen({
                       >
                         Duplicate
                       </button>
+                      {workflowButtonOpensEditor && (
+                        <button
+                          type="button"
+                          className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                          onClick={() => {
+                            setActionsOpen(false)
+                            handleDownloadAgent()
+                          }}
+                        >
+                          Download agent
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-chip-danger-text hover:bg-surface-hover"
@@ -861,6 +919,7 @@ export function AgentInstanceScreen({
                   onViewRun={setSelectedRun}
                   searchQuery={supportsHeaderSearch ? logsQuery : ''}
                   filters={supportsHeaderSearch ? logsFilters : undefined}
+                  explorationFrontDeskStatus={explorationFrontDeskStatus}
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
@@ -883,7 +942,7 @@ export function AgentInstanceScreen({
         {showHeaderSearch && (
           <FilterPanel
             open={isOutcomesTab ? outcomesFilterOpen : logsFilterOpen}
-            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName)}
+            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName, { explorationFrontDeskStatus })}
             selections={isOutcomesTab ? outcomesFilters : logsFilters}
             onSelectionsChange={isOutcomesTab ? setOutcomesFilters : setLogsFilters}
             onClose={() =>
@@ -892,6 +951,12 @@ export function AgentInstanceScreen({
           />
         )}
       </div>
+
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
+      />
     </div>
   )
 }

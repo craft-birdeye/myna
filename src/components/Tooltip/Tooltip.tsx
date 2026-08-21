@@ -165,7 +165,7 @@ export function Tooltip({
           <span
             ref={panelRef}
             role="tooltip"
-            className={`fixed z-[120] w-max ${VARIANT_MAX_WIDTH[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white transition-all duration-150 ease-out ${
+            className={`fixed z-[11000] w-max ${VARIANT_MAX_WIDTH[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white transition-all duration-150 ease-out ${
               entered ? 'opacity-100' : 'opacity-0'
             } ${interactive ? 'pointer-events-auto' : 'pointer-events-none'} ${
               side === 'right' ? 'tooltip-caret-left' : ''

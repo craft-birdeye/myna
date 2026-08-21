@@ -1,7 +1,7 @@
 import React from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import voicemailSample from '../assets/voicemail_sample.mp3'
-import { Chip, LogDetailsPanel, RunDetailsPanel, type RunLogStep } from '../components'
+import { Chip, Icon, LogDetailsPanel, RunDetailsPanel, type RunLogStep } from '../components'
 import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
 import {
   HEALTHCARE_AGENT_WORKFLOWS,
@@ -33,6 +33,20 @@ interface RunDetailViewProps {
   /** Called when a "Track your feedback" link is clicked in the Front-desk Logs Conversation tab —
    *  the host screen navigates to that recommendation's detail page. */
   onTrackFeedback?: (recommendationId: string) => void
+  /** Sibling logs (same filtered set as the Logs table) for prev/next navigation. */
+  runs?: HealthcareLogRow[]
+  onSelectRun?: (row: HealthcareLogRow) => void
+  /** Front desk exploration: show result badge on Call end reason. */
+  explorationFrontDeskStatus?: boolean
+}
+
+function sameLogRow(a: HealthcareLogRow, b: HealthcareLogRow) {
+  return (
+    a.timestamp === b.timestamp
+    && a.contact === b.contact
+    && a.channel === b.channel
+    && a.status === b.status
+  )
 }
 
 const PROCEDURE_CHIPS = [
@@ -59,7 +73,7 @@ const RUN_PROCEDURE_ITEMS = PROCEDURE_CHIPS.map((name) => ({ id: name, name }))
 
 function getImplementedSteps(row: HealthcareLogRow): LogStepId[] {
   if (row.implementedSteps?.length) return row.implementedSteps
-  if (row.status === 'Complete') return ['trigger', 'procedures']
+  if (row.status === 'Complete' || row.status === 'Resolved') return ['trigger', 'procedures']
   return ['trigger']
 }
 
@@ -101,7 +115,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     ]
   }
 
-  if (row.status === 'Failed') {
+  if (row.status === 'Failed' || row.status === 'Not resolved') {
     return [
       trigger,
       {
@@ -265,7 +279,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
     ]
   }
 
-  if (row.status === 'Failed') {
+  if (row.status === 'Failed' || row.status === 'Not resolved') {
     return [
       trigger,
       {
@@ -394,7 +408,7 @@ function getExecutedNodeIds(
 
       // Complete → primary (non-fallback) path; Failed → fallback / last path.
       const chosen =
-        row.status === 'Failed'
+        row.status === 'Failed' || row.status === 'Not resolved'
           ? detail.branches.find((b) => b.isFallback) ?? detail.branches[detail.branches.length - 1]
           : detail.branches.find((b) => !b.isFallback) ?? detail.branches[0]
 
@@ -605,7 +619,16 @@ function WorkflowCanvas({
 }
 
 /* ── main export ── */
-export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackFeedback }: RunDetailViewProps) {
+export function RunDetailView({
+  row,
+  instanceName,
+  onBack,
+  onEditAgent,
+  onTrackFeedback,
+  runs = [],
+  onSelectRun,
+  explorationFrontDeskStatus = false,
+}: RunDetailViewProps) {
   const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
   const isReviewResponse = /review response agent/i.test(agentName)
@@ -621,8 +644,17 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         ? HEALTHCARE_AGENT_WORKFLOWS[agentName]
         : undefined
   const statusVariant =
-    row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
+    row.status === 'Complete' || row.status === 'Resolved'
+      ? 'success'
+      : row.status === 'Failed' || row.status === 'Not resolved'
+        ? 'danger'
+        : 'warning'
   const useRunDetailsPanel = isReminder || isReviewAgent
+
+  const runIndex = runs.findIndex((r) => sameLogRow(r, row))
+  const hasRunNav = runs.length > 1 && runIndex >= 0 && !!onSelectRun
+  const canGoPrev = hasRunNav && runIndex > 0
+  const canGoNext = hasRunNav && runIndex < runs.length - 1
 
   return (
     <div className="log-detail-view relative flex h-full flex-col bg-surface">
@@ -679,7 +711,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         .log-detail-view .canvas-node--selected { border-color: transparent !important; }
       `}</style>
 
-      {/* Header — title + status chip with agent name subtitle */}
+      {/* Header — title + status chip with agent name subtitle; prev/next on the right */}
       <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
         <button
           type="button"
@@ -696,6 +728,34 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
           </div>
           <p className="mt-xs text-small text-text-secondary">{instanceName}</p>
         </div>
+        {hasRunNav && (
+          <div className="mt-xs flex shrink-0 items-center gap-xs">
+            <button
+              type="button"
+              aria-label="Previous log"
+              disabled={!canGoPrev}
+              onClick={() => {
+                if (!canGoPrev) return
+                onSelectRun?.(runs[runIndex - 1])
+              }}
+              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Icon name="chevron_left" size={20} />
+            </button>
+            <button
+              type="button"
+              aria-label="Next log"
+              disabled={!canGoNext}
+              onClick={() => {
+                if (!canGoNext) return
+                onSelectRun?.(runs[runIndex + 1])
+              }}
+              className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Icon name="chevron_right" size={20} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Body — full-bleed canvas with overlaid details panel (matches trigger/task RHS) */}
@@ -735,7 +795,14 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
               onTrackFeedback={isReminder ? onTrackFeedback : undefined}
             />
           ) : (
-            <LogDetailsPanel row={row} agentName={instanceName} onTrackFeedback={onTrackFeedback} />
+            <LogDetailsPanel
+              row={row}
+              agentName={instanceName}
+              onTrackFeedback={onTrackFeedback}
+              callEndResultBadge={explorationFrontDeskStatus ? String(row.status) : undefined}
+              userRating={explorationFrontDeskStatus ? '4 of 5' : undefined}
+              showTranscriptTranslation={explorationFrontDeskStatus}
+            />
           )}
         </div>
       </div>

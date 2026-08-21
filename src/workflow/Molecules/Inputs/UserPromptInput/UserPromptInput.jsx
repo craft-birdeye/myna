@@ -37,6 +37,9 @@ export default function UserPromptInput({
   showTriggerFields = false,
   /** Fields-only toolbar: hides Tools + Rephrase, leaving just the `{x}` field picker. */
   fieldsOnly = false,
+  /** How the Fields picker opens relative to the toolbar icon. */
+  fieldPickerPlacement = 'dock',
+  fieldPickerZIndex,
 }) {
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -266,6 +269,8 @@ export default function UserPromptInput({
           onSelectField={handleFieldSelect}
           anchorEl={fieldsBtnRef.current}
           showTriggerFields={showTriggerFields}
+          placement={fieldPickerPlacement}
+          {...(fieldPickerZIndex != null ? { overlayZIndex: fieldPickerZIndex } : {})}
         />
       )}
       <ToolSlashMenu

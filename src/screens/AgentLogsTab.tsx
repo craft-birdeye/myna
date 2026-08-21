@@ -1,4 +1,4 @@
-import { Chip, DataTable, type ChipVariant, type Column } from '../components'
+import { Chip, DataTable, Tooltip, type ChipVariant, type Column } from '../components'
 import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
@@ -16,6 +16,47 @@ const STATUS_VARIANT: Record<string, ChipVariant> = {
   Complete: 'success',
   Failed: 'danger',
   'In progress': 'warning',
+  Resolved: 'success',
+  'Not resolved': 'danger',
+}
+
+/** Front desk exploration Logs tab — display labels only (underlying data stays Complete/Failed). */
+const EXPLORATION_FRONTDESK_STATUS_LABEL: Record<string, string> = {
+  Complete: 'Resolved',
+  Failed: 'Not resolved',
+  'In progress': 'In progress',
+}
+
+const EXPLORATION_NOT_RESOLVED_INTENTS = ['Aborted', 'Transferred to human'] as const
+
+function mapExplorationFrontDeskStatus(status: string): string {
+  return EXPLORATION_FRONTDESK_STATUS_LABEL[status] ?? status
+}
+
+/** Maps statuses + Not resolved intents; adds a second Not resolved row when needed. */
+function withExplorationFrontDeskLogs(rows: HealthcareLogRow[]): HealthcareLogRow[] {
+  let notResolvedIdx = 0
+  const mapped = rows.map((row) => {
+    const status = mapExplorationFrontDeskStatus(row.status)
+    if (status !== 'Not resolved') return { ...row, status }
+    const topic = EXPLORATION_NOT_RESOLVED_INTENTS[notResolvedIdx % EXPLORATION_NOT_RESOLVED_INTENTS.length]
+    notResolvedIdx += 1
+    return { ...row, status, topic }
+  })
+
+  if (notResolvedIdx === 1) {
+    mapped.push({
+      timestamp: 'Jan 22, 2024, 3:12 pm',
+      status: 'Not resolved',
+      contact: '+1 (415) 555-0142',
+      channel: 'Voice call',
+      duration: '2:18',
+      topic: EXPLORATION_NOT_RESOLVED_INTENTS[1],
+      implementedSteps: ['trigger'],
+    })
+  }
+
+  return mapped
 }
 
 const TIMESTAMP_CELL = (v: unknown) => <span className="group-hover/row:text-text-action">{String(v)}</span>
@@ -31,6 +72,71 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   },
   { key: 'contact', label: 'Contact', width: 200, sortable: true },
   { key: 'channel', label: 'Source', width: 120, sortable: true },
+]
+
+/** Front desk exploration — short AI-summary blurbs for Intent hover tooltips. */
+const EXPLORATION_INTENT_SUMMARIES: Record<string, string> = {
+  'Tooth pain screening':
+    'Caller reported toothache and asked about same-day care. Agent screened for red flags and offered an urgent evaluation with next steps.',
+  'New patient scheduling':
+    'Caller booked a first visit. Agent collected preferred times and contact details, then held a slot and offered the intake packet.',
+  'Appointment reschedule':
+    'Caller moved an upcoming visit. Agent confirmed a new slot, cancelled the original appointment, and sent an updated confirmation.',
+  'Insurance inquiry':
+    'Caller asked about checkup coverage. Agent reviewed eligibility, explained likely copay, and noted remaining questions for billing follow-up.',
+  Aborted:
+    'Caller disconnected before the request was resolved. Partial intent was captured; no appointment or handoff was completed.',
+  'Transferred to human':
+    'Agent could not fully resolve the request and warm-transferred the caller with context packaged for a live representative.',
+  'Emergency dental concern':
+    'Caller described urgent dental pain. Agent screened for emergency signs and escalated when automated resolution was not appropriate.',
+}
+
+function explorationIntentSummary(intent: string): string {
+  return (
+    EXPLORATION_INTENT_SUMMARIES[intent] ??
+    `Conversation focused on ${intent.toLowerCase()}. Agent gathered key details and guided the caller to next steps.`
+  )
+}
+
+function ExplorationIntentCell({ intent }: { intent: string }) {
+  const summary = explorationIntentSummary(intent)
+  return (
+    <Tooltip
+      variant="detail"
+      side="top"
+      content={
+        <div className="flex flex-col gap-xs text-left">
+          <span>AI summary</span>
+          <span>{summary}</span>
+        </div>
+      }
+    >
+      <span className="block truncate">{intent}</span>
+    </Tooltip>
+  )
+}
+
+const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'contact', label: 'Contact', width: 180, sortable: true },
+  { key: 'channel', label: 'Channel', width: 140, sortable: true },
+  { key: 'duration', label: 'Duration', width: 120, sortable: true },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 140,
+    sortable: true,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+  },
+  {
+    key: 'topic',
+    label: 'Intent',
+    width: 220,
+    sortable: true,
+    truncate: false,
+    render: (v) => <ExplorationIntentCell intent={String(v ?? '')} />,
+  },
 ]
 
 const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
@@ -110,7 +216,7 @@ function logRowsForAgent(agentName?: string): Record<string, unknown>[] {
  * Filter fields for the Logs tab, with options derived from the agent's own rows so the panel
  * can never offer a value that filters to nothing. Ids match the row keys they filter on.
  */
-export function getLogFilterFields(agentName?: string) {
+export function getLogFilterFields(agentName?: string, opts?: { explorationFrontDeskStatus?: boolean }) {
   const rows = logRowsForAgent(agentName)
   const distinct = (pick: (r: Record<string, unknown>) => unknown) =>
     Array.from(
@@ -118,10 +224,19 @@ export function getLogFilterFields(agentName?: string) {
     ).sort()
   const asOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }))
 
+  const statusValues = distinct((r) => r.status)
+  const statusOptions = opts?.explorationFrontDeskStatus
+    ? asOptions(statusValues.map(mapExplorationFrontDeskStatus))
+    : asOptions(statusValues)
+
   return [
-    { id: 'status', label: 'Status', options: asOptions(distinct((r) => r.status)) },
+    { id: 'status', label: 'Status', options: statusOptions },
     // The two log shapes name this column `source` (reviews) or `channel` (conversations).
-    { id: 'source', label: 'Source', options: asOptions(distinct((r) => r.source ?? r.channel)) },
+    {
+      id: 'source',
+      label: opts?.explorationFrontDeskStatus ? 'Channel' : 'Source',
+      options: asOptions(distinct((r) => r.source ?? r.channel)),
+    },
   ]
 }
 
@@ -132,10 +247,11 @@ export function getLogFilterFields(agentName?: string) {
  * key; a row missing the filtered key is left in rather than silently dropped. `source` also
  * checks `channel`, because the two log shapes name that column differently.
  */
-function applyLogFilters<T extends Record<string, unknown>>(
+export function applyLogFilters<T extends Record<string, unknown>>(
   rows: T[],
   query: string,
   filters: Record<string, string[]>,
+  opts?: { explorationFrontDeskStatus?: boolean },
 ): T[] {
   const q = query.trim().toLowerCase()
   return rows.filter((row) => {
@@ -146,9 +262,46 @@ function applyLogFilters<T extends Record<string, unknown>>(
       if (!values?.length) return true
       const cell = key === 'source' ? (row.source ?? row.channel) : row[key]
       if (cell == null) return true
-      return values.includes(String(cell))
+      const cellStr = String(cell)
+      if (key === 'status' && opts?.explorationFrontDeskStatus) {
+        return values.includes(mapExplorationFrontDeskStatus(cellStr))
+      }
+      return values.includes(cellStr)
     })
   })
+}
+
+/**
+ * Healthcare log rows the run detail view can page through for this agent
+ * (same set as the Logs table, after search/filters).
+ */
+export function getNavigableLogRows(
+  agentName?: string,
+  searchQuery = '',
+  filters: Record<string, string[]> = {},
+  opts?: { explorationFrontDeskStatus?: boolean },
+): HealthcareLogRow[] {
+  let rows: HealthcareLogRow[]
+  if (agentName === 'Reminder agent') {
+    rows = REMINDER_LOGS_ROWS
+  } else if (agentName?.startsWith('Review response agent')) {
+    rows = REVIEW_RESPONSE_LOGS_ROWS.map((r) => toHealthcareLogRow(r))
+  } else if (agentName && /review generation agent/i.test(agentName)) {
+    rows = REVIEW_GENERATION_LOGS_ROWS.map((r) => toReviewGenerationLogRow(r))
+  } else if (
+    agentName === 'Pre-visit agent'
+    || agentName === 'Waitlist agent'
+    || agentName === 'Tagging & routing agent'
+  ) {
+    // These tables don't open RunDetailView yet.
+    return []
+  } else {
+    rows = HEALTHCARE_LOGS_ROWS
+  }
+  const filtered = applyLogFilters(rows, searchQuery, filters, opts)
+  return opts?.explorationFrontDeskStatus
+    ? withExplorationFrontDeskLogs(filtered)
+    : filtered
 }
 
 interface AgentLogsTabProps {
@@ -159,11 +312,23 @@ interface AgentLogsTabProps {
   searchQuery?: string
   /** Header filter selections, keyed by `LOG_FILTER_FIELDS` id. */
   filters?: Record<string, string[]>
+  /** Front desk exploration only: Complete→Resolved, Failed→Not resolved. */
+  explorationFrontDeskStatus?: boolean
 }
 
-export function AgentLogsTab({ agentName, onViewRun, searchQuery = '', filters = {} }: AgentLogsTabProps) {
+export function AgentLogsTab({
+  agentName,
+  onViewRun,
+  searchQuery = '',
+  filters = {},
+  explorationFrontDeskStatus = false,
+}: AgentLogsTabProps) {
   /** Narrows a row set by the header search + filters. */
-  const f = <T extends Record<string, unknown>>(rows: T[]) => applyLogFilters(rows, searchQuery, filters)
+  const f = <T extends Record<string, unknown>>(rows: T[]) =>
+    applyLogFilters(rows, searchQuery, filters, { explorationFrontDeskStatus })
+
+  const mapStatus = (rows: HealthcareLogRow[]) =>
+    explorationFrontDeskStatus ? withExplorationFrontDeskLogs(rows) : rows
 
 
   if (agentName === 'Reminder agent') {
@@ -243,8 +408,8 @@ export function AgentLogsTab({ agentName, onViewRun, searchQuery = '', filters =
     <>
       <div className="px-lg py-lg">
         <DataTable
-          columns={LOG_COLUMNS}
-          data={f(agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS)}
+          columns={explorationFrontDeskStatus ? EXPLORATION_FRONTDESK_LOG_COLUMNS : LOG_COLUMNS}
+          data={mapStatus(f(agentName === 'Reminder agent' ? REMINDER_LOGS_ROWS : HEALTHCARE_LOGS_ROWS) as HealthcareLogRow[])}
           onRowClick={(row) => onViewRun?.(row as HealthcareLogRow)}
           rowAction={{
             icon: 'visibility',

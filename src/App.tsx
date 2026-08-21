@@ -150,6 +150,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent', label: 'Front desk agent' },
+      { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'reminder-agent',  label: 'Reminder agent'  },
       { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
       { id: 'outreach-agent',  label: 'Outreach agent'  },
@@ -193,6 +194,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent',  label: 'Front desk agent'  },
+      { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
       { id: 'pre-visit-agent',  label: 'Pre-visit agent'  },
       { id: 'reminder-agent',   label: 'Reminder agent'   },
@@ -241,6 +243,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent',             label: 'Front desk agent'             },
+      { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
       { id: 'pre-visit-agent',             label: 'Pre-visit agent'             },
       { id: 'reminder-agent',              label: 'Reminder agent'              },
@@ -363,6 +366,7 @@ const PRODUCT_BRAND: Record<string, string> = {
 
 const AGENT_NAMES: Record<string, string> = {
   'frontdesk-agent':           'Front desk agent',
+  'frontdesk-agent-exploration': 'Front desk agent (exploration)',
   'reminder-agent-sep-1':      'Reminder agent',
   'reminder-agent':            'Reminder agent',
   'outreach-agent':            'Outreach agent',
@@ -377,6 +381,15 @@ const AGENT_NAMES: Record<string, string> = {
   'response-agents-exploration': 'Review response agents (exploration)',
   'generation-agents':         'Review generation agents',
   'review-tagging-agent':      'Review tagging agents',
+}
+
+const EXPLORATION_AGENT_NAV_IDS = new Set([
+  'response-agents-exploration',
+  'frontdesk-agent-exploration',
+])
+
+function isExplorationAgentNav(navId: string) {
+  return EXPLORATION_AGENT_NAV_IDS.has(navId)
 }
 
 // Map railActive → module title shown in the global TopBar
@@ -517,7 +530,7 @@ export function App() {
       name?.includes('Schedule based') || name?.includes('Event trigger based')
     // Draft/live status chrome is exploration-only; other agents keep the prior Schedule/Event rule.
     setEditingAgentStatus(
-      navActive === 'response-agents-exploration'
+      isExplorationAgentNav(navActive)
         ? (status ?? (inferredDraft ? 'Draft' : null))
         : (inferredDraft ? 'Draft' : null),
     )
@@ -922,7 +935,7 @@ export function App() {
                           product={activeProduct}
                           wizardDraft={wizardAgentDraft}
                           agentStatus={
-                            navActive === 'response-agents-exploration'
+                            isExplorationAgentNav(navActive)
                               ? (editingAgentStatus ?? undefined)
                               : editingAgentName?.includes('Schedule based') ||
                                   editingAgentName?.includes('Event trigger based')
@@ -935,7 +948,7 @@ export function App() {
                           aiBuilderPanelOpen={workflowAiBuilderPanelOpen}
                           onAiBuilderPanelOpenChange={setWorkflowAiBuilderPanelOpen}
                           lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
-                          hideTopIdentity={navActive === 'response-agents-exploration'}
+                          hideTopIdentity={isExplorationAgentNav(navActive)}
                         />
                       </div>
                       {workflowAiAssistOpen && (

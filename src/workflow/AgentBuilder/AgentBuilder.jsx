@@ -1093,6 +1093,9 @@ export default function AgentBuilder({
   const [navId, setNavId] = useState(activeNavId);
   const [nodeList, setNodeList] = useState(() => initialNodes || []);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  /** When a canvas branch-path chip is clicked, expand that path in the Branch RHS. */
+  const [focusBranchPathId, setFocusBranchPathId] = useState(null);
+  const [focusBranchPathNonce, setFocusBranchPathNonce] = useState(0);
   /** Parent branch nodes whose path arms are collapsed on the canvas. */
   const [collapsedBranches, setCollapsedBranches] = useState({});
   /** Individual branch-path chips whose child steps are collapsed. */
@@ -2190,13 +2193,19 @@ export default function AgentBuilder({
    * Anything occupying the 390px right slot — node config, Help center, or Test details.
    * Drives the exploration actions pill sliding left so the panel never covers it.
    */
-  const rightPanelOpen = rhsRendered || helpRendered || testRunOpen;
+  // Preview (Front desk play) sits in the same right slot as node config / Help / Test details —
+  // slide the top-right chrome left so Pause / Publish don't overlap it.
+  const rightPanelOpen =
+    rhsRendered || helpRendered || testRunOpen || (previewOpen && !isReviewResponseAgent);
   /** Shared by the top-right floater and (exploration) the bottom editor-row pill. */
   const toggleHelpCenter = () => {
     setVersionHistoryOpen(false);
     setHelpCenterOpen((open) => {
       // Exploration: help occupies the node-config RHS slot, so the two can't coexist.
-      if (!open && hideTopIdentity) handleCloseDrawer();
+      if (!open && hideTopIdentity) {
+        handleCloseDrawer();
+        setPreviewOpen(false);
+      }
       return !open;
     });
   };
@@ -2232,6 +2241,7 @@ export default function AgentBuilder({
         data: {
           ...n.data,
           viewOnly,
+          focusBranchPathId,
           onDelete:
             viewOnly || n.data.isFallback || n.data.isVoiceCallBranch || !n.data.canDeletePath
               ? undefined
@@ -2433,6 +2443,7 @@ export default function AgentBuilder({
         return { ...copy, [id]: details };
       });
 
+      setFocusBranchPathId(null);
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(null);
@@ -2467,6 +2478,7 @@ export default function AgentBuilder({
           [id]: details,
         };
       });
+      setFocusBranchPathId(null);
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
@@ -2596,6 +2608,7 @@ export default function AgentBuilder({
       ...extraDetails,
     }));
 
+    setFocusBranchPathId(null);
     setSelectedNodeId(id);
     setDrawerOpen(true);
     setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
@@ -2614,15 +2627,41 @@ export default function AgentBuilder({
       // Exploration: version history docks on the left, so it stays open and the
       // node config opens read-only beside it.
       if (!hideTopIdentity) setVersionHistoryOpen(false);
+      if (hideTopIdentity) {
+        setHelpCenterOpen(false);
+        setPreviewOpen(false);
+      }
+      setFocusBranchPathId(null);
       setSelectedNodeId(START_NODE_ID);
+      setDrawerOpen(true);
+      return;
+    }
+    // Path chips open the parent Branch panel with that path's accordion expanded.
+    if (node.type === 'branchPath') {
+      const parentId = node.data?.parentId
+        || latestRef.current.nodeDetails?.[node.id]?.parentId;
+      if (!parentId) return;
+      setPaletteSection(null);
+      if (!hideTopIdentity) setVersionHistoryOpen(false);
+      if (hideTopIdentity) {
+        setHelpCenterOpen(false);
+        setPreviewOpen(false);
+      }
+      setFocusBranchPathId(node.id);
+      setFocusBranchPathNonce((n) => n + 1);
+      setSelectedNodeId(parentId);
       setDrawerOpen(true);
       return;
     }
     // AI Builder docks on the left; node config uses the right pane — both can stay open.
     setPaletteSection(null);
     if (!hideTopIdentity) setVersionHistoryOpen(false);
-    // Exploration: help shares the node-config RHS slot, so opening a node closes it.
-    if (hideTopIdentity) setHelpCenterOpen(false);
+    // Exploration: help / preview share the node-config RHS slot, so opening a node closes them.
+    if (hideTopIdentity) {
+      setHelpCenterOpen(false);
+      setPreviewOpen(false);
+    }
+    setFocusBranchPathId(null);
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
     if (node.data?.title) {
@@ -2633,6 +2672,7 @@ export default function AgentBuilder({
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
     setSelectedNodeId(null);
+    setFocusBranchPathId(null);
     setActiveProcedureId(null);
     setLhsPreviewProcedureId(null);
     // Do not reopen AI Builder — user closed config and should return to a clean canvas
@@ -2909,10 +2949,16 @@ export default function AgentBuilder({
               mergeBranches: currentDetails.mergeBranches ?? true,
               branchNodeId: selectedNodeId,
               pathDetails,
+              initialExpandedPathId: focusBranchPathId,
+              expandNonce: focusBranchPathNonce,
             },
             onFieldChange: activeFieldChange,
             onPathFieldChange: (pathId, field, value) => handleNodeFieldChange(pathId, field, value),
             onDeleteBranch: (branchId) => handleDeleteBranchPath(branchId),
+            onFocusBranchPath: (pathId) => {
+              setFocusBranchPathId(pathId);
+              if (pathId) setFocusBranchPathNonce((n) => n + 1);
+            },
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3147,6 +3193,7 @@ export default function AgentBuilder({
       setDrawerOpen(false);
       setSelectedNodeId(null);
       setTestAppointment(null);
+      if (hideTopIdentity) setHelpCenterOpen(false);
       setPreviewOpen(true);
       return;
     }
@@ -3801,7 +3848,7 @@ export default function AgentBuilder({
           )}
 
           {previewOpen && !isReviewResponseAgent && (
-            <div className="agent-builder__preview">
+            <div className="agent-builder__rhs agent-builder__rhs--opening">
               <PreviewPanel
                 onClose={() => {
                   setPreviewOpen(false);

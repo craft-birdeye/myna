@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
+import { AGENT_LANGUAGES } from '../../data/agentLanguages'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
+import { Chip } from '../Chip/Chip'
+import type { ChipVariant } from '../Chip/Chip.types'
 import { Icon } from '../Icon/Icon'
+import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
+import { LanguageFlag } from '../LanguageSelectMenu/LanguageSelectMenu'
 import { RefChip } from '../RefChip/RefChip'
 import { CollapsibleCallDetails, RunDetailsPanel } from '../RunDetailsPanel/RunDetailsPanel'
 import type { RunLogStep } from '../RunDetailsPanel/RunDetailsPanel.types'
@@ -488,6 +493,147 @@ function CallAiSummary({ bullets = DEFAULT_CALL_AI_SUMMARY }: { bullets?: string
   )
 }
 
+const ORIGINAL_TRANSCRIPT = {
+  id: 'original',
+  label: 'Original transcript',
+  countryCode: 'us',
+} as const
+
+/** Translate targets — English is the original, so it is omitted here. */
+const TRANSLATE_LANGUAGES = [
+  { id: 'af', label: 'Afrikaans', countryCode: 'za' },
+  { id: 'ar', label: 'Arabic', countryCode: 'ae' },
+  { id: 'hy', label: 'Armenian', countryCode: 'am' },
+  { id: 'as', label: 'Assamese', countryCode: 'in' },
+  { id: 'ast', label: 'Asturian', countryCode: 'es' },
+  { id: 'az', label: 'Azerbaijani', countryCode: 'az' },
+  ...AGENT_LANGUAGES.filter(
+    (l) => !['en', 'af', 'ar', 'as'].includes(l.id),
+  ),
+]
+
+function TranscriptTranslationControl() {
+  const [open, setOpen] = useState(false)
+  const [selectedId, setSelectedId] = useState<string>(ORIGINAL_TRANSCRIPT.id)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  const selected =
+    selectedId === ORIGINAL_TRANSCRIPT.id
+      ? ORIGINAL_TRANSCRIPT
+      : TRANSLATE_LANGUAGES.find((l) => l.id === selectedId) ?? ORIGINAL_TRANSCRIPT
+
+  const triggerLabel =
+    selected.id === ORIGINAL_TRANSCRIPT.id ? ORIGINAL_TRANSCRIPT.label : selected.label
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: MouseEvent) {
+      if (rootRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative mt-md">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-9 max-w-full items-center gap-sm rounded-sm border border-border-selected bg-surface px-sm py-xs text-left hover:bg-surface-hover"
+      >
+        <LanguageFlag countryCode={selected.countryCode} label={triggerLabel} size="sm" />
+        <span className="min-w-0 truncate text-body text-text-primary">{triggerLabel}</span>
+        <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Available languages"
+          className="absolute left-0 top-full z-30 mt-xs flex w-[280px] max-h-[360px] flex-col overflow-hidden rounded-sm border border-border bg-surface py-sm shadow-dropdown"
+        >
+          <p className="px-md pb-xs text-small text-text-tertiary">Available languages</p>
+          <button
+            type="button"
+            role="option"
+            aria-selected={selectedId === ORIGINAL_TRANSCRIPT.id}
+            onClick={() => {
+              setSelectedId(ORIGINAL_TRANSCRIPT.id)
+              setOpen(false)
+            }}
+            className={`mx-sm flex items-center gap-sm rounded-sm px-sm py-sm text-left ${
+              selectedId === ORIGINAL_TRANSCRIPT.id
+                ? 'bg-surface-selected'
+                : 'hover:bg-surface-hover'
+            }`}
+          >
+            <LanguageFlag
+              countryCode={ORIGINAL_TRANSCRIPT.countryCode}
+              label={ORIGINAL_TRANSCRIPT.label}
+              size="sm"
+            />
+            <span className="min-w-0 flex-1 truncate text-body text-text-primary">
+              {ORIGINAL_TRANSCRIPT.label}
+            </span>
+            {selectedId === ORIGINAL_TRANSCRIPT.id && (
+              <Icon name="check" size={18} className="shrink-0 text-text-primary" />
+            )}
+          </button>
+
+          <div className="my-sm border-t border-border" />
+
+          <div className="flex items-center gap-xs px-md pb-xs">
+            <span className="text-small text-text-tertiary">Translate to more languages</span>
+            <InfoTooltip
+              text="Choose a language to view a translated version of this transcript."
+              variant="detail"
+            />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-sm pb-xs">
+            {TRANSLATE_LANGUAGES.map((lang) => {
+              const isSelected = selectedId === lang.id
+              return (
+                <button
+                  key={lang.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    setSelectedId(lang.id)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-sm rounded-sm px-sm py-sm text-left ${
+                    isSelected ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+                  }`}
+                >
+                  <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-body text-text-primary">
+                    {lang.label}
+                  </span>
+                  {isSelected && (
+                    <Icon name="check" size={18} className="shrink-0 text-text-primary" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function startTimeLabel(timestamp: string): string {
   const match = timestamp.match(/(\d{1,2}:\d{2}\s*[ap]m)/i)
   return match?.[1] ?? timestamp
@@ -502,6 +648,38 @@ function MetaField({ label, value }: { label: string; value: string }) {
   )
 }
 
+const CALL_END_RESULT_VARIANT: Record<string, ChipVariant> = {
+  Resolved: 'success',
+  'Not resolved': 'danger',
+  'In progress': 'warning',
+  Complete: 'success',
+  Failed: 'danger',
+}
+
+function CallEndReasonField({
+  reason,
+  resultBadge,
+}: {
+  reason: string
+  resultBadge?: string
+}) {
+  if (!resultBadge) {
+    return <MetaField label="Call end reason" value={reason} />
+  }
+  return (
+    <div>
+      <p className="m-0 text-small text-text-tertiary">Call end reason</p>
+      <div className="mt-xs flex flex-col gap-xs items-start">
+        <Chip
+          label={resultBadge}
+          variant={CALL_END_RESULT_VARIANT[resultBadge] ?? 'neutral'}
+        />
+        <p className="m-0 text-small text-text-primary">{reason}</p>
+      </div>
+    </div>
+  )
+}
+
 function CallDetailsTab({
   callerNumber,
   languageDetected,
@@ -510,6 +688,8 @@ function CallDetailsTab({
   startTime,
   callEndReason,
   routedVia,
+  callEndResultBadge,
+  userRating,
 }: {
   callerNumber: string
   languageDetected: string
@@ -518,6 +698,8 @@ function CallDetailsTab({
   startTime: string
   callEndReason: string
   routedVia: string
+  callEndResultBadge?: string
+  userRating?: string
 }) {
   return (
     <div className="grid grid-cols-2 gap-x-lg gap-y-md">
@@ -526,8 +708,9 @@ function CallDetailsTab({
       <MetaField label="Duration" value={formatDurationLabel(durationSecs)} />
       <MetaField label="Call SID" value={sidNumber} />
       <MetaField label="Start time" value={startTime} />
-      <MetaField label="Call end reason" value={callEndReason} />
+      <CallEndReasonField reason={callEndReason} resultBadge={callEndResultBadge} />
       <MetaField label="Routed via" value={routedVia} />
+      {userRating ? <MetaField label="User rating" value={userRating} /> : null}
     </div>
   )
 }
@@ -907,6 +1090,9 @@ export function LogDetailsPanel({
   callEndReason = 'User ended the conversation',
   routedVia = agentName,
   showCallDetails = true,
+  callEndResultBadge,
+  userRating,
+  showTranscriptTranslation = false,
 }: LogDetailsPanelProps) {
   const isReminder = agentName.startsWith('Reminder agent')
   const steps = stepsProp ?? (isReminder ? REMINDER_CALL_LOG_STEPS : CALL_LOG_STEPS)
@@ -1035,6 +1221,8 @@ export function LogDetailsPanel({
                         startTime={startTimeLabel(row.timestamp)}
                         callEndReason={callEndReason}
                         routedVia={routedVia}
+                        callEndResultBadge={callEndResultBadge}
+                        userRating={userRating ?? (callEndResultBadge ? '4 of 5' : undefined)}
                       />
                     </CollapsibleCallDetails>
                   )}
@@ -1092,6 +1280,8 @@ export function LogDetailsPanel({
                         startTime={startTimeLabel(row.timestamp)}
                         callEndReason={callEndReason}
                         routedVia={routedVia}
+                        callEndResultBadge={callEndResultBadge}
+                        userRating={userRating ?? (callEndResultBadge ? '4 of 5' : undefined)}
                       />
                     </CollapsibleCallDetails>
                   </div>
@@ -1115,7 +1305,12 @@ export function LogDetailsPanel({
                   </div>
                 )}
                 <div className={`flex flex-col gap-3xl ${hasVoiceCall ? 'mt-lg' : showCallDetails ? '' : 'pt-lg'}`}>
-                  {hasVoiceCall && <CallAiSummary />}
+                  {hasVoiceCall && (
+                    <div>
+                      <CallAiSummary />
+                      {showTranscriptTranslation && <TranscriptTranslationControl />}
+                    </div>
+                  )}
                   {transcriptNodes}
                 </div>
               </div>
