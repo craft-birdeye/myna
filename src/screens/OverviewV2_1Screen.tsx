@@ -1,6 +1,6 @@
 import { useEffect, useState, type DragEvent, type ReactNode } from 'react'
 import { ListFilter } from 'lucide-react'
-import { Icon, Tooltip, TopNav } from '../components'
+import { Icon, InfoTooltip, Tooltip, TopNav } from '../components'
 import {
   FigmaIconFrontDesk,
   FigmaIconInbox,
@@ -9,6 +9,7 @@ import {
   FigmaIconTicketing,
   FigmaIconContentHub,
   FigmaIconRecommendations,
+  FigmaIconInsights,
 } from '../components/l1Icons'
 import jayIcon from '../assets/icon-jay.svg'
 import mynaIcon from '../assets/icon-myna.svg'
@@ -211,11 +212,14 @@ const DEFAULT_EMPTY_LAYOUT_ORDER = [
   'appointments',
   ...EMPTY_STATE_SECTION_ORDER_AFTER_APPOINTMENTS,
 ]
-const DEFAULT_FILLED_LAYOUT_ORDER = ORDERED_SECTIONS.map((section) => section.id).flatMap((id) =>
-  id === 'surveys' ? ['front-desk', id] : [id],
-)
+const FRONTDESK_SPLIT_INDEX = ORDERED_SECTIONS.findIndex((section) => section.id === 'surveys')
+const DEFAULT_FILLED_LAYOUT_ORDER = [
+  ...ORDERED_SECTIONS.slice(0, FRONTDESK_SPLIT_INDEX).map((section) => section.id),
+  'front-desk',
+  ...ORDERED_SECTIONS.slice(FRONTDESK_SPLIT_INDEX).map((section) => section.id),
+]
 const EMPTY_LAYOUT_STORAGE_KEY = 'myna-overview-empty-layout-order'
-const FILLED_LAYOUT_STORAGE_KEY = 'myna-overview-filled-layout-order'
+const FILLED_LAYOUT_STORAGE_KEY = 'myna-overview-filled-layout-order-v2'
 const AGENT_LAYOUT_STORAGE_KEY = 'myna-overview-agent-layout-order'
 
 function getSavedEmptyLayoutOrder(): string[] {
@@ -459,6 +463,74 @@ function DateRangeDropdown({ value, onChange }: { value: string; onChange: (valu
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col gap-xl rounded-md border border-border bg-surface p-xl">{children}</div>
+}
+
+interface BirdeyeScoreKpiData {
+  id: string
+  label: string
+  value: string
+  delta?: string | null
+  valueClassName?: string
+  tooltip?: string
+}
+
+const BIRDEYE_OVERVIEW_SCORE: BirdeyeScoreKpiData = {
+  id: 'birdeye-score',
+  label: 'Birdeye Score',
+  value: '91.8',
+  delta: '-0.9',
+  valueClassName: 'text-text-primary',
+  tooltip: 'A composite score of your online reputation and visibility relative to competitors.',
+}
+
+const BIRDEYE_SUB_SCORES: BirdeyeScoreKpiData[] = [
+  { id: 'sentiment-score', label: 'Sentiment Score', value: '75.4', delta: '-0.6', valueClassName: 'text-text-action' },
+  { id: 'reputation-score', label: 'Reputation Score', value: '74.3', delta: '-1.2', valueClassName: 'text-text-action' },
+  { id: 'listing-score', label: 'Listing Score', value: '51.5', delta: '-', valueClassName: 'text-text-action' },
+]
+
+function BirdeyeScoreDelta({ delta }: { delta: string }) {
+  if (delta === '-') {
+    return <span className="mb-[2px] whitespace-nowrap text-small text-text-tertiary">-</span>
+  }
+  const isNegative = delta.startsWith('-')
+  return (
+    <span className={`mb-[2px] whitespace-nowrap text-small ${isNegative ? 'text-chip-danger-text' : 'text-chip-success-text'}`}>
+      {delta}
+    </span>
+  )
+}
+
+function BirdeyeScoreKpi({ kpi }: { kpi: BirdeyeScoreKpiData }) {
+  return (
+    <div className={KPI_TILE_CLASS}>
+      <div className="flex items-end gap-xs">
+        <p className={`m-0 whitespace-nowrap text-display ${kpi.valueClassName ?? 'text-text-primary'}`}>{kpi.value}</p>
+        {kpi.delta != null && <BirdeyeScoreDelta delta={kpi.delta} />}
+      </div>
+      <p className="m-0 mt-xs flex items-center gap-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">
+        {kpi.label}
+        {kpi.tooltip && <InfoTooltip text={kpi.tooltip} variant="detail" />}
+      </p>
+    </div>
+  )
+}
+
+function BirdeyeScoreOverview() {
+  return (
+    <SectionCard>
+      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <FigmaIconInsights size={20} className="text-text-icon" />
+        Insights
+      </h3>
+      <div className="flex flex-wrap items-end gap-xl">
+        <BirdeyeScoreKpi kpi={BIRDEYE_OVERVIEW_SCORE} />
+        {BIRDEYE_SUB_SCORES.map((kpi) => (
+          <BirdeyeScoreKpi key={kpi.id} kpi={kpi} />
+        ))}
+      </div>
+    </SectionCard>
+  )
 }
 
 // "Today"/"Last week" are short enough that hours read naturally; anything longer accumulates
@@ -902,19 +974,10 @@ const EMPTY_STATE_INBOX_STATS = [
 function EmptyStateAppointmentsCard() {
   return (
     <SectionCard>
-      <div className="flex items-center justify-between">
-        <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-          <FigmaIconFrontDesk size={20} className="text-text-icon" />
-          Appointments
-        </h3>
-        <button
-          type="button"
-          aria-label="Filter"
-          className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-        >
-          <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-        </button>
-      </div>
+      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <FigmaIconFrontDesk size={20} className="text-text-icon" />
+        Appointments
+      </h3>
       <div className={KPI_ROW_CLASS}>
         {EMPTY_STATE_APPOINTMENTS_STATS.map((s) => (
           <div key={s.id} className={KPI_TILE_CLASS}>
@@ -924,7 +987,7 @@ function EmptyStateAppointmentsCard() {
         ))}
         <div className={KPI_TILE_CLASS}>
           <p className="m-0 whitespace-nowrap text-display text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.value}</p>
-          <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-primary">{EMPTY_STATE_NO_SHOW_RATE.label}</p>
+          <p className="m-0 mt-xs whitespace-nowrap text-small uppercase tracking-wide text-text-tertiary">{EMPTY_STATE_NO_SHOW_RATE.label}</p>
         </div>
       </div>
     </SectionCard>
@@ -964,19 +1027,10 @@ const EMPTY_STATE_REFERRALS_STATS = [
 function EmptyStateReferralsCard() {
   return (
     <SectionCard>
-      <div className="flex items-center justify-between">
-        <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-          <FigmaIconReferrals size={20} className="text-text-icon" />
-          Referrals
-        </h3>
-        <button
-          type="button"
-          aria-label="Filter"
-          className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-        >
-          <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-        </button>
-      </div>
+      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+        <FigmaIconReferrals size={20} className="text-text-icon" />
+        Referrals
+      </h3>
       <div className={KPI_ROW_CLASS}>
         {EMPTY_STATE_REFERRALS_STATS.map((s) => (
           <div key={s.id} className={KPI_TILE_CLASS}>
@@ -987,6 +1041,33 @@ function EmptyStateReferralsCard() {
       </div>
     </SectionCard>
   )
+}
+
+function sectionHasVisibleContent(section: V2Section, showAgents: boolean, dataState: DataState): boolean {
+  const showAgentRows = showAgents && section.agents.length > 0
+  const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
+  const hasStatsOverride = Boolean(SECTION_STATS_OVERRIDES[section.id]?.length)
+  const hasBodyContent =
+    Boolean(section.stats) ||
+    hasStatsOverride ||
+    Boolean(section.actionNeeded) ||
+    section.id === 'reviews' ||
+    showAgentRows
+  return hasBodyContent || showSetupBanner
+}
+
+function isFilledLayoutWidgetVisible(id: string, showAgents: boolean, dataState: DataState): boolean {
+  if (id === 'front-desk') return true
+  const section = ORDERED_SECTIONS.find((item) => item.id === id)
+  if (!section) return false
+  return sectionHasVisibleContent(section, showAgents, dataState)
+}
+
+function isEmptyLayoutWidgetVisible(id: string, showAgents: boolean, dataState: DataState): boolean {
+  if (id === 'inbox' || id === 'referrals' || id === 'appointments') return true
+  const section = ORDERED_SECTIONS.find((item) => item.id === id)
+  if (!section) return false
+  return sectionHasVisibleContent(section, showAgents, dataState)
 }
 
 // One card per OVERVIEW_V2_SECTIONS entry — extracted out of the page's render so Empty state can
@@ -1005,9 +1086,7 @@ function ProductSectionCard({
   const isCx = CX_SECTION_IDS.has(section.id)
   const showAgentRows = showAgents && section.agents.length > 0
   const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
-  const hasBodyContent = Boolean(section.stats) || Boolean(section.actionNeeded) || section.id === 'reviews' || showAgentRows
-  const hasAnyContent = hasBodyContent || showSetupBanner
-  if (!hasAnyContent) return null
+  if (!sectionHasVisibleContent(section, showAgents, dataState)) return null
   return (
     <SectionCard>
       <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
@@ -1158,6 +1237,11 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
   const layoutOrder = dataState === 'empty'
     ? (editingLayout ? draftEmptyLayoutOrder : savedEmptyLayoutOrder)
     : (editingLayout ? draftFilledLayoutOrder : savedFilledLayoutOrder)
+  const visibleLayoutOrder = layoutOrder.filter((id) =>
+    dataState === 'empty'
+      ? isEmptyLayoutWidgetVisible(id, showAgents, dataState)
+      : isFilledLayoutWidgetVisible(id, showAgents, dataState),
+  )
 
   const handleEditLayout = () => {
     if (dataState === 'empty') setDraftEmptyLayoutOrder(savedEmptyLayoutOrder)
@@ -1253,7 +1337,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
           )}
 
           {dataState === 'empty' ? (
-            layoutOrder.map((id) => (
+            visibleLayoutOrder.map((id) => (
               <LayoutWidget
                 key={id}
                 id={id}
@@ -1266,7 +1350,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
               </LayoutWidget>
             ))
           ) : (
-            layoutOrder.map((id) => (
+            visibleLayoutOrder.map((id) => (
               <LayoutWidget
                 key={id}
                 id={id}
@@ -1279,6 +1363,8 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
               </LayoutWidget>
             ))
           )}
+
+          {!editingLayout && (dataState === 'empty' || dataState === 'filled') && <BirdeyeScoreOverview />}
         </div>
       </div>
 
