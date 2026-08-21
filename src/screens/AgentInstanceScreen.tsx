@@ -799,7 +799,7 @@ export function AgentInstanceScreen({
           {/* Tabs */}
           <div className="flex shrink-0 items-center justify-between px-2xl">
             {workflowButtonOpensEditor ? (
-              <div className="flex items-end gap-md">
+              <div className="flex items-end gap-sm">
                 <Tabs
                   tabs={tabs}
                   activeTab={activeTab}
