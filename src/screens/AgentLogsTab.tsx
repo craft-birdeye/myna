@@ -76,20 +76,16 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
 
 /** Front desk exploration — short AI-summary blurbs for Intent hover tooltips. */
 const EXPLORATION_INTENT_SUMMARIES: Record<string, string> = {
-  'Tooth pain screening':
-    'Caller reported toothache and asked about same-day care. Agent screened for red flags and offered an urgent evaluation with next steps.',
-  'New patient scheduling':
-    'Caller booked a first visit. Agent collected preferred times and contact details, then held a slot and offered the intake packet.',
-  'Appointment reschedule':
-    'Caller moved an upcoming visit. Agent confirmed a new slot, cancelled the original appointment, and sent an updated confirmation.',
+  'Appointment booked':
+    'Caller scheduled a visit. Agent confirmed availability, collected contact details, and sent a booking confirmation.',
+  'Appointment cancelled':
+    'Caller cancelled an upcoming visit. Agent confirmed the cancellation, released the slot, and noted any follow-up preferences.',
   'Insurance inquiry':
     'Caller asked about checkup coverage. Agent reviewed eligibility, explained likely copay, and noted remaining questions for billing follow-up.',
   Aborted:
     'Caller disconnected before the request was resolved. Partial intent was captured; no appointment or handoff was completed.',
   'Transferred to human':
     'Agent could not fully resolve the request and warm-transferred the caller with context packaged for a live representative.',
-  'Emergency dental concern':
-    'Caller described urgent dental pain. Agent screened for emergency signs and escalated when automated resolution was not appropriate.',
 }
 
 function explorationIntentSummary(intent: string): string {
@@ -102,16 +98,7 @@ function explorationIntentSummary(intent: string): string {
 function ExplorationIntentCell({ intent }: { intent: string }) {
   const summary = explorationIntentSummary(intent)
   return (
-    <Tooltip
-      variant="detail"
-      side="top"
-      content={
-        <div className="flex flex-col gap-xs text-left">
-          <span>AI summary</span>
-          <span>{summary}</span>
-        </div>
-      }
-    >
+    <Tooltip variant="detail" side="top" content={summary}>
       <span className="block truncate">{intent}</span>
     </Tooltip>
   )

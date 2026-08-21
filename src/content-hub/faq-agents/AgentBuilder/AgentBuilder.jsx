@@ -898,13 +898,13 @@ export default function AgentBuilder({
         branches: [
           { id: path1Id, name: 'Branch 1' },
           { id: path2Id, name: 'Branch 2' },
-          { id: fallbackId, name: 'No conditions met', isFallback: true },
+          { id: fallbackId, name: 'Fallback', isFallback: true },
         ],
       });
       extraDetails = {
         [path1Id]: { branchName: 'Branch 1', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
         [path2Id]: { branchName: 'Branch 2', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
-        [fallbackId]: { branchName: 'No conditions met', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
+        [fallbackId]: { branchName: 'Fallback', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
       };
     }
 

@@ -51,7 +51,7 @@ import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
-import { OverviewScreen } from './screens/OverviewScreen'
+import { OverviewV2_1Screen } from './screens/OverviewV2_1Screen'
 import logoSrc from './assets/birdeye-logo.svg'
 import jayIcon from './assets/icon-jay.svg'
 import mynaIcon from './assets/icon-myna.svg'
@@ -337,7 +337,19 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
   },
 ]
 
+const REVIEWS_AGENT_NAV_IDS = new Set([
+  'response-agents',
+  'response-agents-sep-1',
+  'generation-agents',
+  'review-response-agents',
+])
+
 const REVIEWS_DEFAULT_NAV = 'view-all-reviews'
+
+function getRailForAgentNavId(navId: string): string {
+  if (REVIEWS_AGENT_NAV_IDS.has(navId)) return 'reviews'
+  return 'frontdesk'
+}
 
 const REVIEWS_NAV_LABELS: Record<string, string> = Object.fromEntries(
   REVIEWS_NAV_SECTIONS.flatMap((section) => {
@@ -499,6 +511,20 @@ export function App() {
     setRailActive('settings')
     setSettingsTab('Integrations')
     setSettingsSubScreen(`integration-${integrationId}`)
+  }
+
+  function openAgentFromOverview(target: { railId: string; navId?: string }) {
+    setRailActive(target.railId)
+    if (target.navId) {
+      setNavActive(target.navId)
+      return
+    }
+    if (target.railId === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
+    if (target.railId === 'frontdesk') setNavActive(DEFAULT_NAV_BY_PRODUCT[activeProduct] ?? 'manage-appointments')
+  }
+
+  function openAgentByNavId(navId: string) {
+    openAgentFromOverview({ railId: getRailForAgentNavId(navId), navId })
   }
 
   function handleProductChange(id: string) {
@@ -845,22 +871,12 @@ export function App() {
                     }}
                   />
                 ) : railActive === 'overview' ? (
-                  <OverviewScreen
-                    key={activeProduct}
-                    product={activeProduct}
-                    onOpenAgent={(navId) => {
-                      setRailActive('frontdesk')
-                      setNavActive(navId)
-                    }}
-                  />
+                  <OverviewV2_1Screen onOpenAgent={openAgentFromOverview} />
                 ) : railActive === 'agents' ? (
                   <AgentDirectoryScreen
                     key={activeProduct}
                     product={activeProduct}
-                    onOpenAgent={(navId) => {
-                      setRailActive('frontdesk')
-                      setNavActive(navId)
-                    }}
+                    onOpenAgent={openAgentByNavId}
                     onCreateAgent={() => {
                       setRailActive('frontdesk')
                       setNavActive('frontdesk-agent')

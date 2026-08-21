@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 're
 import { createPortal } from 'react-dom';
 import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
-import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import {
   BASE_CATEGORIES,
   WORKFLOW_CATEGORIES,
@@ -18,8 +17,8 @@ const POPOVER_WIDTH = 640;
 const POPOVER_MAX_HEIGHT = 560;
 const DRAWER_GAP = 0;
 
-const FIELDS_INFO =
-  'Data available from previous workflow steps or the customer record.';
+const FIELDS_SUBTITLE =
+  'Data available to reference from the previous steps and customer record.';
 
 /** Placeholder help article — swap for the real Fields docs URL when available. */
 const FIELDS_LEARN_MORE_HREF =
@@ -34,10 +33,14 @@ function FieldChip({ name }) {
   );
 }
 
-/** Two-line sidebar label; full text in a tooltip only when clamped. */
+/** Two-line sidebar label; full text in a tooltip only when clamped.
+ *  Numbered workflow steps (`2.Task: …`) hang-indent so wrapped lines align under the type label. */
 function CatLabel({ text }) {
   const ref = useRef(null);
   const [truncated, setTruncated] = useState(false);
+  const numbered = String(text ?? '').match(/^(\d+\.)(.*)$/);
+  const prefix = numbered?.[1] ?? null;
+  const body = numbered?.[2] ?? text;
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -63,9 +66,18 @@ function CatLabel({ text }) {
       disabled={!truncated}
       className={styles.catLabelWrap}
     >
-      <span ref={ref} className={styles.catLabel}>
-        {text}
-      </span>
+      {prefix ? (
+        <span className={styles.catLabelNumbered}>
+          <span className={styles.catLabelPrefix}>{prefix}</span>
+          <span ref={ref} className={styles.catLabelBody}>
+            {body}
+          </span>
+        </span>
+      ) : (
+        <span ref={ref} className={styles.catLabel}>
+          {text}
+        </span>
+      )}
     </Tooltip>
   );
 }
@@ -185,14 +197,24 @@ function computeDockPosition(anchorEl) {
 
 function computeDropdownPosition(anchorEl) {
   const margin = 8;
+  const gap = 4;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const anchorRect = anchorEl?.getBoundingClientRect?.() ?? null;
-  const width = Math.min(POPOVER_WIDTH, vw - margin * 2, 600);
+  const anchorWidth = anchorRect?.width ?? 0;
+  // Full-width field triggers (e.g. Add input field → Field value): match width
+  // so the picker reads as a dropdown under the control. Icon-only triggers keep
+  // the wider default popover.
+  const width = anchorWidth >= 280
+    ? Math.min(Math.max(anchorWidth, 280), vw - margin * 2)
+    : Math.min(POPOVER_WIDTH, vw - margin * 2, 600);
   const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
 
   let left = anchorRect?.left ?? margin;
-  left = Math.min(left, vw - width - margin);
+  // Prefer left-align with the field; if it overflows the viewport, shift left.
+  if (left + width > vw - margin) {
+    left = Math.max(margin, vw - width - margin);
+  }
   left = Math.max(margin, left);
 
   const spaceBelow = vh - (anchorRect?.bottom ?? 0) - margin;
@@ -202,11 +224,11 @@ function computeDropdownPosition(anchorEl) {
   let top;
   let height = maxHeight;
   if (openBelow) {
-    top = (anchorRect?.bottom ?? margin) + margin;
-    height = Math.min(maxHeight, Math.max(240, spaceBelow));
+    top = (anchorRect?.bottom ?? margin) + gap;
+    height = Math.min(maxHeight, Math.max(240, spaceBelow - gap));
   } else {
-    height = Math.min(maxHeight, Math.max(240, spaceAbove));
-    top = Math.max(margin, (anchorRect?.top ?? height) - height - margin);
+    height = Math.min(maxHeight, Math.max(240, spaceAbove - gap));
+    top = Math.max(margin, (anchorRect?.top ?? height) - height - gap);
   }
 
   return { top, left, width, maxHeight: height };
@@ -333,18 +355,19 @@ export default function FieldPickerModal({
       aria-label="Fields"
     >
       <div className={styles.header}>
-        <div className={styles.titleRow}>
+        <div className={styles.titleBlock}>
           <span className={styles.title}>Fields</span>
-          <span
-            className={styles.titleInfo}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <InfoTooltip
-              text={FIELDS_INFO}
-              variant="detail"
-              learnMoreHref={FIELDS_LEARN_MORE_HREF}
-            />
+          <span className={styles.subtitle}>
+            {FIELDS_SUBTITLE}{' '}
+            <a
+              href={FIELDS_LEARN_MORE_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.learnMore}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Learn more
+            </a>
           </span>
         </div>
         <button type="button" onClick={onClose} className={styles.closeBtn} aria-label="Close">

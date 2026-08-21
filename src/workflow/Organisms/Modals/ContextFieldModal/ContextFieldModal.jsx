@@ -1,8 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Modal from '@birdeye/elemental/core/atoms/Modal/index.js';
-import { Button } from '../../../elemental-stubs';
-import { FormInput } from '../../../elemental-stubs';
-import { Toggle } from '../../../elemental-stubs';
+import { Modal, Button, FormInput, Toggle } from '../../../elemental-stubs';
 // SearchFilter not used
 import './ContextFieldModal.css';
 

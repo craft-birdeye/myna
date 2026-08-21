@@ -654,7 +654,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     basedOn: 'conditions',
     branches: [
       { id: 'wl-5-path-1', name: 'Slot open' },
-      { id: 'wl-5-path-2', name: 'No conditions met', isFallback: true },
+      { id: 'wl-5-path-2', name: 'Fallback', isFallback: true },
     ],
   },
   'wl-5-path-1': {
@@ -678,7 +678,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'wl-5-path-2': {
-    branchName: 'No conditions met',
+    branchName: 'Fallback',
     description: 'No slot available — end loop iteration.',
     conditions: [],
     parentId: 'wl-5',
@@ -701,7 +701,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     basedOn: 'conditions',
     branches: [
       { id: 'wl-9-path-1', name: 'Slot open' },
-      { id: 'wl-9-path-2', name: 'No conditions met', isFallback: true },
+      { id: 'wl-9-path-2', name: 'Fallback', isFallback: true },
     ],
   },
   'wl-9-path-1': {
@@ -722,7 +722,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'wl-9-path-2': {
-    branchName: 'No conditions met',
+    branchName: 'Fallback',
     description: 'Slot no longer available — end loop iteration.',
     conditions: [],
     parentId: 'wl-9',
@@ -1101,7 +1101,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
 // ─── Review response agent ───────────────────────────────────────────────────
 // Workflow: new/updated review → triage → branch
 //   → "Respond": extract details → generate response → post reply
-//   → "No conditions met" (spam): send email alert
+//   → "Fallback" (spam): send email alert
 
 const REVIEW_RESPONSE_NODES = [
   {
@@ -1242,7 +1242,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     basedOn: 'conditions',
     branches: [
       { id: 'rr-3-path-respond', name: 'Respond' },
-      { id: 'rr-3-path-fallback', name: 'No conditions met', isFallback: true },
+      { id: 'rr-3-path-fallback', name: 'Fallback branch', isFallback: true },
     ],
   },
   'rr-3-path-respond': {
@@ -1416,7 +1416,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     selectedTools: ['review-responder'],
   },
   'rr-3-path-fallback': {
-    branchName: 'No conditions met',
+    branchName: 'Fallback branch',
     description: 'Review was marked as spam — alert the team instead of posting a reply.',
     conditions: [],
     parentId: 'rr-3',

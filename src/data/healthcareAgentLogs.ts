@@ -94,7 +94,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: 'Dana Whitfield',
     channel: 'Voice call',
     duration: '0:53',
-    topic: 'Tooth pain screening',
+    topic: 'Appointment booked',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -103,7 +103,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: 'Robert Cho',
     channel: 'Voice call',
     duration: '1:36',
-    topic: 'New patient scheduling',
+    topic: 'Appointment cancelled',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -112,7 +112,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: '+1 (628) 555-0110',
     channel: 'Web chat',
     duration: '1:11',
-    topic: 'Appointment reschedule',
+    topic: 'Appointment booked',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -121,7 +121,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: '+1 (310) 555-0190',
     channel: 'Web chat',
     duration: '1:04',
-    topic: 'Emergency dental concern',
+    topic: 'Appointment cancelled',
     implementedSteps: ['trigger'],
   },
   {

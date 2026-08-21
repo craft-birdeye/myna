@@ -119,6 +119,7 @@ function FieldsetOrDiv({ as: Tag = 'div', children, ...rest }) {
 }
 
 const PANEL_WIDTH = {
+  llmTask: 450,
   procedureDetail: 500,
   createCustomProcedure: 500,
 };

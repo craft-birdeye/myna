@@ -31,6 +31,96 @@
   cursor: pointer;
 }
 
+/* Exploration: "+ Add" + generate icon on the label row. */
+.labelActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fieldAddBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+}
+
+.fieldAddBtn:hover {
+  color: #1565c0;
+}
+
+.addLink {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  color: #1976d2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  font-family: 'Roboto', arial, sans-serif;
+  align-self: flex-start;
+}
+
+.addLink:hover {
+  color: #1565c0;
+}
+
+.generateIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.generateIconBtn:hover {
+  opacity: 0.8;
+}
+
+/* Exploration: Locations-style chips (no bordered box). */
+.explorationChipsField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.chipWrapExploration {
+  gap: 6px;
+  align-items: center;
+}
+
+.moreLink {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+  color: #1976d2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: 'Roboto', arial, sans-serif;
+  align-self: flex-start;
+  text-align: left;
+}
+
+.moreLink:hover {
+  text-decoration: none;
+}
+
 /* ─── Chip container: chips wrap row + Add below ─── */
 
 .chipContainer {

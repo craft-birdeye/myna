@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SingleSelect } from '../../../elemental-stubs';
+import { SingleSelect, MultiSelect } from '../../../elemental-stubs';
 import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons';
 import './HandleResponseDrawer.css';
@@ -32,9 +32,34 @@ const POST_AFTER_OPTIONS = [
   '72 hours',
 ].map((label) => ({ value: label, label }));
 
-/** Mandatory fields — the Tool card in Task details shows an error until both are set. */
+const RESPONSE_TEMPLATE_OPTIONS = [
+  { value: 'thank-you', label: 'Thank you for your feedback' },
+  { value: 'apology', label: 'We apologize for the experience' },
+  { value: 'follow-up', label: 'We would love to follow up' },
+  { value: 'invite-back', label: 'We hope to see you again' },
+  { value: 'address-concern', label: 'Addressing your concern' },
+];
+
+function normalizeTemplateIds(config = {}) {
+  if (Array.isArray(config.templateIds) && config.templateIds.length) return config.templateIds;
+  if (config.templateId) return [config.templateId];
+  return [];
+}
+
+function templateSummaryLabel(ids = []) {
+  if (!ids.length) return '';
+  if (ids.length === 1) {
+    return RESPONSE_TEMPLATE_OPTIONS.find((o) => o.value === ids[0])?.label || ids[0];
+  }
+  return `${ids.length} templates selected`;
+}
+
+/** Mandatory fields — the Tool card in Task details shows an error until these are set. */
 export function isHandleResponseConfigComplete(config = {}) {
-  return !!String(config.responseText ?? '').trim() && !!config.postAfter;
+  const type = config.responseType || 'custom';
+  if (!config.postAfter) return false;
+  if (type === 'template') return normalizeTemplateIds(config).length > 0;
+  return !!String(config.customText ?? config.responseText ?? '').trim();
 }
 
 function NativeDrawer({ isOpen, onClose, children }) {
@@ -60,30 +85,60 @@ function NativeDrawer({ isOpen, onClose, children }) {
   );
 }
 
+function insertAtCursor(textarea, text, fallbackPrev = '') {
+  if (!textarea) return `${fallbackPrev}${text}`;
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? start;
+  const before = textarea.value.slice(0, start);
+  const after = textarea.value.slice(end);
+  const next = `${before}${text}${after}`;
+  const caret = start + text.length;
+  requestAnimationFrame(() => {
+    textarea.focus();
+    textarea.setSelectionRange(caret, caret);
+  });
+  return next;
+}
+
 /**
  * Config drawer for the `handle-response` Birdeye tool, opened from the Task details
  * Tool card's pencil. Saving a complete config clears that card's
  * "Missing mandatory fields" error.
  */
 export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSave }) {
-  const [responseText, setResponseText] = useState('');
-  const [responseLabel, setResponseLabel] = useState('');
+  const [responseType, setResponseType] = useState('custom');
+  const [customText, setCustomText] = useState('');
+  const [templateIds, setTemplateIds] = useState([]);
   const [responseHandling, setResponseHandling] = useState('post-directly');
   const [postAfter, setPostAfter] = useState('');
   const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
+  const textareaRef = useRef(null);
   const fieldTriggerRef = useRef(null);
 
   // Re-seed from the saved config each time the drawer opens.
   useEffect(() => {
     if (!isOpen) return;
-    setResponseText(value.responseText ?? '');
-    setResponseLabel(value.responseLabel ?? value.responseText ?? '');
+    setResponseType(value.responseType || 'custom');
+    setCustomText(value.customText ?? value.responseText ?? '');
+    setTemplateIds(normalizeTemplateIds(value));
     setResponseHandling(value.responseHandling ?? 'post-directly');
     setPostAfter(value.postAfter ?? '');
     setFieldPickerOpen(false);
   }, [isOpen]);
 
-  const draft = { responseText, responseLabel, responseHandling, postAfter };
+  const templateLabel = templateSummaryLabel(templateIds);
+  const draft = {
+    responseType,
+    customText,
+    templateIds,
+    // Keep singular templateId for older readers.
+    templateId: templateIds[0] || '',
+    // Keep responseText in sync for older readers / completeness checks.
+    responseText: responseType === 'template' ? templateLabel : customText,
+    responseLabel: responseType === 'template' ? templateLabel : customText,
+    responseHandling,
+    postAfter,
+  };
   const canSave = isHandleResponseConfigComplete(draft);
 
   return (
@@ -107,49 +162,93 @@ export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSa
         </div>
 
         <div className="hrd__body">
+          {/* How do you want to respond? */}
           <div className="hrd__field">
             <span className="hrd__label">
-              Response text<span className="hrd__required"> *</span>
+              How do you want to respond?<span className="hrd__required"> *</span>
             </span>
-            <button
-              ref={fieldTriggerRef}
-              type="button"
-              className={`hrd__select${fieldPickerOpen ? ' hrd__select--open' : ''}`}
-              onClick={() => setFieldPickerOpen((open) => !open)}
-              aria-haspopup="dialog"
-              aria-expanded={fieldPickerOpen}
-              aria-label="Fields"
-            >
-              <span className="hrd__select-value">
-                {responseText ? (
-                  <span className="hrd__field-chip">
-                    <span className="hrd__field-chip-swatch">{'{}'}</span>
-                    <span className="hrd__field-chip-label">{responseLabel || responseText}</span>
-                  </span>
-                ) : (
-                  <span className="hrd__select-placeholder">Select response text</span>
-                )}
-              </span>
-              <span className={`hrd__select-fields-icon${fieldPickerOpen ? ' hrd__select-fields-icon--active' : ''}`}>
-                <VariableIcon />
-              </span>
-            </button>
-            {fieldPickerOpen && (
-              <FieldPickerModal
-                onClose={() => setFieldPickerOpen(false)}
-                onSelectField={(fieldValue, name) => {
-                  setResponseText(fieldValue);
-                  setResponseLabel(name || fieldValue);
-                  setFieldPickerOpen(false);
-                }}
-                anchorEl={fieldTriggerRef.current}
-                showTriggerFields
-                placement="dropdown"
-                overlayZIndex={10050}
-              />
-            )}
+            <div className="hrd__radios">
+              <label className="hrd__radio hrd__radio--compact">
+                <input
+                  type="radio"
+                  name="handle-response-type"
+                  className="hrd__radio-input"
+                  checked={responseType === 'custom'}
+                  onChange={() => setResponseType('custom')}
+                />
+                <span className="hrd__radio-label">Respond manually</span>
+              </label>
+
+              {responseType === 'custom' && (
+                <div className="hrd__indent-wrap">
+                  <div
+                    className={`hrd__textarea-box${fieldPickerOpen ? ' hrd__textarea-box--open' : ''}`}
+                  >
+                    <textarea
+                      ref={textareaRef}
+                      className="hrd__textarea"
+                      value={customText}
+                      onChange={(e) => setCustomText(e.target.value)}
+                      placeholder="Enter your response here..."
+                      rows={6}
+                      aria-label="Manual response text"
+                    />
+                    <button
+                      ref={fieldTriggerRef}
+                      type="button"
+                      className="hrd__insert-field"
+                      onClick={() => setFieldPickerOpen((open) => !open)}
+                      aria-label="Insert field"
+                      title="Insert field"
+                      aria-haspopup="dialog"
+                      aria-expanded={fieldPickerOpen}
+                    >
+                      <VariableIcon />
+                    </button>
+                  </div>
+                  {fieldPickerOpen && (
+                    <FieldPickerModal
+                      onClose={() => setFieldPickerOpen(false)}
+                      onSelectField={(fieldValue, name) => {
+                        const token = `{{${name || fieldValue}}}`;
+                        setCustomText((prev) => insertAtCursor(textareaRef.current, token, prev));
+                        setFieldPickerOpen(false);
+                      }}
+                      anchorEl={fieldTriggerRef.current?.closest('.hrd__textarea-box') || fieldTriggerRef.current}
+                      showTriggerFields
+                      placement="dropdown"
+                      overlayZIndex={10050}
+                    />
+                  )}
+                </div>
+              )}
+
+              <label className="hrd__radio hrd__radio--compact">
+                <input
+                  type="radio"
+                  name="handle-response-type"
+                  className="hrd__radio-input"
+                  checked={responseType === 'template'}
+                  onChange={() => setResponseType('template')}
+                />
+                <span className="hrd__radio-label">Respond using templates</span>
+              </label>
+
+              {responseType === 'template' && (
+                <div className="hrd__indent-wrap">
+                  <MultiSelect
+                    name="responseTemplates"
+                    selected={templateIds}
+                    options={RESPONSE_TEMPLATE_OPTIONS}
+                    placeholder="Select templates"
+                    onChange={setTemplateIds}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Response handling */}
           <div className="hrd__field">
             <span className="hrd__label">Response handling</span>
             <div className="hrd__radios">
@@ -171,6 +270,7 @@ export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSa
             </div>
           </div>
 
+          {/* Post response after */}
           <div className="hrd__field">
             <span className="hrd__label">
               Post response after<span className="hrd__required"> *</span>

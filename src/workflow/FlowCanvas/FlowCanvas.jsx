@@ -265,13 +265,24 @@ function SubAgentNodeWrapper(props) {
 }
 
 const BRANCH_CHIP_LABEL_MAX = 24;
+const FALLBACK_CHIP_LABEL = 'Fallback branch';
+const FALLBACK_CHIP_TOOLTIP =
+  'If none of the criteria are met, follow this branch.';
+const LEGACY_FALLBACK_CHIP_LABELS = new Set([
+  'No conditions met',
+  'None met',
+  'Fallback',
+  'Fallback branch',
+  'Fall back branch',
+]);
 
 function BranchPathNodeWrapper({ id, data }) {
   const isSelected = id === data.selectedNodeId || id === data.focusBranchPathId;
   const canDelete = !data.viewOnly && !data.isFallback && !data.isVoiceCallBranch && !!data.onDelete;
-  const fullLabel = String(data.label ?? '').trim();
-  // Fallback path has no description tooltip on the canvas.
-  const description = data.isFallback ? '' : String(data.description || '').trim();
+  const rawLabel = String(data.label ?? '').trim();
+  const isFallbackChip = !!data.isFallback || LEGACY_FALLBACK_CHIP_LABELS.has(rawLabel);
+  const fullLabel = isFallbackChip ? FALLBACK_CHIP_LABEL : rawLabel;
+  const description = isFallbackChip ? '' : String(data.description || '').trim();
   const isTruncated = fullLabel.length > BRANCH_CHIP_LABEL_MAX;
   const displayLabel = isTruncated
     ? `${fullLabel.slice(0, BRANCH_CHIP_LABEL_MAX)}…`
@@ -281,7 +292,7 @@ function BranchPathNodeWrapper({ id, data }) {
 
   const chipClass = [
     branchStyles.chip,
-    data.isFallback ? branchStyles.chipFallback : '',
+    isFallbackChip ? branchStyles.chipFallback : '',
     isSelected ? branchStyles.chipSelected : '',
     data.isVoiceCallBranch ? branchStyles.chipNoPointer : '',
   ].filter(Boolean).join(' ');
@@ -303,8 +314,10 @@ function BranchPathNodeWrapper({ id, data }) {
         <Handle type="target" position={Position.Top} />
         <div className={branchStyles.chipRow}>
           <div className={chipClass}>
-            {data.isFallback ? (
-              labelEl
+            {isFallbackChip ? (
+              <Tooltip content={FALLBACK_CHIP_TOOLTIP} variant="detail" side="top">
+                {labelEl}
+              </Tooltip>
             ) : isTruncated ? (
               <Tooltip content={truncatedTooltip} variant="detail" side="top">
                 {labelEl}
