@@ -646,7 +646,7 @@ function BirdsFlatInlineIcon({ className }: { className?: string }) {
       viewBox="0 0 72 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`h-[24px] w-auto shrink-0 ${className ?? ''}`}
+      className={`h-[20px] w-auto shrink-0 ${className ?? ''}`}
       aria-hidden
     >
       <mask id="birds-flat-inline-mask-0" style={{ maskType: 'luminance' }} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
