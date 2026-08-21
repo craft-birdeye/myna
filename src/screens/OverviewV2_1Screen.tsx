@@ -159,7 +159,7 @@ function ReviewsOverview() {
                   </span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="m-0 truncate text-small text-text-tertiary">{s.name}</p>
+                  <p className="m-0 truncate text-small text-text-primary">{s.name}</p>
                   <div className="flex items-center gap-xs">
                     <span className="flex items-center gap-xs text-body text-text-primary">
                       {s.rating}
@@ -218,8 +218,22 @@ const DEFAULT_FILLED_LAYOUT_ORDER = [
   'front-desk',
   ...ORDERED_SECTIONS.slice(FRONTDESK_SPLIT_INDEX).map((section) => section.id),
 ]
+
+// Purchased co-worker always keeps Front desk directly above Surveys — even if an older saved
+// layout (or a prior default that appended it at the end) had it elsewhere.
+function normalizeFilledLayoutOrder(order: string[]): string[] {
+  const withoutFrontDesk = order.filter((id) => id !== 'front-desk')
+  const surveysIndex = withoutFrontDesk.indexOf('surveys')
+  if (surveysIndex < 0) return [...withoutFrontDesk, 'front-desk']
+  return [
+    ...withoutFrontDesk.slice(0, surveysIndex),
+    'front-desk',
+    ...withoutFrontDesk.slice(surveysIndex),
+  ]
+}
+
 const EMPTY_LAYOUT_STORAGE_KEY = 'myna-overview-empty-layout-order'
-const FILLED_LAYOUT_STORAGE_KEY = 'myna-overview-filled-layout-order-v2'
+const FILLED_LAYOUT_STORAGE_KEY = 'myna-overview-filled-layout-order-v3'
 const AGENT_LAYOUT_STORAGE_KEY = 'myna-overview-agent-layout-order'
 
 function getSavedEmptyLayoutOrder(): string[] {
@@ -246,7 +260,7 @@ function getSavedFilledLayoutOrder(): string[] {
       savedOrder.length === DEFAULT_FILLED_LAYOUT_ORDER.length &&
       savedOrder.every((id) => typeof id === 'string' && DEFAULT_FILLED_LAYOUT_ORDER.includes(id))
     ) {
-      return savedOrder
+      return normalizeFilledLayoutOrder(savedOrder)
     }
   } catch {
     // Ignore unavailable or malformed browser storage and use the default layout.
@@ -1234,9 +1248,10 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
   // be the one state that showed them; the AI workforce summary card is the only agent-related
   // content left on the page.
   const showAgents = false
-  const layoutOrder = dataState === 'empty'
+  const rawLayoutOrder = dataState === 'empty'
     ? (editingLayout ? draftEmptyLayoutOrder : savedEmptyLayoutOrder)
     : (editingLayout ? draftFilledLayoutOrder : savedFilledLayoutOrder)
+  const layoutOrder = dataState === 'empty' ? rawLayoutOrder : normalizeFilledLayoutOrder(rawLayoutOrder)
   const visibleLayoutOrder = layoutOrder.filter((id) =>
     dataState === 'empty'
       ? isEmptyLayoutWidgetVisible(id, showAgents, dataState)
@@ -1245,7 +1260,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
 
   const handleEditLayout = () => {
     if (dataState === 'empty') setDraftEmptyLayoutOrder(savedEmptyLayoutOrder)
-    else setDraftFilledLayoutOrder(savedFilledLayoutOrder)
+    else setDraftFilledLayoutOrder(normalizeFilledLayoutOrder(savedFilledLayoutOrder))
     setEditingLayout(true)
   }
 
@@ -1261,7 +1276,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
       return next
     }
     if (dataState === 'empty') setDraftEmptyLayoutOrder(reorder)
-    else setDraftFilledLayoutOrder(reorder)
+    else setDraftFilledLayoutOrder(normalizeFilledLayoutOrder(reorder))
     setDraggedWidgetId(null)
   }
 
@@ -1270,8 +1285,9 @@ export function OverviewV2_1Screen({ userName = 'Rupa' }: OverviewV2_1ScreenProp
       setSavedEmptyLayoutOrder(draftEmptyLayoutOrder)
       window.localStorage.setItem(EMPTY_LAYOUT_STORAGE_KEY, JSON.stringify(draftEmptyLayoutOrder))
     } else {
-      setSavedFilledLayoutOrder(draftFilledLayoutOrder)
-      window.localStorage.setItem(FILLED_LAYOUT_STORAGE_KEY, JSON.stringify(draftFilledLayoutOrder))
+      const normalized = normalizeFilledLayoutOrder(draftFilledLayoutOrder)
+      setSavedFilledLayoutOrder(normalized)
+      window.localStorage.setItem(FILLED_LAYOUT_STORAGE_KEY, JSON.stringify(normalized))
     }
     setLayoutSaveVersion((version) => version + 1)
     setEditingLayout(false)
