@@ -13,9 +13,6 @@ import {
 import jayIcon from '../assets/icon-jay.svg'
 import mynaIcon from '../assets/icon-myna.svg'
 import robinIcon from '../assets/icon-robin.svg'
-import woodenBirdJay from '../assets/wooden-bird-jay.png'
-import woodenBirdMyna from '../assets/wooden-bird-myna.png'
-import woodenBirdRobin from '../assets/wooden-bird-robin.png'
 import googleIcon from '../assets/icon-google.svg'
 import googlePlayIcon from '../assets/icon-google-play.svg'
 import { getAgentDirectory, type AgentDirectoryEntry } from '../data/agentDirectoryData'
@@ -214,7 +211,9 @@ const DEFAULT_EMPTY_LAYOUT_ORDER = [
   'appointments',
   ...EMPTY_STATE_SECTION_ORDER_AFTER_APPOINTMENTS,
 ]
-const DEFAULT_FILLED_LAYOUT_ORDER = [...ORDERED_SECTIONS.map((section) => section.id), 'front-desk']
+const DEFAULT_FILLED_LAYOUT_ORDER = ORDERED_SECTIONS.map((section) => section.id).flatMap((id) =>
+  id === 'surveys' ? ['front-desk', id] : [id],
+)
 const EMPTY_LAYOUT_STORAGE_KEY = 'myna-overview-empty-layout-order'
 const FILLED_LAYOUT_STORAGE_KEY = 'myna-overview-filled-layout-order'
 const AGENT_LAYOUT_STORAGE_KEY = 'myna-overview-agent-layout-order'
@@ -545,10 +544,12 @@ function AgentPerformanceMetric({ value, label }: { value: string; label: string
 
 // Same card layout as the Agent directory's "All" tab (AgentDirectoryScreen's AgentCard) — kept as
 // an independent copy rather than a cross-import, per this file's fork-don't-import convention.
-function AgentPerformanceCard({ agent }: { agent: AgentDirectoryEntry }) {
+function AgentPerformanceCard({ agent, editing = false }: { agent: AgentDirectoryEntry; editing?: boolean }) {
   const issueCount = agent.alert ? parseInt(agent.alert.message, 10) : AGENT_ISSUE_OVERRIDES[agent.id]
   return (
-    <div className="flex flex-col rounded-md border border-[#E9E9E9] bg-white p-xl">
+    // While editing, LayoutWidget overlays a 32px drag handle top-1 (4px) from this card's top
+    // edge — bump the top padding so the header row clears it with an 8px gap (4 + 32 + 8 = 44px).
+    <div className={`flex flex-col rounded-md border border-[#E9E9E9] bg-white p-xl ${editing ? 'pt-[44px]' : ''}`}>
       <div className="mb-xs flex items-center justify-between gap-sm">
         <h4 className="m-0 min-w-0 truncate text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{agent.name}</h4>
         <div className="flex shrink-0 items-center gap-xs">
@@ -639,6 +640,40 @@ function AgentPerformanceSortDropdown({ value, onChange }: { value: AgentPerform
   )
 }
 
+function BirdsFlatInlineIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 72 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`h-[24px] w-auto shrink-0 ${className ?? ''}`}
+      aria-hidden
+    >
+      <mask id="birds-flat-inline-mask-0" style={{ maskType: 'luminance' }} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+        <path d="M0 0H24V24H0V0Z" fill="white" />
+      </mask>
+      <g mask="url(#birds-flat-inline-mask-0)">
+        <path d="M16.2578 4.479C15.5678 4.479 15.0078 5.038 15.0078 5.729C15.0078 6.419 15.5678 6.979 16.2578 6.979C16.9478 6.978 17.5078 6.419 17.5078 5.729C17.5078 5.038 16.9478 4.479 16.2578 4.479Z" fill="currentColor" />
+        <path fillRule="evenodd" clipRule="evenodd" d="M9.5029 1.01807C8.1019 1.01807 7.4659 2.77007 8.5409 3.66907L10.2029 5.05907C10.4529 5.26707 10.5969 5.57705 10.5969 5.90205V10.0451H2.98589C1.19389 10.0451 0.398898 12.2991 1.7929 13.4241L10.6559 20.5751C11.7829 21.4841 13.1879 21.9811 14.6359 21.9811H15.0049C18.2979 21.9811 20.9689 19.3131 20.9729 16.0201C20.9729 16.0081 20.9719 15.9951 20.9719 15.9831H20.9789V7.10406L23.1949 6.29106C23.7189 6.09906 23.7189 5.35705 23.1949 5.16505L20.6849 4.24306C19.9999 2.36206 18.1959 1.01807 16.0779 1.01807H9.5029ZM15.0049 11.8461C17.3079 11.8461 19.1759 13.7141 19.1729 16.0181C19.1699 18.3171 17.3049 20.1801 15.0049 20.1811H14.6359C13.5989 20.1811 12.5929 19.8261 11.7859 19.1751L2.9229 12.0231C2.8929 11.9991 2.8879 11.9821 2.8859 11.9751C2.8829 11.9621 2.8819 11.9391 2.8919 11.9121C2.9009 11.8851 2.9159 11.8671 2.9269 11.8591C2.9329 11.8551 2.94689 11.8461 2.98589 11.8461H15.0049ZM16.0779 2.81805C17.7899 2.81905 19.1779 4.20606 19.1779 5.91806V11.7481C18.1019 10.6951 16.6299 10.0451 15.0049 10.0451H12.3969V5.90205C12.3969 5.04405 12.0159 4.23006 11.3579 3.67906L10.3289 2.81805H16.0779Z" fill="currentColor" />
+      </g>
+      <mask id="birds-flat-inline-mask-1" style={{ maskType: 'luminance' }} maskUnits="userSpaceOnUse" x="24" y="0" width="24" height="24">
+        <path d="M24 0H48V24H24V0Z" fill="white" />
+      </mask>
+      <g mask="url(#birds-flat-inline-mask-1)">
+        <path d="M39.7026 4.15625C39.0126 4.15625 38.4526 4.71625 38.4526 5.40625C38.4526 6.09625 39.0126 6.65625 39.7026 6.65625C40.3926 6.65625 40.9526 6.09725 40.9526 5.40625C40.9526 4.71625 40.3926 4.15625 39.7026 4.15625Z" fill="currentColor" />
+        <path fillRule="evenodd" clipRule="evenodd" d="M38.988 0.453125C35.678 0.453125 32.994 3.13713 32.994 6.44713V11.4801L25.246 18.6961C23.983 19.8721 24.816 21.9871 26.541 21.9871H38.508C42.083 21.9871 44.983 19.0911 44.989 15.5161C44.989 15.4171 44.986 15.3201 44.982 15.2231V6.98712H47.135C47.682 6.98712 47.832 6.23512 47.327 6.02512L44.849 4.99812L47.328 3.97212C47.833 3.76212 47.684 3.01012 47.137 3.01012H43.897C42.813 1.46412 41.019 0.453125 38.988 0.453125ZM38.508 10.8241C41.005 10.8241 43.046 12.7811 43.181 15.2441V15.4801H43.188C43.188 15.4911 43.189 15.5021 43.189 15.5131C43.185 18.0951 41.09 20.1871 38.508 20.1871H26.541C26.505 20.1861 26.49 20.1781 26.483 20.1731C26.472 20.1651 26.458 20.1481 26.448 20.1231C26.438 20.0981 26.438 20.0771 26.44 20.0631C26.442 20.0551 26.446 20.0381 26.472 20.0141L34.925 12.1431C35.834 11.2961 37.031 10.8241 38.274 10.8241H38.508ZM38.988 2.25412C41.304 2.25412 43.181 4.13113 43.181 6.44713V11.0181C42.002 9.79013 40.345 9.02412 38.508 9.02412H38.274C37.038 9.02512 35.837 9.36612 34.795 9.99812V6.44713C34.795 4.13113 36.672 2.25412 38.988 2.25412Z" fill="currentColor" />
+      </g>
+      <mask id="birds-flat-inline-mask-2" style={{ maskType: 'luminance' }} maskUnits="userSpaceOnUse" x="48" y="0" width="24" height="24">
+        <path d="M48 0H72V24H48V0Z" fill="white" />
+      </mask>
+      <g mask="url(#birds-flat-inline-mask-2)">
+        <path d="M63.9175 4.76074C63.2275 4.76074 62.6675 5.31974 62.6675 6.01074C62.6675 6.70074 63.2275 7.26074 63.9175 7.26074C64.6075 7.25974 65.1675 6.70074 65.1675 6.01074C65.1675 5.32074 64.6075 4.76074 63.9175 4.76074Z" fill="currentColor" />
+        <path fillRule="evenodd" clipRule="evenodd" d="M63.8844 1.02686C62.1554 1.02686 60.5425 1.90187 59.5995 3.35187L57.2135 7.01886H50.9015C49.2935 7.01886 48.4125 8.89087 49.4375 10.1299L52.6565 14.0209L49.3824 19.0539C48.5604 20.3179 49.4675 21.9899 50.9755 21.9899H59.0975C64.5645 21.9899 68.9975 17.5569 68.9975 12.0899V6.13986C68.9975 6.03386 68.9935 5.92987 68.9875 5.82587L71.4474 4.08386C71.9244 3.74586 71.6855 2.99586 71.1015 2.99486L67.9105 2.98987C66.9745 1.79587 65.5194 1.02686 63.8844 1.02686ZM63.8844 2.82686C65.7134 2.82686 67.1964 4.30986 67.1974 6.13986V12.0899C67.1974 16.5629 63.5705 20.1889 59.0975 20.1889H50.9755C50.9485 20.1889 50.9335 20.1829 50.9235 20.1779C50.9115 20.1699 50.8974 20.1569 50.8874 20.1379C50.8774 20.1189 50.8735 20.0999 50.8735 20.0859C50.8745 20.0749 50.8765 20.0579 50.8915 20.0349L53.8595 15.4749L54.3025 16.0119C55.3445 17.2709 56.8935 17.9999 58.5285 17.9999C61.5575 17.9999 64.0135 15.5409 64.0135 12.5129C64.0135 9.75286 61.9764 7.46586 59.3224 7.07686L61.1084 4.33286C61.7194 3.39386 62.7644 2.82686 63.8844 2.82686ZM58.5225 8.81886C60.5595 8.81986 62.2125 10.4739 62.2125 12.5129C62.2125 14.5479 60.5625 16.1999 58.5285 16.1999C57.4305 16.1999 56.3894 15.7099 55.6894 14.8639L50.8235 8.98186C50.8045 8.95786 50.8005 8.94286 50.7995 8.93286C50.7985 8.91886 50.8005 8.89787 50.8105 8.87587C50.8205 8.85387 50.8345 8.83986 50.8465 8.83186C50.8545 8.82586 50.8705 8.81886 50.9015 8.81886H58.5225Z" fill="currentColor" />
+      </g>
+    </svg>
+  )
+}
+
 // Shown in all three states — Empty/FTU keep the estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
 // real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
@@ -723,11 +758,7 @@ function AiWorkforceSummaryCard({
           }`}
           style={bannerOnly ? { background: EMPTY_BANNER_GRADIENT } : undefined}
         >
-          <div className="flex shrink-0 items-center">
-            <img src={woodenBirdJay} alt="" className="size-9 rounded-full border-2 border-surface" />
-            <img src={woodenBirdMyna} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
-            <img src={woodenBirdRobin} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
-          </div>
+          <BirdsFlatInlineIcon className={bannerOnly ? 'text-white' : 'text-text-icon'} />
           <p
             className={`m-0 min-w-0 flex-1 truncate text-[16px] leading-6 tracking-[-0.32px] ${
               bannerOnly ? 'text-white' : 'text-text-primary'
@@ -787,7 +818,7 @@ function AiWorkforceSummaryCard({
                     onDragStart={setDraggedAgentId}
                     onDrop={handleDropAgent}
                   >
-                    <AgentPerformanceCard agent={agent} />
+                    <AgentPerformanceCard agent={agent} editing={editingLayout} />
                   </LayoutWidget>
                 ))}
               </div>
