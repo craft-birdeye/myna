@@ -33,6 +33,45 @@
   cursor: pointer;
 }
 
+/* "+ Add" beside label — shown when the field already has chips. */
+.fieldAddBtn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.24px;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+}
+
+.fieldAddBtn:hover {
+  color: #1565c0;
+}
+
+/* Empty state — "+ Add" below the label (matches Agent details Locations). */
+.addLink {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  color: #1976d2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  font-family: 'Roboto', arial, sans-serif;
+  align-self: flex-start;
+}
+
+.addLink:hover {
+  color: #1565c0;
+}
+
 /* ─── Chip container: chips row above, Add below ─── */
 
 .chipContainer {
@@ -47,11 +86,43 @@
   background: #fff;
 }
 
+/* Exploration: Locations-style field (no bordered box). */
+.explorationChipsField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 .chipWrap {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   align-items: flex-start;
+}
+
+.chipWrapExploration {
+  gap: 6px;
+  align-items: center;
+}
+
+/* Matches Agent details Locations "+ N more". */
+.moreLink {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+  color: #1976d2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: 'Roboto', arial, sans-serif;
+  align-self: flex-start;
+  text-align: left;
+}
+
+.moreLink:hover {
+  text-decoration: none;
 }
 
 .addBtn {

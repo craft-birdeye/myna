@@ -216,7 +216,7 @@ function makeNodeDetails(type, label) {
       // placeholder here so the RHS never opens on an empty Branches list.
       branches: [
         { id: 'pending-path-1', name: 'Branch 1' },
-        { id: 'pending-path-fallback', name: 'No conditions met', isFallback: true },
+        { id: 'pending-path-fallback', name: 'Fallback branch', isFallback: true },
       ],
     };
   }
@@ -754,7 +754,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
               isVoiceCallBranch: isVoiceCall || !!branch.isVoiceCallBranch,
               collapsed: pathCollapsed,
               hiddenCount: branchNodes.length,
-              // Keep at least two paths (e.g. Branch 1 + No conditions met).
+              // Keep at least two paths (e.g. Branch 1 + Fallback).
               canDeletePath: !isVoiceCall && !branch.isVoiceCallBranch && !branch.isFallback && branches.length > 2,
             },
           });
@@ -2346,6 +2346,12 @@ export default function AgentBuilder({
     branchChildNodes.find((n) => n.id === selectedNodeId) ||
     branchPathNodes.find((n) => n.id === selectedNodeId);
 
+  // LLM Task RHS is 450px (vs the default 390); chrome needs the wider offset.
+  const rightPanelWide =
+    rhsRendered
+    && selectedNode
+    && (selectedNode.data?.hasAiIcon || selectedNode.data?.subtype === 'Custom');
+
   const handleNodesReorder = useCallback((newIdOrder) => {
     setNodeList((prev) => {
       const byId = Object.fromEntries(prev.map((n) => [n.id, n]));
@@ -2567,12 +2573,12 @@ export default function AgentBuilder({
           mergeBranches: true,
           branches: [
             { id: path1Id, name: 'Branch 1' },
-            { id: fallbackId, name: 'No conditions met', isFallback: true },
+            { id: fallbackId, name: 'Fallback branch', isFallback: true },
           ],
         });
         extraDetails = {
           [path1Id]: makePath({ branchName: 'Branch 1' }),
-          [fallbackId]: makePath({ branchName: 'No conditions met', isFallback: true }),
+          [fallbackId]: makePath({ branchName: 'Fallback branch', isFallback: true }),
         };
       }
     }
@@ -3109,7 +3115,13 @@ export default function AgentBuilder({
           title="Task"
           viewOnly={rhsViewOnly}
           product={product}
-          bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, onOpenToolDrawer: () => setToolPickerOpen(true), onOpenTool: openToolByName }}
+          bodyProps={{
+            initialValues: currentDetails,
+            onFieldChange: activeFieldChange,
+            onOpenToolDrawer: () => setToolPickerOpen(true),
+            onOpenTool: openToolByName,
+            collapseChipsToOneLine: hideTopIdentity,
+          }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
         />
@@ -3594,7 +3606,9 @@ export default function AgentBuilder({
               <div
                 className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
                   hideTopIdentity ? ' rr-chrome-top--right' : ''
-                }${hideTopIdentity && rightPanelOpen ? ' rr-chrome-top--rhs-open' : ''}`}
+                }${hideTopIdentity && rightPanelOpen ? ' rr-chrome-top--rhs-open' : ''}${
+                  hideTopIdentity && rightPanelWide ? ' rr-chrome-top--rhs-wide' : ''
+                }`}
               >
                 {!(viewOnly && viewChromeActions) && !hideTopIdentity && (
                   <>

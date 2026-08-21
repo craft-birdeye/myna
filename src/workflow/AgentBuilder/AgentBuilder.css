@@ -1530,6 +1530,11 @@
   right: calc(390px + 8px + 12px);
 }
 
+/* LLM Task RHS is 450px. */
+.rr-chrome-top--right.rr-chrome-top--rhs-open.rr-chrome-top--rhs-wide {
+  right: calc(450px + 8px + 12px);
+}
+
 .rr-chrome-top--actions-only {
   max-width: none;
   height: auto;

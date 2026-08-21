@@ -5,7 +5,15 @@ import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import styles from './ControlBranchBody.module.css';
 
 const FALLBACK_PATH_INFO =
-  'This path runs when none of the branch conditions above are met.';
+  'If none of the criteria are met, follow this branch.';
+const FALLBACK_BRANCH_NAME = 'Fallback branch';
+const LEGACY_FALLBACK_NAMES = new Set([
+  'None met',
+  'No conditions met',
+  'Fall back branch',
+  'Fallback branch',
+  'Fallback',
+]);
 
 const DEFAULT_CONDITION_OPTIONS = {
   field: [
@@ -57,7 +65,7 @@ function getDefaultBranches(branchNodeId) {
   const idBase = branchNodeId || 'branch';
   return [
     { id: `${idBase}-path-1`, name: 'Branch 1', percentage: 0 },
-    { id: `${idBase}-path-fallback`, name: 'No conditions met', isFallback: true, percentage: 0 },
+    { id: `${idBase}-path-fallback`, name: FALLBACK_BRANCH_NAME, isFallback: true, percentage: 0 },
   ];
 }
 
@@ -79,9 +87,13 @@ function BranchAccordionItem({
   const addMenuRef = React.useRef(null);
   const [isDragging, setIsDragging] = React.useState(false);
   const [addMenuOpen, setAddMenuOpen] = React.useState(false);
-  const isFallback = !!branch.isFallback;
   const rawName = pathDetail.branchName ?? branch.name ?? '';
-  const name = rawName === 'None met' ? 'No conditions met' : rawName;
+  const isFallback = !!branch.isFallback
+    || !!pathDetail.isFallback
+    || LEGACY_FALLBACK_NAMES.has(rawName);
+  const name = isFallback || LEGACY_FALLBACK_NAMES.has(rawName)
+    ? FALLBACK_BRANCH_NAME
+    : rawName;
   const description = pathDetail.description ?? '';
   const conditions = pathDetail.conditions ?? [];
   const filledConditions = conditions.filter((c) => !isBlankCondition(c));
@@ -157,9 +169,24 @@ function BranchAccordionItem({
     ? 'Branch name'
     : (name || 'Untitled branch');
 
+  if (isFallback) {
+    return (
+      <div ref={itemRef} className={`${styles.accordionItem} ${styles.accordionItemFallback}`}>
+        <div className={styles.fallbackBlock}>
+          <div className={styles.fallbackLabelRow}>
+            <span className={styles.fallbackLabel}>{FALLBACK_BRANCH_NAME}</span>
+            <span className={styles.fallbackInfo}>
+              <InfoTooltip text={FALLBACK_PATH_INFO} variant="detail" />
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const header = (
     <div
-      className={`${styles.accordionHeader}${expanded ? ` ${styles.accordionHeaderOpen}` : ''}${isFallback ? ` ${styles.accordionHeaderFallback}` : ''}`}
+      className={`${styles.accordionHeader}${expanded ? ` ${styles.accordionHeaderOpen}` : ''}`}
       onClick={() => onToggle?.()}
       role="button"
       tabIndex={0}
@@ -170,67 +197,50 @@ function BranchAccordionItem({
         }
       }}
     >
-      {!isFallback && (
-        <span
-          className={`${styles.dragHandle}${canReorder ? '' : ` ${styles.dragHandleDisabled}`}`}
-          draggable={canReorder}
-          onDragStart={(e) => {
-            if (!canReorder) return;
-            e.stopPropagation();
-            const card = itemRef.current;
-            if (card && e.dataTransfer) {
-              const rect = card.getBoundingClientRect();
-              e.dataTransfer.effectAllowed = 'move';
-              // Show the full branch card as the drag ghost (not just the handle icon).
-              e.dataTransfer.setDragImage(card, e.clientX - rect.left, e.clientY - rect.top);
-            }
-            setIsDragging(true);
-            onDragStart?.(e);
-          }}
-          onDragEnd={(e) => {
-            setIsDragging(false);
-            onDragEnd?.(e);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          aria-hidden
-        >
-          <span className="material-symbols-outlined">drag_indicator</span>
-        </span>
-      )}
-      {isFallback ? (
-        <span className={styles.fallbackTitleRow}>
-          <span className={styles.accordionTitle}>{headerTitle}</span>
-          <span
-            className={styles.fallbackInfo}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+      <span
+        className={`${styles.dragHandle}${canReorder ? '' : ` ${styles.dragHandleDisabled}`}`}
+        draggable={canReorder}
+        onDragStart={(e) => {
+          if (!canReorder) return;
+          e.stopPropagation();
+          const card = itemRef.current;
+          if (card && e.dataTransfer) {
+            const rect = card.getBoundingClientRect();
+            e.dataTransfer.effectAllowed = 'move';
+            // Show the full branch card as the drag ghost (not just the handle icon).
+            e.dataTransfer.setDragImage(card, e.clientX - rect.left, e.clientY - rect.top);
+          }
+          setIsDragging(true);
+          onDragStart?.(e);
+        }}
+        onDragEnd={(e) => {
+          setIsDragging(false);
+          onDragEnd?.(e);
+        }}
+        onClick={(e) => e.stopPropagation()}
+        aria-hidden
+      >
+        <span className="material-symbols-outlined">drag_indicator</span>
+      </span>
+      <span className={styles.accordionTitle}>{headerTitle}</span>
+      <div className={styles.accordionActions}>
+        {canDelete && (
+          <button
+            type="button"
+            className={styles.deleteBtn}
+            aria-label="Delete branch"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.();
+            }}
           >
-            <InfoTooltip text={FALLBACK_PATH_INFO} variant="detail" />
-          </span>
+            <span className="material-symbols-outlined">delete</span>
+          </button>
+        )}
+        <span className="material-symbols-outlined" aria-hidden>
+          {expanded ? 'expand_less' : 'expand_more'}
         </span>
-      ) : (
-        <span className={styles.accordionTitle}>{headerTitle}</span>
-      )}
-      {!isFallback && (
-        <div className={styles.accordionActions}>
-          {canDelete && (
-            <button
-              type="button"
-              className={styles.deleteBtn}
-              aria-label="Delete branch"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.();
-              }}
-            >
-              <span className="material-symbols-outlined">delete</span>
-            </button>
-          )}
-          <span className="material-symbols-outlined" aria-hidden>
-            {expanded ? 'expand_less' : 'expand_more'}
-          </span>
-        </div>
-      )}
+      </div>
     </div>
   );
 
@@ -371,7 +381,7 @@ export default function ControlBranchBody({
       }
       return;
     }
-    // Parent has no paths yet — seed Branch 1 + No conditions met once and persist.
+    // Parent has no paths yet — seed Branch 1 + Fallback once and persist.
     if (didSeedDefaultsRef.current) return;
     didSeedDefaultsRef.current = true;
     const defaults = getDefaultBranches(initialValues.branchNodeId);
@@ -398,7 +408,7 @@ export default function ControlBranchBody({
   // Keep the requested path expanded when opening from a canvas chip. Clearing
   // the prop (e.g. opening the parent Branch card) collapses all rows again.
   // `expandNonce` re-applies expand when the same chip is clicked again.
-  // Fallback ("No conditions met") has no editable body — never expand it.
+  // Fallback branch has no editable body — never expand it.
   React.useEffect(() => {
     const pathId = initialValues.initialExpandedPathId || null;
     if (!pathId) {
@@ -549,7 +559,7 @@ export default function ControlBranchBody({
 
   return (
     <div className={styles.root}>
-      <div className={styles.branchesSection}>
+      <div className={styles.branchesSection} ref={accordionListRef}>
         <div className={styles.branchesHeader}>
           <SectionLabel label="Branches" />
           {basedOn === 'percentage' && (
@@ -560,9 +570,13 @@ export default function ControlBranchBody({
         </div>
         <p className={styles.branchesHint}>Branches run in the order listed</p>
 
-        <div className={styles.accordionList} ref={accordionListRef}>
-          {branches.map((b, i) =>
-            basedOn === 'percentage' ? (
+        <div className={styles.accordionList}>
+          {branches.map((b, i) => {
+            const isFallbackBranch = !!b.isFallback
+              || !!pathDetails[b.id]?.isFallback
+              || LEGACY_FALLBACK_NAMES.has(pathDetails[b.id]?.branchName ?? b.name ?? '');
+            if (basedOn !== 'percentage' && isFallbackBranch) return null;
+            return basedOn === 'percentage' ? (
               <div key={b.id} className={styles.pctItem}>
                 <span className="material-symbols-outlined">drag_indicator</span>
                 <span className={styles.pctName}>
@@ -611,14 +625,47 @@ export default function ControlBranchBody({
                   <div className={`${styles.dropLine} ${styles.dropLineAfter}`} aria-hidden />
                 )}
               </div>
-            ),
-          )}
+            );
+          })}
         </div>
 
-        <button type="button" className={styles.addLink} onClick={addBranch}>
-          <span className="material-symbols-outlined">add_circle</span>
-          Add a branch
-        </button>
+        {basedOn !== 'percentage' && (
+          <button type="button" className={styles.addLink} onClick={addBranch}>
+            <span className="material-symbols-outlined">add</span>
+            Add a branch
+          </button>
+        )}
+
+        {basedOn !== 'percentage' && (
+          <div className={`${styles.accordionList} ${styles.fallbackList}`}>
+            {branches.map((b) => {
+              const isFallbackBranch = !!b.isFallback
+                || !!pathDetails[b.id]?.isFallback
+                || LEGACY_FALLBACK_NAMES.has(pathDetails[b.id]?.branchName ?? b.name ?? '');
+              if (!isFallbackBranch) return null;
+              return (
+                <div key={b.id} className={styles.accordionSlot} data-branch-path-id={b.id}>
+                  <BranchAccordionItem
+                    branch={{ ...b, isFallback: true }}
+                    pathDetail={pathDetails[b.id] || {}}
+                    expanded={false}
+                    canReorder={false}
+                    canDelete={false}
+                    onToggle={() => onFocusBranchPath?.(b.id)}
+                    onPathFieldChange={handlePathFieldChange}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {basedOn === 'percentage' && (
+          <button type="button" className={styles.addLink} onClick={addBranch}>
+            <span className="material-symbols-outlined">add</span>
+            Add a branch
+          </button>
+        )}
       </div>
     </div>
   );

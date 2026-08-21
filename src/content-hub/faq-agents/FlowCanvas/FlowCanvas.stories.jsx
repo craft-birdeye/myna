@@ -135,7 +135,7 @@ const FILLED_NODES = [
     id: 'path-none',
     type: 'branchPath',
     position: { x: CENTER_X + 430, y: 1100 },
-    data: { label: 'No conditions met', hasIcons: false },
+    data: { label: 'Fallback', hasIcons: false },
   },
   // Tasks below paths
   {

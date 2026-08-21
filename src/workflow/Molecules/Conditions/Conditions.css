@@ -182,6 +182,37 @@
   color: #212121;
 }
 
+.tc-dropdown__option--multi {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.tc-dropdown__checkbox {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #c5cad3;
+  border-radius: 2px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.tc-dropdown__checkbox--checked {
+  border-color: #1976d2;
+  background: #1976d2;
+}
+
+.tc-dropdown__checkbox-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  color: #fff;
+}
+
 /* Logic connector (AND / OR) between conditions */
 .tc-connector {
   position: relative;

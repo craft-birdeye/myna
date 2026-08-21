@@ -137,7 +137,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
         id: 'rr-log-3',
         type: 'branch',
         stepNumber: 3,
-        title: 'No conditions met',
+        title: 'Fallback',
         outputLabel: 'Branch output',
         output: [{ key: 'Path', value: 'Send email alert' }],
         inputs: [{ key: 'Review.isSpam', value: 'true' }],
