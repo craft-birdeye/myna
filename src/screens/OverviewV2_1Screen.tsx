@@ -1087,16 +1087,16 @@ function EmptyStateAppointmentsCard() {
   )
 }
 
-// Empty-state section headers that ignore the page date filter — shown via InfoTooltip on Current overview only.
-const EMPTY_STATE_ALL_TIME_INFO =
+// Section headers that ignore the page date filter — shown via info tooltip in both overview states.
+const SECTION_ALL_TIME_INFO =
   'Data shown here is for all time. The time filter does not apply.'
-const EMPTY_STATE_RECENT_DATA_INFO =
+const SECTION_RECENT_DATA_INFO =
   'Data shown here is always for the most recent period available.'
 
-const EMPTY_STATE_SECTION_INFO_TOOLTIPS: Partial<Record<string, string>> = {
-  inbox: EMPTY_STATE_ALL_TIME_INFO,
-  listings: EMPTY_STATE_ALL_TIME_INFO,
-  'search-ai': EMPTY_STATE_RECENT_DATA_INFO,
+const SECTION_INFO_TOOLTIPS: Partial<Record<string, string>> = {
+  inbox: SECTION_ALL_TIME_INFO,
+  listings: SECTION_ALL_TIME_INFO,
+  'search-ai': SECTION_RECENT_DATA_INFO,
 }
 
 function SectionHeaderInfoTooltip({ text }: { text: string }) {
@@ -1141,7 +1141,7 @@ function EmptyStateInboxCard() {
       <SectionCardTitle
         icon={<FigmaIconInbox size={20} className="text-text-icon" />}
         label="Inbox"
-        infoTooltip={EMPTY_STATE_SECTION_INFO_TOOLTIPS.inbox}
+        infoTooltip={SECTION_INFO_TOOLTIPS.inbox}
       />
       <div className={KPI_ROW_CLASS}>
         {EMPTY_STATE_INBOX_STATS.map((s) => (
@@ -1228,8 +1228,7 @@ function ProductSectionCard({
   const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
   if (!sectionHasVisibleContent(section, showAgents, dataState)) return null
   const sectionLabel = SECTION_LABEL_OVERRIDES[section.id] ?? section.label
-  const emptyStateInfoTooltip =
-    dataState === 'empty' ? EMPTY_STATE_SECTION_INFO_TOOLTIPS[section.id] : undefined
+  const sectionInfoTooltip = SECTION_INFO_TOOLTIPS[section.id]
   return (
     <SectionCard>
       <SectionCardTitle
@@ -1241,7 +1240,7 @@ function ProductSectionCard({
           )
         }
         label={sectionLabel}
-        infoTooltip={emptyStateInfoTooltip}
+        infoTooltip={sectionInfoTooltip}
       />
 
       {(section.stats || section.actionNeeded) && (
