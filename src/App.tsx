@@ -4,6 +4,10 @@ import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
+import {
+  isAgentExplorationChrome,
+  isExplorationHideCanvasStartNode,
+} from './data/agentNavIds'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
@@ -149,6 +153,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
+      { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
       { id: 'frontdesk-agent', label: 'Front desk agent' },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'reminder-agent',  label: 'Reminder agent'  },
@@ -193,6 +198,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
+      { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
       { id: 'frontdesk-agent',  label: 'Front desk agent'  },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
@@ -242,6 +248,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
+      { id: 'frontdesk-agent-sep-1',       label: 'Front desk agent (Sep 1)'       },
       { id: 'frontdesk-agent',             label: 'Front desk agent'             },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
@@ -379,6 +386,7 @@ const PRODUCT_BRAND: Record<string, string> = {
 const AGENT_NAMES: Record<string, string> = {
   'frontdesk-agent':           'Front desk agent',
   'frontdesk-agent-exploration': 'Front desk agent (exploration)',
+  'frontdesk-agent-sep-1':     'Front desk agent',
   'reminder-agent-sep-1':      'Reminder agent',
   'reminder-agent':            'Reminder agent',
   'outreach-agent':            'Outreach agent',
@@ -401,7 +409,7 @@ const EXPLORATION_AGENT_NAV_IDS = new Set([
 ])
 
 function isExplorationAgentNav(navId: string) {
-  return EXPLORATION_AGENT_NAV_IDS.has(navId)
+  return EXPLORATION_AGENT_NAV_IDS.has(navId) || isAgentExplorationChrome(navId)
 }
 
 // Map railActive → module title shown in the global TopBar
@@ -964,7 +972,9 @@ export function App() {
                           aiBuilderPanelOpen={workflowAiBuilderPanelOpen}
                           onAiBuilderPanelOpenChange={setWorkflowAiBuilderPanelOpen}
                           lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
-                          hideTopIdentity={isExplorationAgentNav(navActive)}
+                          hideTopIdentity={isAgentExplorationChrome(navActive)}
+                          hideCanvasStartNode={isExplorationHideCanvasStartNode(navActive)}
+                          explorationChrome={isAgentExplorationChrome(navActive)}
                         />
                       </div>
                       {workflowAiAssistOpen && (

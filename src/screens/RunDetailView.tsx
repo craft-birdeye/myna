@@ -1,7 +1,14 @@
 import React from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import voicemailSample from '../assets/voicemail_sample.mp3'
-import { Chip, Icon, LogDetailsPanel, RunDetailsPanel, type RunLogStep } from '../components'
+import {
+  Chip,
+  getUserRatingForLogStatus,
+  Icon,
+  LogDetailsPanel,
+  RunDetailsPanel,
+  type RunLogStep,
+} from '../components'
 import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
 import {
   HEALTHCARE_AGENT_WORKFLOWS,
@@ -524,6 +531,7 @@ function AgentWorkflowRunCanvas({
           initialZoom={0.85}
           onEdit={onEditWorkflow}
           nodesInteractive={false}
+          logDoneNodeIds={executedIds}
         />
       </div>
     </div>
@@ -586,6 +594,7 @@ function WorkflowCanvas({
             onCopy={() => {}}
             onReplace={() => {}}
             state={triggerImplemented ? 'implemented' : 'default'}
+            runStatus={triggerImplemented ? 'done' : undefined}
           />
         </div>
 
@@ -609,6 +618,7 @@ function WorkflowCanvas({
             onRemoveProcedure={() => {}}
             onSelectProcedure={() => {}}
             state={proceduresImplemented ? 'implemented' : 'default'}
+            runStatus={proceduresImplemented ? 'done' : undefined}
           />
         </div>
 
@@ -800,7 +810,9 @@ export function RunDetailView({
               agentName={instanceName}
               onTrackFeedback={onTrackFeedback}
               callEndResultBadge={explorationFrontDeskStatus ? String(row.status) : undefined}
-              userRating={explorationFrontDeskStatus ? '4 of 5' : undefined}
+              userRating={
+                explorationFrontDeskStatus ? getUserRatingForLogStatus(row.status) : undefined
+              }
               showTranscriptTranslation={explorationFrontDeskStatus}
             />
           )}

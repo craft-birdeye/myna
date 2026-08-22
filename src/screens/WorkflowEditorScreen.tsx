@@ -94,8 +94,12 @@ interface WorkflowEditorScreenProps {
   aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
   /** When true, Create with AI uses help-oriented copy for an already-built agent. */
   existingAgent?: boolean
-  /** Hides the in-canvas title/status row (identity rendered by app shell). */
+  /** Hides the in-canvas title/status row (identity rendered in the header back cluster). */
   hideTopIdentity?: boolean
+  /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. Sep 1 keeps the card. */
+  hideCanvasStartNode?: boolean
+  /** Exploration editor UX (help RHS, version history, chip collapse, etc.). Sep 1 keeps the canvas agent-details card. */
+  explorationChrome?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -119,6 +123,8 @@ export function WorkflowEditorScreen({
   aiTranscript = null,
   existingAgent,
   hideTopIdentity = false,
+  hideCanvasStartNode = hideTopIdentity,
+  explorationChrome = hideTopIdentity,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -284,6 +290,8 @@ export function WorkflowEditorScreen({
             aiTranscript={resolvedAiTranscript}
             existingAgent={resolvedExistingAgent}
             hideTopIdentity={hideTopIdentity}
+            hideCanvasStartNode={hideCanvasStartNode}
+            explorationChrome={explorationChrome}
           />
         </Suspense>
       </div>

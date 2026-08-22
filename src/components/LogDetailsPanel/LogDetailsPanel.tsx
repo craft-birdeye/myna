@@ -12,7 +12,13 @@ import { Icon } from '../Icon/Icon'
 import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
 import { LanguageFlag } from '../LanguageSelectMenu/LanguageSelectMenu'
 import { RefChip } from '../RefChip/RefChip'
-import { CollapsibleCallDetails, RunDetailsPanel } from '../RunDetailsPanel/RunDetailsPanel'
+import {
+  CallTranscriptSection,
+  CollapsibleCallDetails,
+  getUserRatingForLogStatus,
+  RunDetailsPanel,
+  UserRatingDisplay,
+} from '../RunDetailsPanel/RunDetailsPanel'
 import type { RunLogStep } from '../RunDetailsPanel/RunDetailsPanel.types'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import { Toast } from '../Toast/Toast'
@@ -710,7 +716,14 @@ function CallDetailsTab({
       <MetaField label="Start time" value={startTime} />
       <CallEndReasonField reason={callEndReason} resultBadge={callEndResultBadge} />
       <MetaField label="Routed via" value={routedVia} />
-      {userRating ? <MetaField label="User rating" value={userRating} /> : null}
+      {userRating ? (
+        <div>
+          <p className="m-0 text-small text-text-tertiary">User rating</p>
+          <div className="mt-xs">
+            <UserRatingDisplay rating={userRating} />
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -1101,6 +1114,8 @@ export function LogDetailsPanel({
   const totalSecs = durationSecs ?? (parseDurationSecs(row.duration) || 332)
   const displayCaller =
     row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : callerNumber
+  const displayUserRating = userRating
+    ?? (callEndResultBadge ? getUserRatingForLogStatus(callEndResultBadge) : undefined)
 
   // Same "Coach agent" → "Track your feedback" flow as the Inbox transcript view — Coach agent
   // opens the Share-feedback modal; once submitted, that message's link switches to "Track your
@@ -1202,6 +1217,7 @@ export function LogDetailsPanel({
         steps={steps}
         showHeader={false}
         showCallRecording={hasVoiceCall}
+        conversationTabLabel={hasVoiceCall ? 'Call transcript' : 'Conversation'}
         conversationContent={
           isReminder ? (
             <div className="relative flex h-full flex-col">
@@ -1212,7 +1228,7 @@ export function LogDetailsPanel({
               >
                 <div className="flex flex-col gap-3xl pt-lg">
                   {showCallDetails && (
-                    <CollapsibleCallDetails>
+                    <CollapsibleCallDetails userRating={displayUserRating}>
                       <CallDetailsTab
                         callerNumber={displayCaller}
                         languageDetected={languageDetected}
@@ -1222,7 +1238,7 @@ export function LogDetailsPanel({
                         callEndReason={callEndReason}
                         routedVia={routedVia}
                         callEndResultBadge={callEndResultBadge}
-                        userRating={userRating ?? (callEndResultBadge ? '4 of 5' : undefined)}
+                        userRating={displayUserRating}
                       />
                     </CollapsibleCallDetails>
                   )}
@@ -1253,9 +1269,12 @@ export function LogDetailsPanel({
                         </div>
                       </div>
                       <CallAiSummary bullets={REMINDER_CALL_AI_SUMMARY} />
+                      <CallTranscriptSection>
+                        {transcriptNodes}
+                      </CallTranscriptSection>
                     </>
                   )}
-                  {transcriptNodes}
+                  {!hasVoiceCall && transcriptNodes}
                 </div>
               </div>
               {resumeAutoScrollButton}
@@ -1271,7 +1290,7 @@ export function LogDetailsPanel({
                  *  can dock flush under the tabs at `top: 0` with no permanent gap. */}
                 {showCallDetails ? (
                   <div className="pt-lg">
-                    <CollapsibleCallDetails>
+                    <CollapsibleCallDetails userRating={displayUserRating}>
                       <CallDetailsTab
                         callerNumber={displayCaller}
                         languageDetected={languageDetected}
@@ -1281,7 +1300,7 @@ export function LogDetailsPanel({
                         callEndReason={callEndReason}
                         routedVia={routedVia}
                         callEndResultBadge={callEndResultBadge}
-                        userRating={userRating ?? (callEndResultBadge ? '4 of 5' : undefined)}
+                        userRating={displayUserRating}
                       />
                     </CollapsibleCallDetails>
                   </div>
@@ -1305,13 +1324,15 @@ export function LogDetailsPanel({
                   </div>
                 )}
                 <div className={`flex flex-col gap-3xl ${hasVoiceCall ? 'mt-lg' : showCallDetails ? '' : 'pt-lg'}`}>
-                  {hasVoiceCall && (
-                    <div>
-                      <CallAiSummary />
+                  {hasVoiceCall && <CallAiSummary />}
+                  {hasVoiceCall ? (
+                    <CallTranscriptSection>
                       {showTranscriptTranslation && <TranscriptTranslationControl />}
-                    </div>
+                      {transcriptNodes}
+                    </CallTranscriptSection>
+                  ) : (
+                    transcriptNodes
                   )}
-                  {transcriptNodes}
                 </div>
               </div>
               {resumeAutoScrollButton}

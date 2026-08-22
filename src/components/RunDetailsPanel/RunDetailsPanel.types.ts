@@ -38,6 +38,8 @@ export interface RunDetailsPanelProps {
   conversationContent?: ReactNode
   /** When false, hides Logs/Conversation tabs and shows logs only. Default true. */
   showTabs?: boolean
+  /** Conversation-tab label. Default "Conversation"; voice-call logs use "Call transcript". */
+  conversationTabLabel?: string
   /** Panel header title. Default "Run details". */
   title?: string
   /** When false, hides the header row (title + optional "View conversation" button) entirely.

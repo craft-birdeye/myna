@@ -1069,8 +1069,14 @@ export default function AgentBuilder({
   existingAgent = false,
   /** When set by the parent, forces the Procedures floater on/off (preferred over name sniffing). */
   showProceduresPalette = null,
-  /** Hides in-canvas agent name + status (parent renders identity elsewhere). */
+  /** Hides in-canvas agent name + status (identity rendered in the header back cluster). */
   hideTopIdentity = false,
+  /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. */
+  hideCanvasStartNode = hideTopIdentity,
+  /** Exploration editor UX — defaults to hideTopIdentity for backward compatibility. */
+  explorationChrome = hideTopIdentity,
+  /** Log run view: node IDs that completed in this run — show green check on the header icon. */
+  logDoneNodeIds = null,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -2172,13 +2178,13 @@ export default function AgentBuilder({
     onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
   };
   // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
-  const isScratchCreate = hideTopIdentity && !existingAgent;
+  const isScratchCreate = explorationChrome && !existingAgent;
   /**
    * Exploration only: while the version history panel is open the canvas turns into a
    * read-only "browsing an old version" surface — no add-node palette, no build/run
    * actions, and Publish is swapped for a Restore CTA.
    */
-  const versionHistoryMode = versionHistoryOpen && hideTopIdentity;
+  const versionHistoryMode = versionHistoryOpen && explorationChrome;
   const selectedVersion =
     VERSION_HISTORY_VERSIONS.find((v) => v.id === versionHistorySelectedId)
     || VERSION_HISTORY_VERSIONS[0];
@@ -2202,7 +2208,7 @@ export default function AgentBuilder({
     setVersionHistoryOpen(false);
     setHelpCenterOpen((open) => {
       // Exploration: help occupies the node-config RHS slot, so the two can't coexist.
-      if (!open && hideTopIdentity) {
+      if (!open && explorationChrome) {
         handleCloseDrawer();
         setPreviewOpen(false);
       }
@@ -2210,7 +2216,7 @@ export default function AgentBuilder({
     });
   };
   const startDetails = nodeDetails[START_NODE_ID] || {};
-  const agentDetailsIncomplete = hideTopIdentity && (
+  const agentDetailsIncomplete = explorationChrome && (
     !(String(startDetails.goals || '').trim())
     || !((startDetails.locations || []).length)
   );
@@ -2221,7 +2227,7 @@ export default function AgentBuilder({
     product,
     collapsedBranches,
     collapsedBranchPaths,
-    { hideStartNode: hideTopIdentity },
+    { hideStartNode: hideCanvasStartNode },
   );
 
   const nodes = rawNodes.map((n) => {
@@ -2263,16 +2269,17 @@ export default function AgentBuilder({
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
       // Set once Task details is saved with a tool still missing mandatory config.
-      hasError: hideTopIdentity && taskErrorNodeIds.has(n.id),
-      // Exploration only: swap the header glyph for a spinner/check while Run test walks
-      // this node, matching the Test details panel's own stepper animation.
-      runStatus: !hideTopIdentity || !testRunOpen
-        ? undefined
-        : n.id === testRunActiveId
-          ? 'running'
-          : testRun.doneNodeIds.includes(n.id)
-            ? 'done'
-            : undefined,
+      hasError: explorationChrome && taskErrorNodeIds.has(n.id),
+      // Log run view + exploration Run test: swap the header glyph for a spinner/check.
+      runStatus: logDoneNodeIds?.includes(n.id)
+        ? 'done'
+        : !explorationChrome || !testRunOpen
+          ? undefined
+          : n.id === testRunActiveId
+            ? 'running'
+            : testRun.doneNodeIds.includes(n.id)
+              ? 'done'
+              : undefined,
     };
     if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
@@ -2632,8 +2639,8 @@ export default function AgentBuilder({
       setPaletteSection(null);
       // Exploration: version history docks on the left, so it stays open and the
       // node config opens read-only beside it.
-      if (!hideTopIdentity) setVersionHistoryOpen(false);
-      if (hideTopIdentity) {
+      if (!explorationChrome) setVersionHistoryOpen(false);
+      if (explorationChrome) {
         setHelpCenterOpen(false);
         setPreviewOpen(false);
       }
@@ -2648,8 +2655,8 @@ export default function AgentBuilder({
         || latestRef.current.nodeDetails?.[node.id]?.parentId;
       if (!parentId) return;
       setPaletteSection(null);
-      if (!hideTopIdentity) setVersionHistoryOpen(false);
-      if (hideTopIdentity) {
+      if (!explorationChrome) setVersionHistoryOpen(false);
+      if (explorationChrome) {
         setHelpCenterOpen(false);
         setPreviewOpen(false);
       }
@@ -2661,9 +2668,9 @@ export default function AgentBuilder({
     }
     // AI Builder docks on the left; node config uses the right pane — both can stay open.
     setPaletteSection(null);
-    if (!hideTopIdentity) setVersionHistoryOpen(false);
+    if (!explorationChrome) setVersionHistoryOpen(false);
     // Exploration: help / preview share the node-config RHS slot, so opening a node closes them.
-    if (hideTopIdentity) {
+    if (explorationChrome) {
       setHelpCenterOpen(false);
       setPreviewOpen(false);
     }
@@ -2673,7 +2680,7 @@ export default function AgentBuilder({
     if (node.data?.title) {
       setAiNodeContext({ id: node.id, type: node.type, title: node.data.title });
     }
-  }, [hideTopIdentity]);
+  }, [explorationChrome]);
 
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
@@ -2857,7 +2864,7 @@ export default function AgentBuilder({
               }));
             },
             autoOpenLocationsToken: startLocationsOpenToken,
-            includeCustomFields: hideTopIdentity,
+            includeCustomFields: explorationChrome,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3120,7 +3127,7 @@ export default function AgentBuilder({
             onFieldChange: activeFieldChange,
             onOpenToolDrawer: () => setToolPickerOpen(true),
             onOpenTool: openToolByName,
-            collapseChipsToOneLine: hideTopIdentity,
+            collapseChipsToOneLine: explorationChrome,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3207,7 +3214,7 @@ export default function AgentBuilder({
       setDrawerOpen(false);
       setSelectedNodeId(null);
       setTestAppointment(null);
-      if (hideTopIdentity) setHelpCenterOpen(false);
+      if (explorationChrome) setHelpCenterOpen(false);
       setPreviewOpen(true);
       return;
     }
@@ -3394,7 +3401,7 @@ export default function AgentBuilder({
       ) : (
         <>
           {/* Exploration only: Pause / Resume beside Publish for live agents */}
-          {hideTopIdentity && agentStatus === 'Running' && (
+          {explorationChrome && agentStatus === 'Running' && (
             <button
               type="button"
               className="ab-header-pause-btn"
@@ -3404,7 +3411,7 @@ export default function AgentBuilder({
               Pause
             </button>
           )}
-          {hideTopIdentity && agentStatus === 'Paused' && (
+          {explorationChrome && agentStatus === 'Paused' && (
             <button
               type="button"
               className="ab-header-pause-btn"
@@ -3489,8 +3496,8 @@ export default function AgentBuilder({
         <div className={`agent-builder agent-builder--rr-chrome${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
-              {(onClose || hideTopIdentity) && (
-                <div className={`rr-chrome-back-cluster${hideTopIdentity ? ' rr-chrome-back-cluster--identity' : ''}`}>
+              {(onClose || explorationChrome) && (
+                <div className={`rr-chrome-back-cluster${explorationChrome ? ' rr-chrome-back-cluster--identity' : ''}`}>
                   {onClose && (
                     <button
                       type="button"
@@ -3503,10 +3510,10 @@ export default function AgentBuilder({
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
                         <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
                       </svg>
-                      {!hideTopIdentity && <span>Back</span>}
+                      {!explorationChrome && <span>Back</span>}
                     </button>
                   )}
-                  {hideTopIdentity && versionHistoryMode && (
+                  {explorationChrome && versionHistoryMode && (
                     <div className="rr-chrome-identity">
                       <div className="rr-chrome-identity__row">
                         <span className="rr-chrome-identity__name">Version history</span>
@@ -3522,7 +3529,7 @@ export default function AgentBuilder({
                       </div>
                     </div>
                   )}
-                  {hideTopIdentity && !versionHistoryMode && (
+                  {explorationChrome && !versionHistoryMode && (
                     <div className={`rr-chrome-identity${agentDetailsIncomplete ? ' rr-chrome-identity--needs-details' : ''}`}>
                       <div className="rr-chrome-identity__row">
                         <div className="rr-chrome-identity__name-group">
@@ -3589,7 +3596,7 @@ export default function AgentBuilder({
               )}
 
               {/* Exploration renders this trigger in the bottom editor row instead (GraphControls). */}
-              {!viewOnly && !hideTopIdentity && (
+              {!viewOnly && !explorationChrome && (
                 <div className="rr-chrome-help-wrap">
                   <Tooltip content="Help center" variant="brief" side="bottom">
                     <button
@@ -3607,12 +3614,12 @@ export default function AgentBuilder({
 
               <div
                 className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
-                  hideTopIdentity ? ' rr-chrome-top--right' : ''
-                }${hideTopIdentity && rightPanelOpen ? ' rr-chrome-top--rhs-open' : ''}${
-                  hideTopIdentity && rightPanelWide ? ' rr-chrome-top--rhs-wide' : ''
+                  explorationChrome ? ' rr-chrome-top--right' : ''
+                }${explorationChrome && rightPanelOpen ? ' rr-chrome-top--rhs-open' : ''}${
+                  explorationChrome && rightPanelWide ? ' rr-chrome-top--rhs-wide' : ''
                 }`}
               >
-                {!(viewOnly && viewChromeActions) && !hideTopIdentity && (
+                {!(viewOnly && viewChromeActions) && !explorationChrome && (
                   <>
                     <RrChromeAgentTitle
                       text={agentName || 'Untitled agent'}
@@ -3741,7 +3748,7 @@ export default function AgentBuilder({
               />
 
               {/* Exploration opens Help center in the node-config RHS slot instead (below). */}
-              {helpCenterOpen && !hideTopIdentity && (
+              {helpCenterOpen && !explorationChrome && (
                 <div className="rr-chrome-right-panel rr-chrome-right-panel--help">
                   <HelpCenterPanel
                     open={helpCenterOpen}
@@ -3801,7 +3808,7 @@ export default function AgentBuilder({
               onRedo={handleRedo}
               canUndo={historyPast.length > 0}
               canRedo={historyFuture.length > 0}
-              onHelpToggle={hideTopIdentity ? toggleHelpCenter : null}
+              onHelpToggle={explorationChrome ? toggleHelpCenter : null}
               helpOpen={helpCenterOpen}
               onRun={() => {
                 if (isReviewResponseAgent) return;
@@ -3848,7 +3855,7 @@ export default function AgentBuilder({
           )}
 
           {/* Exploration: Help center uses the same RHS slot + slide as the node cards. */}
-          {helpRendered && hideTopIdentity && (
+          {helpRendered && explorationChrome && (
             <div
               className={`agent-builder__rhs agent-builder__rhs--help${helpClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}
             >

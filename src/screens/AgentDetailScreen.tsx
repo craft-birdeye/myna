@@ -45,6 +45,12 @@ import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 import { getAgentWorkflows } from '../data/agentWorkflows'
+import {
+  isAgentExplorationChrome,
+  isExplorationHideCanvasStartNode,
+  isFrontdeskExplorationChrome,
+  isResponseAgentsExplorationChrome,
+} from '../data/agentNavIds'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
@@ -7078,9 +7084,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const isExplorationResponseAgents = navId === 'response-agents-exploration'
-  const isExplorationFrontDeskAgents = navId === 'frontdesk-agent-exploration'
-  const isExplorationAgents = isExplorationResponseAgents || isExplorationFrontDeskAgents
+  const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
+  const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
+  const isExplorationAgents = isAgentExplorationChrome(navId)
   const [selectedInstance, setSelectedInstance] = useState<string | null>(
     pendingInstanceView?.instanceName ?? null,
   )
@@ -8044,6 +8050,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 hideLhs
                 existingAgent={false}
                 hideTopIdentity={isExplorationAgents}
+                hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
+                explorationChrome={isExplorationAgents}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}
