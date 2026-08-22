@@ -1,17 +1,31 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { TextArea } from '../../../elemental-stubs';
 import Conditions from '../../../Molecules/Conditions/Conditions';
 import ChooseTriggerModal, { REVIEW_TRIGGER_OPTIONS } from './ChooseTriggerModal';
+import { CONDITION_OPERATORS, operatorNeedsValue } from '../../../constants/conditionOperators';
 
 const DEFAULT_TRIGGER = REVIEW_TRIGGER_OPTIONS[2];
 
 const OPERATOR_SYMBOLS = {
+  is_blank: '== null',
+  is_not_blank: '!= null',
+  is_within: 'in',
+  between: 'between',
+  before: '<',
+  after: '>',
+  equals: '==',
   is: '==',
   is_not: '!=',
   contains: '.includes',
   greater_than: '>',
   less_than: '<',
 };
+
+const TRIGGER_CONDITION_HELP = 'Define when this workflow should run.';
+
+/** Placeholder help article — swap for the real trigger-condition docs URL when available. */
+const TRIGGER_CONDITION_LEARN_MORE_HREF =
+  'https://help.birdeye.com/hc/en-us/articles/trigger-conditions-in-workflows';
 
 const DEFAULT_CONDITION_OPTIONS = {
   field: [
@@ -24,13 +38,7 @@ const DEFAULT_CONDITION_OPTIONS = {
     { value: 'location', label: 'Location' },
     { value: 'keyword', label: 'Keyword' },
   ],
-  operator: [
-    { value: 'is', label: 'is' },
-    { value: 'is_not', label: 'is not' },
-    { value: 'contains', label: 'contains' },
-    { value: 'greater_than', label: 'is greater than' },
-    { value: 'less_than', label: 'is less than' },
-  ],
+  operator: [...CONDITION_OPERATORS],
   value: [
     { value: 'review_received', label: 'Review received' },
     { value: 'google', label: 'Google' },
@@ -38,7 +46,16 @@ const DEFAULT_CONDITION_OPTIONS = {
   ],
 };
 
+const DEFAULT_CONDITIONS = [{ id: 1, fieldValue: '', operatorValue: '', valueValue: '' }];
+
 const makeCondition = (id) => ({ id, fieldValue: '', operatorValue: '', valueValue: '' });
+
+function normalizeInitialConditions(list) {
+  if (!list?.length) return DEFAULT_CONDITIONS;
+  const hasAnyValue = list.some((c) => c.fieldValue || c.operatorValue || c.valueValue);
+  if (!hasAnyValue) return DEFAULT_CONDITIONS;
+  return list;
+}
 
 function resolveTrigger(initialValues) {
   const raw = initialValues.triggerType ?? initialValues.triggerName ?? '';
@@ -52,13 +69,19 @@ function resolveTrigger(initialValues) {
  *  rendering for the prototype, not a real rules compiler. */
 function buildPreview(entity, conditions, conditionOptions, logic) {
   const lines = conditions
-    .filter((c) => c.fieldValue && c.operatorValue && c.valueValue)
+    .filter((c) => {
+      if (!c.fieldValue || !c.operatorValue) return false;
+      return operatorNeedsValue(c.operatorValue) ? Boolean(c.valueValue) : true;
+    })
     .map((c, i) => {
       const fieldLabel = conditionOptions.field.find((o) => o.value === c.fieldValue)?.label ?? c.fieldValue;
-      const valueLabel = conditionOptions.value.find((o) => o.value === c.valueValue)?.label ?? c.valueValue;
       const opSymbol = OPERATOR_SYMBOLS[c.operatorValue] ?? '==';
       const connector = c.connector ?? logic;
       const prefix = i === 0 ? '' : `${connector} `;
+      if (!operatorNeedsValue(c.operatorValue)) {
+        return `${prefix}${entity}.${fieldLabel.toLowerCase().replace(/\s+/g, '_')} ${opSymbol};`;
+      }
+      const valueLabel = conditionOptions.value.find((o) => o.value === c.valueValue)?.label ?? c.valueValue;
       return `${prefix}${entity}.${fieldLabel.toLowerCase().replace(/\s+/g, '_')} ${opSymbol} ("${valueLabel}");`;
     });
   if (!lines.length) return null;
@@ -73,21 +96,9 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
   const [description, setDescription] = useState(
     initialValues.description ?? initialTrigger.agentDescription ?? '',
   );
-  const [conditions, setConditions] = useState([]);
+  const [conditions, setConditions] = useState(() => normalizeInitialConditions(initialValues.conditions));
   const [logic, setLogic] = useState(initialValues.logic ?? 'AND');
   const conditionOptions = initialValues.conditionOptions ?? DEFAULT_CONDITION_OPTIONS;
-
-  // Keep the card empty by default (Add condition only). Drop any blank placeholder rows
-  // that older nodeDetails still carry so Selects don't reappear on open.
-  useEffect(() => {
-    const list = initialValues.conditions;
-    if (!list?.length) return;
-    const hasAnyValue = list.some((c) => c.fieldValue || c.operatorValue || c.valueValue);
-    if (!hasAnyValue) {
-      setConditions([]);
-      onFieldChange?.('conditions', []);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTriggerSelect = (opt) => {
     setTrigger(opt);
@@ -115,6 +126,7 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
 
   function handleRemoveCondition(id) {
     setConditions((prev) => {
+      if (prev.length <= 1) return prev;
       const next = prev.filter((c) => c.id !== id);
       onFieldChange?.('conditions', next);
       return next;
@@ -180,6 +192,8 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
         onRemoveCondition={handleRemoveCondition}
         conditionOptions={conditionOptions}
         label="Trigger condition"
+        labelHelp={TRIGGER_CONDITION_HELP}
+        labelHelpLearnMoreHref={TRIGGER_CONDITION_LEARN_MORE_HREF}
         showAdvancedFilters={false}
       />
       {preview && (

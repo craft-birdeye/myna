@@ -29,11 +29,44 @@
   width: 100%;
 }
 
+.trigger-conditions__label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
 .trigger-conditions__label {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.5;
   color: #757575;
+}
+
+.trigger-conditions__label-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.trigger-conditions__label-help .material-symbols-outlined {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #555;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 16;
+}
+
+.trigger-conditions__label-help:hover .material-symbols-outlined {
+  color: #212121;
 }
 
 .trigger-conditions__card {

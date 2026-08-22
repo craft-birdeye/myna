@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import Conditions from '../../../Molecules/Conditions/Conditions';
+import { CONDITION_OPERATORS } from '../../../constants/conditionOperators';
 
 const DEFAULT_CONDITION_OPTIONS = {
   field: [
@@ -13,13 +14,7 @@ const DEFAULT_CONDITION_OPTIONS = {
     { value: 'location', label: 'Location' },
     { value: 'keyword', label: 'Keyword' },
   ],
-  operator: [
-    { value: 'is', label: 'is' },
-    { value: 'is_not', label: 'is not' },
-    { value: 'contains', label: 'contains' },
-    { value: 'greater_than', label: 'is greater than' },
-    { value: 'less_than', label: 'is less than' },
-  ],
+  operator: [...CONDITION_OPERATORS],
   value: [
     { value: 'review_received', label: 'Review received' },
     { value: 'google', label: 'Google' },

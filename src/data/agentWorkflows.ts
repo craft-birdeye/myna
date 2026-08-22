@@ -1,3 +1,5 @@
+import { CONDITION_OPERATORS } from '../workflow/constants/conditionOperators'
+
 export interface AgentWorkflow {
   nodes: any[]
   nodeDetails: Record<string, any>
@@ -246,12 +248,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'provider',           label: 'Provider' },
         { value: 'insurance_verified', label: 'Insurance verified' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'booked',    label: 'Booked' },
         { value: 'confirmed', label: 'Confirmed' },
@@ -319,12 +316,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'reminder_channel',    label: 'Reminder channel' },
         { value: 'response_time',       label: 'Response time' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'confirmed',    label: 'Confirmed' },
         { value: 'cancelled',    label: 'Cancelled' },
@@ -351,12 +343,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'reminder_channel',    label: 'Reminder channel' },
         { value: 'response_time',       label: 'Response time' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'confirmed',    label: 'Confirmed' },
         { value: 'cancelled',    label: 'Cancelled' },
@@ -402,11 +389,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -434,11 +417,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -467,11 +446,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -500,11 +475,7 @@ const HEALTHCARE_REMINDER_NODE_DETAILS: Record<string, any> = {
         { value: 'patient_response', label: 'Patient response' },
         { value: 'call_attempt',     label: 'Call attempt' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'answered',   label: 'Answered' },
         { value: 'rejected',   label: 'Rejected' },
@@ -623,10 +594,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
         { value: 'provider',           label: 'Provider' },
         { value: 'location',           label: 'Location' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'cancelled',  label: 'Cancelled' },
         { value: 'updated',    label: 'Updated' },
@@ -665,7 +633,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'slot', label: 'Slot' }],
-      operator: [{ value: 'is', label: 'Is' }, { value: 'is_not', label: 'Is not' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'available', label: 'Available' }, { value: 'unavailable', label: 'Unavailable' }],
     },
     parentId: 'wl-5',
@@ -712,7 +680,7 @@ const WAITLIST_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'slot', label: 'Slot' }],
-      operator: [{ value: 'is', label: 'Is' }, { value: 'is_not', label: 'Is not' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'open', label: 'Open' }, { value: 'filled', label: 'Filled' }],
     },
     parentId: 'wl-9',
@@ -790,12 +758,7 @@ const PREVISIT_NODE_DETAILS: Record<string, any> = {
         { value: 'provider',           label: 'Provider' },
         { value: 'insurance_verified', label: 'Insurance verified' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-        { value: 'contains',   label: 'Contains' },
-        { value: 'is_set',     label: 'Is set' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'booked',      label: 'Booked' },
         { value: 'confirmed',   label: 'Confirmed' },
@@ -830,10 +793,7 @@ const PREVISIT_NODE_DETAILS: Record<string, any> = {
         { value: 'appointment_status', label: 'Appointment status' },
         { value: 'patient_response',   label: 'Patient response' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Is' },
-        { value: 'not_equals', label: 'Is not' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'not_filled', label: 'Not filled' },
         { value: 'filled',     label: 'Filled' },
@@ -879,10 +839,7 @@ const PREVISIT_NODE_DETAILS: Record<string, any> = {
         { value: 'form_status',  label: 'Form status' },
         { value: 'intake_form',  label: 'Intake form' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Is' },
-        { value: 'not_equals', label: 'Is not' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'not_filled', label: 'Not filled' },
         { value: 'filled',     label: 'Filled' },
@@ -962,11 +919,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
         { value: 'channel',               label: 'Channel' },
         { value: 'conversation_assigned', label: 'Conversation assigned to' },
       ],
-      operator: [
-        { value: 'since',       label: 'since' },
-        { value: 'is',          label: 'is' },
-        { value: 'assigned_to', label: 'assigned to' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: '15_mins',   label: '15mins' },
         { value: 'web',       label: 'Web' },
@@ -1000,7 +953,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'conversation_history', label: 'Conversation history' }],
-      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
     },
     parentId: 'tr-3',
@@ -1018,7 +971,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'conversation_history', label: 'Conversation history' }],
-      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
     },
     parentId: 'tr-3',
@@ -1036,7 +989,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'conversation_history', label: 'Conversation history' }],
-      operator: [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Does not contain' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'pricing_request', label: 'Pricing request' }, { value: 'scheduling_request', label: 'Scheduling request' }, { value: 'referral', label: 'Referral' }],
     },
     parentId: 'tr-3',
@@ -1077,7 +1030,7 @@ const TAGGING_ROUTING_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field:    [{ value: 'message_received', label: 'Message received' }],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tr-10',
@@ -1192,10 +1145,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         { value: 'review_source', label: 'Review source' },
         { value: 'location',      label: 'Location' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'created_or_updated', label: 'Created or updated' },
         { value: 'created',            label: 'Created' },
@@ -1256,10 +1206,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         { value: 'Review.isSpam', label: 'Review.isSpam' },
         { value: 'triage_result', label: 'Triage result' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'true',  label: 'True' },
         { value: 'false', label: 'False' },
@@ -1518,10 +1465,7 @@ const REVIEW_GENERATION_NODE_DETAILS: Record<string, any> = {
         { value: 'transaction_status', label: 'Transaction status' },
         { value: 'location', label: 'Location' },
       ],
-      operator: [
-        { value: 'equals', label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'completed', label: 'Completed' },
       ],
@@ -1574,11 +1518,7 @@ const VC_CONDITION_OPTIONS = {
     { value: 'patient_response', label: 'Patient response' },
     { value: 'call_attempt',     label: 'Call attempt' },
   ],
-  operator: [
-    { value: 'equals',       label: 'Equals' },
-    { value: 'not_equals',   label: 'Does not equal' },
-    { value: 'greater_than', label: 'Greater than' },
-  ],
+  operator: [...CONDITION_OPERATORS],
   value: [
     { value: 'answered',  label: 'Answered' },
     { value: 'rejected',  label: 'Rejected' },
@@ -1648,11 +1588,7 @@ const RECALL_NODE_DETAILS: Record<string, any> = {
         { value: 'recall_due_date', label: 'Recall due date' },
         { value: 'patient_status',  label: 'Patient status' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'hygiene_recall', label: 'Hygiene recall' },
         { value: 'active',         label: 'Active' },
@@ -1690,10 +1626,7 @@ const RECALL_NODE_DETAILS: Record<string, any> = {
         { value: 'appointment_status', label: 'Appointment status' },
         { value: 'booking_response',   label: 'Booking response' },
       ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'true',  label: 'True' },
         { value: 'false', label: 'False' },
@@ -1720,7 +1653,7 @@ const RECALL_NODE_DETAILS: Record<string, any> = {
         { value: 'future_appointment', label: 'Future appointment' },
         { value: 'appointment_status', label: 'Appointment status' },
       ],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'rcl-5',
@@ -1887,11 +1820,7 @@ const REVENUE_NODE_DETAILS: Record<string, any> = {
         { value: 'balance_amount',  label: 'Balance amount' },
         { value: 'payment_status',  label: 'Payment status' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'overdue_30_days', label: 'Overdue 30 days' },
         { value: '30_days',         label: '30 days' },
@@ -1931,7 +1860,7 @@ const REVENUE_NODE_DETAILS: Record<string, any> = {
         { value: 'payment_status', label: 'Payment status' },
         { value: 'balance_amount', label: 'Balance amount' },
       ],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'rev-5',
@@ -1952,7 +1881,7 @@ const REVENUE_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field: [{ value: 'payment_done', label: 'Payment done' }],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'rev-5',
@@ -2116,11 +2045,7 @@ const TREATMENT_PLAN_NODE_DETAILS: Record<string, any> = {
         { value: 'days_since_presented', label: 'Days since presented' },
         { value: 'tp_value',             label: 'Treatment plan value' },
       ],
-      operator: [
-        { value: 'equals',       label: 'Equals' },
-        { value: 'not_equals',   label: 'Does not equal' },
-        { value: 'greater_than', label: 'Greater than' },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'treatment_plan_due',  label: 'Treatment plan due' },
         { value: 'presented',           label: 'Presented' },
@@ -2159,7 +2084,7 @@ const TREATMENT_PLAN_NODE_DETAILS: Record<string, any> = {
         { value: 'treatment_plan_status',    label: 'Treatment plan status' },
         { value: 'future_appointment',       label: 'Future appointment' },
       ],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tpa-5',
@@ -2180,7 +2105,7 @@ const TREATMENT_PLAN_NODE_DETAILS: Record<string, any> = {
     ],
     conditionOptions: {
       field: [{ value: 'treatment_plan_scheduled', label: 'Treatment plan scheduled' }],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value: [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tpa-5',
@@ -2342,7 +2267,7 @@ const TPS_NODE_DETAILS: Record<string, unknown> = {
     conditions: [{ id: 1, fieldValue: 'treatment_plan_scheduled', operatorValue: 'equals', valueValue: 'false' }],
     conditionOptions: {
       field:    [{ value: 'treatment_plan_scheduled', label: 'Treatment plan scheduled' }],
-      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }],
     },
     parentId: 'tps-6',
@@ -2357,7 +2282,7 @@ const TPS_NODE_DETAILS: Record<string, unknown> = {
     conditions: [{ id: 1, fieldValue: 'treatment_plan_scheduled', operatorValue: 'equals', valueValue: 'true' }],
     conditionOptions: {
       field:    [{ value: 'treatment_plan_scheduled', label: 'Treatment plan scheduled' }],
-      operator: [{ value: 'equals', label: 'Equals' }],
+      operator: [...CONDITION_OPERATORS],
       value:    [{ value: 'true', label: 'True' }],
     },
     parentId: 'tps-6',
@@ -2480,11 +2405,7 @@ const TPE_NODE_DETAILS: Record<string, unknown> = {
         { value: 'treatment_plan_status', label: 'Plan status'     },
         { value: 'plan_value',            label: 'Plan value'      },
       ],
-      operator: [
-        { value: 'equals',     label: 'equals'     },
-        { value: 'not_equals', label: 'not equals' },
-        { value: 'contains',   label: 'contains'   },
-      ],
+      operator: [...CONDITION_OPERATORS],
       value: [
         { value: 'ABC', label: 'ABC' },
         { value: '124', label: '124' },

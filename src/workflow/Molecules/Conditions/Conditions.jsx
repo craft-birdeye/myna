@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Icon } from '../../../components/Icon/Icon';
+import { Tooltip } from '../../../components/Tooltip/Tooltip';
+import { operatorNeedsValue } from '../../constants/conditionOperators';
 import './Conditions.css';
 import styles from './Conditions.module.css';
 
@@ -191,12 +194,49 @@ export default function Conditions({
   conditionOptions,
   onOptionsChange,
   label = 'Conditions',
+  labelHelp,
+  labelHelpLearnMoreHref,
+  labelHelpLearnMoreLabel,
   showAdvancedFilters = true,
 }) {
   return (
     <div className="trigger-conditions">
       <div className="trigger-conditions__section">
-        <span className="trigger-conditions__label">{label}</span>
+        <div className="trigger-conditions__label-row">
+          <span className="trigger-conditions__label">{label}</span>
+          {labelHelp ? (
+            <Tooltip
+              content={
+                labelHelpLearnMoreHref ? (
+                  <span className="flex flex-col gap-xs">
+                    <span>{labelHelp}</span>
+                    <a
+                      href={labelHelpLearnMoreHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {labelHelpLearnMoreLabel ?? 'Learn more'}
+                    </a>
+                  </span>
+                ) : (
+                  labelHelp
+                )
+              }
+              variant="detail"
+              interactive={Boolean(labelHelpLearnMoreHref)}
+            >
+              <button
+                type="button"
+                className="trigger-conditions__label-help"
+                aria-label="Help"
+              >
+                <Icon name="help" size={16} />
+              </button>
+            </Tooltip>
+          ) : null}
+        </div>
         <div className="trigger-conditions__card">
           <div className="trigger-conditions__conditions">
             {conditions.map((condition, index) => {
@@ -209,6 +249,33 @@ export default function Conditions({
               // Per-row connector lets sibling groups differ (AND within a group, OR between groups).
               // Falls back to the single shared `logic` prop for callers that haven't opted in yet.
               const connector = condition.connector ?? logic;
+              const showValueField = operatorNeedsValue(condition.operatorValue);
+              const canRemove = conditions.length > 1 && onRemoveCondition;
+
+              const conditionHeader = (
+                <div className={styles.conditionHeader}>
+                  {index === 0 ? (
+                    <span className={styles.whenLabel}>When</span>
+                  ) : (
+                    <LogicConnector
+                      value={connector}
+                      onChange={(val) =>
+                        onConnectorChange ? onConnectorChange(condition.id, val) : onLogicChange?.(val)
+                      }
+                    />
+                  )}
+                  {canRemove && index > 0 ? (
+                    <button
+                      type="button"
+                      className={styles.removeBtn}
+                      onClick={() => onRemoveCondition(condition.id)}
+                      title="Remove condition"
+                    >
+                      <span className={`material-symbols-outlined ${styles.removeBtnIcon}`}>delete</span>
+                    </button>
+                  ) : null}
+                </div>
+              );
 
               const conditionFields = (
                 <div className={styles.conditionDropdowns}>
@@ -223,58 +290,40 @@ export default function Conditions({
                     name={`operator-${condition.id}`}
                     selected={condition.operatorValue}
                     options={operatorOpts}
-                    onChange={(opt) => onConditionChange?.(condition.id, 'operator', opt.value)}
+                    onChange={(opt) => {
+                      onConditionChange?.(condition.id, 'operator', opt.value);
+                      if (!operatorNeedsValue(opt.value)) {
+                        onConditionChange?.(condition.id, 'value', '');
+                      }
+                    }}
                     onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('operator', opts) : undefined}
                   />
-                  <Dropdown
-                    name={`value-${condition.id}`}
-                    selected={condition.valueValue}
-                    options={valueOpts}
-                    onChange={(opt) => onConditionChange?.(condition.id, 'value', opt.value)}
-                    onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('value', opts) : undefined}
-                  />
+                  {showValueField ? (
+                    <Dropdown
+                      name={`value-${condition.id}`}
+                      selected={condition.valueValue}
+                      options={valueOpts}
+                      onChange={(opt) => onConditionChange?.(condition.id, 'value', opt.value)}
+                      onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('value', opts) : undefined}
+                    />
+                  ) : null}
                 </div>
               );
 
-              const connectorRow = index > 0 && (
-                <div className={styles.connectorRow}>
-                  <LogicConnector
-                    value={connector}
-                    onChange={(val) =>
-                      onConnectorChange ? onConnectorChange(condition.id, val) : onLogicChange?.(val)
-                    }
-                  />
-                  {onRemoveCondition && (
-                    <button
-                      type="button"
-                      className={styles.removeBtn}
-                      onClick={() => onRemoveCondition(condition.id)}
-                      title="Remove condition"
-                    >
-                      <span className={`material-symbols-outlined ${styles.removeBtnIcon}`}>delete</span>
-                    </button>
-                  )}
-                </div>
-              );
-
-              // Wrap the connector + its condition in `indent` nested left-border guides,
+              // Wrap each condition in `indent` nested left-border guides,
               // so consecutive conditions at deeper levels read as visually grouped.
               let body = (
                 <div className="trigger-conditions__condition">
+                  {conditionHeader}
                   {conditionFields}
                 </div>
               );
               for (let i = 0; i < indent; i++) {
                 body = <div className={styles.indentWrap}>{body}</div>;
               }
-              let connectorBody = connectorRow;
-              for (let i = 0; i < indent && connectorBody; i++) {
-                connectorBody = <div className={styles.indentWrap}>{connectorBody}</div>;
-              }
 
               return (
                 <React.Fragment key={condition.id}>
-                  {connectorBody}
                   {body}
                 </React.Fragment>
               );
