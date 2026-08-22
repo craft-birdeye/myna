@@ -18,6 +18,7 @@ const LEGACY_FALLBACK_NAMES = new Set([
 
 const DEFAULT_CONDITION_OPTIONS = {
   field: [
+    { value: 'review_text', label: 'Review Text' },
     { value: 'rating', label: 'Rating' },
     { value: 'sentiment', label: 'Sentiment' },
     { value: 'source', label: 'Source' },
@@ -43,12 +44,20 @@ function SectionLabel({ label, required }) {
   );
 }
 
-function makeCondition(id, fieldValue = '') {
-  return { id, fieldValue, operatorValue: '', valueValue: '' };
+function makeCondition(id, fieldValue = '', indent = 0) {
+  return { id, fieldValue, operatorValue: '', valueValue: '', indent };
 }
 
-function isBlankCondition(c) {
-  return !(c?.fieldValue || c?.operatorValue || c?.valueValue);
+function defaultPathDetail(branch, branchNodeId) {
+  return {
+    branchName: branch.name,
+    description: '',
+    conditions: branch.isFallback ? [] : [makeCondition(`${branch.id}-cond-1`)],
+    parentId: branchNodeId,
+    isBranchPath: true,
+    isFallback: !!branch.isFallback,
+    nodes: [],
+  };
 }
 
 function normalizeBranches(list) {
@@ -79,9 +88,10 @@ function BranchAccordionItem({
   onPathFieldChange,
 }) {
   const itemRef = React.useRef(null);
-  const addMenuRef = React.useRef(null);
   const [isDragging, setIsDragging] = React.useState(false);
-  const [addMenuOpen, setAddMenuOpen] = React.useState(false);
+  const [descriptionOpen, setDescriptionOpen] = React.useState(
+    () => Boolean(String(pathDetail.description ?? '').trim()),
+  );
   const rawName = pathDetail.branchName ?? branch.name ?? '';
   const isFallback = !!branch.isFallback
     || !!pathDetail.isFallback
@@ -91,72 +101,32 @@ function BranchAccordionItem({
     : rawName;
   const description = pathDetail.description ?? '';
   const conditions = pathDetail.conditions ?? [];
-  const filledConditions = conditions.filter((c) => !isBlankCondition(c));
   const logic = pathDetail.logic ?? 'OR';
   const conditionOptions = pathDetail.conditionOptions ?? DEFAULT_CONDITION_OPTIONS;
-  const fieldOptions = conditionOptions.field ?? [];
+
+  // Non-fallback branches always show at least one empty condition row (no initial CTA).
+  React.useEffect(() => {
+    if (isFallback) return;
+    if ((pathDetail.conditions ?? []).length > 0) return;
+    onPathFieldChange?.(branch.id, 'conditions', [makeCondition(`${branch.id}-cond-1`)]);
+  }, [isFallback, branch.id, pathDetail.conditions?.length, onPathFieldChange]);
 
   function updateConditions(next) {
     onPathFieldChange?.(branch.id, 'conditions', next);
   }
 
-  // Drop blank placeholder rows so empty state stays "Add condition" only.
-  React.useEffect(() => {
-    if (conditions.length > 0 && conditions.every(isBlankCondition)) {
-      updateConditions([]);
-    }
-  }, [branch.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  React.useEffect(() => {
-    if (!addMenuOpen) return undefined;
-    const onDocClick = (e) => {
-      if (!addMenuRef.current?.contains(e.target)) setAddMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [addMenuOpen]);
-
-  function handlePickConditionField(opt) {
-    const next = [
-      ...filledConditions,
-      makeCondition(Date.now(), opt.value),
-    ];
-    updateConditions(next);
-    setAddMenuOpen(false);
+  function handleAddCondition() {
+    const lastIndent = conditions[conditions.length - 1]?.indent ?? 0;
+    updateConditions([...conditions, makeCondition(Date.now(), '', lastIndent)]);
   }
 
-  const addConditionControl = (
-    <div className={styles.addConditionWrap} ref={addMenuRef}>
-      <button
-        type="button"
-        className={styles.addConditionBtn}
-        onClick={() => setAddMenuOpen((open) => !open)}
-        aria-expanded={addMenuOpen}
-        aria-haspopup="listbox"
-      >
-        <span className="material-symbols-outlined">add_circle</span>
-        Add condition
-        <span className={`material-symbols-outlined ${styles.addConditionChevron}`}>
-          expand_more
-        </span>
-      </button>
-      {addMenuOpen && (
-        <div className={styles.addConditionMenu} role="listbox">
-          {fieldOptions.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={styles.addConditionMenuItem}
-              role="option"
-              onClick={() => handlePickConditionField(opt)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  function handleAddConditionGroup() {
+    const lastIndent = conditions[conditions.length - 1]?.indent ?? 0;
+    updateConditions([
+      ...conditions,
+      makeCondition(Date.now(), '', Math.min(lastIndent + 1, 2)),
+    ]);
+  }
 
   // Expanded non-fallback rows use a fixed "Branch name" header label (Figma);
   // collapsed rows show the live branch title.
@@ -261,62 +231,55 @@ function BranchAccordionItem({
             value={name}
             onChange={(e) => onPathFieldChange?.(branch.id, 'branchName', e.target.value)}
           />
-          <div className={styles.fieldBlock}>
-            <SectionLabel label="Description" />
-            <TextArea
-              name={`branch-desc-${branch.id}`}
-              placeholder="Enter branch description"
-              value={description}
-              onChange={(e) => onPathFieldChange?.(branch.id, 'description', e.target.value)}
-              noFloatingLabel
-              rows={3}
-            />
-          </div>
-          <div className={styles.conditionsBlock}>
-            {filledConditions.length === 0 ? (
-              <>
-                <SectionLabel label="Condition" />
-                {addConditionControl}
-              </>
-            ) : (
-              <Conditions
-                conditions={filledConditions}
-                logic={logic}
-                label="Condition"
-                showAdvancedFilters={false}
-                onConditionChange={(id, field, value) => {
-                  updateConditions(
-                    filledConditions.map((c) =>
-                      c.id === id ? { ...c, [`${field}Value`]: value } : c,
-                    ),
-                  );
-                }}
-                onLogicChange={(val) => onPathFieldChange?.(branch.id, 'logic', val)}
-                onAddCondition={() => setAddMenuOpen(true)}
-                onRemoveCondition={(id) =>
-                  updateConditions(filledConditions.filter((c) => c.id !== id))
-                }
-                onAdvancedFilters={() => {}}
-                conditionOptions={conditionOptions}
+
+          {descriptionOpen ? (
+            <div className={styles.fieldBlock}>
+              <SectionLabel label="Description" />
+              <TextArea
+                name={`branch-desc-${branch.id}`}
+                placeholder="Enter branch description"
+                value={description}
+                onChange={(e) => onPathFieldChange?.(branch.id, 'description', e.target.value)}
+                noFloatingLabel
+                rows={3}
               />
-            )}
-            {filledConditions.length > 0 && addMenuOpen && (
-              <div className={styles.addConditionWrap} ref={addMenuRef}>
-                <div className={`${styles.addConditionMenu} ${styles.addConditionMenuBelowConditions}`} role="listbox">
-                  {fieldOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={styles.addConditionMenuItem}
-                      role="option"
-                      onClick={() => handlePickConditionField(opt)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.addDescriptionBtn}
+              onClick={() => setDescriptionOpen(true)}
+            >
+              <span className="material-symbols-outlined">add_circle</span>
+              Add description
+            </button>
+          )}
+
+          <div className={styles.conditionsBlock}>
+            <Conditions
+              conditions={conditions.length > 0 ? conditions : [makeCondition(`${branch.id}-cond-1`)]}
+              logic={logic}
+              label="Condition"
+              showAdvancedFilters={false}
+              onConditionChange={(id, field, value) => {
+                const base = conditions.length > 0 ? conditions : [makeCondition(`${branch.id}-cond-1`)];
+                updateConditions(
+                  base.map((c) =>
+                    c.id === id ? { ...c, [`${field}Value`]: value } : c,
+                  ),
+                );
+              }}
+              onLogicChange={(val) => onPathFieldChange?.(branch.id, 'logic', val)}
+              onAddCondition={handleAddCondition}
+              onAddConditionGroup={handleAddConditionGroup}
+              onRemoveCondition={(id) => {
+                const next = conditions.filter((c) => c.id !== id);
+                // Keep one empty row so the condition box stays open by default.
+                updateConditions(next.length > 0 ? next : [makeCondition(`${branch.id}-cond-1`)]);
+              }}
+              onAdvancedFilters={() => {}}
+              conditionOptions={conditionOptions}
+            />
           </div>
         </div>
       )}
@@ -330,6 +293,7 @@ export default function ControlBranchBody({
   onPathFieldChange,
   onDeleteBranch,
   onFocusBranchPath,
+  onOpenGlossary,
 }) {
   const basedOn = initialValues.basedOn ?? 'conditions';
   const [branches, setBranches] = useState(() => {
@@ -342,18 +306,7 @@ export default function ControlBranchBody({
     }
     const defaults = getDefaultBranches(initialValues.branchNodeId);
     return Object.fromEntries(
-      defaults.map((b) => [
-        b.id,
-        {
-          branchName: b.name,
-          description: '',
-          conditions: [],
-          parentId: initialValues.branchNodeId,
-          isBranchPath: true,
-          isFallback: !!b.isFallback,
-          nodes: [],
-        },
-      ]),
+      defaults.map((b) => [b.id, defaultPathDetail(b, initialValues.branchNodeId)]),
     );
   });
   // Match design: rows start collapsed, unless a canvas path chip requested one open.
@@ -383,18 +336,7 @@ export default function ControlBranchBody({
     setBranches(defaults);
     setPathDetails(
       Object.fromEntries(
-        defaults.map((b) => [
-          b.id,
-          {
-            branchName: b.name,
-            description: '',
-            conditions: [],
-            parentId: initialValues.branchNodeId,
-            isBranchPath: true,
-            isFallback: !!b.isFallback,
-            nodes: [],
-          },
-        ]),
+        defaults.map((b) => [b.id, defaultPathDetail(b, initialValues.branchNodeId)]),
       ),
     );
     onFieldChange?.('branches', defaults);
@@ -444,14 +386,7 @@ export default function ControlBranchBody({
     const newId = `${idBase}-path-${Date.now()}`;
     const newBranch = { id: newId, name: `Branch ${branchNumber}`, percentage: 0 };
     const next = [...nonFallback, newBranch, ...fallback];
-    const newPathDetail = {
-      branchName: newBranch.name,
-      description: '',
-      conditions: [],
-      parentId: initialValues.branchNodeId,
-      isBranchPath: true,
-      nodes: [],
-    };
+    const newPathDetail = defaultPathDetail(newBranch, initialValues.branchNodeId);
 
     setBranches(next);
     setPathDetails((details) => ({
@@ -563,7 +498,16 @@ export default function ControlBranchBody({
             </span>
           )}
         </div>
-        <p className={styles.branchesHint}>Branches run in the order listed</p>
+        <p className={styles.branchesHint}>
+          Branches run in the order listed.{' '}
+          <button
+            type="button"
+            className={styles.branchesHintLink}
+            onClick={() => onOpenGlossary?.('branch')}
+          >
+            Learn more
+          </button>
+        </p>
 
         <div className={styles.accordionList}>
           {branches.map((b, i) => {

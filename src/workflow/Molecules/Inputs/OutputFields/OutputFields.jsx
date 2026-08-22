@@ -33,10 +33,12 @@ export default function OutputFields({
   showInfo,
   infoTooltip,
   infoLearnMoreHref,
+  infoOnLearnMore,
   /** Exploration: bordered box, two chip lines + "View N more". */
   collapseToTwoLines = false,
   /** Exploration: "+ Add" on the label row instead of inside the chip box. */
   addInLabelRow = false,
+  onOpenGlossary,
 }) {
   const normalizedFields = normalizeFields(fields);
   const [generateState, setGenerateState] = useState('idle');
@@ -262,7 +264,8 @@ export default function OutputFields({
           <InfoTooltip
             text={infoTooltip}
             variant="detail"
-            learnMoreHref={infoLearnMoreHref}
+            learnMoreHref={infoOnLearnMore ? undefined : infoLearnMoreHref}
+            onLearnMore={infoOnLearnMore}
           />
         ) : showInfo ? (
           <span className={`material-symbols-outlined ${styles.infoIcon}`}>info</span>
@@ -296,6 +299,7 @@ export default function OutputFields({
         <AddOutputFieldModal
           onClose={() => setOutputModalOpen(false)}
           onAdd={handleOutputModalAdd}
+          onLearnMore={onOpenGlossary ? () => onOpenGlossary('output-field') : undefined}
         />
       )}
     </div>

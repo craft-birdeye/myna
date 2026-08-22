@@ -44,5 +44,7 @@ export interface ContextModalProps {
   overlayZIndex?: number
   /** Optional docs link shown inline after the subtitle. */
   learnMoreHref?: string
+  /** Prefer over href — opens in-app help (e.g. glossary) instead of an external page. */
+  onLearnMore?: () => void
   learnMoreLabel?: string
 }

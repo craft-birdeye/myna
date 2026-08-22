@@ -29,8 +29,8 @@ export interface HelpCenterPanelProps {
   onClose: () => void
   /** Starts the Agent builder basics coach tour. */
   onStartTour?: (tourId?: string) => void
-  /** Opens the Glossary popup (Figma `15988:11969`). */
-  onOpenGlossary?: () => void
+  /** Opens the Glossary popup (Figma `15988:11969`). Optional term id pre-selects that entry. */
+  onOpenGlossary?: (termId?: string) => void
 }
 
 export const HELP_VIDEOS: HelpVideoItem[] = [

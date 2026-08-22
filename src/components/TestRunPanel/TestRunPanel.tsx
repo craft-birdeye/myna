@@ -6,7 +6,7 @@
  * comes from `useTestRun`, the same source that drives the canvas highlighting, so the two
  * surfaces animate in lockstep. The active row scrolls itself into view as the run advances.
  *
- * Shell metrics match the workflow canvas's node-config RHS (390px, 12px radius).
+ * Shell metrics match the workflow canvas's node-config RHS (450px, 12px radius).
  */
 import { useEffect, useRef, useState } from 'react'
 import type { TestRunStep } from '../../data/testRunSteps'
@@ -199,7 +199,7 @@ export function TestRunPanel({
   }, [activeIndex])
 
   return (
-    <div className="flex h-full w-[390px] flex-col overflow-hidden rounded-lg border border-border bg-surface">
+    <div className="flex h-full w-[450px] flex-col overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex min-h-[60px] shrink-0 items-center justify-between p-md">
         <span className="text-h3 text-text-primary">Test details</span>
         <button

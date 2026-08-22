@@ -1,101 +1,105 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '../../../components/Icon/Icon';
 import { Tooltip } from '../../../components/Tooltip/Tooltip';
+import VariableChip from '../Inputs/VariableChip/VariableChip';
 import { operatorNeedsValue } from '../../constants/conditionOperators';
 import './Conditions.css';
 import styles from './Conditions.module.css';
 
-function getScrollParent(el) {
-  let node = el?.parentElement;
-  while (node && node !== document.body) {
-    const { overflowY, overflow } = window.getComputedStyle(node);
-    if (/(auto|scroll|overlay)/.test(overflowY) || /(auto|scroll|overlay)/.test(overflow)) {
-      return node;
-    }
-    node = node.parentElement;
-  }
-  return null;
+const MENU_Z_INDEX = 5200;
+const MENU_MAX_HEIGHT = 240;
+
+function buildFixedMenuStyle(triggerEl, optionCount, zIndex = MENU_Z_INDEX) {
+  if (!triggerEl) return null;
+  const rect = triggerEl.getBoundingClientRect();
+  const estimatedHeight = Math.min(optionCount * 36 + 8, MENU_MAX_HEIGHT);
+  const spaceBelow = window.innerHeight - rect.bottom - 8;
+  const spaceAbove = rect.top - 8;
+  const openUp = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+
+  return {
+    position: 'fixed',
+    left: rect.left,
+    width: rect.width,
+    zIndex,
+    ...(openUp
+      ? { bottom: window.innerHeight - rect.top + 4, maxHeight: Math.min(MENU_MAX_HEIGHT, spaceAbove) }
+      : { top: rect.bottom + 4, maxHeight: Math.min(MENU_MAX_HEIGHT, spaceBelow) }),
+  };
 }
 
-function getRhsFooterTop(anchorEl) {
-  let node = anchorEl;
-  while (node && node !== document.body) {
-    const next = node.nextElementSibling;
-    if (next) {
-      const saveBtn = next.querySelector('button');
-      if (saveBtn && /save/i.test(saveBtn.textContent || '')) {
-        return next.getBoundingClientRect().top;
-      }
-    }
-    node = node.parentElement;
-  }
-  return null;
-}
-
-function getBoundaryBottom(anchorEl) {
-  const footerTop = getRhsFooterTop(anchorEl);
-  if (footerTop != null) return footerTop;
-  const scrollParent = getScrollParent(anchorEl);
-  return scrollParent?.getBoundingClientRect().bottom ?? window.innerHeight;
-}
-
-function shouldOpenMenuUp(anchorEl, menuHeight) {
-  if (!anchorEl || !menuHeight) return false;
-  const anchorRect = anchorEl.getBoundingClientRect();
-  const scrollParent = getScrollParent(anchorEl);
-  const boundaryTop = scrollParent?.getBoundingClientRect().top ?? 0;
-  const boundaryBottom = getBoundaryBottom(anchorEl);
-  const spaceBelow = boundaryBottom - anchorRect.bottom - 4;
-  const spaceAbove = anchorRect.top - boundaryTop - 4;
-  if (spaceBelow >= menuHeight) return false;
-  if (spaceAbove >= menuHeight) return true;
-  return spaceAbove > spaceBelow;
-}
-
-function estimateMenuHeight(optionCount, menuEl) {
-  if (menuEl?.offsetHeight) return menuEl.offsetHeight;
-  return Math.min(optionCount * 36 + 8, 240);
-}
-
-function Dropdown({ name, selected, options, onChange, placeholder = 'Select', onOptionsChange }) {
+function Dropdown({
+  name,
+  selected,
+  options,
+  onChange,
+  placeholder = 'Select',
+  onOptionsChange,
+  valueAsChip = false,
+}) {
   const [open, setOpen] = useState(false);
-  const [menuOpensUp, setMenuOpensUp] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [editorStyle, setEditorStyle] = useState(null);
   const [draftOptions, setDraftOptions] = useState([]);
   const ref = useRef(null);
+  const triggerRef = useRef(null);
   const menuRef = useRef(null);
+  const editorRef = useRef(null);
 
   useEffect(() => {
+    if (!open && !editMode) return undefined;
     const close = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-        setEditMode(false);
+      const t = e.target;
+      if (
+        ref.current?.contains(t)
+        || menuRef.current?.contains(t)
+        || editorRef.current?.contains(t)
+      ) {
+        return;
       }
+      setOpen(false);
+      setEditMode(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
-  }, []);
+  }, [open, editMode]);
 
   useLayoutEffect(() => {
-    if (!open) return undefined;
-    const trigger = ref.current?.querySelector('.tc-dropdown__trigger');
-    if (!trigger) return undefined;
+    if (!open || !triggerRef.current) return undefined;
 
     const updatePlacement = () => {
-      const menuHeight = estimateMenuHeight(options.length, menuRef.current);
-      setMenuOpensUp(shouldOpenMenuUp(trigger, menuHeight));
+      setMenuStyle(buildFixedMenuStyle(triggerRef.current, options.length));
     };
 
     updatePlacement();
-    const raf = requestAnimationFrame(updatePlacement);
     window.addEventListener('resize', updatePlacement);
     window.addEventListener('scroll', updatePlacement, true);
     return () => {
-      cancelAnimationFrame(raf);
       window.removeEventListener('resize', updatePlacement);
       window.removeEventListener('scroll', updatePlacement, true);
     };
   }, [open, options.length]);
+
+  useLayoutEffect(() => {
+    if (!editMode || !triggerRef.current) return undefined;
+
+    const updatePlacement = () => {
+      setEditorStyle({
+        ...buildFixedMenuStyle(triggerRef.current, Math.max(draftOptions.length, 3), MENU_Z_INDEX),
+        right: 'auto',
+      });
+    };
+
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [editMode, draftOptions.length]);
 
   const selectedLabel = options.find((o) => o.value === selected)?.label;
 
@@ -107,7 +111,7 @@ function Dropdown({ name, selected, options, onChange, placeholder = 'Select', o
   };
 
   const updateDraftLabel = (index, label) => {
-    setDraftOptions((prev) => prev.map((o, i) => i === index ? { ...o, label } : o));
+    setDraftOptions((prev) => prev.map((o, i) => (i === index ? { ...o, label } : o)));
   };
 
   const removeDraftOption = (index) => {
@@ -129,28 +133,97 @@ function Dropdown({ name, selected, options, onChange, placeholder = 'Select', o
     setEditMode(false);
   };
 
+  const menu = open && menuStyle
+    ? createPortal(
+      <ul
+        ref={menuRef}
+        className="tc-dropdown__menu tc-dropdown__menu--portaled"
+        style={menuStyle}
+        role="listbox"
+        data-dropdown-name={name}
+      >
+        {options.map((opt) => (
+          <li
+            key={opt.value}
+            role="option"
+            aria-selected={opt.value === selected}
+            className={`tc-dropdown__option${opt.value === selected ? ' tc-dropdown__option--selected' : ''}`}
+            onClick={() => { onChange(opt); setOpen(false); }}
+          >
+            {opt.label}
+            {opt.value === selected && (
+              <span className="material-symbols-outlined tc-dropdown__check">check</span>
+            )}
+          </li>
+        ))}
+      </ul>,
+      document.body,
+    )
+    : null;
+
+  const editor = editMode && editorStyle
+    ? createPortal(
+      <div ref={editorRef} className={styles.optionsEditor} style={editorStyle}>
+        <div className={styles.optionsEditorList}>
+          {draftOptions.map((opt, i) => (
+            <div key={opt.value || i} className={styles.optionRow}>
+              <input
+                className={styles.optionInput}
+                value={opt.label}
+                placeholder="Option label"
+                onChange={(e) => updateDraftLabel(i, e.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.optionRemoveBtn}
+                onClick={() => removeDraftOption(i)}
+              >
+                <span className={`material-symbols-outlined ${styles.optionRemoveBtnIcon}`}>close</span>
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className={styles.editorFooter}>
+          <button type="button" className={styles.addOptionBtn} onClick={addDraftOption}>
+            <span className={`material-symbols-outlined ${styles.addOptionIcon}`}>add</span>
+            Add option
+          </button>
+          <button type="button" className={styles.applyBtn} onClick={applyOptions}>
+            <span className={`material-symbols-outlined ${styles.applyBtnIcon}`}>check</span>
+          </button>
+        </div>
+      </div>,
+      document.body,
+    )
+    : null;
+
   return (
     <div className={styles.dropdownOuter} ref={ref}>
       <div className="tc-dropdown">
         <button
+          ref={triggerRef}
           type="button"
           className={`tc-dropdown__trigger${open ? ' tc-dropdown__trigger--open' : ''} ${styles.dropdownTrigger}`}
           onClick={() => {
             if (editMode) return;
-            setOpen((wasOpen) => {
-              if (wasOpen) return false;
-              const trigger = ref.current?.querySelector('.tc-dropdown__trigger');
-              const menuHeight = estimateMenuHeight(options.length, null);
-              setMenuOpensUp(shouldOpenMenuUp(trigger, menuHeight));
-              return true;
-            });
+            setOpen((wasOpen) => !wasOpen);
           }}
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          <span className={`tc-dropdown__value${!selectedLabel ? ' tc-dropdown__value--placeholder' : ''}`}>
-            {selectedLabel || placeholder}
-          </span>
+          {valueAsChip && selectedLabel ? (
+            <span className={styles.chipValue}>
+              <VariableChip
+                value={selectedLabel}
+                type="variable"
+                onDelete={() => onChange({ value: '', label: '' })}
+              />
+            </span>
+          ) : (
+            <span className={`tc-dropdown__value${!selectedLabel ? ' tc-dropdown__value--placeholder' : ''}`}>
+              {selectedLabel || placeholder}
+            </span>
+          )}
           {onOptionsChange && (
             <span
               className={styles.editTrigger}
@@ -175,62 +248,8 @@ function Dropdown({ name, selected, options, onChange, placeholder = 'Select', o
           )}
           <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
         </button>
-
-        {open && (
-          <ul
-            ref={menuRef}
-            className={`tc-dropdown__menu${menuOpensUp ? ' tc-dropdown__menu--up' : ''}`}
-            role="listbox"
-          >
-            {options.map((opt) => (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={opt.value === selected}
-                className={`tc-dropdown__option${opt.value === selected ? ' tc-dropdown__option--selected' : ''}`}
-                onClick={() => { onChange(opt); setOpen(false); }}
-              >
-                {opt.label}
-                {opt.value === selected && (
-                  <span className="material-symbols-outlined tc-dropdown__check">check</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {editMode && (
-          <div className={styles.optionsEditor}>
-            <div className={styles.optionsEditorList}>
-              {draftOptions.map((opt, i) => (
-                <div key={opt.value || i} className={styles.optionRow}>
-                  <input
-                    className={styles.optionInput}
-                    value={opt.label}
-                    placeholder="Option label"
-                    onChange={(e) => updateDraftLabel(i, e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className={styles.optionRemoveBtn}
-                    onClick={() => removeDraftOption(i)}
-                  >
-                    <span className={`material-symbols-outlined ${styles.optionRemoveBtnIcon}`}>close</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className={styles.editorFooter}>
-              <button type="button" className={styles.addOptionBtn} onClick={addDraftOption}>
-                <span className={`material-symbols-outlined ${styles.addOptionIcon}`}>add</span>
-                Add option
-              </button>
-              <button type="button" className={styles.applyBtn} onClick={applyOptions}>
-                <span className={`material-symbols-outlined ${styles.applyBtnIcon}`}>check</span>
-              </button>
-            </div>
-          </div>
-        )}
+        {menu}
+        {editor}
       </div>
     </div>
   );
@@ -238,34 +257,176 @@ function Dropdown({ name, selected, options, onChange, placeholder = 'Select', o
 
 function LogicConnector({ value, onChange }) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
   const ref = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
-    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    if (!open) return undefined;
+    const close = (e) => {
+      if (ref.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
-  }, []);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return undefined;
+    const updatePlacement = () => {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setMenuStyle({
+        position: 'fixed',
+        left: rect.left,
+        top: rect.bottom + 4,
+        zIndex: MENU_Z_INDEX,
+        minWidth: Math.max(rect.width, 120),
+      });
+    };
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [open]);
+
+  const menu = open && menuStyle
+    ? createPortal(
+      <ul ref={menuRef} className="tc-connector__menu tc-connector__menu--portaled" style={menuStyle}>
+        {['AND', 'OR'].map((opt) => (
+          <li
+            key={opt}
+            className={`tc-connector__option${value === opt ? ' tc-connector__option--selected' : ''}`}
+            onClick={() => { onChange(opt); setOpen(false); }}
+          >
+            <span>{opt}</span>
+            {value === opt && <span className="material-symbols-outlined">check</span>}
+          </li>
+        ))}
+      </ul>,
+      document.body,
+    )
+    : null;
 
   return (
     <div className="tc-connector" ref={ref}>
-      <button type="button" className="tc-connector__btn" onClick={() => setOpen((v) => !v)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="tc-connector__btn"
+        onClick={() => setOpen((v) => !v)}
+      >
         <span>{value}</span>
         <span className="material-symbols-outlined">expand_more</span>
       </button>
-      {open && (
-        <ul className="tc-connector__menu">
-          {['AND', 'OR'].map((opt) => (
-            <li
-              key={opt}
-              className={`tc-connector__option${value === opt ? ' tc-connector__option--selected' : ''}`}
-              onClick={() => { onChange(opt); setOpen(false); }}
-            >
-              <span>{opt}</span>
-              {value === opt && <span className="material-symbols-outlined">check</span>}
-            </li>
-          ))}
-        </ul>
-      )}
+      {menu}
+    </div>
+  );
+}
+
+function AddConditionButton({ onAddCondition, onAddConditionGroup }) {
+  const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
+  const wrapRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const showGroup = typeof onAddConditionGroup === 'function';
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => {
+      if (wrapRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return undefined;
+    const updatePlacement = () => {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setMenuStyle({
+        position: 'fixed',
+        left: rect.left,
+        top: rect.bottom + 4,
+        zIndex: MENU_Z_INDEX,
+        minWidth: Math.max(rect.width, 200),
+      });
+    };
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [open]);
+
+  const pick = (action) => {
+    setOpen(false);
+    action?.();
+  };
+
+  const menu = open && menuStyle
+    ? createPortal(
+      <div
+        ref={menuRef}
+        className="tc-add-menu"
+        style={menuStyle}
+        role="menu"
+      >
+        <button
+          type="button"
+          className="tc-add-menu__item"
+          role="menuitem"
+          onClick={() => pick(onAddCondition)}
+        >
+          <span className="material-symbols-outlined">add</span>
+          Add condition
+        </button>
+        {showGroup ? (
+          <button
+            type="button"
+            className="tc-add-menu__item"
+            role="menuitem"
+            onClick={() => pick(onAddConditionGroup)}
+          >
+            <span className="material-symbols-outlined">account_tree</span>
+            Add condition group
+          </button>
+        ) : null}
+      </div>,
+      document.body,
+    )
+    : null;
+
+  return (
+    <div className="tc-add-wrap" ref={wrapRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="trigger-conditions__add-btn"
+        onClick={() => {
+          if (!showGroup) {
+            onAddCondition?.();
+            return;
+          }
+          setOpen((v) => !v);
+        }}
+        aria-haspopup={showGroup ? 'menu' : undefined}
+        aria-expanded={showGroup ? open : undefined}
+      >
+        <span className="material-symbols-outlined">add_circle</span>
+        Add condition
+        {showGroup ? (
+          <span className="material-symbols-outlined trigger-conditions__add-chevron">expand_more</span>
+        ) : null}
+      </button>
+      {menu}
     </div>
   );
 }
@@ -277,6 +438,7 @@ export default function Conditions({
   onLogicChange,
   onConnectorChange,
   onAddCondition,
+  onAddConditionGroup,
   onRemoveCondition,
   onAdvancedFilters,
   conditionOptions,
@@ -338,7 +500,7 @@ export default function Conditions({
               // Falls back to the single shared `logic` prop for callers that haven't opted in yet.
               const connector = condition.connector ?? logic;
               const showValueField = operatorNeedsValue(condition.operatorValue);
-              const canRemove = conditions.length > 1 && onRemoveCondition;
+              const canRemove = conditions.length > 1 && Boolean(onRemoveCondition);
 
               const conditionHeader = (
                 <div className={styles.conditionHeader}>
@@ -352,7 +514,7 @@ export default function Conditions({
                       }
                     />
                   )}
-                  {canRemove && index > 0 ? (
+                  {canRemove ? (
                     <button
                       type="button"
                       className={styles.removeBtn}
@@ -371,6 +533,8 @@ export default function Conditions({
                     name={`field-${condition.id}`}
                     selected={condition.fieldValue}
                     options={fieldOpts}
+                    valueAsChip
+                    placeholder="Select"
                     onChange={(opt) => onConditionChange?.(condition.id, 'field', opt.value)}
                     onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('field', opts) : undefined}
                   />
@@ -378,6 +542,7 @@ export default function Conditions({
                     name={`operator-${condition.id}`}
                     selected={condition.operatorValue}
                     options={operatorOpts}
+                    placeholder="Select"
                     onChange={(opt) => {
                       onConditionChange?.(condition.id, 'operator', opt.value);
                       if (!operatorNeedsValue(opt.value)) {
@@ -391,6 +556,7 @@ export default function Conditions({
                       name={`value-${condition.id}`}
                       selected={condition.valueValue}
                       options={valueOpts}
+                      placeholder="Select"
                       onChange={(opt) => onConditionChange?.(condition.id, 'value', opt.value)}
                       onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('value', opts) : undefined}
                     />
@@ -417,10 +583,10 @@ export default function Conditions({
               );
             })}
           </div>
-          <button type="button" className="trigger-conditions__add-btn" onClick={onAddCondition}>
-            <span className="material-symbols-outlined">add_circle</span>
-            Add condition
-          </button>
+          <AddConditionButton
+            onAddCondition={onAddCondition}
+            onAddConditionGroup={onAddConditionGroup}
+          />
         </div>
       </div>
       {showAdvancedFilters && (

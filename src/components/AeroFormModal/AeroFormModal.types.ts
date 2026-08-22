@@ -17,5 +17,7 @@ export interface AeroFormModalProps {
   /** One-line description under the title. */
   subtitle?: string
   learnMoreHref?: string
+  /** Prefer over href — opens in-app help (e.g. glossary) instead of an external page. */
+  onLearnMore?: () => void
   learnMoreLabel?: string
 }

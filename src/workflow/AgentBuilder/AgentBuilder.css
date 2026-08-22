@@ -123,12 +123,12 @@
 }
 
 .agent-builder__rhs--ai {
-  width: 390px;
+  width: 450px;
 }
 
-/* Help center in the node-config RHS slot (exploration) — matches the node panel width. */
+/* Help center in the node-config RHS slot — matches the node panel width. */
 .agent-builder__rhs--help {
-  width: 390px;
+  width: 450px;
 }
 
 @keyframes agent-builder-rhs-slide-in {
@@ -694,14 +694,14 @@
   -webkit-backdrop-filter: blur(4px);
 }
 
-/* Shift horizontal center left when the RHS panel is open (390px + 8px inset + 12px gap). */
+/* Shift horizontal center left when the RHS panel is open (450px + 8px inset + 12px gap). */
 .ab-publish-blocked-overlay--rhs-open {
-  padding-right: 410px;
+  padding-right: 470px;
 }
 
-/* LLM Task RHS is 450px wide. */
+/* Procedure detail RHS is 500px wide. */
 .ab-publish-blocked-overlay--rhs-wide {
-  padding-right: 470px;
+  padding-right: 520px;
 }
 
 .ab-publish-blocked-dialog {
@@ -1680,7 +1680,7 @@
 /* Actions-only: transparent shell so switch + Run test sit as separate controls. */
 /*
  * Exploration: the actions pill is right-aligned rather than centred, and slides left to
- * clear whatever opens in the 390px right slot (node config / Help center / Test details /
+ * clear whatever opens in the 450px right slot (node config / Help center / Test details /
  * Front desk Preview). Easing matches `agent-builder-rhs-slide-in` so the pill and the
  * panel move together.
  */
@@ -1691,15 +1691,15 @@
   transition: right 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 390px panel + its 8px inset from the canvas edge + a 12px gap.
- * Same footprint for trigger / Help / Test details / Front desk Preview. */
+/* 450px panel + its 8px inset from the canvas edge + a 12px gap.
+ * Same footprint for trigger / task / branch / Help / Test details / agent details. */
 .rr-chrome-top--right.rr-chrome-top--rhs-open {
-  right: calc(390px + 8px + 12px);
+  right: calc(450px + 8px + 12px);
 }
 
-/* LLM Task RHS is 450px. */
+/* Procedure detail RHS is 500px. */
 .rr-chrome-top--right.rr-chrome-top--rhs-open.rr-chrome-top--rhs-wide {
-  right: calc(450px + 8px + 12px);
+  right: calc(500px + 8px + 12px);
 }
 
 .rr-chrome-top--actions-only {
@@ -1825,10 +1825,17 @@
 }
 
 .rr-chrome-left-floater__icon {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
   height: 20px;
   pointer-events: none;
+  line-height: 0;
+}
+
+.rr-chrome-left-floater__icon .material-symbols-outlined {
+  color: inherit;
 }
 
 .rr-chrome-left-floater__icon--ai {
@@ -1944,7 +1951,7 @@
   top: 72px;
   right: 16px;
   bottom: 16px;
-  width: 390px;
+  width: 450px;
   max-height: calc(100% - 88px);
   box-shadow: none;
 }

@@ -120,15 +120,16 @@ function FieldsetOrDiv({ as: Tag = 'div', children, ...rest }) {
 }
 
 const PANEL_WIDTH = {
-  llmTask: 450,
   procedureDetail: 500,
   createCustomProcedure: 500,
 };
 
+const DEFAULT_PANEL_WIDTH = 450;
+
 export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false, saveLabel, showPromptStrength: showPromptStrengthProp, titleLayoutMenu = null, titleTabMenu = null }) {
   const config = VARIANTS[variant];
   const Body = config.body;
-  const panelWidth = PANEL_WIDTH[variant] ?? 390;
+  const panelWidth = PANEL_WIDTH[variant] ?? DEFAULT_PANEL_WIDTH;
   const showPromptStrength = showPromptStrengthProp ?? config.showPromptStrength;
   const resolvedSaveLabel = saveLabel ?? 'Save';
 

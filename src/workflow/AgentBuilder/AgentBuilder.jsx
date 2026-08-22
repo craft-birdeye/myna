@@ -58,6 +58,7 @@ import iconRrHistory from '../../assets/rr-chrome/icon-history.svg';
 import iconRrPreview from '../../assets/rr-chrome/icon-preview.svg';
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg';
 import { Tooltip } from '../../components/Tooltip/Tooltip';
+import { Icon } from '../../components/Icon/Icon';
 import { AiBuilderPanel } from '../../components/AiBuilderPanel/AiBuilderPanel';
 import { TestRunPanel } from '../../components/TestRunPanel/TestRunPanel';
 import { Toast } from '../../components/Toast/Toast';
@@ -1237,6 +1238,15 @@ export default function AgentBuilder({
   const [coachTourOpen, setCoachTourOpen] = useState(false);
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [glossaryTermId, setGlossaryTermId] = useState(undefined);
+  const openGlossary = (termId) => {
+    setGlossaryTermId(termId || undefined);
+    setGlossaryOpen(true);
+  };
+  const closeGlossary = () => {
+    setGlossaryOpen(false);
+    setGlossaryTermId(undefined);
+  };
   // Rebuilt only while the panel is open so the run isn't restarted by unrelated edits.
   const testRunSteps = useMemo(
     () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails) : EMPTY_TEST_RUN_STEPS),
@@ -2242,7 +2252,7 @@ export default function AgentBuilder({
     setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
   };
   /**
-   * Anything occupying the 390px right slot — node config, Help center, or Test details.
+   * Anything occupying the 450px right slot — node config, Help center, or Test details.
    * Drives the exploration actions pill sliding left so the panel never covers it.
    */
   // Preview (Front desk play) sits in the same right slot as node config / Help / Test details —
@@ -2401,11 +2411,10 @@ export default function AgentBuilder({
     branchChildNodes.find((n) => n.id === selectedNodeId) ||
     branchPathNodes.find((n) => n.id === selectedNodeId);
 
-  // LLM Task RHS is 450px (vs the default 390); chrome needs the wider offset.
+  // Procedure RHS is 500px (vs the default 450); chrome needs the wider offset.
   const rightPanelWide =
     rhsRendered
-    && selectedNode
-    && (selectedNode.data?.hasAiIcon || selectedNode.data?.subtype === 'Custom');
+    && (Boolean(lhsPreviewProcedureId) || Boolean(activeProcedureId));
 
   const handleNodesReorder = useCallback((newIdOrder) => {
     setNodeList((prev) => {
@@ -3058,6 +3067,7 @@ export default function AgentBuilder({
               setFocusBranchPathId(pathId);
               if (pathId) setFocusBranchPathNonce((n) => n + 1);
             },
+            onOpenGlossary: openGlossary,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3247,6 +3257,7 @@ export default function AgentBuilder({
             setupConfigureInHeader: llmTaskOption2,
             activeTab: llmTaskTab,
             onTabChange: llmTaskExplorationLayout ? setLlmTaskTab : undefined,
+            onOpenGlossary: openGlossary,
           }}
           onClose={handleCloseDrawer}
           onSave={llmSetupTab ? () => setLlmTaskTab('configure') : handleCloseDrawer}
@@ -3801,12 +3812,40 @@ export default function AgentBuilder({
                   </Tooltip>
                   <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
                     {[
-                      { id: 'Trigger', src: iconRrTrigger, label: 'Trigger', tourId: 'trigger' },
+                      {
+                        id: 'Trigger',
+                        src: iconRrTrigger,
+                        icon: 'bolt',
+                        color: '#FE9A00',
+                        label: 'Trigger',
+                        tourId: 'trigger',
+                      },
                       ...(showProceduresFloater
-                        ? [{ id: 'Procedures', src: iconRrProcedures, label: 'Procedures', tourId: null }]
+                        ? [{
+                            id: 'Procedures',
+                            src: iconRrProcedures,
+                            icon: 'menu_book',
+                            color: '#7C3AED',
+                            label: 'Procedures',
+                            tourId: null,
+                          }]
                         : []),
-                      { id: 'Tasks', src: iconRrTasks, label: 'Task', tourId: 'tasks' },
-                      { id: 'Controls', src: iconRrControls, label: 'Controls', tourId: 'controls' },
+                      {
+                        id: 'Tasks',
+                        src: iconRrTasks,
+                        icon: 'description',
+                        color: '#00C950',
+                        label: 'Task',
+                        tourId: 'tasks',
+                      },
+                      {
+                        id: 'Controls',
+                        src: iconRrControls,
+                        icon: 'account_tree',
+                        color: '#62748E',
+                        label: 'Controls',
+                        tourId: 'controls',
+                      },
                     ].map((item) => (
                       <Tooltip key={item.id} content={item.label} variant="brief" side="right">
                         <button
@@ -3827,7 +3866,14 @@ export default function AgentBuilder({
                             setPaletteSection((prev) => (prev === item.id ? null : item.id));
                           }}
                         >
-                          <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                          {/* Filled glyphs only on exploration chrome — Sep 1 keeps outlined SVGs. */}
+                          {explorationChrome && !sep1Chrome ? (
+                            <span className="rr-chrome-left-floater__icon" style={{ color: item.color }} aria-hidden>
+                              <Icon name={item.icon} size={20} fill />
+                            </span>
+                          ) : (
+                            <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                          )}
                         </button>
                       </Tooltip>
                     ))}
@@ -3885,7 +3931,7 @@ export default function AgentBuilder({
                   <HelpCenterPanel
                     open={helpCenterOpen}
                     onClose={() => setHelpCenterOpen(false)}
-                    onOpenGlossary={() => setGlossaryOpen(true)}
+                    onOpenGlossary={openGlossary}
                     onStartTour={() => {
                       setHelpCenterOpen(false);
                       if (!viewOnly) setCoachTourOpen(true);
@@ -3996,7 +4042,7 @@ export default function AgentBuilder({
               <HelpCenterPanel
                 open={helpCenterOpen}
                 onClose={() => setHelpCenterOpen(false)}
-                onOpenGlossary={() => setGlossaryOpen(true)}
+                onOpenGlossary={openGlossary}
                 onStartTour={() => {
                   setHelpCenterOpen(false);
                   if (!viewOnly) setCoachTourOpen(true);
@@ -4200,7 +4246,11 @@ export default function AgentBuilder({
         <WorkflowCoachTour open={coachTourOpen} onClose={() => setCoachTourOpen(false)} />
       )}
 
-      <GlossaryModal open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
+      <GlossaryModal
+        open={glossaryOpen}
+        onClose={closeGlossary}
+        initialTermId={glossaryTermId}
+      />
     </div>
   );
 }

@@ -19,7 +19,7 @@ function FieldLabel({ children, required = false }) {
   );
 }
 
-export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100 }) {
+export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLearnMore }) {
   const [fieldName, setFieldName] = useState('');
   const [fieldValueText, setFieldValueText] = useState('');
   const [fieldValueChips, setFieldValueChips] = useState([]);
@@ -55,7 +55,8 @@ export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100 }) {
       <AeroFormModal
         title="Add input field"
         subtitle={INPUT_FIELD_MODAL_SUBTITLE}
-        learnMoreHref={INPUT_FIELDS_LEARN_MORE_HREF}
+        learnMoreHref={onLearnMore ? undefined : INPUT_FIELDS_LEARN_MORE_HREF}
+        onLearnMore={onLearnMore}
         onClose={onClose}
         onPrimary={handleAdd}
         primaryDisabled={!fieldName || !hasFieldValue}

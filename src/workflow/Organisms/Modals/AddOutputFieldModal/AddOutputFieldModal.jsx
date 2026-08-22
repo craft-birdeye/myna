@@ -145,7 +145,7 @@ function FieldTypeDropdown({ value, onChange, menuZIndex = 2200 }) {
   );
 }
 
-export default function AddOutputFieldModal({ onClose, onAdd, zIndex = 2100 }) {
+export default function AddOutputFieldModal({ onClose, onAdd, zIndex = 2100, onLearnMore }) {
   const [fieldName, setFieldName] = useState('');
   const [fieldType, setFieldType] = useState('');
   const [description, setDescription] = useState('');
@@ -161,7 +161,8 @@ export default function AddOutputFieldModal({ onClose, onAdd, zIndex = 2100 }) {
     <AeroFormModal
       title="Add output field"
       subtitle={OUTPUT_FIELD_MODAL_SUBTITLE}
-      learnMoreHref={OUTPUT_FIELDS_LEARN_MORE_HREF}
+      learnMoreHref={onLearnMore ? undefined : OUTPUT_FIELDS_LEARN_MORE_HREF}
+      onLearnMore={onLearnMore}
       onClose={onClose}
       onPrimary={handleAdd}
       primaryDisabled={!fieldName || !fieldType || !description.trim()}

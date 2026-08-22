@@ -9,6 +9,14 @@
   padding-right: 12px;
 }
 
+.chipValue {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
 /* ─── Trigger button — needed as hover ancestor for pencil icon ─── */
 .dropdownTrigger {
   position: relative;
@@ -60,6 +68,11 @@
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(33, 33, 33, 0.15);
   overflow: hidden;
+}
+
+/* When portaled via fixed inline styles, clear absolute anchors */
+.optionsEditor[style] {
+  right: auto;
 }
 
 .optionsEditorList {

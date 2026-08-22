@@ -73,6 +73,7 @@ function ChipContainer({
   showInfo = false,
   infoTooltip,
   infoLearnMoreHref,
+  infoOnLearnMore,
   chips,
   onChipChange,
   onChipDelete,
@@ -267,7 +268,8 @@ function ChipContainer({
           <InfoTooltip
             text={infoTooltip}
             variant="detail"
-            learnMoreHref={infoLearnMoreHref}
+            learnMoreHref={infoOnLearnMore ? undefined : infoLearnMoreHref}
+            onLearnMore={infoOnLearnMore}
           />
         ) : showInfo ? (
           <span className={`material-symbols-outlined ${styles.infoIcon}`}>info</span>
@@ -284,6 +286,7 @@ export default function LLMTaskBody({
   onFieldChange,
   onOpenToolDrawer,
   onOpenTool,
+  onOpenGlossary,
   /** Exploration only: Setup / Configure tabs + footer Continue flow (not Sep 1). */
   collapseChipsToOneLine = false,
   /** Exploration chrome (incl. Sep 1): two chip lines + "View N more". */
@@ -344,7 +347,12 @@ export default function LLMTaskBody({
     <div className={`${styles.fieldGroup} ${styles.fieldGroupCompact}`}>
       <div className={styles.labelRow}>
         <span className={styles.label}>Context</span>
-        <InfoTooltip text={CONTEXT_INFO} variant="detail" learnMoreHref={CONTEXT_LEARN_MORE_HREF} />
+        <InfoTooltip
+          text={CONTEXT_INFO}
+          variant="detail"
+          learnMoreHref={onOpenGlossary ? undefined : CONTEXT_LEARN_MORE_HREF}
+          onLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
+        />
         {contextFields.length > 0 && (
           <button
             type="button"
@@ -388,6 +396,7 @@ export default function LLMTaskBody({
       showInfo
       infoTooltip={CONTEXT_INFO}
       infoLearnMoreHref={CONTEXT_LEARN_MORE_HREF}
+      infoOnLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
       chips={contextFields}
       onChipChange={(i, v) => updateContextFields(contextFields.map((c, idx) => idx === i ? { ...c, value: v } : c))}
       onChipDelete={(i) => updateContextFields(contextFields.filter((_, idx) => idx !== i))}
@@ -406,7 +415,8 @@ export default function LLMTaskBody({
         <InfoTooltip
           text={INPUT_FIELDS_INFO}
           variant="detail"
-          learnMoreHref={INPUT_FIELDS_LEARN_MORE_HREF}
+          learnMoreHref={onOpenGlossary ? undefined : INPUT_FIELDS_LEARN_MORE_HREF}
+          onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
         />
         {inputFields.length > 0 && (
           <button
@@ -451,6 +461,7 @@ export default function LLMTaskBody({
       showInfo
       infoTooltip={INPUT_FIELDS_INFO}
       infoLearnMoreHref={INPUT_FIELDS_LEARN_MORE_HREF}
+      infoOnLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
       chips={inputFields}
       onChipChange={(i, v) => updateInputFields(inputFields.map((c, idx) => idx === i ? { ...c, value: v } : c))}
       onChipDelete={(i) => updateInputFields(inputFields.filter((_, idx) => idx !== i))}
@@ -488,6 +499,8 @@ export default function LLMTaskBody({
       showInfo
       infoTooltip={OUTPUT_FIELDS_INFO}
       infoLearnMoreHref={OUTPUT_FIELDS_LEARN_MORE_HREF}
+      infoOnLearnMore={onOpenGlossary ? () => onOpenGlossary('output-field') : undefined}
+      onOpenGlossary={onOpenGlossary}
       collapseToTwoLines={collapseChipsToTwoLines}
       addInLabelRow={collapseChipsToTwoLines}
     />
@@ -497,7 +510,30 @@ export default function LLMTaskBody({
     <div className={styles.fieldGroup}>
       <div className={styles.labelRow}>
         <span className={styles.label}>LLM Model</span>
-        <Tooltip content={LLM_MODEL_TOOLTIP} variant="detail" side="top">
+        <Tooltip
+          content={
+            onOpenGlossary ? (
+              <span className="flex flex-col gap-xs">
+                {LLM_MODEL_TOOLTIP}
+                <button
+                  type="button"
+                  className="m-0 cursor-pointer border-0 bg-transparent p-0 text-left text-white underline-offset-2 hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenGlossary('llm-model');
+                  }}
+                >
+                  Learn more
+                </button>
+              </span>
+            ) : (
+              LLM_MODEL_TOOLTIP
+            )
+          }
+          variant="detail"
+          side="top"
+          interactive={Boolean(onOpenGlossary)}
+        >
           <button
             type="button"
             className="flex items-center justify-center text-text-tertiary hover:text-text-secondary"
@@ -622,6 +658,7 @@ export default function LLMTaskBody({
           onClose={() => setContextModalOpen(false)}
           onSave={handleContextSave}
           overlayZIndex={2100}
+          onLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
         />
       )}
 
@@ -629,6 +666,7 @@ export default function LLMTaskBody({
         <AddInputFieldModal
           onClose={() => setInputModalOpen(false)}
           onAdd={handleInputAdd}
+          onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
         />
       )}
     </div>

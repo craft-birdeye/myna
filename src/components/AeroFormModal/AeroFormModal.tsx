@@ -20,6 +20,7 @@ export function AeroFormModal({
   fitContent = false,
   subtitle,
   learnMoreHref,
+  onLearnMore,
   learnMoreLabel = 'Learn more',
   children,
 }: AeroFormModalProps) {
@@ -46,18 +47,31 @@ export function AeroFormModal({
             {subtitle && (
               <p className="mt-xs text-small text-text-secondary">
                 {subtitle}
-                {learnMoreHref && (
+                {(onLearnMore || learnMoreHref) && (
                   <>
                     {' '}
-                    <a
-                      href={learnMoreHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-text-action no-underline hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {learnMoreLabel}
-                    </a>
+                    {onLearnMore ? (
+                      <button
+                        type="button"
+                        className="m-0 cursor-pointer border-0 bg-transparent p-0 text-small text-text-action hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onLearnMore()
+                        }}
+                      >
+                        {learnMoreLabel}
+                      </button>
+                    ) : (
+                      <a
+                        href={learnMoreHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-text-action no-underline hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {learnMoreLabel}
+                      </a>
+                    )}
                   </>
                 )}
               </p>
