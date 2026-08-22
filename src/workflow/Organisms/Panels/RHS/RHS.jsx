@@ -124,10 +124,12 @@ const PANEL_WIDTH = {
   createCustomProcedure: 500,
 };
 
-export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false }) {
+export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false, saveLabel, showPromptStrength: showPromptStrengthProp, titleLayoutMenu = null, titleTabMenu = null }) {
   const config = VARIANTS[variant];
   const Body = config.body;
   const panelWidth = PANEL_WIDTH[variant] ?? 390;
+  const showPromptStrength = showPromptStrengthProp ?? config.showPromptStrength;
+  const resolvedSaveLabel = saveLabel ?? 'Save';
 
   return (
       <div style={{
@@ -149,6 +151,8 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           onBack={onBack}
           showActions={viewOnly || variant === 'procedureDetail' || variant === 'createCustomProcedure' ? false : config.showActions}
           showMoreMenu={false}
+          titleLayoutMenu={titleLayoutMenu}
+          titleTabMenu={titleTabMenu}
         />
 
         {/* `inlineFooter`: body shrinks-to-fit instead of stretching, so a short panel lets
@@ -188,8 +192,8 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
         {!viewOnly && (
           <RHSPanelFooter
             onSave={onSave}
-            saveLabel="Save"
-            showPromptStrength={config.showPromptStrength}
+            saveLabel={resolvedSaveLabel}
+            showPromptStrength={showPromptStrength}
           />
         )}
       </div>

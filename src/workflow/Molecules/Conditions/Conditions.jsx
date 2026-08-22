@@ -1,15 +1,69 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Icon } from '../../../components/Icon/Icon';
 import { Tooltip } from '../../../components/Tooltip/Tooltip';
 import { operatorNeedsValue } from '../../constants/conditionOperators';
 import './Conditions.css';
 import styles from './Conditions.module.css';
 
+function getScrollParent(el) {
+  let node = el?.parentElement;
+  while (node && node !== document.body) {
+    const { overflowY, overflow } = window.getComputedStyle(node);
+    if (/(auto|scroll|overlay)/.test(overflowY) || /(auto|scroll|overlay)/.test(overflow)) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function getRhsFooterTop(anchorEl) {
+  let node = anchorEl;
+  while (node && node !== document.body) {
+    const next = node.nextElementSibling;
+    if (next) {
+      const saveBtn = next.querySelector('button');
+      if (saveBtn && /save/i.test(saveBtn.textContent || '')) {
+        return next.getBoundingClientRect().top;
+      }
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function getBoundaryBottom(anchorEl) {
+  const footerTop = getRhsFooterTop(anchorEl);
+  if (footerTop != null) return footerTop;
+  const scrollParent = getScrollParent(anchorEl);
+  return scrollParent?.getBoundingClientRect().bottom ?? window.innerHeight;
+}
+
+function shouldOpenMenuUp(anchorEl, menuHeight) {
+  if (!anchorEl || !menuHeight) return false;
+  const anchorRect = anchorEl.getBoundingClientRect();
+  const scrollParent = getScrollParent(anchorEl);
+  const boundaryTop = scrollParent?.getBoundingClientRect().top ?? 0;
+  const boundaryBottom = getBoundaryBottom(anchorEl);
+  const spaceBelow = boundaryBottom - anchorRect.bottom - 4;
+  const spaceAbove = anchorRect.top - boundaryTop - 4;
+  if (spaceBelow >= menuHeight) return false;
+  if (spaceAbove >= menuHeight) return true;
+  return spaceAbove > spaceBelow;
+}
+
+function estimateMenuHeight(optionCount, menuEl) {
+  if (menuEl?.offsetHeight) return menuEl.offsetHeight;
+  return Math.min(optionCount * 36 + 8, 240);
+}
+
 function Dropdown({ name, selected, options, onChange, placeholder = 'Select', onOptionsChange }) {
   const [open, setOpen] = useState(false);
+  const [menuOpensUp, setMenuOpensUp] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [draftOptions, setDraftOptions] = useState([]);
   const ref = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const close = (e) => {
@@ -21,6 +75,27 @@ function Dropdown({ name, selected, options, onChange, placeholder = 'Select', o
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const trigger = ref.current?.querySelector('.tc-dropdown__trigger');
+    if (!trigger) return undefined;
+
+    const updatePlacement = () => {
+      const menuHeight = estimateMenuHeight(options.length, menuRef.current);
+      setMenuOpensUp(shouldOpenMenuUp(trigger, menuHeight));
+    };
+
+    updatePlacement();
+    const raf = requestAnimationFrame(updatePlacement);
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [open, options.length]);
 
   const selectedLabel = options.find((o) => o.value === selected)?.label;
 
@@ -60,7 +135,16 @@ function Dropdown({ name, selected, options, onChange, placeholder = 'Select', o
         <button
           type="button"
           className={`tc-dropdown__trigger${open ? ' tc-dropdown__trigger--open' : ''} ${styles.dropdownTrigger}`}
-          onClick={() => { if (!editMode) setOpen((v) => !v); }}
+          onClick={() => {
+            if (editMode) return;
+            setOpen((wasOpen) => {
+              if (wasOpen) return false;
+              const trigger = ref.current?.querySelector('.tc-dropdown__trigger');
+              const menuHeight = estimateMenuHeight(options.length, null);
+              setMenuOpensUp(shouldOpenMenuUp(trigger, menuHeight));
+              return true;
+            });
+          }}
           aria-haspopup="listbox"
           aria-expanded={open}
         >
@@ -93,7 +177,11 @@ function Dropdown({ name, selected, options, onChange, placeholder = 'Select', o
         </button>
 
         {open && (
-          <ul className="tc-dropdown__menu" role="listbox">
+          <ul
+            ref={menuRef}
+            className={`tc-dropdown__menu${menuOpensUp ? ' tc-dropdown__menu--up' : ''}`}
+            role="listbox"
+          >
             {options.map((opt) => (
               <li
                 key={opt.value}
@@ -214,7 +302,7 @@ export default function Conditions({
                       href={labelHelpLearnMoreHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white underline"
+                      className="text-white no-underline hover:text-white hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {labelHelpLearnMoreLabel ?? 'Learn more'}

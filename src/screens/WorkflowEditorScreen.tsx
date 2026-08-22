@@ -243,7 +243,6 @@ export function WorkflowEditorScreen({
   // Create-from-scratch opens an empty canvas — never show "Running".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0
-  const publishDisabled = issueCount > 0
 
   const AGENT_NAV_MAP: Record<string, string> = {
     'Front desk agent': 'frontdesk',
@@ -278,7 +277,7 @@ export function WorkflowEditorScreen({
             showProceduresPalette={isFrontDeskAgent}
             onAddProcedure={addProcedure}
             initialStatus={resolvedStatus}
-            publishDisabled={publishDisabled}
+            publishDisabled={false}
             issueCount={issueCount}
             issues={getAgentIssues(agentName)}
             defaultOpenSection={isEmptyScratch ? 'Trigger' : 'Tasks'}

@@ -1012,6 +1012,14 @@ function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
   return clonedEntry;
 }
 
+function publishBlockedCopy(count) {
+  const label = count === 1 ? 'error' : 'errors';
+  return {
+    title: 'Resolve errors to publish',
+    body: `Fix ${count} ${label} in your workflow before publishing.`,
+  };
+}
+
 export default function AgentBuilder({
   agentId: propAgentId,
   agentSlug: propAgentSlug,
@@ -1073,7 +1081,7 @@ export default function AgentBuilder({
   hideTopIdentity = false,
   /** RHS Save follows the content instead of pinning to the panel bottom (Sep 1 only). */
   inlineRhsFooter = false,
-  /** Sep 1 chrome: red "N Errors" chip after the run-test icon instead of the text trigger. */
+  /** Sep 1 chrome: inline RHS footer + other Sep-1-only treatments. */
   sep1Chrome = false,
   /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. */
   hideCanvasStartNode = hideTopIdentity,
@@ -1114,6 +1122,10 @@ export default function AgentBuilder({
   const [clipboard, setClipboard] = useState(null);
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
+  /** Exploration LLM task: Setup vs Configure tab (footer Continue / prompt strength). */
+  const [llmTaskTab, setLlmTaskTab] = useState('setup');
+  /** Exploration LLM task: Option 1 = body tabs, Option 2 = header Setup/Configure menu. */
+  const [llmTaskLayoutOption, setLlmTaskLayoutOption] = useState('option1');
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
   const externalPreviewRef = useRef(null);
 
@@ -1458,6 +1470,7 @@ export default function AgentBuilder({
   /* ─── Header three-dots menu ─── */
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
+  const [publishBlockedModalOpen, setPublishBlockedModalOpen] = useState(false);
   const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
   const publishMenuRef = useRef(null);
@@ -1529,6 +1542,18 @@ export default function AgentBuilder({
   const resolveIssuesList =
     (Array.isArray(issues) && issues.length > 0 ? issues : null) ||
     getAgentIssues(entryAgentName);
+
+  const issuesByNodeId = useMemo(() => {
+    const map = new Map();
+    resolveIssuesList.forEach((issue) => {
+      if (!issue.nodeId) return;
+      const existing = map.get(issue.nodeId) || [];
+      map.set(issue.nodeId, [...existing, issue]);
+    });
+    return map;
+  }, [resolveIssuesList]);
+
+  const [canvasFocusNodeId, setCanvasFocusNodeId] = useState(null);
 
   // Undo/redo history for the floating-chrome canvas toolbar.
   const [historyPast, setHistoryPast] = useState([]);
@@ -1678,6 +1703,20 @@ export default function AgentBuilder({
       }, 1500);
     }
   }, [buildAgentPayload, onSaveAgent]);
+
+  const handlePublishAttempt = useCallback(() => {
+    if (issueCount > 0) {
+      setPublishMenuOpen(false);
+      setPublishBlockedModalOpen(true);
+      return;
+    }
+    handlePublish();
+  }, [issueCount, handlePublish]);
+
+  const handleViewPublishErrors = useCallback(() => {
+    setPublishBlockedModalOpen(false);
+    setResolveIssuesOpen(true);
+  }, []);
 
   const handleSaveAsDraft = useCallback(async () => {
     setPublishMenuOpen(false);
@@ -2256,6 +2295,12 @@ export default function AgentBuilder({
       };
     }
     if (n.type === 'branchEnd') return n;
+    const nodeIssueList = issuesByNodeId.get(n.id);
+    const hasAgentIssue = !!(nodeIssueList?.length);
+    const hasTaskSaveError = taskErrorNodeIds.has(n.id);
+    const issueLabel = hasAgentIssue ? nodeIssueList[0].title : undefined;
+    const issueTooltip = issueLabel
+      || (hasTaskSaveError ? 'Missing mandatory fields' : undefined);
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
       onDelete: () => handleDeleteNode(n.id),
@@ -2267,8 +2312,9 @@ export default function AgentBuilder({
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
-      // Set once Task details is saved with a tool still missing mandatory config.
-      hasError: explorationChrome && taskErrorNodeIds.has(n.id),
+      hasError: explorationChrome && (hasTaskSaveError || hasAgentIssue),
+      showConfigWarning: !!(n.data.showConfigWarning && !hasAgentIssue && !hasTaskSaveError),
+      errorTooltip: issueTooltip,
       // Log run view + exploration Run test: swap the header glyph for a spinner/check.
       runStatus: logDoneNodeIds?.includes(n.id)
         ? 'done'
@@ -2681,15 +2727,47 @@ export default function AgentBuilder({
     }
   }, [explorationChrome]);
 
+  useEffect(() => {
+    setLlmTaskTab('setup');
+  }, [selectedNodeId]);
+
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
     setSelectedNodeId(null);
     setFocusBranchPathId(null);
     setActiveProcedureId(null);
     setLhsPreviewProcedureId(null);
+    setLlmTaskTab('setup');
     // Do not reopen AI Builder — user closed config and should return to a clean canvas
     // (FAB remains available to reopen AI explicitly).
   }, []);
+
+  /** Open a task on the canvas that has a publish-blocking issue. */
+  const navigateToIssueNode = useCallback((nodeId) => {
+    if (!nodeId) return;
+    setResolveIssuesOpen(false);
+    setPublishBlockedModalOpen(false);
+    setPaletteSection(null);
+    setHelpCenterOpen(false);
+    setVersionHistoryOpen(false);
+
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (located?.containerId) {
+      const branchPathId = located.containerId;
+      const parentBranchId = nodeDetails[branchPathId]?.parentId;
+      if (parentBranchId) {
+        setCollapsedBranches((prev) => ({ ...prev, [parentBranchId]: false }));
+      }
+      setCollapsedBranchPaths((prev) => ({ ...prev, [branchPathId]: false }));
+      setFocusBranchPathId(branchPathId);
+    } else {
+      setFocusBranchPathId(null);
+    }
+
+    setSelectedNodeId(nodeId);
+    setDrawerOpen(true);
+    setCanvasFocusNodeId(nodeId);
+  }, [nodeList, nodeDetails]);
 
   const currentDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
 
@@ -3127,7 +3205,10 @@ export default function AgentBuilder({
       );
     }
 
-    if (data.hasAiIcon || data.subtype === 'Custom') {
+    if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).includes('handle-response'))) {
+      const llmTaskExplorationLayout = explorationChrome && !sep1Chrome;
+      const llmTaskOption2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option2';
+      const llmSetupTab = llmTaskExplorationLayout && llmTaskTab === 'setup';
       return (
         <RHS
           variant="llmTask"
@@ -3135,15 +3216,37 @@ export default function AgentBuilder({
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
+          saveLabel={llmSetupTab ? 'Continue' : 'Save'}
+          showPromptStrength={llmTaskExplorationLayout ? !llmSetupTab : undefined}
+          titleLayoutMenu={llmTaskExplorationLayout ? {
+            value: llmTaskLayoutOption,
+            options: [
+              { value: 'option1', label: 'Option 1' },
+              { value: 'option2', label: 'Option 2' },
+            ],
+            onChange: setLlmTaskLayoutOption,
+          } : null}
+          titleTabMenu={llmTaskOption2 ? {
+            value: llmTaskTab,
+            options: [
+              { value: 'setup', label: 'Setup' },
+              { value: 'configure', label: 'Configure' },
+            ],
+            onChange: setLlmTaskTab,
+          } : null}
           bodyProps={{
             initialValues: currentDetails,
             onFieldChange: activeFieldChange,
             onOpenToolDrawer: () => setToolPickerOpen(true),
             onOpenTool: openToolByName,
-            collapseChipsToOneLine: explorationChrome,
+            collapseChipsToOneLine: llmTaskExplorationLayout,
+            collapseChipsToTwoLines: explorationChrome,
+            setupConfigureInHeader: llmTaskOption2,
+            activeTab: llmTaskTab,
+            onTabChange: llmTaskExplorationLayout ? setLlmTaskTab : undefined,
           }}
           onClose={handleCloseDrawer}
-          onSave={handleCloseDrawer}
+          onSave={llmSetupTab ? () => setLlmTaskTab('configure') : handleCloseDrawer}
         />
       );
     }
@@ -3202,7 +3305,7 @@ export default function AgentBuilder({
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
           // Only surface tool errors once this task has been saved in that state.
-          showToolErrors: taskErrorNodeIds.has(selectedNodeId),
+          showToolErrors: taskErrorNodeIds.has(selectedNodeId) || issuesByNodeId.has(selectedNodeId),
           onOpenTool: (toolId) => {
             if (toolId === 'reminder-tool') { setReminderToolOpen(true); return; }
             if (toolId === 'get-unscheduled-treatment-plans') { setQueryConfigOpen(true); return; }
@@ -3286,15 +3389,15 @@ export default function AgentBuilder({
   };
 
   /**
-   * Issue-count affordance. Sep 1 shows it as a red "N Errors" chip placed after the
-   * run-test icon; every other agent keeps the original text trigger before the icons.
+   * Issue-count affordance. Exploration chrome shows a red "N errors" chip after the
+   * run-test icon; legacy agents keep the original text trigger before the icons.
    * Both open the same issues popover.
    */
   const resolveIssues = (
     <div className="ab-resolve-issues" ref={resolveIssuesRef}>
       <button
         type="button"
-        className={sep1Chrome ? 'ab-error-chip' : 'ab-resolve-issues__trigger'}
+        className={explorationChrome ? 'ab-error-chip' : 'ab-resolve-issues__trigger'}
         aria-expanded={resolveIssuesOpen}
         aria-haspopup="dialog"
         onClick={() => {
@@ -3304,12 +3407,16 @@ export default function AgentBuilder({
         }}
       >
         <span className="material-symbols-outlined" aria-hidden>error</span>
-        {sep1Chrome
-          ? `${issueCount} ${issueCount === 1 ? 'Error' : 'Errors'}`
+        {explorationChrome
+          ? `${issueCount} ${issueCount === 1 ? 'error' : 'errors'}`
           : `Resolve issues (${issueCount})`}
       </button>
       {resolveIssuesOpen && (
-        <div className="ab-resolve-issues__popover" role="dialog" aria-label="Resolve issues">
+        <div
+          className={`ab-resolve-issues__popover${explorationChrome ? ' ab-resolve-issues__popover--anchor-right' : ''}`}
+          role="dialog"
+          aria-label="Resolve issues"
+        >
           <div className="ab-resolve-issues__heading">
             {issueCount} {issueCount === 1 ? 'issue' : 'issues'} to resolve
           </div>
@@ -3326,7 +3433,10 @@ export default function AgentBuilder({
                 <button
                   type="button"
                   className="ab-resolve-issues__item"
-                  onClick={() => setResolveIssuesOpen(false)}
+                  onClick={() => {
+                    if (issue.nodeId) navigateToIssueNode(issue.nodeId);
+                    else setResolveIssuesOpen(false);
+                  }}
                 >
                   <span className="material-symbols-outlined ab-resolve-issues__item-icon" aria-hidden>
                     error
@@ -3378,7 +3488,7 @@ export default function AgentBuilder({
     )
   ) : (
     <div className="ab-header-actions">
-      {issueCount > 0 && !sep1Chrome && resolveIssues}
+      {issueCount > 0 && !explorationChrome && resolveIssues}
       {/* Cloud save / version history — matches Figma 15324:121197 */}
       {!isScratchCreate && (
         <Tooltip
@@ -3420,7 +3530,7 @@ export default function AgentBuilder({
           <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
         </button>
       </Tooltip>
-      {issueCount > 0 && sep1Chrome && resolveIssues}
+      {issueCount > 0 && explorationChrome && resolveIssues}
       {isTemplateMode ? (
         <Button
           theme="primary"
@@ -3456,8 +3566,8 @@ export default function AgentBuilder({
               className="ab-publish-split__main"
               aria-label="Publish"
               data-tour-id="publish"
-              disabled={publishDisabled || issueCount > 0}
-              onClick={handlePublish}
+              disabled={publishDisabled}
+              onClick={handlePublishAttempt}
             >
               Publish
             </button>
@@ -3467,7 +3577,7 @@ export default function AgentBuilder({
               aria-label="More publish options"
               aria-haspopup="menu"
               aria-expanded={publishMenuOpen}
-              disabled={publishDisabled || issueCount > 0}
+              disabled={publishDisabled}
               onClick={() => setPublishMenuOpen((open) => !open)}
             >
               <span className="material-symbols-outlined">expand_more</span>
@@ -3820,7 +3930,7 @@ export default function AgentBuilder({
               rrChrome
               initialZoom={initialZoom}
               runDisabled={runDisabled}
-              focusNodeId={testRunActiveId}
+              focusNodeId={testRunOpen ? testRunActiveId : canvasFocusNodeId}
               onEdit={onEdit}
               onView={onView}
               onUndo={handleUndo}
@@ -3903,6 +4013,63 @@ export default function AgentBuilder({
                 testAppointment={testAppointment}
                 onEditAppointment={() => setBookTestModalOpen(true)}
               />
+            </div>
+          )}
+
+          {/* ─── Publish blocked alert (top-fixed, canvas-centered) ─── */}
+          {publishBlockedModalOpen && (
+            <div
+              className={`ab-publish-blocked-overlay${
+                rightPanelOpen
+                  ? rightPanelWide
+                    ? ' ab-publish-blocked-overlay--rhs-wide'
+                    : ' ab-publish-blocked-overlay--rhs-open'
+                  : ''
+              }`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setPublishBlockedModalOpen(false);
+              }}
+            >
+              <div
+                className="ab-publish-blocked-dialog"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ab-publish-blocked-title"
+              >
+                <div className="ab-publish-blocked-dialog__header">
+                  <h2 id="ab-publish-blocked-title" className="ab-publish-blocked-dialog__title">
+                    {publishBlockedCopy(issueCount).title}
+                  </h2>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setPublishBlockedModalOpen(false)}
+                    className="ab-publish-blocked-dialog__close"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <p className="ab-publish-blocked-dialog__body">
+                  {publishBlockedCopy(issueCount).body}
+                </p>
+                <div className="ab-publish-blocked-dialog__footer">
+                  <button
+                    type="button"
+                    className="ab-publish-blocked-dialog__cancel"
+                    onClick={() => setPublishBlockedModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="ab-publish-blocked-dialog__primary"
+                    onClick={handleViewPublishErrors}
+                  >
+                    View errors
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

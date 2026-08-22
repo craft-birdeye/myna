@@ -95,6 +95,7 @@ export default function CanvasNodeHeader({
   runStatus,
   /** Task saved with a tool still missing mandatory config — flags an icon before the toggle. */
   hasError = false,
+  errorTooltip,
 }) {
   const config = ICON_CONFIG[nodeType] || ICON_CONFIG.task;
   const NodeSvg = config.Component || null;
@@ -170,16 +171,16 @@ export default function CanvasNodeHeader({
             <AiSparkleGlyphIcon size={14} />
           </div>
         )}
-        {hasError && (
+        {hasError && errorTooltip && (
           <Tooltip
-            content="Missing mandatory fields"
-            variant="brief"
+            content={errorTooltip}
+            variant="detail"
             side="top"
           >
             <span
               className="cnh__error-icon"
               role="img"
-              aria-label="Missing mandatory fields"
+              aria-label={errorTooltip}
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
             >

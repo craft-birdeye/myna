@@ -1,6 +1,102 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../../../elemental-stubs';
 import PlayArrowIcon from './icons/play_arrow.svg';
+import '../../../Molecules/Conditions/Conditions.css';
+
+function HeaderMiniDropdown({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  showSelectedLabel = false,
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find((o) => o.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="tc-dropdown" ref={ref} style={{ width: 'auto', flexShrink: 0 }}>
+      <button
+        type="button"
+        className={`tc-dropdown__trigger${open ? ' tc-dropdown__trigger--open' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel ?? (selected ? selected.label : 'Select')}
+        style={{
+          minHeight: 0,
+          height: 24,
+          padding: showSelectedLabel ? '0 2px 0 6px' : '0 2px',
+          gap: 2,
+          border: 'none',
+          background: 'none',
+          boxShadow: 'none',
+        }}
+      >
+        {showSelectedLabel && selected && (
+          <span
+            style={{
+              fontSize: 12,
+              lineHeight: '20px',
+              letterSpacing: '-0.24px',
+              color: '#bdbdbd',
+              fontFamily: '"Roboto", sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {selected.label}
+          </span>
+        )}
+        <span
+          className="material-symbols-outlined"
+          style={{
+            fontSize: 16,
+            width: 16,
+            height: 16,
+            lineHeight: 1,
+            color: '#bdbdbd',
+            fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+          }}
+        >
+          expand_more
+        </span>
+      </button>
+      {open && (
+        <ul className="tc-dropdown__menu" role="listbox" style={{ minWidth: 120 }}>
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={isSelected}
+                className={`tc-dropdown__option${isSelected ? ' tc-dropdown__option--selected' : ''}`}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+              >
+                {opt.label}
+                {isSelected && (
+                  <span className="material-symbols-outlined tc-dropdown__check">check</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function RHSPanelHeader({
   title = 'Title',
@@ -9,6 +105,10 @@ export default function RHSPanelHeader({
   onBack = undefined,
   showActions = true,
   showMoreMenu = false,
+  /** Exploration LLM task: toggle Option 1 (body tabs) vs Option 2 (header Setup/Configure). */
+  titleLayoutMenu = null,
+  /** Option 2 only: Setup / Configure menu beside the layout picker. */
+  titleTabMenu = null,
 }) {
   const svgStyle = { width: 24, height: 24, display: 'block' };
   const iconStyle = {
@@ -55,6 +155,23 @@ export default function RHSPanelHeader({
         }}>
           {title}
         </span>
+        {titleLayoutMenu && (
+          <HeaderMiniDropdown
+            value={titleLayoutMenu.value}
+            options={titleLayoutMenu.options}
+            onChange={titleLayoutMenu.onChange}
+            ariaLabel="Task layout"
+            showSelectedLabel
+          />
+        )}
+        {titleTabMenu && (
+          <HeaderMiniDropdown
+            value={titleTabMenu.value}
+            options={titleTabMenu.options}
+            onChange={titleTabMenu.onChange}
+            ariaLabel={titleTabMenu.value === 'setup' ? 'Task section: Setup' : 'Task section: Configure'}
+          />
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {showMoreMenu && (

@@ -23,7 +23,7 @@ export function InfoTooltip({
         href={learnMoreHref}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-white underline"
+        className="text-white no-underline hover:text-white hover:underline"
         onClick={(e) => e.stopPropagation()}
       >
         {learnMoreLabel}

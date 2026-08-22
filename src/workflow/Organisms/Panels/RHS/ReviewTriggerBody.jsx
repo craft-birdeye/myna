@@ -208,7 +208,7 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
               borderRadius: 6,
               background: '#f7f8fa',
               border: '1px solid #e5e9f0',
-              color: '#212121',
+              color: '#757575',
               fontFamily: '"Roboto Mono", "Courier New", monospace',
               fontSize: 12,
               lineHeight: '18px',

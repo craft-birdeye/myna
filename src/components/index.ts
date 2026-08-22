@@ -68,6 +68,7 @@ export type {
   BookTestAppointmentModalProps,
   BookTestAppointmentValues,
 } from './BookTestAppointmentModal/BookTestAppointmentModal.types'
+export { AeroFormModal } from './AeroFormModal/AeroFormModal'
 export { ContextModal } from './ContextModal/ContextModal'
 export { CustomizeColumnsDrawer } from './CustomizeColumnsDrawer/CustomizeColumnsDrawer'
 export { EmptyHintField } from './EmptyHintField/EmptyHintField'
@@ -199,6 +200,7 @@ export type { ChartTooltipItem, ChartTooltipProps } from './charts/ChartTooltip'
 
 export type { LinkProps } from './Link/Link.types'
 export type { ChipProps, ChipVariant } from './Chip/Chip.types'
+export type { AeroFormModalProps } from './AeroFormModal/AeroFormModal.types'
 export type { ContextModalProps, ContextModalResult } from './ContextModal/ContextModal.types'
 export type {
   CustomizeColumnsDrawerProps,

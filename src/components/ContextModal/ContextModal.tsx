@@ -56,7 +56,7 @@ function ModalTabs({
   showSearch: boolean
 }) {
   return (
-    <div className="flex shrink-0 items-center justify-between gap-md px-2xl">
+    <div className="flex h-[42px] shrink-0 items-center justify-between gap-md px-2xl pb-md">
       <div className="flex items-end gap-xs">
         {TABS.map((tab) => {
           const active = tab === activeTab
@@ -79,7 +79,7 @@ function ModalTabs({
           )
         })}
       </div>
-      {showSearch && (
+      {showSearch ? (
         <div className="flex h-[34px] w-[240px] shrink-0 items-center gap-sm rounded-md border border-border-input bg-surface px-md">
           <Search className="size-5 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
           <input
@@ -95,6 +95,8 @@ function ModalTabs({
             </button>
           )}
         </div>
+      ) : (
+        <div className="h-[34px] w-[240px] shrink-0" aria-hidden />
       )}
     </div>
   )
@@ -254,7 +256,7 @@ function KnowledgeTab({
   }
 
   return (
-    <div className="h-full min-h-0 flex-1 overflow-y-auto px-2xl py-lg">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto px-2xl py-lg">
       <div className="mb-2xl">
         <div className="mb-sm flex items-center gap-xs">
           <span className="text-body text-text-primary">Files</span>
@@ -345,7 +347,7 @@ function BrandTab({
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item)))
 
   return (
-    <div className="h-full min-h-0 flex-1 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
       {items.map((item) => (
         <div key={item.id} className="flex gap-md border-b border-border px-2xl py-lg">
           <CheckBox checked={item.enabled} onChange={() => toggle(item.id)} ariaLabel={`Enable ${item.name}`} />
@@ -367,7 +369,7 @@ function IndustryTab({
   setEnabled: (v: boolean) => void
 }) {
   return (
-    <div className="h-full min-h-0 flex-1 overflow-y-auto px-2xl py-lg">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto px-2xl py-lg">
       <div className="flex items-start justify-between gap-2xl">
       <div className="min-w-0 flex-1">
         <p className="text-body text-text-primary">Industry context</p>
@@ -397,7 +399,17 @@ function IndustryTab({
   )
 }
 
-export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: ContextModalProps) {
+const CONTEXT_LEARN_MORE_HREF =
+  'https://help.birdeye.com/hc/en-us/articles/context-in-workflows'
+
+export function ContextModal({
+  open,
+  onClose,
+  onSave,
+  overlayZIndex = 110,
+  learnMoreHref = CONTEXT_LEARN_MORE_HREF,
+  learnMoreLabel = 'Learn more',
+}: ContextModalProps) {
   const [activeTab, setActiveTab] = useState<ContextModalTab>('Fields')
   const [fieldsSearch, setFieldsSearch] = useState('')
   const [fields, setFields] = useState<ContextField[]>(DEFAULT_CONTEXT_FIELDS)
@@ -424,9 +436,11 @@ export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: Con
     onClose()
   }
 
+  if (!open) return null
+
   return createPortal(
     <div
-      className={`fixed inset-0 flex items-center justify-center ${open ? '' : 'pointer-events-none'}`}
+      className={`fixed inset-0 flex items-start justify-center pt-[72px] ${open ? '' : 'pointer-events-none'}`}
       style={{ zIndex: overlayZIndex }}
       aria-hidden={!open}
     >
@@ -438,25 +452,34 @@ export function ContextModal({ open, onClose, onSave, overlayZIndex = 110 }: Con
         role="dialog"
         aria-modal="true"
         aria-labelledby="context-modal-title"
-        className={`relative flex h-[calc(100vh-130px)] w-full max-w-[1200px] flex-col overflow-hidden rounded-xl bg-surface shadow-modal transition-opacity duration-200 ${
+        className={`relative flex h-[calc(100vh-96px)] w-full max-w-[1200px] flex-col overflow-hidden rounded-md bg-surface shadow-modal transition-opacity duration-200 ${
           open ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between px-2xl py-md">
           <div>
-            <h2 id="context-modal-title" className="text-body text-text-primary">
+            <h2 id="context-modal-title" className="text-h3 text-text-primary">
               Context
             </h2>
             <p className="text-small text-text-secondary">
-              This is sent to the LLM to improve the accuracy and quality of responses.
+              This is sent to the LLM to improve the accuracy and quality of responses.{' '}
+              <a
+                href={learnMoreHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-text-action no-underline hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {learnMoreLabel}
+              </a>
             </p>
           </div>
           <div className="flex items-center gap-md">
             <button
               type="button"
               onClick={handleSave}
-              className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
             >
               Save
             </button>
