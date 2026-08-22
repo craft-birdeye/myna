@@ -1408,34 +1408,6 @@
   color: #212121;
 }
 
-.rr-chrome-identity__hint {
-  box-sizing: border-box;
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-  color: #c45500;
-}
-
-.rr-chrome-identity__hint:hover {
-  background: #f2f4f7;
-  color: #a34600;
-}
-
-.rr-chrome-identity__hint-icon {
-  font-size: 16px !important;
-  line-height: 1;
-  color: inherit;
-}
-
 .rr-chrome-identity__title:disabled {
   cursor: default;
 }

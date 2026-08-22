@@ -2219,11 +2219,6 @@ export default function AgentBuilder({
       return !open;
     });
   };
-  const startDetails = nodeDetails[START_NODE_ID] || {};
-  const agentDetailsIncomplete = explorationChrome && (
-    !(String(startDetails.goals || '').trim())
-    || !((startDetails.locations || []).length)
-  );
   const { nodes: rawNodes, edges } = buildFlow(
     nodeList,
     startData,
@@ -3564,7 +3559,7 @@ export default function AgentBuilder({
                     </div>
                   )}
                   {explorationChrome && !versionHistoryMode && (
-                    <div className={`rr-chrome-identity${agentDetailsIncomplete ? ' rr-chrome-identity--needs-details' : ''}`}>
+                    <div className="rr-chrome-identity">
                       <div className="rr-chrome-identity__row">
                         <div className="rr-chrome-identity__name-group">
                           <button
@@ -3577,20 +3572,6 @@ export default function AgentBuilder({
                               {agentName || 'Untitled agent'}
                             </span>
                           </button>
-                          {nodesInteractive && agentDetailsIncomplete && (
-                            <Tooltip content="Add agent details" variant="brief" side="bottom">
-                              <button
-                                type="button"
-                                className="rr-chrome-identity__hint"
-                                onClick={handleOpenAgentDetails}
-                                aria-label="Add agent details"
-                              >
-                                <span className="material-symbols-outlined rr-chrome-identity__hint-icon" aria-hidden>
-                                  error
-                                </span>
-                              </button>
-                            </Tooltip>
-                          )}
                         </div>
                         {nodesInteractive && (
                           <Tooltip content="Edit" variant="brief" side="bottom">
