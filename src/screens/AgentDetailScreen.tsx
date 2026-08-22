@@ -6403,7 +6403,7 @@ function HealthcareFrontdeskCreateAgentLive({
         <p className="text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary">
           Build your <span className="ai-gradient-text">agent</span>
         </p>
-        <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI co-worker that gets the work done for you!</p>
+        <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI agent that gets the work done for you!</p>
       </div>
 
       <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
