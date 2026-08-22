@@ -1087,15 +1087,62 @@ function EmptyStateAppointmentsCard() {
   )
 }
 
+// Empty-state section headers that ignore the page date filter — shown via InfoTooltip on Current overview only.
+const EMPTY_STATE_ALL_TIME_INFO =
+  'Data shown here is for all time. The time filter does not apply.'
+const EMPTY_STATE_RECENT_DATA_INFO =
+  'Data shown here is always for the most recent period available.'
+
+const EMPTY_STATE_SECTION_INFO_TOOLTIPS: Partial<Record<string, string>> = {
+  inbox: EMPTY_STATE_ALL_TIME_INFO,
+  listings: EMPTY_STATE_ALL_TIME_INFO,
+  'search-ai': EMPTY_STATE_RECENT_DATA_INFO,
+}
+
+function SectionHeaderInfoTooltip({ text }: { text: string }) {
+  return (
+    <Tooltip content={text} variant="detail">
+      <button
+        type="button"
+        className="flex items-center justify-center text-text-secondary"
+        aria-label="More info"
+      >
+        <Icon name="info" size={14} />
+      </button>
+    </Tooltip>
+  )
+}
+
+function SectionCardTitle({
+  icon,
+  label,
+  infoTooltip,
+}: {
+  icon: ReactNode
+  label: string
+  infoTooltip?: string
+}) {
+  return (
+    <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+      {icon}
+      <span className="flex items-center gap-xs">
+        {label}
+        {infoTooltip && <SectionHeaderInfoTooltip text={infoTooltip} />}
+      </span>
+    </h3>
+  )
+}
+
 // Empty state only — same plain-KPI treatment as Appointments, pulled from Birdeye's Inbox
 // surface. Rendered first in Empty state, matching the main nav's product order.
 function EmptyStateInboxCard() {
   return (
     <SectionCard>
-      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-        <FigmaIconInbox size={20} className="text-text-icon" />
-        Inbox
-      </h3>
+      <SectionCardTitle
+        icon={<FigmaIconInbox size={20} className="text-text-icon" />}
+        label="Inbox"
+        infoTooltip={EMPTY_STATE_SECTION_INFO_TOOLTIPS.inbox}
+      />
       <div className={KPI_ROW_CLASS}>
         {EMPTY_STATE_INBOX_STATS.map((s) => (
           <div key={s.id} className={KPI_TILE_CLASS}>
@@ -1180,12 +1227,22 @@ function ProductSectionCard({
   const showAgentRows = showAgents && section.agents.length > 0
   const showSetupBanner = dataState === 'ftu' && section.agents.length > 0
   if (!sectionHasVisibleContent(section, showAgents, dataState)) return null
+  const sectionLabel = SECTION_LABEL_OVERRIDES[section.id] ?? section.label
+  const emptyStateInfoTooltip =
+    dataState === 'empty' ? EMPTY_STATE_SECTION_INFO_TOOLTIPS[section.id] : undefined
   return (
     <SectionCard>
-      <h3 className="m-0 flex items-center gap-sm text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
-        {NavIcon ? <NavIcon size={20} className="text-text-icon" /> : <Icon name={section.icon} size={20} className="text-text-icon" />}
-        {SECTION_LABEL_OVERRIDES[section.id] ?? section.label}
-      </h3>
+      <SectionCardTitle
+        icon={
+          NavIcon ? (
+            <NavIcon size={20} className="text-text-icon" />
+          ) : (
+            <Icon name={section.icon} size={20} className="text-text-icon" />
+          )
+        }
+        label={sectionLabel}
+        infoTooltip={emptyStateInfoTooltip}
+      />
 
       {(section.stats || section.actionNeeded) && (
         <V2StatGroup
