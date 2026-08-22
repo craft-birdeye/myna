@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -95,6 +95,42 @@ function HeaderLabel({ label, className }: { label: string; className: string })
     <Tooltip content={label} variant="detail" disabled={!truncated} className="!block min-w-0 max-w-full flex-1 overflow-hidden">
       <span ref={ref} className={className}>
         {label}
+      </span>
+    </Tooltip>
+  )
+}
+
+/** Body cell that shows a tooltip with the full value only when single-line truncation applies. */
+function TruncatedCell({ children, tooltip }: { children: ReactNode; tooltip?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [truncated, setTruncated] = useState(false)
+  const [measuredText, setMeasuredText] = useState('')
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => {
+      setTruncated(el.scrollWidth > el.clientWidth + 1)
+      setMeasuredText(el.textContent?.trim() ?? '')
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [children, tooltip])
+
+  const tooltipText = tooltip ?? measuredText
+
+  return (
+    <Tooltip
+      content={tooltipText}
+      variant="detail"
+      side="top"
+      disabled={!truncated || !tooltipText}
+      className="!block min-w-0 max-w-full overflow-hidden"
+    >
+      <span ref={ref} className="block min-w-0 truncate">
+        {children}
       </span>
     </Tooltip>
   )
@@ -276,17 +312,24 @@ export function DataTable<T extends Record<string, unknown>>({
             >
               {columns.map((col, ci) => {
                 const isLast = ci === columns.length - 1
-                const content = col.render ? col.render(row[col.key], row) : String(row[col.key] ?? '')
-                const wrapTruncate = isLast && col.truncate !== false
+                const rawValue = row[col.key]
+                const content = col.render ? col.render(rawValue, row) : String(rawValue ?? '')
+                const useTruncatedCell = col.truncate !== false
+                const cellTooltip = col.tooltip?.(rawValue, row)
+                const cellContent = useTruncatedCell ? (
+                  <TruncatedCell tooltip={cellTooltip}>{content}</TruncatedCell>
+                ) : (
+                  content
+                )
                 return (
                   <td
                     key={String(col.key)}
                     style={{ height: rowHeight }}
                   className={`px-[10px] align-middle text-body text-text-primary ${
-                      isLast ? 'relative' : 'truncate'
+                      isLast ? 'relative min-w-0 overflow-hidden' : 'min-w-0 overflow-hidden'
                     }`}
                   >
-                    {wrapTruncate ? <span className="block truncate">{content}</span> : content}
+                    {cellContent}
 
                     {/* Row hover CTAs anchored to the right edge */}
                     {isLast && hasRowCtas && (

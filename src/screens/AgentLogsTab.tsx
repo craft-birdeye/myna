@@ -14,10 +14,12 @@ import {
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
   Complete: 'success',
+  Completed: 'success',
   Failed: 'danger',
   'In progress': 'warning',
   Resolved: 'success',
   'Not resolved': 'danger',
+  Aborted: 'neutral',
 }
 
 /** Front desk exploration Logs tab — display labels only (underlying data stays Complete/Failed). */
@@ -139,7 +141,8 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
 ]
 
-const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
+/** Shared by review generation's Logs tab, which doesn't carry duration/rating/comment. */
+const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
   {
     key: 'status',
@@ -150,6 +153,27 @@ const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
   { key: 'source', label: 'Source', width: 180, sortable: true },
+]
+
+const RATING_CELL = (v: unknown) => <span>{typeof v === 'number' ? `${v} star` : 'No rating'}</span>
+const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
+const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
+
+const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 200, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'duration', label: 'Duration', width: 110, sortable: true, tooltip: TEXT_TOOLTIP },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 130,
+    sortable: true,
+    truncate: false,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+  },
+  { key: 'contact', label: 'Reviewer name', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'rating', label: 'Review rating', width: 140, truncate: false, render: RATING_CELL },
+  { key: 'source', label: 'Review source', width: 160, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'comment', label: 'Comment', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
 ]
 
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -355,7 +379,7 @@ export function AgentLogsTab({
     return (
       <div className="px-lg py-lg">
         <DataTable
-          columns={REVIEW_RESPONSE_LOG_COLUMNS}
+          columns={REVIEW_GENERATION_LOG_COLUMNS}
           data={f(REVIEW_GENERATION_LOGS_ROWS)}
           rowAction={{
             icon: 'visibility',

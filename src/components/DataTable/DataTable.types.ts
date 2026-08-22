@@ -10,9 +10,11 @@ export interface Column<T> {
   sortable?: boolean
   /** Allow the user to drag-resize this column (default true). */
   resizable?: boolean
-  /** When false, last-column cells render content without single-line truncation. */
+  /** When false, skips truncation + hover tooltip (e.g. chips, custom cells with their own tooltip). */
   truncate?: boolean
   render?: (value: T[keyof T], row: T) => ReactNode
+  /** Tooltip copy when the cell truncates; defaults to the cell's text content. */
+  tooltip?: (value: T[keyof T], row: T) => string | undefined
   /** Custom header cell content; receives sort state and toggle handler. */
   headerRender?: (context: {
     sorted: boolean

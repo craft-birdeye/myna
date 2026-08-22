@@ -172,14 +172,14 @@ export default function CanvasNodeHeader({
         )}
         {hasError && (
           <Tooltip
-            content="Some of the variables referenced in this task does not exist"
-            variant="detail"
+            content="Missing mandatory fields"
+            variant="brief"
             side="top"
           >
             <span
               className="cnh__error-icon"
               role="img"
-              aria-label="Some of the variables referenced in this task does not exist"
+              aria-label="Missing mandatory fields"
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
             >

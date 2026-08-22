@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TooltipProps } from './Tooltip.types'
 
-const VARIANT_MAX_WIDTH = {
-  brief: 'max-w-[140px]',
+const VARIANT_CLASS = {
+  brief: 'whitespace-nowrap',
   detail: 'max-w-[280px]',
 }
 
@@ -165,7 +165,7 @@ export function Tooltip({
           <span
             ref={panelRef}
             role="tooltip"
-            className={`fixed z-[11000] w-max ${VARIANT_MAX_WIDTH[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white transition-all duration-150 ease-out ${
+            className={`fixed z-[11000] w-max ${VARIANT_CLASS[variant]} rounded-sm bg-tooltip px-sm py-xs text-small text-white transition-all duration-150 ease-out ${
               entered ? 'opacity-100' : 'opacity-0'
             } ${interactive ? 'pointer-events-auto' : 'pointer-events-none'} ${
               side === 'right' ? 'tooltip-caret-left' : ''
