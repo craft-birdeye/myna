@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import LHSDrawer, {
   isFrontDeskAgent as agentNameIsFrontDesk,
   isFrontDeskCanvasAgent,
@@ -4016,8 +4017,8 @@ export default function AgentBuilder({
             </div>
           )}
 
-          {/* ─── Publish blocked alert (top-fixed, canvas-centered) ─── */}
-          {publishBlockedModalOpen && (
+          {/* ─── Publish blocked alert (viewport overlay — L1 + top nav + canvas) ─── */}
+          {publishBlockedModalOpen && createPortal(
             <div
               className={`ab-publish-blocked-overlay${
                 rightPanelOpen
@@ -4070,7 +4071,8 @@ export default function AgentBuilder({
                   </button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body,
           )}
         </div>
       </div>

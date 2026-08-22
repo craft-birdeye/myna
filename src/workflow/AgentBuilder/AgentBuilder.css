@@ -678,11 +678,11 @@
   display: none;
 }
 
-/* ─── Publish blocked alert (top-fixed, canvas-centered) ─── */
+/* ─── Publish blocked alert (viewport-fixed — covers L1 + top nav) ─── */
 .ab-publish-blocked-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 2100;
+  z-index: 10000;
   display: flex;
   align-items: flex-start;
   justify-content: center;
