@@ -122,6 +122,19 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     ]
   }
 
+  if (row.status === 'Aborted') {
+    return [
+      trigger,
+      {
+        id: 'rr-log-2',
+        type: 'task',
+        stepNumber: 2,
+        title: 'Triage review',
+        note: 'Aborted — run was stopped before a response could be generated.',
+      },
+    ]
+  }
+
   if (row.status === 'Failed' || row.status === 'Not resolved') {
     return [
       trigger,
@@ -135,9 +148,9 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
           { key: 'Reason', value: 'Spam or content-policy violation' },
         ],
         inputs: [
-          { key: 'Review.comment', value: 'Unrelated promotional content' },
+          { key: 'Review.comment', value: String(row.comment ?? 'Unrelated promotional content') },
           { key: 'Review.source', value: source },
-          { key: 'Review.rating', value: '1' },
+          { key: 'Review.rating', value: String(row.rating ?? 1) },
         ],
       },
       {
@@ -183,9 +196,9 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
         { key: 'Review type', value: 'Genuine customer review' },
       ],
       inputs: [
-        { key: 'Review.comment', value: 'Wait was longer than expected…' },
+        { key: 'Review.comment', value: String(row.comment ?? 'Wait was longer than expected…') },
         { key: 'Review.source', value: source },
-        { key: 'Review.rating', value: '3' },
+        { key: 'Review.rating', value: String(row.rating ?? 3) },
       ],
     },
     {
@@ -208,8 +221,8 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
         { key: 'Severity', value: 'Medium' },
       ],
       inputs: [
-        { key: 'Review.comment', value: 'Wait was longer than expected…' },
-        { key: 'Review.rating', value: '3' },
+        { key: 'Review.comment', value: String(row.comment ?? 'Wait was longer than expected…') },
+        { key: 'Review.rating', value: String(row.rating ?? 3) },
         { key: 'Review.source', value: source },
       ],
     },
