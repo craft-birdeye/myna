@@ -18,6 +18,7 @@ import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
 import SendResponseTaskBody from './SendResponseTaskBody';
+import styles from './RHS.module.css';
 
 const VARIANTS = {
   start: {
@@ -132,18 +133,7 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
   const resolvedSaveLabel = saveLabel ?? 'Save';
 
   return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: panelWidth,
-        height: '100%',
-        background: '#ffffff',
-        borderRadius: 12,
-        boxShadow: '0 2px 12px 1px rgba(33, 33, 33, 0.06)',
-        border: '1px solid #e5e9f0',
-        overflow: 'hidden',
-        fontFamily: '"Roboto", arial, sans-serif',
-      }}>
+      <div className={styles['rhs-panel']} style={{ width: panelWidth }}>
         <RHSSidePanelHeader
           title={title || 'Title'}
           onPreview={viewOnly ? undefined : onPreview}
@@ -158,13 +148,9 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
         {/* `inlineFooter`: body shrinks-to-fit instead of stretching, so a short panel lets
             the Save button sit right under the content. Once the content is tall enough to
             scroll the body fills the space again and the footer lands at the bottom as usual. */}
-        <div style={{
-          flex: inlineFooter ? '0 1 auto' : 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          padding: '16px 15px',
-          boxSizing: 'border-box',
-        }}>
+        <div
+          className={`${styles['rhs-panel__body']}${inlineFooter ? ` ${styles['rhs-panel__body--inline']}` : ''}`}
+        >
           {/* Read-only mode uses a disabled <fieldset>, not just pointer-events: that natively
               disables every nested control so Tab-and-type can't edit the panel either. The
               pointer-events guard stays for non-form click handlers (swatch pickers etc.). */}

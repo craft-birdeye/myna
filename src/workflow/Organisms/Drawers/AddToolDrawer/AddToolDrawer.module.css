@@ -1,3 +1,5 @@
+/* Aero DS tokens (see tailwind.config.ts) — keep values in sync with design tokens. */
+
 .panel {
   position: absolute;
   right: 8px;
@@ -5,23 +7,24 @@
   width: 650px;
   max-width: calc(92vw - 8px);
   height: calc(100% - 16px);
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  background: #ffffff; /* surface */
+  border-radius: 16px; /* Corner Radius/xl — drawer shell (matches FormDrawer) */
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22); /* shadow-modal */
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   font-family: 'Roboto', sans-serif;
+  color: #0d0d12; /* text/primary */
 }
 
 /* ─── Header ─── */
 
 .header {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 24px;
-  background: #fff;
+  align-items: flex-start;
+  gap: 8px; /* spacing/sm */
+  padding: 24px 24px 16px; /* 2xl / lg */
+  background: #ffffff;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -29,27 +32,55 @@
 }
 
 .backBtn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 4px; /* Corner Radius/sm */
   cursor: pointer;
-  color: #424242;
+  color: #303030; /* text/icon */
   padding: 0;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.backBtn:hover { background: #f5f5f5; }
+.backBtn:hover {
+  background: #f2f4f7; /* surface/hover */
+}
+
+.headerTitles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* spacing/xs */
+  min-width: 0;
+}
 
 .headerTitle {
-  font-size: 18px;
+  font-size: 18px; /* Heading 3 */
   font-weight: 400;
-  color: #212121;
-  line-height: 24px;
+  color: #0d0d12; /* text/primary */
+  line-height: 26px;
+  letter-spacing: -0.36px;
+}
+
+.headerSubtitle {
+  font-size: 12px; /* Small Body */
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182; /* text/secondary */
+}
+
+.headerSubtitleLink {
+  color: #1976d2; /* text/action */
+  text-decoration: none;
+}
+
+.headerSubtitleLink:hover {
+  color: #1565c0; /* primary/hover */
+  text-decoration: underline;
 }
 
 /* ─── Body ─── */
@@ -58,7 +89,7 @@
   padding: 0 24px 32px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 16px; /* spacing/lg */
 }
 
 /* ─── Search ─── */
@@ -67,24 +98,34 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 0 12px;
-  height: 40px;
-  background: #fff;
+  border: 1px solid #e5e9f0; /* border/input */
+  border-radius: 4px; /* Corner Radius/sm — chrome */
+  padding: 0 12px; /* spacing/md */
+  height: 36px;
+  background: #ffffff;
+}
+
+.searchIcon {
+  color: #303030; /* text/icon */
+  flex-shrink: 0;
 }
 
 .searchInput {
   flex: 1;
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: 14px; /* Body 2 */
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: 'Roboto', sans-serif;
-  color: #212121;
+  font-weight: 400;
+  color: #0d0d12;
   background: transparent;
 }
 
-.searchInput::placeholder { color: #9e9e9e; }
+.searchInput::placeholder {
+  color: #9ca3af; /* text/tertiary */
+}
 
 /* ─── Tabs ─── */
 
@@ -92,33 +133,60 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #e5e9f0;
-  margin-bottom: -4px;
 }
 
 .tabs {
   display: flex;
+  align-items: flex-end;
+  gap: 4px; /* spacing/xs — matches shared Tabs */
 }
 
 .tab {
-  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
   cursor: pointer;
   font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: 'Roboto', sans-serif;
-  color: #616161;
-  margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  font-weight: 400;
+  color: #717182; /* text/secondary */
+  transition: color 0.15s;
 }
 
-.tab:hover { color: #212121; }
+.tabLabel {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 8px; /* spacing/sm */
+  border-radius: 8px; /* Corner Radius/md */
+}
+
+.tab:hover {
+  color: #0d0d12;
+}
+
+.tab:hover .tabLabel {
+  background: #f2f4f7; /* surface/hover */
+}
 
 .tabActive {
-  color: #1976d2;
-  border-bottom-color: #1976d2;
-  font-weight: 400;
+  color: #0d0d12; /* text/primary — Aero tabs */
+}
+
+.tabUnderline {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: transparent;
+}
+
+.tabActive .tabUnderline {
+  background: #1976d2; /* primary */
 }
 
 .addCustomBtn {
@@ -128,14 +196,19 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: 'Roboto', sans-serif;
-  color: #1976d2;
+  font-weight: 400;
+  color: #1976d2; /* text/action */
   padding: 4px 0;
   flex-shrink: 0;
 }
 
-.addCustomBtn:hover { opacity: 0.8; }
+.addCustomBtn:hover {
+  color: #1565c0;
+}
 
 /* ─── Entity filter dropdown ─── */
 
@@ -147,49 +220,74 @@
   border: none;
   cursor: pointer;
   font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   color: #1976d2;
   padding: 2px 0;
 }
 
-.entityFilterBtn:hover { opacity: 0.8; }
+.entityFilterBtn:hover {
+  color: #1565c0;
+}
 
 .entityFilterLabel {
   font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   color: #1976d2;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+}
+
+.entityFilterIcon {
+  color: #1976d2;
 }
 
 .entityDropdown {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  background: #fff;
+  background: #ffffff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  border-radius: 4px; /* Corner Radius/sm — menus */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); /* shadow-dropdown */
   min-width: 180px;
   z-index: 100;
   overflow: hidden;
+  padding: 4px 0;
 }
 
 .entityDropdownItem {
   display: block;
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 16px; /* sm / lg — DataTable menu rhythm */
   background: none;
   border: none;
   cursor: pointer;
   font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: 'Roboto', sans-serif;
-  color: #212121;
+  font-weight: 400;
+  color: #0d0d12;
   text-align: left;
   transition: background 0.12s;
 }
 
-.entityDropdownItem:hover { background: #f5f7fa; }
-.entityDropdownItemActive { color: #1976d2; background: #e8f0fd; }
-.entityDropdownItemActive:hover { background: #dce8fc; }
+.entityDropdownItem:hover {
+  background: #f2f4f7; /* surface/hover */
+}
+
+.entityDropdownItemActive {
+  color: #1976d2;
+  background: #e8f1fc; /* chip/info/bg */
+}
+
+.entityDropdownItemActive:hover {
+  background: #e8f1fc;
+}
 
 /* ─── Tool list ─── */
 
@@ -202,31 +300,40 @@
 .toolRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 12px; /* spacing/md */
   padding: 12px 16px;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  background: #fff;
+  border-radius: 8px; /* Corner Radius/md */
+  background: #ffffff;
   cursor: pointer;
   text-align: left;
   width: 100%;
   transition: background 0.12s;
 }
 
-.toolRow:hover { background: #f5f7fa; }
+.toolRow:hover {
+  background: #f2f4f7;
+}
 
-.toolRowDisabled { opacity: 0.6; cursor: default; }
-.toolRowDisabled:hover { background: #fff; }
+.toolRowDisabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.toolRowDisabled:hover {
+  background: #ffffff;
+}
 
 .toolIcon {
   width: 36px;
   height: 36px;
-  border-radius: 6px;
-  background: #f5f5f5;
+  border-radius: 8px; /* Corner Radius/md */
+  background: #eef2f6; /* surface/icon */
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: #303030; /* text/icon */
 }
 
 .toolIconImg {
@@ -245,9 +352,11 @@
 
 .toolName {
   font-size: 14px;
-  color: #212121;
-  font-family: 'Roboto', sans-serif;
   line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -255,9 +364,11 @@
 
 .toolDesc {
   font-size: 12px;
-  color: #757575;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182; /* text/secondary */
   font-family: 'Roboto', sans-serif;
-  line-height: 16px;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -271,16 +382,22 @@
 }
 
 .connectedText {
-  font-size: 13px;
-  color: #424242;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   white-space: nowrap;
 }
 
 .connectBtn {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   color: #1976d2;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -289,8 +406,11 @@
   padding: 32px;
   text-align: center;
   font-size: 14px;
-  color: #9e9e9e;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #9ca3af; /* text/tertiary */
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
 }
 
 /* ─── Status dots ─── */
@@ -303,8 +423,13 @@
   flex-shrink: 0;
 }
 
-.statusDotGreen { background: #4caf50; }
-.statusDotRed   { background: #f44336; }
+.statusDotGreen {
+  background: #4cae3d; /* accent/positive */
+}
+
+.statusDotRed {
+  background: #de1b0c; /* chip/danger/text */
+}
 
 /* ─── Account select trigger ─── */
 
@@ -313,27 +438,34 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 40px;
+  height: 36px;
   padding: 0 12px;
-  border: 1px solid #c5cad3;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid #e5e9f0; /* border/input */
+  border-radius: 4px; /* Corner Radius/sm */
+  background: #ffffff;
   cursor: pointer;
   font-family: 'Roboto', sans-serif;
   text-align: left;
   transition: border-color 0.15s;
+  color: #303030;
 }
 
-.accountSelectTrigger:hover { border-color: #9e9e9e; }
+.accountSelectTrigger:hover {
+  border-color: #cccccc; /* border/strong */
+}
 
 .accountSelectPlaceholder {
   font-size: 14px;
-  color: #9e9e9e;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #9ca3af;
 }
 
 .accountSelectValue {
   font-size: 14px;
-  color: #212121;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -346,10 +478,10 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #fff;
+  background: #ffffff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 200;
   overflow: hidden;
 }
@@ -364,23 +496,30 @@
 
 .accountLabel {
   font-size: 14px;
-  color: #212121;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
   font-family: 'Roboto', sans-serif;
   font-weight: 400;
 }
 
-.required { color: #de1b0c; }
+.required {
+  color: #de1b0c;
+}
 
 .accountSubLabel {
   font-size: 12px;
-  color: #757575;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   margin-bottom: 8px;
 }
 
 .accountBox {
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -389,23 +528,33 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e5e9f0;
 }
 
 .accountBoxLabel {
-  font-size: 13px;
-  color: #9e9e9e;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #9ca3af;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
 }
 
 .addAccountBtn {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   color: #1976d2;
   background: none;
   border: none;
   cursor: pointer;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   padding: 0;
+}
+
+.addAccountBtn:hover {
+  color: #1565c0;
 }
 
 .accountSearch {
@@ -413,7 +562,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e5e9f0;
 }
 
 .accountSearchInput {
@@ -421,12 +570,17 @@
   border: none;
   outline: none;
   font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: 'Roboto', sans-serif;
-  color: #212121;
+  font-weight: 400;
+  color: #0d0d12;
   background: transparent;
 }
 
-.accountSearchInput::placeholder { color: #9e9e9e; }
+.accountSearchInput::placeholder {
+  color: #9ca3af;
+}
 
 .accountList {
   display: flex;
@@ -440,17 +594,29 @@
   padding: 12px 14px;
   background: none;
   border: none;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid #e5e9f0;
   cursor: pointer;
   text-align: left;
   width: 100%;
   transition: background 0.12s;
 }
 
-.accountRow:last-child { border-bottom: none; }
-.accountRow:hover:not(:disabled) { background: #f5f7fa; }
-.accountRowSelected { background: #e8f0fd; }
-.accountRowExpired { cursor: default; opacity: 0.8; }
+.accountRow:last-child {
+  border-bottom: none;
+}
+
+.accountRow:hover:not(:disabled) {
+  background: #f2f4f7;
+}
+
+.accountRowSelected {
+  background: #e8f1fc;
+}
+
+.accountRowExpired {
+  cursor: default;
+  opacity: 0.8;
+}
 
 .accountInfo {
   flex: 1;
@@ -462,33 +628,47 @@
 
 .accountEmail {
   font-size: 14px;
-  color: #212121;
-  font-family: 'Roboto', sans-serif;
   line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
 }
 
 .accountStatus {
   font-size: 12px;
-  color: #757575;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
 }
 
 .accountError {
   font-size: 12px;
-  color: #757575;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182;
   font-family: 'Roboto', sans-serif;
-  line-height: 16px;
+  font-weight: 400;
 }
 
 .reconnectBtn {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   color: #1976d2;
   background: none;
   border: none;
   cursor: pointer;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   padding: 0;
   flex-shrink: 0;
+}
+
+.reconnectBtn:hover {
+  color: #1565c0;
 }
 
 /* ─── Selected account row ─── */
@@ -497,17 +677,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid #c5cad3;
+  border: 1px solid #e5e9f0;
   border-radius: 4px;
   padding: 0 12px;
   height: 36px;
-  background: #fff;
+  background: #ffffff;
 }
 
 .selectedAccountEmail {
   font-size: 14px;
-  color: #212121;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
   font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -519,11 +702,14 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #757575;
+  color: #303030;
   display: flex;
   align-items: center;
   padding: 2px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
-.accountClearBtn:hover { color: #212121; }
+.accountClearBtn:hover {
+  background: #f2f4f7;
+  color: #0d0d12;
+}

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from '../elemental-stubs';
 import { SelectMenu } from '../../components/SelectMenu/SelectMenu';
 import './LocationsDrawer.css';
 
@@ -402,19 +401,26 @@ export default function LocationsDrawer({
   }, [flyoutOpen, flyoutMode, popoverCategory, measureFlyoutPos]);
 
   return createPortal(
-    <div className="loc-overlay">
-      <div className="loc-drawer">
+    <div className="loc-overlay" onClick={onBack}>
+      <div className="loc-drawer" onClick={(e) => e.stopPropagation()}>
 
         <div className="loc-header">
           <div className="loc-header__left">
-            <button className="loc-back-btn" onClick={onBack} type="button">
+            <button className="loc-back-btn" onClick={onBack} type="button" aria-label="Back">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
               </svg>
             </button>
             <span className="loc-title">Locations</span>
           </div>
-          <Button theme="primary" label="Add" onClick={handleSave} disabled={locationsLoading} />
+          <button
+            type="button"
+            className="loc-add-btn"
+            onClick={handleSave}
+            disabled={locationsLoading}
+          >
+            Add
+          </button>
         </div>
 
         <div className="loc-body">
@@ -651,12 +657,22 @@ export default function LocationsDrawer({
 }
 
 function Checkbox({ checked, indeterminate }) {
+  const active = checked || indeterminate;
   return (
-    <div className={`loc-checkbox ${checked || indeterminate ? 'loc-checkbox--on' : ''}`}>
-      {checked && !indeterminate && (
-        <span className="material-symbols-outlined loc-checkbox__check">check</span>
-      )}
-      {indeterminate && <span className="loc-checkbox__dash" />}
-    </div>
+    <span
+      className={`loc-checkbox${active ? ' loc-checkbox--on' : ''}`}
+      role="checkbox"
+      aria-checked={indeterminate ? 'mixed' : !!checked}
+    >
+      {indeterminate ? (
+        <span className="material-symbols-outlined loc-checkbox__glyph" aria-hidden>
+          remove
+        </span>
+      ) : checked ? (
+        <span className="material-symbols-outlined loc-checkbox__glyph" aria-hidden>
+          check
+        </span>
+      ) : null}
+    </span>
   );
 }

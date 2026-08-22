@@ -1,0 +1,27 @@
+/* Aero DS — node-config RHS side panel */
+
+.rhs-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff; /* surface */
+  border-radius: 16px; /* Corner Radius/xl — matches agent-builder__rhs / FormDrawer */
+  border: 1px solid #e5e9f0; /* border */
+  box-shadow: none; /* parent .agent-builder__rhs owns elevation */
+  overflow: hidden;
+  font-family: 'Roboto', sans-serif;
+  color: #0d0d12; /* text/primary */
+  box-sizing: border-box;
+}
+
+.rhs-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 16px; /* 2xl horizontal — Aero spacing */
+  box-sizing: border-box;
+}
+
+.rhs-panel__body--inline {
+  flex: 0 1 auto;
+}

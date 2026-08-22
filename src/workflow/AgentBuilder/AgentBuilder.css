@@ -115,8 +115,9 @@
   height: calc(100% - 16px);
   overflow: hidden;
   z-index: 30;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  border-radius: 16px; /* Corner Radius/xl — Aero drawer/panel shell */
+  /* Mild floating elevation — lighter than modal scrim panels */
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
   display: flex;
   flex-direction: column;
 }
@@ -1239,7 +1240,33 @@
 }
 
 .agent-builder--rr-chrome .start-node {
-  border-radius: 8px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .start-node--selected {
+  border-color: #1976d2;
+}
+
+/* Match top chrome surface (identity / Pause·Publish cards). */
+.agent-builder--rr-chrome .canvas-node {
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .canvas-node--selected {
+  border-color: #1976d2;
+}
+
+.agent-builder--rr-chrome .canvas-node--hover {
+  border-color: #ccd5e4;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .canvas-node--error:not(.canvas-node--selected) {
+  border-color: #d32f2f;
 }
 
 .agent-builder--rr-chrome .cnh__ai-icon {
@@ -1250,10 +1277,10 @@
   display: none;
 }
 
-/* Match floating chrome shadow (same as graph-controls__rr-edit) */
+/* Match Aero floating panel shell (16px radius + mild elevation) */
 .agent-builder--rr-chrome .agent-builder__rhs {
-  box-shadow: none;
-  border-radius: 12px;
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
+  border-radius: 16px;
   z-index: 56;
 }
 
@@ -1754,7 +1781,7 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid #f0f2f5;
+  border: 1px solid #e5e9f0;
   border-radius: 6px;
   background: #fff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
@@ -1777,7 +1804,7 @@
   gap: 14px;
   width: 56px;
   padding: 12px;
-  border: 1px solid #f0f2f5;
+  border: 1px solid #e5e9f0;
   border-radius: 6px;
   background: #fff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);

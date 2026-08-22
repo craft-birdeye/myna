@@ -1,52 +1,68 @@
+/* Aero DS — overlay + native drawer shell (matches Add a tool / FormDrawer). */
+
 /* ── Overlay ── */
 .loc-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(33, 33, 33, 0.64);
-  z-index: 200;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.2); /* Aero 20% scrim */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 /* ── Drawer panel ── */
 .loc-drawer {
   position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 598px;
-  max-width: 100%;
-  background: #fff;
-  box-shadow: 0px 4px 8px 0px rgba(33, 33, 33, 0.18);
+  right: 8px;
+  top: 8px;
+  width: 650px;
+  max-width: calc(92vw - 8px);
+  height: calc(100% - 16px);
+  background: #ffffff; /* surface */
+  border-radius: 16px; /* Corner Radius/xl */
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22); /* shadow-modal */
   display: flex;
   flex-direction: column;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
+  color: #0d0d12; /* text/primary */
   overflow: hidden;
 }
 
 /* ── Header ── */
 .loc-header {
-  height: 66px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 16px;
-  background: #fff;
+  gap: 12px;
+  padding: 24px 24px 16px; /* 2xl / lg */
+  background: #ffffff;
 }
 
 .loc-header__left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px; /* spacing/sm */
+  min-width: 0;
 }
 
 .loc-back-btn {
+  width: 28px;
+  height: 28px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
-  color: #212121;
+  justify-content: center;
+  color: #303030; /* text/icon */
+  border-radius: 4px; /* Corner Radius/sm */
+  flex-shrink: 0;
+}
+
+.loc-back-btn:hover {
+  background: #f2f4f7; /* surface/hover */
 }
 
 .loc-back-btn .material-symbols-outlined {
@@ -57,25 +73,54 @@
 }
 
 .loc-title {
-  font-size: 16px;
+  font-size: 18px; /* Heading 3 */
   font-weight: 400;
-  line-height: 24px;
-  color: #1f2328;
+  line-height: 26px;
+  letter-spacing: -0.36px;
+  color: #0d0d12; /* text/primary */
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Primary header CTA — Aero chrome (not elemental stub Material greys) */
+.loc-add-btn {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px; /* Corner Radius/sm */
+  background: #1976d2; /* primary */
+  color: #ffffff;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px; /* Body 2 */
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  flex-shrink: 0;
+  transition: background-color 0.12s ease;
+}
+
+.loc-add-btn:hover:not(:disabled) {
+  background: #1565c0; /* primary/hover */
+}
+
+.loc-add-btn:disabled {
+  background: #e5e9f0; /* surface/selected */
+  color: #9ca3af; /* text/tertiary */
+  cursor: not-allowed;
 }
 
 /* ── Body ── */
 .loc-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 24px 16px;
+  padding: 0 24px 24px;
 }
 
 .loc-inner {
   position: relative;
-  padding: 0 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 16px; /* spacing/lg */
 }
 
 /* ── Description ── */
@@ -84,16 +129,19 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
-  font-size: 12px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px; /* Small Body */
+  font-weight: 400;
   line-height: 18px;
-  color: #212121;
+  letter-spacing: -0.24px;
+  color: #717182; /* text/secondary */
 }
 
 .loc-info-icon {
   font-size: 16px !important;
   width: 16px;
   height: 16px;
-  color: #8f8f8f;
+  color: #303030; /* text/icon */
   margin-left: 4px;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
@@ -111,13 +159,19 @@
   gap: 2px;
   font-size: 12px;
   line-height: 18px;
-  color: #1976d2;
-  font-family: "Roboto", arial, sans-serif;
+  letter-spacing: -0.24px;
+  color: #1976d2; /* text/action */
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   border: none;
   background: transparent;
   padding: 0;
   cursor: pointer;
   outline: none;
+}
+
+.loc-select-by:hover {
+  color: #1565c0;
 }
 
 .loc-select-menu {
@@ -137,10 +191,10 @@
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid #e5e9f0;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(33, 33, 33, 0.16);
+  background: #ffffff;
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 4px; /* Corner Radius/sm — menus */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); /* shadow-dropdown */
 }
 
 .loc-flyout--menu {
@@ -175,7 +229,7 @@
   font-size: 18px !important;
   width: 18px;
   height: 18px;
-  color: #555;
+  color: #303030; /* text/icon */
   flex-shrink: 0;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
@@ -187,7 +241,7 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px;
-  border-right: 1px solid #eaeaea;
+  border-right: 1px solid #e5e9f0;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -201,14 +255,16 @@
   margin: 0;
   padding: 8px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px; /* Corner Radius/sm */
   background: transparent;
   cursor: pointer;
   text-align: left;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
-  color: #212121;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
 }
 
 .loc-picker-popover__nav-item:hover {
@@ -216,7 +272,8 @@
 }
 
 .loc-picker-popover__nav-item--active {
-  background: #f0f0f0;
+  background: #e8f1fc; /* chip/info/bg */
+  color: #1976d2;
 }
 
 .loc-picker-popover__nav-label {
@@ -241,17 +298,20 @@
   height: 18px;
   padding: 0 6px;
   border-radius: 9px;
-  background: #eeeeee;
-  color: #555;
-  font-size: 11px;
-  line-height: 16px;
+  background: #eef2f6; /* surface/icon */
+  color: #717182; /* text/secondary */
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px; /* Small Body */
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.24px;
 }
 
 .loc-picker-popover__chevron {
   font-size: 18px !important;
   width: 18px;
   height: 18px;
-  color: #8f8f8f;
+  color: #303030;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
@@ -272,16 +332,16 @@
   height: 36px;
   flex-shrink: 0;
   padding: 0 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #e5e9f0; /* border/input */
   border-radius: 4px;
-  background: #fff;
+  background: #ffffff;
 }
 
 .loc-picker-popover__search .material-symbols-outlined {
   font-size: 20px !important;
   width: 20px;
   height: 20px;
-  color: #8f8f8f;
+  color: #303030; /* text/icon */
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
@@ -291,14 +351,16 @@
   border: none;
   outline: none;
   background: transparent;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
-  color: #212121;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
 }
 
 .loc-picker-popover__search input::placeholder {
-  color: #8f8f8f;
+  color: #9ca3af; /* text/tertiary */
 }
 
 .loc-picker-popover__list {
@@ -320,14 +382,16 @@
   background: transparent;
   cursor: pointer;
   text-align: left;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
-  color: #212121;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
 }
 
 .loc-picker-popover__row:hover {
-  background: #f8f9fa;
+  background: #f2f4f7;
 }
 
 .loc-picker-popover__empty {
@@ -335,7 +399,8 @@
   padding: 12px 4px;
   font-size: 14px;
   line-height: 20px;
-  color: #8f8f8f;
+  letter-spacing: -0.28px;
+  color: #9ca3af;
 }
 
 .loc-picker-popover__footer {
@@ -345,8 +410,8 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #eaeaea;
-  background: #fff;
+  border-top: 1px solid #e5e9f0;
+  background: #ffffff;
 }
 
 .loc-picker-popover__cancel {
@@ -356,9 +421,11 @@
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
+  letter-spacing: -0.28px;
+  font-weight: 400;
   color: #1976d2;
 }
 
@@ -373,10 +440,12 @@
   border-radius: 4px;
   background: #1976d2;
   cursor: pointer;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
-  color: #fff;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #ffffff;
 }
 
 .loc-picker-popover__apply:hover:not(:disabled) {
@@ -384,7 +453,8 @@
 }
 
 .loc-picker-popover__apply:disabled {
-  background: #90caf9;
+  background: #e5e9f0; /* surface/selected */
+  color: #9ca3af;
   cursor: not-allowed;
 }
 
@@ -403,10 +473,10 @@
   align-items: center;
   gap: 8px;
   height: 36px;
-  border: 1px solid #ccc;
+  border: 1px solid #e5e9f0;
   border-radius: 4px;
   padding: 0 12px;
-  background: #fff;
+  background: #ffffff;
   box-sizing: border-box;
 }
 
@@ -414,7 +484,7 @@
   font-size: 20px !important;
   width: 20px;
   height: 20px;
-  color: #8f8f8f;
+  color: #303030;
   flex-shrink: 0;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
@@ -424,14 +494,16 @@
   border: none;
   outline: none;
   font-size: 14px;
-  font-family: "Roboto", arial, sans-serif;
-  color: #212121;
   line-height: 20px;
+  letter-spacing: -0.28px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  color: #0d0d12;
   background: transparent;
 }
 
 .loc-search-input::placeholder {
-  color: #8f8f8f;
+  color: #9ca3af;
 }
 
 /* ── List ── */
@@ -446,10 +518,11 @@
   justify-content: center;
   gap: 10px;
   min-height: 160px;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
-  color: #555;
+  letter-spacing: -0.28px;
+  color: #717182;
 }
 
 .loc-list-loading__spinner {
@@ -462,16 +535,19 @@
 }
 
 @keyframes loc-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loc-list-empty {
   margin: 0;
   padding: 16px 0;
-  font-family: "Roboto", arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
-  color: #8f8f8f;
+  letter-spacing: -0.28px;
+  color: #9ca3af;
 }
 
 .loc-row {
@@ -479,7 +555,7 @@
   align-items: center;
   gap: 10px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 1px solid #e5e9f0;
   margin-bottom: 12px;
   cursor: pointer;
   min-height: 24px;
@@ -487,6 +563,7 @@
 
 .loc-row:last-child {
   margin-bottom: 0;
+  border-bottom: none;
 }
 
 .loc-row__label {
@@ -494,52 +571,48 @@
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
-  color: #212121;
-  font-family: "Roboto", arial, sans-serif;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  font-family: 'Roboto', sans-serif;
 }
 
 .loc-row__count {
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
-  color: #212121;
-  font-family: "Roboto", arial, sans-serif;
   letter-spacing: -0.28px;
+  color: #717182; /* text/secondary — selection meta */
+  font-family: 'Roboto', sans-serif;
   white-space: nowrap;
 }
 
-/* ── Checkbox ── */
+/* ── Checkbox (Aero DS — matches FilesModal / MediaLibrary / SelectMenu) ── */
 .loc-checkbox {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  border: 1px solid #ccc;
+  border: 1px solid #9e9e9e; /* control/border */
   border-radius: 2px;
-  background: #fff;
+  background: #ffffff; /* surface */
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
 .loc-checkbox--on {
-  background: #1976d2;
+  background: #1976d2; /* primary */
   border-color: #1976d2;
 }
 
-.loc-checkbox__check {
+.loc-checkbox__glyph {
   font-size: 14px !important;
   width: 14px;
   height: 14px;
-  color: #fff;
+  color: #ffffff;
   line-height: 1;
-  font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 20;
+  display: block;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
 }
 
-.loc-checkbox__dash {
-  width: 10px;
-  height: 2px;
-  background: #fff;
-  border-radius: 1px;
-  display: block;
-}

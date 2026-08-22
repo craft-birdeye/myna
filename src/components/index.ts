@@ -135,13 +135,17 @@ export type {
   WorkflowCoachPlacement,
 } from './WorkflowCoachTour/WorkflowCoachTour.types'
 export { HelpCenterPanel } from './HelpCenterPanel/HelpCenterPanel'
+export { GlossaryModal } from './HelpCenterPanel/GlossaryModal'
+export type { GlossaryModalProps } from './HelpCenterPanel/GlossaryModal'
 export type {
   HelpCenterPanelProps,
   HelpCenterView,
   HelpVideoItem,
-  HelpTourItem,
   HelpArticleItem,
+  HelpGlossaryItem,
+  HelpDictionaryItem,
 } from './HelpCenterPanel/HelpCenterPanel.types'
+export { HELP_GLOSSARY, HELP_DICTIONARY } from './HelpCenterPanel/HelpCenterPanel.types'
 export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
 export type {
   AgentLibraryPreviewData,

@@ -19,6 +19,7 @@ import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
+import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
 import { WorkflowCoachTour } from '../../components/WorkflowCoachTour/WorkflowCoachTour';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
@@ -1235,6 +1236,7 @@ export default function AgentBuilder({
   // First-time coach queue on the edit canvas — Help center "Start tour" also reopens it.
   const [coachTourOpen, setCoachTourOpen] = useState(false);
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
   // Rebuilt only while the panel is open so the run isn't restarted by unrelated edits.
   const testRunSteps = useMemo(
     () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails) : EMPTY_TEST_RUN_STEPS),
@@ -3883,6 +3885,7 @@ export default function AgentBuilder({
                   <HelpCenterPanel
                     open={helpCenterOpen}
                     onClose={() => setHelpCenterOpen(false)}
+                    onOpenGlossary={() => setGlossaryOpen(true)}
                     onStartTour={() => {
                       setHelpCenterOpen(false);
                       if (!viewOnly) setCoachTourOpen(true);
@@ -3993,6 +3996,7 @@ export default function AgentBuilder({
               <HelpCenterPanel
                 open={helpCenterOpen}
                 onClose={() => setHelpCenterOpen(false)}
+                onOpenGlossary={() => setGlossaryOpen(true)}
                 onStartTour={() => {
                   setHelpCenterOpen(false);
                   if (!viewOnly) setCoachTourOpen(true);
@@ -4195,6 +4199,8 @@ export default function AgentBuilder({
       {!viewOnly && (
         <WorkflowCoachTour open={coachTourOpen} onClose={() => setCoachTourOpen(false)} />
       )}
+
+      <GlossaryModal open={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
     </div>
   );
 }
