@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import '../../../Molecules/Conditions/Conditions.css';
 import styles from './ConversationTriggerBody.module.css';
+import descStyles from './TriggerDescription.module.css';
 
 const VOICE_OPTIONS = [
   { value: 'incoming_call', label: 'Incoming call' },
@@ -152,6 +153,9 @@ function ChannelSection({ icon, title, conditionsLabel, conditionOptions, rows, 
 export default function ConversationTriggerBody({ initialValues = {}, onFieldChange, viewOnly = false }) {
   const [triggerName, setTriggerName] = useState(initialValues.triggerName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
+  const [descriptionOpen, setDescriptionOpen] = useState(
+    () => Boolean(String(initialValues.description ?? '').trim()),
+  );
   // A wizard-built trigger explicitly sets voiceRows/webChatRows — to an empty
   // array when that channel wasn't selected during onboarding. Respect that as
   // given. Only fall back to a single default row when the node carries no
@@ -211,16 +215,30 @@ export default function ConversationTriggerBody({ initialValues = {}, onFieldCha
         required
         readOnly={viewOnly}
       />
-      <TextArea
-        name="description"
-        label="Description"
-        placeholder="Enter description"
-        value={description}
-        onChange={handleDescription}
-        noFloatingLabel
-        required
-        readOnly={viewOnly}
-      />
+      {descriptionOpen ? (
+        <div className={descStyles.descriptionField}>
+          <TextArea
+            name="description"
+            label="Description"
+            placeholder="Enter description"
+            value={description}
+            onChange={handleDescription}
+            noFloatingLabel
+            readOnly={viewOnly}
+          />
+        </div>
+      ) : (
+        !viewOnly && (
+          <button
+            type="button"
+            className={descStyles.addDescriptionBtn}
+            onClick={() => setDescriptionOpen(true)}
+          >
+            <span className="material-symbols-outlined">add_circle</span>
+            Add description
+          </button>
+        )
+      )}
 
       {voiceRows.length > 0 && (
         <ChannelSection

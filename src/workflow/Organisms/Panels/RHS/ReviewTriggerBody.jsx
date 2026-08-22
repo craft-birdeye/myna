@@ -3,6 +3,7 @@ import { TextArea } from '../../../elemental-stubs';
 import Conditions from '../../../Molecules/Conditions/Conditions';
 import ChooseTriggerModal, { REVIEW_TRIGGER_OPTIONS } from './ChooseTriggerModal';
 import { CONDITION_OPERATORS, operatorNeedsValue } from '../../../constants/conditionOperators';
+import descStyles from './TriggerDescription.module.css';
 
 const DEFAULT_TRIGGER = REVIEW_TRIGGER_OPTIONS[2];
 
@@ -93,8 +94,9 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
   const [trigger, setTrigger] = useState(initialTrigger);
   const [pickerOpen, setPickerOpen] = useState(false);
   const triggerFieldRef = useRef(null);
-  const [description, setDescription] = useState(
-    initialValues.description ?? initialTrigger.agentDescription ?? '',
+  const [description, setDescription] = useState(initialValues.description ?? '');
+  const [descriptionOpen, setDescriptionOpen] = useState(
+    () => Boolean(String(initialValues.description ?? '').trim()),
   );
   const [conditions, setConditions] = useState(() => normalizeInitialConditions(initialValues.conditions));
   const [logic, setLogic] = useState(initialValues.logic ?? 'AND');
@@ -104,10 +106,6 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
     setTrigger(opt);
     onFieldChange?.('triggerType', opt.value);
     onFieldChange?.('triggerName', opt.label);
-    if (!description || description === trigger.agentDescription) {
-      setDescription(opt.agentDescription);
-      onFieldChange?.('description', opt.agentDescription);
-    }
   };
 
   const handleDescription = (e) => {
@@ -174,14 +172,27 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
           </button>
         </div>
       </div>
-      <TextArea
-        name="description"
-        label="Description"
-        placeholder="Enter description"
-        value={description}
-        onChange={handleDescription}
-        noFloatingLabel
-      />
+      {descriptionOpen ? (
+        <div className={descStyles.descriptionField}>
+          <TextArea
+            name="description"
+            label="Description"
+            placeholder="Enter description"
+            value={description}
+            onChange={handleDescription}
+            noFloatingLabel
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={descStyles.addDescriptionBtn}
+          onClick={() => setDescriptionOpen(true)}
+        >
+          <span className="material-symbols-outlined">add_circle</span>
+          Add description
+        </button>
+      )}
       <Conditions
         conditions={conditions}
         logic={logic}

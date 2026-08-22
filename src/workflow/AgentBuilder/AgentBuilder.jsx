@@ -2460,7 +2460,8 @@ export default function AgentBuilder({
       : label;
     let details = makeNodeDetails(effectiveType, effectiveType === 'procedures' ? procedureSeed : label);
     if (effectiveType === 'trigger' && label === 'Reviews' && REVIEWS_TRIGGER_LEAF_COPY[description]) {
-      details = { ...details, triggerName: description, description: REVIEWS_TRIGGER_LEAF_COPY[description] };
+      // Seed trigger name from the palette leaf; description stays optional (+ Add description).
+      details = { ...details, triggerName: description, description: '' };
     }
     if (effectiveType === 'task' && description && label !== 'Custom') {
       const taskDefaults = TASK_DROP_DEFAULTS[description] || {};

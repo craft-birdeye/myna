@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FormInput, TextArea, SingleSelect } from '../../../../elemental-stubs';
 import RHSPanelHeader from '../../RHSHeader/RHSHeader';
 import RHSPanelFooter from '../../RHSFooter/RHSFooter';
+import descStyles from '../../../../Organisms/Panels/RHS/TriggerDescription.module.css';
 
 const font = '"Roboto", arial, sans-serif';
 
@@ -18,6 +19,9 @@ export function ScheduleBasedBody({
 }) {
   const [localTriggerName, setLocalTriggerName] = useState(triggerName);
   const [localDescription, setLocalDescription] = useState(description);
+  const [descriptionOpen, setDescriptionOpen] = useState(
+    () => Boolean(String(description ?? '').trim()),
+  );
   const [frequency, setFrequency] = useState(defaultFrequency ?? null);
   const [day, setDay] = useState(defaultDay ?? null);
   const [time, setTime] = useState(defaultTime ?? null);
@@ -37,19 +41,31 @@ export function ScheduleBasedBody({
         }}
         required
       />
-      <TextArea
-        name="description"
-        label="Description"
-        placeholder="Enter description"
-        value={localDescription}
-        onChange={(event) => {
-          const value = event.target.value;
-          setLocalDescription(value);
-          onFieldChange?.('description', value);
-        }}
-        required
-        noFloatingLabel
-      />
+      {descriptionOpen ? (
+        <div className={descStyles.descriptionField}>
+          <TextArea
+            name="description"
+            label="Description"
+            placeholder="Enter description"
+            value={localDescription}
+            onChange={(event) => {
+              const value = event.target.value;
+              setLocalDescription(value);
+              onFieldChange?.('description', value);
+            }}
+            noFloatingLabel
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={descStyles.addDescriptionBtn}
+          onClick={() => setDescriptionOpen(true)}
+        >
+          <span className="material-symbols-outlined">add_circle</span>
+          Add description
+        </button>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: 18 }}>
           <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', color: '#212121', fontFamily: font }}>Frequency</span>
