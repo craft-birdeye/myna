@@ -22,6 +22,18 @@ export const AGENT_INSTANCE_ISSUES: Record<string, AgentIssue[]> = {
       description: 'Add hours so the agent knows when to escalate after hours.',
     },
   ],
+  'Review response agent - North Region': [
+    {
+      id: 'rr-north-template',
+      title: 'Response template not selected',
+      description: 'Pick the templates this agent is allowed to reply with before publishing.',
+    },
+    {
+      id: 'rr-north-handle-response',
+      title: 'Handle response is not configured',
+      description: 'Set the response text and posting delay on the Handle response task.',
+    },
+  ],
   'Front desk agent - South region': [
     {
       id: 'fd-south-phone',

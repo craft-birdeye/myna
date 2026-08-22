@@ -7,6 +7,8 @@ import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
 import {
   isAgentExplorationChrome,
   isExplorationHideCanvasStartNode,
+  RESPONSE_AGENTS_SEP1_NAV_ID,
+  FRONTDESK_SEP1_NAV_ID,
 } from './data/agentNavIds'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
@@ -975,6 +977,11 @@ export function App() {
                           hideTopIdentity={isAgentExplorationChrome(navActive)}
                           hideCanvasStartNode={isExplorationHideCanvasStartNode(navActive)}
                           explorationChrome={isAgentExplorationChrome(navActive)}
+                          sep1Chrome={
+                            navActive === RESPONSE_AGENTS_SEP1_NAV_ID
+                            || navActive === FRONTDESK_SEP1_NAV_ID
+                          }
+                          inlineRhsFooter={navActive === RESPONSE_AGENTS_SEP1_NAV_ID}
                         />
                       </div>
                       {workflowAiAssistOpen && (

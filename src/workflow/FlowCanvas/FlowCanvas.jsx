@@ -566,6 +566,7 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              singleSearch={!!data?.singleAddStepSearch}
               showPasteOption={!!data?.hasClipboard && !!data?.betweenCards}
               onPaste={data?.onPasteAtEdge}
             />
@@ -652,6 +653,8 @@ function FlowCanvasInner({
   onRedo,
   canUndo = false,
   canRedo = false,
+  /** Add-step "+" menu uses one full-width search instead of one per pane (Sep 1 only). */
+  singleAddStepSearch = false,
   /** When set, the Help center trigger renders as its own pill in the bottom editor row
    * instead of the top-right floater (exploration only). */
   onHelpToggle = null,
@@ -1025,6 +1028,7 @@ function FlowCanvasInner({
           product,
           agentName,
           hasClipboard,
+          singleAddStepSearch,
           onDropOnEdge: viewOnly ? undefined : (type, label, description) => {
             if (type === 'trigger') return;
             onDropNodeRef.current?.({
@@ -1040,7 +1044,7 @@ function FlowCanvasInner({
           },
         },
       })),
-    [edges, isDraggingFromLHS, draggingLhsKind, viewOnly, product, agentName, hasClipboard]
+    [edges, isDraggingFromLHS, draggingLhsKind, viewOnly, product, agentName, hasClipboard, singleAddStepSearch]
   );
 
   const handleViewportChange = useCallback(({ zoom: z }) => {

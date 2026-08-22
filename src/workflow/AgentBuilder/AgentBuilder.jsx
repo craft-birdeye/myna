@@ -1071,6 +1071,10 @@ export default function AgentBuilder({
   showProceduresPalette = null,
   /** Hides in-canvas agent name + status (identity rendered in the header back cluster). */
   hideTopIdentity = false,
+  /** RHS Save follows the content instead of pinning to the panel bottom (Sep 1 only). */
+  inlineRhsFooter = false,
+  /** Sep 1 chrome: red "N Errors" chip after the run-test icon instead of the text trigger. */
+  sep1Chrome = false,
   /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. */
   hideCanvasStartNode = hideTopIdentity,
   /** Exploration editor UX — defaults to hideTopIdentity for backward compatibility. */
@@ -2817,6 +2821,7 @@ export default function AgentBuilder({
           variant="procedureDetail"
           title={mergedProc.name}
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           onBack={closeLhsPreview}
           bodyProps={{
@@ -2854,6 +2859,7 @@ export default function AgentBuilder({
           variant="agentDetails"
           title="Agent details"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             values: startDetails,
@@ -2878,6 +2884,7 @@ export default function AgentBuilder({
           variant="branch"
           title="Branch"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2923,6 +2930,7 @@ export default function AgentBuilder({
           variant="conversationTrigger"
           title="Trigger"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2937,6 +2945,7 @@ export default function AgentBuilder({
           variant={(isReviewResponseAgent || isReviewGenerationAgent) ? 'reviewTrigger' : 'entityTrigger'}
           title="Trigger"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2954,6 +2963,7 @@ export default function AgentBuilder({
           variant="controlBranch"
           title="Branch"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: {
@@ -2985,6 +2995,7 @@ export default function AgentBuilder({
           variant="subagent"
           title="Sub-agent"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2999,6 +3010,7 @@ export default function AgentBuilder({
           variant="delay"
           title="Delay"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -3013,6 +3025,7 @@ export default function AgentBuilder({
           variant="parallel"
           title="Parallel tasks"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -3027,6 +3040,7 @@ export default function AgentBuilder({
           variant="loop"
           title="Loop"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -3048,6 +3062,7 @@ export default function AgentBuilder({
               variant="createCustomProcedure"
               title="Create custom procedure"
               viewOnly={rhsViewOnly}
+              inlineFooter={inlineRhsFooter}
               product={product}
               onBack={() => setActiveProcedureId(null)}
               bodyProps={{
@@ -3079,6 +3094,7 @@ export default function AgentBuilder({
             variant="procedureDetail"
             title={mergedProc.name}
             viewOnly={rhsViewOnly}
+            inlineFooter={inlineRhsFooter}
             product={product}
             onBack={() => setActiveProcedureId(null)}
             bodyProps={{
@@ -3103,6 +3119,7 @@ export default function AgentBuilder({
           variant="procedureTask"
           title="Procedures"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -3121,6 +3138,7 @@ export default function AgentBuilder({
           variant="llmTask"
           title="Task"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -3141,6 +3159,7 @@ export default function AgentBuilder({
           variant="voiceCallTask"
           title="Task"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -3166,6 +3185,7 @@ export default function AgentBuilder({
           variant="sendResponseTask"
           title="Task"
           viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -3182,6 +3202,7 @@ export default function AgentBuilder({
         variant="entityTask"
         title="Task details"
         viewOnly={rhsViewOnly}
+        inlineFooter={inlineRhsFooter}
         bodyProps={{
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
@@ -3269,6 +3290,67 @@ export default function AgentBuilder({
     setVersionHistoryOpen(true);
   };
 
+  /**
+   * Issue-count affordance. Sep 1 shows it as a red "N Errors" chip placed after the
+   * run-test icon; every other agent keeps the original text trigger before the icons.
+   * Both open the same issues popover.
+   */
+  const resolveIssues = (
+    <div className="ab-resolve-issues" ref={resolveIssuesRef}>
+      <button
+        type="button"
+        className={sep1Chrome ? 'ab-error-chip' : 'ab-resolve-issues__trigger'}
+        aria-expanded={resolveIssuesOpen}
+        aria-haspopup="dialog"
+        onClick={() => {
+          setPublishMenuOpen(false);
+          setHeaderMenuOpen(false);
+          setResolveIssuesOpen((open) => !open);
+        }}
+      >
+        <span className="material-symbols-outlined" aria-hidden>error</span>
+        {sep1Chrome
+          ? `${issueCount} ${issueCount === 1 ? 'Error' : 'Errors'}`
+          : `Resolve issues (${issueCount})`}
+      </button>
+      {resolveIssuesOpen && (
+        <div className="ab-resolve-issues__popover" role="dialog" aria-label="Resolve issues">
+          <div className="ab-resolve-issues__heading">
+            {issueCount} {issueCount === 1 ? 'issue' : 'issues'} to resolve
+          </div>
+          <ul className="ab-resolve-issues__list">
+            {(resolveIssuesList.length > 0
+              ? resolveIssuesList
+              : Array.from({ length: issueCount }, (_, i) => ({
+                  id: `issue-${i + 1}`,
+                  title: `Issue ${i + 1}`,
+                  description: 'Review this item before publishing.',
+                }))
+            ).map((issue) => (
+              <li key={issue.id}>
+                <button
+                  type="button"
+                  className="ab-resolve-issues__item"
+                  onClick={() => setResolveIssuesOpen(false)}
+                >
+                  <span className="material-symbols-outlined ab-resolve-issues__item-icon" aria-hidden>
+                    error
+                  </span>
+                  <span className="ab-resolve-issues__item-body">
+                    <span className="ab-resolve-issues__item-title">{issue.title}</span>
+                    {issue.description ? (
+                      <span className="ab-resolve-issues__item-desc">{issue.description}</span>
+                    ) : null}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+
   const headerActions = viewOnly ? (
     viewChromeActions ? viewChromeButtons : (
       <div className="ab-view-badge">
@@ -3277,80 +3359,31 @@ export default function AgentBuilder({
       </div>
     )
   ) : versionHistoryMode ? (
-    <div className="ab-header-actions">
-      <button
-        type="button"
-        className="ab-header-cancel-btn"
-        aria-label="Cancel"
-        onClick={closeVersionHistory}
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        className="ab-header-restore-btn"
-        aria-label="Restore this version"
-        disabled={viewingLiveVersion}
-        onClick={handleRestoreVersion}
-      >
-        Restore
-      </button>
-    </div>
+    // Nothing to cancel or restore while the live version is selected — the whole
+    // pill is hidden rather than shown empty; Back exits history in that state.
+    viewingLiveVersion ? null : (
+      <div className="ab-header-actions">
+        <button
+          type="button"
+          className="ab-header-cancel-btn"
+          aria-label="Cancel"
+          onClick={closeVersionHistory}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="ab-header-restore-btn"
+          aria-label="Restore this version"
+          onClick={handleRestoreVersion}
+        >
+          Restore
+        </button>
+      </div>
+    )
   ) : (
     <div className="ab-header-actions">
-      {issueCount > 0 && (
-        <div className="ab-resolve-issues" ref={resolveIssuesRef}>
-          <button
-            type="button"
-            className="ab-resolve-issues__trigger"
-            aria-expanded={resolveIssuesOpen}
-            aria-haspopup="dialog"
-            onClick={() => {
-              setPublishMenuOpen(false);
-              setHeaderMenuOpen(false);
-              setResolveIssuesOpen((open) => !open);
-            }}
-          >
-            <span className="material-symbols-outlined" aria-hidden>error</span>
-            Resolve issues ({issueCount})
-          </button>
-          {resolveIssuesOpen && (
-            <div className="ab-resolve-issues__popover" role="dialog" aria-label="Resolve issues">
-              <div className="ab-resolve-issues__heading">
-                {issueCount} {issueCount === 1 ? 'issue' : 'issues'} to resolve
-              </div>
-              <ul className="ab-resolve-issues__list">
-                {(resolveIssuesList.length > 0
-                  ? resolveIssuesList
-                  : Array.from({ length: issueCount }, (_, i) => ({
-                      id: `issue-${i + 1}`,
-                      title: `Issue ${i + 1}`,
-                      description: 'Review this item before publishing.',
-                    }))
-                ).map((issue) => (
-                  <li key={issue.id}>
-                    <button
-                      type="button"
-                      className="ab-resolve-issues__item"
-                      onClick={() => setResolveIssuesOpen(false)}
-                    >
-                      <span className="material-symbols-outlined ab-resolve-issues__item-icon" aria-hidden>
-                        error
-                      </span>
-                      <span className="ab-resolve-issues__item-body">
-                        <span className="ab-resolve-issues__item-title">{issue.title}</span>
-                        {issue.description ? (
-                          <span className="ab-resolve-issues__item-desc">{issue.description}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
+      {issueCount > 0 && !sep1Chrome && resolveIssues}
       {/* Cloud save / version history — matches Figma 15324:121197 */}
       {!isScratchCreate && (
         <Tooltip
@@ -3392,6 +3425,7 @@ export default function AgentBuilder({
           <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
         </button>
       </Tooltip>
+      {issueCount > 0 && sep1Chrome && resolveIssues}
       {isTemplateMode ? (
         <Button
           theme="primary"
@@ -3612,6 +3646,9 @@ export default function AgentBuilder({
                 </div>
               )}
 
+              {/* Version history on the live version has no actions — skip the pill entirely
+                  so an empty white chip doesn't float over the canvas. */}
+              {!(versionHistoryMode && !headerActions) && (
               <div
                 className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
                   explorationChrome ? ' rr-chrome-top--right' : ''
@@ -3633,6 +3670,7 @@ export default function AgentBuilder({
                 )}
                 {headerActions}
               </div>
+              )}
 
               {!viewOnly && !versionHistoryMode && (
                 <div className="rr-chrome-left-stack">
@@ -3810,6 +3848,7 @@ export default function AgentBuilder({
               canRedo={historyFuture.length > 0}
               onHelpToggle={explorationChrome ? toggleHelpCenter : null}
               helpOpen={helpCenterOpen}
+              singleAddStepSearch={sep1Chrome}
               onRun={() => {
                 if (isReviewResponseAgent) return;
                 if (isReminderAgent) {

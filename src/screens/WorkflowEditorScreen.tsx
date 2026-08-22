@@ -100,6 +100,10 @@ interface WorkflowEditorScreenProps {
   hideCanvasStartNode?: boolean
   /** Exploration editor UX (help RHS, version history, chip collapse, etc.). Sep 1 keeps the canvas agent-details card. */
   explorationChrome?: boolean
+  /** Sep 1 chrome — red "N Errors" chip after the run-test icon (both Sep 1 agents). */
+  sep1Chrome?: boolean
+  /** RHS Save follows the content instead of pinning to the panel bottom (Response agents Sep 1 only). */
+  inlineRhsFooter?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -125,6 +129,8 @@ export function WorkflowEditorScreen({
   hideTopIdentity = false,
   hideCanvasStartNode = hideTopIdentity,
   explorationChrome = hideTopIdentity,
+  sep1Chrome = false,
+  inlineRhsFooter = false,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -292,6 +298,8 @@ export function WorkflowEditorScreen({
             hideTopIdentity={hideTopIdentity}
             hideCanvasStartNode={hideCanvasStartNode}
             explorationChrome={explorationChrome}
+            inlineRhsFooter={inlineRhsFooter}
+            sep1Chrome={sep1Chrome}
           />
         </Suspense>
       </div>

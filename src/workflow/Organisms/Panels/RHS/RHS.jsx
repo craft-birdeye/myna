@@ -124,7 +124,7 @@ const PANEL_WIDTH = {
   createCustomProcedure: 500,
 };
 
-export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive' }) {
+export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false }) {
   const config = VARIANTS[variant];
   const Body = config.body;
   const panelWidth = PANEL_WIDTH[variant] ?? 390;
@@ -151,8 +151,11 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           showMoreMenu={false}
         />
 
+        {/* `inlineFooter`: body shrinks-to-fit instead of stretching, so a short panel lets
+            the Save button sit right under the content. Once the content is tall enough to
+            scroll the body fills the space again and the footer lands at the bottom as usual. */}
         <div style={{
-          flex: 1,
+          flex: inlineFooter ? '0 1 auto' : 1,
           minHeight: 0,
           overflowY: 'auto',
           padding: '16px 15px',
