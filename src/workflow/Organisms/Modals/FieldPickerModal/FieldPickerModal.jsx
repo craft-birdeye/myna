@@ -13,7 +13,7 @@ import {
 } from './fieldPickerData';
 import styles from './FieldPickerModal.module.css';
 
-const POPOVER_WIDTH = 640;
+const POPOVER_WIDTH = 672;
 const POPOVER_MAX_HEIGHT = 560;
 const DRAWER_GAP = 0;
 
@@ -207,7 +207,7 @@ function computeDropdownPosition(anchorEl) {
   // the wider default popover.
   const width = anchorWidth >= 280
     ? Math.min(Math.max(anchorWidth, 280), vw - margin * 2)
-    : Math.min(POPOVER_WIDTH, vw - margin * 2, 600);
+    : Math.min(POPOVER_WIDTH, vw - margin * 2);
   const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
 
   let left = anchorRect?.left ?? margin;

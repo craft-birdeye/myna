@@ -20,6 +20,7 @@ export default {
           selected: '#e5e9f0',      // New/Selected · bg/primary/Selected
           subtle: '#f7f7f7',        // neutral light grey (no blue cast) — section header bands
           muted: '#fafafa',         // secondary surface — settings section cards
+          icon: '#eef2f6',          // Help center / icon well (Figma Help_Drawer)
           'selected-l1': '#c7d6f6', // New/Selected (L1)
         },
         accent: {
@@ -63,6 +64,11 @@ export default {
           empty: '#B9BCC0', // empty / unfilled review star
         },
         tooltip: { DEFAULT: '#252525' }, // Gray/800 — Tooltip / Web (Aero DS, node 2180:72)
+        helpThumb: {
+          purple: '#7B61FF',
+          teal: '#2BB0A6',
+          orange: '#E87A3A',
+        },
         // ── Contenthub 2.0 shadcn tokens (for copied contenthub UI components) ──
         background:  'var(--background)',
         foreground:  'var(--foreground)',

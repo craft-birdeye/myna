@@ -28,9 +28,11 @@ export default function CanvasNode({
   onPasteReplace = undefined,
   state = 'default',
   showConfigWarning = false,
+  configWarningText = 'Missing mandatory fields',
   runStatus,
   /** Task details was saved with a tool still missing mandatory config. */
   hasError = false,
+  errorTooltip,
 }) {
   const [on, setOn] = useState(toggleEnabled);
   const [copied, setCopied] = useState(false);
@@ -70,6 +72,7 @@ export default function CanvasNode({
           label={label}
           runStatus={runStatus}
           hasError={hasError}
+          errorTooltip={errorTooltip || 'Missing mandatory fields'}
           hasAiIcon={hasAiIcon}
           hasToggle={hasToggle}
           toggleEnabled={on}
@@ -102,7 +105,7 @@ export default function CanvasNode({
             <span className="material-symbols-outlined canvas-node__config-warning-icon" aria-hidden>
               warning
             </span>
-            <span className="canvas-node__config-warning-text">Missing mandatory fields</span>
+            <span className="canvas-node__config-warning-text">{configWarningText}</span>
           </div>
         )}
         {showFooterAdd && (

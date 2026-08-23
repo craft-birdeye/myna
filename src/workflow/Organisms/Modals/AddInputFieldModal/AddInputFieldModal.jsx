@@ -1,16 +1,25 @@
 import React, { useState, useRef } from 'react';
-import {
-  Modal, Button, gray900, red100,
-} from '../../../elemental-stubs';
-import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
+import { AeroFormModal } from '../../../../components/AeroFormModal/AeroFormModal';
 import DataType from '../../../Molecules/DataType/DataType';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
 import FieldPickerModal from '../FieldPickerModal/FieldPickerModal.jsx';
 import styles from './AddInputFieldModal.module.css';
 
-const font = '"Roboto", arial, sans-serif';
+const INPUT_FIELD_MODAL_SUBTITLE =
+  'Input fields add context to your prompt and are automatically included when generating the output.';
+const INPUT_FIELDS_LEARN_MORE_HREF =
+  'https://help.birdeye.com/hc/en-us/articles/input-fields-in-workflows';
 
-export default function AddInputFieldModal({ onClose, onAdd }) {
+function FieldLabel({ children, required = false }) {
+  return (
+    <div className="flex items-center gap-xs">
+      <span className="text-small text-text-primary">{children}</span>
+      {required && <span className="text-small text-chip-danger-text">*</span>}
+    </div>
+  );
+}
+
+export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLearnMore }) {
   const [fieldName, setFieldName] = useState('');
   const [fieldValueText, setFieldValueText] = useState('');
   const [fieldValueChips, setFieldValueChips] = useState([]);
@@ -43,49 +52,20 @@ export default function AddInputFieldModal({ onClose, onAdd }) {
 
   return (
     <>
-      <Modal
-        dialogOptions={{
-          isOpen: true,
-          onCloseModal: onClose,
-          shouldCloseOnOverlayClick: true,
-          shouldCloseOnEsc: true,
-          showCloseIcon: false,
-          title: 'Add input field',
-          dialogStyles: {
-            content: {
-              padding: 0,
-              width: 650,
-              maxWidth: 650,
-              height: 320,
-              maxHeight: 320,
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            },
-          },
-        }}
+      <AeroFormModal
+        title="Add input field"
+        subtitle={INPUT_FIELD_MODAL_SUBTITLE}
+        learnMoreHref={onLearnMore ? undefined : INPUT_FIELDS_LEARN_MORE_HREF}
+        onLearnMore={onLearnMore}
+        onClose={onClose}
+        onPrimary={handleAdd}
+        primaryDisabled={!fieldName || !hasFieldValue}
+        zIndex={zIndex}
+        panelClassName="h-[360px]"
       >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 12px', flexShrink: 0 }}>
-          <span style={{ fontSize: 16, fontWeight: 400, lineHeight: '24px', letterSpacing: '-0.32px', color: gray900, fontFamily: font }}>
-            Add input field
-          </span>
-          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
-            <img src={CloseIcon} alt="Close" style={{ width: 24, height: 24 }} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '0 24px', flex: 1, minHeight: 0 }}>
-          {/* Field name */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', color: gray900, fontFamily: font }}>
-                Field name
-              </span>
-              <span style={{ fontSize: 12, lineHeight: '18px', color: red100, fontFamily: font }}>*</span>
-            </div>
+        <div className="flex flex-col gap-xl pb-md">
+          <label className="flex flex-col gap-xs">
+            <FieldLabel required>Field name</FieldLabel>
             <input
               type="text"
               className={styles.fieldInput}
@@ -93,16 +73,10 @@ export default function AddInputFieldModal({ onClose, onAdd }) {
               onChange={(e) => setFieldName(e.target.value)}
               placeholder="Field name"
             />
-          </div>
+          </label>
 
-          {/* Field value — type freely; `{*}` icon opens the Fields picker */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', color: gray900, fontFamily: font }}>
-                Field value
-              </span>
-              <span style={{ fontSize: 12, lineHeight: '18px', color: red100, fontFamily: font }}>*</span>
-            </div>
+          <label className="flex flex-col gap-xs">
+            <FieldLabel required>Field value</FieldLabel>
             <div
               ref={fieldValueRef}
               className={styles.fieldValueBox}
@@ -137,15 +111,9 @@ export default function AddInputFieldModal({ onClose, onAdd }) {
                 <VariableIcon />
               </button>
             </div>
-          </div>
+          </label>
         </div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '12px 24px 24px', flexShrink: 0 }}>
-          <Button type="link" label="Cancel" onClick={onClose} />
-          <Button type="primary" label="Add" onClick={handleAdd} disabled={!fieldName || !hasFieldValue} />
-        </div>
-      </Modal>
+      </AeroFormModal>
 
       {fieldPickerOpen && (
         <FieldPickerModal
@@ -154,7 +122,7 @@ export default function AddInputFieldModal({ onClose, onAdd }) {
           anchorEl={fieldValueRef.current}
           placement="dropdown"
           showTriggerFields
-          overlayZIndex={2100}
+          overlayZIndex={zIndex + 100}
         />
       )}
     </>

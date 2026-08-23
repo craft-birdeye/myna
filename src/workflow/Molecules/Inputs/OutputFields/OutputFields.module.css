@@ -8,6 +8,10 @@
   gap: 6px;
 }
 
+.wrapCompact {
+  gap: 2px;
+}
+
 .labelRow {
   display: flex;
   align-items: center;
@@ -57,6 +61,12 @@
   color: #1565c0;
 }
 
+.labelAddWrap {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .addLink {
   font-size: 13px;
   font-weight: 400;
@@ -90,17 +100,62 @@
   opacity: 0.8;
 }
 
-/* Exploration: Locations-style chips (no bordered box). */
-.explorationChipsField {
+.chipContainer {
+  position: relative;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  padding: 16px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  box-sizing: border-box;
   width: 100%;
+  background: #fff;
 }
 
-.chipWrapExploration {
-  gap: 6px;
-  align-items: center;
+.chipContainerCompact {
+  padding: 8px 10px;
+  gap: 4px;
+}
+
+.chipContainerEmpty {
+  padding: 8px 10px;
+  gap: 0;
+  min-height: 0;
+}
+
+.chipMeasure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  left: 10px;
+  right: 10px;
+  top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.chipMeasureCompact {
+  top: 8px;
+  gap: 8px;
+}
+
+.chipMeasureItem {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.chipWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.chipWrapCompact {
+  gap: 8px;
 }
 
 .moreLink {
@@ -121,50 +176,31 @@
   text-decoration: none;
 }
 
-/* ─── Chip container: chips wrap row + Add below ─── */
-
-.chipContainer {
-  border: 1px solid #e5e9f0;
-  border-radius: 4px;
-  padding: 16px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-sizing: border-box;
-  width: 100%;
-  background: #fff;
-}
-
-.chipWrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-start;
-}
-
 .addBtn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   color: #1976d2;
   font-family: 'Roboto', sans-serif;
+  line-height: 1;
 }
 
 .addBtn .material-symbols-outlined {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
   line-height: 1;
   overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
 .addBtnLabel {
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 20px;
   letter-spacing: -0.24px;
 }
 

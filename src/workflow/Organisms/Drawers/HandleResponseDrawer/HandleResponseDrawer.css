@@ -1,5 +1,28 @@
+/* Aero DS tokens (see tailwind.config.ts) — keep values in sync with design tokens. */
+
 .hrd {
   font-family: 'Roboto', sans-serif;
+  color: #0d0d12; /* text/primary */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.hrd__panel {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 650px;
+  max-width: calc(92vw - 8px);
+  height: calc(100% - 16px);
+  background: #ffffff; /* surface */
+  border-radius: 16px; /* Corner Radius/xl — drawer shell */
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22); /* shadow-modal */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  font-family: 'Roboto', sans-serif;
+  color: #0d0d12;
 }
 
 .hrd__header {
@@ -9,93 +32,102 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
-  background: #fff;
+  gap: 12px;
+  padding: 24px 24px 16px; /* 2xl / lg — matches Add a tool */
+  background: #ffffff;
+  flex-shrink: 0;
 }
 
 .hrd__header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px; /* spacing/sm */
   min-width: 0;
 }
 
 .hrd__back {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  color: #555;
-  border-radius: 4px;
+  color: #303030; /* text/icon */
+  border-radius: 4px; /* Corner Radius/sm */
   padding: 0;
   flex-shrink: 0;
 }
 
 .hrd__back:hover {
-  background: #f2f4f7;
+  background: #f2f4f7; /* surface/hover */
 }
 
 .hrd__title {
-  font-size: 14px;
-  line-height: 20px;
-  color: #212121;
+  font-size: 18px; /* Heading 3 */
+  line-height: 26px;
+  letter-spacing: -0.36px;
+  font-weight: 400;
+  color: #0d0d12; /* text/primary */
 }
 
 .hrd__save {
   height: 36px;
-  padding: 0 20px;
-  background: #1976d2;
-  color: #fff;
+  padding: 0 16px; /* spacing/lg */
+  background: #1976d2; /* primary */
+  color: #ffffff;
   border: none;
-  border-radius: 4px;
+  border-radius: 4px; /* Corner Radius/sm */
   cursor: pointer;
-  font-size: 14px;
+  font-size: 14px; /* Body 2 */
   line-height: 20px;
+  letter-spacing: -0.28px;
   font-family: inherit;
+  font-weight: 400;
   flex-shrink: 0;
 }
 
 .hrd__save:hover:not(:disabled) {
-  background: #1565c0;
+  background: #1565c0; /* primary/hover */
 }
 
 .hrd__save:disabled {
-  background: #eceff3;
-  color: #9aa4b2;
+  background: #e5e9f0; /* surface/selected */
+  color: #9ca3af; /* text/tertiary */
   cursor: not-allowed;
 }
 
 .hrd__body {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 8px 24px 48px;
+  gap: 24px; /* spacing/2xl */
+  padding: 0 24px 32px;
+  flex: 1;
 }
 
 .hrd__field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 8px; /* spacing/sm */
 }
 
 .hrd__label {
-  font-size: 13px;
+  font-size: 14px; /* Body 2 */
   line-height: 20px;
-  color: #212121;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
 }
 
 .hrd__required {
-  color: #d32f2f;
+  color: #de1b0c; /* chip/danger/text */
 }
 
 .hrd__radios {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 12px; /* spacing/md */
 }
 
 .hrd__radio {
@@ -132,13 +164,16 @@
 .hrd__radio-label {
   font-size: 14px;
   line-height: 20px;
-  color: #212121;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
 }
 
 .hrd__radio-hint {
-  font-size: 12px;
+  font-size: 12px; /* Small Body */
   line-height: 18px;
-  color: #757575;
+  letter-spacing: -0.24px;
+  color: #717182; /* text/secondary */
 }
 
 /* Indented nested control under a radio option */
@@ -152,15 +187,15 @@
 /* Custom response textarea with insert-field control */
 .hrd__textarea-box {
   position: relative;
-  border: 1px solid #d0d5dd;
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid #e5e9f0; /* border/input */
+  border-radius: 4px; /* Corner Radius/sm — chrome */
+  background: #ffffff;
   box-sizing: border-box;
   transition: border-color 0.12s ease;
 }
 
 .hrd__textarea-box:hover {
-  border-color: #b0b8c4;
+  border-color: #cccccc; /* border/strong */
 }
 
 .hrd__textarea-box:focus-within,
@@ -181,8 +216,13 @@
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.28px;
-  color: #212121;
+  font-weight: 400;
+  color: #0d0d12;
   background: transparent;
+}
+
+.hrd__textarea::placeholder {
+  color: #9ca3af; /* text/tertiary */
 }
 
 .hrd__insert-field {
@@ -198,7 +238,7 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  color: #303030;
+  color: #303030; /* text/icon */
   border-radius: 4px;
 }
 

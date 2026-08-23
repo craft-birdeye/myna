@@ -14,7 +14,7 @@
 
 /* Agent builder RHS slot — match trigger / node-config panel (390×, 12px radius). */
 .agent-builder__rhs .preview-panel {
-  width: 390px;
+  width: 450px;
   border: 1px solid #e5e9f0;
   border-radius: 12px;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);

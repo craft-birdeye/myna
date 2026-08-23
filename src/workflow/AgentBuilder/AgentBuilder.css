@@ -115,19 +115,20 @@
   height: calc(100% - 16px);
   overflow: hidden;
   z-index: 30;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  border-radius: 16px; /* Corner Radius/xl — Aero drawer/panel shell */
+  /* Mild floating elevation — lighter than modal scrim panels */
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
   display: flex;
   flex-direction: column;
 }
 
 .agent-builder__rhs--ai {
-  width: 390px;
+  width: 450px;
 }
 
-/* Help center in the node-config RHS slot (exploration) — matches the node panel width. */
+/* Help center in the node-config RHS slot — matches the node panel width. */
 .agent-builder__rhs--help {
-  width: 390px;
+  width: 450px;
 }
 
 @keyframes agent-builder-rhs-slide-in {
@@ -247,7 +248,7 @@
   position: relative;
 }
 
-/* Sep 1 only: the issue count reads as a red chip after the run-test icon. */
+/* Exploration chrome: issue count reads as a red chip after the run-test icon. */
 .ab-error-chip {
   display: inline-flex;
   align-items: center;
@@ -255,20 +256,19 @@
   margin: 0;
   padding: 4px 10px;
   border: none;
-  /* 4px matches the Pause / Publish buttons beside it, not a full pill. */
-  border-radius: 4px;
-  background: #fdecea;
-  color: #d32f2f;
-  font-family: 'Roboto', arial, sans-serif;
+  border-radius: 4px; /* rounded-sm */
+  background: #fef6f5; /* chip-danger bg */
+  color: #de1b0c; /* chip-danger text */
   font-size: 14px;
   line-height: 20px;
+  letter-spacing: -0.28px;
   cursor: pointer;
   transition: background 0.12s ease;
 }
 
 .ab-error-chip:hover,
 .ab-error-chip[aria-expanded='true'] {
-  background: #fbdbd7;
+  background: #fce8e6;
 }
 
 .ab-error-chip .material-symbols-outlined {
@@ -276,7 +276,7 @@
   width: 18px;
   height: 18px;
   line-height: 1;
-  color: #d32f2f;
+  color: #de1b0c;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
@@ -289,17 +289,17 @@
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #555;
-  font-family: 'Roboto', arial, sans-serif;
-  font-size: 13px;
+  color: #717182; /* text-secondary */
+  font-size: 14px;
   line-height: 20px;
+  letter-spacing: -0.28px;
   cursor: pointer;
   transition: background 0.12s ease;
 }
 
 .ab-resolve-issues__trigger:hover,
 .ab-resolve-issues__trigger[aria-expanded='true'] {
-  background: #f5f5f5;
+  background: #f2f4f7; /* surface-hover */
 }
 
 .ab-resolve-issues__trigger .material-symbols-outlined {
@@ -310,23 +310,29 @@
 
 .ab-resolve-issues__popover {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 4px);
   left: 0;
   z-index: 320;
   width: 320px;
-  padding: 8px 0;
-  background: #fff;
-  border: 1px solid #e5e9f0;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px 0; /* py-xs */
+  background: #ffffff; /* surface */
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 4px; /* rounded-sm */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); /* shadow-dropdown */
+}
+
+/* Exploration chrome: chip sits top-right — anchor popover to the right edge. */
+.ab-resolve-issues__popover--anchor-right {
+  left: auto;
+  right: 0;
 }
 
 .ab-resolve-issues__heading {
-  padding: 6px 14px 10px;
-  color: #212121;
-  font-family: 'Roboto', arial, sans-serif;
+  padding: 8px 12px 4px; /* py-sm px-md */
+  color: #0d0d12; /* text-primary */
   font-size: 14px;
   line-height: 20px;
+  letter-spacing: -0.28px;
 }
 
 .ab-resolve-issues__list {
@@ -340,20 +346,19 @@
 .ab-resolve-issues__item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px; /* gap-sm */
   width: 100%;
   margin: 0;
-  padding: 10px 14px;
+  padding: 8px 12px; /* py-sm px-md */
   border: none;
   background: transparent;
   text-align: left;
   cursor: pointer;
-  font-family: 'Roboto', arial, sans-serif;
   transition: background 0.12s ease;
 }
 
 .ab-resolve-issues__item:hover {
-  background: #f5f5f5;
+  background: #f2f4f7; /* surface-hover */
 }
 
 .ab-resolve-issues__item-icon {
@@ -361,7 +366,7 @@
   margin-top: 1px;
   font-size: 18px;
   line-height: 1;
-  color: #de1b0c;
+  color: #de1b0c; /* chip-danger text */
 }
 
 .ab-resolve-issues__item-body {
@@ -372,15 +377,17 @@
 }
 
 .ab-resolve-issues__item-title {
-  color: #212121;
+  color: #0d0d12; /* text-primary */
   font-size: 14px;
   line-height: 20px;
+  letter-spacing: -0.28px;
 }
 
 .ab-resolve-issues__item-desc {
-  color: #555;
-  font-size: 13px;
+  color: #717182; /* text-secondary */
+  font-size: 12px;
   line-height: 18px;
+  letter-spacing: -0.24px;
 }
 
 .ab-publish-split {
@@ -670,6 +677,135 @@
 
 .ab-hidden-input {
   display: none;
+}
+
+/* ─── Publish blocked alert (viewport-fixed — covers L1 + top nav) ─── */
+.ab-publish-blocked-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 72px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Shift horizontal center left when the RHS panel is open (450px + 8px inset + 12px gap). */
+.ab-publish-blocked-overlay--rhs-open {
+  padding-right: 470px;
+}
+
+/* Procedure detail RHS is 500px wide. */
+.ab-publish-blocked-overlay--rhs-wide {
+  padding-right: 520px;
+}
+
+.ab-publish-blocked-dialog {
+  width: 420px;
+  max-width: calc(100% - 32px);
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 24px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+}
+
+.ab-publish-blocked-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ab-publish-blocked-dialog__title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  letter-spacing: -0.36px;
+  color: #0d0d12;
+}
+
+.ab-publish-blocked-dialog__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #303030;
+  cursor: pointer;
+}
+
+.ab-publish-blocked-dialog__close:hover {
+  background: #f2f4f7;
+}
+
+.ab-publish-blocked-dialog__close .material-symbols-outlined {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.ab-publish-blocked-dialog__body {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182;
+}
+
+.ab-publish-blocked-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ab-publish-blocked-dialog__cancel {
+  margin: 0;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1976d2;
+  cursor: pointer;
+}
+
+.ab-publish-blocked-dialog__cancel:hover {
+  background: #f2f4f7;
+}
+
+.ab-publish-blocked-dialog__primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ab-publish-blocked-dialog__primary:hover {
+  background: #1565c0;
 }
 
 /* ─── Publish agent modal form ─── */
@@ -1104,7 +1240,33 @@
 }
 
 .agent-builder--rr-chrome .start-node {
-  border-radius: 8px;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .start-node--selected {
+  border-color: #1976d2;
+}
+
+/* Match top chrome surface (identity / Pause·Publish cards). */
+.agent-builder--rr-chrome .canvas-node {
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .canvas-node--selected {
+  border-color: #1976d2;
+}
+
+.agent-builder--rr-chrome .canvas-node--hover {
+  border-color: #ccd5e4;
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+}
+
+.agent-builder--rr-chrome .canvas-node--error:not(.canvas-node--selected) {
+  border-color: #d32f2f;
 }
 
 .agent-builder--rr-chrome .cnh__ai-icon {
@@ -1115,10 +1277,10 @@
   display: none;
 }
 
-/* Match floating chrome shadow (same as graph-controls__rr-edit) */
+/* Match Aero floating panel shell (16px radius + mild elevation) */
 .agent-builder--rr-chrome .agent-builder__rhs {
-  box-shadow: none;
-  border-radius: 12px;
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
+  border-radius: 16px;
   z-index: 56;
 }
 
@@ -1518,7 +1680,7 @@
 /* Actions-only: transparent shell so switch + Run test sit as separate controls. */
 /*
  * Exploration: the actions pill is right-aligned rather than centred, and slides left to
- * clear whatever opens in the 390px right slot (node config / Help center / Test details /
+ * clear whatever opens in the 450px right slot (node config / Help center / Test details /
  * Front desk Preview). Easing matches `agent-builder-rhs-slide-in` so the pill and the
  * panel move together.
  */
@@ -1529,15 +1691,15 @@
   transition: right 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 390px panel + its 8px inset from the canvas edge + a 12px gap.
- * Same footprint for trigger / Help / Test details / Front desk Preview. */
+/* 450px panel + its 8px inset from the canvas edge + a 12px gap.
+ * Same footprint for trigger / task / branch / Help / Test details / agent details. */
 .rr-chrome-top--right.rr-chrome-top--rhs-open {
-  right: calc(390px + 8px + 12px);
+  right: calc(450px + 8px + 12px);
 }
 
-/* LLM Task RHS is 450px. */
+/* Procedure detail RHS is 500px. */
 .rr-chrome-top--right.rr-chrome-top--rhs-open.rr-chrome-top--rhs-wide {
-  right: calc(450px + 8px + 12px);
+  right: calc(500px + 8px + 12px);
 }
 
 .rr-chrome-top--actions-only {
@@ -1619,7 +1781,7 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid #f0f2f5;
+  border: 1px solid #e5e9f0;
   border-radius: 6px;
   background: #fff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
@@ -1680,7 +1842,7 @@
   gap: 14px;
   width: 56px;
   padding: 12px;
-  border: 1px solid #f0f2f5;
+  border: 1px solid #e5e9f0;
   border-radius: 6px;
   background: #fff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
@@ -1701,10 +1863,17 @@
 }
 
 .rr-chrome-left-floater__icon {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
   height: 20px;
   pointer-events: none;
+  line-height: 0;
+}
+
+.rr-chrome-left-floater__icon .material-symbols-outlined {
+  color: inherit;
 }
 
 .rr-chrome-left-floater__icon--ai {
@@ -1820,7 +1989,7 @@
   top: 72px;
   right: 16px;
   bottom: 16px;
-  width: 390px;
+  width: 450px;
   max-height: calc(100% - 88px);
   box-shadow: none;
 }

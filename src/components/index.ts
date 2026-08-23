@@ -68,6 +68,7 @@ export type {
   BookTestAppointmentModalProps,
   BookTestAppointmentValues,
 } from './BookTestAppointmentModal/BookTestAppointmentModal.types'
+export { AeroFormModal } from './AeroFormModal/AeroFormModal'
 export { ContextModal } from './ContextModal/ContextModal'
 export { CustomizeColumnsDrawer } from './CustomizeColumnsDrawer/CustomizeColumnsDrawer'
 export { EmptyHintField } from './EmptyHintField/EmptyHintField'
@@ -134,13 +135,17 @@ export type {
   WorkflowCoachPlacement,
 } from './WorkflowCoachTour/WorkflowCoachTour.types'
 export { HelpCenterPanel } from './HelpCenterPanel/HelpCenterPanel'
+export { GlossaryModal } from './HelpCenterPanel/GlossaryModal'
+export type { GlossaryModalProps } from './HelpCenterPanel/GlossaryModal'
 export type {
   HelpCenterPanelProps,
   HelpCenterView,
   HelpVideoItem,
-  HelpTourItem,
   HelpArticleItem,
+  HelpGlossaryItem,
+  HelpDictionaryItem,
 } from './HelpCenterPanel/HelpCenterPanel.types'
+export { HELP_GLOSSARY, HELP_DICTIONARY } from './HelpCenterPanel/HelpCenterPanel.types'
 export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
 export type {
   AgentLibraryPreviewData,
@@ -199,6 +204,7 @@ export type { ChartTooltipItem, ChartTooltipProps } from './charts/ChartTooltip'
 
 export type { LinkProps } from './Link/Link.types'
 export type { ChipProps, ChipVariant } from './Chip/Chip.types'
+export type { AeroFormModalProps } from './AeroFormModal/AeroFormModal.types'
 export type { ContextModalProps, ContextModalResult } from './ContextModal/ContextModal.types'
 export type {
   CustomizeColumnsDrawerProps,

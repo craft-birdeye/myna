@@ -18,6 +18,7 @@ import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
 import SendResponseTaskBody from './SendResponseTaskBody';
+import styles from './RHS.module.css';
 
 const VARIANTS = {
   start: {
@@ -119,29 +120,21 @@ function FieldsetOrDiv({ as: Tag = 'div', children, ...rest }) {
 }
 
 const PANEL_WIDTH = {
-  llmTask: 450,
   procedureDetail: 500,
   createCustomProcedure: 500,
 };
 
-export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false, subtitle = null }) {
+const DEFAULT_PANEL_WIDTH = 450;
+
+export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false, subtitle = null, saveLabel, showPromptStrength: showPromptStrengthProp, titleLayoutMenu = null, titleTabMenu = null }) {
   const config = VARIANTS[variant];
   const Body = config.body;
-  const panelWidth = PANEL_WIDTH[variant] ?? 390;
+  const panelWidth = PANEL_WIDTH[variant] ?? DEFAULT_PANEL_WIDTH;
+  const showPromptStrength = showPromptStrengthProp ?? config.showPromptStrength;
+  const resolvedSaveLabel = saveLabel ?? 'Save';
 
   return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: panelWidth,
-        height: '100%',
-        background: '#ffffff',
-        borderRadius: 12,
-        boxShadow: '0 2px 12px 1px rgba(33, 33, 33, 0.06)',
-        border: '1px solid #e5e9f0',
-        overflow: 'hidden',
-        fontFamily: '"Roboto", arial, sans-serif',
-      }}>
+      <div className={styles['rhs-panel']} style={{ width: panelWidth }}>
         <RHSSidePanelHeader
           title={title || 'Title'}
           subtitle={subtitle}
@@ -150,18 +143,16 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           onBack={onBack}
           showActions={viewOnly || variant === 'procedureDetail' || variant === 'createCustomProcedure' ? false : config.showActions}
           showMoreMenu={false}
+          titleLayoutMenu={titleLayoutMenu}
+          titleTabMenu={titleTabMenu}
         />
 
         {/* `inlineFooter`: body shrinks-to-fit instead of stretching, so a short panel lets
             the Save button sit right under the content. Once the content is tall enough to
             scroll the body fills the space again and the footer lands at the bottom as usual. */}
-        <div style={{
-          flex: inlineFooter ? '0 1 auto' : 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          padding: '16px 15px',
-          boxSizing: 'border-box',
-        }}>
+        <div
+          className={`${styles['rhs-panel__body']}${inlineFooter ? ` ${styles['rhs-panel__body--inline']}` : ''}`}
+        >
           {/* Read-only mode uses a disabled <fieldset>, not just pointer-events: that natively
               disables every nested control so Tab-and-type can't edit the panel either. The
               pointer-events guard stays for non-form click handlers (swatch pickers etc.). */}
@@ -189,8 +180,8 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
         {!viewOnly && (
           <RHSPanelFooter
             onSave={onSave}
-            saveLabel="Save"
-            showPromptStrength={config.showPromptStrength}
+            saveLabel={resolvedSaveLabel}
+            showPromptStrength={showPromptStrength}
           />
         )}
       </div>

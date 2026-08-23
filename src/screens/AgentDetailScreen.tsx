@@ -7087,6 +7087,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
+  const isSep1Agents = Boolean(navId?.includes('sep-1'))
+  const showExplorationAgentsToggle =
+    isExplorationAgents && !isSep1Agents && activeTab === 'agents'
+  const useExplorationGrid =
+    isExplorationAgents && !isSep1Agents && agentsViewMode === 'grid'
   const [selectedInstance, setSelectedInstance] = useState<string | null>(
     pendingInstanceView?.instanceName ?? null,
   )
@@ -7650,7 +7655,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       )
     : libraryCards
   const isReviewTaggingFirstTime = isReviewTagging && visibleData.length === 0
-  const showExplorationAgentsToggle = isExplorationAgents && activeTab === 'agents'
 
   if (showSetupWizard && isFrontdesk) {
     return (
@@ -8166,7 +8170,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     >
                       Create agent
                     </button>
-                    {(!isExplorationAgents || agentsViewMode === 'list') && (
+                    {(!isExplorationAgents || !useExplorationGrid) && (
                       <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                         <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                       </button>
@@ -8238,7 +8242,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setSavingsModalOpen(false)
                     }}
                   />
-                  {isExplorationAgents && agentsViewMode === 'grid' ? (
+                  {useExplorationGrid ? (
                     <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
                         const cardMetrics = isExplorationFrontDeskAgents

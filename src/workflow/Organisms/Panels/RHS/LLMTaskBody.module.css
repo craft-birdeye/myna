@@ -4,10 +4,88 @@
   gap: 24px;
 }
 
+.containerExploration {
+  gap: 16px;
+}
+
+.nameDescriptionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tabBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+}
+
+.tabLabel {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #757575;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab:hover .tabLabel {
+  background: #f5f5f5;
+}
+
+.tabActive .tabLabel {
+  color: #212121;
+}
+
+.tabIndicator {
+  height: 2px;
+  width: 100%;
+  background: transparent;
+}
+
+.tabActive .tabIndicator {
+  background: #1976d2;
+}
+
+.tabPanel {
+  min-width: 0;
+}
+
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.containerExploration .tabContent {
+  gap: 16px;
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.fieldGroupCompact {
+  gap: 2px;
 }
 
 .labelRow {
@@ -53,6 +131,12 @@
   color: #1565c0;
 }
 
+.labelAddWrap {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Empty state — "+ Add" below the label (matches Agent details Locations). */
 .addLink {
   font-size: 13px;
@@ -75,6 +159,7 @@
 /* ─── Chip container: chips row above, Add below ─── */
 
 .chipContainer {
+  position: relative;
   border: 1px solid #e5e9f0;
   border-radius: 4px;
   padding: 16px 10px;
@@ -86,12 +171,39 @@
   background: #fff;
 }
 
-/* Exploration: Locations-style field (no bordered box). */
-.explorationChipsField {
+/* Exploration empty state: bordered box with inline add_circle Add. */
+.chipContainerEmpty {
+  padding: 8px 10px;
+  gap: 0;
+  min-height: 0;
+}
+
+.chipContainerCompact {
+  padding: 8px 10px;
+  gap: 4px;
+}
+
+.chipMeasure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  left: 10px;
+  right: 10px;
+  top: 16px;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.chipMeasureCompact {
+  top: 8px;
   gap: 8px;
-  width: 100%;
+}
+
+.chipMeasureItem {
+  display: inline-flex;
+  max-width: 100%;
 }
 
 .chipWrap {
@@ -101,9 +213,8 @@
   align-items: flex-start;
 }
 
-.chipWrapExploration {
-  gap: 6px;
-  align-items: center;
+.chipWrapCompact {
+  gap: 8px;
 }
 
 /* Matches Agent details Locations "+ N more". */

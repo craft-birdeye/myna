@@ -22,6 +22,11 @@ export function isAgentExplorationChrome(navId?: string | null) {
   return isResponseAgentsExplorationChrome(navId) || isFrontdeskExplorationChrome(navId)
 }
 
+/** LLM task Setup/Configure layout (body tabs, Continue footer) — exploration nav ids only, not Sep 1. Chip two-line collapse applies to all exploration chrome incl. Sep 1. */
+export function isLlmTaskExplorationLayout(navId?: string | null) {
+  return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || navId === FRONTDESK_EXPLORATION_NAV_ID
+}
+
 function explorationHidesCanvasStartNode(navId?: string | null) {
   return Boolean(navId && EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS.has(navId))
 }

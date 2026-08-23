@@ -1249,13 +1249,14 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         id: 'rr-6',
         flowType: 'task' as const,
         data: {
-          title: 'Send a review response',
-          subtype: 'Custom',
+          title: 'Handle response',
+          subtype: 'Integration',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
-          descriptionPlaceholder: 'Reply to the review using the generated response',
+          descriptionPlaceholder:
+            'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
         },
       },
     ],
@@ -1350,17 +1351,10 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'rr-6': {
-    taskName: 'Send a review response',
-    description: 'Reply to the review using the generated response',
-    llmModel: 'Fast',
-    contextFields: [],
-    inputFields: [],
-    systemPrompt:
-      'You are a marketing manager specialised in responding to reviews. Given the generated response, post it to the review.',
-    userPrompt:
-      'Use response from {{5.review.response}} and respond using {{Review responder}}',
-    outputFields: [],
-    selectedTools: ['review-responder'],
+    taskName: 'Handle response',
+    description:
+      'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
+    selectedTools: ['handle-response'],
   },
   'rr-3-path-fallback': {
     branchName: 'Fallback branch',

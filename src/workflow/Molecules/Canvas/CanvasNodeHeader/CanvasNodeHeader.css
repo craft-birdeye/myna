@@ -41,6 +41,14 @@
   flex-shrink: 0;
 }
 
+/* Same rr-chrome assets as the left floater; match prior card glyph size. */
+.cnh__floater-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .cnh__node-icon--subagent .material-symbols-outlined {
   color: #6834b7;
 }

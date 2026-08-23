@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  Modal, Button, gray900, gray90, gray2000, red100, white,
-} from '../../../elemental-stubs';
-import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { AeroFormModal } from '../../../../components/AeroFormModal/AeroFormModal';
+import { Icon } from '../../../../components/Icon/Icon';
 
-const font = '"Roboto", arial, sans-serif';
+const OUTPUT_FIELD_MODAL_SUBTITLE =
+  'Define fields and AI will automatically populate them with structured data. Use clear names and descriptions for each field.';
+const OUTPUT_FIELDS_LEARN_MORE_HREF =
+  'https://help.birdeye.com/hc/en-us/articles/output-fields-in-workflows';
 
 const FIELD_TYPE_OPTIONS = [
   'Text', 'Number', 'Boolean', 'Email', 'Phone number',
@@ -12,205 +14,200 @@ const FIELD_TYPE_OPTIONS = [
   'Category - Multi select', 'Category - Single select',
 ];
 
-function FieldTypeDropdown({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const ref = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filtered = FIELD_TYPE_OPTIONS.filter((o) =>
-    o.toLowerCase().includes(search.toLowerCase())
-  );
-
+function FieldLabel({ children, required = false }) {
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          width: '100%', height: 36, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 8px 0 12px', border: `1px solid ${gray2000}`, borderRadius: 4,
-          background: white, cursor: 'pointer', boxSizing: 'border-box',
-        }}
-      >
-        <span style={{ fontSize: 14, lineHeight: '20px', letterSpacing: '-0.28px', fontFamily: font, color: value ? gray900 : gray90 }}>
-          {value || 'Select'}
-        </span>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}>
-            <path d="M5 7.5L10 12.5L15 7.5" stroke="#212121" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-          background: white, borderRadius: 4,
-          boxShadow: '0px 4px 8px 0px rgba(33,33,33,0.18)',
-          paddingBottom: 12,
-        }}>
-          <div style={{ padding: '8px 20px 8px 16px' }}>
-            <span style={{ fontSize: 12, fontWeight: 500, lineHeight: '18px', letterSpacing: '-0.24px', color: gray90, fontFamily: font }}>
-              Field type
-            </span>
-          </div>
-
-          <div style={{ padding: '0 16px 4px' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              height: 36, border: `1px solid ${gray2000}`, borderRadius: 4,
-              padding: '0 12px', boxSizing: 'border-box',
-            }}>
-              <i className="icon_phoenix-search" style={{ fontSize: 20, color: gray90, flexShrink: 0 }} />
-              <input
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search"
-                style={{
-                  flex: 1, border: 'none', outline: 'none', fontSize: 14,
-                  lineHeight: '20px', letterSpacing: '-0.28px', color: gray900,
-                  fontFamily: font, background: 'transparent',
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={{ maxHeight: 240, overflowY: 'auto', padding: '4px 16px 0' }}>
-            {filtered.map((opt) => {
-              const selected = opt === value;
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => { onChange(opt); setOpen(false); setSearch(''); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', height: 36, padding: '0 8px 0 12px',
-                    borderRadius: 4, border: 'none', cursor: 'pointer', boxSizing: 'border-box',
-                    background: selected ? gray2000 : white, textAlign: 'left',
-                  }}
-                >
-                  <span style={{ fontSize: 14, lineHeight: '20px', letterSpacing: '-0.28px', fontFamily: font, color: gray900 }}>
-                    {opt}
-                  </span>
-                  {selected && (
-                    <i className="icon_phoenix-check" style={{ fontSize: 20, color: gray900, flexShrink: 0 }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+    <div className="flex items-center gap-xs">
+      <span className="text-small text-text-primary">{children}</span>
+      {required && <span className="text-small text-chip-danger-text">*</span>}
     </div>
   );
 }
 
-export default function AddOutputFieldModal({ onClose, onAdd }) {
+function FieldTypeDropdown({ value, onChange, menuZIndex = 2200 }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [menuStyle, setMenuStyle] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+
+    function updatePosition() {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const menuMaxHeight = 320;
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const openUp = spaceBelow < menuMaxHeight && spaceAbove > spaceBelow;
+
+      setMenuStyle({
+        position: 'fixed',
+        left: rect.left,
+        width: rect.width,
+        zIndex: menuZIndex,
+        ...(openUp
+          ? { bottom: window.innerHeight - rect.top + 4, maxHeight: Math.min(menuMaxHeight, spaceAbove) }
+          : { top: rect.bottom + 4, maxHeight: Math.min(menuMaxHeight, spaceBelow) }),
+      });
+    }
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, menuZIndex]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e) {
+      const t = e.target;
+      if (
+        triggerRef.current?.contains(t) ||
+        menuRef.current?.contains(t)
+      ) {
+        return;
+      }
+      setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const filtered = FIELD_TYPE_OPTIONS.filter((o) =>
+    o.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const menu = open && menuStyle && createPortal(
+    <div
+      ref={menuRef}
+      style={menuStyle}
+      className="flex flex-col overflow-hidden rounded-sm border border-border bg-surface shadow-dropdown"
+    >
+      <div className="shrink-0 border-b border-border px-md py-sm">
+        <span className="text-small text-text-secondary">Field type</span>
+      </div>
+      <div className="shrink-0 px-md py-sm">
+        <div className="flex h-9 items-center gap-sm rounded-sm border border-border-input bg-surface px-md">
+          <Icon name="search" size={18} className="text-text-icon" />
+          <input
+            autoFocus
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search"
+            className="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
+          />
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-md pb-sm">
+        {filtered.map((opt) => {
+          const selected = opt === value;
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { onChange(opt); setOpen(false); setSearch(''); }}
+              className={`flex h-9 w-full items-center justify-between rounded-sm px-md text-left text-body text-text-primary hover:bg-surface-hover ${
+                selected ? 'bg-surface-selected' : ''
+              }`}
+            >
+              <span>{opt}</span>
+              {selected && <Icon name="check" size={18} className="text-text-primary" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>,
+    document.body,
+  );
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-9 w-full items-center justify-between rounded-sm border border-border-input bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+      >
+        <span className={value ? 'text-text-primary' : 'text-text-tertiary'}>
+          {value || 'Select field type'}
+        </span>
+        <Icon
+          name="expand_more"
+          size={20}
+          className={`text-text-icon transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {menu}
+    </div>
+  );
+}
+
+export default function AddOutputFieldModal({ onClose, onAdd, zIndex = 2100, onLearnMore }) {
   const [fieldName, setFieldName] = useState('');
   const [fieldType, setFieldType] = useState('');
   const [description, setDescription] = useState('');
+  const [required, setRequired] = useState(false);
 
   function handleAdd() {
-    if (!fieldName || !fieldType) return;
-    onAdd({ fieldName, fieldType, description });
+    if (!fieldName || !fieldType || !description.trim()) return;
+    onAdd({ fieldName, fieldType, description: description.trim(), required });
     onClose();
   }
 
   return (
-    <Modal
-      dialogOptions={{
-        isOpen: true,
-        onCloseModal: onClose,
-        shouldCloseOnOverlayClick: true,
-        shouldCloseOnEsc: true,
-        showCloseIcon: false,
-        title: 'Add output field',
-        dialogStyles: {
-          content: { padding: 0, maxWidth: 600 },
-        },
-      }}
+    <AeroFormModal
+      title="Add output field"
+      subtitle={OUTPUT_FIELD_MODAL_SUBTITLE}
+      learnMoreHref={onLearnMore ? undefined : OUTPUT_FIELDS_LEARN_MORE_HREF}
+      onLearnMore={onLearnMore}
+      onClose={onClose}
+      onPrimary={handleAdd}
+      primaryDisabled={!fieldName || !fieldType || !description.trim()}
+      zIndex={zIndex}
+      widthClassName="w-[650px]"
+      fitContent
     >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 12px' }}>
-        <span style={{ fontSize: 16, fontWeight: 400, lineHeight: '24px', letterSpacing: '-0.32px', color: gray900, fontFamily: font }}>
-          Add output field
-        </span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
-          <img src={CloseIcon} alt="Close" style={{ width: 24, height: 24 }} />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '0 24px' }}>
-        {/* Field name */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', letterSpacing: '-0.24px', color: gray900, fontFamily: font }}>
-              Field name
-            </span>
-            <span style={{ fontSize: 12, lineHeight: '18px', color: red100, fontFamily: font }}>*</span>
-          </div>
+      <div className="flex flex-col gap-lg pb-md">
+        <label className="flex flex-col gap-xs">
+          <FieldLabel required>Field name</FieldLabel>
           <input
             type="text"
             value={fieldName}
             onChange={(e) => setFieldName(e.target.value)}
-            placeholder="Enter field name"
-            style={{
-              width: '100%', height: 36, border: `1px solid ${gray2000}`, borderRadius: 4,
-              padding: '0 12px', fontSize: 14, lineHeight: '20px', letterSpacing: '-0.28px',
-              color: gray900, fontFamily: font, outline: 'none', boxSizing: 'border-box',
-              background: white,
-            }}
+            placeholder="Field name"
+            className="h-9 w-full rounded-sm border border-border-input bg-surface px-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
           />
-        </div>
+        </label>
 
-        {/* Field type */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', letterSpacing: '-0.24px', color: gray900, fontFamily: font }}>
-              Field type
-            </span>
-            <span style={{ fontSize: 12, lineHeight: '18px', color: red100, fontFamily: font }}>*</span>
-          </div>
-          <FieldTypeDropdown value={fieldType} onChange={setFieldType} />
-        </div>
+        <label className="flex flex-col gap-xs">
+          <FieldLabel required>Field type</FieldLabel>
+          <FieldTypeDropdown value={fieldType} onChange={setFieldType} menuZIndex={zIndex + 100} />
+        </label>
 
-        {/* Description */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', letterSpacing: '-0.24px', color: gray900, fontFamily: font }}>
-            Description
-          </span>
-          <div style={{ position: 'relative', border: `1px solid ${gray2000}`, borderRadius: 4, height: 120, background: white }}>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add optional instruction or examples to help generate this output"
-              style={{
-                width: '100%', height: '100%', border: 'none', outline: 'none', resize: 'none',
-                padding: '8px 12px 32px', fontSize: 14, lineHeight: '20px', letterSpacing: '-0.28px',
-                color: gray900, fontFamily: font, boxSizing: 'border-box', background: 'transparent',
-              }}
-            />
-            <div style={{ position: 'absolute', bottom: 8, left: 11 }}>
-              <i className="icon_phoenix-data_object" style={{ fontSize: 16, color: '#555555', cursor: 'pointer' }} />
-            </div>
-          </div>
-        </div>
+        <label className="flex flex-col gap-xs">
+          <FieldLabel required>Description</FieldLabel>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add instructions or examples which will be sent to LLM to generate this output"
+            rows={3}
+            className="w-full resize-none rounded-sm border border-border-input bg-surface px-md py-sm text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
+          />
+        </label>
+
+        <label className="flex cursor-pointer items-center gap-sm">
+          <input
+            type="checkbox"
+            checked={required}
+            onChange={(e) => setRequired(e.target.checked)}
+            className="size-[18px] rounded-sm border border-control-border accent-primary"
+          />
+          <span className="text-body text-text-primary">Is this output field required?</span>
+        </label>
       </div>
-
-      {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '12px 24px 24px' }}>
-        <Button type="link" label="Cancel" onClick={onClose} />
-        <Button type="primary" label="Add" onClick={handleAdd} disabled={!fieldName || !fieldType} />
-      </div>
-    </Modal>
+    </AeroFormModal>
   );
 }

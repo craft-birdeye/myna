@@ -201,6 +201,9 @@ const ENTITY_OPTIONS = [
   { id: 'insights',     label: 'Insights AI' },
 ];
 
+const TOOLS_LEARN_MORE_HREF =
+  'https://help.birdeye.com/hc/en-us/articles/tools-in-workflows';
+
 /* ─── Drawer shell ─── */
 function NativeDrawer({ isOpen, onClose, children }) {
   useEffect(() => {
@@ -220,6 +223,12 @@ function NativeDrawer({ isOpen, onClose, children }) {
   );
 }
 
+const ICON = {
+  fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+}
+const ICON_DEFAULT = { ...ICON, color: '#303030' } /* text/icon */
+const ICON_ACTION = { ...ICON, color: '#1976d2' } /* text/action */
+
 /* ─── Tool row (internal / brand) ─── */
 function ToolRow({ icon, iconDataUrl, name, description, onClick }) {
   return (
@@ -228,9 +237,9 @@ function ToolRow({ icon, iconDataUrl, name, description, onClick }) {
         {iconDataUrl ? (
           <img src={iconDataUrl} alt={name} className={styles.toolIconImg} />
         ) : icon ? (
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#555', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>{icon}</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, ...ICON_DEFAULT }}>{icon}</span>
         ) : (
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#555', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>build</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, ...ICON_DEFAULT }}>build</span>
         )}
       </div>
       <div className={styles.toolInfo}>
@@ -389,7 +398,7 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
                 <span className={selectedAccount ? styles.accountSelectValue : styles.accountSelectPlaceholder}>
                   {selectedAccount?.email || 'Select'}
                 </span>
-                <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#616161', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, ...ICON_DEFAULT }}>
                   {accountDropdownOpen ? 'expand_less' : 'expand_more'}
                 </span>
               </button>
@@ -402,7 +411,7 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
                     <button type="button" className={styles.addAccountBtn}>Add new account</button>
                   </div>
                   <div className={styles.accountSearch}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#9e9e9e', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>search</span>
+                    <span className={`material-symbols-outlined ${styles.searchIcon}`} style={{ fontSize: 16, ...ICON_DEFAULT }}>search</span>
                     <input
                       className={styles.accountSearchInput}
                       placeholder="Search"
@@ -432,7 +441,7 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
                         {account.status === 'expired' ? (
                           <button type="button" className={styles.reconnectBtn} onClick={e => e.stopPropagation()}>Reconnect</button>
                         ) : selectedAccount?.id === account.id ? (
-                          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#1976d2', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>check</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: 18, ...ICON_ACTION }}>check</span>
                         ) : null}
                       </button>
                     ))}
@@ -483,17 +492,17 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
               <span className={styles.selectedAccountEmail}>{selectedAccount?.email}</span>
               <div style={{ display: 'flex', gap: 4 }}>
                 <button type="button" className={styles.accountClearBtn} onClick={backToAccount}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>close</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, ...ICON_DEFAULT }}>close</span>
                 </button>
                 <button type="button" className={styles.accountClearBtn} onClick={backToAccount}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>expand_more</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, ...ICON_DEFAULT }}>expand_more</span>
                 </button>
               </div>
             </div>
           </div>
 
           <div className={styles.searchWrap}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#9e9e9e', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>search</span>
+            <span className={`material-symbols-outlined ${styles.searchIcon}`} style={{ fontSize: 16, ...ICON_DEFAULT }}>search</span>
             <input
               className={styles.searchInput}
               placeholder="Search tools"
@@ -559,12 +568,26 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
     <NativeDrawer isOpen={isOpen} onClose={onClose}>
       <div className={styles.header}>
         <button type="button" className={styles.backBtn} onClick={onClose}><BackArrow /></button>
-        <span className={styles.headerTitle}>Add a tool</span>
+        <div className={styles.headerTitles}>
+          <span className={styles.headerTitle}>Add a tool</span>
+          <span className={styles.headerSubtitle}>
+            Select a tool the agent can use to perform an action or retrieve information.{' '}
+            <a
+              href={TOOLS_LEARN_MORE_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.headerSubtitleLink}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Learn more
+            </a>
+          </span>
+        </div>
       </div>
 
       <div className={styles.body}>
         <div className={styles.searchWrap}>
-          <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#9e9e9e', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>search</span>
+          <span className={`material-symbols-outlined ${styles.searchIcon}`} style={{ fontSize: 16, ...ICON_DEFAULT }}>search</span>
           <input
             className={styles.searchInput}
             placeholder="Search tools"
@@ -575,11 +598,25 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
 
         <div className={styles.tabRow}>
           <div className={styles.tabs}>
-            <button type="button" className={`${styles.tab} ${tab === 'internal' ? styles.tabActive : ''}`} onClick={() => setTab('internal')}>Internal tools</button>
-            <button type="button" className={`${styles.tab} ${tab === 'external' ? styles.tabActive : ''}`} onClick={() => setTab('external')}>External tools</button>
+            <button
+              type="button"
+              className={`${styles.tab} ${tab === 'internal' ? styles.tabActive : ''}`}
+              onClick={() => setTab('internal')}
+            >
+              <span className={styles.tabLabel}>Internal tools</span>
+              <span className={styles.tabUnderline} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${tab === 'external' ? styles.tabActive : ''}`}
+              onClick={() => setTab('external')}
+            >
+              <span className={styles.tabLabel}>External tools</span>
+              <span className={styles.tabUnderline} aria-hidden />
+            </button>
           </div>
           <button type="button" className={styles.addCustomBtn}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>add_circle</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, ...ICON }}>add_circle</span>
             Add custom integration
           </button>
         </div>
@@ -592,7 +629,7 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
               onClick={() => setEntityDropdownOpen(v => !v)}
             >
               <span className={styles.entityFilterLabel}>{entityFilter}</span>
-              <span className="material-symbols-outlined" style={{ fontSize: 18, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>expand_more</span>
+              <span className={`material-symbols-outlined ${styles.entityFilterIcon}`} style={{ fontSize: 18, ...ICON }}>expand_more</span>
             </button>
             {entityDropdownOpen && (
               <div className={styles.entityDropdown}>
@@ -638,9 +675,9 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
               >
                 <div className={styles.toolIcon} style={{ background: 'none', padding: 0 }}>
                   {LOGOS[integration.id] ? (
-                    <img src={LOGOS[integration.id]} alt={integration.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'contain', display: 'block' }} />
+                    <img src={LOGOS[integration.id]} alt={integration.name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', display: 'block' }} />
                   ) : (
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#555', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>integration_instructions</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, ...ICON_DEFAULT }}>integration_instructions</span>
                   )}
                 </div>
                 <div className={styles.toolInfo}>
@@ -649,7 +686,7 @@ export default function AddToolDrawer({ isOpen, onClose, onSelectTool, product, 
                 </div>
                 {integration.connected ? (
                   <div className={styles.connectedBadge}>
-                    <span className={styles.statusDotGreen} style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', flexShrink: 0 }} />
+                    <span className={styles.statusDotGreen} />
                     <span className={styles.connectedText}>Connected</span>
                   </div>
                 ) : (

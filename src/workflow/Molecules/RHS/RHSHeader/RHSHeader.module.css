@@ -1,0 +1,83 @@
+/* Aero DS — RHS panel header */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 24px 24px 16px; /* 2xl / lg — matches Help center / Add a tool */
+  min-height: 0;
+  background: #ffffff;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Title + optional subtitle stacked (Branch panel's ordering hint). */
+.titleStack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: #8f8f8f;
+  font-family: 'Roboto', sans-serif;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #303030; /* text/icon */
+  border-radius: 4px; /* Corner Radius/sm */
+  flex-shrink: 0;
+}
+
+.iconBtn:hover {
+  background: #f2f4f7; /* surface/hover */
+}
+
+.title {
+  font-size: 18px; /* Heading 3 */
+  font-weight: 400;
+  line-height: 26px;
+  letter-spacing: -0.36px;
+  color: #0d0d12; /* text/primary */
+  font-family: 'Roboto', sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.iconGlyph {
+  font-size: 20px;
+  line-height: 1;
+  color: #303030;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}

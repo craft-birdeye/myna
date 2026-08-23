@@ -63,22 +63,28 @@ export function isHandleResponseConfigComplete(config = {}) {
 }
 
 function NativeDrawer({ isOpen, onClose, children }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={onClose}
         style={{
-          position: 'relative',
-          width: 650,
-          maxWidth: '95vw',
-          height: '100%',
-          overflowY: 'auto',
-          background: '#fff',
-          boxShadow: '-4px 0 24px rgba(0,0,0,0.14)',
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.2)',
+          backdropFilter: 'blur(4px)',
         }}
-      >
+      />
+      <div className="hrd__panel" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -147,7 +153,16 @@ export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSa
         <div className="hrd__header">
           <div className="hrd__header-left">
             <button type="button" className="hrd__back" onClick={onClose} aria-label="Back">
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize: 20,
+                  color: '#303030',
+                  fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+                }}
+              >
+                arrow_back
+              </span>
             </button>
             <span className="hrd__title">Handle response</span>
           </div>

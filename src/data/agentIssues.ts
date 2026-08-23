@@ -7,6 +7,8 @@ export interface AgentIssue {
   id: string
   title: string
   description: string
+  /** Workflow node id — used to flag the task card on the canvas. */
+  nodeId?: string
 }
 
 export const AGENT_INSTANCE_ISSUES: Record<string, AgentIssue[]> = {
@@ -27,11 +29,13 @@ export const AGENT_INSTANCE_ISSUES: Record<string, AgentIssue[]> = {
       id: 'rr-north-template',
       title: 'Response template not selected',
       description: 'Pick the templates this agent is allowed to reply with before publishing.',
+      nodeId: 'rr-5',
     },
     {
       id: 'rr-north-handle-response',
       title: 'Handle response is not configured',
       description: 'Set the response text and posting delay on the Handle response task.',
+      nodeId: 'rr-6',
     },
   ],
   'Front desk agent - South region': [
