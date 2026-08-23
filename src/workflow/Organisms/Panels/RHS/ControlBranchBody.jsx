@@ -77,6 +77,8 @@ function BranchAccordionItem({
   onDragEnd,
   onDelete,
   onPathFieldChange,
+  /** Sep 1 drops the per-branch "Condition" label — WHEN already introduces the rows. */
+  hideSectionLabels = false,
 }) {
   const itemRef = React.useRef(null);
   const addMenuRef = React.useRef(null);
@@ -275,14 +277,14 @@ function BranchAccordionItem({
           <div className={styles.conditionsBlock}>
             {filledConditions.length === 0 ? (
               <>
-                <SectionLabel label="Condition" />
+                {!hideSectionLabels && <SectionLabel label="Condition" />}
                 {addConditionControl}
               </>
             ) : (
               <Conditions
                 conditions={filledConditions}
                 logic={logic}
-                label="Condition"
+                label={hideSectionLabels ? '' : 'Condition'}
                 showAdvancedFilters={false}
                 onConditionChange={(id, field, value) => {
                   updateConditions(
@@ -330,6 +332,11 @@ export default function ControlBranchBody({
   onPathFieldChange,
   onDeleteBranch,
   onFocusBranchPath,
+  /**
+   * Sep 1: the "Branches" title and its hint move to the panel header, and the per-branch
+   * "Condition" label is dropped (WHEN already introduces the condition rows).
+   */
+  hideSectionLabels = false,
 }) {
   const basedOn = initialValues.basedOn ?? 'conditions';
   const [branches, setBranches] = useState(() => {
@@ -556,14 +563,16 @@ export default function ControlBranchBody({
     <div className={styles.root}>
       <div className={styles.branchesSection} ref={accordionListRef}>
         <div className={styles.branchesHeader}>
-          <SectionLabel label="Branches" />
+          {!hideSectionLabels && <SectionLabel label="Branches" />}
           {basedOn === 'percentage' && (
             <span className={totalPercentage === 100 ? styles.pctOk : styles.pctBad}>
               Total: {totalPercentage}%
             </span>
           )}
         </div>
-        <p className={styles.branchesHint}>Branches run in the order listed</p>
+        {!hideSectionLabels && (
+          <p className={styles.branchesHint}>Branches run in the order listed</p>
+        )}
 
         <div className={styles.accordionList}>
           {branches.map((b, i) => {
@@ -596,6 +605,7 @@ export default function ControlBranchBody({
                 )}
                 <BranchAccordionItem
                   branch={b}
+                  hideSectionLabels={hideSectionLabels}
                   pathDetail={pathDetails[b.id] || {}}
                   expanded={expandedId === b.id}
                   canReorder={canReorderOrDelete && !b.isFallback}
@@ -641,6 +651,7 @@ export default function ControlBranchBody({
               return (
                 <div key={b.id} className={styles.accordionSlot} data-branch-path-id={b.id}>
                   <BranchAccordionItem
+                    hideSectionLabels={hideSectionLabels}
                     branch={{ ...b, isFallback: true }}
                     pathDetail={pathDetails[b.id] || {}}
                     expanded={false}

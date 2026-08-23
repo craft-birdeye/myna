@@ -124,7 +124,7 @@ const PANEL_WIDTH = {
   createCustomProcedure: 500,
 };
 
-export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false }) {
+export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false, subtitle = null }) {
   const config = VARIANTS[variant];
   const Body = config.body;
   const panelWidth = PANEL_WIDTH[variant] ?? 390;
@@ -144,6 +144,7 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
       }}>
         <RHSSidePanelHeader
           title={title || 'Title'}
+          subtitle={subtitle}
           onPreview={viewOnly ? undefined : onPreview}
           onClose={onClose}
           onBack={onBack}

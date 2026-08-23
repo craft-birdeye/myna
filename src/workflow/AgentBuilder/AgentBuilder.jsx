@@ -73,6 +73,19 @@ const END_NODE_ID = '__end__';
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
 
 /** RR chrome header title — ellipsizes past a fixed max width; full name on hover only when truncated. */
+/**
+ * Wraps children in a right-side Tooltip, or renders them bare. Used by the left stack:
+ * once each item carries a visible label, the tooltip would only repeat it.
+ */
+function TooltipOrFragment({ enabled, content, children }) {
+  if (!enabled) return children;
+  return (
+    <Tooltip content={content} variant="brief" side="right">
+      {children}
+    </Tooltip>
+  );
+}
+
 function RrChromeAgentTitle({ text, onClick }) {
   const textRef = useRef(null);
   const [truncated, setTruncated] = useState(false);
@@ -2280,7 +2293,11 @@ export default function AgentBuilder({
               ? 'done'
               : undefined,
     };
-    if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
+    if (n.type === 'branch') {
+      extra.onAddBranch = () => handleAddBranchPath(n.id);
+      // Sep 1 drops the in-card "Add a branch" CTA; branches are added from the canvas.
+      extra.hideAddBranch = sep1Chrome;
+    }
     if (n.type === 'task' && !viewOnly) {
       extra.onToggleChange = (enabled) => handleNodeToggleChange(n.id, enabled);
     }
@@ -2957,10 +2974,13 @@ export default function AgentBuilder({
         <RHS
           variant="controlBranch"
           title="Branch"
+          // Sep 1 lifts the "Branches" hint into the header and drops the section labels.
+          subtitle={sep1Chrome ? 'Branches run in the order listed' : null}
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
+            hideSectionLabels: sep1Chrome,
             initialValues: {
               ...currentDetails,
               description: currentDetails.description ?? selectedNode?.data?.descriptionPlaceholder ?? '',
@@ -3654,8 +3674,12 @@ export default function AgentBuilder({
               )}
 
               {!viewOnly && !versionHistoryMode && (
-                <div className="rr-chrome-left-stack">
-                  <Tooltip content="Create with AI" variant="brief" side="right">
+                <div className={`rr-chrome-left-stack${sep1Chrome ? ' rr-chrome-left-stack--labelled' : ''}`}>
+                  {/* Labelled mode names each item inline, so the tooltip would only repeat it. */}
+                  <TooltipOrFragment
+                    enabled={!sep1Chrome}
+                    content="Create with AI"
+                  >
                     <button
                       type="button"
                       className={`rr-chrome-left-ai${rrAiPanelOpen ? ' rr-chrome-left-ai--active' : ''}`}
@@ -3684,8 +3708,9 @@ export default function AgentBuilder({
                         }}
                         aria-hidden
                       />
+                      {sep1Chrome && <span className="rr-chrome-left-label">AI</span>}
                     </button>
-                  </Tooltip>
+                  </TooltipOrFragment>
                   <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
                     {[
                       { id: 'Trigger', src: iconRrTrigger, label: 'Trigger', tourId: 'trigger' },
@@ -3695,7 +3720,7 @@ export default function AgentBuilder({
                       { id: 'Tasks', src: iconRrTasks, label: 'Task', tourId: 'tasks' },
                       { id: 'Controls', src: iconRrControls, label: 'Controls', tourId: 'controls' },
                     ].map((item) => (
-                      <Tooltip key={item.id} content={item.label} variant="brief" side="right">
+                      <TooltipOrFragment key={item.id} enabled={!sep1Chrome} content={item.label}>
                         <button
                           type="button"
                           className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
@@ -3715,8 +3740,9 @@ export default function AgentBuilder({
                           }}
                         >
                           <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                          {sep1Chrome && <span className="rr-chrome-left-label">{item.label}</span>}
                         </button>
-                      </Tooltip>
+                      </TooltipOrFragment>
                     ))}
                   </div>
                 </div>

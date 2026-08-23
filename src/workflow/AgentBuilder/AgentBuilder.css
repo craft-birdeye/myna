@@ -1631,6 +1631,44 @@
   background: #f9f7fd;
 }
 
+/*
+ * Sep 1 only: each item names itself under the icon instead of relying on a hover
+ * tooltip, so both cards widen and the buttons become icon-over-label stacks.
+ */
+.rr-chrome-left-stack--labelled .rr-chrome-left-ai,
+.rr-chrome-left-stack--labelled .rr-chrome-left-floater {
+  width: 84px;
+}
+
+.rr-chrome-left-stack--labelled .rr-chrome-left-ai {
+  height: auto;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 8px;
+}
+
+.rr-chrome-left-stack--labelled .rr-chrome-left-floater {
+  gap: 16px;
+}
+
+.rr-chrome-left-stack--labelled .rr-chrome-left-floater__btn {
+  width: 100%;
+  height: auto;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 4px;
+}
+
+.rr-chrome-left-label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.12px;
+  color: #555;
+  text-align: center;
+  white-space: nowrap;
+}
+
 /* Figma Agent ARC 15324:293284 — pad/gap + hover chip + right tooltip */
 .rr-chrome-left-floater {
   position: relative;

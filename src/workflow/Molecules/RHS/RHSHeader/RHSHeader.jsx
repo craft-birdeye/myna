@@ -4,6 +4,8 @@ import PlayArrowIcon from './icons/play_arrow.svg';
 
 export default function RHSPanelHeader({
   title = 'Title',
+  /** Optional line under the title (e.g. the Branch panel's ordering hint). */
+  subtitle = null,
   onPreview,
   onClose,
   onBack = undefined,
@@ -21,7 +23,8 @@ export default function RHSPanelHeader({
   return (
     <div style={{
       display: 'flex',
-      alignItems: 'center',
+      // Top-align when a subtitle stacks under the title so the actions stay on the title row.
+      alignItems: subtitle ? 'flex-start' : 'center',
       justifyContent: 'space-between',
       padding: '16px',
       minHeight: 60,
@@ -29,7 +32,7 @@ export default function RHSPanelHeader({
       boxSizing: 'border-box',
       flexShrink: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: subtitle ? 'flex-start' : 'center', gap: 4, minWidth: 0, flex: 1 }}>
         {onBack && (
           <button
             type="button"
@@ -42,19 +45,32 @@ export default function RHSPanelHeader({
             </svg>
           </button>
         )}
-        <span style={{
-          fontSize: 16,
-          fontWeight: 400,
-          lineHeight: '24px',
-          letterSpacing: '-0.32px',
-          color: '#212121',
-          fontFamily: '"Roboto", sans-serif',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
-          {title}
-        </span>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{
+            fontSize: 16,
+            fontWeight: 400,
+            lineHeight: '24px',
+            letterSpacing: '-0.32px',
+            color: '#212121',
+            fontFamily: '"Roboto", sans-serif',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {title}
+          </span>
+          {subtitle && (
+            <span style={{
+              fontSize: 12,
+              fontWeight: 400,
+              lineHeight: '18px',
+              color: '#8f8f8f',
+              fontFamily: '"Roboto", sans-serif',
+            }}>
+              {subtitle}
+            </span>
+          )}
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {showMoreMenu && (
