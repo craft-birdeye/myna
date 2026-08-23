@@ -62,7 +62,6 @@ export default function CanvasNode({
   const isOff = hasToggle && !on;
   const stateClass = `${state !== 'default' ? ` canvas-node--${state}` : ''}${hasError ? ' canvas-node--error' : ''}`;
   const showHeaderAdd = hasAddButton && !viewOnly && nodeType !== 'branch';
-  const showFooterAdd = hasAddButton && !viewOnly && nodeType === 'branch';
 
   return (
     <div className="canvas-node-wrap">
@@ -107,20 +106,6 @@ export default function CanvasNode({
             </span>
             <span className="canvas-node__config-warning-text">{configWarningText}</span>
           </div>
-        )}
-        {showFooterAdd && (
-          <button
-            type="button"
-            className="canvas-node__add-branch"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddClick?.();
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <span className="material-symbols-outlined">add</span>
-            Add a branch
-          </button>
         )}
       </div>
       {!viewOnly && (onDelete || onCopy) ? (

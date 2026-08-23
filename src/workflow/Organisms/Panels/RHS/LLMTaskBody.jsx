@@ -235,7 +235,8 @@ function ChipContainer({
   const labelAddControl = showLabelAdd && (
     <div className={styles.labelAddWrap} ref={pickerRef}>
       <button type="button" className={styles.fieldAddBtn} onClick={openForAdd}>
-        + Add
+        <span className="material-symbols-outlined">add_circle</span>
+        <span className={styles.fieldAddBtnLabel}>Add</span>
       </button>
       {typePicker}
     </div>
@@ -291,9 +292,9 @@ export default function LLMTaskBody({
   collapseChipsToOneLine = false,
   /** Exploration chrome (incl. Sep 1): two chip lines + "View N more". */
   collapseChipsToTwoLines = false,
-  /** Option 2: Setup / Configure in the header — hide body tabs. */
+  /** Option 2: Setup / Configure in the header — legacy prop (body tabs removed). */
   setupConfigureInHeader = false,
-  /** Controlled Setup / Configure tab (exploration LLM task). */
+  /** Controlled Setup / Configure tab — legacy prop (body tabs removed). */
   activeTab: activeTabProp,
   onTabChange,
 }) {
@@ -315,12 +316,7 @@ export default function LLMTaskBody({
     const raw = initialValues.outputFields ?? [];
     return raw.map((item) => typeof item === 'string' ? { value: item, type: 'variable' } : item);
   });
-  const [internalTab, setInternalTab] = useState('setup');
-  const activeTab = collapseChipsToOneLine && onTabChange
-    ? (activeTabProp ?? 'setup')
-    : internalTab;
-  const setActiveTab = collapseChipsToOneLine && onTabChange ? onTabChange : setInternalTab;
-
+  const [advancedOpen, setAdvancedOpen] = useState(true);
   const emit = (field, val) => onFieldChange?.(field, val);
 
   const updateContextFields = (next) => { setContextFields(next); emit('contextFields', next); };
@@ -359,7 +355,8 @@ export default function LLMTaskBody({
             className={styles.fieldAddBtn}
             onClick={() => setContextModalOpen(true)}
           >
-            + Add
+            <span className="material-symbols-outlined">add_circle</span>
+            <span className={styles.fieldAddBtnLabel}>Add</span>
           </button>
         )}
       </div>
@@ -424,7 +421,8 @@ export default function LLMTaskBody({
             className={styles.fieldAddBtn}
             onClick={() => setInputModalOpen(true)}
           >
-            + Add
+            <span className="material-symbols-outlined">add_circle</span>
+            <span className={styles.fieldAddBtnLabel}>Add</span>
           </button>
         )}
       </div>
@@ -555,102 +553,79 @@ export default function LLMTaskBody({
 
   return (
     <div className={`${styles.container}${collapseChipsToOneLine ? ` ${styles.containerExploration}` : ''}`}>
-      {collapseChipsToOneLine ? (
-        <div className={styles.nameDescriptionGroup}>
-          <FormInput
-            name="taskName"
-            type="text"
-            label="Task name"
-            placeholder="Enter name"
-            value={taskName}
-            onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
-            required
-          />
-          <TextArea
-            name="description"
-            label="Description"
-            placeholder="Enter description"
-            value={description}
-            onChange={(e) => { setDescription(e.target.value); emit('description', e.target.value); }}
-            required
-            noFloatingLabel
-          />
-        </div>
-      ) : (
-        <>
-          <FormInput
-            name="taskName"
-            type="text"
-            label="Task name"
-            placeholder="Enter name"
-            value={taskName}
-            onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
-            required
-          />
-          <TextArea
-            name="description"
-            label="Description"
-            placeholder="Enter description"
-            value={description}
-            onChange={(e) => { setDescription(e.target.value); emit('description', e.target.value); }}
-            required
-            noFloatingLabel
-          />
-        </>
-      )}
-
-      {collapseChipsToOneLine ? (
-        <>
-          {!setupConfigureInHeader && (
-            <div className={styles.tabBar} role="tablist" aria-label="Task configuration">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'setup'}
-                className={`${styles.tab}${activeTab === 'setup' ? ` ${styles.tabActive}` : ''}`}
-                onClick={() => setActiveTab('setup')}
-              >
-                <span className={styles.tabLabel}>Setup</span>
-                <span className={styles.tabIndicator} aria-hidden />
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'configure'}
-                className={`${styles.tab}${activeTab === 'configure' ? ` ${styles.tabActive}` : ''}`}
-                onClick={() => setActiveTab('configure')}
-              >
-                <span className={styles.tabLabel}>Configure</span>
-                <span className={styles.tabIndicator} aria-hidden />
-              </button>
-            </div>
-          )}
-          <div className={styles.tabPanel} role="tabpanel">
-            {activeTab === 'setup' ? (
-              <div className={styles.tabContent}>
-                {contextSection}
-                {inputFieldsSection}
-                {systemPromptSection}
-              </div>
-            ) : (
-              <div className={styles.tabContent}>
-                {llmModelSection}
-                {userPromptSection}
-                {outputFieldsSection}
-              </div>
-            )}
+      <div className={styles.essentialsGroup}>
+        {collapseChipsToOneLine ? (
+          <div className={styles.nameDescriptionGroup}>
+            <FormInput
+              name="taskName"
+              type="text"
+              label="Task name"
+              placeholder="Enter name"
+              value={taskName}
+              onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
+              required
+            />
+            <TextArea
+              name="description"
+              label="Description"
+              placeholder="Enter description"
+              value={description}
+              onChange={(e) => { setDescription(e.target.value); emit('description', e.target.value); }}
+              required
+              noFloatingLabel
+            />
           </div>
-        </>
-      ) : (
-        <>
-          {contextSection}
-          {inputFieldsSection}
-          {systemPromptSection}
-          {userPromptSection}
-          {outputFieldsSection}
-          {llmModelSection}
-        </>
-      )}
+        ) : (
+          <>
+            <FormInput
+              name="taskName"
+              type="text"
+              label="Task name"
+              placeholder="Enter name"
+              value={taskName}
+              onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
+              required
+            />
+            <TextArea
+              name="description"
+              label="Description"
+              placeholder="Enter description"
+              value={description}
+              onChange={(e) => { setDescription(e.target.value); emit('description', e.target.value); }}
+              required
+              noFloatingLabel
+            />
+          </>
+        )}
+
+        {systemPromptSection}
+        {userPromptSection}
+      </div>
+
+      <div className={styles.advancedSection}>
+        <button
+          type="button"
+          className={styles.advancedToggle}
+          onClick={() => setAdvancedOpen((open) => !open)}
+          aria-expanded={advancedOpen}
+        >
+          <span className={styles.advancedToggleLabel}>Advanced settings</span>
+          <span
+            className={`material-symbols-outlined ${styles.advancedToggleChevron}${advancedOpen ? ` ${styles.advancedToggleChevronOpen}` : ''}`}
+            aria-hidden
+          >
+            expand_more
+          </span>
+        </button>
+        {advancedOpen && (
+          <div className={styles.advancedBody}>
+            {llmModelSection}
+            {contextSection}
+            {inputFieldsSection}
+            {outputFieldsSection}
+          </div>
+        )}
+      </div>
 
       {collapseChipsToTwoLines && contextModalOpen && (
         <ContextModal

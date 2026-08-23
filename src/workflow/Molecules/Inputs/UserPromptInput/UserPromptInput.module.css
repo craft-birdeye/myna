@@ -16,7 +16,7 @@
   font-weight: 400;
   line-height: 18px;
   letter-spacing: -0.24px;
-  color: #212121;
+  color: #717182; /* text/secondary */
   font-family: 'Roboto', sans-serif;
   white-space: nowrap;
 }
@@ -49,7 +49,7 @@
   right: 12px;
   left: 12px;
   z-index: 0;
-  color: #9e9e9e;
+  color: #9ca3af; /* text/tertiary */
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
@@ -67,7 +67,7 @@
 .editor {
   position: relative;
   z-index: 1;
-  min-height: 40px;
+  min-height: 76px; /* matches Description textarea (3 rows × 20px + 16px padding) */
   max-height: 168px;
   overflow-y: auto;
   padding: 8px 12px;
@@ -75,7 +75,7 @@
   font-weight: 400;
   line-height: 20px;
   letter-spacing: -0.28px;
-  color: #212121;
+  color: #0d0d12; /* text/primary */
   font-family: 'Roboto', sans-serif;
   outline: none;
   word-break: break-word;
@@ -87,7 +87,7 @@
 .editorAutoHeight {
   max-height: none;
   overflow-y: visible;
-  min-height: 40px;
+  min-height: 76px;
 }
 
 .toolbar {

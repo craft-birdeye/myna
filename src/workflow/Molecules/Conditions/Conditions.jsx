@@ -452,41 +452,43 @@ export default function Conditions({
   return (
     <div className="trigger-conditions">
       <div className="trigger-conditions__section">
-        <div className="trigger-conditions__label-row">
-          <span className="trigger-conditions__label">{label}</span>
-          {labelHelp ? (
-            <Tooltip
-              content={
-                labelHelpLearnMoreHref ? (
-                  <span className="flex flex-col gap-xs">
-                    <span>{labelHelp}</span>
-                    <a
-                      href={labelHelpLearnMoreHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-white no-underline hover:text-white hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {labelHelpLearnMoreLabel ?? 'Learn more'}
-                    </a>
-                  </span>
-                ) : (
-                  labelHelp
-                )
-              }
-              variant="detail"
-              interactive={Boolean(labelHelpLearnMoreHref)}
-            >
-              <button
-                type="button"
-                className="trigger-conditions__label-help"
-                aria-label="Help"
+        {(label || labelHelp) ? (
+          <div className="trigger-conditions__label-row">
+            {label ? <span className="trigger-conditions__label">{label}</span> : null}
+            {labelHelp ? (
+              <Tooltip
+                content={
+                  labelHelpLearnMoreHref ? (
+                    <span className="flex flex-col gap-xs">
+                      <span>{labelHelp}</span>
+                      <a
+                        href={labelHelpLearnMoreHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white no-underline hover:text-white hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {labelHelpLearnMoreLabel ?? 'Learn more'}
+                      </a>
+                    </span>
+                  ) : (
+                    labelHelp
+                  )
+                }
+                variant="detail"
+                interactive={Boolean(labelHelpLearnMoreHref)}
               >
-                <Icon name="help" size={16} />
-              </button>
-            </Tooltip>
-          ) : null}
-        </div>
+                <button
+                  type="button"
+                  className="trigger-conditions__label-help"
+                  aria-label="Help"
+                >
+                  <Icon name="help" size={16} />
+                </button>
+              </Tooltip>
+            ) : null}
+          </div>
+        ) : null}
         <div className="trigger-conditions__card">
           <div className="trigger-conditions__conditions">
             {conditions.map((condition, index) => {

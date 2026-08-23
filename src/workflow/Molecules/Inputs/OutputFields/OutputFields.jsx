@@ -273,7 +273,8 @@ export default function OutputFields({
         {showLabelAdd && (
           <div className={styles.labelAddWrap} ref={pickerRef}>
             <button type="button" className={styles.fieldAddBtn} onClick={openForAdd}>
-              + Add
+              <span className="material-symbols-outlined">add_circle</span>
+              <span className={styles.fieldAddBtnLabel}>Add</span>
             </button>
             {typePicker}
           </div>

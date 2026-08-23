@@ -2064,32 +2064,6 @@ export default function AgentBuilder({
     setClipboard(null);
   }, [clipboard, nodeList, nodeDetails, selectedNodeId]);
 
-  const handleAddBranchPath = useCallback((branchNodeId) => {
-    const newPathId = `${branchNodeId}-path-${Date.now()}`;
-    setNodeDetails((prev) => {
-      const nodeD = prev[branchNodeId] || {};
-      const existing = nodeD.branches || [];
-      const nonFallback = existing.filter((b) => !b.isFallback);
-      const fallback = existing.filter((b) => b.isFallback);
-      const pathNumber = nonFallback.length + 1;
-      const newPath = { id: newPathId, name: `Branch ${pathNumber}` };
-      return {
-        ...prev,
-        [branchNodeId]: {
-          ...nodeD,
-          branches: [...nonFallback, newPath, ...fallback],
-        },
-        [newPathId]: {
-          branchName: newPath.name,
-          description: '',
-          conditions: [],
-          parentId: branchNodeId,
-          isBranchPath: true,
-        },
-      };
-    });
-  }, []);
-
   const handleMoveNode = useCallback((nodeId, direction) => {
     setNodeList((prev) => {
       const idx = prev.findIndex((n) => n.id === nodeId);
@@ -2339,7 +2313,6 @@ export default function AgentBuilder({
               ? 'done'
               : undefined,
     };
-    if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
       extra.onToggleChange = (enabled) => handleNodeToggleChange(n.id, enabled);
     }
@@ -3049,7 +3022,7 @@ export default function AgentBuilder({
           variant="controlBranch"
           title="Branch"
           viewOnly={rhsViewOnly}
-          inlineFooter={inlineRhsFooter}
+          inlineFooter={false}
           product={product}
           bodyProps={{
             initialValues: {
@@ -3222,7 +3195,6 @@ export default function AgentBuilder({
     if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).includes('handle-response'))) {
       const llmTaskExplorationLayout = explorationChrome && !sep1Chrome;
       const llmTaskOption2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option2';
-      const llmSetupTab = llmTaskExplorationLayout && llmTaskTab === 'setup';
       return (
         <RHS
           variant="llmTask"
@@ -3230,8 +3202,8 @@ export default function AgentBuilder({
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
-          saveLabel={llmSetupTab ? 'Continue' : 'Save'}
-          showPromptStrength={llmTaskExplorationLayout ? !llmSetupTab : undefined}
+          saveLabel="Save"
+          showPromptStrength={llmTaskExplorationLayout ? true : undefined}
           titleLayoutMenu={llmTaskExplorationLayout ? {
             value: llmTaskLayoutOption,
             options: [
@@ -3261,7 +3233,7 @@ export default function AgentBuilder({
             onOpenGlossary: openGlossary,
           }}
           onClose={handleCloseDrawer}
-          onSave={llmSetupTab ? () => setLlmTaskTab('configure') : handleCloseDrawer}
+          onSave={handleCloseDrawer}
         />
       );
     }

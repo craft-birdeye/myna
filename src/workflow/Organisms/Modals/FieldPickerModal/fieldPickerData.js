@@ -27,8 +27,9 @@ function objectNode(name, value, children) {
 export const BASE_CATEGORIES = [
   {
     id: 'business',
-    label: 'Business',
+    label: 'Business fields',
     sectionLabel: 'Business fields',
+    description: 'Fields from your business profile, branding, and account settings.',
     fields: [
       leaf('Business name', 'Business.name', 'Aspen Dental'),
       leaf('Business phone', 'Business.phone', '+1 415-555-0100'),
@@ -54,8 +55,9 @@ export const BASE_CATEGORIES = [
   },
   {
     id: 'location',
-    label: 'Location',
+    label: 'Location fields',
     sectionLabel: 'Location fields',
+    description: 'Fields from the location or site where this workflow is running.',
     fields: [
       leaf('Location name', 'Location.name', 'Downtown clinic'),
       leaf('Location address', 'Location.address', '100 Main St'),
@@ -73,8 +75,9 @@ export const BASE_CATEGORIES = [
   },
   {
     id: 'contacts',
-    label: 'Contacts',
+    label: 'Contact fields',
     sectionLabel: 'Contact fields',
+    description: 'Fields from the customer or contact record linked to this run.',
     fields: [
       leaf('Contact first name', 'Contact.firstName', 'John'),
       leaf('Contact last name', 'Contact.lastName', 'Doe'),
@@ -99,7 +102,8 @@ const REVIEW_DATE = 'Fri, Mar 27, 2026 12:46 AM';
 export const WORKFLOW_CATEGORIES = [
   {
     id: 'trigger',
-    label: '1.Trigger',
+    label: '1. Trigger',
+    description: 'Outputs available from the trigger that started this workflow.',
     trees: [
       group('trigger-output', 'Trigger output', [
         leaf('id', 'Trigger.id', '545043398', 'number'),
@@ -111,7 +115,8 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-identify',
-    label: '2.Task: Identify relevant mentions',
+    label: '2. Task: Identify relevant mentions',
+    description: 'Outputs from the identify-relevant-mentions task.',
     trees: [
       group('identify-output', 'Task output', [
         leaf('mentionCount', 'Identify.mentionCount', '4', 'number'),
@@ -123,7 +128,8 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-tokens',
-    label: '3.Task: custom tokens',
+    label: '3. Task: custom tokens',
+    description: 'Custom token values produced by this task.',
     trees: [
       group('tokens-output', 'Task output', [
         leaf('greeting', 'Tokens.greeting', 'Hi there'),
@@ -136,7 +142,8 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-generate-response',
-    label: '4.Task: Generate review response',
+    label: '4. Task: Generate review response',
+    description: 'Task and tool outputs from generating the review response.',
     // Sidebar count matches top-level sections (Task output + Tool), not leaf fields.
     count: 2,
     trees: [
@@ -167,7 +174,8 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-send-response',
-    label: '5.Task: Send a review response',
+    label: '5. Task: Send a review response',
+    description: 'Outputs from posting the review response.',
     trees: [
       group('send-output', 'Task output', [
         leaf('posted', 'SendResponse.posted', 'true', 'boolean'),

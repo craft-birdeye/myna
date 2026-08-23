@@ -128,11 +128,8 @@ function BranchAccordionItem({
     ]);
   }
 
-  // Expanded non-fallback rows use a fixed "Branch name" header label (Figma);
-  // collapsed rows show the live branch title.
-  const headerTitle = !isFallback && expanded
-    ? 'Branch name'
-    : (name || 'Untitled branch');
+  // Header always reflects the live branch title (including while editing the name field).
+  const headerTitle = name || 'Untitled branch';
 
   if (isFallback) {
     return (
@@ -259,7 +256,7 @@ function BranchAccordionItem({
             <Conditions
               conditions={conditions.length > 0 ? conditions : [makeCondition(`${branch.id}-cond-1`)]}
               logic={logic}
-              label="Condition"
+              label=""
               showAdvancedFilters={false}
               onConditionChange={(id, field, value) => {
                 const base = conditions.length > 0 ? conditions : [makeCondition(`${branch.id}-cond-1`)];
@@ -490,14 +487,13 @@ export default function ControlBranchBody({
   return (
     <div className={styles.root}>
       <div className={styles.branchesSection} ref={accordionListRef}>
-        <div className={styles.branchesHeader}>
-          <SectionLabel label="Branches" />
-          {basedOn === 'percentage' && (
+        {basedOn === 'percentage' && (
+          <div className={styles.branchesHeader}>
             <span className={totalPercentage === 100 ? styles.pctOk : styles.pctBad}>
               Total: {totalPercentage}%
             </span>
-          )}
-        </div>
+          </div>
+        )}
         <p className={styles.branchesHint}>
           Branches run in the order listed.{' '}
           <button
@@ -509,7 +505,7 @@ export default function ControlBranchBody({
           </button>
         </p>
 
-        <div className={styles.accordionList}>
+        <div className={styles.branchStack}>
           {branches.map((b, i) => {
             const isFallbackBranch = !!b.isFallback
               || !!pathDetails[b.id]?.isFallback
@@ -566,45 +562,32 @@ export default function ControlBranchBody({
               </div>
             );
           })}
+
+          <button type="button" className={styles.addLink} onClick={addBranch}>
+            <span className="material-symbols-outlined">add</span>
+            Add a branch
+          </button>
+
+          {basedOn !== 'percentage' && branches.map((b) => {
+            const isFallbackBranch = !!b.isFallback
+              || !!pathDetails[b.id]?.isFallback
+              || LEGACY_FALLBACK_NAMES.has(pathDetails[b.id]?.branchName ?? b.name ?? '');
+            if (!isFallbackBranch) return null;
+            return (
+              <div key={b.id} className={styles.accordionSlot} data-branch-path-id={b.id}>
+                <BranchAccordionItem
+                  branch={{ ...b, isFallback: true }}
+                  pathDetail={pathDetails[b.id] || {}}
+                  expanded={false}
+                  canReorder={false}
+                  canDelete={false}
+                  onToggle={() => onFocusBranchPath?.(b.id)}
+                  onPathFieldChange={handlePathFieldChange}
+                />
+              </div>
+            );
+          })}
         </div>
-
-        {basedOn !== 'percentage' && (
-          <button type="button" className={styles.addLink} onClick={addBranch}>
-            <span className="material-symbols-outlined">add</span>
-            Add a branch
-          </button>
-        )}
-
-        {basedOn !== 'percentage' && (
-          <div className={`${styles.accordionList} ${styles.fallbackList}`}>
-            {branches.map((b) => {
-              const isFallbackBranch = !!b.isFallback
-                || !!pathDetails[b.id]?.isFallback
-                || LEGACY_FALLBACK_NAMES.has(pathDetails[b.id]?.branchName ?? b.name ?? '');
-              if (!isFallbackBranch) return null;
-              return (
-                <div key={b.id} className={styles.accordionSlot} data-branch-path-id={b.id}>
-                  <BranchAccordionItem
-                    branch={{ ...b, isFallback: true }}
-                    pathDetail={pathDetails[b.id] || {}}
-                    expanded={false}
-                    canReorder={false}
-                    canDelete={false}
-                    onToggle={() => onFocusBranchPath?.(b.id)}
-                    onPathFieldChange={handlePathFieldChange}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {basedOn === 'percentage' && (
-          <button type="button" className={styles.addLink} onClick={addBranch}>
-            <span className="material-symbols-outlined">add</span>
-            Add a branch
-          </button>
-        )}
       </div>
     </div>
   );

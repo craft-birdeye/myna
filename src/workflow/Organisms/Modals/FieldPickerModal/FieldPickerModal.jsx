@@ -16,6 +16,7 @@ import styles from './FieldPickerModal.module.css';
 const POPOVER_WIDTH = 672;
 const POPOVER_MAX_HEIGHT = 560;
 const DRAWER_GAP = 0;
+const BASE_CATEGORY_IDS = new Set(BASE_CATEGORIES.map((c) => c.id));
 
 const FIELDS_SUBTITLE =
   'Data available to reference from the previous steps and customer record.';
@@ -23,6 +24,8 @@ const FIELDS_SUBTITLE =
 /** Placeholder help article — swap for the real Fields docs URL when available. */
 const FIELDS_LEARN_MORE_HREF =
   'https://help.birdeye.com/hc/en-us/articles/fields-in-workflows';
+
+const WORKFLOW_SECTION_HEADING = 'Previous step outputs';
 
 function FieldChip({ name }) {
   return (
@@ -258,7 +261,9 @@ export default function FieldPickerModal({
   const [selectedCategoryId, setSelectedCategoryId] = useState('business');
   const [searchSelectedId, setSearchSelectedId] = useState(null);
   const [pos, setPos] = useState(() => computePosition(anchorEl, placement));
+  const [userMoved, setUserMoved] = useState(false);
   const rootRef = useRef(null);
+  const dragRef = useRef(null);
 
   const categories = useMemo(() => {
     const base = BASE_CATEGORIES.map(normalizeCategory);
@@ -298,6 +303,44 @@ export default function FieldPickerModal({
     [categories, matchingCategories, isSearching],
   );
 
+  const baseSidebarCategories = useMemo(
+    () => sidebarCategories.filter((cat) => BASE_CATEGORY_IDS.has(cat.id)),
+    [sidebarCategories],
+  );
+
+  const workflowSidebarCategories = useMemo(
+    () => sidebarCategories.filter((cat) => !BASE_CATEGORY_IDS.has(cat.id)),
+    [sidebarCategories],
+  );
+
+  const renderCategoryButton = (cat) => {
+    const isSelected = isSearching
+      ? cat.id === searchSelectedId
+      : cat.id === selectedCategoryId;
+    return (
+      <button
+        key={cat.id}
+        type="button"
+        className={`${styles.catBtn}${isSelected ? ` ${styles.catBtnSelected}` : ''}`}
+        onClick={() => {
+          if (isSearching) setSearchSelectedId((prev) => (prev === cat.id ? null : cat.id));
+          else setSelectedCategoryId(cat.id);
+        }}
+      >
+        <CatLabel text={cat.label} />
+        <span className={styles.catMeta}>
+          <span className={styles.catCount}>{cat.count}</span>
+          <span
+            className="material-symbols-outlined"
+            style={{ fontSize: 16, color: '#8f8f8f', fontVariationSettings: "'FILL' 0, 'wght' 300" }}
+          >
+            chevron_right
+          </span>
+        </span>
+      </button>
+    );
+  };
+
   const handleSearchChange = (value) => {
     setSearch(value);
     setSearchSelectedId(null);
@@ -319,15 +362,33 @@ export default function FieldPickerModal({
   }, [showTriggerFields, selectedCategoryId]);
 
   useLayoutEffect(() => {
+    if (userMoved) return;
     setPos(computePosition(anchorEl, placement));
-  }, [anchorEl, placement]);
+  }, [anchorEl, placement, userMoved]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     const onDown = (e) => {
+      if (dragRef.current) return;
       if (rootRef.current && !rootRef.current.contains(e.target)) onClose();
     };
-    const reposition = () => setPos(computePosition(anchorEl, placement));
+    const reposition = () => {
+      if (userMoved) {
+        setPos((prev) => {
+          const next = computePosition(anchorEl, placement);
+          const margin = 12;
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const width = next.width;
+          const maxHeight = next.maxHeight;
+          const top = Math.min(Math.max(margin, prev.top), Math.max(margin, vh - maxHeight - margin));
+          const left = Math.min(Math.max(margin, prev.left), Math.max(margin, vw - width - margin));
+          return { top, left, width, maxHeight };
+        });
+        return;
+      }
+      setPos(computePosition(anchorEl, placement));
+    };
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onDown);
     window.addEventListener('resize', reposition);
@@ -338,7 +399,52 @@ export default function FieldPickerModal({
       window.removeEventListener('resize', reposition);
       document.removeEventListener('scroll', reposition, true);
     };
-  }, [onClose, anchorEl, placement]);
+  }, [onClose, anchorEl, placement, userMoved]);
+
+  const clampPos = (top, left, width, maxHeight) => {
+    const margin = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    return {
+      top: Math.min(Math.max(margin, top), Math.max(margin, vh - maxHeight - margin)),
+      left: Math.min(Math.max(margin, left), Math.max(margin, vw - width - margin)),
+      width,
+      maxHeight,
+    };
+  };
+
+  const handleDragPointerDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('a, button, input, textarea, select, [role="button"]')) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startTop = pos.top;
+    const startLeft = pos.left;
+    dragRef.current = { startX, startY, startTop, startLeft };
+    setUserMoved(true);
+
+    const onMove = (ev) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const nextTop = drag.startTop + (ev.clientY - drag.startY);
+      const nextLeft = drag.startLeft + (ev.clientX - drag.startX);
+      setPos((prev) => clampPos(nextTop, nextLeft, prev.width, prev.maxHeight));
+    };
+
+    const onUp = () => {
+      dragRef.current = null;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.style.removeProperty('user-select');
+      document.body.style.removeProperty('cursor');
+    };
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  };
 
   return createPortal(
     <div
@@ -354,7 +460,11 @@ export default function FieldPickerModal({
       role="dialog"
       aria-label="Fields"
     >
-      <div className={styles.header}>
+      <div
+        className={styles.header}
+        onPointerDown={handleDragPointerDown}
+        role="presentation"
+      >
         <div className={styles.titleBlock}>
           <span className={styles.title}>Fields</span>
           <span className={styles.subtitle}>
@@ -410,36 +520,16 @@ export default function FieldPickerModal({
 
       <div className={styles.body}>
         <div className={styles.sidebar}>
-          {sidebarCategories.map((cat) => {
-            const isSelected = isSearching
-              ? cat.id === searchSelectedId
-              : cat.id === selectedCategoryId;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                className={`${styles.catBtn} ${isSelected ? styles.catBtnSelected : ''}`}
-                onClick={() => {
-                  if (isSearching) setSearchSelectedId((prev) => (prev === cat.id ? null : cat.id));
-                  else setSelectedCategoryId(cat.id);
-                }}
-              >
-                <CatLabel text={cat.label} />
-                <span className={styles.catMeta}>
-                  <span className={styles.catCount}>{cat.count}</span>
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: 16, color: '#8f8f8f', fontVariationSettings: "'FILL' 0, 'wght' 300" }}
-                  >
-                    chevron_right
-                  </span>
-                </span>
-              </button>
-            );
-          })}
+          {baseSidebarCategories.map(renderCategoryButton)}
+          {workflowSidebarCategories.length > 0 && (
+            <>
+              <div className={styles.sidebarSectionHeading}>
+                {WORKFLOW_SECTION_HEADING}
+              </div>
+              {workflowSidebarCategories.map(renderCategoryButton)}
+            </>
+          )}
         </div>
-
-        <div className={styles.divider} />
 
         <div className={styles.content}>
           <div className={styles.card}>

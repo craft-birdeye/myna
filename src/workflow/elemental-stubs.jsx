@@ -88,7 +88,7 @@ export function FormInput({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#757575',
+            color: '#717182',
             fontFamily: font,
           }}
         >
@@ -110,19 +110,21 @@ export function FormInput({
         style={{
           height: 36,
           padding: '0 12px',
-          border: noBorder ? 'none' : '1px solid #c5cad3',
+          border: noBorder ? 'none' : '1px solid #e5e9f0',
           borderRadius: noBorder ? 0 : 4,
           fontSize: 14,
+          lineHeight: '20px',
+          letterSpacing: '-0.28px',
           fontFamily: font,
-          color: '#212121',
-          background: readOnly ? '#FAFAFA' : disabled ? '#f5f5f5' : '#fff',
+          color: '#0d0d12',
+          background: readOnly ? '#fafafa' : disabled ? '#f5f5f5' : '#fff',
           outline: 'none',
           boxSizing: 'border-box',
           width: '100%',
           cursor: readOnly ? 'default' : undefined,
         }}
         onFocus={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#c5cad3'; }}
+        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#e5e9f0'; }}
       />
     </div>
   );
@@ -151,7 +153,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#757575',
+            color: '#717182',
             fontFamily: font,
           }}
         >
@@ -167,7 +169,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#757575',
+            color: '#717182',
             fontFamily: font,
           }}
         >
@@ -186,21 +188,22 @@ export function TextArea({
         readOnly={readOnly}
         style={{
           padding: '8px 12px',
-          border: '1px solid #c5cad3',
+          border: '1px solid #e5e9f0',
           borderRadius: 4,
           fontSize: 14,
           fontFamily: font,
-          color: '#212121',
-          background: readOnly ? '#FAFAFA' : disabled ? '#f5f5f5' : '#fff',
+          color: '#0d0d12',
+          background: readOnly ? '#fafafa' : disabled ? '#f5f5f5' : '#fff',
           outline: 'none',
           resize: readOnly ? 'none' : 'vertical',
           boxSizing: 'border-box',
           width: '100%',
           lineHeight: '20px',
+          letterSpacing: '-0.28px',
           cursor: readOnly ? 'default' : undefined,
         }}
         onFocus={(e) => { if (!readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = '#c5cad3'; }}
+        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = '#e5e9f0'; }}
       />
     </div>
   );
