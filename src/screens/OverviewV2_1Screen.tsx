@@ -318,11 +318,11 @@ function getSavedAgentLayoutOrder(agentIds: string[]): string[] {
 }
 
 // KPI ids that show a value but no period-over-period delta — the "Listings" headline count,
-// Average rank (already its own rank number, a delta doesn't read meaningfully), and every
+// Rank (already its own rank number, a delta doesn't read meaningfully), and every
 // action-needed stat (they're already flagged red; a delta on top reads as noise).
 const NO_DELTA_IDS = new Set([
   'listings',
-  'average-rank',
+  'rank',
   'awaiting-review',
   'pending-review',
   'replies-awaiting-approval',
@@ -372,15 +372,13 @@ const REVIEWS_STATS: V2Stat[] = [
   { id: '3-star-or-less', value: '34', label: '3 star or less' },
 ]
 
-// Search AI's own top-level KPI set — adds Sentiment score between Visibility score and Average
-// rank, and renames the headline stat to match the "AI Search" section rename below. Kept local
-// rather than editing the shared OVERVIEW_V2_SECTIONS file, since v2/v3 shouldn't pick it up.
+// Search AI KPI order — Search AI score, then Visibility, Citation share, Rank, Sentiment score.
 const SEARCH_AI_STATS: V2Stat[] = [
   { id: 'search-ai-score', value: '33.6%', label: 'AI Search score' },
-  { id: 'citation-share', value: '17.6%', label: 'Citation share' },
   { id: 'visibility-score', value: '60.2%', label: 'Visibility score' },
+  { id: 'citation-share', value: '17.6%', label: 'Citation share' },
+  { id: 'rank', value: '4', label: 'Rank' },
   { id: 'sentiment-score', value: '78', label: 'Sentiment score' },
-  { id: 'average-rank', value: '4', label: 'Average rank' },
 ]
 
 // Surveys has no top-level business-metric stats in the shared data (only agents/actionNeeded) —
