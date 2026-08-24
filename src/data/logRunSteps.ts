@@ -22,7 +22,7 @@ export interface WorkflowNodeSeed {
 
 export type LogStepPayloadSlice = Pick<
   RunLogStep,
-  'output' | 'inputs' | 'tool' | 'note' | 'outputLabel' | 'durationSecs'
+  'output' | 'inputs' | 'tool' | 'note' | 'outputLabel' | 'durationMs'
 >
 
 const FLOW_TYPE_TO_STEP_TYPE: Record<string, RunLogStepType> = {
@@ -36,8 +36,8 @@ const FLOW_TYPE_TO_STEP_TYPE: Record<string, RunLogStepType> = {
 }
 
 function pickPayloadFields(step: RunLogStep): LogStepPayloadSlice {
-  const { output, inputs, tool, note, outputLabel, durationSecs } = step
-  return { output, inputs, tool, note, outputLabel, durationSecs }
+  const { output, inputs, tool, note, outputLabel, durationMs } = step
+  return { output, inputs, tool, note, outputLabel, durationMs }
 }
 
 function zipStepsToPayloads(
