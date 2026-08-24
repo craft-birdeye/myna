@@ -3619,7 +3619,7 @@ export default function AgentBuilder({
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        <div className={`agent-builder agent-builder--rr-chrome${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
+        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
               {(onClose || explorationChrome) && (
@@ -3751,7 +3751,7 @@ export default function AgentBuilder({
               )}
 
               {!viewOnly && !versionHistoryMode && (
-                <div className="rr-chrome-left-stack">
+                <div className={`rr-chrome-left-stack${sep1Chrome ? ' rr-chrome-left-stack--labelled' : ''}`}>
                   <Tooltip content="Create with AI" variant="brief" side="right">
                     <button
                       type="button"
@@ -3781,6 +3781,7 @@ export default function AgentBuilder({
                         }}
                         aria-hidden
                       />
+                      {sep1Chrome && <span className="rr-chrome-left-label">AI</span>}
                     </button>
                   </Tooltip>
                   <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
@@ -3809,6 +3810,7 @@ export default function AgentBuilder({
                         icon: 'description',
                         color: '#00C950',
                         label: 'Task',
+                        underLabel: 'Actions',
                         tourId: 'tasks',
                       },
                       {
@@ -3819,12 +3821,14 @@ export default function AgentBuilder({
                         label: 'Controls',
                         tourId: 'controls',
                       },
-                    ].map((item) => (
-                      <Tooltip key={item.id} content={item.label} variant="brief" side="right">
+                    ].map((item) => {
+                      const displayLabel = sep1Chrome ? (item.underLabel || item.label) : item.label;
+                      return (
+                      <Tooltip key={item.id} content={displayLabel} variant="brief" side="right">
                         <button
                           type="button"
                           className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
-                          aria-label={item.label}
+                          aria-label={displayLabel}
                           data-tour-id={item.tourId || undefined}
                           aria-pressed={paletteSection === item.id}
                           onClick={() => {
@@ -3847,9 +3851,11 @@ export default function AgentBuilder({
                           ) : (
                             <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
                           )}
+                          {sep1Chrome && <span className="rr-chrome-left-label">{displayLabel}</span>}
                         </button>
                       </Tooltip>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
