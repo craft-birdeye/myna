@@ -526,6 +526,7 @@ export function AgentInstanceScreen({
       : METRICS_BY_AGENT[agentName]
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
+  const explorationLogLayout = workflowButtonOpensEditor
   const explorationFrontDeskStatus = workflowButtonOpensEditor && isFrontdeskAgent
   const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
@@ -621,6 +622,7 @@ export function AgentInstanceScreen({
 
   if (selectedRun) {
     const navigableRuns = getNavigableLogRows(agentName, logsQuery, logsFilters, {
+      explorationLogLayout,
       explorationFrontDeskStatus,
     })
     return (
@@ -635,6 +637,7 @@ export function AgentInstanceScreen({
             onBack={() => setSelectedRun(null)}
             onEditAgent={() => onEditAgent?.(instanceName)}
             explorationFrontDeskStatus={explorationFrontDeskStatus}
+            explorationLogLayout={explorationLogLayout}
             onTrackFeedback={(recommendationId) => {
               setSelectedRun(null)
               setActiveTab('recommendation')
@@ -920,6 +923,7 @@ export function AgentInstanceScreen({
                   searchQuery={supportsHeaderSearch ? logsQuery : ''}
                   filters={supportsHeaderSearch ? logsFilters : undefined}
                   explorationFrontDeskStatus={explorationFrontDeskStatus}
+            explorationLogLayout={explorationLogLayout}
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
@@ -942,7 +946,7 @@ export function AgentInstanceScreen({
         {showHeaderSearch && (
           <FilterPanel
             open={isOutcomesTab ? outcomesFilterOpen : logsFilterOpen}
-            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName, { explorationFrontDeskStatus })}
+            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName, { explorationLogLayout })}
             selections={isOutcomesTab ? outcomesFilters : logsFilters}
             onSelectionsChange={isOutcomesTab ? setOutcomesFilters : setLogsFilters}
             onClose={() =>

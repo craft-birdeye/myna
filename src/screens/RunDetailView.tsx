@@ -9,26 +9,18 @@ import {
   RunDetailsPanel,
   type RunLogStep,
 } from '../components'
-import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
+import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import {
-  HEALTHCARE_AGENT_WORKFLOWS,
-  HEALTHCARE_REMINDER_NORTH_WORKFLOW,
-} from '../data/agentWorkflows'
+  buildLogRunSteps,
+  getExecutedNodeIds,
+  resolveAgentWorkflowForLog,
+  type WorkflowNodeSeed,
+} from '../data/logRunSteps'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
 
 const AgentBuilder = AgentBuilderRaw as unknown as React.ComponentType<Record<string, unknown>>
-import StartNode from '../workflow/Molecules/Canvas/StartNode/StartNode'
-import CanvasNode from '../workflow/Molecules/Canvas/CanvasNode/CanvasNode'
-import ProceduresNode from '../workflow/Molecules/Canvas/ProceduresNode/ProceduresNode'
-import EndNode from '../workflow/Molecules/Canvas/EndNode/EndNode'
-import GraphControls from '../workflow/Modules/FlowCanvas/GraphControls/GraphControls'
-import {
-  FLOW_CONNECTOR_GAP,
-  FLOW_START_GAP,
-} from '../workflow/flowLayoutConstants'
-import '../workflow/FlowCanvas/FlowCanvas.css'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import '../workflow/AgentBuilder/AgentBuilder.css'
 
@@ -54,34 +46,6 @@ function sameLogRow(a: HealthcareLogRow, b: HealthcareLogRow) {
     && a.channel === b.channel
     && a.status === b.status
   )
-}
-
-const PROCEDURE_CHIPS = [
-  'Greet and open conversation',
-  'Talk to human',
-  'Handle general inquiry',
-  'Handle unclear message',
-  'Handle emergency or urgent concern',
-]
-
-/* ── workflow canvas connector (matches FlowCanvas edge styling, no add button in run view) ── */
-function RunFlowConnector({ height }: { height: number }) {
-  return (
-    <div className="relative flex items-center justify-center" style={{ height, width: 24 }}>
-      <div
-        className="pointer-events-none absolute bottom-0 top-0 left-1/2 w-px -translate-x-1/2"
-        style={{ background: '#ccd5e4' }}
-      />
-    </div>
-  )
-}
-
-const RUN_PROCEDURE_ITEMS = PROCEDURE_CHIPS.map((name) => ({ id: name, name }))
-
-function getImplementedSteps(row: HealthcareLogRow): LogStepId[] {
-  if (row.implementedSteps?.length) return row.implementedSteps
-  if (row.status === 'Complete' || row.status === 'Resolved') return ['trigger', 'procedures']
-  return ['trigger']
 }
 
 function parseDurationSecs(duration: string): number {
@@ -390,86 +354,6 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
   ]
 }
 
-/* ── generic workflow node shape (from agentWorkflows seeds) ── */
-interface WorkflowNodeSeed {
-  id: string
-  flowType: string
-  data: {
-    title: string
-    subtype?: string
-    descriptionPlaceholder?: string
-  }
-}
-
-/** Node ids this run executed — follows only the taken branch path, not every branch. */
-function getExecutedNodeIds(
-  row: HealthcareLogRow,
-  nodes: WorkflowNodeSeed[],
-  nodeDetails: Record<string, unknown>,
-): string[] {
-  // Explicit list from the log row wins when present.
-  const explicit = row.executedNodeIds
-  if (Array.isArray(explicit) && explicit.length > 0) {
-    return explicit.filter((id): id is string => typeof id === 'string')
-  }
-
-  if (row.status === 'In progress') {
-    return nodes.slice(0, Math.min(2, nodes.length)).map((node) => node.id)
-  }
-
-  const ids: string[] = []
-  const visit = (items: WorkflowNodeSeed[]) => {
-    items.forEach((node) => {
-      ids.push(node.id)
-      const detail = nodeDetails[node.id] as {
-        branches?: Array<{ id: string; isFallback?: boolean }>
-      } | undefined
-      if (!detail?.branches?.length) return
-
-      // Complete → primary (non-fallback) path; Failed → fallback / last path.
-      const chosen =
-        row.status === 'Failed' || row.status === 'Not resolved'
-          ? detail.branches.find((b) => b.isFallback) ?? detail.branches[detail.branches.length - 1]
-          : detail.branches.find((b) => !b.isFallback) ?? detail.branches[0]
-
-      const path = chosen
-        ? (nodeDetails[chosen.id] as { nodes?: WorkflowNodeSeed[] } | undefined)
-        : undefined
-      if (path?.nodes) visit(path.nodes)
-    })
-  }
-  visit(nodes)
-  return ids
-}
-
-/* ── View-only / Edit switch — log canvas chrome (no Run test) ── */
-function LogViewWorkflowChrome({ onEdit }: { onEdit?: () => void }) {
-  return (
-    <div className="log-view-workflow-chrome">
-      <div className="rr-chrome-mode-switch" role="group" aria-label="Workflow mode">
-        <button
-          type="button"
-          className="rr-chrome-mode-btn rr-chrome-mode-btn--active"
-          aria-current="true"
-          aria-label="View-only"
-        >
-          <span className="material-symbols-outlined" aria-hidden>visibility</span>
-          <span>View-only</span>
-        </button>
-        <button
-          type="button"
-          className="rr-chrome-mode-btn"
-          onClick={onEdit}
-          aria-label="Edit"
-        >
-          <span className="material-symbols-outlined" aria-hidden>edit</span>
-          <span>Edit</span>
-        </button>
-      </div>
-    </div>
-  )
-}
-
 /* ── run canvas — same AgentBuilder viewer as the Workflow tab, executed nodes in green ── */
 function AgentWorkflowRunCanvas({
   instanceName,
@@ -551,96 +435,6 @@ function AgentWorkflowRunCanvas({
   )
 }
 
-/* ── workflow canvas ── */
-function WorkflowCanvas({
-  instanceName,
-  implementedSteps,
-  onEditWorkflow,
-}: {
-  instanceName: string
-  implementedSteps: LogStepId[]
-  onEditWorkflow?: () => void
-}) {
-  const triggerImplemented = implementedSteps.includes('trigger')
-  const proceduresImplemented = implementedSteps.includes('procedures')
-  const [zoom, setZoom] = React.useState(85)
-
-  return (
-    <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
-      <div className="log-view-workflow-chrome-anchor">
-        <LogViewWorkflowChrome onEdit={onEditWorkflow} />
-      </div>
-
-      <div className="log-view-zoom-anchor">
-        <GraphControls
-          rrChrome
-          viewOnly
-          zoom={zoom}
-          onZoomSelect={(fraction: number) => setZoom(Math.round(fraction * 100))}
-          onFitView={() => setZoom(85)}
-          onFillView={() => setZoom(100)}
-        />
-      </div>
-
-      {/* Right padding keeps the flow clear of the overlaid details panel */}
-      <div
-        className="flex flex-col items-center pb-2xl pr-[620px] pt-[84px]"
-        style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-      >
-        <StartNode title={instanceName} subtitle="All locations" />
-
-        <RunFlowConnector height={FLOW_START_GAP} />
-
-        <div className="flow-canvas__node-center">
-          <CanvasNode
-            nodeType="trigger"
-            label="Trigger"
-            stepNumber={1}
-            title="Conversation trigger"
-            description="Agent triggers when a voice, chat, or text conversations starts"
-            titlePlaceholder=""
-            descriptionPlaceholder=""
-            viewOnly
-            onToggleChange={() => {}}
-            onAddClick={() => {}}
-            onDelete={() => {}}
-            onCopy={() => {}}
-            onReplace={() => {}}
-            state={triggerImplemented ? 'implemented' : 'default'}
-            runStatus={triggerImplemented ? 'done' : undefined}
-          />
-        </div>
-
-        <RunFlowConnector height={FLOW_CONNECTOR_GAP} />
-
-        <div className="flow-canvas__node-center">
-          <ProceduresNode
-            stepNumber={3}
-            procedureItems={RUN_PROCEDURE_ITEMS as never[]}
-            hasToggle
-            toggleEnabled
-            toggleDisabled
-            viewOnly
-            onToggleChange={() => {}}
-            onDelete={() => {}}
-            onCopy={() => {}}
-            onReplace={() => {}}
-            onMoveUp={() => {}}
-            onMoveDown={() => {}}
-            onDropProcedure={() => {}}
-            onRemoveProcedure={() => {}}
-            onSelectProcedure={() => {}}
-            state={proceduresImplemented ? 'implemented' : 'default'}
-            runStatus={proceduresImplemented ? 'done' : undefined}
-          />
-        </div>
-
-        <EndNode viewOnly hideAdd onDropBeforeEnd={() => {}} />
-      </div>
-    </div>
-  )
-}
-
 /* ── main export ── */
 export function RunDetailView({
   row,
@@ -652,7 +446,6 @@ export function RunDetailView({
   onSelectRun,
   explorationFrontDeskStatus = false,
 }: RunDetailViewProps) {
-  const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
   const isReviewResponse = /review response agent/i.test(agentName)
   const isReviewGeneration = /review generation agent/i.test(agentName)
@@ -660,12 +453,15 @@ export function RunDetailView({
   const isReminder = agentName === 'Reminder agent'
   const hasVoiceCall = row.channel.toLowerCase().includes('voice')
   const totalSecs = parseDurationSecs(row.duration)
-  const agentWorkflow =
-    instanceName === 'Reminder agent - North region'
-      ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
-      : agentName !== 'Front desk agent'
-        ? HEALTHCARE_AGENT_WORKFLOWS[agentName]
-        : undefined
+  const agentWorkflow = resolveAgentWorkflowForLog(instanceName, agentName)
+  const legacyLogSteps = isReviewResponse
+    ? buildReviewResponseRunSteps(row)
+    : isReviewGeneration
+      ? buildReviewGenerationRunSteps(row)
+      : undefined
+  const logSteps = agentWorkflow
+    ? buildLogRunSteps(row, agentWorkflow, { agentName, legacySteps: legacyLogSteps })
+    : legacyLogSteps
   const statusVariant =
     row.status === 'Complete' || row.status === 'Resolved'
       ? 'success'
@@ -681,9 +477,7 @@ export function RunDetailView({
 
   return (
     <div className="log-detail-view relative flex h-full flex-col bg-surface">
-      {/* Visual chrome shared by both canvas paths (AgentBuilder run canvas and the plain
-          WorkflowCanvas) so every agent's log view looks identical, whatever data it shows.
-          Scoped to .log-detail-view — .flow-canvas is shared with the workflow editor. */}
+      {/* Visual chrome for the AgentBuilder run canvas so every agent's log view looks identical. */}
       <style>{`
         .log-detail-view .flow-canvas,
         .log-detail-view .run-wf-bg,
@@ -691,24 +485,7 @@ export function RunDetailView({
           background-color: #f2f4f7 !important;
           background-image: none !important;
         }
-        /* Centered View-only/Edit + Run test chrome (fallback WorkflowCanvas path). */
-        .log-detail-view .log-view-workflow-chrome-anchor {
-          /* Center in the visible canvas (full width minus the 480px details panel),
-             same optical center as the Workflow tab chrome. */
-          position: absolute;
-          top: 16px;
-          left: calc((100% - 480px) / 2);
-          transform: translateX(-50%);
-          z-index: 60;
-          pointer-events: none;
-        }
-        .log-detail-view .log-view-workflow-chrome {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          pointer-events: auto;
-        }
-        /* Bottom-left zoom floater (fallback WorkflowCanvas path). */
+        /* Bottom-left zoom floater (AgentBuilder canvas path). */
         .log-detail-view .log-view-zoom-anchor {
           position: absolute;
           bottom: 16px;
@@ -790,24 +567,12 @@ export function RunDetailView({
             row={row}
             onEditWorkflow={onEditAgent}
           />
-        ) : (
-          <WorkflowCanvas
-            instanceName={canvasInstanceName}
-            implementedSteps={getImplementedSteps(row)}
-            onEditWorkflow={onEditAgent}
-          />
-        )}
+        ) : null}
 
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
           {useRunDetailsPanel ? (
             <RunDetailsPanel
-              steps={
-                isReviewResponse
-                  ? buildReviewResponseRunSteps(row)
-                  : isReviewGeneration
-                    ? buildReviewGenerationRunSteps(row)
-                    : undefined
-              }
+              steps={logSteps}
               showTabs={!isReviewAgent}
               title={isReviewAgent ? 'Log details' : undefined}
               showHeader={isReviewAgent}
@@ -821,6 +586,7 @@ export function RunDetailView({
             <LogDetailsPanel
               row={row}
               agentName={instanceName}
+              steps={logSteps}
               onTrackFeedback={onTrackFeedback}
               callEndResultBadge={explorationFrontDeskStatus ? String(row.status) : undefined}
               userRating={

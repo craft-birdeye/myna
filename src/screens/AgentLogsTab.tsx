@@ -76,8 +76,8 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'channel', label: 'Source', width: 120, sortable: true },
 ]
 
-/** Front desk exploration — short AI-summary blurbs for Intent hover tooltips. */
-const EXPLORATION_INTENT_SUMMARIES: Record<string, string> = {
+/** Front desk exploration — short AI-summary blurbs for Topic hover tooltips. */
+const EXPLORATION_TOPIC_SUMMARIES: Record<string, string> = {
   'Appointment booked':
     'Caller scheduled a visit. Agent confirmed availability, collected contact details, and sent a booking confirmation.',
   'Appointment cancelled':
@@ -90,27 +90,25 @@ const EXPLORATION_INTENT_SUMMARIES: Record<string, string> = {
     'Agent could not fully resolve the request and warm-transferred the caller with context packaged for a live representative.',
 }
 
-function explorationIntentSummary(intent: string): string {
+function explorationTopicSummary(topic: string): string {
   return (
-    EXPLORATION_INTENT_SUMMARIES[intent] ??
-    `Conversation focused on ${intent.toLowerCase()}. Agent gathered key details and guided the caller to next steps.`
+    EXPLORATION_TOPIC_SUMMARIES[topic] ??
+    `Conversation focused on ${topic.toLowerCase()}. Agent gathered key details and guided the caller to next steps.`
   )
 }
 
-function ExplorationIntentCell({ intent }: { intent: string }) {
-  const summary = explorationIntentSummary(intent)
+function ExplorationTopicCell({ topic }: { topic: string }) {
+  const summary = explorationTopicSummary(topic)
   return (
     <Tooltip variant="detail" side="top" content={summary}>
-      <span className="block truncate">{intent}</span>
+      <span className="block truncate">{topic}</span>
     </Tooltip>
   )
 }
 
+/** Front desk exploration — Timestamp → Status → Contact → Channel → Duration → Topic. */
 const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
-  { key: 'contact', label: 'Contact', width: 180, sortable: true },
-  { key: 'channel', label: 'Channel', width: 140, sortable: true },
-  { key: 'duration', label: 'Duration', width: 120, sortable: true },
   {
     key: 'status',
     label: 'Status',
@@ -118,13 +116,16 @@ const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     sortable: true,
     render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
   },
+  { key: 'contact', label: 'Contact', width: 180, sortable: true },
+  { key: 'channel', label: 'Channel', width: 140, sortable: true },
+  { key: 'duration', label: 'Duration', width: 120, sortable: true },
   {
     key: 'topic',
-    label: 'Intent',
+    label: 'Topic',
     width: 220,
     sortable: true,
     truncate: false,
-    render: (v) => <ExplorationIntentCell intent={String(v ?? '')} />,
+    render: (v) => <ExplorationTopicCell topic={String(v ?? '')} />,
   },
 ]
 
@@ -158,6 +159,21 @@ const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
 const RATING_CELL = (v: unknown) => <span>{typeof v === 'number' ? `${v} star` : 'No rating'}</span>
 const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
 const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
+
+const REVIEW_EXPLORATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
+  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 130,
+    sortable: true,
+    truncate: false,
+    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+  },
+  { key: 'contact', label: 'Contact', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'source', label: 'Channel', width: 160, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'comment', label: 'Topic', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+]
 
 const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 200, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
@@ -227,7 +243,7 @@ function logRowsForAgent(agentName?: string): Record<string, unknown>[] {
  * Filter fields for the Logs tab, with options derived from the agent's own rows so the panel
  * can never offer a value that filters to nothing. Ids match the row keys they filter on.
  */
-export function getLogFilterFields(agentName?: string, opts?: { explorationFrontDeskStatus?: boolean }) {
+export function getLogFilterFields(agentName?: string, opts?: { explorationLogLayout?: boolean }) {
   const rows = logRowsForAgent(agentName)
   const distinct = (pick: (r: Record<string, unknown>) => unknown) =>
     Array.from(
@@ -236,7 +252,7 @@ export function getLogFilterFields(agentName?: string, opts?: { explorationFront
   const asOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }))
 
   const statusValues = distinct((r) => r.status)
-  const statusOptions = opts?.explorationFrontDeskStatus
+  const statusOptions = opts?.explorationLogLayout
     ? asOptions(statusValues.map(mapExplorationFrontDeskStatus))
     : asOptions(statusValues)
 
@@ -245,7 +261,7 @@ export function getLogFilterFields(agentName?: string, opts?: { explorationFront
     // The two log shapes name this column `source` (reviews) or `channel` (conversations).
     {
       id: 'source',
-      label: opts?.explorationFrontDeskStatus ? 'Channel' : 'Source',
+      label: opts?.explorationLogLayout ? 'Channel' : 'Source',
       options: asOptions(distinct((r) => r.source ?? r.channel)),
     },
   ]
@@ -262,7 +278,7 @@ export function applyLogFilters<T extends Record<string, unknown>>(
   rows: T[],
   query: string,
   filters: Record<string, string[]>,
-  opts?: { explorationFrontDeskStatus?: boolean },
+  opts?: { explorationLogLayout?: boolean },
 ): T[] {
   const q = query.trim().toLowerCase()
   return rows.filter((row) => {
@@ -274,7 +290,7 @@ export function applyLogFilters<T extends Record<string, unknown>>(
       const cell = key === 'source' ? (row.source ?? row.channel) : row[key]
       if (cell == null) return true
       const cellStr = String(cell)
-      if (key === 'status' && opts?.explorationFrontDeskStatus) {
+      if (key === 'status' && opts?.explorationLogLayout) {
         return values.includes(mapExplorationFrontDeskStatus(cellStr))
       }
       return values.includes(cellStr)
@@ -290,7 +306,7 @@ export function getNavigableLogRows(
   agentName?: string,
   searchQuery = '',
   filters: Record<string, string[]> = {},
-  opts?: { explorationFrontDeskStatus?: boolean },
+  opts?: { explorationLogLayout?: boolean; explorationFrontDeskStatus?: boolean },
 ): HealthcareLogRow[] {
   let rows: HealthcareLogRow[]
   if (agentName === 'Reminder agent') {
@@ -323,7 +339,9 @@ interface AgentLogsTabProps {
   searchQuery?: string
   /** Header filter selections, keyed by `LOG_FILTER_FIELDS` id. */
   filters?: Record<string, string[]>
-  /** Front desk exploration only: Complete→Resolved, Failed→Not resolved. */
+  /** Exploration chrome: Timestamp → Status → Contact → Channel → Topic (no duration). */
+  explorationLogLayout?: boolean
+  /** Front desk exploration only: Complete→Resolved, Failed→Not resolved row mapping. */
   explorationFrontDeskStatus?: boolean
 }
 
@@ -332,11 +350,12 @@ export function AgentLogsTab({
   onViewRun,
   searchQuery = '',
   filters = {},
+  explorationLogLayout = false,
   explorationFrontDeskStatus = false,
 }: AgentLogsTabProps) {
   /** Narrows a row set by the header search + filters. */
   const f = <T extends Record<string, unknown>>(rows: T[]) =>
-    applyLogFilters(rows, searchQuery, filters, { explorationFrontDeskStatus })
+    applyLogFilters(rows, searchQuery, filters, { explorationLogLayout })
 
   const mapStatus = (rows: HealthcareLogRow[]) =>
     explorationFrontDeskStatus ? withExplorationFrontDeskLogs(rows) : rows
@@ -363,7 +382,7 @@ export function AgentLogsTab({
     return (
       <div className="px-lg py-lg">
         <DataTable
-          columns={REVIEW_RESPONSE_LOG_COLUMNS}
+          columns={explorationLogLayout ? REVIEW_EXPLORATION_LOG_COLUMNS : REVIEW_RESPONSE_LOG_COLUMNS}
           data={f(REVIEW_RESPONSE_LOGS_ROWS)}
           rowAction={{
             icon: 'visibility',
