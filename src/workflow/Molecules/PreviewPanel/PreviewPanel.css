@@ -1153,7 +1153,7 @@
 .pp-summary-card__header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
   padding: 10px 14px;
   background: none;
@@ -1164,21 +1164,11 @@
 }
 
 .pp-summary-card__icon-wrap {
-  width: 22px;
-  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #6d4bbc;
   flex-shrink: 0;
-}
-
-.pp-summary-card__icon-wrap .material-symbols-outlined {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  line-height: 1;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
 .pp-summary-card__label {

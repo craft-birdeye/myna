@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import '../../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { Icon } from '../Icon/Icon'
+import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import type { VoiceChatDrawerProps } from './VoiceChatDrawer.types'
@@ -58,7 +59,7 @@ export function VoiceChatDrawer({
                   onClick={() => setSummaryOpen((v) => !v)}
                 >
                   <span className="pp-summary-card__icon-wrap" aria-hidden>
-                    <span className="material-symbols-outlined">auto_awesome</span>
+                    <AiCoachSparkleIcon size={12} />
                   </span>
                   <span className="pp-summary-card__label">Summary</span>
                   <span className="material-symbols-outlined pp-summary-card__chevron">
@@ -97,7 +98,7 @@ export function VoiceChatDrawer({
                             }
                             className="group flex items-center gap-xs text-small text-text-action"
                           >
-                            <Icon name="auto_awesome" size={16} />
+                            <AiCoachSparkleIcon />
                             <span className="group-hover:underline">Coach agent</span>
                           </button>
                         )}

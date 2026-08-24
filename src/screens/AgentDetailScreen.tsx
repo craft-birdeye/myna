@@ -57,6 +57,7 @@ import { HC_PROCEDURES } from '../data/procedureData'
 import { SendIcon } from '../assets/SendIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
 import iconAgentsPurple from '../assets/icon-agents-purple.svg'
+import iconAgentsTwoStarSparkle from '../assets/icon-agents-two-star-sparkle.svg'
 import agentEmptyState from '../assets/agent-empty-state.svg'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
@@ -6401,8 +6402,8 @@ function HealthcareFrontdeskCreateAgentLive({
         <span
           className="ai-gradient-icon size-10"
           style={{
-            WebkitMaskImage: `url("${iconAgentsPurple}")`,
-            maskImage: `url("${iconAgentsPurple}")`,
+            WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
+            maskImage: `url("${iconAgentsTwoStarSparkle}")`,
           }}
           aria-hidden
         />

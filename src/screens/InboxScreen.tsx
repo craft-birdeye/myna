@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChartCard, ChatBubble, ChatSystemLabel, DataTable, Icon, RunConversationThread, SankeyChart, ShareFeedbackModal, StackedBarChart, SummaryStats, Toast, TopNav, VoicemailMessage, type Column, type MessageFeedbackValue, type NavSection, type VoiceChatMessage } from '../components'
+import { AiCoachSparkleIcon } from '../assets/AiCoachSparkleIcon'
 import voicemailSample from '../assets/voicemail_sample.mp3'
 import {
   FRONT_DESK_CALL_SUMMARY,
@@ -1243,7 +1244,7 @@ export function InboxScreen({
                                 onClick={() => setShareFeedbackMessageId(event.id)}
                                 className="group flex items-center gap-xs text-small text-text-action"
                               >
-                                <Icon name="auto_awesome" size={16} />
+                                <AiCoachSparkleIcon />
                                 <span className="group-hover:underline">Coach agent</span>
                               </button>
                             ))}
