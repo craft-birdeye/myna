@@ -301,6 +301,7 @@ export default function LoopNode({
   description,
   titlePlaceholder = 'For each loop',
   descriptionPlaceholder = 'Repeat the following tasks for each theme',
+  actionLabel = 'Task',
   loopChildren = [],
   loopFlow = [],
   loopNodeDetails = {},
@@ -453,11 +454,11 @@ export default function LoopNode({
                   >
                     <CanvasNode
                       nodeType="task"
-                      label="Task"
+                      label={actionLabel}
                       stepNumber={child.stepNumber}
                       title={child.title}
                       description={child.subtitle}
-                      titlePlaceholder={child.titlePlaceholder || 'Enter task name'}
+                      titlePlaceholder={child.titlePlaceholder || `Enter ${actionLabel.toLowerCase()} name`}
                       descriptionPlaceholder={child.descriptionPlaceholder || 'Enter description'}
                       hasToggle={child.hasToggle}
                       toggleEnabled={child.toggleEnabled ?? true}

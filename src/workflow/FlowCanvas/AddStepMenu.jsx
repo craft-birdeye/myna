@@ -142,6 +142,7 @@ export default function AddStepMenu({
   // Lock horizontal origin when the menu opens so expand/hover never shifts Branch/Delay.
   const originLeftRef = useRef(null);
 
+  const actionLabel = singleSearch ? 'Action' : 'Task';
   const taskCards = useMemo(() => getAddStepTaskCards(product, agentName), [product, agentName]);
   const controlCards = useMemo(() => getAddStepControlCards(), []);
   const subItemsMap = useMemo(() => getTaskSubItems(product, agentName), [product, agentName]);
@@ -271,7 +272,7 @@ export default function AddStepMenu({
 
         {filteredTasks.length > 0 && (
           <div className="add-step-menu__section">
-            <p className="add-step-menu__section-label">Tasks</p>
+            <p className="add-step-menu__section-label">{actionLabel}s</p>
             <div className="add-step-menu__section-list">
               {filteredTasks.map((card) => (
                 <NavRow

@@ -70,6 +70,8 @@ interface AgentInstanceScreenProps {
   workflowButtonOpensEditor?: boolean
   /** Sep 1 review response flow hides Recommendation. */
   hideRecommendationTab?: boolean
+  /** Sep 1: Logs tab "Task"/"Task output" reads "Action"/"Action output" instead. */
+  sep1Chrome?: boolean
 }
 
 interface LocationRow {
@@ -432,6 +434,7 @@ export function AgentInstanceScreen({
   initialFeedbackPrefill,
   workflowButtonOpensEditor = false,
   hideRecommendationTab = false,
+  sep1Chrome = false,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -635,6 +638,7 @@ export function AgentInstanceScreen({
             onBack={() => setSelectedRun(null)}
             onEditAgent={() => onEditAgent?.(instanceName)}
             explorationFrontDeskStatus={explorationFrontDeskStatus}
+            sep1Chrome={sep1Chrome}
             onTrackFeedback={(recommendationId) => {
               setSelectedRun(null)
               setActiveTab('recommendation')

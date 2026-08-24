@@ -1017,6 +1017,8 @@ export default function LHSDrawer({
    *  pill in the Create with AI composer so a follow-up message can reference it. */
   nodeContext = null,
   onClearNodeContext = null,
+  /** Sep 1: floating "Tasks" palette section reads "Actions" instead. */
+  actionLabel = 'Task',
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
   // Review response / Review generation agents get their own "Event based" trigger
@@ -1798,9 +1800,9 @@ export default function LHSDrawer({
       Tasks: {
         iconSrc: iconRrTasks,
         tone: 'tasks',
-        title: 'Tasks',
+        title: `${actionLabel}s`,
         content: tasksContent,
-        searchPlaceholder: 'Search tasks...',
+        searchPlaceholder: `Search ${actionLabel.toLowerCase()}s...`,
       },
       Procedures: {
         iconSrc: iconRrProcedures,

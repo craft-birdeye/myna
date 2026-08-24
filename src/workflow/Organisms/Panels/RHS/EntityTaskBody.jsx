@@ -17,6 +17,7 @@ export default function EntityTaskBody({
    * dropped tool never looks broken before the user has had a chance to set it up.
    */
   showToolErrors = false,
+  actionLabel = 'Task',
 }) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
@@ -64,7 +65,7 @@ export default function EntityTaskBody({
       <FormInput
         name="taskName"
         type="text"
-        label="Task name"
+        label={`${actionLabel} name`}
         placeholder="Enter name"
         value={taskName}
         onChange={handleTaskName}

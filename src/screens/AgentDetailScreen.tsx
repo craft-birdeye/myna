@@ -8111,6 +8111,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           product={product}
           workflowButtonOpensEditor={isExplorationAgents}
           hideRecommendationTab={navId === 'response-agents-sep-1'}
+          sep1Chrome={isSep1Agents}
         />
         <Toast
           message={toastMessage}

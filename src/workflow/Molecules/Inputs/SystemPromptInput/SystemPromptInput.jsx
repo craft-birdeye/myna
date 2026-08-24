@@ -5,7 +5,7 @@ import { VariableIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import styles from './SystemPromptInput.module.css';
 
-export default function SystemPromptInput({ value, onChange, required, showTriggerFields = true }) {
+export default function SystemPromptInput({ value, onChange, required, showTriggerFields = true, actionLabel = 'Task' }) {
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -105,6 +105,7 @@ export default function SystemPromptInput({ value, onChange, required, showTrigg
           onSelectField={handleFieldSelect}
           anchorEl={fieldsBtnRef.current}
           showTriggerFields={showTriggerFields}
+          actionLabel={actionLabel}
         />
       )}
     </>

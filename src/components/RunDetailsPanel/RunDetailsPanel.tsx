@@ -191,11 +191,12 @@ export function FieldList({ fields }: { fields: RunLogField[] }) {
   )
 }
 
-function RunLogStepRow({ step }: { step: RunLogStep }) {
+function RunLogStepRow({ step, taskLabel }: { step: RunLogStep; taskLabel: string }) {
   const [outputOpen, setOutputOpen] = useState(true)
   const [inputsOpen, setInputsOpen] = useState(false)
   const [toolOpen, setToolOpen] = useState(false)
   const meta = TYPE_META[step.type]
+  const stepLabel = step.type === 'task' ? taskLabel : meta.label
   const outputLabel =
     step.outputLabel ??
     (step.type === 'trigger'
@@ -204,7 +205,7 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
         ? 'Procedure output'
         : step.type === 'branch'
           ? 'Branch output'
-          : 'Task output')
+          : `${taskLabel} output`)
 
   return (
     <div className="relative flex gap-md">
@@ -213,7 +214,7 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
       <div className="min-w-0 flex-1 pb-2xl">
         <div className="flex items-center gap-xs text-small text-text-tertiary">
           <Icon name={meta.icon} size={16} className={`shrink-0 ${meta.colorClass}`} />
-          {meta.label}
+          {stepLabel}
         </div>
         <p className="mt-xs text-body text-text-primary">
           {step.stepNumber}. {step.title}
@@ -284,11 +285,11 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
   )
 }
 
-function LogsTab({ steps }: { steps: RunLogStep[] }) {
+function LogsTab({ steps, taskLabel }: { steps: RunLogStep[]; taskLabel: string }) {
   return (
     <div className="flex flex-col">
       {steps.map((step) => (
-        <RunLogStepRow key={step.id} step={step} />
+        <RunLogStepRow key={step.id} step={step} taskLabel={taskLabel} />
       ))}
       <div className="flex items-center gap-md">
         <Icon name="check_circle" size={20} fill className="shrink-0 text-accent-positive" />
@@ -665,6 +666,7 @@ export function RunDetailsPanel({
   callDetailsContent,
   agentName,
   onTrackFeedback,
+  taskLabel = 'Task',
 }: RunDetailsPanelProps) {
   const [tab, setTab] = useState<'logs' | 'conversation'>('conversation')
   const hasCallDetails = Boolean(callDetails || callDetailsContent)
@@ -743,7 +745,7 @@ export function RunDetailsPanel({
             skipContainerTopPadding ? '' : 'pt-lg'
           }`}
         >
-          <LogsTab steps={steps} />
+          <LogsTab steps={steps} taskLabel={taskLabel} />
         </div>
       ) : (
         <div

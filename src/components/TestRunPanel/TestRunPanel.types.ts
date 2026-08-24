@@ -14,4 +14,6 @@ export interface TestRunPanelProps {
   /** Closes the panel and clears all canvas highlighting. Fired by both the header ✕ and
    *  the footer "Exit test" button. */
   onExit: () => void
+  /** Sep 1: "Task"/"Task output" reads "Action"/"Action output" instead. */
+  taskLabel?: string
 }

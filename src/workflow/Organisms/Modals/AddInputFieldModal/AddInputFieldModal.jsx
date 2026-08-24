@@ -19,7 +19,7 @@ function FieldLabel({ children, required = false }) {
   );
 }
 
-export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLearnMore }) {
+export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLearnMore, actionLabel = 'Task' }) {
   const [fieldName, setFieldName] = useState('');
   const [fieldValueText, setFieldValueText] = useState('');
   const [fieldValueChips, setFieldValueChips] = useState([]);
@@ -123,6 +123,7 @@ export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLe
           placement="dropdown"
           showTriggerFields
           overlayZIndex={zIndex + 100}
+          actionLabel={actionLabel}
         />
       )}
     </>

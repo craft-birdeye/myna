@@ -111,7 +111,7 @@ function insertAtCursor(textarea, text, fallbackPrev = '') {
  * Tool card's pencil. Saving a complete config clears that card's
  * "Missing mandatory fields" error.
  */
-export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSave }) {
+export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSave, actionLabel = 'Task' }) {
   const [responseType, setResponseType] = useState('custom');
   const [customText, setCustomText] = useState('');
   const [templateIds, setTemplateIds] = useState([]);
@@ -233,6 +233,7 @@ export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSa
                       showTriggerFields
                       placement="dropdown"
                       overlayZIndex={10050}
+                      actionLabel={actionLabel}
                     />
                   )}
                 </div>

@@ -79,4 +79,6 @@ export interface LogDetailsPanelProps {
   userRating?: string
   /** Front desk exploration: language / translate control under AI summary. */
   showTranscriptTranslation?: boolean
+  /** Sep 1: Logs "Task"/"Task output" reads "Action"/"Action output" instead. */
+  taskLabel?: string
 }

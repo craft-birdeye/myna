@@ -72,4 +72,6 @@ export interface RunDetailsPanelProps {
   agentName?: string
   /** Navigates to the recommendation a message's feedback landed on (see agentName). */
   onTrackFeedback?: (recommendationId: string) => void
+  /** Sep 1: "Task"/"Task output" reads "Action"/"Action output" instead. */
+  taskLabel?: string
 }

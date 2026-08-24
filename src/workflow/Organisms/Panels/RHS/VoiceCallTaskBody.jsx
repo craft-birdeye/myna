@@ -17,6 +17,7 @@ export default function VoiceCallTaskBody({
   onEditTool,
   onSwapTool,
   viewOnly = false,
+  actionLabel = 'Task',
 }) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? DEFAULT_TASK_NAME);
   const [description, setDescription] = useState(initialValues.description ?? DEFAULT_DESCRIPTION);
@@ -65,7 +66,7 @@ export default function VoiceCallTaskBody({
       <FormInput
         name="taskName"
         type="text"
-        label="Task name"
+        label={`${actionLabel} name`}
         placeholder="Enter name"
         value={taskName}
         onChange={handleTaskName}

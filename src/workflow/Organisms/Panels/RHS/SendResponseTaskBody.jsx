@@ -38,7 +38,7 @@ function ConfigureMessageInfo() {
   );
 }
 
-export default function SendResponseTaskBody({ initialValues = {}, onFieldChange, viewOnly = false }) {
+export default function SendResponseTaskBody({ initialValues = {}, onFieldChange, viewOnly = false, actionLabel = 'Task' }) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? DEFAULT_TASK_NAME);
   const [description, setDescription] = useState(initialValues.description ?? '');
   const [messageMode, setMessageMode] = useState(initialValues.messageMode ?? 'Literal');
@@ -77,7 +77,7 @@ export default function SendResponseTaskBody({ initialValues = {}, onFieldChange
       <FormInput
         name="taskName"
         type="text"
-        label="Task name"
+        label={`${actionLabel} name`}
         placeholder="Enter name"
         value={taskName}
         onChange={handleTaskName}
@@ -138,6 +138,7 @@ export default function SendResponseTaskBody({ initialValues = {}, onFieldChange
             onChange={handleLiteralMessage}
             placeholder="Enter literal message"
             readOnly={viewOnly}
+            actionLabel={actionLabel}
           />
         ) : (
           <UserPromptInput
@@ -146,6 +147,7 @@ export default function SendResponseTaskBody({ initialValues = {}, onFieldChange
             onChange={handlePromptMessage}
             placeholder="Enter prompt"
             readOnly={viewOnly}
+            actionLabel={actionLabel}
           />
         )}
       </div>

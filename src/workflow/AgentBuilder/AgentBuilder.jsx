@@ -298,7 +298,7 @@ const TASK_DROP_DEFAULTS = {
   },
 };
 
-function makeNodeConfig(id, type, label, description) {
+function makeNodeConfig(id, type, label, description, actionLabel = 'Task') {
   let flowType = 'task';
   let hasAiIcon = false;
   let titlePlaceholder = 'Enter name';
@@ -330,7 +330,7 @@ function makeNodeConfig(id, type, label, description) {
   } else if (type === 'task') {
     flowType = 'task';
     hasAiIcon = label === 'Custom';
-    titlePlaceholder = 'Enter task name';
+    titlePlaceholder = `Enter ${actionLabel.toLowerCase()} name`;
   }
 
   return {
@@ -2263,6 +2263,7 @@ export default function AgentBuilder({
         data: {
           ...n.data,
           onToggle: () => handleToggleBranchCollapse(n.data.parentBranchId),
+          actionLabel: sep1Chrome ? 'Action' : 'Task',
         },
       };
     }
@@ -2273,6 +2274,7 @@ export default function AgentBuilder({
           ...n.data,
           viewOnly,
           focusBranchPathId,
+          actionLabel: sep1Chrome ? 'Action' : 'Task',
           onDelete:
             viewOnly || n.data.isFallback || n.data.isVoiceCallBranch || !n.data.canDeletePath
               ? undefined
@@ -2290,6 +2292,7 @@ export default function AgentBuilder({
       || (hasTaskSaveError ? 'Missing mandatory fields' : undefined);
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
+      actionLabel: sep1Chrome ? 'Action' : 'Task',
       onDelete: () => handleDeleteNode(n.id),
       onCopy: () => handleCopyNode(n.id),
       hasClipboard: !!clipboard,
@@ -2423,7 +2426,7 @@ export default function AgentBuilder({
     const effectiveType = isVoiceCallDrop ? 'voiceCall' : type;
 
     const id = nextId();
-    const newNode = makeNodeConfig(id, effectiveType, label, description);
+    const newNode = makeNodeConfig(id, effectiveType, label, description, sep1Chrome ? 'Action' : 'Task');
     // For procedures, `description` is the procedure name from the sub-item dropdown
     // while `label` is the category name — use the procedure name as the seed ID
     const procedureSeed = effectiveType === 'procedures'
@@ -3102,7 +3105,7 @@ export default function AgentBuilder({
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
-          bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
+          bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, actionLabel: sep1Chrome ? 'Action' : 'Task' }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
         />
@@ -3198,7 +3201,7 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="llmTask"
-          title="Task"
+          title={sep1Chrome ? 'Action' : 'Task'}
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
@@ -3231,6 +3234,7 @@ export default function AgentBuilder({
             activeTab: llmTaskTab,
             onTabChange: llmTaskExplorationLayout ? setLlmTaskTab : undefined,
             onOpenGlossary: openGlossary,
+            actionLabel: sep1Chrome ? 'Action' : 'Task',
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3242,7 +3246,7 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="voiceCallTask"
-          title="Task"
+          title={sep1Chrome ? 'Action' : 'Task'}
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
@@ -3257,6 +3261,7 @@ export default function AgentBuilder({
               });
             },
             onSwapTool: () => setToolPickerOpen(true),
+            actionLabel: sep1Chrome ? 'Action' : 'Task',
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3268,13 +3273,14 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="sendResponseTask"
-          title="Task"
+          title={sep1Chrome ? 'Action' : 'Task'}
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
             onFieldChange: activeFieldChange,
+            actionLabel: sep1Chrome ? 'Action' : 'Task',
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -3285,7 +3291,7 @@ export default function AgentBuilder({
     return (
       <RHS
         variant="entityTask"
-        title="Task details"
+        title={sep1Chrome ? 'Action details' : 'Task details'}
         viewOnly={rhsViewOnly}
         inlineFooter={inlineRhsFooter}
         bodyProps={{
@@ -3305,6 +3311,7 @@ export default function AgentBuilder({
             });
           },
           onSwapTool: () => setToolPickerOpen(true),
+          actionLabel: sep1Chrome ? 'Action' : 'Task',
         }}
         onClose={handleCloseDrawer}
         onSave={handleSaveTaskDetails}
@@ -3873,6 +3880,7 @@ export default function AgentBuilder({
                     product={product}
                     agentName={agentName}
                     procedures={procedures}
+                    actionLabel={sep1Chrome ? 'Action' : 'Task'}
                     onCollapse={() => setPaletteSection(null)}
                     onDropNode={handleDropNode}
                     onProcedureClick={(procedureId) => {
@@ -3997,6 +4005,7 @@ export default function AgentBuilder({
                   activeIndex={testRun.activeIndex}
                   status={testRun.status}
                   onExit={() => setTestRunOpen(false)}
+                  taskLabel={sep1Chrome ? 'Action' : 'Task'}
                 />
               </div>
             </>
@@ -4042,6 +4051,7 @@ export default function AgentBuilder({
                 agentName={agentName}
                 testAppointment={testAppointment}
                 onEditAppointment={() => setBookTestModalOpen(true)}
+                actionLabel={sep1Chrome ? 'Action' : 'Task'}
               />
             </div>
           )}
@@ -4133,7 +4143,7 @@ export default function AgentBuilder({
       <ReminderToolDrawer isOpen={reminderToolOpen} onClose={() => setReminderToolOpen(false)} initialValues={currentDetails} onFieldChange={activeFieldChange} />
 
       {/* ─── Voice call tool drawer ─── */}
-      <VoiceCallToolDrawer isOpen={voiceCallToolOpen} onClose={() => setVoiceCallToolOpen(false)} initialValues={currentDetails} product={product} onFieldChange={activeFieldChange} />
+      <VoiceCallToolDrawer isOpen={voiceCallToolOpen} onClose={() => setVoiceCallToolOpen(false)} initialValues={currentDetails} product={product} onFieldChange={activeFieldChange} actionLabel={sep1Chrome ? 'Action' : 'Task'} />
 
       {/* ─── Transfer tool drawer ─── */}
       <TransferToolDrawer isOpen={transferToolOpen} onClose={() => setTransferToolOpen(false)} />
@@ -4158,6 +4168,7 @@ export default function AgentBuilder({
           activeFieldChange('handleResponse', config);
           setHandleResponseToolOpen(false);
         }}
+        actionLabel={sep1Chrome ? 'Action' : 'Task'}
       />
 
       {/* ─── Tool configuration overlay ─── */}

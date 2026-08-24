@@ -158,10 +158,10 @@ export function OutboundPreviewLogsPanel({
   );
 }
 
-export function buildVoiceCallLogOutput(phone, completed = false) {
+export function buildVoiceCallLogOutput(phone, completed = false, actionLabel = 'Task') {
   return {
     id: 'vc-out',
-    label: 'Task output',
+    label: `${actionLabel} output`,
     rows: [
       { label: 'Source', value: 'Voice call' },
       {
@@ -234,7 +234,7 @@ function LogKindIcon({ kind }) {
   );
 }
 
-export function buildReminderPreviewLogSteps(booking) {
+export function buildReminderPreviewLogSteps(booking, actionLabel = 'Task') {
   const patientName = booking
     ? `${booking.firstName} ${booking.lastName}`.trim()
     : 'Sarah Lawson';
@@ -283,7 +283,7 @@ export function buildReminderPreviewLogSteps(booking) {
       {
         id: 'reminder-email',
         kind: 'task',
-        kindLabel: 'Task',
+        kindLabel: actionLabel,
         stepLabel: '2. Appointment reminder',
         awaitingResponse: true,
         outputSections: [
@@ -320,7 +320,7 @@ export function buildReminderPreviewLogSteps(booking) {
       {
         id: 'voice-call',
         kind: 'task',
-        kindLabel: 'Task',
+        kindLabel: actionLabel,
         stepLabel: '5. Initiating voice call',
         outputSections: [],
       },

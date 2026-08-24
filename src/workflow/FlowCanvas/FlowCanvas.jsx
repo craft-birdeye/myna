@@ -112,7 +112,7 @@ function TaskNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="task" label="Task" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="task" label={data.actionLabel || 'Task'} runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -123,7 +123,7 @@ function VoiceCallNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="task" label="Task" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="task" label={data.actionLabel || 'Task'} runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -230,6 +230,7 @@ function LoopNodeWrapper({ id, data }) {
         description={data.subtitle}
         titlePlaceholder={data.titlePlaceholder}
         descriptionPlaceholder={data.descriptionPlaceholder}
+        actionLabel={data.actionLabel}
         hasToggle={data.hasToggle}
         toggleEnabled={data.toggleEnabled}
         toggleDisabled={data.viewOnly}
@@ -289,6 +290,7 @@ function BranchPathNodeWrapper({ id, data }) {
     : fullLabel;
   const collapsed = !!data.collapsed;
   const hiddenCount = data.hiddenCount ?? 0;
+  const actionLabel = data.actionLabel || 'Task';
 
   const chipClass = [
     branchStyles.chip,
@@ -369,7 +371,7 @@ function BranchPathNodeWrapper({ id, data }) {
           )}
         </div>
         {collapsed && hiddenCount > 0 && (
-          <p className={branchStyles.hiddenCount}>{hiddenCount} Tasks hidden</p>
+          <p className={branchStyles.hiddenCount}>{hiddenCount} {actionLabel}s hidden</p>
         )}
         <Handle type="source" position={Position.Bottom} style={collapsed ? { opacity: 0 } : undefined} />
       </div>
@@ -381,7 +383,8 @@ function BranchCollapseNodeWrapper({ data }) {
   const collapsed = !!data.collapsed;
   const branchCount = data.branchCount ?? 0;
   const taskCount = data.taskCount ?? 0;
-  const label = `${branchCount} Branch • ${taskCount} Tasks hidden`;
+  const actionLabel = data.actionLabel || 'Task';
+  const label = `${branchCount} Branch • ${taskCount} ${actionLabel}s hidden`;
 
   return (
     <div className="flow-canvas__node-center">

@@ -91,8 +91,8 @@ function TranscriptMessages({ messages, interim }) {
 }
 
 /* ── Outbound (Reminder Agent) preview panel ────────────────── */
-function OutboundPreviewPanel({ onClose, testAppointment, onPreviewActiveChange, onEditAppointment }) {
-  const previewData = buildReminderPreviewLogSteps(testAppointment);
+function OutboundPreviewPanel({ onClose, testAppointment, onPreviewActiveChange, onEditAppointment, actionLabel = 'Task' }) {
+  const previewData = buildReminderPreviewLogSteps(testAppointment, actionLabel);
   const { patientName, phone, appointmentLine } = previewData;
   const [logSteps, setLogSteps] = useState(() => previewData.steps);
   const [panelView, setPanelView] = useState('preview');
@@ -131,7 +131,7 @@ function OutboundPreviewPanel({ onClose, testAppointment, onPreviewActiveChange,
 
     if (!testAppointment) return undefined;
 
-    setLogSteps(buildReminderPreviewLogSteps(testAppointment).steps);
+    setLogSteps(buildReminderPreviewLogSteps(testAppointment, actionLabel).steps);
 
     const schedule = (fn, delay) => {
       timersRef.current.push(setTimeout(fn, delay));
@@ -225,7 +225,7 @@ function OutboundPreviewPanel({ onClose, testAppointment, onPreviewActiveChange,
     setLogSteps((prev) =>
       prev.map((step) =>
         step.id === 'voice-call'
-          ? { ...step, outputSections: [buildVoiceCallLogOutput(phone, false)] }
+          ? { ...step, outputSections: [buildVoiceCallLogOutput(phone, false, actionLabel)] }
           : step,
       ),
     );
@@ -249,7 +249,7 @@ function OutboundPreviewPanel({ onClose, testAppointment, onPreviewActiveChange,
         .filter((step) => step.id !== 'end')
         .map((step) =>
           step.id === 'voice-call'
-            ? { ...step, outputSections: [buildVoiceCallLogOutput(phone, true)] }
+            ? { ...step, outputSections: [buildVoiceCallLogOutput(phone, true, actionLabel)] }
             : step,
         );
       return [...withVoiceComplete, buildEndLogStep()];
@@ -402,6 +402,7 @@ export default function PreviewPanel({
   testAppointment = null,
   onEditAppointment = null,
   scriptedTranscript = /** @type {{ role: string, text: string }[] | null} */ (null),
+  actionLabel = 'Task',
 }) {
   const [panelView, setPanelView]   = useState('preview'); // preview | logs | details
   const [phase, setPhase]         = useState('idle');   // idle | dialing | active | ended
@@ -637,6 +638,7 @@ export default function PreviewPanel({
         testAppointment={testAppointment}
         onPreviewActiveChange={onPreviewActiveChange}
         onEditAppointment={onEditAppointment}
+        actionLabel={actionLabel}
       />
     );
   }

@@ -157,7 +157,7 @@ function varsToContextItems(vars) {
   return vars.map((v) => ({ id: v.value, label: v.name || v.value, variable: v.value }));
 }
 
-export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {}, product = 'automotive', onFieldChange }) {
+export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {}, product = 'automotive', onFieldChange, actionLabel = 'Task' }) {
   const isDental = product === 'dental';
   const isHealthcare = product === 'healthcare';
 
@@ -454,6 +454,7 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
             });
             setFieldPickerOpen(false);
           }}
+          actionLabel={actionLabel}
         />
       )}
     </NativeDrawer>

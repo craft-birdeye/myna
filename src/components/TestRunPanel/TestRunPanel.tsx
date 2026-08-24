@@ -59,16 +59,19 @@ function TestRunStepRow({
   step,
   status,
   isLast,
+  taskLabel,
 }: {
   step: TestRunStep
   status: TestRunStepStatus
   isLast: boolean
+  taskLabel: string
 }) {
   const [open, setOpen] = useState(status !== 'pending')
   const [outputOpen, setOutputOpen] = useState(false)
   const [toolOpen, setToolOpen] = useState(true)
   const [inputsOpen, setInputsOpen] = useState(false)
   const meta = TYPE_META[step.type]
+  const stepLabel = step.type === 'task' ? taskLabel : meta.label
 
   // Follow the run: expand as a step starts, collapse again once it is behind us.
   useEffect(() => {
@@ -83,7 +86,7 @@ function TestRunStepRow({
       <div className="min-w-0 flex-1 pb-xl">
         <div className="flex items-center gap-xs text-small text-text-tertiary">
           <Icon name={meta.icon} size={16} className={`shrink-0 ${meta.colorClass}`} />
-          {meta.label}
+          {stepLabel}
         </div>
 
         <button
@@ -144,7 +147,7 @@ function TestRunStepRow({
                     size={16}
                     className="shrink-0"
                   />
-                  {step.type === 'branch' ? 'Branch output' : 'Task output'}
+                  {step.type === 'branch' ? 'Branch output' : `${taskLabel} output`}
                 </button>
                 {outputOpen && (
                   <div className="ml-sm mt-xs">
@@ -188,6 +191,7 @@ export function TestRunPanel({
   activeIndex,
   status,
   onExit,
+  taskLabel = 'Task',
 }: TestRunPanelProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const activeRef = useRef<HTMLDivElement>(null)
@@ -219,6 +223,7 @@ export function TestRunPanel({
               step={step}
               status={stepStatuses[i] ?? 'pending'}
               isLast={i === steps.length - 1 && status !== 'complete'}
+              taskLabel={taskLabel}
             />
           </div>
         ))}

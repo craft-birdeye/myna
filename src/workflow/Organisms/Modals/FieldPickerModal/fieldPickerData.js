@@ -188,6 +188,30 @@ export const WORKFLOW_CATEGORIES = [
   },
 ];
 
+/** Sep 1: relabel "Task output" groups and "N. Task: ..." category labels to `actionLabel`,
+ *  without mutating the shared WORKFLOW_CATEGORIES data. */
+export function relabelTaskCategories(categories, actionLabel = 'Task') {
+  if (actionLabel === 'Task') return categories;
+  const relabelNode = (node) => {
+    if (node.type === 'group') {
+      return {
+        ...node,
+        label: node.label === 'Task output' ? `${actionLabel} output` : node.label,
+        children: node.children.map(relabelNode),
+      };
+    }
+    if (node.type === 'object') {
+      return { ...node, children: node.children.map(relabelNode) };
+    }
+    return node;
+  };
+  return categories.map((cat) => ({
+    ...cat,
+    label: cat.label.replace(/\bTask:/, `${actionLabel}:`),
+    trees: cat.trees.map(relabelNode),
+  }));
+}
+
 export function countLeaves(nodes = []) {
   return nodes.reduce((sum, node) => {
     if (node.type === 'field') return sum + 1;

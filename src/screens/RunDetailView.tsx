@@ -45,6 +45,8 @@ interface RunDetailViewProps {
   onSelectRun?: (row: HealthcareLogRow) => void
   /** Front desk exploration: show result badge on Call end reason. */
   explorationFrontDeskStatus?: boolean
+  /** Sep 1: Logs "Task"/"Task output" reads "Action"/"Action output" instead. */
+  sep1Chrome?: boolean
 }
 
 function sameLogRow(a: HealthcareLogRow, b: HealthcareLogRow) {
@@ -651,7 +653,9 @@ export function RunDetailView({
   runs = [],
   onSelectRun,
   explorationFrontDeskStatus = false,
+  sep1Chrome = false,
 }: RunDetailViewProps) {
+  const taskLabel = sep1Chrome ? 'Action' : 'Task'
   const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
   const isReviewResponse = /review response agent/i.test(agentName)
@@ -816,6 +820,7 @@ export function RunDetailView({
               durationSecs={isReminder ? totalSecs : undefined}
               agentName={isReminder ? instanceName : undefined}
               onTrackFeedback={isReminder ? onTrackFeedback : undefined}
+              taskLabel={taskLabel}
             />
           ) : (
             <LogDetailsPanel
@@ -827,6 +832,7 @@ export function RunDetailView({
                 explorationFrontDeskStatus ? getUserRatingForLogStatus(row.status) : undefined
               }
               showTranscriptTranslation={explorationFrontDeskStatus}
+              taskLabel={taskLabel}
             />
           )}
         </div>

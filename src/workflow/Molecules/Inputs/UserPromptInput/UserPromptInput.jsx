@@ -40,6 +40,7 @@ export default function UserPromptInput({
   /** How the Fields picker opens relative to the toolbar icon. */
   fieldPickerPlacement = 'dock',
   fieldPickerZIndex,
+  actionLabel = 'Task',
 }) {
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -270,6 +271,7 @@ export default function UserPromptInput({
           anchorEl={fieldsBtnRef.current}
           showTriggerFields={showTriggerFields}
           placement={fieldPickerPlacement}
+          actionLabel={actionLabel}
           {...(fieldPickerZIndex != null ? { overlayZIndex: fieldPickerZIndex } : {})}
         />
       )}

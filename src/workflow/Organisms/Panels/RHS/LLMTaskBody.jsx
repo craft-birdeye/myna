@@ -297,6 +297,7 @@ export default function LLMTaskBody({
   /** Controlled Setup / Configure tab — legacy prop (body tabs removed). */
   activeTab: activeTabProp,
   onTabChange,
+  actionLabel = 'Task',
 }) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
@@ -476,6 +477,7 @@ export default function LLMTaskBody({
       value={systemPrompt}
       onChange={(val) => { setSystemPrompt(val); emit('systemPrompt', val); }}
       required
+      actionLabel={actionLabel}
     />
   );
 
@@ -487,6 +489,7 @@ export default function LLMTaskBody({
       onOpenToolDrawer={onOpenToolDrawer}
       onOpenTool={onOpenTool}
       showTriggerFields
+      actionLabel={actionLabel}
     />
   );
 
@@ -559,7 +562,7 @@ export default function LLMTaskBody({
             <FormInput
               name="taskName"
               type="text"
-              label="Task name"
+              label={`${actionLabel} name`}
               placeholder="Enter name"
               value={taskName}
               onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
@@ -580,7 +583,7 @@ export default function LLMTaskBody({
             <FormInput
               name="taskName"
               type="text"
-              label="Task name"
+              label={`${actionLabel} name`}
               placeholder="Enter name"
               value={taskName}
               onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
@@ -642,6 +645,7 @@ export default function LLMTaskBody({
           onClose={() => setInputModalOpen(false)}
           onAdd={handleInputAdd}
           onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
+          actionLabel={actionLabel}
         />
       )}
     </div>

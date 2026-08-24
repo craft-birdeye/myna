@@ -17,7 +17,7 @@ function SectionLabel({ label, showInfo }) {
 }
 
 /* Variable chip input box — shows chips + an {x} add trigger */
-function LoopOverField({ chips, onAdd, onRemove }) {
+function LoopOverField({ chips, onAdd, onRemove, actionLabel = 'Task' }) {
   const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
 
   return (
@@ -82,13 +82,14 @@ function LoopOverField({ chips, onAdd, onRemove }) {
             setFieldPickerOpen(false);
           }}
           showTriggerFields
+          actionLabel={actionLabel}
         />
       )}
     </>
   );
 }
 
-export default function LoopBody({ initialValues = {}, onFieldChange }) {
+export default function LoopBody({ initialValues = {}, onFieldChange, actionLabel = 'Task' }) {
   const [name, setName] = useState(initialValues.name ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
   const [loopMode, setLoopMode] = useState(initialValues.loopMode ?? 'manual');
@@ -157,7 +158,7 @@ export default function LoopBody({ initialValues = {}, onFieldChange }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <SectionLabel label="Loop over" showInfo />
-        <LoopOverField chips={chips} onAdd={handleAddChip} onRemove={handleRemoveChip} />
+        <LoopOverField chips={chips} onAdd={handleAddChip} onRemove={handleRemoveChip} actionLabel={actionLabel} />
         <span style={{ fontSize: 11, lineHeight: '16px', color: '#8f8f8f', fontFamily: font }}>
           Select the variable to iterate over
         </span>

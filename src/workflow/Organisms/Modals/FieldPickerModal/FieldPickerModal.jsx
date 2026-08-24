@@ -7,6 +7,7 @@ import {
   WORKFLOW_CATEGORIES,
   SAMPLE_COLOR,
   normalizeCategory,
+  relabelTaskCategories,
   filterTrees,
   formatSample,
   countLeaves,
@@ -256,6 +257,8 @@ export default function FieldPickerModal({
   showTriggerFields = false,
   /** `dock` = left of enclosing panel; `dropdown` = under the trigger. */
   placement = 'dock',
+  /** Sep 1: "Task output" / "N. Task: ..." categories read "Action" instead. */
+  actionLabel = 'Task',
 }) {
   const [search, setSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('business');
@@ -268,8 +271,9 @@ export default function FieldPickerModal({
   const categories = useMemo(() => {
     const base = BASE_CATEGORIES.map(normalizeCategory);
     if (!showTriggerFields) return base;
-    return [...base, ...WORKFLOW_CATEGORIES.map(normalizeCategory)];
-  }, [showTriggerFields]);
+    const workflowCategories = relabelTaskCategories(WORKFLOW_CATEGORIES, actionLabel);
+    return [...base, ...workflowCategories.map(normalizeCategory)];
+  }, [showTriggerFields, actionLabel]);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) ?? categories[0];
   const query = search.trim();
@@ -460,6 +464,16 @@ export default function FieldPickerModal({
       role="dialog"
       aria-label="Fields"
     >
+      <div
+        className={styles.dragHandle}
+        onPointerDown={handleDragPointerDown}
+        role="presentation"
+        aria-hidden="true"
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#8f8f8f', transform: 'rotate(90deg)' }}>
+          drag_indicator
+        </span>
+      </div>
       <div
         className={styles.header}
         onPointerDown={handleDragPointerDown}
