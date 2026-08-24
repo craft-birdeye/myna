@@ -527,6 +527,7 @@ export function AgentInstanceScreen({
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
   const explorationFrontDeskStatus = workflowButtonOpensEditor && isFrontdeskAgent
+  const hideMarketingLogDuration = workflowButtonOpensEditor && !isFrontdeskAgent
   const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
@@ -920,6 +921,7 @@ export function AgentInstanceScreen({
                   searchQuery={supportsHeaderSearch ? logsQuery : ''}
                   filters={supportsHeaderSearch ? logsFilters : undefined}
                   explorationFrontDeskStatus={explorationFrontDeskStatus}
+                  hideLogDuration={hideMarketingLogDuration}
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />

@@ -159,6 +159,10 @@ const RATING_CELL = (v: unknown) => <span>{typeof v === 'number' ? `${v} star` :
 const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
 const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
 
+function withoutLogDuration<T>(columns: Column<T>[]): Column<T>[] {
+  return columns.filter((col) => col.key !== 'duration')
+}
+
 const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 200, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
   { key: 'duration', label: 'Duration', width: 110, sortable: true, tooltip: TEXT_TOOLTIP },
@@ -325,6 +329,8 @@ interface AgentLogsTabProps {
   filters?: Record<string, string[]>
   /** Front desk exploration only: Complete→Resolved, Failed→Not resolved. */
   explorationFrontDeskStatus?: boolean
+  /** Marketing suite exploration: hide Duration on review/listings logs. */
+  hideLogDuration?: boolean
 }
 
 export function AgentLogsTab({
@@ -333,6 +339,7 @@ export function AgentLogsTab({
   searchQuery = '',
   filters = {},
   explorationFrontDeskStatus = false,
+  hideLogDuration = false,
 }: AgentLogsTabProps) {
   /** Narrows a row set by the header search + filters. */
   const f = <T extends Record<string, unknown>>(rows: T[]) =>
@@ -360,10 +367,13 @@ export function AgentLogsTab({
   }
 
   if (agentName?.startsWith('Review response agent')) {
+    const columns = hideLogDuration
+      ? withoutLogDuration(REVIEW_RESPONSE_LOG_COLUMNS)
+      : REVIEW_RESPONSE_LOG_COLUMNS
     return (
       <div className="px-lg py-lg">
         <DataTable
-          columns={REVIEW_RESPONSE_LOG_COLUMNS}
+          columns={columns}
           data={f(REVIEW_RESPONSE_LOGS_ROWS)}
           rowAction={{
             icon: 'visibility',
