@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
+import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { AGENT_LANGUAGES } from '../../data/agentLanguages'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
@@ -1118,7 +1119,7 @@ function TranscriptEntry({
                 }}
                 className="group flex items-center gap-xs text-small text-text-action"
               >
-                <Icon name="auto_awesome" size={16} />
+                <AiCoachSparkleIcon />
                 <span className="group-hover:underline">Coach agent</span>
               </button>
             )}

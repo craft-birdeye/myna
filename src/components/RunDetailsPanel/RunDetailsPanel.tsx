@@ -1,5 +1,6 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
+import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
 // @ts-expect-error JS module — same canvas node-header glyphs as AgentBuilder
 import { BranchIcon, ProcedureIcon, TaskIcon, TriggerIcon } from '../../workflow/Molecules/Canvas/CanvasNodeIcons'
@@ -694,7 +695,7 @@ export function RunConversationThread({
                     onClick={() => onCoachAgent?.(entry.id)}
                     className="group flex items-center gap-xs text-small text-text-action"
                   >
-                    <Icon name="auto_awesome" size={16} />
+                    <AiCoachSparkleIcon />
                     <span className="group-hover:underline">Coach agent</span>
                   </button>
                 )}
