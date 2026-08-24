@@ -45,6 +45,18 @@ export const AGENT_INSTANCE_ISSUES: Record<string, AgentIssue[]> = {
       description: 'Assign a voice number to this location before publishing.',
     },
   ],
+  'Reminder agent - North region': [
+    {
+      id: 'rem-north-hours',
+      title: 'Calling window not configured',
+      description: 'Set quiet hours so reminder calls never go out at odd times.',
+    },
+    {
+      id: 'rem-north-voice',
+      title: 'Default voice not selected',
+      description: 'Pick a TTS voice for the phone reminder arm before publishing.',
+    },
+  ],
 }
 
 export const AGENT_INSTANCE_ISSUE_COUNTS: Record<string, number> = Object.fromEntries(

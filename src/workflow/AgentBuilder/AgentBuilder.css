@@ -1852,21 +1852,29 @@
 .rr-chrome-left-stack--labelled .rr-chrome-left-ai {
   width: 84px;
   height: auto;
+  min-height: 64px;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 4px;
+  padding: 10px 8px;
+  box-sizing: border-box;
 }
 
 .rr-chrome-left-stack--labelled .rr-chrome-left-floater {
   width: 84px;
+  padding: 10px;
+  gap: 8px;
 }
 
 .rr-chrome-left-stack--labelled .rr-chrome-left-floater__btn {
-  width: 100%;
-  height: auto;
+  box-sizing: border-box;
+  width: 64px;
+  height: 64px;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
   gap: 4px;
-  padding: 6px 2px;
+  padding: 8px;
+  border-radius: 6px;
 }
 
 .rr-chrome-left-label {

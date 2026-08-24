@@ -1798,9 +1798,9 @@ export default function LHSDrawer({
       Tasks: {
         iconSrc: iconRrTasks,
         tone: 'tasks',
-        title: 'Tasks',
+        title: 'Actions',
         content: tasksContent,
-        searchPlaceholder: 'Search tasks...',
+        searchPlaceholder: 'Search actions...',
       },
       Procedures: {
         iconSrc: iconRrProcedures,

@@ -7,8 +7,8 @@ import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
 import {
   isAgentExplorationChrome,
   isExplorationHideCanvasStartNode,
+  isSep1Chrome,
   RESPONSE_AGENTS_SEP1_NAV_ID,
-  FRONTDESK_SEP1_NAV_ID,
 } from './data/agentNavIds'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
@@ -158,8 +158,8 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
       { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
       { id: 'frontdesk-agent', label: 'Front desk agent' },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
-      { id: 'reminder-agent',  label: 'Reminder agent'  },
       { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
+      { id: 'reminder-agent',  label: 'Reminder agent'  },
       { id: 'outreach-agent',  label: 'Outreach agent'  },
     ],
   },
@@ -205,8 +205,8 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
       { id: 'pre-visit-agent',  label: 'Pre-visit agent'  },
-      { id: 'reminder-agent',   label: 'Reminder agent'   },
       { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
+      { id: 'reminder-agent',   label: 'Reminder agent'   },
     ],
   },
   {
@@ -255,8 +255,8 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
       { id: 'pre-visit-agent',             label: 'Pre-visit agent'             },
-      { id: 'reminder-agent',              label: 'Reminder agent'              },
       { id: 'reminder-agent-sep-1',        label: 'Reminder agent (Sep 1)'      },
+      { id: 'reminder-agent',              label: 'Reminder agent'              },
       { id: 'recall-agent',                label: 'Recall agent'                },
       { id: 'revenue-agent',               label: 'Revenue agent'               },
       { id: 'treatment-plan-agent',        label: 'Treatment plan agent'        },
@@ -977,10 +977,7 @@ export function App() {
                           hideTopIdentity={isAgentExplorationChrome(navActive)}
                           hideCanvasStartNode={isExplorationHideCanvasStartNode(navActive)}
                           explorationChrome={isAgentExplorationChrome(navActive)}
-                          sep1Chrome={
-                            navActive === RESPONSE_AGENTS_SEP1_NAV_ID
-                            || navActive === FRONTDESK_SEP1_NAV_ID
-                          }
+                          sep1Chrome={isSep1Chrome(navActive)}
                           inlineRhsFooter={navActive === RESPONSE_AGENTS_SEP1_NAV_ID}
                         />
                       </div>

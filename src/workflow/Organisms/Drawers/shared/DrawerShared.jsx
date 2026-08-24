@@ -3,23 +3,27 @@ import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import ProcedureDetailBody from '../../Panels/RHS/ProcedureDetailBody';
 import './DrawerShared.css';
 
-/* ─── Drawer shell — shared by every Organisms/Drawers/* side panel ─── */
+/* ─── Drawer shell — Aero DS (matches FormDrawer / Add a tool / Handle response) ─── */
 export function NativeDrawer({ isOpen, onClose, children, width = 650 }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
+    <div className="ds__drawer-root" role="presentation">
+      <div className="ds__drawer-backdrop" onClick={onClose} aria-hidden />
       <div
+        className="ds__drawer-panel"
+        style={{ width, maxWidth: 'calc(92vw - 8px)' }}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          position: 'relative',
-          width,
-          maxWidth: '95vw',
-          height: '100%',
-          overflowY: 'auto',
-          background: '#fff',
-          boxShadow: '-4px 0 24px rgba(0,0,0,0.14)',
-        }}
+        role="dialog"
+        aria-modal="true"
       >
         {children}
       </div>
@@ -379,28 +383,30 @@ function ProcedureMultiSelectDropdown({ library, selected, onApply, onCancel }) 
         </div>
 
         <div className="ds__addproc-main">
-          <ProcedureSearchList
-            items={items}
-            query={query}
-            onQueryChange={setQuery}
-            emptyLabel={tab === 'active' ? 'No active procedures found.' : 'No procedures found.'}
-            renderRow={(item) => (
-              <ProcedureRow
-                key={item.id}
-                item={item}
-                selected={draft.includes(item.id)}
-                showCheckbox
-                pillLabels={tab === 'active' ? item.activeIn : undefined}
-                onClick={() => toggle(item.id)}
-              />
-            )}
-          />
+          <div className="ds__addproc-card">
+            <ProcedureSearchList
+              items={items}
+              query={query}
+              onQueryChange={setQuery}
+              emptyLabel={tab === 'active' ? 'No active procedures found.' : 'No procedures found.'}
+              renderRow={(item) => (
+                <ProcedureRow
+                  key={item.id}
+                  item={item}
+                  selected={draft.includes(item.id)}
+                  showCheckbox
+                  pillLabels={tab === 'active' ? item.activeIn : undefined}
+                  onClick={() => toggle(item.id)}
+                />
+              )}
+            />
+          </div>
         </div>
       </div>
 
       <div className="ds__addproc-footer">
         <button type="button" className="ds__cancel" onClick={onCancel}>Cancel</button>
-        <button type="button" className="ds__save-sm" onClick={() => onApply(draft)}>Apply</button>
+        <button type="button" className="ds__save-sm" onClick={() => onApply(draft)}>Add</button>
       </div>
     </div>
   );

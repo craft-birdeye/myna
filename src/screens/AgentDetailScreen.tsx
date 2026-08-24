@@ -270,10 +270,10 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
   ],
   'Reminder agent': [
-    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min' },
-    { region: 'East region',  status: 'Running', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min' },
-    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min' },
-    { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       interactions: '407',  fcr: '68%', aht: '1m 55s', escalation: '15%', locations: '140', bookings: '60',  confirmed: '10', confirmRate: '16.7%', timeSaved: '6 min' },
+    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min', issues: AGENT_INSTANCE_ISSUE_COUNTS['Reminder agent - North region'], instanceName: 'Reminder agent - North region' },
+    { region: 'East region',  status: 'Running', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min', instanceName: 'Reminder agent - East region' },
+    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min', instanceName: 'Reminder agent - South region' },
+    { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       interactions: '407',  fcr: '68%', aht: '1m 55s', escalation: '15%', locations: '140', bookings: '60',  confirmed: '10', confirmRate: '16.7%', timeSaved: '6 min', instanceName: 'Reminder agent - West region' },
   ],
   'Outreach agent': [
     { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '920', fcr: '42%', aht: '2m 45s', escalation: '9%',  locations: '358' },
@@ -8190,6 +8190,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 hideTopIdentity={isExplorationAgents}
                 hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
                 explorationChrome={isExplorationAgents}
+                sep1Chrome={isSep1Agents}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}

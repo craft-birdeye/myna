@@ -3823,8 +3823,7 @@ export default function AgentBuilder({
                       },
                     ].map((item) => {
                       const displayLabel = sep1Chrome ? (item.underLabel || item.label) : item.label;
-                      return (
-                      <Tooltip key={item.id} content={displayLabel} variant="brief" side="right">
+                      const btn = (
                         <button
                           type="button"
                           className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
@@ -3853,7 +3852,15 @@ export default function AgentBuilder({
                           )}
                           {sep1Chrome && <span className="rr-chrome-left-label">{displayLabel}</span>}
                         </button>
-                      </Tooltip>
+                      );
+                      // Sep 1 shows labels under icons — skip redundant tooltips (Create with AI keeps its tooltip).
+                      if (sep1Chrome) {
+                        return <React.Fragment key={item.id}>{btn}</React.Fragment>;
+                      }
+                      return (
+                        <Tooltip key={item.id} content={displayLabel} variant="brief" side="right">
+                          {btn}
+                        </Tooltip>
                       );
                     })}
                   </div>

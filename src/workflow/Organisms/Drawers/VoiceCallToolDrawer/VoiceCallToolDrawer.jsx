@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal';
+import AddInputFieldModal from '../../Modals/AddInputFieldModal/AddInputFieldModal';
 import VariableChip, { DataTypeIcon } from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import { SingleSelect } from '../../../elemental-stubs';
 import { getProcedureDetail } from '../shared/procedureDetails';
@@ -174,7 +174,7 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
   const [retryInterval,    setRetryInterval]     = useState('24');
   const [retryUnit,        setRetryUnit]         = useState('Hours');
   const [contextVariables, setContextVariables]  = useState([]);
-  const [fieldPickerOpen,  setFieldPickerOpen]   = useState(false);
+  const [addInputFieldOpen, setAddInputFieldOpen] = useState(false);
   const [viewingProcedureId, setViewingProcedureId] = useState(null);
   const [procedureOverrides, setProcedureOverrides] = useState({});
   const [retrySettingsOpen, setRetrySettingsOpen] = useState(true);
@@ -247,7 +247,12 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
         <div className="vctd__header vctd__header--main">
           <div className="vctd__header-left">
             <button type="button" className="vctd__back" onClick={onClose} aria-label="Back">
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: 20, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
+              >
+                arrow_back
+              </span>
             </button>
             <div className="vctd__header-titles">
               <span className="vctd__title">Initiate voice call</span>
@@ -327,27 +332,13 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
             />
           )}
 
-          {/* Context */}
+          {/* Additional fields */}
           <div className="vctd__field">
-            <FieldLabel tooltip="Uses your brand voice and industry knowledge to generate accurate responses">Context</FieldLabel>
+            <FieldLabel tooltip="Input fields add context to the call and are automatically included when the agent runs.">
+              Additional fields
+            </FieldLabel>
             <div className="vctd__context-box">
-              {contextVariables.length === 0 ? (
-                <div className="vctd__context-footer">
-                  <button
-                    type="button"
-                    className="vctd__context-add-btn"
-                    onClick={() => setFieldPickerOpen(true)}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: 16, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
-                    >
-                      add_circle
-                    </span>
-                    Add
-                  </button>
-                </div>
-              ) : (
+              {contextVariables.length > 0 && (
                 <div className="vctd__context-chips">
                   {contextVariables.map((item, i) => (
                     <VariableChip
@@ -360,8 +351,15 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
                 </div>
               )}
               <div className="vctd__context-footer">
-                <button type="button" className="vctd__context-add-btn" onClick={() => setFieldPickerOpen(true)}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                <button
+                  type="button"
+                  className="vctd__context-add-btn"
+                  onClick={() => setAddInputFieldOpen(true)}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 16, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
+                  >
                     add_circle
                   </span>
                   Add
@@ -442,17 +440,20 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
         </div>
       </div>
 
-      {fieldPickerOpen && (
-        <FieldPickerModal
-          overlayZIndex={10000}
-          showTriggerFields
-          onClose={() => setFieldPickerOpen(false)}
-          onSelectField={(value, name) => {
+      {addInputFieldOpen && (
+        <AddInputFieldModal
+          zIndex={10000}
+          onClose={() => setAddInputFieldOpen(false)}
+          onAdd={({ fieldName, fieldValue }) => {
+            const valueFromVars = Array.isArray(fieldValue) && fieldValue.length > 0
+              ? fieldValue[0]
+              : fieldName;
+            const label = fieldName || valueFromVars;
             setContextVariables((prev) => {
-              if (prev.some((v) => v.value === value)) return prev;
-              return [...prev, { value, name }];
+              if (prev.some((v) => v.value === label)) return prev;
+              return [...prev, { value: label, name: label }];
             });
-            setFieldPickerOpen(false);
+            setAddInputFieldOpen(false);
           }}
         />
       )}
