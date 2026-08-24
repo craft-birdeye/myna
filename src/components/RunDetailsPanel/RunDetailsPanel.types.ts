@@ -19,6 +19,8 @@ export interface RunLogStep {
   tool?: { name: string; properties: RunLogField[] }
   /** Plain status line shown instead of output/inputs (e.g. delay steps). */
   note?: string
+  /** Wall-clock time for this step; falls back to a type-based default when omitted. */
+  durationSecs?: number
 }
 
 // Conversation entry shape is shared with the inbox deep-link data.

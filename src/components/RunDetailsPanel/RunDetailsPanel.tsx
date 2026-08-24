@@ -34,10 +34,26 @@ function MetaLabel({ label }: { label: string }) {
   )
 }
 
+const DEFAULT_STEP_DURATION_SECS: Record<RunLogStep['type'], number> = {
+  trigger: 1,
+  procedures: 3,
+  task: 2,
+  delay: 0,
+  branch: 1,
+}
+
+export function formatStepDuration(secs: number): string {
+  return `${secs}s`
+}
+
+export function resolveStepDurationSecs(step: RunLogStep): number {
+  return step.durationSecs ?? DEFAULT_STEP_DURATION_SECS[step.type]
+}
+
 /** Node-type icon + colour, matched to the canvas node-card glyphs. Shared with `TestRunPanel`. */
 export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
-  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Action' },
+  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
   branch: { icon: 'account_tree', colorClass: 'text-[#5071CE]', label: 'Branch' },
   procedures: { icon: 'menu_book', colorClass: 'text-[#37A248]', label: 'Procedures' },
@@ -204,16 +220,19 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
         ? 'Procedure output'
         : step.type === 'branch'
           ? 'Branch output'
-          : 'Action output')
+          : 'Task output')
 
   return (
     <div className="relative flex gap-md">
       <div className="absolute bottom-0 left-[9px] top-[24px] w-px bg-border" aria-hidden />
       <Icon name="check_circle" size={20} fill className="relative z-10 mt-[2px] shrink-0 text-accent-positive" />
       <div className="min-w-0 flex-1 pb-2xl">
-        <div className="flex items-center gap-xs text-small text-text-tertiary">
-          <Icon name={meta.icon} size={16} className={`shrink-0 ${meta.colorClass}`} />
-          {meta.label}
+        <div className="flex items-center justify-between gap-sm text-small text-text-tertiary">
+          <div className="flex min-w-0 items-center gap-xs">
+            <Icon name={meta.icon} size={16} className={`shrink-0 ${meta.colorClass}`} />
+            {meta.label}
+          </div>
+          <span className="shrink-0 tabular-nums">{formatStepDuration(resolveStepDurationSecs(step))}</span>
         </div>
         <p className="mt-xs text-body text-text-primary">
           {step.stepNumber}. {step.title}
