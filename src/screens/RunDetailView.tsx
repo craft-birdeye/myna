@@ -7,6 +7,7 @@ import {
   Icon,
   LogDetailsPanel,
   RunDetailsPanel,
+  type ChipVariant,
   type RunLogStep,
 } from '../components'
 import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
@@ -95,6 +96,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
   const source = String(row.source ?? row.channel ?? 'Google')
   const trigger: RunLogStep = {
     id: 'rr-log-1',
+    nodeId: 'rr-1',
     type: 'trigger',
     stepNumber: 1,
     title: 'When a new review is received or updated',
@@ -114,6 +116,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rr-log-2',
+        nodeId: 'rr-2',
         type: 'task',
         stepNumber: 2,
         title: 'Triage review',
@@ -127,6 +130,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rr-log-2',
+        nodeId: 'rr-2',
         type: 'task',
         stepNumber: 2,
         title: 'Triage review',
@@ -140,6 +144,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rr-log-2',
+        nodeId: 'rr-2',
         type: 'task',
         stepNumber: 2,
         title: 'Triage review',
@@ -155,6 +160,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       },
       {
         id: 'rr-log-3',
+        nodeId: 'rr-3',
         type: 'branch',
         stepNumber: 3,
         title: 'Fallback',
@@ -164,6 +170,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       },
       {
         id: 'rr-log-4',
+        nodeId: 'rr-7',
         type: 'task',
         stepNumber: 4,
         title: 'Send email alert',
@@ -188,6 +195,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     trigger,
     {
       id: 'rr-log-2',
+      nodeId: 'rr-2',
       type: 'task',
       stepNumber: 2,
       title: 'Triage review',
@@ -203,6 +211,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-3',
+      nodeId: 'rr-3',
       type: 'branch',
       stepNumber: 3,
       title: 'Respond',
@@ -212,6 +221,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-4',
+      nodeId: 'rr-4',
       type: 'task',
       stepNumber: 4,
       title: 'Extract review details',
@@ -228,6 +238,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-5',
+      nodeId: 'rr-5',
       type: 'task',
       stepNumber: 5,
       title: 'Generate response',
@@ -245,6 +256,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-6',
+      nodeId: 'rr-6',
       type: 'task',
       stepNumber: 6,
       title: 'Send response',
@@ -272,6 +284,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
   const firstName = row.contact.split(' ')[0] || row.contact
   const trigger: RunLogStep = {
     id: 'rg-log-1',
+    nodeId: 'rg-1',
     type: 'trigger',
     stepNumber: 1,
     title: 'When a transaction is completed',
@@ -291,6 +304,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rg-log-2',
+        nodeId: 'rg-2',
         type: 'task',
         stepNumber: 2,
         title: 'Send review request email',
@@ -304,6 +318,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rg-log-2',
+        nodeId: 'rg-2',
         type: 'task',
         stepNumber: 2,
         title: 'Send review request email',
@@ -322,6 +337,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
       },
       {
         id: 'rg-log-3',
+        nodeId: 'rg-3',
         type: 'task',
         stepNumber: 3,
         title: 'Send review request text',
@@ -345,6 +361,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
     trigger,
     {
       id: 'rg-log-2',
+      nodeId: 'rg-2',
       type: 'task',
       stepNumber: 2,
       title: 'Send review request email',
@@ -367,6 +384,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rg-log-3',
+      nodeId: 'rg-3',
       type: 'task',
       stepNumber: 3,
       title: 'Send review request text',
@@ -442,17 +460,68 @@ function getExecutedNodeIds(
   return ids
 }
 
+/** Flatten top-level + branch-path nodes for title → id lookup. */
+function flattenWorkflowNodes(
+  nodes: WorkflowNodeSeed[],
+  nodeDetails: Record<string, unknown>,
+): WorkflowNodeSeed[] {
+  const out: WorkflowNodeSeed[] = []
+  const visit = (items: WorkflowNodeSeed[]) => {
+    items.forEach((node) => {
+      out.push(node)
+      const detail = nodeDetails[node.id] as {
+        branches?: Array<{ id: string; name?: string }>
+      } | undefined
+      detail?.branches?.forEach((branch) => {
+        const path = nodeDetails[branch.id] as { nodes?: WorkflowNodeSeed[] } | undefined
+        if (path?.nodes) visit(path.nodes)
+      })
+    })
+  }
+  visit(nodes)
+  return out
+}
+
+/** Resolve which canvas node a log step should focus. */
+function resolveLogStepNodeId(
+  step: RunLogStep,
+  nodes: WorkflowNodeSeed[],
+  nodeDetails: Record<string, unknown>,
+): string | null {
+  if (step.nodeId) return step.nodeId
+  const all = flattenWorkflowNodes(nodes, nodeDetails)
+  const byTitle = all.find((n) => n.data.title === step.title)
+  if (byTitle) return byTitle.id
+  // Branch log rows often use the path label ("Respond" / "Fallback") rather than the branch card title.
+  for (const node of all) {
+    const detail = nodeDetails[node.id] as {
+      branches?: Array<{ id: string; name?: string }>
+    } | undefined
+    const match = detail?.branches?.find(
+      (b) =>
+        b.name === step.title ||
+        (b.name != null && b.name.toLowerCase().startsWith(step.title.toLowerCase())),
+    )
+    if (match) return node.id
+  }
+  return null
+}
+
 /* ── run canvas — same AgentBuilder viewer as the Workflow tab, executed nodes in green ── */
 function AgentWorkflowRunCanvas({
   instanceName,
   workflow,
   row,
   product,
+  focusNodeId = null,
+  focusNonce = 0,
 }: {
   instanceName: string
   workflow: { nodes: WorkflowNodeSeed[]; nodeDetails: Record<string, unknown> }
   row: HealthcareLogRow
   product?: string
+  focusNodeId?: string | null
+  focusNonce?: number
 }) {
   const { procedures } = useProcedureStore()
   const filteredProcedures = procedures.filter((p) => p.category === 'Healthcare Frontdesk')
@@ -466,6 +535,11 @@ function AgentWorkflowRunCanvas({
     )
     .join('\n')
 
+  const focusCss = focusNodeId
+    ? `.run-wf-viewer .react-flow__node[data-id="${focusNodeId}"] .canvas-node { border: 1px solid #1976d2 !important; animation: ab-test-run-pulse 2.6s ease-in-out infinite; }`
+    : ''
+
+  // Remount focus signal when the same node is clicked again (nonce bumps).
   return (
     <div className="run-wf-bg absolute inset-0 overflow-hidden">
       <style>{`
@@ -495,6 +569,7 @@ function AgentWorkflowRunCanvas({
         .run-wf-viewer .rr-chrome-top { display: none !important; }
         .run-wf-viewer .rr-chrome-run-test { display: none !important; }
         ${executedCss}
+        ${focusCss}
       `}</style>
       <div className="run-wf-viewer">
         <AgentBuilder
@@ -514,6 +589,8 @@ function AgentWorkflowRunCanvas({
           initialZoom={0.85}
           nodesInteractive={false}
           logDoneNodeIds={executedIds}
+          externalFocusNodeId={focusNodeId}
+          externalFocusNonce={focusNonce}
         />
       </div>
     </div>
@@ -554,7 +631,7 @@ function WorkflowCanvas({
 
         <RunFlowConnector height={FLOW_START_GAP} />
 
-        <div className="flow-canvas__node-center">
+        <div className="flow-canvas__node-center" data-log-canvas-step="trigger">
           <CanvasNode
             nodeType="trigger"
             label="Trigger"
@@ -576,7 +653,7 @@ function WorkflowCanvas({
 
         <RunFlowConnector height={FLOW_CONNECTOR_GAP} />
 
-        <div className="flow-canvas__node-center">
+        <div className="flow-canvas__node-center" data-log-canvas-step="procedures">
           <ProceduresNode
             stepNumber={3}
             procedureItems={RUN_PROCEDURE_ITEMS as never[]}
@@ -629,13 +706,41 @@ export function RunDetailView({
       : agentName !== 'Front desk agent'
         ? HEALTHCARE_AGENT_WORKFLOWS[agentName]
         : undefined
-  const statusVariant =
-    row.status === 'Complete' || row.status === 'Resolved'
-      ? 'success'
-      : row.status === 'Failed' || row.status === 'Not resolved'
-        ? 'danger'
-        : 'warning'
+  const LOG_STATUS_VARIANT: Record<string, ChipVariant> = {
+    Complete: 'success',
+    Completed: 'success',
+    Failed: 'danger',
+    'In progress': 'warning',
+    Resolved: 'success',
+    'Not resolved': 'danger',
+    Aborted: 'neutral',
+  }
+  const statusVariant = LOG_STATUS_VARIANT[row.status] ?? 'warning'
   const useRunDetailsPanel = isReminder || isReviewAgent
+
+  const [focusNodeId, setFocusNodeId] = React.useState<string | null>(null)
+  const [focusNonce, setFocusNonce] = React.useState(0)
+
+  const handleStepFocus = React.useCallback(
+    (step: RunLogStep) => {
+      if (agentWorkflow) {
+        const id = resolveLogStepNodeId(
+          step,
+          agentWorkflow.nodes as WorkflowNodeSeed[],
+          agentWorkflow.nodeDetails as Record<string, unknown>,
+        )
+        if (!id) return
+        setFocusNodeId(id)
+        setFocusNonce((n) => n + 1)
+        return
+      }
+      // Front-desk fallback canvas — scroll the matching static card into view.
+      const key = step.nodeId ?? (step.type === 'procedures' ? 'procedures' : step.type === 'trigger' ? 'trigger' : step.id)
+      const el = document.querySelector<HTMLElement>(`[data-log-canvas-step="${key}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    },
+    [agentWorkflow],
+  )
 
   const runIndex = runs.findIndex((r) => sameLogRow(r, row))
   const hasRunNav = runs.length > 1 && runIndex >= 0 && !!onSelectRun
@@ -680,25 +785,29 @@ export function RunDetailView({
         .log-detail-view .canvas-node--selected { border-color: transparent !important; }
       `}</style>
 
-      {/* Header — title + status chip with agent name subtitle; prev/next on the right */}
-      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
-        <button
-          type="button"
-          aria-label="Back to logs"
-          onClick={onBack}
-          className="mt-xs flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-        >
-          <BackArrowIcon />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-sm">
-            <h1 className="min-w-0 truncate text-h3 text-text-primary">Log - {row.timestamp}</h1>
-            <Chip label={row.status} variant={statusVariant} />
+      {/* Header — title + status on line 1, instance name on line 2 */}
+      <div className="flex shrink-0 items-center justify-between gap-md bg-surface px-2xl py-md">
+        <div className="flex min-w-0 items-center gap-sm">
+          <button
+            type="button"
+            aria-label="Back to logs"
+            onClick={onBack}
+            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          >
+            <BackArrowIcon />
+          </button>
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-sm">
+              <h1 className="min-w-0 truncate text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+                Log - {row.timestamp}
+              </h1>
+              <Chip label={row.status} variant={statusVariant} />
+            </div>
+            <p className="truncate text-small text-text-secondary">{instanceName}</p>
           </div>
-          <p className="mt-xs text-small text-text-secondary">{instanceName}</p>
         </div>
         {hasRunNav && (
-          <div className="mt-xs flex shrink-0 items-center gap-xs">
+          <div className="flex shrink-0 items-center gap-xs">
             <button
               type="button"
               aria-label="Previous log"
@@ -734,6 +843,8 @@ export function RunDetailView({
             instanceName={instanceName}
             workflow={agentWorkflow as { nodes: WorkflowNodeSeed[]; nodeDetails: Record<string, unknown> }}
             row={row}
+            focusNodeId={focusNodeId}
+            focusNonce={focusNonce}
           />
         ) : (
           <WorkflowCanvas
@@ -760,9 +871,11 @@ export function RunDetailView({
               durationSecs={isReminder ? totalSecs : undefined}
               agentName={isReminder ? instanceName : undefined}
               onTrackFeedback={isReminder ? onTrackFeedback : undefined}
+              onStepFocus={handleStepFocus}
             />
           ) : (
             <LogDetailsPanel
+              key={row.timestamp}
               row={row}
               agentName={instanceName}
               onTrackFeedback={onTrackFeedback}
@@ -771,6 +884,7 @@ export function RunDetailView({
                 explorationFrontDeskStatus ? getUserRatingForLogStatus(row.status) : undefined
               }
               showTranscriptTranslation={explorationFrontDeskStatus}
+              onStepFocus={handleStepFocus}
             />
           )}
         </div>

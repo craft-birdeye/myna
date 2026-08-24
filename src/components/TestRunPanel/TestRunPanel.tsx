@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TestRunStep } from '../../data/testRunSteps'
 import { Icon } from '../Icon/Icon'
-import { FieldList, TYPE_META } from '../RunDetailsPanel/RunDetailsPanel'
+import { FieldList, StepTypeIcon, TYPE_META } from '../RunDetailsPanel/RunDetailsPanel'
 import type { TestRunPanelProps, TestRunStepStatus } from './TestRunPanel.types'
 
 /**
@@ -82,7 +82,7 @@ function TestRunStepRow({
 
       <div className="min-w-0 flex-1 pb-xl">
         <div className="flex items-center gap-xs text-small text-text-tertiary">
-          <Icon name={meta.icon} size={16} className={`shrink-0 ${meta.colorClass}`} />
+          <StepTypeIcon type={step.type} />
           {meta.label}
         </div>
 

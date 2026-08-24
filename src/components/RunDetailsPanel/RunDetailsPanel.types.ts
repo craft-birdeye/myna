@@ -12,6 +12,8 @@ export interface RunLogStep {
   type: RunLogStepType
   stepNumber: number
   title: string
+  /** Canvas node id to pan/highlight when this log step is clicked. */
+  nodeId?: string
   /** Defaults to "Trigger output" / "Procedure output" / "Branch output" / "Task output". */
   outputLabel?: string
   output?: RunLogField[]
@@ -55,7 +57,7 @@ export interface RunDetailsPanelProps {
   durationSecs?: number
   /** When provided (or via `callDetailsContent`), shows a collapsible "Call details" section at
    *  the top of the Conversation tab — Caller number, Language detected, Duration, Call SID,
-   *  Start time, Call end reason, Routed via. Collapsed by default. */
+   *  Start time, Call end reason, Routed via. Collapsed on first land. */
   callDetails?: {
     callerNumber: string
     languageDetected: string
@@ -67,11 +69,13 @@ export interface RunDetailsPanelProps {
   }
   /** Overrides the built-in call-details fields with arbitrary content. When set (or when
    *  `callDetails` is set), a collapsible "Call details" section appears at the top of the
-   *  Conversation tab (collapsed by default). */
+   *  Conversation tab (collapsed on first land). */
   callDetailsContent?: ReactNode
   /** Agent instance name — enables the Coach agent / Track your feedback flow on business bubbles
    *  in the Conversation tab (matching `LogDetailsPanel`) and tags any submitted feedback with it. */
   agentName?: string
   /** Navigates to the recommendation a message's feedback landed on (see agentName). */
   onTrackFeedback?: (recommendationId: string) => void
+  /** Click a log step to focus the matching canvas node (`step.nodeId` or resolved by title). */
+  onStepFocus?: (step: RunLogStep) => void
 }

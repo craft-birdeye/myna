@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
 import { AGENT_LANGUAGES } from '../../data/agentLanguages'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
+import type { CallRecordingPlayerHandle } from '../CallRecordingPlayer/CallRecordingPlayer.types'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import { Chip } from '../Chip/Chip'
 import type { ChipVariant } from '../Chip/Chip.types'
@@ -45,6 +46,7 @@ function normalizeChannel(channel: string): Channel {
 export const CALL_LOG_STEPS: RunLogStep[] = [
   {
     id: 'step-1',
+    nodeId: 'trigger',
     type: 'trigger',
     stepNumber: 1,
     title: 'Channel',
@@ -62,6 +64,7 @@ export const CALL_LOG_STEPS: RunLogStep[] = [
   },
   {
     id: 'step-2',
+    nodeId: 'procedures',
     type: 'procedures',
     stepNumber: 2,
     title: 'Follow procedures',
@@ -164,14 +167,13 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?',
     llmResponseTime: '0.42s',
     tts: '700ms',
-    time: '5:30 PM',
+    durationLabel: '4s',
   },
   {
     id: 'c1',
     role: 'caller',
     text: 'I am having a very bad headache. I think it is migraine.',
     durationLabel: '5s',
-    time: '5:30 PM',
   },
   {
     id: 'a2',
@@ -180,7 +182,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     llmResponseTime: '0.51s',
     tts: '820ms',
     knowledgeBase: '5s',
-    time: '5:31 PM',
+    durationLabel: '7s',
     toolCall: {
       id: 'tool-1',
       name: 'Patient record - Lookup',
@@ -195,7 +197,6 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: 'Now that you ask — it kind of started near my back tooth and spread up.',
     durationLabel: '4s',
-    time: '5:31 PM',
   },
   {
     id: 'a3',
@@ -203,14 +204,13 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'Thank you, that helps. Pain that radiates from a tooth can sometimes need prompt attention. Are you having any swelling in your face or jaw, fever, or trouble swallowing or breathing?',
     llmResponseTime: '0.48s',
     tts: '640ms',
-    time: '5:31 PM',
+    durationLabel: '6s',
   },
   {
     id: 'c3',
     role: 'caller',
     text: 'A little swelling near the tooth, no fever',
     durationLabel: '3s',
-    time: '5:32 PM',
   },
   {
     id: 'a4',
@@ -219,7 +219,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     llmResponseTime: '0.39s',
     tts: '610ms',
     knowledgeBase: '10s',
-    time: '5:32 PM',
+    durationLabel: '5s',
   },
   { id: 'sys2', role: 'system', text: 'Routed to appointment booking agent' },
   { id: 'sys3', role: 'system', text: 'Procedure switched : Book appointment' },
@@ -229,14 +229,13 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: 'I have an opening this Thursday at 2 PM with Dr. Patel — would that work for you?',
     llmResponseTime: '0.35s',
     tts: '580ms',
-    time: '5:32 PM',
+    durationLabel: '3s',
   },
   {
     id: 'c4',
     role: 'caller',
     text: 'Yes please, Thursday at 2 PM works.',
     durationLabel: '3s',
-    time: '5:33 PM',
   },
   {
     id: 'a6',
@@ -244,7 +243,7 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "You're all set for Thursday at 2 PM with Dr. Patel. Anything else I can help with?",
     llmResponseTime: '0.31s',
     tts: '520ms',
-    time: '5:33 PM',
+    durationLabel: '3s',
     toolCall: {
       id: 'tool-2',
       name: 'Schedule Appointment',
@@ -268,7 +267,6 @@ const DEFAULT_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: "No, that's all. Thank you!",
     durationLabel: '2s',
-    time: '5:33 PM',
   },
 ]
 
@@ -375,7 +373,7 @@ export const REMINDER_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "Hi there! I'm Myna, your virtual assistant from Rock Dental Brands. I'm reaching out to confirm your upcoming appointment. Is now a good time to chat?",
     llmResponseTime: '0.42s',
     tts: '700ms',
-    time: '5:30 PM',
+    durationLabel: '5s',
     toolCall: {
       id: 'rtool-1',
       name: 'Initiate voice call',
@@ -390,7 +388,6 @@ export const REMINDER_TRANSCRIPT: LogTranscriptEntry[] = [
     role: 'caller',
     text: 'Yes, go ahead.',
     durationLabel: '2s',
-    time: '5:30 PM',
   },
   {
     id: 'ra2',
@@ -399,14 +396,13 @@ export const REMINDER_TRANSCRIPT: LogTranscriptEntry[] = [
     llmResponseTime: '0.42s',
     tts: '700ms',
     knowledgeBase: '5s',
-    time: '5:31 PM',
+    durationLabel: '6s',
   },
   {
     id: 'rc2',
     role: 'caller',
     text: "Yes, I'll be there. Do I need to bring anything?",
     durationLabel: '3s',
-    time: '5:31 PM',
   },
   {
     id: 'ra3',
@@ -414,14 +410,13 @@ export const REMINDER_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "Glad to hear it! Please bring a valid photo ID and your insurance card if applicable. Also, arrive about 10 minutes early to complete any paperwork. Is there anything else you'd like to know before your visit?",
     llmResponseTime: '0.42s',
     tts: '700ms',
-    time: '5:32 PM',
+    durationLabel: '8s',
   },
   {
     id: 'rc3',
     role: 'caller',
     text: 'Actually, can you also tell me what my insurance covers for this visit?',
     durationLabel: '4s',
-    time: '5:32 PM',
   },
   { id: 'rsys4', role: 'system', text: 'Routed to Front desk agent' },
   {
@@ -430,7 +425,7 @@ export const REMINDER_TRANSCRIPT: LogTranscriptEntry[] = [
     text: "That's a great question! Let me connect you with our front desk team — they'll be able to walk you through your coverage details right away.",
     llmResponseTime: '0.42s',
     tts: '700ms',
-    time: '5:33 PM',
+    durationLabel: '5s',
   },
 ]
 
@@ -447,6 +442,42 @@ function formatDurationLabel(secs: number): string {
   const mins = Math.floor(secs / 60)
   const rem = secs % 60
   return `${mins}m ${String(rem).padStart(2, '0')}s`
+}
+
+/** Parse transcript duration labels like "5s" / "400ms" into seconds. */
+function parseMsgDurationSecs(label?: string): number {
+  if (!label) return 1.5
+  const trimmed = label.trim()
+  const ms = trimmed.match(/^([\d.]+)\s*ms$/i)
+  if (ms) return Math.max(0.1, Number(ms[1]) / 1000)
+  const s = trimmed.match(/^([\d.]+)\s*s$/i)
+  if (s) return Math.max(0.1, Number(s[1]))
+  return 1.5
+}
+
+/** Cumulative start times for each transcript entry (speech timeline). */
+function buildTranscriptTimeline(entries: LogTranscriptEntry[]) {
+  let t = 0
+  const marks: { id: string; start: number }[] = []
+  for (const entry of entries) {
+    marks.push({ id: entry.id, start: t })
+    if (entry.role === 'system') t += 0.4
+    else t += parseMsgDurationSecs(entry.durationLabel)
+  }
+  return { marks, duration: Math.max(t, 0.001) }
+}
+
+function activeTranscriptId(
+  marks: { id: string; start: number }[],
+  speechTime: number,
+): string | null {
+  if (marks.length === 0) return null
+  let active = marks[0].id
+  for (const mark of marks) {
+    if (mark.start <= speechTime) active = mark.id
+    else break
+  }
+  return active
 }
 
 const DEFAULT_CALL_AI_SUMMARY = [
@@ -503,7 +534,7 @@ function CallAiSummary({ bullets = DEFAULT_CALL_AI_SUMMARY }: { bullets?: string
 
 const ORIGINAL_TRANSCRIPT = {
   id: 'original',
-  label: 'Original transcript',
+  label: 'English',
   countryCode: 'us',
 } as const
 
@@ -649,9 +680,9 @@ function startTimeLabel(timestamp: string): string {
 
 function MetaField({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="flex flex-col gap-xs">
       <p className="m-0 text-small text-text-tertiary">{label}</p>
-      <p className="m-0 mt-xs text-small text-text-primary">{value}</p>
+      <p className="m-0 text-body text-text-primary">{value}</p>
     </div>
   )
 }
@@ -682,7 +713,7 @@ function CallEndReasonField({
           label={resultBadge}
           variant={CALL_END_RESULT_VARIANT[resultBadge] ?? 'neutral'}
         />
-        <p className="m-0 text-small text-text-primary">{reason}</p>
+        <p className="m-0 text-body text-text-primary">{reason}</p>
       </div>
     </div>
   )
@@ -702,7 +733,8 @@ function CallDetailsTab({
   callerNumber: string
   languageDetected: string
   durationSecs: number
-  sidNumber: string
+  /** Voice calls only — omitted for chat/SMS/email. */
+  sidNumber?: string
   startTime: string
   callEndReason: string
   routedVia: string
@@ -714,7 +746,7 @@ function CallDetailsTab({
       <MetaField label="Caller number" value={callerNumber} />
       <MetaField label="Language detected" value={languageDetected} />
       <MetaField label="Duration" value={formatDurationLabel(durationSecs)} />
-      <MetaField label="Call SID" value={sidNumber} />
+      {sidNumber ? <MetaField label="Call SID" value={sidNumber} /> : null}
       <MetaField label="Start time" value={startTime} />
       <CallEndReasonField reason={callEndReason} resultBadge={callEndResultBadge} />
       <MetaField label="Routed via" value={routedVia} />
@@ -883,7 +915,10 @@ function ToolCallLine({ tool }: { tool: LogToolCall }) {
     <div className="flex flex-col items-center gap-sm py-sm">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
         className="flex items-center gap-xs text-small text-text-tertiary hover:text-text-secondary"
       >
         <Icon name="build" size={16} className="shrink-0" />
@@ -899,7 +934,10 @@ function ToolCallLine({ tool }: { tool: LogToolCall }) {
             <Tooltip content="Copy" variant="brief">
               <button
                 type="button"
-                onClick={handleCopy}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopy()
+                }}
                 aria-label="Copy"
                 className="flex size-7 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-icon"
               >
@@ -1038,12 +1076,13 @@ function TranscriptEntry({
         gap="gap-sm"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
-        <MetaLine parts={sttParts} trailing={entry.time} />
+        <MetaLine parts={sttParts} />
       </ChatBubble>
     )
   }
 
   const metaParts = agentMetaParts(entry)
+  const msgDuration = entry.durationLabel
 
   return (
     <>
@@ -1061,7 +1100,10 @@ function TranscriptEntry({
             {recId ? (
               <button
                 type="button"
-                onClick={onTrackFeedback}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onTrackFeedback?.()
+                }}
                 className="group flex items-center gap-xs text-small text-text-action"
               >
                 <Icon name="track_changes" size={16} />
@@ -1070,17 +1112,20 @@ function TranscriptEntry({
             ) : (
               <button
                 type="button"
-                onClick={onCoachAgent}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCoachAgent?.()
+                }}
                 className="group flex items-center gap-xs text-small text-text-action"
               >
                 <Icon name="auto_awesome" size={16} />
                 <span className="group-hover:underline">Coach agent</span>
               </button>
             )}
-            {entry.time && (
+            {msgDuration && (
               <>
                 <span className="shrink-0 text-small text-text-tertiary">•</span>
-                <span className="shrink-0 text-small text-text-tertiary">{entry.time}</span>
+                <span className="shrink-0 text-small text-text-tertiary">{msgDuration}</span>
               </>
             )}
           </div>
@@ -1107,7 +1152,8 @@ export function LogDetailsPanel({
   showCallDetails = true,
   callEndResultBadge,
   userRating,
-  showTranscriptTranslation = false,
+  showTranscriptTranslation: _showTranscriptTranslation = false,
+  onStepFocus,
 }: LogDetailsPanelProps) {
   const isReminder = agentName.startsWith('Reminder agent')
   const steps = stepsProp ?? (isReminder ? REMINDER_CALL_LOG_STEPS : CALL_LOG_STEPS)
@@ -1159,28 +1205,77 @@ export function LogDetailsPanel({
     setRecIdByMessage((prev) => ({ ...prev, [feedbackMessageId]: recId }))
   }
 
-  // Chat auto-scrolls to track the call recording's playhead — the waveform itself stays put
-  // (pinned above), only the transcript below it moves. A manual scroll (wheel/touch/drag)
-  // suspends this until the user opts back in via "Resume auto scrolling".
+  // Chat auto-scrolls to the transcript message matching the call playhead — the waveform
+  // stays sticky; seeking/scrubbing jumps that message to just below the player. A manual
+  // scroll suspends this until "Resume auto scrolling".
   const [autoScroll, setAutoScroll] = useState(true)
   const [playbackProgress, setPlaybackProgress] = useState({ elapsed: 0, total: 0 })
+  /** True when content above the sticky call recording has scrolled away (player is pinned). */
+  const [recordingPinned, setRecordingPinned] = useState(false)
   const chatScrollRef = useRef<HTMLDivElement>(null)
-  // Set right before a programmatic scrollTop write, so the very next `onScroll` it fires can
-  // be told apart from a genuine user-driven one (which should suspend auto-scroll).
+  const recordingPlayerRef = useRef<CallRecordingPlayerHandle>(null)
   const isProgrammaticScrollRef = useRef(false)
+  const transcriptTimeline = useMemo(() => buildTranscriptTimeline(transcript), [transcript])
+
+  const updateRecordingPinned = useCallback(() => {
+    const el = chatScrollRef.current
+    if (!el || !hasVoiceCall) {
+      setRecordingPinned(false)
+      return
+    }
+    const sticky = el.querySelector<HTMLElement>('[data-call-recording-sticky]')
+    if (!sticky) {
+      setRecordingPinned(false)
+      return
+    }
+    const parentTop = el.getBoundingClientRect().top
+    const stickyTop = sticky.getBoundingClientRect().top
+    setRecordingPinned(stickyTop <= parentTop + 1)
+  }, [hasVoiceCall])
+
+  const scrollTranscriptToPlayhead = useCallback(
+    (elapsedSecs: number, totalSecs: number) => {
+      const el = chatScrollRef.current
+      if (!el || totalSecs <= 0) return
+      const speechTime = (elapsedSecs / totalSecs) * transcriptTimeline.duration
+      const activeId = activeTranscriptId(transcriptTimeline.marks, speechTime)
+      if (!activeId) return
+      const target = el.querySelector<HTMLElement>(`[data-transcript-entry="${activeId}"]`)
+      if (!target) return
+      const sticky = el.querySelector<HTMLElement>('[data-call-recording-sticky]')
+      const stickyH = sticky?.getBoundingClientRect().height ?? 0
+      const delta =
+        target.getBoundingClientRect().top - el.getBoundingClientRect().top - stickyH - 8
+      if (Math.abs(delta) < 1) return
+      isProgrammaticScrollRef.current = true
+      el.scrollTop += delta
+      requestAnimationFrame(updateRecordingPinned)
+    },
+    [transcriptTimeline, updateRecordingPinned],
+  )
 
   useEffect(() => {
     if (!autoScroll) return
-    const el = chatScrollRef.current
-    if (!el || playbackProgress.total <= 0) return
-    const fraction = Math.min(1, Math.max(0, playbackProgress.elapsed / playbackProgress.total))
-    const maxScroll = el.scrollHeight - el.clientHeight
-    if (maxScroll <= 0) return
-    isProgrammaticScrollRef.current = true
-    el.scrollTop = fraction * maxScroll
-  }, [autoScroll, playbackProgress])
+    // Playhead at 0 = first land (or seek-to-start): keep Call details in view at the top
+    // rather than jumping to the first transcript bubble.
+    if (playbackProgress.elapsed <= 0) {
+      const el = chatScrollRef.current
+      if (el && el.scrollTop !== 0) {
+        isProgrammaticScrollRef.current = true
+        el.scrollTop = 0
+        requestAnimationFrame(updateRecordingPinned)
+      }
+      return
+    }
+    scrollTranscriptToPlayhead(playbackProgress.elapsed, playbackProgress.total)
+  }, [autoScroll, playbackProgress, scrollTranscriptToPlayhead, updateRecordingPinned])
+
+  useEffect(() => {
+    updateRecordingPinned()
+  }, [updateRecordingPinned, showCallDetails, hasVoiceCall])
 
   const handleChatScroll = () => {
+    updateRecordingPinned()
     if (isProgrammaticScrollRef.current) {
       isProgrammaticScrollRef.current = false
       return
@@ -1188,18 +1283,69 @@ export function LogDetailsPanel({
     setAutoScroll(false)
   }
 
+  const handleRecordingProgress = useCallback((elapsedSecs: number, playerTotalSecs: number) => {
+    setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })
+  }, [])
+
+  const handleRecordingSeek = useCallback(
+    (elapsedSecs: number, playerTotalSecs: number) => {
+      setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })
+      setAutoScroll(true)
+      requestAnimationFrame(() => scrollTranscriptToPlayhead(elapsedSecs, playerTotalSecs))
+    },
+    [scrollTranscriptToPlayhead],
+  )
+
+  const handleTranscriptEntryClick = useCallback(
+    (entryId: string) => {
+      if (!hasVoiceCall) return
+      const mark = transcriptTimeline.marks.find((m) => m.id === entryId)
+      if (!mark) return
+      const recordingTotal = playbackProgress.total > 0 ? playbackProgress.total : totalSecs
+      const elapsedSecs = (mark.start / transcriptTimeline.duration) * recordingTotal
+      setAutoScroll(true)
+      recordingPlayerRef.current?.seekTo(elapsedSecs)
+      requestAnimationFrame(() => scrollTranscriptToPlayhead(elapsedSecs, recordingTotal))
+    },
+    [
+      hasVoiceCall,
+      playbackProgress.total,
+      scrollTranscriptToPlayhead,
+      totalSecs,
+      transcriptTimeline,
+    ],
+  )
+
   const transcriptNodes = transcript.map((entry) => (
-    <TranscriptEntry
+    <div
       key={entry.id}
-      entry={entry}
-      recId={entry.role === 'agent' ? recIdByMessage[entry.id] : undefined}
-      onCoachAgent={entry.role === 'agent' ? () => setShareFeedbackMessageId(entry.id) : undefined}
-      onTrackFeedback={
-        entry.role === 'agent'
-          ? () => recIdByMessage[entry.id] && onTrackFeedback?.(recIdByMessage[entry.id])
+      data-transcript-entry={entry.id}
+      role={hasVoiceCall ? 'button' : undefined}
+      tabIndex={hasVoiceCall ? 0 : undefined}
+      onClick={hasVoiceCall ? () => handleTranscriptEntryClick(entry.id) : undefined}
+      onKeyDown={
+        hasVoiceCall
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleTranscriptEntryClick(entry.id)
+              }
+            }
           : undefined
       }
-    />
+      className={hasVoiceCall ? 'cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30' : undefined}
+    >
+      <TranscriptEntry
+        entry={entry}
+        recId={entry.role === 'agent' ? recIdByMessage[entry.id] : undefined}
+        onCoachAgent={entry.role === 'agent' ? () => setShareFeedbackMessageId(entry.id) : undefined}
+        onTrackFeedback={
+          entry.role === 'agent'
+            ? () => recIdByMessage[entry.id] && onTrackFeedback?.(recIdByMessage[entry.id])
+            : undefined
+        }
+      />
+    </div>
   ))
 
   const resumeAutoScrollButton = !autoScroll && (
@@ -1220,22 +1366,27 @@ export function LogDetailsPanel({
         showHeader={false}
         showCallRecording={hasVoiceCall}
         conversationTabLabel={hasVoiceCall ? 'Call transcript' : 'Conversation'}
+        onStepFocus={onStepFocus}
         conversationContent={
           isReminder ? (
             <div className="relative flex h-full flex-col">
               <div
                 ref={chatScrollRef}
                 onScroll={handleChatScroll}
-                className="min-h-0 flex-1 overflow-y-auto px-lg pb-2xl [scrollbar-gutter:stable_both-edges]"
+                className="min-h-0 flex-1 overflow-y-auto pb-sm [scrollbar-gutter:stable_both-edges]"
               >
                 <div className="flex flex-col gap-3xl pt-lg">
                   {showCallDetails && (
-                    <CollapsibleCallDetails userRating={displayUserRating}>
+                    <CollapsibleCallDetails
+                      key={`${row.timestamp}-details`}
+                      userRating={displayUserRating}
+                      title={hasVoiceCall ? 'Call details' : 'Details'}
+                    >
                       <CallDetailsTab
                         callerNumber={displayCaller}
                         languageDetected={languageDetected}
                         durationSecs={totalSecs}
-                        sidNumber={sidNumber}
+                        sidNumber={hasVoiceCall ? sidNumber : undefined}
                         startTime={startTimeLabel(row.timestamp)}
                         callEndReason={callEndReason}
                         routedVia={routedVia}
@@ -1257,26 +1408,35 @@ export function LogDetailsPanel({
                   {hasVoiceCall && (
                     <>
                       <ChatSystemLabel text="Voice call started" />
-                      <div className="sticky top-0 z-10 bg-surface pb-md pt-sm">
+                      <div className="sticky top-0 z-10 bg-surface pb-md pt-sm" data-call-recording-sticky>
                         <div className="border border-transparent px-lg">
-                          <p className="m-0 mb-sm text-[13px] tracking-[-0.26px] text-[#555]">
+                          <p className="m-0 mb-sm text-body text-text-secondary">
                             Call recording
                           </p>
                           <CallRecordingPlayer
+                            ref={recordingPlayerRef}
                             audioUrl={audioUrl}
                             durationSecs={totalSecs}
                             padded={false}
-                            onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                            showSeeker={recordingPinned}
+                            onProgress={handleRecordingProgress}
+                            onSeek={handleRecordingSeek}
                           />
                         </div>
                       </div>
                       <CallAiSummary bullets={REMINDER_CALL_AI_SUMMARY} />
                       <CallTranscriptSection>
+                        <TranscriptTranslationControl />
                         {transcriptNodes}
                       </CallTranscriptSection>
                     </>
                   )}
-                  {!hasVoiceCall && transcriptNodes}
+                  {!hasVoiceCall && (
+                    <div className="flex flex-col gap-lg">
+                      <TranscriptTranslationControl />
+                      {transcriptNodes}
+                    </div>
+                  )}
                 </div>
               </div>
               {resumeAutoScrollButton}
@@ -1292,12 +1452,16 @@ export function LogDetailsPanel({
                  *  can dock flush under the tabs at `top: 0` with no permanent gap. */}
                 {showCallDetails ? (
                   <div className="pt-lg">
-                    <CollapsibleCallDetails userRating={displayUserRating}>
+                    <CollapsibleCallDetails
+                      key={`${row.timestamp}-details`}
+                      userRating={displayUserRating}
+                      title={hasVoiceCall ? 'Call details' : 'Details'}
+                    >
                       <CallDetailsTab
                         callerNumber={displayCaller}
                         languageDetected={languageDetected}
                         durationSecs={totalSecs}
-                        sidNumber={sidNumber}
+                        sidNumber={hasVoiceCall ? sidNumber : undefined}
                         startTime={startTimeLabel(row.timestamp)}
                         callEndReason={callEndReason}
                         routedVia={routedVia}
@@ -1310,17 +1474,20 @@ export function LogDetailsPanel({
                   <div className="pt-lg" aria-hidden />
                 ) : null}
                 {hasVoiceCall && (
-                  <div className="sticky top-0 z-10 bg-surface pb-md pt-sm">
+                  <div className="sticky top-0 z-10 bg-surface pb-md pt-sm" data-call-recording-sticky>
                     {/* Same inset as Call details label (1px border + px-lg) for title + player. */}
                     <div className="border border-transparent px-lg">
-                      <p className="m-0 mb-sm text-[13px] tracking-[-0.26px] text-[#555]">
+                      <p className="m-0 mb-sm text-body text-text-secondary">
                         Call recording
                       </p>
                       <CallRecordingPlayer
+                        ref={recordingPlayerRef}
                         audioUrl={audioUrl}
                         durationSecs={totalSecs}
                         padded={false}
-                        onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                        showSeeker={recordingPinned}
+                        onProgress={handleRecordingProgress}
+                        onSeek={handleRecordingSeek}
                       />
                     </div>
                   </div>
@@ -1329,11 +1496,14 @@ export function LogDetailsPanel({
                   {hasVoiceCall && <CallAiSummary />}
                   {hasVoiceCall ? (
                     <CallTranscriptSection>
-                      {showTranscriptTranslation && <TranscriptTranslationControl />}
+                      <TranscriptTranslationControl />
                       {transcriptNodes}
                     </CallTranscriptSection>
                   ) : (
-                    transcriptNodes
+                    <div className="flex flex-col gap-lg">
+                      <TranscriptTranslationControl />
+                      {transcriptNodes}
+                    </div>
                   )}
                 </div>
               </div>

@@ -1092,6 +1092,10 @@ export default function AgentBuilder({
   explorationChrome = hideTopIdentity,
   /** Log run view: node IDs that completed in this run — show green check on the header icon. */
   logDoneNodeIds = null,
+  /** External canvas focus (e.g. clicking a log step in RunDetailView). */
+  externalFocusNodeId = null,
+  /** Bumped when the same node is focused again so the canvas re-pans. */
+  externalFocusNonce = 0,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -1567,6 +1571,24 @@ export default function AgentBuilder({
   }, [resolveIssuesList]);
 
   const [canvasFocusNodeId, setCanvasFocusNodeId] = useState(null);
+
+  // Parent-driven focus (log step click) — also expand any collapsed branch that holds the node.
+  useEffect(() => {
+    if (!externalFocusNodeId) return;
+    const located = locateNodeContainer(externalFocusNodeId, nodeList, nodeDetails);
+    if (located?.containerId) {
+      const branchPathId = located.containerId;
+      const parentBranchId = nodeDetails[branchPathId]?.parentId;
+      if (parentBranchId) {
+        setCollapsedBranches((prev) => ({ ...prev, [parentBranchId]: false }));
+      }
+      setCollapsedBranchPaths((prev) => ({ ...prev, [branchPathId]: false }));
+    }
+    // Clear first so re-focusing the same id still triggers FlowCanvas's pan effect.
+    setCanvasFocusNodeId(null);
+    const frame = requestAnimationFrame(() => setCanvasFocusNodeId(externalFocusNodeId));
+    return () => cancelAnimationFrame(frame);
+  }, [externalFocusNodeId, externalFocusNonce, nodeList, nodeDetails]);
 
   // Undo/redo history for the floating-chrome canvas toolbar.
   const [historyPast, setHistoryPast] = useState([]);

@@ -40,21 +40,23 @@
   pointer-events: none;
 }
 
-.preview-panel-float-wrap .preview-panel {
+.preview-panel-float-wrap .preview-panel,
+.preview-panel-float-wrap .log-details-panel {
   flex: 1;
   min-height: 0;
   pointer-events: auto;
 }
 
-/* Wider float wrap for healthcare log-details panel — overlays canvas like agent-builder RHS */
+/* Wider float wrap for healthcare log-details panel — Aero inset side panel over the canvas */
 .preview-panel-float-wrap--log-details {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 480px; /* 460px panel + 10px padding each side */
-  min-width: 380px; /* 360px panel + 10px padding each side */
-  z-index: 10;
+  width: 476px; /* 460px panel + 8px inset each side */
+  min-width: 376px;
+  padding: 8px; /* Aero drawer inset */
+  z-index: 20;
 }
 
 .preview-panel-float-wrap--log-details .log-details-panel,
@@ -62,7 +64,12 @@
   width: 460px !important;
   min-width: 360px;
   flex-shrink: 0;
-  box-shadow: none;
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 16px; /* Corner Radius/xl — Aero drawer */
+  background: #ffffff; /* surface */
+  /* Soft docked-panel elevation (same as agent-builder RHS) — not shadow-modal */
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  pointer-events: auto;
 }
 
 /* ── Header ── */
