@@ -31,6 +31,25 @@ const EXPLORATION_FRONTDESK_STATUS_LABEL: Record<string, string> = {
 
 const EXPLORATION_NOT_RESOLVED_INTENTS = ['Aborted', 'Transferred to human'] as const
 
+const NEGATIVE_LOG_STATUS_TOOLTIP = 'Placeholder for actual error'
+
+const NEGATIVE_LOG_STATUSES = new Set(['Failed', 'Not resolved', 'Aborted'])
+
+function renderLogStatusCell(
+  value: unknown,
+  variantMap: Record<string, ChipVariant> = STATUS_VARIANT,
+) {
+  const label = String(value)
+  const variant = variantMap[label] ?? 'neutral'
+  const chip = <Chip label={label} variant={variant} />
+  if (!NEGATIVE_LOG_STATUSES.has(label)) return chip
+  return (
+    <Tooltip variant="detail" side="top" content={NEGATIVE_LOG_STATUS_TOOLTIP}>
+      <span className="inline-flex">{chip}</span>
+    </Tooltip>
+  )
+}
+
 function mapExplorationFrontDeskStatus(status: string): string {
   return EXPLORATION_FRONTDESK_STATUS_LABEL[status] ?? status
 }
@@ -70,7 +89,7 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     label: 'Status',
     width: 130,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 200, sortable: true },
   { key: 'channel', label: 'Source', width: 120, sortable: true },
@@ -116,7 +135,7 @@ const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   {
     key: 'topic',
@@ -135,7 +154,7 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
@@ -149,7 +168,7 @@ const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
   { key: 'source', label: 'Source', width: 180, sortable: true },
@@ -172,7 +191,7 @@ const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
     width: 130,
     sortable: true,
     truncate: false,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Reviewer name', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
   { key: 'rating', label: 'Review rating', width: 140, truncate: false, render: RATING_CELL },
@@ -193,9 +212,7 @@ const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => (
-      <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />
-    ),
+    render: (v) => renderLogStatusCell(v, PREVISIT_STATUS_VARIANT),
   },
   { key: 'contact', label: 'Contact', width: 200, sortable: true },
   { key: 'channel', label: 'Channel', width: 120, sortable: true },
@@ -209,7 +226,7 @@ const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v, PREVISIT_STATUS_VARIANT),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
 ]
