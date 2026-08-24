@@ -5,20 +5,22 @@ export interface RunLogField {
   properties?: RunLogField[]
 }
 
-export type RunLogStepType = 'trigger' | 'task' | 'delay' | 'branch'
+export type RunLogStepType = 'trigger' | 'task' | 'delay' | 'branch' | 'procedures'
 
 export interface RunLogStep {
   id: string
   type: RunLogStepType
   stepNumber: number
   title: string
-  /** Defaults to "Branch output" for branch steps, "Task output" otherwise. */
+  /** Defaults to "Trigger output" / "Procedure output" / "Branch output" / "Task output". */
   outputLabel?: string
   output?: RunLogField[]
   inputs?: RunLogField[]
   tool?: { name: string; properties: RunLogField[] }
   /** Plain status line shown instead of output/inputs (e.g. delay steps). */
   note?: string
+  /** Wall-clock time for this step; falls back to a type-based default when omitted. */
+  durationSecs?: number
 }
 
 // Conversation entry shape is shared with the inbox deep-link data.
@@ -38,6 +40,8 @@ export interface RunDetailsPanelProps {
   conversationContent?: ReactNode
   /** When false, hides Logs/Conversation tabs and shows logs only. Default true. */
   showTabs?: boolean
+  /** Conversation-tab label. Default "Conversation"; voice-call logs use "Call transcript". */
+  conversationTabLabel?: string
   /** Panel header title. Default "Run details". */
   title?: string
   /** When false, hides the header row (title + optional "View conversation" button) entirely.
@@ -49,8 +53,9 @@ export interface RunDetailsPanelProps {
   showCallRecording?: boolean
   audioUrl?: string
   durationSecs?: number
-  /** Shows a third "Call details" tab (Caller number, Language detected, Duration, Call SID,
-   *  Start time, Call end reason, Routed via) when provided. */
+  /** When provided (or via `callDetailsContent`), shows a collapsible "Call details" section at
+   *  the top of the Conversation tab — Caller number, Language detected, Duration, Call SID,
+   *  Start time, Call end reason, Routed via. Collapsed by default. */
   callDetails?: {
     callerNumber: string
     languageDetected: string
@@ -60,8 +65,9 @@ export interface RunDetailsPanelProps {
     callEndReason: string
     routedVia: string
   }
-  /** Overrides the built-in `CallDetailsTab` rendering of `callDetails` with arbitrary content.
-   *  Also shows the "Call details" tab on its own, even without `callDetails` set. */
+  /** Overrides the built-in call-details fields with arbitrary content. When set (or when
+   *  `callDetails` is set), a collapsible "Call details" section appears at the top of the
+   *  Conversation tab (collapsed by default). */
   callDetailsContent?: ReactNode
   /** Agent instance name — enables the Coach agent / Track your feedback flow on business bubbles
    *  in the Conversation tab (matching `LogDetailsPanel`) and tags any submitted feedback with it. */
