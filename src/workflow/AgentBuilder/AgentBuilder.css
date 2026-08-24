@@ -1848,6 +1848,46 @@
   background: #f0f2f5;
 }
 
+/* Sep 1: show a text label under each left-stack icon (AI / Trigger / Procedures / Actions / Controls). */
+.rr-chrome-left-stack--labelled .rr-chrome-left-ai {
+  width: 84px;
+  height: auto;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 4px;
+}
+
+.rr-chrome-left-stack--labelled .rr-chrome-left-floater {
+  width: 84px;
+}
+
+.rr-chrome-left-stack--labelled .rr-chrome-left-floater__btn {
+  width: 100%;
+  height: auto;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 2px;
+}
+
+.rr-chrome-left-label {
+  font-size: 11px;
+  line-height: 14px;
+  color: #8f8f8f;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Sep 1 left stack is wider (84px vs 56px) to fit icon labels — shift everything that
+   anchors off its right edge (node palette, Create with AI panel) so they no longer overlap it. */
+.agent-builder--rr-chrome.agent-builder--lhs-labelled {
+  --rr-chrome-lhs-panel-left: 104px;
+}
+
+.agent-builder--lhs-labelled .rr-chrome-palette {
+  left: 110px;
+}
+
 .rr-chrome-palette {
   position: absolute;
   top: 72px;
