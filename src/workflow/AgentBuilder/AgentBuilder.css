@@ -565,13 +565,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #555;
+  color: #303030; /* text/icon */
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 4px; /* Corner Radius/sm */
 }
 
 .ab-header-cloud-btn:hover {
-  background: #f2f4f7;
+  background: #f2f4f7; /* surface/hover */
+  color: #0d0d12;
 }
 
 .ab-header-cloud-btn:disabled {
@@ -935,8 +936,8 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 8px; /* xs / sm — Chip */
+  border-radius: 4px; /* Corner Radius/sm */
   font-family: 'Roboto', sans-serif;
   font-size: 12px;
   font-weight: 400;
@@ -945,18 +946,18 @@
 }
 
 .ab-header-status--running {
-  background: #f1faf0;
-  color: #377e2c;
+  background: #f1faf0; /* chip/success/bg */
+  color: #377e2c; /* chip/success/text */
 }
 
 .ab-header-status--paused {
-  background: #fef3d6;
-  color: #c69204;
+  background: #fef3d6; /* chip/warning/bg */
+  color: #c69204; /* chip/warning/text */
 }
 
 .ab-header-status--draft {
-  background: #eeeeee;
-  color: #212121;
+  background: #eaeaea; /* chip/neutral/bg */
+  color: #555555; /* chip/neutral/text */
 }
 
 .ab-header-status--with-live {
@@ -1469,20 +1470,20 @@
   gap: 6px;
   height: 40px;
   padding: 0 14px 0 10px;
-  border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 8px; /* Corner Radius/md */
+  background: #ffffff; /* surface */
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
   cursor: pointer;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.28px;
-  color: #212121;
+  color: #0d0d12; /* text/primary */
 }
 
 .rr-chrome-back:hover {
-  background: #f2f4f7;
+  background: #f2f4f7; /* surface/hover */
 }
 
 .rr-chrome-back-cluster {
@@ -1492,7 +1493,7 @@
   z-index: 60;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px; /* spacing/sm */
   max-width: calc(50% - 24px);
 }
 
@@ -1506,10 +1507,10 @@
   align-items: center;
   height: 40px;
   min-width: 300px;
-  padding: 0 16px 0 12px;
+  padding: 0 12px 0 8px; /* md / sm */
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  background: #fff;
+  border-radius: 8px; /* Corner Radius/md */
+  background: #ffffff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
 }
 
@@ -1518,19 +1519,22 @@
 }
 
 .rr-chrome-back-cluster--identity .rr-chrome-back {
-  height: auto;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
-  border-radius: 0;
+  border-radius: 4px; /* Corner Radius/sm — Aero icon button */
   background: transparent;
   box-shadow: none;
   align-self: center;
   margin-top: 0;
+  justify-content: center;
+  color: #303030; /* text/icon */
 }
 
 .rr-chrome-back-cluster--identity .rr-chrome-back:hover {
-  background: transparent;
-  color: #555;
+  background: #f2f4f7; /* surface/hover */
+  color: #0d0d12;
 }
 
 .rr-chrome-identity {
@@ -1546,7 +1550,7 @@
   min-width: 0;
   width: 100%;
   align-items: center;
-  gap: 6px;
+  gap: 8px; /* spacing/sm */
 }
 
 .rr-chrome-identity__name-group {
@@ -1567,7 +1571,7 @@
   background: none;
   cursor: pointer;
   font: inherit;
-  color: #212121;
+  color: #0d0d12; /* text/primary */
 }
 
 .rr-chrome-identity__title:disabled {
@@ -1581,9 +1585,10 @@
   white-space: nowrap;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
+  font-weight: 400;
   line-height: 20px;
   letter-spacing: -0.28px;
-  color: #212121;
+  color: #0d0d12; /* text/primary */
 }
 
 /* Version-history identity: "Version history · Dec 10, 2025, 10:11 AM" */
@@ -1592,17 +1597,18 @@
   flex-shrink: 0;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
+  font-weight: 400;
   line-height: 20px;
   letter-spacing: -0.28px;
   white-space: nowrap;
 }
 
 .rr-chrome-identity__version-sep {
-  color: #9aa4b2;
+  color: #9ca3af; /* text/tertiary */
 }
 
 .rr-chrome-identity__version-stamp {
-  color: #555;
+  color: #717182; /* text/secondary */
 }
 
 .rr-chrome-help-wrap {
@@ -1905,10 +1911,10 @@
   width: 304px;
   max-height: calc(100% - 168px);
   overflow: hidden;
-  border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
+  border: 1px solid #e5e9f0; /* border */
+  border-radius: 16px; /* Corner Radius/xl — Aero overlay panel */
+  background: #ffffff; /* surface */
+  box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06); /* docked RHS elevation */
   display: flex;
   flex-direction: column;
   transition: left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
@@ -1930,7 +1936,7 @@
   max-width: 100%;
   height: 100%;
   border: none;
-  border-radius: 6px;
+  border-radius: 16px;
   box-shadow: none;
 }
 

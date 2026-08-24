@@ -23,6 +23,27 @@ import iconRrProcedures from '../../assets/rr-chrome/icon-procedures.svg';
 import iconRrControls from '../../assets/rr-chrome/icon-controls.svg';
 import './LHSDrawer.css';
 
+/** Palette category icon — Material glyph or SVG (Branch uses the Controls floater asset). */
+function PaletteCategoryIcon({ icon, iconSrc }) {
+  if (iconSrc) {
+    return (
+      <img
+        src={iconSrc}
+        alt=""
+        width={14}
+        height={14}
+        className="lhs-drawer__palette-category-icon lhs-drawer__palette-category-icon--svg"
+        draggable={false}
+      />
+    );
+  }
+  return (
+    <span className="material-symbols-outlined lhs-drawer__palette-category-icon" aria-hidden>
+      {icon}
+    </span>
+  );
+}
+
 const EXTERNAL_APPS_TASK_KEY = 'External apps-task';
 
 /* ─── Trigger data ─── */
@@ -767,7 +788,13 @@ const LHS_CONTROL_STANDALONE_CARDS = CONTROL_CARDS.filter(
  *  collapsible categories whose bodies are rich `LHSEntityGroup` cards. */
 const CONTROL_SECTION_CATEGORIES = [
   { id: 'Delay', label: 'Delay', icon: 'schedule', nodeType: 'delay', items: DELAY_VARIANT_ITEMS },
-  { id: 'Branch', label: 'Branch', icon: 'account_tree', nodeType: 'branch', items: BRANCH_VARIANT_ITEMS },
+  {
+    id: 'Branch',
+    label: 'Branch',
+    iconSrc: iconRrControls,
+    nodeType: 'branch',
+    items: BRANCH_VARIANT_ITEMS,
+  },
 ];
 
 /** Single controls (no sub-variants) shown as standalone rich cards below the categories. */
@@ -1380,9 +1407,7 @@ export default function LHSDrawer({
                   onClick={() => setPaletteCategoryId((id) => (id === cat.id ? null : cat.id))}
                   aria-expanded={isOpen}
                 >
-                  <span className="material-symbols-outlined lhs-drawer__palette-category-icon" aria-hidden>
-                    {cat.icon}
-                  </span>
+                  <PaletteCategoryIcon icon={cat.icon} iconSrc={cat.iconSrc} />
                   <span className="lhs-drawer__palette-category-label">{cat.label}</span>
                   <span className="material-symbols-outlined lhs-drawer__palette-category-chevron" aria-hidden>
                     expand_more
@@ -1513,9 +1538,7 @@ export default function LHSDrawer({
                   onClick={() => setPaletteCategoryId((id) => (id === cat.id ? null : cat.id))}
                   aria-expanded={isOpen}
                 >
-                  <span className="material-symbols-outlined lhs-drawer__palette-category-icon" aria-hidden>
-                    {cat.icon}
-                  </span>
+                  <PaletteCategoryIcon icon={cat.icon} iconSrc={cat.iconSrc} />
                   <span className="lhs-drawer__palette-category-label">{cat.label}</span>
                   <span className="material-symbols-outlined lhs-drawer__palette-category-chevron" aria-hidden>
                     expand_more
@@ -1596,9 +1619,7 @@ export default function LHSDrawer({
                   onClick={() => setPaletteCategoryId((id) => (id === cat.id ? null : cat.id))}
                   aria-expanded={isOpen}
                 >
-                  <span className="material-symbols-outlined lhs-drawer__palette-category-icon" aria-hidden>
-                    {cat.icon}
-                  </span>
+                  <PaletteCategoryIcon icon={cat.icon} iconSrc={cat.iconSrc} />
                   <span className="lhs-drawer__palette-category-label">{cat.label}</span>
                   <span className="material-symbols-outlined lhs-drawer__palette-category-chevron" aria-hidden>
                     expand_more
@@ -1793,7 +1814,7 @@ export default function LHSDrawer({
         tone: 'trigger',
         title: 'Trigger',
         content: triggerContent,
-        searchPlaceholder: 'Search trigger...',
+        searchPlaceholder: 'Search triggers',
       },
       Tasks: {
         iconSrc: iconRrTasks,

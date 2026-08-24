@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 're
 import { createPortal } from 'react-dom';
 import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
+import { DataTypeIcon } from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import {
   BASE_CATEGORIES,
   WORKFLOW_CATEGORIES,
@@ -37,7 +38,9 @@ const SIDEBAR_VISIBLE_WORKFLOW_COUNT = 5;
 function FieldChip({ name }) {
   return (
     <span className={styles.chip}>
-      <span className={styles.chipSwatch}>{'{}'}</span>
+      <span className={styles.chipSwatch} aria-hidden>
+        <DataTypeIcon />
+      </span>
       <span className={styles.chipLabel}>{name}</span>
     </span>
   );

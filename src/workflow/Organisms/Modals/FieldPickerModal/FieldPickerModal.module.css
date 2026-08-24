@@ -433,9 +433,12 @@
   flex-shrink: 0;
   background: #ecf5fd;
   border-right: 1px solid #d1e5f9;
-  font-family: monospace;
-  font-size: 11px;
-  color: #1976d2;
+}
+
+.chipSwatch svg {
+  display: block;
+  width: 14px;
+  height: 13px;
 }
 
 .chipLabel {
