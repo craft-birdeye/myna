@@ -4,6 +4,12 @@ import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
+import {
+  isAgentExplorationChrome,
+  isExplorationHideCanvasStartNode,
+  RESPONSE_AGENTS_SEP1_NAV_ID,
+  FRONTDESK_SEP1_NAV_ID,
+} from './data/agentNavIds'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
@@ -60,7 +66,6 @@ import jayIcon from './assets/icon-jay.svg'
 import mynaIcon from './assets/icon-myna.svg'
 import robinIcon from './assets/icon-robin.svg'
 import {
-  FigmaIconBirdAI,
   FigmaIconOverview,
   FigmaIconInbox,
   FigmaIconFrontDesk,
@@ -99,10 +104,9 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'marketing',
-    header: 'Marketing · Jay',
-    headerIcon: jayIcon,
+    header: 'Marketing',
     items: [
-      { id: 'search',               label: 'Search AI',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
+      { id: 'search',               label: 'AI Search',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
       { id: 'listings',             label: 'Listings AI',             icon: <FigmaIconListings size={ICON_SIZE} />,        kind: 'element' },
       { id: 'reviews',              label: 'Reviews AI',              icon: <FigmaIconReviews size={ICON_SIZE} />,         kind: 'element' },
       { id: 'social',               label: 'Social AI',               icon: <FigmaIconSocial size={ICON_SIZE} />,          kind: 'element' },
@@ -113,8 +117,7 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'operations',
-    header: 'Operations · Myna',
-    headerIcon: mynaIcon,
+    header: 'Operations',
     items: [
       { id: 'inbox',     label: 'Inbox',      icon: <FigmaIconInbox size={ICON_SIZE} />,        kind: 'element' },
       { id: 'frontdesk', label: 'Front desk', icon: <FigmaIconFrontDesk size={ICON_SIZE} />, kind: 'element' },
@@ -122,8 +125,7 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'cx',
-    header: 'Customer experience · Robin',
-    headerIcon: robinIcon,
+    header: 'Customer experience',
     items: [
       { id: 'surveys',   label: 'Surveys AI',  icon: <FigmaIconSurveys size={ICON_SIZE} />,   kind: 'element' },
       { id: 'ticketing', label: 'Ticketing',   icon: <FigmaIconTicketing size={ICON_SIZE} />, kind: 'element' },
@@ -156,7 +158,9 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
+      { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
       { id: 'frontdesk-agent', label: 'Front desk agent' },
+      { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'reminder-agent',  label: 'Reminder agent'  },
       { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
       { id: 'outreach-agent',  label: 'Outreach agent'  },
@@ -199,7 +203,9 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
+      { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
       { id: 'frontdesk-agent',  label: 'Front desk agent'  },
+      { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
       { id: 'pre-visit-agent',  label: 'Pre-visit agent'  },
       { id: 'reminder-agent',   label: 'Reminder agent'   },
@@ -247,7 +253,9 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
+      { id: 'frontdesk-agent-sep-1',       label: 'Front desk agent (Sep 1)'       },
       { id: 'frontdesk-agent',             label: 'Front desk agent'             },
+      { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
       { id: 'pre-visit-agent',             label: 'Pre-visit agent'             },
       { id: 'reminder-agent',              label: 'Reminder agent'              },
@@ -305,9 +313,11 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     badge: 'New',
     items: [
-      { id: 'response-agents-sep-1',   label: 'Response agents (Sep 1)' },
-      { id: 'response-agents',         label: 'Response agents' },
+      { id: 'response-agents-sep-1',        label: 'Response agents (Sep 1)' },
+      { id: 'response-agents',              label: 'Response agents' },
+      { id: 'response-agents-exploration',  label: 'Response agents (exploration)' },
       { id: 'generation-agents',       label: 'Generation agents' },
+      { id: 'review-tagging-agent',    label: 'Review tagging agents' },
     ],
   },
   {
@@ -380,6 +390,8 @@ const PRODUCT_BRAND: Record<string, string> = {
 
 const AGENT_NAMES: Record<string, string> = {
   'frontdesk-agent':           'Front desk agent',
+  'frontdesk-agent-exploration': 'Front desk agent (exploration)',
+  'frontdesk-agent-sep-1':     'Front desk agent',
   'reminder-agent-sep-1':      'Reminder agent',
   'reminder-agent':            'Reminder agent',
   'outreach-agent':            'Outreach agent',
@@ -391,7 +403,18 @@ const AGENT_NAMES: Record<string, string> = {
   'review-response-agents':    'Review response agents',
   'response-agents':           'Review response agents',
   'response-agents-sep-1':     'Review response agents',
+  'response-agents-exploration': 'Review response agents (exploration)',
   'generation-agents':         'Review generation agents',
+  'review-tagging-agent':      'Review tagging agents',
+}
+
+const EXPLORATION_AGENT_NAV_IDS = new Set([
+  'response-agents-exploration',
+  'frontdesk-agent-exploration',
+])
+
+function isExplorationAgentNav(navId: string) {
+  return EXPLORATION_AGENT_NAV_IDS.has(navId) || isAgentExplorationChrome(navId)
 }
 
 // Map railActive → module title shown in the global TopBar
@@ -404,7 +427,7 @@ const RAIL_TITLE: Record<string, string> = {
   'overview-v2-1':       'Overview',
   'overview-v3':         'Overview v3',
   agents:                'Co-workers',
-  search:                'Search AI',
+  search:                'AI Search',
   listings:              'Listings AI',
   reviews:               'Reviews AI',
   social:                'Social AI',
@@ -467,10 +490,13 @@ export function App() {
   const [searchAIL2Active, setSearchAIL2Active] = useState(SEARCH_AI_L2_DEFAULT_ACTIVE)
   const [socialL2Active, setSocialL2Active] = useState('Publish/Calendar')
   const [editingAgentName, setEditingAgentName] = useState<string | null>(null)
+  /** Instance status when opening the editor (e.g. Draft with a live version). */
+  const [editingAgentStatus, setEditingAgentStatus] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
   // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
   // closing the editor) knows which instance + tab to land on instead of its own defaults.
   const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
+  const [editorReturnView, setEditorReturnView] = useState<{ instanceName: string; tab: string } | null>(null)
   // Set by the Agent directory "Create agent" CTA so the freshly-mounted AgentDetailScreen
   // lands directly in its create-agent flow instead of the default Agents-tab table.
   const [autoOpenAgentCreateFlow, setAutoOpenAgentCreateFlow] = useState(false)
@@ -531,9 +557,25 @@ export function App() {
     setServiceRequestDetail(null)
   }
 
-  function handleEditAgent(name: string, draft?: WizardAgentDraft) {
+  function handleEditAgent(
+    name: string,
+    draft?: WizardAgentDraft,
+    returnTo?: { instanceName: string; tab: string },
+    status?: string,
+  ) {
+    // Remembered so closing the editor lands back where editing started (e.g. the instance's
+    // Workflow tab) instead of dropping to the agent list.
+    setEditorReturnView(returnTo ?? null)
     setWizardAgentDraft(draft ?? null)
     setEditingAgentName(name)
+    const inferredDraft =
+      name?.includes('Schedule based') || name?.includes('Event trigger based')
+    // Draft/live status chrome is exploration-only; other agents keep the prior Schedule/Event rule.
+    setEditingAgentStatus(
+      isExplorationAgentNav(navActive)
+        ? (status ?? (inferredDraft ? 'Draft' : null))
+        : (inferredDraft ? 'Draft' : null),
+    )
     setWorkflowAiCreateFullscreen(false)
     // Keep the AI Builder closed on land — user opens it via the Create with AI FAB.
     setWorkflowAiBuilderPanelOpen(false)
@@ -924,6 +966,11 @@ export function App() {
                           agentName={editingAgentName}
                           onClose={() => {
                             setEditingAgentName(null)
+                            setEditingAgentStatus(null)
+                            if (editorReturnView) {
+                              setPendingAgentInstanceView(editorReturnView)
+                              setEditorReturnView(null)
+                            }
                             setWizardAgentDraft(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)
@@ -933,9 +980,12 @@ export function App() {
                           product={activeProduct}
                           wizardDraft={wizardAgentDraft}
                           agentStatus={
-                            editingAgentName?.includes('Schedule based') || editingAgentName?.includes('Event trigger based')
-                              ? 'Draft'
-                              : undefined
+                            isExplorationAgentNav(navActive)
+                              ? (editingAgentStatus ?? undefined)
+                              : editingAgentName?.includes('Schedule based') ||
+                                  editingAgentName?.includes('Event trigger based')
+                                ? 'Draft'
+                                : undefined
                           }
                           aiAssistOpen={workflowAiAssistOpen}
                           onAiAssistOpenChange={setWorkflowAiAssistOpen}
@@ -943,6 +993,14 @@ export function App() {
                           aiBuilderPanelOpen={workflowAiBuilderPanelOpen}
                           onAiBuilderPanelOpenChange={setWorkflowAiBuilderPanelOpen}
                           lhsDefaultTab={workflowLhsPreferAiTab ? 'Create with AI' : 'Create manually'}
+                          hideTopIdentity={isAgentExplorationChrome(navActive)}
+                          hideCanvasStartNode={isExplorationHideCanvasStartNode(navActive)}
+                          explorationChrome={isAgentExplorationChrome(navActive)}
+                          sep1Chrome={
+                            navActive === RESPONSE_AGENTS_SEP1_NAV_ID
+                            || navActive === FRONTDESK_SEP1_NAV_ID
+                          }
+                          inlineRhsFooter={navActive === RESPONSE_AGENTS_SEP1_NAV_ID}
                         />
                       </div>
                       {workflowAiAssistOpen && (
@@ -964,6 +1022,9 @@ export function App() {
                       navId={navActive}
                       onEditAgent={handleEditAgent}
                       onAgentSetupActiveChange={setIsAgentSetupActive}
+                      onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
+                      pendingInstanceView={pendingAgentInstanceView}
+                      onPendingInstanceViewConsumed={() => setPendingAgentInstanceView(null)}
                       onNavigateToInbox={(conversationId) => {
                         setInboxFocusId(conversationId ?? FRONT_DESK_INBOX_CONVERSATION_ID)
                         setRailActive('inbox')

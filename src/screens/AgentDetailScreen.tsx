@@ -6,6 +6,8 @@ import {
   CustomizeColumnsDrawer,
   DataTable,
   EstimateSavingsModal,
+  REVIEW_RESPONSE_SAVINGS_COPY,
+  parseTimeSavedHours,
   FilesModal,
   FilterPanel,
   HeaderSearchField,
@@ -42,6 +44,13 @@ import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 import { WorkflowEditorScreen } from './WorkflowEditorScreen'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
+import { getAgentWorkflows } from '../data/agentWorkflows'
+import {
+  isAgentExplorationChrome,
+  isExplorationHideCanvasStartNode,
+  isFrontdeskExplorationChrome,
+  isResponseAgentsExplorationChrome,
+} from '../data/agentNavIds'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
@@ -78,7 +87,12 @@ interface AgentDetailScreenProps {
    * the same display `agentName`.
    */
   navId?: string
-  onEditAgent?: (agentName: string, draft?: WizardAgentDraft) => void
+  onEditAgent?: (
+    agentName: string,
+    draft?: WizardAgentDraft,
+    returnTo?: { instanceName: string; tab: string },
+    status?: string,
+  ) => void
   onAgentSetupActiveChange?: (active: boolean) => void
   onNavigateToInbox?: (conversationId?: string) => void
   /** Automotive-only: opens the Settings > Integrations sub-screen for a given integration
@@ -105,6 +119,20 @@ const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
   'response-agents-sep-1',
   'reminder-agent-sep-1',
 ])
+
+const REVIEW_RESPONSE_AGENT_NAME = 'Review response agents'
+const REVIEW_RESPONSE_EXPLORATION_AGENT_NAME = 'Review response agents (exploration)'
+
+function isReviewResponseAgentName(name: string) {
+  return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
+}
+
+const FRONTDESK_AGENT_NAME = 'Front desk agent'
+const FRONTDESK_EXPLORATION_AGENT_NAME = 'Front desk agent (exploration)'
+
+function isFrontdeskAgentName(name: string) {
+  return name === FRONTDESK_AGENT_NAME || name === FRONTDESK_EXPLORATION_AGENT_NAME
+}
 
 interface AgentInstance {
   name: string
@@ -229,11 +257,17 @@ const LAST_UPDATED_SAMPLES = [
 const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as const
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
-  'Front desk agent': [
-    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'] },
-    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'] },
-    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140' },
+  [FRONTDESK_AGENT_NAME]: [
+    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
+    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
+    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
+  ],
+  [FRONTDESK_EXPLORATION_AGENT_NAME]: [
+    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
+    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
+    { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
   ],
   'Reminder agent': [
     { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min' },
@@ -283,7 +317,13 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'South Region', status: 'Paused',  channels: 'Voice call, Text',       statusUpdated: '450',  conversationsAssigned: '400', conversationsManaged: '400', timeSaved: '3m',  locations: '200' },
     { region: 'West Region',  status: 'Draft',   channels: 'Chat',                   statusUpdated: '400',  conversationsAssigned: '350', conversationsManaged: '380', timeSaved: '2m',  locations: '100' },
   ],
-  'Review response agents': [
+  [REVIEW_RESPONSE_AGENT_NAME]: [
+    { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
+    { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
+    { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
+    { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+  ],
+  [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
     { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
     { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
     { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
@@ -313,6 +353,8 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
       instanceName: 'Review generation agent with A/B testing, smart targeting and split campaigns 1',
     },
   ],
+  // First-time empty — no instances yet; Agents tab shows the create empty state.
+  'Review tagging agents': [],
 }
 
 const DEFAULT_REGIONS: RegionRow[] = REGIONS_BY_AGENT['Front desk agent']
@@ -355,7 +397,25 @@ type CreateLibraryCard = {
   steps?: AgentLibraryPreviewStep[]
 }
 
-function toLibraryPreviewData(card: CreateLibraryCard): AgentLibraryPreviewData {
+function workflowAgentNameForLibraryCard(card: CreateLibraryCard, currentAgent?: string): string {
+  const haystack = `${card.id} ${card.title} ${currentAgent ?? ''}`.toLowerCase()
+  if (haystack.includes('reminder') || haystack.includes('no-show') || haystack.includes('confirmation')) {
+    return 'Reminder agent'
+  }
+  if (haystack.includes('generation')) return 'Review generation agent'
+  if (haystack.includes('review')) return 'Review response agent'
+  if (haystack.includes('waitlist')) return 'Waitlist agent'
+  if (haystack.includes('outreach')) return 'Outreach agent'
+  if (haystack.includes('tagging')) return 'Tagging & routing agent'
+  if (haystack.includes('pre-visit') && !haystack.includes('preparation')) return 'Pre-visit agent'
+  if (currentAgent?.startsWith('Reminder')) return 'Reminder agent'
+  return 'Front desk agent'
+}
+
+function toLibraryPreviewData(
+  card: CreateLibraryCard,
+  opts?: { product?: string; agentName?: string },
+): AgentLibraryPreviewData {
   return {
     id: card.id,
     name: card.title,
@@ -364,6 +424,8 @@ function toLibraryPreviewData(card: CreateLibraryCard): AgentLibraryPreviewData 
       card.outcome ??
       'Increase coverage by automating more of this workflow across locations. Free your team to focus on exceptions while the agent handles the routine work.',
     locationsLabel: 'All locations',
+    product: opts?.product,
+    workflowAgentName: workflowAgentNameForLibraryCard(card, opts?.agentName),
     steps: card.steps ?? [
       {
         kind: 'trigger',
@@ -619,21 +681,76 @@ const REMINDER_PLACEHOLDERS = [
 
 const DEFAULT_CREATE_PLACEHOLDER = 'Describe the agent you want to build…'
 
-const REVIEW_GENERATION_CREATE_CARDS = [
+const REVIEW_GENERATION_CREATE_CARDS: CreateLibraryCard[] = [
   {
     id: 'reviews-generation-standard',
     title: 'Review generation agent',
     description: 'Sends review requests to customers after transactions complete across email and text.',
+    glyph: 'generation',
+    tone: 'info',
   },
   {
     id: 'reviews-generation-ab',
     title: 'Review generation agent with A/B testing',
     description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
+    glyph: 'generation-ab',
+    tone: 'ai',
   },
 ]
 
 const REVIEW_GENERATION_CREATE_PROMPT =
   'Create a review generation agent that sends review request emails and texts after a customer completes a transaction, so we get more reviews across locations.'
+
+const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
+  {
+    id: 'review-tagging-evaluation',
+    title: 'Review tagging - Review evaluation',
+    description:
+      'Analyzes review comments to identify topics mentioned in it. Uses the identified topics to tag reviews.',
+    glyph: 'tagging',
+    tone: 'success',
+    outcome:
+      'Tag more reviews consistently by topic so teams can find and act on themes faster across locations.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations.',
+      },
+      {
+        kind: 'task',
+        title: '2. Identify topics and apply tags',
+        description:
+          'Analyzes review comments for mentioned topics, then applies matching tags to the review.',
+      },
+    ],
+  },
+  {
+    id: 'review-tagging-high-risk',
+    title: 'High risk review tagging agent',
+    description:
+      'Analyzes review comments to identify extreme negative sentiments and critical issue topics mentioned to match them with tags existing in the account',
+    glyph: 'tagging-risk',
+    tone: 'danger',
+    outcome:
+      'Surface high-risk reviews quickly so teams can prioritize responses and escalate critical issues.',
+    steps: [
+      {
+        kind: 'trigger',
+        title: '1. New review is received or updated',
+        description:
+          'Agent triggers when there is a new review or an existing review is updated across all sources and locations.',
+      },
+      {
+        kind: 'task',
+        title: '2. Detect high-risk sentiment and tag',
+        description:
+          'Flags extreme negative sentiment and critical topics, then matches them to existing account tags.',
+      },
+    ],
+  },
+]
 
 // ── Per-agent library cards ──────────────────────────────────────────────────
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
@@ -737,7 +854,7 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       description: 'Analyze conversations to assign the right contact status, route messages to the appropriate team or user, and manage when conversations stay open or closed.',
     },
   ],
-  'Review response agents': [
+  [REVIEW_RESPONSE_AGENT_NAME]: [
     {
       id: 'reviews-response-templates',
       title: 'Review response agent replying using templates',
@@ -759,18 +876,30 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       description: 'Uses AI to analyze review sentiment and shows unique, context-aware replies in the dashboard for one-click posting',
     },
   ],
-  'Review generation agents': [
+  [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
     {
-      id: 'reviews-generation-standard',
-      title: 'Review generation agent',
-      description: 'Sends review requests to customers after transactions complete across email and text.',
+      id: 'reviews-response-templates',
+      title: 'Review response agent replying using templates',
+      description: 'Uses pre-defined templates and responds to reviews automatically',
     },
     {
-      id: 'reviews-generation-ab',
-      title: 'Review generation agent with A/B testing',
-      description: 'Runs split campaigns with smart targeting to maximize review request click-through and conversion.',
+      id: 'reviews-response-autonomous',
+      title: 'Review response agent replying autonomously',
+      description: 'Uses AI to analyze sentiment and post unique, context-aware replies automatically',
+    },
+    {
+      id: 'reviews-response-human-approval',
+      title: 'Review response agent replying after human approval',
+      description: 'Uses AI to analyze sentiment, generate unique replies for human approval before posting',
+    },
+    {
+      id: 'reviews-response-dashboard-suggestions',
+      title: 'Review response agent suggesting replies in dashboard',
+      description: 'Uses AI to analyze review sentiment and shows unique, context-aware replies in the dashboard for one-click posting',
     },
   ],
+  'Review generation agents': REVIEW_GENERATION_CREATE_CARDS,
+  'Review tagging agents': REVIEW_TAGGING_CREATE_CARDS,
 }
 
 // ── Illustration for the create-agent empty state (library-only landing) ───
@@ -780,14 +909,21 @@ function CreateAgentEmptyState({
   onSelectFromLibrary,
   onPreview,
   fromScratchLabel = 'Create from scratch',
+  /** `build` = screenshot-style "Build your agent" + collapsible library (1st-time UX). */
+  layout = 'compact',
+  libraryDefaultOpen = true,
 }: {
   cards: CreateLibraryCard[]
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
   onPreview?: (card: CreateLibraryCard) => void
   fromScratchLabel?: string
+  layout?: 'compact' | 'build'
+  libraryDefaultOpen?: boolean
 }) {
+  const [libraryOpen, setLibraryOpen] = useState(libraryDefaultOpen)
   const cardCount = cards.length
+  const showLibrary = layout === 'compact' || libraryOpen
   return (
     <div
       className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${
@@ -809,46 +945,82 @@ function CreateAgentEmptyState({
         draggable={false}
       />
 
-      <p className="m-0 text-center text-body text-text-secondary">
-        <button
-          type="button"
-          onClick={onCreateFromScratch}
-          className="text-body text-text-action hover:underline"
-        >
-          {fromScratchLabel}
-        </button>
-        <span className="text-text-primary">{' or select from '}</span>
-        <button type="button" className="text-body text-text-primary hover:underline">
-          library
-        </button>
-      </p>
-
-      <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
-        <div
-          className={`grid w-full gap-md ${
-            cardCount === 4
-              ? 'grid-cols-1 min-[500px]:grid-cols-4'
-              : cardCount === 2
-                ? 'grid-cols-1 min-[500px]:grid-cols-2'
-                : cardCount === 1
-                  ? 'max-w-[325px] grid-cols-1'
-                  : 'grid-cols-3'
-          }`}
-        >
-          {cards.map((tpl) => (
-            <InfoCard
-              key={tpl.id}
-              title={tpl.title}
-              description={tpl.description}
-              glyph={tpl.glyph}
-              tone={tpl.tone}
-              actionLabel="Use agent"
-              onAction={() => onSelectFromLibrary(tpl.id)}
-              onPreview={onPreview ? () => onPreview(tpl) : undefined}
+      {layout === 'build' ? (
+        <div className="flex flex-col items-center gap-sm text-center">
+          <p className="m-0 flex items-center justify-center gap-xs text-body text-text-primary">
+            <span
+              className="ai-gradient-icon size-4 shrink-0"
+              style={{
+                WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                maskImage: `url("${iconAgentsPurple}")`,
+              }}
+              aria-hidden
             />
-          ))}
+            <span>
+              Build your agent.{' '}
+              <button
+                type="button"
+                onClick={onCreateFromScratch}
+                className="text-body text-text-action hover:underline"
+              >
+                {fromScratchLabel}
+              </button>
+            </span>
+          </p>
+          <p className="m-0 text-body text-text-primary">or</p>
+          <button
+            type="button"
+            onClick={() => setLibraryOpen((open) => !open)}
+            className="flex items-center gap-xs text-body text-text-primary"
+            aria-expanded={libraryOpen}
+          >
+            Select from library
+          </button>
         </div>
-      </div>
+      ) : (
+        <p className="m-0 text-center text-body text-text-secondary">
+          <button
+            type="button"
+            onClick={onCreateFromScratch}
+            className="text-body text-text-action hover:underline"
+          >
+            {fromScratchLabel}
+          </button>
+          <span className="text-text-primary">{' or select from '}</span>
+          <button type="button" className="text-body text-text-primary hover:underline">
+            library
+          </button>
+        </p>
+      )}
+
+      {showLibrary && (
+        <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
+          <div
+            className={`grid w-full gap-md ${
+              cardCount === 4
+                ? 'grid-cols-1 min-[500px]:grid-cols-4'
+                : cardCount === 2
+                  ? 'grid-cols-1 min-[500px]:grid-cols-2'
+                  : cardCount === 1
+                    ? 'max-w-[325px] grid-cols-1'
+                    : 'grid-cols-3'
+            }`}
+          >
+            {cards.map((tpl) => (
+              <InfoCard
+                key={tpl.id}
+                title={tpl.title}
+                description={tpl.description}
+                glyph={tpl.glyph}
+                tone={tpl.tone}
+                actionLabel="Use agent"
+                onAction={() => onSelectFromLibrary(tpl.id)}
+                onPreview={onPreview ? () => onPreview(tpl) : undefined}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -6237,7 +6409,7 @@ function HealthcareFrontdeskCreateAgentLive({
         <p className="text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary">
           Build your <span className="ai-gradient-text">agent</span>
         </p>
-        <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI co-worker that gets the work done for you!</p>
+        <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI agent that gets the work done for you!</p>
       </div>
 
       <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
@@ -6907,10 +7079,19 @@ function HistoryChatReplay({
 
 export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed }: AgentDetailScreenProps) {
   const [activeTab, setActiveTab] = useState('agents')
+  const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('list')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
+  const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
+  const isExplorationAgents = isAgentExplorationChrome(navId)
+  const isSep1Agents = Boolean(navId?.includes('sep-1'))
+  const showExplorationAgentsToggle =
+    isExplorationAgents && !isSep1Agents && activeTab === 'agents'
+  const useExplorationGrid =
+    isExplorationAgents && !isSep1Agents && agentsViewMode === 'grid'
   const [selectedInstance, setSelectedInstance] = useState<string | null>(
     pendingInstanceView?.instanceName ?? null,
   )
@@ -7032,7 +7213,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   })
 
   const METRICS_BY_AGENT: Record<string, Metric[]> = {
-    'Front desk agent': [
+    [FRONTDESK_AGENT_NAME]: [
+      { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
+      { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
+      { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
+      { id: 'timeSaved', value: '40h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved based on average handle time for equivalent human-handled conversations.' },
+    ],
+    [FRONTDESK_EXPLORATION_AGENT_NAME]: [
       { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
       { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
       { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
@@ -7086,7 +7273,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       { id: 'conversationsManaged', value: '2500', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations tagged and routed end-to-end by the agent.' },
       { id: 'timeSaved', value: '40m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing.' },
     ],
-    'Review response agents': [
+    [REVIEW_RESPONSE_AGENT_NAME]: [
+      { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
+      { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
+      { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
+      { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
+    ],
+    [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
       { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
       { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
       { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
@@ -7097,6 +7290,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       { id: 'contactsReached', value: '265', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
       { id: 'clickThroughRate', value: '4.9%', label: 'Click-through rate', delta: '0.3%', trend: 'down', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
       { id: 'timeSaved', value: '9h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+    ],
+    'Review tagging agents': [
+      { id: 'reviewsTagged', value: '0', label: 'Reviews tagged', info: true, tooltip: 'Total reviews the agent has tagged across all locations in the selected period.' },
+      { id: 'topicsIdentified', value: '0', label: 'Topics identified', info: true, tooltip: 'Unique topics identified from review comments.' },
+      { id: 'highRiskTagged', value: '0', label: 'High-risk reviews tagged', info: true, tooltip: 'Reviews tagged for extreme negative sentiment or critical issues.' },
+      { id: 'timeSaved', value: '0m', label: 'Time saved', info: true, tooltip: 'Estimated staff time saved by automating review tagging.' },
     ],
   }
 
@@ -7109,11 +7308,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
 
   const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
 
-  const isFrontdeskAgent = agentName === 'Front desk agent'
-  const displayMetrics: Metric[] = isFrontdeskAgent
+  const isFrontdeskAgent = isFrontdeskAgentName(agentName)
+  const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponseAgentName(agentName)
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
-        const hours = parseFloat(String(m.value).replace(/[^\d.]/g, '')) || 0
+        const hours = parseTimeSavedHours(String(m.value))
         const cost = hours * savingsSettings.hourlyWage
         const formattedCost = new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -7183,16 +7382,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }, [initialRecommendationFocus])
 
   const isReminder        = agentName === 'Reminder agent'
-  const isFrontdesk       = agentName === 'Front desk agent'
+  const isFrontdesk       = isFrontdeskAgentName(agentName)
   const isWaitlist        = agentName === 'Waitlist agent'
   const isPreVisit        = agentName === 'Pre-visit agent'
   const isRecall          = agentName === 'Recall agent'
   const isRevenue         = agentName === 'Revenue agent'
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
-  const isReviewResponse  = agentName === 'Review response agents'
+  const isReviewResponse  = isReviewResponseAgentName(agentName)
   const isReviewGeneration = agentName === 'Review generation agents'
-  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration
+  const isReviewTagging   = agentName === 'Review tagging agents'
+  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging
   /** Illustration + library cards only (no Ghostwriter) — Sep 1 response/reminder, waitlist, pre-visit. */
   const isLibraryOnlyCreate =
     isWaitlist ||
@@ -7366,6 +7566,54 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     [order],
   )
 
+  /**
+   * Row menu → Download: exports this agent instance as a JSON file (metadata + workflow)
+   * the browser saves locally.
+   */
+  const handleDownloadAgent = (row: AgentInstance) => {
+    const workflows = getAgentWorkflows(product)
+    const workflow =
+      workflows[row.name]
+      ?? workflows[agentName]
+      ?? workflows['Review response agent']
+      ?? { nodes: [], nodeDetails: {} }
+
+    const instanceFields = Object.fromEntries(
+      order
+        .map((key) => {
+          const value = row[key as keyof AgentInstance]
+          return [key, value] as const
+        })
+        .filter(([, value]) => value !== undefined && value !== null && value !== ''),
+    )
+
+    const payload = {
+      name: row.name,
+      agentType: agentName,
+      status: row.status,
+      exportedAt: new Date().toISOString(),
+      instance: instanceFields,
+      nodes: workflow.nodes ?? [],
+      nodeDetails: workflow.nodeDetails ?? {},
+    }
+
+    const fileName = `${row.name.replace(/\s+/g, '-').toLowerCase() || 'agent'}.json`
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }),
+    )
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    // Revoking synchronously can cancel the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    setToastMessage(`${fileName} has been downloaded`)
+    setToastVisible(true)
+  }
+
   const FILTER_FIELDS: FilterField[] = [
     { id: 'status', label: 'Status', options: opts('Running', 'Paused', 'Draft') },
     { id: 'channels', label: 'Channels', options: opts('Voice call', 'Web chat', 'Text', 'Email', 'Facebook'), multi: true },
@@ -7378,15 +7626,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       ? REVIEW_RESPONSE_CREATE_CARDS
       : isReviewGeneration
         ? REVIEW_GENERATION_CREATE_CARDS.map((c) => ({ ...c }))
-        : isReminder
-          ? REMINDER_CREATE_CARDS
-          : isWaitlist
-            ? WAITLIST_CREATE_CARDS
-            : isPreVisit
-              ? PREVISIT_CREATE_CARDS
-              : isFrontdesk
-                ? HEALTHCARE_FRONTDESK_CREATE_CARDS
-                : (DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES).map((c) => ({ ...c }))
+        : isReviewTagging
+          ? REVIEW_TAGGING_CREATE_CARDS
+          : isReminder
+            ? REMINDER_CREATE_CARDS
+            : isWaitlist
+              ? WAITLIST_CREATE_CARDS
+              : isPreVisit
+                ? PREVISIT_CREATE_CARDS
+                : isFrontdesk
+                  ? HEALTHCARE_FRONTDESK_CREATE_CARDS
+                  : (DENTAL_AGENT_LIBRARY[agentName] ?? LIBRARY_TEMPLATES).map((c) => ({ ...c }))
   const libraryCards = librarySource.map((tpl) => ({
     title: tpl.title,
     description: tpl.description,
@@ -7394,7 +7644,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     tone: tpl.tone,
     actionLabel: 'Use agent' as const,
     onAction: () => onEditAgent?.(tpl.title),
-    onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl)),
+    onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl, { product, agentName })),
   }))
 
   const searchQ = searchQuery.trim().toLowerCase()
@@ -7404,6 +7654,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
         (card) => card.title.toLowerCase().includes(searchQ) || card.description.toLowerCase().includes(searchQ),
       )
     : libraryCards
+  const isReviewTaggingFirstTime = isReviewTagging && visibleData.length === 0
 
   if (showSetupWizard && isFrontdesk) {
     return (
@@ -7481,7 +7732,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 setShowCreateFlow(false)
                 onEditAgent?.(card?.title ?? fallbackLibraryName)
               }}
-              onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card))}
+              onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card, { product, agentName }))}
             />
           </div>
         </div>
@@ -7802,6 +8053,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 onClose={closeCreateWorkflow}
                 hideLhs
                 existingAgent={false}
+                hideTopIdentity={isExplorationAgents}
+                hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
+                explorationChrome={isExplorationAgents}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}
@@ -7855,6 +8109,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           }
           onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
           product={product}
+          workflowButtonOpensEditor={isExplorationAgents}
+          hideRecommendationTab={navId === 'response-agents-sep-1'}
         />
         <Toast
           message={toastMessage}
@@ -7874,107 +8130,213 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           {/* Header */}
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
             <h1 className="text-h3 text-text-primary">{agentName}</h1>
-            <div className="flex items-center gap-sm">
-              <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
+            {!isReviewTaggingFirstTime && (
+              <div className="flex items-center gap-sm">
+                <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
+                {activeTab === 'agents' ? (
+                  <>
+                    {showExplorationAgentsToggle && (
+                      <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
+                        <button
+                          type="button"
+                          aria-label="Card view"
+                          onClick={() => setAgentsViewMode('grid')}
+                          className={`flex size-6 items-center justify-center rounded-sm ${
+                            agentsViewMode === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
+                          }`}
+                        >
+                          <Icon name="grid_view" size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="List view"
+                          onClick={() => setAgentsViewMode('list')}
+                          className={`flex size-6 items-center justify-center rounded-sm ${
+                            agentsViewMode === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
+                          }`}
+                        >
+                          <Icon name="table_rows" size={18} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
+                          ? openCreateFlow()
+                          : onEditAgent?.('')
+                      }
+                      className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                    >
+                      Create agent
+                    </button>
+                    {(!isExplorationAgents || !useExplorationGrid) && (
+                      <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                        <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                      </button>
+                    )}
+                    <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
+                      <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {isReviewTaggingFirstTime ? (
+            <div className="scrollbar-subtle flex min-h-0 flex-1 items-start justify-center overflow-auto px-lg pb-lg">
+              <CreateAgentEmptyState
+                layout="build"
+                libraryDefaultOpen
+                cards={REVIEW_TAGGING_CREATE_CARDS}
+                fromScratchLabel="Create from scratch"
+                onCreateFromScratch={() => onEditAgent?.('Review tagging agent 1')}
+                onSelectFromLibrary={(templateId) => {
+                  const card = REVIEW_TAGGING_CREATE_CARDS.find((c) => c.id === templateId)
+                  onEditAgent?.(card?.title ?? 'Review tagging agent')
+                }}
+                onPreview={(card) => setLibraryPreview(toLibraryPreviewData(card, { product, agentName }))}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Tabs */}
+              <div className="px-2xl">
+                <Tabs
+                  tabs={TABS}
+                  activeTab={activeTab}
+                  onChange={setActiveTab}
+                />
+              </div>
+
               {activeTab === 'agents' ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
-                        ? openCreateFlow()
-                        : onEditAgent?.('')
-                    }
-                    className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                  >
-                    Create agent
-                  </button>
-                  <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                    <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-                  </button>
-                  <button type="button" aria-label="Filters" onClick={() => setFilterOpen((o) => !o)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
-                    <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
-                  </button>
+                  <div className="px-2xl pt-lg">
+                    <MetricTiles
+                      metrics={displayMetrics}
+                      renderTileAction={
+                        isFrontdesk || isReviewResponse
+                          ? (metric) =>
+                              metric.id === 'timeSaved' ? (
+                                <button
+                                  type="button"
+                                  aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
+                                  onClick={() => setSavingsModalOpen(true)}
+                                  className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                >
+                                  <Icon name="tune" size={18} />
+                                </button>
+                              ) : null
+                          : undefined
+                      }
+                    />
+                  </div>
+                  <EstimateSavingsModal
+                    open={savingsModalOpen}
+                    onClose={() => setSavingsModalOpen(false)}
+                    initialValues={savingsSettings}
+                    copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
+                    onSave={(values) => {
+                      setSavingsSettings(values)
+                      setSavingsModalOpen(false)
+                    }}
+                  />
+                  {useExplorationGrid ? (
+                    <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
+                      {visibleData.map((row) => {
+                        const cardMetrics = isExplorationFrontDeskAgents
+                          ? [
+                              { value: row.interactions ?? '—', label: 'Conversations responded' },
+                              { value: row.fcr ?? '—', label: 'Conversations resolved' },
+                              { value: row.aht ?? '—', label: 'Resolution rate' },
+                              { value: row.escalation ?? '—', label: 'Time saved' },
+                            ]
+                          : [
+                              { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
+                              { value: row.responseRate ?? '—', label: 'Response rate' },
+                              { value: row.avgResponseTime ?? '—', label: 'Average response time' },
+                              { value: row.timeSaved ?? '—', label: 'Time saved' },
+                            ]
+                        return (
+                          <button
+                            type="button"
+                            key={row.name}
+                            onClick={() => {
+                              setInstanceInitialTab('outcomes')
+                              setSelectedInstanceDisplayName(null)
+                              setSelectedInstance(row.name)
+                            }}
+                            className="group flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg text-left transition-colors hover:bg-surface-hover"
+                          >
+                            <div className="flex min-w-0 items-start justify-between gap-sm">
+                              <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
+                                {row.name}
+                              </h3>
+                              <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
+                            </div>
+                            <div className="mt-md grid grid-cols-3 content-start gap-md">
+                              {cardMetrics.map((metric) => (
+                                <div key={metric.label} className="min-w-0">
+                                  <div className="truncate text-h3 text-text-primary">{metric.value}</div>
+                                  <div className="truncate text-small text-text-tertiary">{metric.label}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-lg py-lg">
+                      <DataTable
+                        columns={columns}
+                        data={visibleData}
+                        scrollOnHover
+                        onRowClick={(row) => {
+                          setInstanceInitialTab('outcomes')
+                          setSelectedInstanceDisplayName(null)
+                          setSelectedInstance(row.name)
+                        }}
+                        rowMenuItems={[
+                          { label: 'Edit', onClick: (row) => onEditAgent?.(
+                            row.name,
+                            undefined,
+                            undefined,
+                            isExplorationAgents ? row.status : undefined,
+                          ) },
+                          {
+                            label: 'Pause',
+                            onClick: () => {},
+                            visible: (row) => row.status === 'Running',
+                          },
+                          { label: 'Duplicate', onClick: () => {} },
+                          { label: 'View details', onClick: (row) => {
+                            setInstanceInitialTab('outcomes')
+                            setSelectedInstanceDisplayName(null)
+                            setSelectedInstance(row.name)
+                          } },
+                          { label: 'Reports', onClick: () => {} },
+                          ...(isExplorationAgents
+                            ? [{
+                                label: 'Download agent',
+                                onClick: (row: AgentInstance) => handleDownloadAgent(row),
+                              }]
+                            : []),
+                          { label: 'Delete', onClick: () => {}, variant: 'danger' },
+                        ]}
+                      />
+                    </div>
+                  )}
                 </>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="px-2xl">
-            <Tabs
-              tabs={TABS}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
-          </div>
-
-          {activeTab === 'agents' ? (
-            <>
-              <div className="px-2xl pt-lg">
-                <MetricTiles
-                  metrics={displayMetrics}
-                  renderTileAction={
-                    isFrontdesk
-                      ? (metric) =>
-                          metric.id === 'timeSaved' ? (
-                            <button
-                              type="button"
-                              aria-label="Estimate savings"
-                              onClick={() => setSavingsModalOpen(true)}
-                              className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-                            >
-                              <Icon name="tune" size={18} />
-                            </button>
-                          ) : null
-                      : undefined
-                  }
-                />
-              </div>
-              <EstimateSavingsModal
-                open={savingsModalOpen}
-                onClose={() => setSavingsModalOpen(false)}
-                initialValues={savingsSettings}
-                onSave={(values) => {
-                  setSavingsSettings(values)
-                  setSavingsModalOpen(false)
-                }}
-              />
-              <div className="px-lg py-lg">
-                <DataTable
-                  columns={columns}
-                  data={visibleData}
-                  scrollOnHover
-                  onRowClick={(row) => {
-                    setInstanceInitialTab('outcomes')
-                    setSelectedInstanceDisplayName(null)
-                    setSelectedInstance(row.name)
-                  }}
-                  rowMenuItems={[
-                    { label: 'Edit', onClick: (row) => onEditAgent?.(row.name) },
-                    {
-                      label: 'Pause',
-                      onClick: () => {},
-                      visible: (row) => row.status === 'Running',
-                    },
-                    { label: 'Duplicate', onClick: () => {} },
-                    { label: 'View details', onClick: (row) => {
-                      setInstanceInitialTab('outcomes')
-                      setSelectedInstanceDisplayName(null)
-                      setSelectedInstance(row.name)
-                    } },
-                    { label: 'Reports', onClick: () => {} },
-                    { label: 'Delete', onClick: () => {}, variant: 'danger' },
-                  ]}
-                />
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
+                  {visibleLibraryCards.map((card) => (
+                    <InfoCard key={card.title} {...card} />
+                  ))}
+                </div>
+              )}
             </>
-          ) : (
-            <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-4">
-              {visibleLibraryCards.map((card) => (
-                <InfoCard key={card.title} {...card} />
-              ))}
-            </div>
           )}
         </div>
 
@@ -8006,6 +8368,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           setLibraryPreview(null)
           onEditAgent?.(name)
         }}
+      />
+
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
       />
 
     </div>
