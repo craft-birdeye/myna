@@ -6,6 +6,9 @@ export const SAMPLE_COLOR = {
   boolean: '#1976d2',
 };
 
+const REVIEW_COMMENT = 'This is a great place for boon...';
+const REVIEW_DATE = 'Fri, Mar 27, 2026 12:46 AM';
+
 function leaf(name, value, sample, valueType = 'string') {
   return { type: 'field', name, value, sample, valueType };
 }
@@ -95,9 +98,6 @@ export const BASE_CATEGORIES = [
   },
 ];
 
-const REVIEW_COMMENT = 'This is a great place for boon...';
-const REVIEW_DATE = 'Fri, Mar 27, 2026 12:46 AM';
-
 /** Workflow step outputs shown when the picker is opened from an agent canvas. */
 export const WORKFLOW_CATEGORIES = [
   {
@@ -105,7 +105,7 @@ export const WORKFLOW_CATEGORIES = [
     label: '1. Trigger',
     description: 'Outputs available from the trigger that started this workflow.',
     trees: [
-      group('trigger-output', 'Trigger output', [
+      group('trigger-output', '1. Trigger output', [
         leaf('id', 'Trigger.id', '545043398', 'number'),
         leaf('source', 'Trigger.source', 'Google'),
         leaf('rating', 'Trigger.rating', '5', 'number'),
@@ -115,10 +115,10 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-identify',
-    label: '2. Task: Identify relevant mentions',
-    description: 'Outputs from the identify-relevant-mentions task.',
+    label: '2. Action: Identify relevant mentions',
+    description: 'Outputs from the identify-relevant-mentions action.',
     trees: [
-      group('identify-output', 'Task output', [
+      group('identify-output', '2. Action output', [
         leaf('mentionCount', 'Identify.mentionCount', '4', 'number'),
         leaf('matched', 'Identify.matched', 'true', 'boolean'),
         leaf('keywords', 'Identify.keywords', 'wait, billing'),
@@ -128,10 +128,10 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-tokens',
-    label: '3. Task: custom tokens',
-    description: 'Custom token values produced by this task.',
+    label: '3. Action: custom tokens',
+    description: 'Custom token values produced by this action.',
     trees: [
-      group('tokens-output', 'Task output', [
+      group('tokens-output', '3. Action output', [
         leaf('greeting', 'Tokens.greeting', 'Hi there'),
         leaf('signOff', 'Tokens.signOff', 'Best regards'),
         leaf('promo', 'Tokens.promo', 'Book online'),
@@ -142,12 +142,12 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-generate-response',
-    label: '4. Task: Generate review response',
-    description: 'Task and tool outputs from generating the review response.',
-    // Sidebar count matches top-level sections (Task output + Tool), not leaf fields.
+    label: '4. Action: Generate review response',
+    description: 'Action and tool outputs from generating the review response.',
+    // Sidebar count matches top-level sections (Action output + Tool), not leaf fields.
     count: 2,
     trees: [
-      group('gen-task-output', 'Task output', [
+      group('gen-task-output', '4. Action output', [
         leaf('id', 'GenerateResponse.id', '545043398', 'number'),
         leaf('overallRating', 'GenerateResponse.overallRating', '5', 'number'),
         leaf('comments', 'GenerateResponse.comments', REVIEW_COMMENT),
@@ -174,15 +174,29 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-send-response',
-    label: '5. Task: Send a review response',
+    label: '5. Action: Send a review response',
     description: 'Outputs from posting the review response.',
     trees: [
-      group('send-output', 'Task output', [
+      group('send-output', '5. Action output', [
         leaf('posted', 'SendResponse.posted', 'true', 'boolean'),
         leaf('channel', 'SendResponse.channel', 'Google'),
         leaf('responseId', 'SendResponse.responseId', 'resp_8821'),
         leaf('postedAt', 'SendResponse.postedAt', REVIEW_DATE),
         leaf('status', 'SendResponse.status', 'delivered'),
+      ]),
+    ],
+  },
+  {
+    id: 'task-send-response-followup',
+    label: '6. Action: Send a review response',
+    description: 'Outputs from a follow-up send of the review response.',
+    trees: [
+      group('send-followup-output', '6. Action output', [
+        leaf('posted', 'SendFollowup.posted', 'true', 'boolean'),
+        leaf('channel', 'SendFollowup.channel', 'Google'),
+        leaf('responseId', 'SendFollowup.responseId', 'resp_9902'),
+        leaf('postedAt', 'SendFollowup.postedAt', REVIEW_DATE),
+        leaf('status', 'SendFollowup.status', 'queued'),
       ]),
     ],
   },

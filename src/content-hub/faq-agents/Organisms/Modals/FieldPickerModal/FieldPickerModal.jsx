@@ -13,22 +13,22 @@ const MOCK_NODES = [
   },
   {
     id: 2,
-    label: '2.Task: Identify relevant...',
+    label: '2.Action: Identify relevant...',
     fields: ['Task.input', 'Task.output', 'Task.score', 'Task.tags'],
   },
   {
     id: 3,
-    label: '3.Task: custom tokens',
+    label: '3.Action: custom tokens',
     fields: ['Token.id', 'Token.value', 'Token.type', 'Token.scope', 'Token.expiry'],
   },
   {
     id: 4,
-    label: '4.Task: Generate resp...',
+    label: '4.Action: Generate resp...',
     fields: ['Response.text', 'Response.status'],
   },
   {
     id: 5,
-    label: '5.Task : Send a review r...',
+    label: '5.Action: Send a review r...',
     fields: ['Review.id', 'Review.author', 'Review.date', 'Review.channel', 'Review.body'],
   },
 ];

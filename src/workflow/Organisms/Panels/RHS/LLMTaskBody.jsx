@@ -507,7 +507,7 @@ export default function LLMTaskBody({
   const llmModelSection = (
     <div className={styles.fieldGroup}>
       <div className={styles.labelRow}>
-        <span className={styles.label}>LLM Model</span>
+        <span className={styles.label}>LLM model</span>
         <Tooltip
           content={
             onOpenGlossary ? (
@@ -598,8 +598,8 @@ export default function LLMTaskBody({
           </>
         )}
 
-        {systemPromptSection}
         {userPromptSection}
+        {outputFieldsSection}
       </div>
 
       <div className={styles.advancedSection}>
@@ -620,9 +620,9 @@ export default function LLMTaskBody({
         {advancedOpen && (
           <div className={styles.advancedBody}>
             {llmModelSection}
+            {systemPromptSection}
             {contextSection}
             {inputFieldsSection}
-            {outputFieldsSection}
           </div>
         )}
       </div>

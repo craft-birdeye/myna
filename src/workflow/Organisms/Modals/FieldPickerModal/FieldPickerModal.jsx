@@ -27,6 +27,13 @@ const FIELDS_LEARN_MORE_HREF =
 
 const WORKFLOW_SECTION_HEADING = 'Previous step outputs';
 
+/**
+ * Spacious body height for the docked Fields card: 3 base categories + section
+ * heading + 5 workflow steps. A 6th step scrolls into view below this.
+ */
+const SPACIOUS_BODY_HEIGHT_PX = 460;
+const SIDEBAR_VISIBLE_WORKFLOW_COUNT = 5;
+
 function FieldChip({ name }) {
   return (
     <span className={styles.chip}>
@@ -37,7 +44,7 @@ function FieldChip({ name }) {
 }
 
 /** Two-line sidebar label; full text in a tooltip only when clamped.
- *  Numbered workflow steps (`2.Task: …`) hang-indent so wrapped lines align under the type label. */
+ *  Numbered workflow steps (`2. Action: …`) hang-indent so wrapped lines align under the type label. */
 function CatLabel({ text }) {
   const ref = useRef(null);
   const [truncated, setTruncated] = useState(false);
@@ -173,8 +180,9 @@ function computeDockPosition(anchorEl) {
     const availableWidth = Math.max(320, panelRect.left - DRAWER_GAP - margin);
     const width = Math.min(POPOVER_WIDTH, availableWidth);
     const left = Math.max(margin, panelRect.left - DRAWER_GAP - width);
-    const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2, panelRect.height - margin * 2);
-    const idealTop = anchorRect ? anchorRect.top : panelRect.top;
+    // Match the spacious 5-step Fields card — do not shrink to the RHS panel height.
+    const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
+    const idealTop = panelRect.top;
     const top = Math.min(Math.max(margin, idealTop), Math.max(margin, vh - maxHeight - margin));
     return { top, left, width, maxHeight };
   }
@@ -312,6 +320,11 @@ export default function FieldPickerModal({
     () => sidebarCategories.filter((cat) => !BASE_CATEGORY_IDS.has(cat.id)),
     [sidebarCategories],
   );
+
+  const clipSidebarToFiveSteps =
+    showTriggerFields
+    && !isSearching
+    && workflowSidebarCategories.length > SIDEBAR_VISIBLE_WORKFLOW_COUNT;
 
   const renderCategoryButton = (cat) => {
     const isSelected = isSearching
@@ -454,7 +467,8 @@ export default function FieldPickerModal({
         top: pos.top,
         left: pos.left,
         width: pos.width,
-        maxHeight: pos.maxHeight,
+        // Spacious 5-step card: don't let the dock/RHS maxHeight crop the list.
+        maxHeight: clipSidebarToFiveSteps ? undefined : pos.maxHeight,
         zIndex: overlayZIndex,
       }}
       role="dialog"
@@ -518,8 +532,13 @@ export default function FieldPickerModal({
         </div>
       </div>
 
-      <div className={styles.body}>
-        <div className={styles.sidebar}>
+      <div
+        className={`${styles.body}${clipSidebarToFiveSteps ? ` ${styles.bodySpacious}` : ''}`}
+        style={clipSidebarToFiveSteps ? { height: SPACIOUS_BODY_HEIGHT_PX } : undefined}
+      >
+        <div
+          className={`${styles.sidebar}${clipSidebarToFiveSteps ? ` ${styles.sidebarScrollable}` : ''}`}
+        >
           {baseSidebarCategories.map(renderCategoryButton)}
           {workflowSidebarCategories.length > 0 && (
             <>

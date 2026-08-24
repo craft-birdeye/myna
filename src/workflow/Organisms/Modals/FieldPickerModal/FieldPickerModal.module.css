@@ -8,7 +8,6 @@
   background: #fff;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
   box-sizing: border-box;
-  height: auto;
 }
 
 .popoverDropdown {
@@ -139,20 +138,52 @@
   min-height: 0;
   padding: 0 16px 16px;
   box-sizing: border-box;
-  gap: 0;
+  gap: 16px;
+  overflow: hidden;
+}
+
+/* Fixed spacious height — 5 workflow steps visible; 6th+ scrolls in the sidebar */
+.bodySpacious {
+  flex: 0 0 auto;
   overflow: hidden;
 }
 
 .sidebar {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: 256px;
   flex-shrink: 0;
-  padding-right: 12px;
   align-self: stretch;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* Always-visible thin scrollbar when the list is intentionally clipped */
+.sidebarScrollable {
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: #b8c0cc #eef0f4;
+}
+
+.sidebarScrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebarScrollable::-webkit-scrollbar-track {
+  background: #eef0f4;
+  border-radius: 9999px;
+}
+
+.sidebarScrollable::-webkit-scrollbar-thumb {
+  background: #b8c0cc;
+  border-radius: 9999px;
+}
+
+.sidebarScrollable::-webkit-scrollbar-thumb:hover {
+  background: #9aa3b2;
 }
 
 .sidebarSectionHeading {
@@ -165,6 +196,7 @@
   letter-spacing: 0.6px;
   text-transform: uppercase;
   color: #9ca3af; /* text/tertiary */
+  flex-shrink: 0;
 }
 
 .content {
@@ -174,6 +206,25 @@
   overflow-x: hidden;
   overflow-y: auto;
   align-self: stretch;
+  scrollbar-width: thin;
+  scrollbar-color: #d0d5dd transparent;
+}
+
+.content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: #d0d5dd;
+  border-radius: 9999px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: #b8c0cc;
 }
 
 .card {
@@ -192,7 +243,8 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  min-height: 0;
+  min-height: 40px;
+  flex-shrink: 0;
   padding: 10px 12px;
   border: 1px solid #e5e9f0;
   border-radius: 4px;
@@ -339,7 +391,6 @@
   gap: 6px;
   margin-left: 10px;
   padding-left: 12px;
-  border-left: 1px solid #e5e9f0;
 }
 
 .fieldRow {
