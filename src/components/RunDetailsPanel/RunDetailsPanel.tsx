@@ -37,20 +37,22 @@ function MetaLabel({ label }: { label: string }) {
   )
 }
 
-const DEFAULT_STEP_DURATION_SECS: Record<RunLogStep['type'], number> = {
-  trigger: 1,
-  procedures: 3,
-  task: 2,
+const DEFAULT_STEP_DURATION_MS: Record<RunLogStep['type'], number> = {
+  trigger: 345,
+  procedures: 760,
+  task: 520,
   delay: 0,
-  branch: 1,
+  branch: 210,
 }
 
-export function formatStepDuration(secs: number): string {
-  return `${secs}s`
+export function formatStepDuration(ms: number): string {
+  if (ms < 1000) return `${ms} ms`
+  const secs = Math.round((ms / 1000) * 10) / 10
+  return Number.isInteger(secs) ? `${secs} s` : `${secs.toFixed(1)} s`
 }
 
-export function resolveStepDurationSecs(step: RunLogStep): number {
-  return step.durationSecs ?? DEFAULT_STEP_DURATION_SECS[step.type]
+export function resolveStepDurationMs(step: RunLogStep): number {
+  return step.durationMs ?? DEFAULT_STEP_DURATION_MS[step.type]
 }
 
 /** Node-type icon + colour. Trigger/task/branch/procedures use the canvas header SVGs. Shared with `TestRunPanel`. */
@@ -267,7 +269,7 @@ function RunLogStepRow({
               <StepTypeIcon type={step.type} />
               {meta.label}
             </div>
-            <span className="shrink-0 tabular-nums">{formatStepDuration(resolveStepDurationSecs(step))}</span>
+            <span className="shrink-0 tabular-nums">{formatStepDuration(resolveStepDurationMs(step))}</span>
           </div>
           <p
             className={`mt-xs text-body ${

@@ -51,7 +51,7 @@ export const CALL_LOG_STEPS: RunLogStep[] = [
     type: 'trigger',
     stepNumber: 1,
     title: 'Channel',
-    durationSecs: 1,
+    durationMs: 345,
     output: [
       { key: 'Source', value: 'Voice call' },
       { key: 'Caller', value: '(032) 902 9023' },
@@ -69,7 +69,7 @@ export const CALL_LOG_STEPS: RunLogStep[] = [
     type: 'procedures',
     stepNumber: 2,
     title: 'Follow procedures',
-    durationSecs: 3,
+    durationMs: 760,
     output: [
       { key: 'Procedure path', value: 'General inquiry → Book, cancel, reschedule appointment' },
       { key: 'Procedure used', value: 'Book, cancel, reschedule appointment' },
