@@ -527,7 +527,7 @@ export function AgentInstanceScreen({
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
   const explorationFrontDeskStatus = workflowButtonOpensEditor && isFrontdeskAgent
-  const hideMarketingLogDuration = workflowButtonOpensEditor && !isFrontdeskAgent
+  const hideMarketingLogDuration = isReviewResponse || isReviewGeneration
   const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
