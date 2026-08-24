@@ -559,7 +559,7 @@ export default function LLMTaskBody({
             <FormInput
               name="taskName"
               type="text"
-              label="Task name"
+              label="Action name"
               placeholder="Enter name"
               value={taskName}
               onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
@@ -580,7 +580,7 @@ export default function LLMTaskBody({
             <FormInput
               name="taskName"
               type="text"
-              label="Task name"
+              label="Action name"
               placeholder="Enter name"
               value={taskName}
               onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}

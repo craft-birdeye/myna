@@ -2059,6 +2059,80 @@ function ReviewAgentReply({
   )
 }
 
+/** Demo trigger: picking this pill simulates a mid-stream API failure. */
+function isSourcesStreamFailDemo(text: string) {
+  return /^facebook only\.?$/i.test(text.trim())
+}
+
+const SOURCES_STREAM_FAIL_PARTIAL =
+  "Got it — I'll limit the trigger to Facebook reviews only. Next I'll narrow loc"
+
+/** Streams a partial assistant reply, then surfaces an inline failure + Retry. */
+function GhostwriterStreamFailTurn({
+  onFail,
+}: {
+  onFail: (partial: string) => void
+}) {
+  const onFailRef = useRef(onFail)
+  onFailRef.current = onFail
+
+  const { typed, done } = useTypewriter(SOURCES_STREAM_FAIL_PARTIAL, {
+    charsPerTick: 3,
+    intervalMs: 18,
+  })
+
+  useEffect(() => {
+    if (!done) return
+    // Brief pause after the last token so the cut feels like a dropped stream.
+    const t = window.setTimeout(() => onFailRef.current(SOURCES_STREAM_FAIL_PARTIAL), 280)
+    return () => window.clearTimeout(t)
+  }, [done])
+
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm" aria-live="polite">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning />
+      </span>
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <p className="whitespace-pre-wrap">
+          {typed}
+          <TypingCaret />
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Inline stream-failure state (ChatGPT / Claude / Fin pattern) — not a toast. */
+function GhostwriterStreamFailError({
+  partial,
+  onRetry,
+}: {
+  partial: string
+  onRetry: () => void
+}) {
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm" role="alert">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={false} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-sm text-body leading-6">
+        {partial ? (
+          <p className="whitespace-pre-wrap text-text-primary">{partial}</p>
+        ) : null}
+        <p className="text-text-secondary">Couldn&apos;t generate a response</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="flex h-9 w-fit items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  )
+}
+
 type ReviewChoiceStep = {
   /** Scripted demo reply pre-filled when the user clicks the composer. */
   composerFill: string
@@ -2262,6 +2336,10 @@ function ReviewResponseThread({
 }) {
   const [introDone, setIntroDone] = useState(false)
   const [sourcesAnswer, setSourcesAnswer] = useState('')
+  /** none → happy path; attempting/failed → Facebook-only stream-fail demo; ok → recovered via Retry. */
+  const [sourcesStreamPhase, setSourcesStreamPhase] = useState<'none' | 'attempting' | 'failed' | 'ok'>('none')
+  const [sourcesStreamPartial, setSourcesStreamPartial] = useState('')
+  const [sourcesStreamAttemptKey, setSourcesStreamAttemptKey] = useState(0)
   const [sourcesThoughtsOpen, setSourcesThoughtsOpen] = useState(true)
   const [sourcesReplyReady, setSourcesReplyReady] = useState(false)
   const [sourcesReplyDone, setSourcesReplyDone] = useState(false)
@@ -2323,6 +2401,27 @@ function ReviewResponseThread({
                       ? 'build'
                       : null
 
+  const applySourcesAnswer = (raw: string, { recoverFail = false }: { recoverFail?: boolean } = {}) => {
+    const text = raw.trim()
+    if (!text) return
+    const fill = REVIEW_RESPONSE_CHOICES.sources.composerFill
+    const next =
+      text === 'All sources' || text === fill
+        ? fill
+        : text
+    setSourcesThoughtsOpen(true)
+    setSourcesReplyReady(false)
+    setSourcesReplyDone(false)
+    setSourcesStreamPartial('')
+    if (recoverFail || !isSourcesStreamFailDemo(next)) {
+      setSourcesStreamPhase('ok')
+    } else {
+      setSourcesStreamPhase('attempting')
+      setSourcesStreamAttemptKey((k) => k + 1)
+    }
+    setSourcesAnswer(next)
+  }
+
   const applyAnswer = (raw: string) => {
     const text = raw.trim()
     if (!text || !awaitingStep) return
@@ -2330,9 +2429,7 @@ function ReviewResponseThread({
 
     switch (awaitingStep) {
       case 'sources':
-        setSourcesAnswer(
-          text === 'All sources' || text === fill ? fill : text,
-        )
+        applySourcesAnswer(text)
         break
       case 'locations':
         if (text === 'Select locations') {
@@ -2377,22 +2474,41 @@ function ReviewResponseThread({
     }
   }
 
+  const handleSourcesStreamRetry = () => {
+    // Re-send the same user prompt; this time the stream succeeds (no auto-retry loop).
+    applySourcesAnswer(sourcesAnswer || 'Facebook only', { recoverFail: true })
+  }
+
   useEffect(() => {
-    if (!pendingAnswer?.trim() || !awaitingStep) return
+    if (!pendingAnswer?.trim()) return
+    // While a failed turn sits inline, composer stays live — a new send rephrases.
+    if (sourcesStreamPhase === 'failed') {
+      applySourcesAnswer(pendingAnswer)
+      onPendingAnswerConsumed?.()
+      return
+    }
+    if (!awaitingStep) return
     applyAnswer(pendingAnswer)
     onPendingAnswerConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingAnswer, awaitingStep])
+  }, [pendingAnswer, awaitingStep, sourcesStreamPhase])
 
   useEffect(() => {
+    if (sourcesStreamPhase === 'failed' && sourcesAnswer) {
+      onComposerFillChange?.(sourcesAnswer)
+      return
+    }
     onComposerFillChange?.(
       awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep].composerFill : null,
     )
-  }, [awaitingStep, onComposerFillChange])
+  }, [awaitingStep, onComposerFillChange, sourcesStreamPhase, sourcesAnswer])
+
+  const sourcesAwaitingReply =
+    Boolean(sourcesAnswer) && !sourcesReplyDone && sourcesStreamPhase !== 'failed'
 
   const busy =
     !introDone ||
-    (Boolean(sourcesAnswer) && !sourcesReplyDone) ||
+    sourcesAwaitingReply ||
     (Boolean(locationsAnswer) && !locationsReplyDone) ||
     (Boolean(spamOkAnswer) && !spamAlertDone) ||
     (Boolean(spamAlertAnswer) && !spamEmailDone) ||
@@ -2424,8 +2540,10 @@ function ReviewResponseThread({
 
     if (sourcesAnswer) {
       trail.push({ kind: 'user', text: sourcesAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS })
-      if (sourcesReplyReady || sourcesReplyDone) pushAgent(REVIEW_RESPONSE_SOURCES_REPLY)
+      if (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') {
+        trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS })
+        if (sourcesReplyReady || sourcesReplyDone) pushAgent(REVIEW_RESPONSE_SOURCES_REPLY)
+      }
     }
     if (locationsAnswer) {
       trail.push({ kind: 'user', text: locationsAnswer })
@@ -2485,6 +2603,7 @@ function ReviewResponseThread({
   }, [
     onTrailChange,
     sourcesAnswer,
+    sourcesStreamPhase,
     sourcesReplyReady,
     sourcesReplyDone,
     locationsAnswer,
@@ -2541,7 +2660,22 @@ function ReviewResponseThread({
         <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
       )}
       {sourcesAnswer && <UserBubble>{sourcesAnswer}</UserBubble>}
-      {sourcesAnswer && (
+      {sourcesAnswer && sourcesStreamPhase === 'attempting' && (
+        <GhostwriterStreamFailTurn
+          key={sourcesStreamAttemptKey}
+          onFail={(partial) => {
+            setSourcesStreamPartial(partial)
+            setSourcesStreamPhase('failed')
+          }}
+        />
+      )}
+      {sourcesAnswer && sourcesStreamPhase === 'failed' && (
+        <GhostwriterStreamFailError
+          partial={sourcesStreamPartial}
+          onRetry={handleSourcesStreamRetry}
+        />
+      )}
+      {sourcesAnswer && (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') && (
         <>
           <CreateAgentThinkingPanel
             open={sourcesThoughtsOpen}

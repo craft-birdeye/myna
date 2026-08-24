@@ -37,7 +37,7 @@ function MetaLabel({ label }: { label: string }) {
 /** Node-type icon + colour, matched to the canvas node-card glyphs. Shared with `TestRunPanel`. */
 export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
-  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
+  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Action' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
   branch: { icon: 'account_tree', colorClass: 'text-[#5071CE]', label: 'Branch' },
   procedures: { icon: 'menu_book', colorClass: 'text-[#37A248]', label: 'Procedures' },
@@ -204,7 +204,7 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
         ? 'Procedure output'
         : step.type === 'branch'
           ? 'Branch output'
-          : 'Task output')
+          : 'Action output')
 
   return (
     <div className="relative flex gap-md">

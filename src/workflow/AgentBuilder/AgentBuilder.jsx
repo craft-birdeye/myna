@@ -3198,7 +3198,7 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="llmTask"
-          title="Task"
+          title="Action"
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
@@ -3242,7 +3242,7 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="voiceCallTask"
-          title="Task"
+          title="Action"
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
@@ -3268,7 +3268,7 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="sendResponseTask"
-          title="Task"
+          title="Action"
           viewOnly={rhsViewOnly}
           inlineFooter={inlineRhsFooter}
           product={product}
@@ -3285,7 +3285,7 @@ export default function AgentBuilder({
     return (
       <RHS
         variant="entityTask"
-        title="Task details"
+        title="Action"
         viewOnly={rhsViewOnly}
         inlineFooter={inlineRhsFooter}
         bodyProps={{
@@ -3809,7 +3809,7 @@ export default function AgentBuilder({
                         src: iconRrTasks,
                         icon: 'description',
                         color: '#00C950',
-                        label: 'Task',
+                        label: 'Action',
                         underLabel: 'Actions',
                         tourId: 'tasks',
                       },

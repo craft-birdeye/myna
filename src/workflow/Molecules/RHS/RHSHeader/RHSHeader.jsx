@@ -134,7 +134,7 @@ export default function RHSPanelHeader({
             value={titleLayoutMenu.value}
             options={titleLayoutMenu.options}
             onChange={titleLayoutMenu.onChange}
-            ariaLabel="Task layout"
+            ariaLabel="Action layout"
             showSelectedLabel
           />
         )}
@@ -143,7 +143,7 @@ export default function RHSPanelHeader({
             value={titleTabMenu.value}
             options={titleTabMenu.options}
             onChange={titleTabMenu.onChange}
-            ariaLabel={titleTabMenu.value === 'setup' ? 'Task section: Setup' : 'Task section: Configure'}
+            ariaLabel={titleTabMenu.value === 'setup' ? 'Action section: Setup' : 'Action section: Configure'}
           />
         )}
       </div>
