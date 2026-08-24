@@ -42,7 +42,7 @@ const COLUMNS: Column<RecommendationRow>[] = [
         {rec.source === 'feedback' ? (
           <Icon name="thumb_down" size={16} className="shrink-0 text-chip-danger-text" />
         ) : (
-          <AiAgentIcon size={16} className="shrink-0" />
+          <AiAgentIcon size={14} className="shrink-0" />
         )}
         {rec.source === 'feedback' ? (rec.reportedBy ?? 'Human feedback') : 'Myna'}
       </span>
