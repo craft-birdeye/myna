@@ -636,9 +636,6 @@ export function RunConversationThread({
           {showCallRecording && entry.insertCallRecordingAfter && (
             <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
               <div className="border border-transparent px-lg">
-                <p className="m-0 mb-sm text-body text-text-secondary">
-                  Call recording
-                </p>
                 <CallRecordingPlayer
                   audioUrl={audioUrl}
                   durationSecs={durationSecs}

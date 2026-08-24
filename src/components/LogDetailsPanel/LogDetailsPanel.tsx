@@ -1411,9 +1411,6 @@ export function LogDetailsPanel({
                       <ChatSystemLabel text="Voice call started" />
                       <div className="sticky top-0 z-10 bg-surface pb-md pt-sm" data-call-recording-sticky>
                         <div className="border border-transparent px-lg">
-                          <p className="m-0 mb-sm text-body text-text-secondary">
-                            Call recording
-                          </p>
                           <CallRecordingPlayer
                             ref={recordingPlayerRef}
                             audioUrl={audioUrl}
@@ -1476,11 +1473,8 @@ export function LogDetailsPanel({
                 ) : null}
                 {hasVoiceCall && (
                   <div className="sticky top-0 z-10 bg-surface pb-md pt-sm" data-call-recording-sticky>
-                    {/* Same inset as Call details label (1px border + px-lg) for title + player. */}
+                    {/* Same inset as Call details (1px border + px-lg) for the player. */}
                     <div className="border border-transparent px-lg">
-                      <p className="m-0 mb-sm text-body text-text-secondary">
-                        Call recording
-                      </p>
                       <CallRecordingPlayer
                         ref={recordingPlayerRef}
                         audioUrl={audioUrl}
