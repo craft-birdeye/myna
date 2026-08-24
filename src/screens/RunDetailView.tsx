@@ -442,47 +442,17 @@ function getExecutedNodeIds(
   return ids
 }
 
-/* ── View-only / Edit switch — log canvas chrome (no Run test) ── */
-function LogViewWorkflowChrome({ onEdit }: { onEdit?: () => void }) {
-  return (
-    <div className="log-view-workflow-chrome">
-      <div className="rr-chrome-mode-switch" role="group" aria-label="Workflow mode">
-        <button
-          type="button"
-          className="rr-chrome-mode-btn rr-chrome-mode-btn--active"
-          aria-current="true"
-          aria-label="View-only"
-        >
-          <span className="material-symbols-outlined" aria-hidden>visibility</span>
-          <span>View-only</span>
-        </button>
-        <button
-          type="button"
-          className="rr-chrome-mode-btn"
-          onClick={onEdit}
-          aria-label="Edit"
-        >
-          <span className="material-symbols-outlined" aria-hidden>edit</span>
-          <span>Edit</span>
-        </button>
-      </div>
-    </div>
-  )
-}
-
 /* ── run canvas — same AgentBuilder viewer as the Workflow tab, executed nodes in green ── */
 function AgentWorkflowRunCanvas({
   instanceName,
   workflow,
   row,
   product,
-  onEditWorkflow,
 }: {
   instanceName: string
   workflow: { nodes: WorkflowNodeSeed[]; nodeDetails: Record<string, unknown> }
   row: HealthcareLogRow
   product?: string
-  onEditWorkflow?: () => void
 }) {
   const { procedures } = useProcedureStore()
   const filteredProcedures = procedures.filter((p) => p.category === 'Healthcare Frontdesk')
@@ -521,7 +491,8 @@ function AgentWorkflowRunCanvas({
         .run-wf-viewer .graph-controls--rr-chrome { display: flex !important; }
         .run-wf-viewer .graph-controls__toggle { display: none !important; }
         .run-wf-viewer .flow-canvas__edge-add  { display: none !important; }
-        /* Logs are a historical run — no Run test. */
+        /* Logs are a historical run — no workflow chrome (mode switch / run test). */
+        .run-wf-viewer .rr-chrome-top { display: none !important; }
         .run-wf-viewer .rr-chrome-run-test { display: none !important; }
         ${executedCss}
       `}</style>
@@ -531,7 +502,6 @@ function AgentWorkflowRunCanvas({
           pageTitle={instanceName}
           appTitle={instanceName}
           viewOnly
-          viewChromeActions
           product={product ?? 'healthcare'}
           moduleSlug="myna"
           moduleContext="myna"
@@ -542,7 +512,6 @@ function AgentWorkflowRunCanvas({
           procedures={filteredProcedures}
           defaultOpenSection="Tasks"
           initialZoom={0.85}
-          onEdit={onEditWorkflow}
           nodesInteractive={false}
           logDoneNodeIds={executedIds}
         />
@@ -555,11 +524,9 @@ function AgentWorkflowRunCanvas({
 function WorkflowCanvas({
   instanceName,
   implementedSteps,
-  onEditWorkflow,
 }: {
   instanceName: string
   implementedSteps: LogStepId[]
-  onEditWorkflow?: () => void
 }) {
   const triggerImplemented = implementedSteps.includes('trigger')
   const proceduresImplemented = implementedSteps.includes('procedures')
@@ -567,10 +534,6 @@ function WorkflowCanvas({
 
   return (
     <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
-      <div className="log-view-workflow-chrome-anchor">
-        <LogViewWorkflowChrome onEdit={onEditWorkflow} />
-      </div>
-
       <div className="log-view-zoom-anchor">
         <GraphControls
           rrChrome
@@ -584,7 +547,7 @@ function WorkflowCanvas({
 
       {/* Right padding keeps the flow clear of the overlaid details panel */}
       <div
-        className="flex flex-col items-center pb-2xl pr-[620px] pt-[84px]"
+        className="flex flex-col items-center pb-2xl pr-[620px] pt-2xl"
         style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
       >
         <StartNode title={instanceName} subtitle="All locations" />
@@ -691,23 +654,6 @@ export function RunDetailView({
           background-color: #f2f4f7 !important;
           background-image: none !important;
         }
-        /* Centered View-only/Edit + Run test chrome (fallback WorkflowCanvas path). */
-        .log-detail-view .log-view-workflow-chrome-anchor {
-          /* Center in the visible canvas (full width minus the 480px details panel),
-             same optical center as the Workflow tab chrome. */
-          position: absolute;
-          top: 16px;
-          left: calc((100% - 480px) / 2);
-          transform: translateX(-50%);
-          z-index: 60;
-          pointer-events: none;
-        }
-        .log-detail-view .log-view-workflow-chrome {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          pointer-events: auto;
-        }
         /* Bottom-left zoom floater (fallback WorkflowCanvas path). */
         .log-detail-view .log-view-zoom-anchor {
           position: absolute;
@@ -788,13 +734,11 @@ export function RunDetailView({
             instanceName={instanceName}
             workflow={agentWorkflow as { nodes: WorkflowNodeSeed[]; nodeDetails: Record<string, unknown> }}
             row={row}
-            onEditWorkflow={onEditAgent}
           />
         ) : (
           <WorkflowCanvas
             instanceName={canvasInstanceName}
             implementedSteps={getImplementedSteps(row)}
-            onEditWorkflow={onEditAgent}
           />
         )}
 
