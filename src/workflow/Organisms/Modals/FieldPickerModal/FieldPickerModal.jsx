@@ -19,13 +19,13 @@ const DRAWER_GAP = 0;
 const BASE_CATEGORY_IDS = new Set(BASE_CATEGORIES.map((c) => c.id));
 
 const FIELDS_SUBTITLE =
-  'Data available to reference from the previous steps and customer record.';
+  'Data available to use in your prompts.';
 
 /** Placeholder help article — swap for the real Fields docs URL when available. */
 const FIELDS_LEARN_MORE_HREF =
   'https://help.birdeye.com/hc/en-us/articles/fields-in-workflows';
 
-const WORKFLOW_SECTION_HEADING = 'Previous step outputs';
+const WORKFLOW_SECTION_HEADING = 'Output fields from previous steps';
 
 /**
  * Spacious body height for the docked Fields card: 3 base categories + section
