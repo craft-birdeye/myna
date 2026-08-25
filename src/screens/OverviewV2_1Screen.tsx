@@ -183,7 +183,7 @@ function ReviewsOverview() {
           {OVERVIEW_REVIEW_SOURCES.map((s) => {
             const logoSrc = REVIEW_SOURCE_LOGO[s.id]
             return (
-              <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-sm border border-border py-md pl-2xl pr-lg">
+              <div key={s.id} className="flex min-w-[220px] flex-1 items-center gap-md rounded-md border border-border py-md pl-2xl pr-lg">
                 {logoSrc ? (
                   <img src={logoSrc} alt="" className="size-9 shrink-0" />
                 ) : (
@@ -930,7 +930,7 @@ function AiWorkforceSummaryCard({
             <button
               type="button"
               onClick={onScheduleDemo}
-              className={`flex h-9 shrink-0 items-center rounded-sm bg-white px-lg ${EMPTY_BANNER_TEXT_CLASS} text-ai-brand transition-colors hover:opacity-90`}
+              className={`flex h-9 shrink-0 items-center rounded-md bg-white px-lg ${EMPTY_BANNER_TEXT_CLASS} text-ai-brand transition-colors hover:opacity-90`}
             >
               Schedule demo
             </button>
@@ -1444,7 +1444,7 @@ export function OverviewV2_1Screen({ userName = 'Rupa', onOpenAgent }: OverviewV
             </div>
             <div className="flex shrink-0 items-center gap-sm">
               {editingLayout ? (
-                <button type="button" onClick={handleSaveLayout} className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover">
+                <button type="button" onClick={handleSaveLayout} className="flex h-9 items-center rounded-md bg-primary px-lg text-body text-white hover:bg-primary-hover">
                   Save
                 </button>
               ) : (
@@ -1454,21 +1454,21 @@ export function OverviewV2_1Screen({ userName = 'Rupa', onOpenAgent }: OverviewV
                     type="button"
                     aria-label="Edit layout"
                     onClick={handleEditLayout}
-                    className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                    className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                   >
                     <Icon name="edit" size={20} />
                   </button>
                   <button
                     type="button"
                     aria-label="Download"
-                    className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                    className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                   >
                     <Icon name="download" size={20} />
                   </button>
                   <button
                     type="button"
                     aria-label="Filter"
-                    className="flex size-9 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                    className="flex size-9 items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
                   >
                     <ListFilter className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                   </button>
