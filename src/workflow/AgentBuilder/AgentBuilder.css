@@ -1925,10 +1925,54 @@
   left: calc(var(--rr-chrome-lhs-panel-left) + var(--rr-chrome-lhs-panel-width) + 12px);
 }
 
+/* Create with AI open: same treatment as version history — panel fills the extra height,
+   the bottom-left zoom pill slides right of it, and the undo/redo pill re-centers in the
+   remaining space so nothing overlaps. */
+.agent-builder--lhs-ai-open .agent-builder__lhs-ai {
+  bottom: 16px;
+  max-height: calc(100% - 88px);
+}
+
+.agent-builder--lhs-ai-open .graph-controls__rr-zoom {
+  position: relative;
+  left: calc(var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px);
+}
+
+.agent-builder--lhs-ai-open .graph-controls__rr-edit {
+  left: calc(50% + (var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px) / 2);
+}
+
 /* Instant swap from Create with AI → Trigger/Tasks/Procedures/Controls (no slide). */
 .agent-builder--palette-instant .rr-chrome-palette,
 .rr-chrome-palette--instant {
   transition: none !important;
+}
+
+/* Version history open: panel drops its bottom inset to use the full canvas height,
+   and the bottom-left zoom pill slides right of it so the two never overlap. */
+.agent-builder--version-history-open .rr-version-history {
+  bottom: 16px;
+  max-height: calc(100% - 88px);
+}
+
+.agent-builder--version-history-open:not(.agent-builder--version-history-canvas) .graph-controls__rr-zoom {
+  position: relative;
+  left: calc(var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px);
+}
+
+.agent-builder--version-history-canvas .graph-controls__rr-zoom {
+  position: relative;
+  left: calc(16px + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px);
+}
+
+/* Re-center the undo/redo pill within the space actually left of it, rather than the
+   canvas's true center, so it doesn't collide with the now-shifted zoom pill. */
+.agent-builder--version-history-open:not(.agent-builder--version-history-canvas) .graph-controls__rr-edit {
+  left: calc(50% + (var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px) / 2);
+}
+
+.agent-builder--version-history-canvas .graph-controls__rr-edit {
+  left: calc(50% + (var(--rr-chrome-lhs-panel-width, 360px) + 12px) / 2);
 }
 
 .rr-chrome-palette .lhs-drawer {

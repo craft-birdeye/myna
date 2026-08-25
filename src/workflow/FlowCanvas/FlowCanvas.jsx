@@ -653,6 +653,7 @@ function FlowCanvasInner({
   onRedo,
   canUndo = false,
   canRedo = false,
+  hideUndoRedo = false,
   /** Add-step "+" menu uses one full-width search instead of one per pane (Sep 1 only). */
   singleAddStepSearch = false,
   /** When set, the Help center trigger renders as its own pill in the bottom editor row
@@ -1080,6 +1081,7 @@ function FlowCanvasInner({
           onRedo={onRedo}
           canUndo={canUndo}
           canRedo={canRedo}
+          hideUndoRedo={hideUndoRedo}
           onHelpToggle={onHelpToggle}
           helpOpen={helpOpen}
         />
