@@ -701,7 +701,7 @@ export function App() {
               <button
                 type="button"
                 aria-label="Create new"
-                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-surface-l2 transition-colors hover:bg-surface-selected"
+                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-surface-l2 transition-colors hover:bg-surface-selected"
               >
                 <Icon name="add" size={18} className="text-text-primary" />
               </button>
@@ -709,7 +709,7 @@ export function App() {
               {/* Ask BirdGPT — matches contenthub 2.0 Button style */}
               <button
                 type="button"
-                className="group flex h-[30px] items-center gap-[5px] rounded-lg bg-surface-l2 px-[10px] transition-colors hover:bg-surface-selected"
+                className="group flex h-[30px] items-center gap-[5px] rounded-md bg-surface-l2 px-[10px] transition-colors hover:bg-surface-selected"
               >
                 <span
                   className="shrink-0 group-hover:[animation:myna-cta-icon-tilt_360ms_ease-out_1] material-symbols-outlined select-none"
@@ -727,7 +727,7 @@ export function App() {
               <button
                 type="button"
                 aria-label="Menu"
-                className="flex size-[30px] items-center justify-center rounded-lg bg-surface-l2 transition-colors hover:bg-surface-selected"
+                className="flex size-[30px] items-center justify-center rounded-md bg-surface-l2 transition-colors hover:bg-surface-selected"
               >
                 <Icon name="menu" size={18} className="text-text-icon" />
               </button>
