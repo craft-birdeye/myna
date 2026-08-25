@@ -5,7 +5,7 @@ import { VariableIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import styles from './SystemPromptInput.module.css';
 
-export default function SystemPromptInput({ value, onChange, required, showTriggerFields = true }) {
+export default function SystemPromptInput({ value, onChange, required, showTriggerFields = true, tall = false }) {
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -70,7 +70,7 @@ export default function SystemPromptInput({ value, onChange, required, showTrigg
         <div className={styles.inputBox}>
           <div
             ref={editorRef}
-            className={styles.editor}
+            className={`${styles.editor}${tall ? ` ${styles.editorTall}` : ''}`}
             contentEditable
             suppressContentEditableWarning
             onInput={emitChange}

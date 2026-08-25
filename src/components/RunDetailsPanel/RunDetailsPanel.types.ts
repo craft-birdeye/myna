@@ -14,7 +14,7 @@ export interface RunLogStep {
   title: string
   /** Canvas node id to pan/highlight when this log step is clicked. */
   nodeId?: string
-  /** Defaults to "Trigger output" / "Procedure output" / "Branch output" / "Task output". */
+  /** Defaults to "Trigger output" / "Procedure output" / "Branch output" / "Action output". */
   outputLabel?: string
   output?: RunLogField[]
   inputs?: RunLogField[]
@@ -76,6 +76,6 @@ export interface RunDetailsPanelProps {
   agentName?: string
   /** Navigates to the recommendation a message's feedback landed on (see agentName). */
   onTrackFeedback?: (recommendationId: string) => void
-  /** Click a log step to focus the matching canvas node (`step.nodeId` or resolved by title). */
+  /** Hover "View" on a log step to focus the matching canvas node (`step.nodeId` or resolved by title). */
   onStepFocus?: (step: RunLogStep) => void
 }

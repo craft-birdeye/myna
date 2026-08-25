@@ -58,7 +58,7 @@ export function resolveStepDurationMs(step: RunLogStep): number {
 /** Node-type icon + colour. Trigger/task/branch/procedures use the canvas header SVGs. Shared with `TestRunPanel`. */
 export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
-  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
+  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Action' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
   branch: { icon: 'account_tree', colorClass: 'text-[#5071CE]', label: 'Branch' },
   procedures: { icon: 'menu_book', colorClass: 'text-[#37A248]', label: 'Procedures' },
@@ -245,42 +245,42 @@ function RunLogStepRow({
         ? 'Procedure output'
         : step.type === 'branch'
           ? 'Branch output'
-          : 'Task output')
+          : 'Action output')
 
   const focusable = Boolean(onStepFocus)
 
   return (
-    <div className="relative flex gap-md">
+    <div className={`relative flex gap-md ${focusable ? 'group/step' : ''}`}>
       <div className="absolute bottom-0 left-[9px] top-[24px] w-px bg-border" aria-hidden />
       <Icon name="check_circle" size={20} fill className="relative z-10 mt-[2px] shrink-0 text-accent-positive" />
       <div className="min-w-0 flex-1 pb-2xl">
-        <button
-          type="button"
-          disabled={!focusable}
-          onClick={() => onStepFocus?.(step)}
-          className={`group/step w-full text-left ${
-            focusable
-              ? 'cursor-pointer outline-none'
-              : 'cursor-default'
-          }`}
-        >
-          <div className="flex items-center justify-between gap-sm text-small text-text-tertiary">
-            <div className="flex min-w-0 items-center gap-xs">
-              <StepTypeIcon type={step.type} />
-              {meta.label}
-            </div>
-            <span className="shrink-0 tabular-nums">{formatStepDuration(resolveStepDurationMs(step))}</span>
+        <div className="flex items-center justify-between gap-sm text-small text-text-tertiary">
+          <div className="flex min-w-0 items-center gap-xs">
+            <StepTypeIcon type={step.type} />
+            {meta.label}
           </div>
-          <p
-            className={`mt-xs text-body ${
-              focusable
-                ? 'text-text-primary transition-colors group-hover/step:text-text-action'
-                : 'text-text-primary'
-            }`}
-          >
-            {step.stepNumber}. {step.title}
-          </p>
-        </button>
+          <div className="relative flex h-5 shrink-0 items-center justify-end">
+            <span
+              className={`tabular-nums transition-opacity ${
+                focusable ? 'group-hover/step:opacity-0' : ''
+              }`}
+            >
+              {formatStepDuration(resolveStepDurationMs(step))}
+            </span>
+            {focusable && (
+              <button
+                type="button"
+                onClick={() => onStepFocus?.(step)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-body text-text-action opacity-0 outline-none transition-opacity group-hover/step:opacity-100 focus-visible:opacity-100"
+              >
+                View
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="mt-xs text-body text-text-primary">
+          {step.stepNumber}. {step.title}
+        </p>
 
         {step.note ? (
           <p className="mt-sm text-small text-text-tertiary">{step.note}</p>

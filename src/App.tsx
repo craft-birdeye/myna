@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
+import { AgentSystemPromptStoreProvider } from './data/AgentSystemPromptStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
@@ -620,6 +621,7 @@ export function App() {
 
   return (
     <ProcedureStoreProvider>
+      <AgentSystemPromptStoreProvider>
       {/*
         Shell layout (mirrors contenthub 2.0):
           - Outer: h-screen w-screen flex, bg = shell gray (#e0e5eb)
@@ -1171,6 +1173,7 @@ export function App() {
       </div>
       </RecommendationOverridesStoreProvider>
       </FeedbackRecommendationsStoreProvider>
+      </AgentSystemPromptStoreProvider>
     </ProcedureStoreProvider>
   )
 }

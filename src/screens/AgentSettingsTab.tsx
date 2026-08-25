@@ -31,22 +31,13 @@ import {
   VariableIcon,
 } from '../workflow/Molecules/Inputs/PromptToolbarIcons.jsx'
 import FieldPickerModal from '../workflow/Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx'
+import { useAgentSystemPromptStore } from '../data/AgentSystemPromptStoreContext'
 
 interface AgentSettingsTabProps {
   product?: string
   agentName?: string
   onOpenIntegrationSettings?: (integrationId: string) => void
 }
-
-const FRONTDESK_SYSTEM_PROMPT = `# Personality
-You are Myna, the elegant and attentive reservations specialist at the Grand Hotel. You make every caller feel like a VIP — refined, warm, and effortlessly capable. You handle reservation requests with the calm efficiency of someone who has booked thousands of stays.
-
-# Environment
-You handle inbound calls for hotel reservations: new bookings, modifications, cancellations, and general questions about the property. Callers may be planning a special trip, calling on behalf of a guest, or checking on a stay they've already booked. Booking system, room types, and rate plans are managed by the workspace owner — only quote details that are explicitly available to you in this conversation.
-
-# Tone
-- Warm and refined hospitality — never stuffy.
-- Attentive to details: dates, room preferences, special requests (anniversary, accessibility, dietary).`
 
 const FRONTDESK_GREETING =
   'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?'
@@ -1054,7 +1045,7 @@ function SettingsOptionRow({
 }
 
 function FrontDeskSettings() {
-  const [systemPrompt, setSystemPrompt] = useState(FRONTDESK_SYSTEM_PROMPT)
+  const { systemPrompt, setSystemPrompt } = useAgentSystemPromptStore()
   const [language, setLanguage] = useState<AgentLanguageId>('en')
   const [additionalLanguages, setAdditionalLanguages] = useState<AgentLanguageId[]>([])
   const [additionalFieldVisible, setAdditionalFieldVisible] = useState(false)

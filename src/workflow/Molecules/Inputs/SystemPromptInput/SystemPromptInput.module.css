@@ -59,6 +59,11 @@
   box-sizing: border-box;
 }
 
+.editorTall {
+  min-height: 200px;
+  max-height: 360px;
+}
+
 .editor:empty::before {
   content: attr(data-placeholder);
   color: #9ca3af; /* text/tertiary */
