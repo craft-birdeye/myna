@@ -52,7 +52,7 @@ export function FanoutQueryDetailPanel({
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex shrink-0 items-center justify-between gap-sm border-b border-border px-2xl py-lg">
+        <div className="flex shrink-0 items-center justify-between gap-sm px-2xl py-lg">
           <div className="flex min-w-0 items-center gap-sm">
             <button
               type="button"
@@ -126,19 +126,21 @@ export function FanoutQueryDetailPanel({
             <ReadOnlyField label="Updated on">{updatedOn}</ReadOnlyField>
           </div>
 
-          <div className="flex flex-col gap-sm">
-            <p className="text-small text-text-secondary">Fanout queries ({fanoutQueries.length})</p>
-            <div className="flex flex-wrap gap-xs rounded-sm border border-border p-lg">
-              {fanoutQueries.map((q, i) => (
-                <span
-                  key={`${q}-${i}`}
-                  className="inline-flex shrink-0 items-center gap-xs whitespace-nowrap rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text"
-                >
-                  {q}
-                </span>
-              ))}
+          {status === 'Completed' && (
+            <div className="flex flex-col gap-sm">
+              <p className="text-small text-text-secondary">Fanout queries ({fanoutQueries.length})</p>
+              <div className="flex flex-wrap gap-xs rounded-sm border border-border p-lg">
+                {fanoutQueries.map((q, i) => (
+                  <span
+                    key={`${q}-${i}`}
+                    className="inline-flex shrink-0 items-center gap-xs whitespace-nowrap rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text"
+                  >
+                    {q}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </aside>
     </div>
