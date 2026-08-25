@@ -1,7 +1,7 @@
 /** Extra context passed alongside the feedback text — currently only populated by the `help` variant. */
 export interface ShareFeedbackSubmitMeta {
-  /** Whether the user opted in to being contacted for future user research. */
-  optedIntoResearch: boolean
+  /** Whether the user joined the user experience improvement program (usage-data analytics opt-in). */
+  optedIntoUxImprovement: boolean
   attachments: File[]
 }
 
@@ -16,4 +16,9 @@ export interface ShareFeedbackModalProps {
    * `help` — Help center Share feedback (Figma `16119:14085`).
    */
   variant?: 'coaching' | 'help'
+  /**
+   * `help` variant only — opens Settings > Account > User experience improvement
+   * program (the opt-in checkbox's "Learn more" link).
+   */
+  onOpenUxImprovementSettings?: () => void
 }

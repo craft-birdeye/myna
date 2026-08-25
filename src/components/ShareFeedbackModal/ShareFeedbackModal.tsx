@@ -31,10 +31,11 @@ export function ShareFeedbackModal({
   onSubmit,
   initialDetails = '',
   variant = 'coaching',
+  onOpenUxImprovementSettings,
 }: ShareFeedbackModalProps) {
   const [details, setDetails] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [optedIntoResearch, setOptedIntoResearch] = useState(false)
+  const [optedIntoUxImprovement, setOptedIntoUxImprovement] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const nextAttachmentId = useRef(0)
   const attachmentsRef = useRef<Attachment[]>([])
@@ -43,14 +44,14 @@ export function ShareFeedbackModal({
   useEffect(() => {
     if (open) {
       setDetails(initialDetails)
-      setOptedIntoResearch(false)
+      setOptedIntoUxImprovement(false)
       setAttachments((prev) => {
         prev.forEach((a) => URL.revokeObjectURL(a.url))
         return []
       })
     } else {
       setDetails('')
-      setOptedIntoResearch(false)
+      setOptedIntoUxImprovement(false)
       setAttachments((prev) => {
         prev.forEach((a) => URL.revokeObjectURL(a.url))
         return []
@@ -142,7 +143,7 @@ export function ShareFeedbackModal({
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value.slice(0, HELP_MAX_CHARS))}
-              placeholder="What do you think about the product or are you stuck somewhere?"
+              placeholder="What do you think about the agent builder? Are you stuck somewhere?"
               rows={4}
               className="w-full resize-none rounded-md bg-transparent px-md pt-md text-body text-text-primary outline-none placeholder:text-text-tertiary"
             />
@@ -203,28 +204,30 @@ export function ShareFeedbackModal({
             </div>
           </div>
 
-          <div className="mt-xl flex items-start gap-sm">
+          <div className="mt-xl flex items-start gap-sm rounded-md bg-surface-muted p-lg">
             <input
-              id="share-feedback-research-optin"
+              id="share-feedback-ux-optin"
               type="checkbox"
-              checked={optedIntoResearch}
-              onChange={(e) => setOptedIntoResearch(e.target.checked)}
+              checked={optedIntoUxImprovement}
+              onChange={(e) => setOptedIntoUxImprovement(e.target.checked)}
               className="mt-0.5 size-4 shrink-0 rounded border-border"
             />
-            <label
-              htmlFor="share-feedback-research-optin"
-              className="flex-1 cursor-pointer text-body text-text-secondary"
-            >
-              I&apos;m open to being contacted for future user research.{' '}
-              <a
-                href="https://docs.google.com/document/d/16P1wcCLCndIleWfhdyNOpn7sfwaM5yGWf6RdQrcW5BA/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-text-action hover:underline"
-              >
-                Learn more
-              </a>
-            </label>
+            <div className="min-w-0 flex-1">
+              <label htmlFor="share-feedback-ux-optin" className="cursor-pointer text-body text-text-primary">
+                Join user experience improvement program
+              </label>
+              <p className="mt-xs text-small text-text-secondary">
+                Help us build a better product. We analyze how you use the product to catch issues and
+                improve faster.{' '}
+                <button
+                  type="button"
+                  onClick={() => onOpenUxImprovementSettings?.()}
+                  className="text-text-action hover:underline"
+                >
+                  Learn more
+                </button>
+              </p>
+            </div>
           </div>
 
           <div className="mt-xl flex items-center justify-end gap-md">
@@ -241,7 +244,7 @@ export function ShareFeedbackModal({
               onClick={() => {
                 if (!canSubmit) return
                 onSubmit(trimmed, {
-                  optedIntoResearch,
+                  optedIntoUxImprovement,
                   attachments: attachments.map((a) => a.file),
                 })
               }}

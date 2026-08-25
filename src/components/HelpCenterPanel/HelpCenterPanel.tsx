@@ -48,12 +48,17 @@ function SearchField({
  * nested Video tutorials / Support articles lists; Glossary opens the
  * `15988:11969` popup.
  */
-export function HelpCenterPanel({ open, onClose, onStartTour, onOpenGlossary }: HelpCenterPanelProps) {
+export function HelpCenterPanel({
+  open,
+  onClose,
+  onStartTour,
+  onOpenGlossary,
+  onOpenUxImprovementSettings,
+}: HelpCenterPanelProps) {
   const [view, setView] = useState<HelpCenterView>('home')
   const [query, setQuery] = useState('')
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [feedbackToastVisible, setFeedbackToastVisible] = useState(false)
-  const [feedbackToastMessage, setFeedbackToastMessage] = useState('')
   const [activeVideo, setActiveVideo] = useState<HelpVideoItem | null>(null)
 
   useEffect(() => {
@@ -262,19 +267,15 @@ export function HelpCenterPanel({ open, onClose, onStartTour, onOpenGlossary }: 
         open={feedbackOpen}
         variant="help"
         onClose={() => setFeedbackOpen(false)}
-        onSubmit={(_details, meta) => {
+        onSubmit={() => {
           setFeedbackOpen(false)
-          setFeedbackToastMessage(
-            meta?.optedIntoResearch
-              ? "Thanks for the feedback! We've added you to our research list — we'll reach out if there's a study that's a good fit."
-              : 'Thanks for the feedback! Naveen and the team read every note.',
-          )
           setFeedbackToastVisible(true)
         }}
+        onOpenUxImprovementSettings={onOpenUxImprovementSettings}
       />
 
       <Toast
-        message={feedbackToastMessage}
+        message="Appreciate it! Thanks for the feedback!"
         visible={feedbackToastVisible}
         onClose={() => setFeedbackToastVisible(false)}
       />

@@ -42,6 +42,8 @@ export interface HelpCenterPanelProps {
   onStartTour?: (tourId?: string) => void
   /** Opens the Glossary popup (Figma `15988:11969`). Optional term id pre-selects that entry. */
   onOpenGlossary?: (termId?: string) => void
+  /** Opens Settings > Account > User experience improvement program (Share feedback "Learn more"). */
+  onOpenUxImprovementSettings?: () => void
 }
 
 export const HELP_VIDEOS: HelpVideoItem[] = [

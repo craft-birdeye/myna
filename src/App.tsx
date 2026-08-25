@@ -55,6 +55,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { IntegrationDetailScreen } from './screens/IntegrationDetailScreen'
 import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
+import { UserExperienceImprovementScreen } from './screens/UserExperienceImprovementScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
@@ -524,6 +525,12 @@ export function App() {
     setSettingsSubScreen(`integration-${integrationId}`)
   }
 
+  function openUxImprovementSettings() {
+    setRailActive('settings')
+    setSettingsTab('Account')
+    setSettingsSubScreen('user-experience-improvement')
+  }
+
   function openAgentFromOverview(target: { railId: string; navId?: string }) {
     setRailActive(target.railId)
     if (target.navId) {
@@ -861,12 +868,15 @@ export function App() {
                     <WebWidgetsScreen onBack={() => setSettingsSubScreen(null)} />
                   ) : settingsSubScreen === 'appointment-widgets' ? (
                     <AppointmentWidgetsScreen onBack={() => setSettingsSubScreen(null)} />
+                  ) : settingsSubScreen === 'user-experience-improvement' ? (
+                    <UserExperienceImprovementScreen onBack={() => setSettingsSubScreen(null)} />
                   ) : (
                     <SettingsScreen
                       initialTab={settingsTab}
                       onTabConsumed={() => setSettingsTab(null)}
                       onWebWidgets={() => setSettingsSubScreen('web-widgets')}
                       onAppointmentWidgets={() => setSettingsSubScreen('appointment-widgets')}
+                      onUxImprovement={openUxImprovementSettings}
                     />
                   )
                 ) : railActive === 'inbox' ? (
@@ -981,6 +991,7 @@ export function App() {
                           explorationChrome={isAgentExplorationChrome(navActive)}
                           sep1Chrome={isSep1Chrome(navActive)}
                           inlineRhsFooter={navActive === RESPONSE_AGENTS_SEP1_NAV_ID}
+                          onOpenUxImprovementSettings={openUxImprovementSettings}
                         />
                       </div>
                       {workflowAiAssistOpen && (
