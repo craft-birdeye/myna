@@ -57,8 +57,10 @@
 .readOnlySteps {
   height: auto;
   min-height: 120px;
+  max-height: 500px;
   padding: 16px;
   pointer-events: auto;
+  overflow-y: auto;
 }
 
 .readOnlySteps .stepsList {
@@ -286,8 +288,7 @@
 }
 
 /* ── Steps editor shell (edit mode + toolbar) ──
- * No max-height/internal scroll — the box has a min-height and grows with
- * content, same as the create-mode variant below. */
+ * Default: fixed height + internal scroll. Expand overlay removes the cap. */
 .stepsEditorShell {
   display: flex;
   flex-direction: column;
@@ -296,6 +297,8 @@
   border-radius: 4px;
   box-sizing: border-box;
   min-height: 160px;
+  max-height: 500px;
+  overflow: hidden;
 }
 
 .stepsEditorShellFocused {
@@ -305,18 +308,21 @@
 .stepsEditorShellCreate {
   /* Matches STEPS_FIELD_MIN_HEIGHT in ProcedureDetailScreen.tsx. */
   min-height: 250px;
+  max-height: 500px;
 }
 
 .stepsEditorBody {
   flex: 1;
-  overflow: visible;
-  min-height: 100px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .stepsEditorBodyCreate {
   flex: 1 1 auto;
-  overflow: visible;
-  min-height: calc(250px - 36px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .stepsEditorBodyCreate .stepsListNestedEmpty {
@@ -579,6 +585,13 @@
 .stepsOverlayBody .stepsEditorShell,
 .stepsOverlayBody .stepsEditorShellCreate {
   min-height: 100%;
+  max-height: none;
+  overflow: hidden;
+}
+
+.stepsOverlayBody .stepsEditorBody,
+.stepsOverlayBody .stepsEditorBodyCreate {
+  overflow-y: auto;
 }
 
 .stepsOverlayBody .readOnlySteps {
