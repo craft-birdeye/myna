@@ -336,6 +336,12 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'South region', status: 'Paused',  channels: 'Text, Facebook', pagesValidated: '102', signalsPassed: '90%', citationIssues: '6',  flaggedForReview: '3', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',     pagesValidated: '61',  signalsPassed: '88%', citationIssues: '4',  flaggedForReview: '2', locations: '140' },
   ],
+  'Domain health agent': [
+    { region: 'North region', status: 'Running', channels: 'Voice call',     domainsMonitored: '142', pagesCrawled: '9.8K', issuesDetected: '64', timeSaved: '9.4h', locations: '358' },
+    { region: 'East region',  status: 'Running', channels: 'Web chat, Text', domainsMonitored: '96',  pagesCrawled: '6.1K', issuesDetected: '41', timeSaved: '6.1h', locations: '212' },
+    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook', domainsMonitored: '58',  pagesCrawled: '3.4K', issuesDetected: '22', timeSaved: '3.7h', locations: '180' },
+    { region: 'West region',  status: 'Draft',   channels: 'Voice call',     domainsMonitored: '31',  pagesCrawled: '1.9K', issuesDetected: '12', timeSaved: '2.0h', locations: '140' },
+  ],
 }
 
 const DEFAULT_REGIONS: RegionRow[] = REGIONS_BY_AGENT['Front desk agent']
@@ -391,6 +397,7 @@ function workflowAgentNameForLibraryCard(card: CreateLibraryCard, currentAgent?:
   if (haystack.includes('pre-visit') && !haystack.includes('preparation')) return 'Pre-visit agent'
   if (haystack.includes('fanout')) return 'Query fanout agent'
   if (haystack.includes('aeo') || haystack.includes('validator')) return 'AEO validator agent'
+  if (haystack.includes('domain')) return 'Domain health agent'
   if (currentAgent?.startsWith('Reminder')) return 'Reminder agent'
   return 'Front desk agent'
 }
@@ -873,6 +880,13 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
       id: 'aeo-validator-default',
       title: 'AEO signal and citation validation',
       description: 'Checks new and updated content for AEO signals, validates AI-cited sources against the published page, and flags failures for review.',
+    },
+  ],
+  'Domain health agent': [
+    {
+      id: 'domain-health-default',
+      title: 'Domain health monitoring and reporting',
+      description: 'Polls crawl status for eligible domains, runs a full website health analysis once each crawl completes, and generates an LLM report of issues and recommendations.',
     },
   ],
 }
@@ -7263,6 +7277,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       { id: 'citationIssues', value: '37', label: 'Citation issues found', delta: '1.1%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages where an AI-cited source no longer matched the published content.' },
       { id: 'flaggedForReview', value: '19', label: 'Flagged for review', delta: '0.8%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages routed to the content team after failing AEO validation.' },
     ],
+    'Domain health agent': [
+      { id: 'domainsMonitored', value: '327', label: 'Domains monitored', delta: '4.2%', trend: 'up', info: true, tooltip: 'Eligible domains checked for crawl completion and health analysis in the selected period.' },
+      { id: 'pagesCrawled', value: '21.2K', label: 'Pages crawled', delta: '7.8%', trend: 'up', info: true, tooltip: 'Total pages crawled across monitored domains in the selected period.' },
+      { id: 'issuesDetected', value: '139', label: 'Issues detected', delta: '2.6%', trend: 'down', positiveDown: true, info: true, tooltip: 'Page issues surfaced by the website health analysis, such as freshness or renderability problems.' },
+      { id: 'timeSaved', value: '21h', label: 'Time saved', delta: '4.2%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
+    ],
   }
 
   const DEFAULT_METRICS: Metric[] = [
@@ -7337,6 +7357,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     signalsPassed: r.signalsPassed,
     citationIssues: r.citationIssues,
     flaggedForReview: r.flaggedForReview,
+    domainsMonitored: r.domainsMonitored,
+    pagesCrawled: r.pagesCrawled,
+    issuesDetected: r.issuesDetected,
     issues: r.issues,
     lastUpdated: r.lastUpdated ?? LAST_UPDATED_SAMPLES[i % LAST_UPDATED_SAMPLES.length],
     updatedBy: r.updatedBy ?? UPDATED_BY_SAMPLES[i % UPDATED_BY_SAMPLES.length],
@@ -7367,7 +7390,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isReviewTagging   = agentName === 'Review tagging agents'
   const isQueryFanout     = agentName === 'Query fanout agent'
   const isAeoValidator    = agentName === 'AEO validator agent'
-  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging || isQueryFanout || isAeoValidator
+  const isDomainHealth    = agentName === 'Domain health agent'
+  const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging || isQueryFanout || isAeoValidator || isDomainHealth
   /** Illustration + library cards only (no Ghostwriter) — Sep 1 response/reminder, waitlist, pre-visit. */
   const isLibraryOnlyCreate =
     isWaitlist ||
@@ -7498,6 +7522,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       { key: 'signalsPassed' as keyof AgentInstance, label: 'AEO signals passed', width: 170, sortable: true },
       { key: 'citationIssues' as keyof AgentInstance, label: 'Citation issues found', width: 190, sortable: true },
       { key: 'flaggedForReview' as keyof AgentInstance, label: 'Flagged for review', width: 170, sortable: true },
+    ] : isDomainHealth ? [
+      { key: 'domainsMonitored' as keyof AgentInstance, label: 'Domains monitored', width: 160, sortable: true },
+      { key: 'pagesCrawled' as keyof AgentInstance, label: 'Pages crawled', width: 150, sortable: true },
+      { key: 'issuesDetected' as keyof AgentInstance, label: 'Issues detected', width: 150, sortable: true },
+      { key: 'timeSaved' as keyof AgentInstance, label: 'Time saved', width: 110, sortable: true },
     ] : [
       { key: 'interactions' as keyof AgentInstance, label: 'Interactions handled', width: 200, sortable: true },
       { key: 'fcr' as keyof AgentInstance, label: 'First contact resolution rate', width: 220, sortable: true },
@@ -7519,7 +7548,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     .slice(hideChannels ? 2 : 3)
     .map((c) => String(c.key))
     .filter((k) => !trailingKeys.has(k))
-  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse || isReviewGeneration || isQueryFanout || isAeoValidator
+  const showAllMetrics = isFrontdesk || isPreVisit || isWaitlist || isReminder || isTaggingRouting || isReviewResponse || isReviewGeneration || isQueryFanout || isAeoValidator || isDomainHealth
   const DEFAULT_VISIBLE = [
     'name',
     'status',

@@ -34,6 +34,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { id: 'searchai-query-fanout',  label: 'Query fanout agents'    },
       { id: 'searchai-aeo-validator', label: 'AEO validator agents'   },
+      { id: 'searchai-domain-health', label: 'Domain health agents'   },
     ],
   },
   {

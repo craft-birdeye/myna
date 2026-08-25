@@ -1772,6 +1772,76 @@ export const RECOMMENDATIONS: Recommendation[] = [
     conversations: [],
     agentName: 'Query fanout agent',
   },
+  // ─── Domain health agent — crawl, freshness, and renderability recommendations ──
+  // Restricted via `agentName` so they only show on the Domain health agent's Recommendation tab.
+  {
+    id: 'r-domain-health-1',
+    gapType: 'action',
+    title: 'Fix renderability failure on 14 service pages',
+    procedureTitle: 'Service page renderability fix',
+    summary: '14 pages affected • Content invisible to crawlers',
+    priority: 'High',
+    timeAgo: '3h ago',
+    conversationCount: 0,
+    isNew: true,
+    whenToUse: 'When the website health analysis flags pages where key content only renders after client-side JavaScript runs, so a crawler reading the raw HTML sees an empty or incomplete page.',
+    steps: [
+      {
+        title: 'Server-render or pre-render the affected content',
+        bullets: [
+          'Move the service descriptions and pricing blocks currently injected client-side into the server-rendered HTML response',
+          'Re-run the crawl and confirm the content now appears in the raw HTML, not just after JavaScript executes',
+        ],
+      },
+    ],
+    outcomes: [
+      'Closes a renderability gap flagged across 14 service pages.',
+      'Once fixed, the next scheduled crawl will re-check renderability for these pages.',
+    ],
+    tools: [
+      { label: 'Website Health Analysis', icon: 'health_and_safety' },
+      { label: 'Check crawl status', icon: 'sync' },
+    ],
+    thoughts: 'The website health analysis flagged 14 service pages where the crawled HTML is missing content that\'s visible in the browser — checking further, that content is being injected by client-side JavaScript after the initial page load.',
+    rationale: '14 service pages render their key content client-side only, so crawlers that don\'t execute JavaScript see an empty or incomplete page — reducing the odds this content gets cited by AI engines.',
+    changeType: 'Service page content moved to server-rendered HTML so it is visible without executing JavaScript.',
+    conversations: [],
+    agentName: 'Domain health agent',
+  },
+  {
+    id: 'r-domain-health-2',
+    gapType: 'knowledge',
+    title: 'Refresh 9 pricing pages flagged as stale',
+    procedureTitle: 'Pricing page refresh',
+    summary: '9 pages affected • Last updated over 18 months ago',
+    priority: 'Medium',
+    timeAgo: '1d ago',
+    conversationCount: 0,
+    isNew: true,
+    whenToUse: 'When the freshness check flags pages that haven\'t been updated in over a year, reducing the odds an AI engine treats them as a current, citable source.',
+    steps: [
+      {
+        title: 'Update pricing and outdated references',
+        bullets: [
+          'Review and update listed prices, promotions, and any dated references on each flagged page',
+          'Update the page\'s last-modified date so freshness signals reflect the real edit',
+        ],
+      },
+    ],
+    outcomes: [
+      'Closes a freshness gap flagged across 9 pricing pages.',
+      'Once published, the next scheduled crawl will re-check freshness for these pages.',
+    ],
+    tools: [
+      { label: 'Website Health Analysis', icon: 'health_and_safety' },
+      { label: 'Send to domain health', icon: 'send' },
+    ],
+    thoughts: 'The website health analysis flagged 9 pricing pages whose content hasn\'t changed in over 18 months — that staleness lowers how confidently an AI engine can cite them as current.',
+    rationale: '9 pricing pages are flagged stale by the freshness check, so AI engines are less likely to treat them as current, citable sources.',
+    changeType: 'Pricing and outdated references updated on 9 flagged pages; last-modified dates refreshed.',
+    conversations: [],
+    agentName: 'Domain health agent',
+  },
 ]
 
 // ── Conversation transcripts (keyed by opening customer message) ────────────

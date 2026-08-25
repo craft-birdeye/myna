@@ -961,6 +961,26 @@ function AEOValidatorAgentsView({
   );
 }
 
+function DomainHealthAgentsView({
+  onEditAgent,
+  pendingInstanceView,
+  onPendingInstanceViewConsumed,
+}: {
+  onEditAgent?: OnEditAgent;
+  pendingInstanceView?: PendingInstanceView | null;
+  onPendingInstanceViewConsumed?: () => void;
+}) {
+  return (
+    <AgentDetailScreen
+      agentName="Domain health agent"
+      navId="searchai-domain-health"
+      onEditAgent={onEditAgent}
+      pendingInstanceView={pendingInstanceView}
+      onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
+    />
+  );
+}
+
 export type SearchAIViewProps = {
   /** L2 compound key from `L2NavLayout` (e.g. `Actions/Recommendations`). */
   l2ActiveItem: string;
@@ -997,6 +1017,15 @@ export function SearchAIView({
   if (l2ActiveItem === "searchai-aeo-validator") {
     return (
       <AEOValidatorAgentsView
+        onEditAgent={onEditAgent}
+        pendingInstanceView={pendingInstanceView}
+        onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
+      />
+    );
+  }
+  if (l2ActiveItem === "searchai-domain-health") {
+    return (
+      <DomainHealthAgentsView
         onEditAgent={onEditAgent}
         pendingInstanceView={pendingInstanceView}
         onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}

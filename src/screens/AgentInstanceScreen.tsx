@@ -205,6 +205,12 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'citationIssues', value: '9', label: 'Citation issues found', delta: '1.1%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages where an AI-cited source no longer matched the published content.' },
     { id: 'flaggedForReview', value: '5', label: 'Flagged for review', delta: '0.8%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages routed to the content team after failing AEO validation.' },
   ],
+  'Domain health agent': [
+    { id: 'domainsMonitored', value: '83', label: 'Domains monitored', delta: '4.2%', trend: 'up', info: true, tooltip: 'Eligible domains checked for crawl completion and health analysis at this location in the selected period.' },
+    { id: 'pagesCrawled', value: '5.4K', label: 'Pages crawled', delta: '7.8%', trend: 'up', info: true, tooltip: 'Total pages crawled across monitored domains at this location in the selected period.' },
+    { id: 'issuesDetected', value: '36', label: 'Issues detected', delta: '2.6%', trend: 'down', positiveDown: true, info: true, tooltip: 'Page issues surfaced by the website health analysis, such as freshness or renderability problems.' },
+    { id: 'timeSaved', value: '5.4h', label: 'Time saved', delta: '4.2%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent at this location.' },
+  ],
 }
 
 const DEFAULT_METRICS: Metric[] = [
@@ -298,6 +304,12 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Chicago, IL',      count: '98',  pagesValidated: '46', signalsPassed: '91%', citationIssues: '2', flaggedForReview: '1' },
     { location: 'Boston, MA',       count: '76',  pagesValidated: '34', signalsPassed: '90%', citationIssues: '2', flaggedForReview: '1' },
     { location: 'Philadelphia, PA', count: '60',  pagesValidated: '20', signalsPassed: '89%', citationIssues: '2', flaggedForReview: '1' },
+  ],
+  'Domain health agent': [
+    { location: 'Atlanta, GA',      count: '124', domainsMonitored: '32', pagesCrawled: '2.1K', issuesDetected: '14', timeSaved: '2.3h' },
+    { location: 'Chicago, IL',      count: '98',  domainsMonitored: '24', pagesCrawled: '1.6K', issuesDetected: '10', timeSaved: '1.7h' },
+    { location: 'Boston, MA',       count: '76',  domainsMonitored: '17', pagesCrawled: '1.1K', issuesDetected: '7',  timeSaved: '1.1h' },
+    { location: 'Philadelphia, PA', count: '60',  domainsMonitored: '10', pagesCrawled: '0.6K', issuesDetected: '5',  timeSaved: '0.5h' },
   ],
 }
 
@@ -438,6 +450,14 @@ const AEO_VALIDATOR_COLUMNS: Column<LocationRow>[] = [
   { key: 'flaggedForReview', label: 'Flagged for review', width: 170, sortable: true },
 ]
 
+const DOMAIN_HEALTH_COLUMNS: Column<LocationRow>[] = [
+  { key: 'location', label: 'Location', width: 220, sortable: true },
+  { key: 'domainsMonitored', label: 'Domains monitored', width: 170, sortable: true },
+  { key: 'pagesCrawled', label: 'Pages crawled', width: 150, sortable: true },
+  { key: 'issuesDetected', label: 'Issues detected', width: 150, sortable: true },
+  { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
+]
+
 export function AgentInstanceScreen({
   instanceName,
   displayName,
@@ -536,6 +556,7 @@ export function AgentInstanceScreen({
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
     : agentName === 'Query fanout agent'  ? QUERY_FANOUT_COLUMNS
     : agentName === 'AEO validator agent' ? AEO_VALIDATOR_COLUMNS
+    : agentName === 'Domain health agent' ? DOMAIN_HEALTH_COLUMNS
     : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
     : isReviewResponse                    ? REVIEW_RESPONSE_COLUMNS
     : DEFAULT_COLUMNS
@@ -580,9 +601,10 @@ export function AgentInstanceScreen({
   const isTaggingRouting = agentName === 'Tagging & routing agent'
   const isQueryFanout = agentName === 'Query fanout agent'
   const isAeoValidator = agentName === 'AEO validator agent'
+  const isDomainHealth = agentName === 'Domain health agent'
   const tabs = isTaggingRouting
     ? TAGGING_ROUTING_TABS
-    : isReviewResponse || isReviewGeneration || isQueryFanout || isAeoValidator
+    : isReviewResponse || isReviewGeneration || isQueryFanout || isAeoValidator || isDomainHealth
       ? REVIEW_RESPONSE_TABS
       : TABS
 

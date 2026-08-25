@@ -700,12 +700,158 @@ const AEO_VALIDATOR_NODE_DETAILS: Record<string, any> = {
   },
 }
 
+// ─── Domain Health Agent (Search AI) ──────────────────────────────────────────
+// Workflow: Schedule trigger → Get all eligible domains → [Loop: Check crawl status → Crawl completed?
+//   No → end iteration, loop repeats | Yes → Website Health Analysis → LLM Report Generation → Send to domain health]
+
+const DOMAIN_HEALTH_NODES = [
+  { id: 'dh-1', flowType: 'trigger' as const, data: { title: 'Schedule — domain health check', subtype: 'Schedule-based', headerLabel: 'Trigger', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Enter description' } },
+  { id: 'dh-2', flowType: 'task'    as const, data: { title: 'Get all eligible domains', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Fetches every domain currently enrolled for domain health monitoring.' } },
+  { id: 'dh-3', flowType: 'loop'    as const, data: { title: 'For domain', subtype: 'Loop', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter loop name', descriptionPlaceholder: 'Repeat the following tasks for each domain' } },
+]
+
+const DOMAIN_HEALTH_NODE_DETAILS: Record<string, any> = {
+  '__start__': {
+    agentName: 'Domain health agent',
+    goals: 'Continuously monitors enrolled domains for crawl completion, runs a full website health analysis once each crawl finishes, and delivers an LLM-generated health report — so issues, freshness, and renderability problems surface automatically without manual crawl-status polling.',
+    outcomes: [
+      '1. Every eligible domain is picked up on a fixed schedule',
+      '2. The agent polls crawl status and only proceeds once the crawl for a domain has actually completed',
+      '3. Completed crawls are analyzed for page facts, issues, scores, freshness, and renderability',
+      '4. An LLM report highlighting issues and recommendations is generated and sent to Domain health',
+    ].join('\n'),
+    locations: ['1001 - Mountain View, CA', '1002 - Seattle, WA', '1004 - Chicago, IL', '1006 - Las Vegas, NV'],
+  },
+  'dh-1': {
+    triggerName: 'Schedule — domain health check',
+    description: 'Runs on a fixed daily cadence to check for eligible domains and refresh their health report.',
+    frequency: 'Daily',
+    day: 'Every day',
+    time: '2:00 AM',
+  },
+  'dh-2': {
+    taskName: 'Get all eligible domains',
+    description: 'Fetches every domain currently enrolled for domain health monitoring.',
+    selectedTools: ['get-eligible-domains'],
+  },
+  'dh-3': {
+    loopName: 'For domain',
+    name: 'For domain',
+    description: 'Repeat the following tasks for each domain.',
+    loopOver: 'Eligible domain',
+    loopMode: 'variable',
+    nodes: [
+      { id: 'dh-4', flowType: 'task'   as const, data: { title: 'Check crawl status',  subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name',   descriptionPlaceholder: 'Checks whether the latest crawl for the domain list has finished.' } },
+      { id: 'dh-5', flowType: 'branch' as const, data: { title: 'Crawl completed?',    subtype: 'Branch',      hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter branch name', descriptionPlaceholder: 'Build condition-specific flows' } },
+    ],
+  },
+  'dh-4': {
+    taskName: 'Check crawl status',
+    description: 'Checks whether the latest crawl for the domain list has finished.',
+    selectedTools: ['check-crawl-status'],
+  },
+  'dh-5': {
+    basedOn: 'conditions',
+    branches: [
+      { id: 'dh-5-path-1', name: 'Crawl completed' },
+      { id: 'dh-5-path-2', name: 'Crawl not completed', isFallback: true },
+    ],
+  },
+  'dh-5-path-1': {
+    branchName: 'Crawl completed',
+    description: 'Crawl finished — proceed to website health analysis.',
+    conditions: [
+      { id: 1, fieldValue: 'crawl_status', operatorValue: 'equals', valueValue: 'completed' },
+    ],
+    conditionOptions: {
+      field:    [{ value: 'crawl_status', label: 'Crawl status' }],
+      operator: [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Does not equal' }],
+      value:    [{ value: 'completed', label: 'Completed' }, { value: 'in_progress', label: 'In progress' }],
+    },
+    parentId: 'dh-5',
+    isBranchPath: true,
+    nodes: [
+      { id: 'dh-6', flowType: 'task' as const, data: { title: 'Website Health Analysis', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Analyzes the crawled domain for Page Facts, Issues, Scores, Freshness, Renderability, and Recommendations.' } },
+      { id: 'dh-7', flowType: 'task' as const, data: { title: 'LLM Report Generation',   subtype: 'Custom',      hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Configures and generates the domain health report.' } },
+      { id: 'dh-8', flowType: 'task' as const, data: { title: 'Send to domain health',   subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Delivers the generated report to the Domain health dashboard.' } },
+    ],
+  },
+  'dh-5-path-2': {
+    branchName: 'Crawl not completed',
+    description: 'Crawl still in progress — end this loop iteration and check again.',
+    conditions: [],
+    parentId: 'dh-5',
+    isBranchPath: true,
+    isFallback: true,
+    nodes: [],
+  },
+  'dh-6': {
+    taskName: 'Website Health Analysis',
+    description: 'Analyzes the crawled domain for Page Facts, Issues, Scores, Freshness, Renderability, and Recommendations.',
+    selectedTools: ['website-health-analysis'],
+  },
+  'dh-7': {
+    taskName: 'LLM Report Generation',
+    description: 'Configures and generates the domain health report.',
+    llmModel: 'Balanced',
+    contextFields: [
+      { value: 'WebsiteHealthAnalysis.pageFacts', type: 'variable' },
+      { value: 'WebsiteHealthAnalysis.issues', type: 'variable' },
+      { value: 'WebsiteHealthAnalysis.scores', type: 'variable' },
+      { value: 'WebsiteHealthAnalysis.freshness', type: 'variable' },
+      { value: 'WebsiteHealthAnalysis.renderability', type: 'variable' },
+      { value: 'WebsiteHealthAnalysis.recommendations', type: 'variable' },
+      { value: 'Prompt.userPreferences', type: 'variable' },
+    ],
+    inputFields: [
+      { value: 'WebsiteHealthAnalysis.issues', type: 'variable' },
+      { value: 'WebsiteHealthAnalysis.recommendations', type: 'variable' },
+      { value: 'Prompt.userPreferences', type: 'variable' },
+    ],
+    systemPrompt:
+      'You are generating a customer-facing Website Health Report.\n\n' +
+      'The supplied analysis is authoritative.\n\n' +
+      'You MUST NOT:\n' +
+      '- change scores\n' +
+      '- invent issues\n' +
+      '- remove evidence-backed facts unless explicitly hidden by user preference\n' +
+      '- invent recommendations\n' +
+      '- change crawl results\n\n' +
+      'You MAY:\n' +
+      '- summarize findings\n' +
+      '- explain findings\n' +
+      '- reorder findings based on user preference\n' +
+      '- rephrase issue names\n' +
+      '- hide issues explicitly excluded by the user\n' +
+      '- adjust tone and level of detail',
+    userPrompt:
+      'Website Health Analysis:\n' +
+      '{{WebsiteHealthAnalysis.pageFacts}}\n' +
+      '{{WebsiteHealthAnalysis.issues}}\n' +
+      '{{WebsiteHealthAnalysis.scores}}\n' +
+      '{{WebsiteHealthAnalysis.freshness}}\n' +
+      '{{WebsiteHealthAnalysis.renderability}}\n' +
+      '{{WebsiteHealthAnalysis.recommendations}}\n\n' +
+      'User Preferences:\n' +
+      '{{Prompt.userPreferences}}',
+    outputFields: [
+      { value: 'DomainHealth.report', type: 'variable' },
+    ],
+  },
+  'dh-8': {
+    taskName: 'Send to domain health',
+    description: 'Delivers the generated report to the Domain health dashboard.',
+    selectedTools: ['send-to-domain-health'],
+  },
+}
+
 export const AUTOMOTIVE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Front desk agent': { nodes: FRONTDESK_NODES,           nodeDetails: FRONTDESK_NODE_DETAILS           },
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,             nodeDetails: OUTREACH_NODE_DETAILS            },
   'Query fanout agent':  { nodes: QUERY_FANOUT_NODES,     nodeDetails: QUERY_FANOUT_NODE_DETAILS        },
   'AEO validator agent': { nodes: AEO_VALIDATOR_NODES,    nodeDetails: AEO_VALIDATOR_NODE_DETAILS       },
+  'Domain health agent': { nodes: DOMAIN_HEALTH_NODES,    nodeDetails: DOMAIN_HEALTH_NODE_DETAILS       },
 }
 
 // ─── Waitlist Agent ──────────────────────────────────────────────────────────
@@ -1692,6 +1838,7 @@ export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   // whichever product context (`activeProduct`) happens to be active elsewhere in the app.
   'Query fanout agent':  { nodes: QUERY_FANOUT_NODES,     nodeDetails: QUERY_FANOUT_NODE_DETAILS        },
   'AEO validator agent': { nodes: AEO_VALIDATOR_NODES,    nodeDetails: AEO_VALIDATOR_NODE_DETAILS       },
+  'Domain health agent': { nodes: DOMAIN_HEALTH_NODES,    nodeDetails: DOMAIN_HEALTH_NODE_DETAILS       },
 }
 
 // ─── Shared voice-call conditionOptions (reused across all three dental agents) ─

@@ -21,10 +21,11 @@ interface RecommendationsTabProps {
  *  agents belong to Jay). */
 type RecommendationRow = Recommendation & { ageMinutes: number; persona: string }
 
-/** Search AI agents (Query fanout, AEO validator, …) belong to Jay (Marketing), not Myna
- *  (Operations) — everything else on the Front desk / Inbox canvas stays Myna's. */
+/** Search AI agents (Query fanout, AEO validator, Domain health, …) belong to Jay
+ *  (Marketing), not Myna (Operations) — everything else on the Front desk / Inbox
+ *  canvas stays Myna's. */
 function personaForAgent(agentName: string): string {
-  return agentName.startsWith('Query fanout agent') || agentName.startsWith('AEO validator agent')
+  return agentName.startsWith('Query fanout agent') || agentName.startsWith('AEO validator agent') || agentName.startsWith('Domain health agent')
     ? 'Jay'
     : 'Myna'
 }
@@ -90,10 +91,11 @@ export function RecommendationsTab({ agentName, onSelect, isDraft = false, empty
   const { feedbackRecommendations } = useFeedbackRecommendationsStore()
   const { overrides } = useRecommendationOverridesStore()
   const feedbackForAgent = feedbackRecommendations.filter((rec) => rec.agentName === agentName)
-  // Search AI agents (Query fanout, AEO validator) don't fit the generic front-desk-style
-  // dataset below — they only see recommendations explicitly tagged with their own agentName.
-  // Every other agent keeps the pre-existing behavior: untagged rows shown everywhere.
-  const isSearchAiAgent = agentName.startsWith('Query fanout agent') || agentName.startsWith('AEO validator agent')
+  // Search AI agents (Query fanout, AEO validator, Domain health) don't fit the generic
+  // front-desk-style dataset below — they only see recommendations explicitly tagged with
+  // their own agentName. Every other agent keeps the pre-existing behavior: untagged rows
+  // shown everywhere.
+  const isSearchAiAgent = agentName.startsWith('Query fanout agent') || agentName.startsWith('AEO validator agent') || agentName.startsWith('Domain health agent')
   const genericRecs = isSearchAiAgent
     ? RECOMMENDATIONS.filter((rec) => rec.agentName && agentName.startsWith(rec.agentName))
     : RECOMMENDATIONS.filter((rec) => !rec.agentName)
