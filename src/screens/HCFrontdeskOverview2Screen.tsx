@@ -16,7 +16,9 @@ import {
   StackedBarChart,
   SummaryStats,
   TopNav,
+  TrendLineChart,
   ViewModeToggle,
+  scaleForViewMode,
   type Column,
   type EstimateSavingsValues,
   type FilterField,
@@ -25,6 +27,38 @@ import {
   type SankeyNode,
   type ViewMode,
 } from '../components'
+
+// Funnel outcome volumes (Jul anchor, 1,000 total) — shared by trend + location tables.
+const FUNNEL_OUTCOME_VOLUMES = {
+  scheduled: 145,
+  rescheduled: 85,
+  cancelled: 40,
+  informationProvided: 400,
+  humanTransfer: 100,
+  actionPending: 190,
+  incompleteInteraction: 20,
+  other: 20,
+} as const
+const RESOLVED_OUTCOME_KEYS = ['scheduled', 'rescheduled', 'cancelled', 'informationProvided'] as const
+const NOT_RESOLVED_OUTCOME_KEYS = ['humanTransfer', 'actionPending', 'incompleteInteraction', 'other'] as const
+const RESOLVED_OUTCOME_TOTAL = RESOLVED_OUTCOME_KEYS.reduce((s, k) => s + FUNNEL_OUTCOME_VOLUMES[k], 0)
+const NOT_RESOLVED_OUTCOME_TOTAL = NOT_RESOLVED_OUTCOME_KEYS.reduce((s, k) => s + FUNNEL_OUTCOME_VOLUMES[k], 0)
+
+const FUNNEL_SUBOUTCOME_VOLUMES = {
+  paymentBilling: 80,
+  insuranceCoverage: 90,
+  treatmentRelated: 100,
+  referrals: 60,
+  generalEnquiry: 70,
+  callAttended: 65,
+  callNotAttended: 35,
+  followUp: 190,
+  callDisconnected: 12,
+  abandoned: 8,
+  wrongNumbers: 8,
+  salesCalls: 6,
+  humanResources: 6,
+} as const
 
 // ─── Conversation data per funnel node ────────────────────────────────────────
 
@@ -119,12 +153,18 @@ const CONVERSATIONS_BY_NODE: Record<string, FunnelConversation[]> = {
     { id: 'pen4', name: 'Wesley Grant',                      message: 'Awaiting confirmation from specialist\'s office on availability.',                    location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025',  unread: true },
     { id: 'pen5', name: 'Camille Ortiz',                     message: 'Awaiting confirmation on a referral to a specialist.',                               location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 8, 2025', unread: true },
   ],
-  'Bookings': [
+  'Not resolved': [
+    { id: 'nr-1', name: 'Nathaniel Cole',  message: 'Transferred to the billing team for a disputed charge.',            location: 'North Clinic',    assignee: 'Marcus Webb',  date: '09:36 AM', unread: true },
+    { id: 'nr-2', name: 'Sandra Lee',      message: 'Awaiting callback from Dr. Patel regarding lab results.',            location: 'Downtown Clinic', assignee: 'Front desk AI', date: '10:20 AM', unread: true },
+    { id: 'nr-3', name: 'Isabel Marsh',    message: 'Call went unanswered — voicemail left, no callback yet.',            location: 'North Clinic',    date: '09:58 AM', unread: true },
+    { id: 'nr-4', name: 'Paloma Ruiz',     message: 'Transferred to clinical staff for a medication question.',           location: 'South Clinic',    assignee: 'Ana Reyes',    date: 'Jun 10, 2025' },
+    { id: 'nr-5', name: 'Thomas Reyes',    message: 'Requested a callback about referral status — pending review.',       location: 'South Clinic',    assignee: 'Front desk AI', date: '09:55 AM' },
+  ],
+  'Scheduled': [
     { id: 'bkg1', name: 'Natalie Brooks',  verified: true,   message: 'Booked new patient consult for Jun 14 at 10am.',                                      location: 'North Clinic',    assignee: 'Front desk AI', date: '09:30 AM', unread: true },
     { id: 'bkg2', name: 'Carlos Jimenez',                    message: 'Scheduled annual physical for next Tuesday.',                                        location: 'South Clinic',    assignee: 'Front desk AI', date: '08:58 AM' },
     { id: 'bkg3', name: 'Ingrid Sorensen',                   message: 'Booked follow-up visit after recent ER discharge.',                                  location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'bkg4', name: 'Om Prakash',                         message: 'New patient intake appointment booked for Jun 16.',                                  location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025',  unread: true },
-    { id: 'bkg5', name: 'Derek Chow',                         message: 'Booked a follow-up visit after a recent procedure.',                                 location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 8, 2025' },
   ],
   'Rescheduled': [
     { id: 'res1', name: 'Bethany Coleman',                   message: 'Moved Thursday visit to next Monday due to travel.',                                 location: 'South Clinic',    assignee: 'Front desk AI', date: '11:05 AM', unread: true },
@@ -133,11 +173,87 @@ const CONVERSATIONS_BY_NODE: Record<string, FunnelConversation[]> = {
     { id: 'res4', name: 'Harold Simmons',                    message: 'Moved appointment earlier due to a schedule conflict.',                              location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
     { id: 'res5', name: 'Isabel Marsh',                      message: 'Rescheduled due to a transportation conflict.',                                       location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 8, 2025' },
   ],
-  'Cancellations': [
+  'Cancelled': [
     { id: 'can1', name: 'Gabriela Nunez',                    message: 'Cancelled Friday appointment — feeling better, no longer needed.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: '09:48 AM', unread: true },
     { id: 'can2', name: 'Trevor Adams',                      message: 'Cancelled follow-up — switched to a different provider.',                            location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
     { id: 'can3', name: 'Monica Silva',    verified: true,   message: 'Cancelled annual checkup — will rebook next quarter.',                                location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025' },
-    { id: 'can4', name: 'Julian Cross',                      message: 'Cancelled follow-up — resolved without needing the visit.',                          location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 8, 2025', unread: true },
+  ],
+  'Information provided': [
+    { id: 'ans1', name: 'Angela Martinez', verified: true, message: 'Called to confirm which insurance plans are accepted — confirmed Blue Cross in-network.', location: 'North Clinic',    assignee: 'Front desk AI', date: '09:12 AM', unread: true },
+    { id: 'ans2', name: 'David Kim',                        message: 'Asked about post-op care instructions after knee surgery.',                          location: 'South Clinic',    assignee: 'Front desk AI', date: '08:47 AM', unread: true },
+    { id: 'ans3', name: 'Renee Ortiz',    verified: true,   message: 'Confirmed pharmacy on file for prescription pickup.',                                 location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'ans4', name: 'Marcus Webb',                       message: 'Asked about clinic hours for the holiday weekend.',                                   location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+  ],
+  'Human transfer': [
+    { id: 'trf-1', name: 'Nathaniel Cole',                     message: 'Transferred to the billing team for a disputed charge.',            location: 'North Clinic',    assignee: 'Marcus Webb',  date: '09:36 AM', unread: true },
+    { id: 'trf-2', name: 'Paloma Ruiz',                        message: 'Transferred to clinical staff for a medication question.',           location: 'South Clinic',    assignee: 'Ana Reyes',    date: 'Jun 10, 2025' },
+    { id: 'trf-3', name: 'Elliot Gray',                        message: 'Transferred to the scheduling supervisor for a multi-visit request.', location: 'Downtown Clinic', assignee: 'Kelsy Hiltz',  date: 'Jun 9, 2025' },
+    { id: 'trf-4', name: 'Grace Liu',                          message: 'Transferred to a specialist\'s office for a referral question.',     location: 'North Clinic',    assignee: 'Ana Reyes',    date: 'Jun 8, 2025' },
+  ],
+  'Action pending': [
+    { id: 'pen1', name: 'Sandra Lee',                        message: 'Awaiting callback from Dr. Patel regarding lab results.',                            location: 'Downtown Clinic', assignee: 'Front desk AI', date: '10:20 AM', unread: true },
+    { id: 'pen2', name: 'Thomas Reyes',                      message: 'Requested a callback about referral status — pending review.',                       location: 'South Clinic',    assignee: 'Front desk AI', date: '09:55 AM' },
+    { id: 'pen3', name: 'Priya Chandran', verified: true,    message: 'Insurance pre-authorization request submitted, pending approval.',                    location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+    { id: 'pen4', name: 'Wesley Grant',                      message: 'Awaiting confirmation from specialist\'s office on availability.',                    location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 9, 2025',  unread: true },
+  ],
+  'Incomplete interaction': [
+    { id: 'na-1', name: 'Isabel Marsh',                       message: 'Call went unanswered — voicemail left, no callback yet.',            location: 'North Clinic',    date: '09:58 AM', unread: true },
+    { id: 'na-2', name: 'Julian Cross',                        message: 'Call disconnected before front desk picked up.',                    location: 'South Clinic',    date: 'Jun 9, 2025' },
+    { id: 'na-3', name: 'Aditi Rao',                           message: 'Call dropped before it could be answered.',                          location: 'Downtown Clinic', date: 'Jun 7, 2025' },
+  ],
+  'Other': [
+    { id: 'oth-1', name: 'Vendor Rep',                        message: 'Sales call about office supplies — not a patient inquiry.',           location: 'North Clinic',    date: 'Jun 8, 2025' },
+    { id: 'oth-2', name: 'Unknown caller',                    message: 'Wrong number — caller was looking for a different clinic.',          location: 'South Clinic',    date: 'Jun 7, 2025' },
+    { id: 'oth-3', name: 'Jordan Ellis',                      message: 'HR inquiry about a job posting at the practice.',                    location: 'Downtown Clinic', date: 'Jun 6, 2025' },
+  ],
+  'Payment and billing': [
+    { id: 'pb-1', name: 'Brandon Lee',                       message: 'Asked about a duplicate charge on the last statement.',              location: 'South Clinic',    assignee: 'Kelsy Hiltz',   date: '08:44 AM' },
+    { id: 'pb-2', name: 'Tomás Rivera',                      message: 'Asked about payment plan options for an outstanding balance.',     location: 'South Clinic',    assignee: 'Front desk AI', date: 'Jun 7, 2025', unread: true },
+  ],
+  'Insurance coverage': [
+    { id: 'ins-1', name: 'Angela Martinez', verified: true, message: 'Confirmed Blue Cross is accepted and benefits were explained.',     location: 'North Clinic',    assignee: 'Front desk AI', date: '09:12 AM', unread: true },
+    { id: 'ins-2', name: 'Renee Ortiz',    verified: true,   message: 'Asked whether a specialist visit would be covered.',                  location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+  ],
+  'Treatment related': [
+    { id: 'tr-1', name: 'David Kim',                         message: 'Asked about post-op care instructions after knee surgery.',          location: 'South Clinic',    assignee: 'Front desk AI', date: '08:47 AM', unread: true },
+    { id: 'tr-2', name: 'Fatima Noor',                       message: 'Asked about medication instructions before a procedure.',            location: 'Downtown Clinic', assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+  ],
+  'Referrals': [
+    { id: 'ref-1', name: 'Grace Liu',                         message: 'Asked for a referral to a cardiologist in-network.',                 location: 'North Clinic',    assignee: 'Ana Reyes',    date: 'Jun 8, 2025' },
+    { id: 'ref-2', name: 'Camille Ortiz',                     message: 'Requested records be sent to a specialist.',                           location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 10, 2025' },
+  ],
+  'General enquiry': [
+    { id: 'ge-1', name: 'Marcus Webb',                       message: 'Asked about clinic hours for the holiday weekend.',                   location: 'North Clinic',    assignee: 'Front desk AI', date: 'Jun 9, 2025' },
+    { id: 'ge-2', name: 'Robert Hail',                       message: 'Phoned to ask if walk-ins are accepted on weekends.',                location: 'South Clinic',    assignee: 'Front desk AI', date: '08:40 AM' },
+  ],
+  'Call attended': [
+    { id: 'ca-1', name: 'Nathaniel Cole',                    message: 'Transferred to billing — call was picked up by a team member.',      location: 'North Clinic',    assignee: 'Marcus Webb',  date: '09:36 AM', unread: true },
+    { id: 'ca-2', name: 'Paloma Ruiz',                       message: 'Transferred to clinical staff — nurse answered.',                    location: 'South Clinic',    assignee: 'Ana Reyes',    date: 'Jun 10, 2025' },
+  ],
+  'Call not attended': [
+    { id: 'cna-1', name: 'Elliot Gray',                      message: 'Transferred to scheduling — no one picked up, voicemail left.',    location: 'Downtown Clinic', assignee: 'Kelsy Hiltz',  date: 'Jun 9, 2025' },
+    { id: 'cna-2', name: 'Tomás Rivera',                     message: 'Transfer attempted to billing — call rang out.',                     location: 'South Clinic',    assignee: 'Marcus Webb',  date: 'Jun 7, 2025', unread: true },
+  ],
+  'Follow up': [
+    { id: 'fu-1', name: 'Sandra Lee',                        message: 'Practice needs to call back with lab results.',                        location: 'Downtown Clinic', assignee: 'Front desk AI', date: '10:20 AM', unread: true },
+    { id: 'fu-2', name: 'Thomas Reyes',                      message: 'Referral status check — practice to follow up with specialist.',     location: 'South Clinic',    assignee: 'Front desk AI', date: '09:55 AM' },
+  ],
+  'Call disconnected': [
+    { id: 'cd-1', name: 'Julian Cross',                      message: 'Call disconnected before front desk picked up.',                    location: 'South Clinic',    date: 'Jun 9, 2025' },
+    { id: 'cd-2', name: 'Aditi Rao',                         message: 'Call dropped before it could be answered.',                          location: 'Downtown Clinic', date: 'Jun 7, 2025' },
+  ],
+  'Abandoned': [
+    { id: 'ab-1', name: 'Helen Cho',                         message: 'Webchat session abandoned mid-conversation.',                        location: 'North Clinic',    date: '11:00 AM', unread: true },
+    { id: 'ab-2', name: 'Isabel Marsh',                      message: 'Patient left the chat queue before an agent joined.',                location: 'North Clinic',    date: '09:58 AM', unread: true },
+  ],
+  'Wrong numbers': [
+    { id: 'wn-1', name: 'Unknown caller',                    message: 'Wrong number — caller was looking for a different clinic.',          location: 'South Clinic',    date: 'Jun 7, 2025' },
+  ],
+  'Sales calls': [
+    { id: 'sc-1', name: 'Vendor Rep',                        message: 'Sales call about office supplies — not a patient inquiry.',           location: 'North Clinic',    date: 'Jun 8, 2025' },
+  ],
+  'Human resources': [
+    { id: 'hr-1', name: 'Jordan Ellis',                      message: 'HR inquiry about a job posting at the practice.',                    location: 'Downtown Clinic', date: 'Jun 6, 2025' },
   ],
 }
 
@@ -344,8 +460,9 @@ const FILTER_FIELDS: FilterField[] = [
   { id: 'brand',                  label: 'Brand',                  options: opts('Willowbrook Health', 'Riverside Medical Group', 'Evercare Clinics', 'Northgate Health Partners') },
   { id: 'location',               label: 'Location',               options: opts('North Clinic', 'South Clinic', 'Downtown Clinic') },
   { id: 'channel',                label: 'Channel',                 options: opts('Call', 'Text', 'Webchat'), formatSelectionLabel: formatChannelSelectionLabel },
-  { id: 'outcome',                label: 'Outcome',                options: opts('Resolved', 'Transferred', 'Pending', 'Missed') },
-  { id: 'sub-outcomes',           label: 'Sub-outcomes',           options: opts('Answered', 'Bookings', 'Rescheduled', 'Cancellations') },
+  { id: 'status',                 label: 'Status',                 options: opts('Resolved', 'Not resolved') },
+  { id: 'outcome',                label: 'Outcome',                options: opts('Scheduled', 'Rescheduled', 'Cancelled', 'Information provided', 'Human transfer', 'Action pending', 'Incomplete interaction', 'Other') },
+  { id: 'sub-outcomes',           label: 'Sub-outcomes',           options: opts('Payment and billing', 'Insurance coverage', 'Treatment related', 'Referrals', 'General enquiry', 'Call attended', 'Call not attended', 'Follow up', 'Call disconnected', 'Abandoned', 'Wrong numbers', 'Sales calls', 'Human resources') },
   { id: 'agents',                 label: 'Agents',                 options: opts('Front desk agent - North region', 'Front desk agent - East region', 'Front desk agent - South region', 'Front desk agent - West region') },
   { id: 'involvement',            label: 'Involvement',            options: opts('AI agents involved', 'Human involved', 'Not answered') },
   { id: 'call-timing',            label: 'Call timing',            options: opts('Office hours', 'After hours') },
@@ -420,18 +537,33 @@ const INVOLVEMENT_TREND_SERIES = [
   { key: 'notAnswered', label: 'Not answered',   color: '#de1b0c' },
 ]
 
-// Transferred decreases every single month (AI needing fewer human handoffs as it improves) —
-// unlike the other trends on this page, this one is a clean, unambiguous decline, not up-and-down
-// noise. Resolved is derived, not independent: resolved[m] = involved[m] − transferred[m], where
-// involved[m] = INVOLVEMENT_TREND_DATA[m].myna + .human — so resolution rate still climbs
-// (75% in Feb to 85.7% by Jul) and Jul (the "current month" anchor used elsewhere) is unchanged.
-const OUTCOME_TREND_DATA = [
-  { month: 'Feb', resolved: 580, transferred: 190 },
-  { month: 'Mar', resolved: 670, transferred: 175 },
-  { month: 'Apr', resolved: 633, transferred: 162 },
-  { month: 'May', resolved: 743, transferred: 152 },
-  { month: 'Jun', resolved: 695, transferred: 145 },
-  { month: 'Jul', resolved: 840, transferred: 140 },
+// Transferred decreases every single month — resolution rate still climbs (75% in Feb to 85.7% by Jul).
+const OUTCOME_MONTHLY_TOTALS = [
+  { month: 'Feb', total: 770 },
+  { month: 'Mar', total: 845 },
+  { month: 'Apr', total: 795 },
+  { month: 'May', total: 895 },
+  { month: 'Jun', total: 840 },
+  { month: 'Jul', total: 1000 },
+]
+
+// Unique patients served — fewer than session volume (patients can have multiple sessions).
+const UNIQUE_PATIENTS_RATIO = 0.72
+const UNIQUE_PATIENTS_TREND_DATA = CHANNEL_TREND_DATA.map((row) => ({
+  month: row.month,
+  call: Math.round(row.call * UNIQUE_PATIENTS_RATIO),
+  text: Math.round(row.text * UNIQUE_PATIENTS_RATIO),
+  webchat: Math.round(row.webchat * UNIQUE_PATIENTS_RATIO),
+}))
+
+// Average patient rating on a 1–5 scale (empty when not rated is excluded from the average).
+const RATING_TREND_DATA = [
+  { label: 'Feb', value: 3.9 },
+  { label: 'Mar', value: 4.0 },
+  { label: 'Apr', value: 4.1 },
+  { label: 'May', value: 4.2 },
+  { label: 'Jun', value: 4.4 },
+  { label: 'Jul', value: 4.5 },
 ]
 
 // Office hours / after hours split of AI agent-handled interactions only
@@ -448,17 +580,11 @@ const TIMING_TREND_SERIES = [
   { key: 'after',  label: 'After hours',  color: '#c4b1f7' },
 ]
 
-// Interactions by channel (Call/Text/Webchat) → Involvement → Outcome → Sub-outcome
-// 0-2: channels, 3-5: involvement, 6-9: outcome, 10-13: sub-outcome.
-// Nodes are ordered largest-first within each column so the dominant flow stays flush
-// along the top of the diagram instead of sweeping diagonally between columns.
-// Every unit of volume carries all the way through the Outcome column (Resolved + Transferred +
-// Pending + Missed sum to the full 1,000) so that column isn't vertically centered shorter than
-// the rest — "Pending" (8) and "Missed" (9) terminate there instead of continuing into
-// Sub-outcome; only Resolved and Transferred continue (summing to 770, the Sub-outcome column's
-// total).
+// Interactions by channel (Call/Text/Webchat) → Involvement → Status → Outcome → Sub-outcome
+// 0-2: channels, 3-5: involvement, 6-7: status, 8-15: outcome, 16-28: sub-outcome.
+// Scheduled, rescheduled, and cancelled terminate at Outcome (no sub-outcome column).
 const FUNNEL_LINKS: SankeyLink[] = [
-  // channel → involvement (real per-channel splits, not an even proportion of the channel total)
+  // channel → involvement
   { source: 0, target: 3, value: 470 }, // Call    → AI agents involved
   { source: 0, target: 4, value: 120 }, // Call    → Human involved
   { source: 0, target: 5, value: 10  }, // Call    → Not answered
@@ -468,28 +594,44 @@ const FUNNEL_LINKS: SankeyLink[] = [
   { source: 2, target: 3, value: 38  }, // Webchat → AI agents involved
   { source: 2, target: 4, value: 60  }, // Webchat → Human involved
   { source: 2, target: 5, value: 2   }, // Webchat → Not answered
-  // involvement → outcome — human involvement always resolves (never transfers or goes pending);
-  // AI involvement splits across all three of its own outcomes; not-answered interactions land in
-  // Missed instead of dropping out of the diagram.
-  { source: 3, target: 6, value: 390 }, // AI agents involved  → Resolved
-  { source: 3, target: 7, value: 100 }, // AI agents involved  → Transferred
-  { source: 3, target: 8, value: 210 }, // AI agents involved  → Pending
-  { source: 4, target: 6, value: 280 }, // Human involved → Resolved
-  { source: 5, target: 9, value: 20  }, // Not answered   → Missed
-  // outcome → sub-outcome — only Resolved and Transferred continue (Pending and Missed are
-  // terminal); Resolved spreads across all four, Transferred only into the first three.
-  { source: 6, target: 10, value: 400 }, // Resolved    → Answered
-  { source: 6, target: 11, value: 145 }, // Resolved    → Bookings
-  { source: 6, target: 12, value: 85  }, // Resolved    → Rescheduled
-  { source: 6, target: 13, value: 40  }, // Resolved    → Cancellations
-  { source: 7, target: 10, value: 60  }, // Transferred → Answered
-  { source: 7, target: 11, value: 30  }, // Transferred → Bookings
-  { source: 7, target: 12, value: 10  }, // Transferred → Rescheduled
+  // involvement → status — human involvement always resolves; not-answered lands in Not resolved.
+  { source: 3, target: 6, value: 390 }, // AI agents involved → Resolved
+  { source: 3, target: 7, value: 310 }, // AI agents involved → Not resolved
+  { source: 4, target: 6, value: 280 }, // Human involved     → Resolved
+  { source: 5, target: 7, value: 20  }, // Not answered       → Not resolved
+  // status → outcome
+  { source: 6, target: 8,  value: 145 }, // Resolved     → Scheduled
+  { source: 6, target: 9,  value: 85  }, // Resolved     → Rescheduled
+  { source: 6, target: 10, value: 40  }, // Resolved     → Cancelled
+  { source: 6, target: 11, value: 400 }, // Resolved     → Information provided
+  { source: 7, target: 12, value: 100 }, // Not resolved → Human transfer
+  { source: 7, target: 13, value: 190 }, // Not resolved → Action pending
+  { source: 7, target: 14, value: 20  }, // Not resolved → Incomplete interaction
+  { source: 7, target: 15, value: 20  }, // Not resolved → Other
+  // outcome → sub-outcome — scheduling/rescheduling/cancellation are terminal at Outcome.
+  { source: 11, target: 16, value: 80  }, // Information provided → Payment and billing
+  { source: 11, target: 17, value: 90  }, // Information provided → Insurance coverage
+  { source: 11, target: 18, value: 100 }, // Information provided → Treatment related
+  { source: 11, target: 19, value: 60  }, // Information provided → Referrals
+  { source: 11, target: 20, value: 70  }, // Information provided → General enquiry
+  { source: 12, target: 21, value: 65  }, // Human transfer     → Call attended
+  { source: 12, target: 22, value: 35  }, // Human transfer     → Call not attended
+  { source: 13, target: 23, value: 190 }, // Action pending     → Follow up
+  { source: 14, target: 24, value: 12  }, // Incomplete interaction → Call disconnected
+  { source: 14, target: 25, value: 8   }, // Incomplete interaction → Abandoned
+  { source: 15, target: 26, value: 8   }, // Other                → Wrong numbers
+  { source: 15, target: 27, value: 6   }, // Other                → Sales calls
+  { source: 15, target: 28, value: 6   }, // Other                → Human resources
 ]
 const FUNNEL_NODE_COLORS: Record<number, string> = {
   0: '#1976d2', 1: '#3f51b5', 2: '#9c27b0',
-  3: '#7c4dff', 4: '#4cae3d', 5: '#de1b0c', 6: '#4cae3d', 7: '#f59e0b', 8: '#f5a623', 9: '#de1b0c',
-  10: '#00bcd4', 11: '#e056c7', 12: '#8bc34a', 13: '#4cae3d',
+  3: '#7c4dff', 4: '#4cae3d', 5: '#de1b0c',
+  6: '#4cae3d', 7: '#de1b0c',
+  8: '#e056c7', 9: '#8bc34a', 10: '#f59e0b', 11: '#00bcd4',
+  12: '#f5a623', 13: '#9c27b0', 14: '#ef4444', 15: '#78909c',
+  16: '#1976d2', 17: '#3f51b5', 18: '#4cae3d', 19: '#9c27b0', 20: '#00bcd4',
+  21: '#4cae3d', 22: '#de1b0c', 23: '#f5a623', 24: '#ef4444', 25: '#e91e63',
+  26: '#78909c', 27: '#ff9800', 28: '#607d8b',
 }
 
 // ─── Channel filter ───────────────────────────────────────────────────────────
@@ -507,14 +649,22 @@ const CHANNEL_NODE_INDEX: Record<ChannelKey, number> = { call: 0, text: 1, webch
 const FUNNEL_NODE_BASE_NAMES = [
   'Call', 'Text', 'Webchat',
   'AI agents involved', 'Human involved', 'Not answered',
-  'Resolved', 'Transferred', 'Pending', 'Missed',
-  'Answered', 'Bookings', 'Rescheduled', 'Cancellations',
+  'Resolved', 'Not resolved',
+  'Scheduled', 'Rescheduled', 'Cancelled', 'Information provided',
+  'Human transfer', 'Action pending', 'Incomplete interaction', 'Other',
+  'Payment and billing', 'Insurance coverage', 'Treatment related', 'Referrals', 'General enquiry',
+  'Call attended', 'Call not attended',
+  'Follow up',
+  'Call disconnected', 'Abandoned',
+  'Wrong numbers', 'Sales calls', 'Human resources',
 ]
-// Column groupings by node index — used to recompute each node's % label relative to its own
-// column's new total (the Sub-outcome column excludes "Pending" and "Missed", so it never sums
-// to the same total as the other three — see the nodePadding comment above the SankeyChart usage
-// below).
-const FUNNEL_COLUMNS = [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]
+const FUNNEL_COLUMNS = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7],
+  [8, 9, 10, 11, 12, 13, 14, 15],
+  [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28],
+]
 
 function computeFilteredFunnel(selectedChannels: ChannelKey[]) {
   const selectedIdx = new Set(selectedChannels.map((c) => CHANNEL_NODE_INDEX[c]))
@@ -527,10 +677,10 @@ function computeFilteredFunnel(selectedChannels: ChannelKey[]) {
     if (s === 0 || s === 1 || s === 2) originalChannelTotal[s] += l.value
   }
 
-  // Walk the links in the same channel → involvement → outcome → sub-outcome order they're
-  // authored in: channel links are hard-filtered, every link past that is scaled by how much of
-  // its source node's inflow survived filtering, so each node's outflow always sums back to
-  // exactly its (possibly reduced) inflow — real flow conservation, not a single global ratio.
+  // Walk the links in channel → involvement → status → outcome → sub-outcome order. Channel links
+  // are hard-filtered; every link past that is scaled by how much of its source node's inflow
+  // survived filtering, so each node's outflow always sums back to exactly its (possibly reduced)
+  // inflow — real flow conservation, not a single global ratio.
   const newIncoming: Record<number, number> = {}
   const newLinks: SankeyLink[] = []
   for (const l of FUNNEL_LINKS) {
@@ -623,7 +773,7 @@ interface IntentRow {
   afterHours: number
   totalCalls: number
   resolvedPct: string
-  transferredPct: string
+  notResolvedPct: string
   [key: string]: string | number
 }
 function getIntentColumns(): Column<IntentRow>[] {
@@ -633,7 +783,7 @@ function getIntentColumns(): Column<IntentRow>[] {
     { key: 'afterHours',     label: 'After hours',       width: 160, sortable: true },
     { key: 'totalCalls',     label: 'Total',              width: 130, sortable: true },
     { key: 'resolvedPct',    label: 'Resolved',           width: 130, sortable: true, render: (v) => <span className="text-chip-success-text">{v as string}</span> },
-    { key: 'transferredPct', label: 'Transferred',        width: 130, sortable: true, render: (v) => <span className="text-chip-warning-text">{v as string}</span> },
+    { key: 'notResolvedPct', label: 'Not resolved',       width: 130, sortable: true, render: (v) => <span className="text-chip-warning-text">{v as string}</span> },
   ]
 }
 
@@ -666,54 +816,90 @@ function scaleRows<T extends Record<string, unknown>>(rows: T[], keys: (keyof T)
 const getInvolvementTrendData = (ratio: number) => scaleRows(INVOLVEMENT_TREND_DATA, ['myna', 'human', 'notAnswered'], ratio)
 const getTimingTrendData = (ratio: number) => scaleRows(TIMING_TREND_DATA, ['office', 'after'], ratio)
 
-// Resolved's own sub-outcome split (from the funnel: Answered 400 / Pending 170 / Bookings 145 /
-// Rescheduled 85 / Cancellations 40, of a 840 Resolved total) is fixed — every month's Resolved
-// value carries the same proportions. Each sub-outcome is its own upfront stacked segment plus a
-// legend entry, alongside Transferred — no separate "Resolved" segment, since these five together
-// *are* Resolved. Colors match the funnel's Sub-outcome column exactly (same category, same hue),
-// picked to be mutually distinct rather than shades of one color — five shades of green all read
-// the same at a glance; cyan/amber/pink/light-green/green/blue don't.
-const OUTCOME_RESOLVED_TOTAL = 840
-const OUTCOME_RESOLVED_BREAKDOWN = [
-  { key: 'resolvedAnswered',      label: 'Answered',      color: '#00bcd4', share: 400 / OUTCOME_RESOLVED_TOTAL },
-  { key: 'resolvedPending',       label: 'Pending',       color: '#f5a623', share: 170 / OUTCOME_RESOLVED_TOTAL },
-  { key: 'resolvedBookings',      label: 'Bookings',      color: '#e056c7', share: 145 / OUTCOME_RESOLVED_TOTAL },
-  { key: 'resolvedRescheduled',   label: 'Rescheduled',   color: '#8bc34a', share: 85 / OUTCOME_RESOLVED_TOTAL },
-  { key: 'resolvedCancellations', label: 'Cancellations', color: '#4cae3d', share: 40 / OUTCOME_RESOLVED_TOTAL },
-]
-const OUTCOME_TREND_SUBOUTCOME_SERIES = [
-  ...OUTCOME_RESOLVED_BREAKDOWN.map(({ key, label, color }) => ({ key, label, color })),
-  { key: 'transferred', label: 'Transferred', color: '#1976d2' },
+const OUTCOME_TREND_SERIES = [
+  { key: 'scheduled',             label: 'Scheduled',              color: '#e056c7' },
+  { key: 'rescheduled',           label: 'Rescheduled',            color: '#8bc34a' },
+  { key: 'cancelled',             label: 'Cancelled',              color: '#f59e0b' },
+  { key: 'informationProvided',   label: 'Information provided',   color: '#00bcd4' },
+  { key: 'humanTransfer',         label: 'Human transfer',         color: '#f5a623' },
+  { key: 'actionPending',         label: 'Action pending',         color: '#9c27b0' },
+  { key: 'incompleteInteraction', label: 'Incomplete interaction', color: '#ef4444' },
+  { key: 'other',                 label: 'Other',                  color: '#78909c' },
 ]
 const INVOLVEMENT_FILTER_OPTIONS = ['All involvements', 'AI agents involved', 'Human involved']
 
-// Human involvement never transfers (see FUNNEL_LINKS), so every month's Transferred count is
-// entirely AI's — that's enough to split each month's existing Resolved/Involvement totals into
-// an exact AI-only and Human-only outcome trend, without inventing a whole new dataset.
-function getOutcomeTrendData(involvement: string, ratio: number) {
-  return OUTCOME_TREND_DATA.map((row, i) => {
-    const inv = INVOLVEMENT_TREND_DATA[i]
-    const aiTransferred = row.transferred
-    const aiResolved = inv.myna - aiTransferred
-    const humanResolved = inv.human
-    const resolved = involvement === 'AI agents involved' ? aiResolved : involvement === 'Human involved' ? humanResolved : row.resolved
-    const transferred = involvement === 'Human involved' ? 0 : involvement === 'AI agents involved' ? aiTransferred : row.transferred
-    const scaledResolved = Math.round(resolved * ratio)
-    const out: Record<string, string | number> = { month: row.month, resolved: scaledResolved, transferred: Math.round(transferred * ratio) }
-    for (const b of OUTCOME_RESOLVED_BREAKDOWN) out[b.key] = Math.round(scaledResolved * b.share)
+function getOutcomeTrendData(involvement: string, ratio: number, viewMode: ViewMode) {
+  return OUTCOME_MONTHLY_TOTALS.map((row) => {
+    const total = scaleForViewMode(Math.round(row.total * ratio), viewMode)
+    const out: Record<string, string | number> = { month: row.month }
+
+    const fillResolved = (bucketTotal: number) => {
+      for (const key of RESOLVED_OUTCOME_KEYS) {
+        out[key] = Math.round(bucketTotal * (FUNNEL_OUTCOME_VOLUMES[key] / RESOLVED_OUTCOME_TOTAL))
+      }
+    }
+    const fillNotResolved = (bucketTotal: number) => {
+      for (const key of NOT_RESOLVED_OUTCOME_KEYS) {
+        out[key] = Math.round(bucketTotal * (FUNNEL_OUTCOME_VOLUMES[key] / NOT_RESOLVED_OUTCOME_TOTAL))
+      }
+    }
+    const zeroNotResolved = () => {
+      for (const key of NOT_RESOLVED_OUTCOME_KEYS) out[key] = 0
+    }
+
+    if (involvement === 'Human involved') {
+      const humanTotal = Math.round(total * 0.28)
+      fillResolved(humanTotal)
+      zeroNotResolved()
+    } else if (involvement === 'AI agents involved') {
+      const aiTotal = Math.round(total * 0.70)
+      const aiResolved = Math.round(aiTotal * (390 / 700))
+      const aiNotResolved = aiTotal - aiResolved
+      fillResolved(aiResolved)
+      fillNotResolved(aiNotResolved)
+    } else {
+      for (const key of RESOLVED_OUTCOME_KEYS) {
+        out[key] = Math.round(total * (FUNNEL_OUTCOME_VOLUMES[key] / 1000))
+      }
+      for (const key of NOT_RESOLVED_OUTCOME_KEYS) {
+        out[key] = Math.round(total * (FUNNEL_OUTCOME_VOLUMES[key] / 1000))
+      }
+    }
     return out
   })
 }
-const getIntentData = (ratio: number) => scaleRows(INTENT_DATA, ['office', 'after'], ratio)
-function getIntentTableData(ratio: number): IntentRow[] {
-  return getIntentData(ratio).map((d) => ({
-    intent: d.intent,
-    officeHours: d.office,
-    afterHours: d.after,
-    totalCalls: d.office + d.after,
-    resolvedPct: '80%',
-    transferredPct: '20%',
+
+function getUniquePatientsTrendData(selectedChannels: ChannelKey[], viewMode: ViewMode) {
+  const selected = new Set(selectedChannels)
+  return UNIQUE_PATIENTS_TREND_DATA.map((row) => ({
+    month: row.month,
+    call: selected.has('call') ? scaleForViewMode(row.call, viewMode) : 0,
+    text: selected.has('text') ? scaleForViewMode(row.text, viewMode) : 0,
+    webchat: selected.has('webchat') ? scaleForViewMode(row.webchat, viewMode) : 0,
   }))
+}
+const getIntentData = (ratio: number) => scaleRows(INTENT_DATA, ['office', 'after'], ratio)
+const INTENT_STATUS_BY_INTENT: Record<string, { resolved: number; notResolved: number }> = {
+  'General inquiry': { resolved: 82, notResolved: 18 },
+  'Scheduling':      { resolved: 91, notResolved: 9  },
+  'Reschedule':      { resolved: 88, notResolved: 12 },
+  'Cancellation':    { resolved: 86, notResolved: 14 },
+  'Prescription':    { resolved: 79, notResolved: 21 },
+  'Lab results':     { resolved: 84, notResolved: 16 },
+  'Other':           { resolved: 75, notResolved: 25 },
+}
+function getIntentTableData(ratio: number): IntentRow[] {
+  return getIntentData(ratio).map((d) => {
+    const status = INTENT_STATUS_BY_INTENT[d.intent] ?? { resolved: 80, notResolved: 20 }
+    return {
+      intent: d.intent,
+      officeHours: d.office,
+      afterHours: d.after,
+      totalCalls: d.office + d.after,
+      resolvedPct: `${status.resolved}%`,
+      notResolvedPct: `${status.notResolved}%`,
+    }
+  })
 }
 function getIntentTrendForIntent(intent: string, ratio: number) {
   return (INTENT_TREND_BY_INTENT[intent] ?? []).map((m) => ({
@@ -739,6 +925,14 @@ function getChannelDonut(selectedChannels: ChannelKey[]) {
   const selected = new Set(selectedChannels)
   return CHANNEL_KEYS.filter((k) => selected.has(k)).map((k) => ({ name: CHANNEL_LABELS[k], value: CHANNEL_TOTALS[k], color: CHANNEL_COLORS[k] }))
 }
+function getChannelTrendData(viewMode: ViewMode) {
+  return CHANNEL_TREND_DATA.map((row) => ({
+    month: row.month,
+    call: scaleForViewMode(row.call, viewMode),
+    text: scaleForViewMode(row.text, viewMode),
+    webchat: scaleForViewMode(row.webchat, viewMode),
+  }))
+}
 function getChannelTrendSeries(selectedChannels: ChannelKey[]) {
   const selected = new Set(selectedChannels)
   return CHANNEL_TREND_SERIES.filter((s) => selected.has(s.key as ChannelKey))
@@ -749,7 +943,7 @@ function getChannelTrendSeries(selectedChannels: ChannelKey[]) {
 // breakdown — channel, outcome, or sub-outcome — fills in the rest of the columns.
 // Every column's total across locations reconciles with the totals established above.
 
-const DIMENSION_OPTIONS = ['Channel', 'Outcomes', 'Sub-outcomes']
+const DIMENSION_OPTIONS = ['Channel', 'Status', 'Outcomes', 'Sub-outcomes']
 
 const LOCATIONS = [
   { label: 'North Clinic',    total: 220 },
@@ -821,28 +1015,48 @@ const LOCATION_CHANNEL_BREAKDOWN: Record<string, { call: number; text: number; w
   'Uptown Clinic':   { call: 78,  text: 39, webchat: 13 },
 }
 
-// "Pending" moved here from the sub-outcome breakdown below (it's now its own outcome, not a
-// resolved/transferred sub-split) — each location's old resolved total is reduced by exactly its
-// pending count so the location's overall total is unchanged.
-const LOCATION_OUTCOME_BREAKDOWN: Record<string, { resolved: number; transferred: number; pending: number; missed: number }> = {
-  'North Clinic':    { resolved: 141, transferred: 29, pending: 46, missed: 4 },
-  'South Clinic':    { resolved: 116, transferred: 30, pending: 40, missed: 4 },
-  'Downtown Clinic': { resolved: 114, transferred: 17, pending: 36, missed: 3 },
-  'East Clinic':     { resolved: 88,  transferred: 27, pending: 32, missed: 3 },
-  'West Clinic':     { resolved: 97,  transferred: 11, pending: 29, missed: 3 },
-  'Uptown Clinic':   { resolved: 81,  transferred: 19, pending: 27, missed: 3 },
+// "Pending" moved here from the sub-outcome breakdown below — each location's resolved total is
+// reduced by exactly its not-resolved count so the location's overall total is unchanged.
+function locationOutcomeFromShare(locationTotal: number) {
+  const share = locationTotal / 1000
+  return {
+    scheduled: Math.round(FUNNEL_OUTCOME_VOLUMES.scheduled * share),
+    rescheduled: Math.round(FUNNEL_OUTCOME_VOLUMES.rescheduled * share),
+    cancelled: Math.round(FUNNEL_OUTCOME_VOLUMES.cancelled * share),
+    informationProvided: Math.round(FUNNEL_OUTCOME_VOLUMES.informationProvided * share),
+    humanTransfer: Math.round(FUNNEL_OUTCOME_VOLUMES.humanTransfer * share),
+    actionPending: Math.round(FUNNEL_OUTCOME_VOLUMES.actionPending * share),
+    incompleteInteraction: Math.round(FUNNEL_OUTCOME_VOLUMES.incompleteInteraction * share),
+    other: Math.round(FUNNEL_OUTCOME_VOLUMES.other * share),
+  }
 }
 
-const LOCATION_SUBOUTCOME_BREAKDOWN: Record<string, {
-  answered: number; bookings: number; rescheduled: number; cancellations: number; transferred: number
-}> = {
-  'North Clinic':    { answered: 101, bookings: 39, rescheduled: 21, cancellations: 9, transferred: 31 },
-  'South Clinic':    { answered: 87,  bookings: 33, rescheduled: 18, cancellations: 8, transferred: 27 },
-  'Downtown Clinic': { answered: 78,  bookings: 30, rescheduled: 16, cancellations: 7, transferred: 24 },
-  'East Clinic':     { answered: 69,  bookings: 26, rescheduled: 14, cancellations: 6, transferred: 21 },
-  'West Clinic':     { answered: 64,  bookings: 25, rescheduled: 13, cancellations: 6, transferred: 20 },
-  'Uptown Clinic':   { answered: 60,  bookings: 23, rescheduled: 12, cancellations: 5, transferred: 18 },
+function locationSuboutcomeFromShare(locationTotal: number) {
+  const share = locationTotal / 1000
+  return {
+    paymentBilling: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.paymentBilling * share),
+    insuranceCoverage: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.insuranceCoverage * share),
+    treatmentRelated: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.treatmentRelated * share),
+    referrals: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.referrals * share),
+    generalEnquiry: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.generalEnquiry * share),
+    callAttended: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.callAttended * share),
+    callNotAttended: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.callNotAttended * share),
+    followUp: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.followUp * share),
+    callDisconnected: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.callDisconnected * share),
+    abandoned: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.abandoned * share),
+    wrongNumbers: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.wrongNumbers * share),
+    salesCalls: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.salesCalls * share),
+    humanResources: Math.round(FUNNEL_SUBOUTCOME_VOLUMES.humanResources * share),
+  }
 }
+
+const LOCATION_OUTCOME_BREAKDOWN: Record<string, ReturnType<typeof locationOutcomeFromShare>> = Object.fromEntries(
+  LOCATIONS.map((l) => [l.label, locationOutcomeFromShare(l.total)]),
+)
+
+const LOCATION_SUBOUTCOME_BREAKDOWN: Record<string, ReturnType<typeof locationSuboutcomeFromShare>> = Object.fromEntries(
+  LOCATIONS.map((l) => [l.label, locationSuboutcomeFromShare(l.total)]),
+)
 
 interface LocationBreakdownRow {
   location: string
@@ -900,13 +1114,9 @@ function InlineHeadingDropdown({
   )
 }
 
-// Resolved's 5 sub-outcomes plus Transferred, filterable by who was involved (All / AI agents /
-// Human) — same inline "- {value} ⌄" dropdown treatment as Intent trend analysis. All 6 are real
-// upfront stacked segments with their own legend entries (no separate "Resolved" segment — these
-// five together are Resolved), so e.g. Bookings this month vs. last is a direct read, not a hover.
-function OutcomeTrendCard({ forms, ratio }: { forms: NounForms; ratio: number }) {
+function OutcomeTrendCard({ forms, ratio, viewMode }: { forms: NounForms; ratio: number; viewMode: ViewMode }) {
   const [involvement, setInvolvement] = useState('All involvements')
-  const chartData = getOutcomeTrendData(involvement, ratio)
+  const chartData = getOutcomeTrendData(involvement, ratio, viewMode)
 
   return (
     <HCCard
@@ -914,13 +1124,13 @@ function OutcomeTrendCard({ forms, ratio }: { forms: NounForms; ratio: number })
       titleSuffix={
         <>
           <InlineHeadingDropdown value={involvement} options={INVOLVEMENT_FILTER_OPTIONS} onChange={setInvolvement} />
-          <InfoTooltip text={`Monthly breakdown of resolved ${forms.lowPlural} (answered, pending, bookings, rescheduled, cancellations) and transferred ${forms.lowPlural}`} />
+          <InfoTooltip text={`Monthly breakdown of ${forms.lowPlural} by outcome — scheduled, rescheduled, cancelled, information provided, human transfer, action pending, incomplete interaction, and other — aligned with the funnel status model.`} />
         </>
       }
     >
       <StackedBarChart
         data={chartData}
-        series={OUTCOME_TREND_SUBOUTCOME_SERIES}
+        series={OUTCOME_TREND_SERIES}
         xKey="month"
         height={280}
         showBarLabels
@@ -1006,7 +1216,11 @@ function LocationTableSkeleton({ columnCount }: { columnCount: number }) {
   )
 }
 
-function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounForms; selectedChannels: ChannelKey[] }) {
+function scaleCount(value: number, viewMode: ViewMode) {
+  return scaleForViewMode(value, viewMode)
+}
+
+function InteractionsByDimensionCard({ forms, selectedChannels, viewMode }: { forms: NounForms; selectedChannels: ChannelKey[]; viewMode: ViewMode }) {
   const [dimension, setDimension] = useState('Outcomes')
   const [level, setLevel] = useState('By location')
   const [loading, setLoading] = useState(false)
@@ -1024,11 +1238,19 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
   const rows = groupsForLevel(level).map((group) => {
     const members = membersOfGroup(level, group)
     const fullTotal = members.reduce((sum, m) => sum + (LOCATIONS.find((l) => l.label === m)?.total ?? 0), 0)
-    const totalInteractions = selectedChannels.reduce((sum, ch) => sum + sumField(LOCATION_CHANNEL_BREAKDOWN, members, ch), 0)
-    const channelShare = fullTotal > 0 ? totalInteractions / fullTotal : 0
-    const resolved = Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, members, 'resolved') * channelShare)
-    const resolutionRate = totalInteractions > 0 ? Math.round((resolved / totalInteractions) * 100) : 0
-    return { group, members, totalInteractions, resolved, resolutionRate, channelShare }
+    const rawTotal = selectedChannels.reduce((sum, ch) => sum + sumField(LOCATION_CHANNEL_BREAKDOWN, members, ch), 0)
+    const channelShare = fullTotal > 0 ? rawTotal / fullTotal : 0
+    const rawResolved = Math.round(
+      RESOLVED_OUTCOME_KEYS.reduce((sum, k) => sum + sumField(LOCATION_OUTCOME_BREAKDOWN, members, k), 0) * channelShare,
+    )
+    const rawNotResolved = Math.round(
+      NOT_RESOLVED_OUTCOME_KEYS.reduce((sum, k) => sum + sumField(LOCATION_OUTCOME_BREAKDOWN, members, k), 0) * channelShare,
+    )
+    const totalInteractions = scaleCount(rawTotal, viewMode)
+    const resolved = scaleCount(rawResolved, viewMode)
+    const notResolved = scaleCount(rawNotResolved, viewMode)
+    const resolutionRate = rawTotal > 0 ? Math.round((rawResolved / rawTotal) * 100) : 0
+    return { group, members, totalInteractions, resolved, notResolved, resolutionRate, channelShare }
   })
 
   let columns: Column<LocationBreakdownRow>[]
@@ -1048,41 +1270,76 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
     columns = [
       LOCATION_COLUMN,
       TOTAL_INTERACTIONS_COLUMN,
-      { key: 'resolved',    label: 'Resolved',    width: 130, sortable: true },
-      { key: 'transferred', label: 'Transferred', width: 130, sortable: true },
-      { key: 'pending',     label: 'Pending',     width: 130, sortable: true },
-      { key: 'missed',      label: 'Missed',      width: 130, sortable: true },
+      { key: 'scheduled',             label: 'Scheduled',              width: 120, sortable: true },
+      { key: 'rescheduled',           label: 'Rescheduled',            width: 120, sortable: true },
+      { key: 'cancelled',             label: 'Cancelled',              width: 110, sortable: true },
+      { key: 'informationProvided',   label: 'Information provided',   width: 160, sortable: true },
+      { key: 'humanTransfer',         label: 'Human transfer',         width: 130, sortable: true },
+      { key: 'actionPending',         label: 'Action pending',         width: 130, sortable: true },
+      { key: 'incompleteInteraction', label: 'Incomplete interaction', width: 160, sortable: true },
+      { key: 'other',                 label: 'Other',                  width: 100, sortable: true },
+    ]
+    data = rows.map((r) => ({
+      location: r.group,
+      totalInteractions: r.totalInteractions,
+      scheduled: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'scheduled') * r.channelShare), viewMode),
+      rescheduled: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'rescheduled') * r.channelShare), viewMode),
+      cancelled: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'cancelled') * r.channelShare), viewMode),
+      informationProvided: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'informationProvided') * r.channelShare), viewMode),
+      humanTransfer: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'humanTransfer') * r.channelShare), viewMode),
+      actionPending: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'actionPending') * r.channelShare), viewMode),
+      incompleteInteraction: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'incompleteInteraction') * r.channelShare), viewMode),
+      other: scaleCount(Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'other') * r.channelShare), viewMode),
+    }))
+  } else if (dimension === 'Status') {
+    columns = [
+      LOCATION_COLUMN,
+      TOTAL_INTERACTIONS_COLUMN,
+      { key: 'resolved',    label: 'Resolved',     width: 130, sortable: true },
+      { key: 'notResolved', label: 'Not resolved', width: 130, sortable: true },
       RESOLUTION_RATE_COLUMN,
     ]
     data = rows.map((r) => ({
       location: r.group,
       totalInteractions: r.totalInteractions,
       resolved: r.resolved,
-      transferred: Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'transferred') * r.channelShare),
-      pending: Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'pending') * r.channelShare),
-      missed: Math.round(sumField(LOCATION_OUTCOME_BREAKDOWN, r.members, 'missed') * r.channelShare),
+      notResolved: r.notResolved,
       resolutionRate: r.resolutionRate,
     }))
   } else if (dimension === 'Sub-outcomes') {
     columns = [
       LOCATION_COLUMN,
       TOTAL_INTERACTIONS_COLUMN,
-      { key: 'answered',      label: 'Answered',      width: 120, sortable: true },
-      { key: 'bookings',      label: 'Bookings',      width: 120, sortable: true },
-      { key: 'rescheduled',   label: 'Rescheduled',   width: 120, sortable: true },
-      { key: 'cancellations', label: 'Cancellations', width: 130, sortable: true },
-      { key: 'transferred',   label: 'Transferred',   width: 120, sortable: true },
-      RESOLUTION_RATE_COLUMN,
+      { key: 'paymentBilling',    label: 'Payment and billing',    width: 150, sortable: true },
+      { key: 'insuranceCoverage', label: 'Insurance coverage',     width: 150, sortable: true },
+      { key: 'treatmentRelated',  label: 'Treatment related',      width: 140, sortable: true },
+      { key: 'referrals',         label: 'Referrals',              width: 110, sortable: true },
+      { key: 'generalEnquiry',    label: 'General enquiry',        width: 130, sortable: true },
+      { key: 'callAttended',      label: 'Call attended',          width: 120, sortable: true },
+      { key: 'callNotAttended',   label: 'Call not attended',      width: 140, sortable: true },
+      { key: 'followUp',          label: 'Follow up',              width: 110, sortable: true },
+      { key: 'callDisconnected',  label: 'Call disconnected',      width: 140, sortable: true },
+      { key: 'abandoned',         label: 'Abandoned',              width: 110, sortable: true },
+      { key: 'wrongNumbers',      label: 'Wrong numbers',          width: 120, sortable: true },
+      { key: 'salesCalls',        label: 'Sales calls',            width: 110, sortable: true },
+      { key: 'humanResources',    label: 'Human resources',        width: 130, sortable: true },
     ]
     data = rows.map((r) => ({
       location: r.group,
       totalInteractions: r.totalInteractions,
-      answered: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'answered') * r.channelShare),
-      bookings: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'bookings') * r.channelShare),
-      rescheduled: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'rescheduled') * r.channelShare),
-      cancellations: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'cancellations') * r.channelShare),
-      transferred: Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'transferred') * r.channelShare),
-      resolutionRate: r.resolutionRate,
+      paymentBilling: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'paymentBilling') * r.channelShare), viewMode),
+      insuranceCoverage: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'insuranceCoverage') * r.channelShare), viewMode),
+      treatmentRelated: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'treatmentRelated') * r.channelShare), viewMode),
+      referrals: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'referrals') * r.channelShare), viewMode),
+      generalEnquiry: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'generalEnquiry') * r.channelShare), viewMode),
+      callAttended: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'callAttended') * r.channelShare), viewMode),
+      callNotAttended: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'callNotAttended') * r.channelShare), viewMode),
+      followUp: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'followUp') * r.channelShare), viewMode),
+      callDisconnected: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'callDisconnected') * r.channelShare), viewMode),
+      abandoned: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'abandoned') * r.channelShare), viewMode),
+      wrongNumbers: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'wrongNumbers') * r.channelShare), viewMode),
+      salesCalls: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'salesCalls') * r.channelShare), viewMode),
+      humanResources: scaleCount(Math.round(sumField(LOCATION_SUBOUTCOME_BREAKDOWN, r.members, 'humanResources') * r.channelShare), viewMode),
     }))
   } else {
     columns = [
@@ -1097,9 +1354,9 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
     data = rows.map((r) => ({
       location: r.group,
       totalInteractions: r.totalInteractions,
-      call: isSelected.has('call') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'call') : 0,
-      text: isSelected.has('text') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'text') : 0,
-      webchat: isSelected.has('webchat') ? sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'webchat') : 0,
+      call: isSelected.has('call') ? scaleCount(sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'call'), viewMode) : 0,
+      text: isSelected.has('text') ? scaleCount(sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'text'), viewMode) : 0,
+      webchat: isSelected.has('webchat') ? scaleCount(sumField(LOCATION_CHANNEL_BREAKDOWN, r.members, 'webchat'), viewMode) : 0,
       resolutionRate: r.resolutionRate,
     }))
   }
@@ -1110,7 +1367,7 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
       titleSuffix={
         <>
           <InlineHeadingDropdown value={dimension} options={DIMENSION_OPTIONS} onChange={setDimension} />
-          <InfoTooltip text={`Each location's ${forms.lowSingular} volume broken down by channel, outcome, or sub-outcome. Switch the view with the dropdown.`} />
+          <InfoTooltip text={`Each location's ${forms.lowSingular} volume broken down by channel, status, outcome, or sub-outcome. Switch the view with the dropdown.`} />
         </>
       }
       toolbar={<DateRangeSelector value={level} options={LEVEL_OPTIONS} onChange={setLevel} />}
@@ -1125,7 +1382,7 @@ function InteractionsByDimensionCard({ forms, selectedChannels }: { forms: NounF
 }
 
 // Full-page skeleton shown for a beat while filters reshape every chart on the page at once.
-const SKELETON_BLOCK_HEIGHTS = [440, 280, 280, 280, 280, 340, 300, 260, 320, 260, 300]
+const SKELETON_BLOCK_HEIGHTS = [440, 280, 280, 280, 280, 280, 280, 340, 300, 260, 320, 260, 300]
 function PageSkeleton() {
   return (
     <div className="flex flex-col gap-lg p-2xl">
@@ -1264,39 +1521,43 @@ export function HCFrontdeskOverview2Screen() {
         ) : (
         <div className="flex flex-col gap-lg p-2xl">
 
-          <SummaryStats stats={getSummaryStats(forms, filteredFunnel.grandTotal, filteredFunnel.resolvedTotal, savingsValues, () => setSavingsModalOpen(true))} />
+          <SummaryStats stats={getSummaryStats(forms, scaleForViewMode(filteredFunnel.grandTotal, viewMode), scaleForViewMode(filteredFunnel.resolvedTotal, viewMode), savingsValues, () => setSavingsModalOpen(true))} />
 
-          <HCCard title={`${forms.capPlural} funnel`} tooltip={`${forms.capSingular} volume by channel, through AI agent or human involvement, to the outcome of each ${forms.lowSingular}. Select any section to see the underlying ${forms.lowPlural}.`}>
+          <HCCard title={`${forms.capPlural} funnel`} tooltip={`${forms.capSingular} volume by channel, through AI agent or human involvement, to the status and outcome of each ${forms.lowSingular}. Select any section to see the underlying ${forms.lowPlural}.`}>
             <SankeyChart
               nodes={filteredFunnel.nodes}
               links={filteredFunnel.links}
-              height={440}
+              height={620}
+              minWidth={1320}
+              minLabelHeight={16}
               nodeColors={FUNNEL_NODE_COLORS}
-              terminalNodes={[8, 9]}
-              // A hidden phantom node anchors "Pending" and "Missed" (terminalNodes) into the
-              // Outcome column instead of letting them jump to Sub-outcome.
-              nodePadding={4}
-              // Keep Outcome reading Resolved → Transferred → Pending → Missed — a fixed sequence,
-              // not size order (Pending currently outweighs Transferred).
+              terminalNodes={[8, 9, 10]}
+              nodePadding={8}
               sort={false}
-              // Skip position relaxation so every column stacks flush against the same top edge
-              // instead of settling around its links' weighted center.
               iterations={0}
-              // Only Resolved and Transferred continue into Sub-outcome (Pending/Missed stop at
-              // Outcome), so its real total (770) is naturally less than every other column's
-              // (1,000) — stretch just this column to still fill the full height, keeping
-              // Answered/Bookings/Rescheduled/Cancellations proportional to each other.
-              stretchColumn={[10, 11, 12, 13]}
-              columnHeaders={[`${forms.capPlural} by channel`, 'Involvement', 'Outcome', 'Sub-outcome']}
+              stretchColumn={[16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]}
+              columnHeaders={[`${forms.capPlural} by channel`, 'Involvement', 'Status', 'Outcome', 'Sub-outcome']}
               columnHeaderTooltips={{ 1: `Outcomes for Human involved ${forms.lowPlural} are tracked across Text and Webchat only — voice call outcomes aren't included.` }}
               onNodeClick={(name) => { if (CONVERSATIONS_BY_NODE[name]) setNodeDrawer(name) }}
             />
           </HCCard>
 
+          {viewMode === 'sessions' && (
+            <HCCard title="Unique patients trend by channel" tooltip="Monthly count of unique patients served, split by call, text, and webchat — one patient may have multiple sessions in a month.">
+              <StackedBarChart
+                data={getUniquePatientsTrendData(selectedChannels, viewMode)}
+                series={getChannelTrendSeries(selectedChannels)}
+                xKey="month"
+                height={280}
+                showBarLabels
+              />
+            </HCCard>
+          )}
+
           <div className="grid grid-cols-2 gap-lg">
             <HCCard title={`${forms.capPlural} trend by channel`} tooltip={`Monthly ${forms.lowSingular} volume by channel`}>
               <StackedBarChart
-                data={CHANNEL_TREND_DATA}
+                data={getChannelTrendData(viewMode)}
                 series={getChannelTrendSeries(selectedChannels)}
                 xKey="month"
                 height={280}
@@ -1306,7 +1567,12 @@ export function HCFrontdeskOverview2Screen() {
 
             <HCCard title="Involvement trend" tooltip={`Monthly breakdown of ${forms.lowPlural} handled by AI agents, a human agent, or left unanswered`}>
               <StackedBarChart
-                data={getInvolvementTrendData(channelRatio)}
+                data={getInvolvementTrendData(channelRatio).map((row) => ({
+                  ...row,
+                  myna: scaleForViewMode(row.myna as number, viewMode),
+                  human: scaleForViewMode(row.human as number, viewMode),
+                  notAnswered: scaleForViewMode(row.notAnswered as number, viewMode),
+                }))}
                 series={INVOLVEMENT_TREND_SERIES}
                 xKey="month"
                 height={280}
@@ -1316,34 +1582,54 @@ export function HCFrontdeskOverview2Screen() {
           </div>
 
           <div className="grid grid-cols-2 gap-lg">
-            <OutcomeTrendCard forms={forms} ratio={channelRatio} />
+            <OutcomeTrendCard forms={forms} ratio={channelRatio} viewMode={viewMode} />
 
+            <HCCard title="Rating trend" tooltip="Average patient rating on a 1–5 scale when a rating is given. Unrated sessions are excluded from the average.">
+              <ChartStatRow stats={[
+                { value: '4.5', label: 'Average rating', icon: 'star' },
+                { value: '+0.6', label: 'vs. Feb' },
+              ]} />
+              <TrendLineChart
+                data={RATING_TREND_DATA}
+                height={220}
+                yDomain={[0, 5]}
+                valueLabel="Average rating"
+                color="#7c4dff"
+              />
+            </HCCard>
+          </div>
+
+          <div className="grid grid-cols-2 gap-lg">
             <HCCard title={`${forms.capPlural} timing trend`} tooltip={`Monthly split of AI agent-handled ${forms.lowPlural} during office hours and after hours`}>
               <StackedBarChart
-                data={getTimingTrendData(channelRatio)}
+                data={getTimingTrendData(channelRatio).map((row) => ({
+                  ...row,
+                  office: scaleForViewMode(row.office as number, viewMode),
+                  after: scaleForViewMode(row.after as number, viewMode),
+                }))}
                 series={TIMING_TREND_SERIES}
                 xKey="month"
-                height={280}
+                height={340}
+                showBarLabels
+              />
+            </HCCard>
+
+            <HCCard title={`${forms.capPlural} intent breakdown by working hours`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with the office vs. after-hours split for each category`}>
+              <StackedBarChart
+                data={getIntentData(channelRatio)}
+                series={INTENT_SERIES}
+                xKey="intent"
+                height={340}
+                grouped
+                horizontal
                 showBarLabels
               />
             </HCCard>
           </div>
 
-          <HCCard title={`${forms.capPlural} intent breakdown by working hours`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with the office vs. after-hours split and resolution outcome for each category`}>
-            <StackedBarChart
-              data={getIntentData(channelRatio)}
-              series={INTENT_SERIES}
-              xKey="intent"
-              height={340}
-              grouped
-              horizontal
-              showBarLabels
-            />
-          </HCCard>
-
           <IntentTrendCard forms={forms} ratio={channelRatio} />
 
-          <HCCard title={`${forms.capPlural} intent breakdown by outcome`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with the office/after-hours split and resolution outcome for each category.`}>
+          <HCCard title={`${forms.capPlural} intent breakdown by outcome`} tooltip={`AI agent-handled ${forms.lowPlural} by intent, with resolved vs. not resolved status for each category.`}>
             <DataTable columns={getIntentColumns()} data={getIntentTableData(channelRatio)} stickyFirstColumn />
           </HCCard>
 
@@ -1367,7 +1653,7 @@ export function HCFrontdeskOverview2Screen() {
             />
           </HCCard>
 
-          <InteractionsByDimensionCard forms={forms} selectedChannels={selectedChannels} />
+          <InteractionsByDimensionCard forms={forms} selectedChannels={selectedChannels} viewMode={viewMode} />
 
         </div>
         )}

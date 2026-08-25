@@ -16,7 +16,6 @@ import { AppointmentTypeScreen } from './screens/AppointmentTypeScreen'
 import { AvailabilityScreen } from './screens/AvailabilityScreen'
 import { AutoAppointmentTypeScreen } from './screens/AutoAppointmentTypeScreen'
 import { AutoAvailabilityScreen } from './screens/AutoAvailabilityScreen'
-import { HCFrontdeskOverviewScreen } from './screens/HCFrontdeskOverviewScreen'
 import { HCFrontdeskOverview2Screen } from './screens/HCFrontdeskOverview2Screen'
 import { HCNoShowsScreen } from './screens/HCNoShowsScreen'
 import { HCWaitlistFilledScreen } from './screens/HCWaitlistFilledScreen'
@@ -215,7 +214,8 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     id: 'outcomes',
     label: 'Outcomes',
     items: [
-      { id: 'dental-frontdesk-overview', label: 'Front desk overview'       },
+      { id: 'dental-frontdesk-overview',   label: 'Front desk overview'   },
+      { id: 'dental-frontdesk-overview-2', label: 'Front desk overview 2' },
       { id: 'dental-no-shows',           label: 'Appointment confirmation' },
       { id: 'dental-waitlist',           label: 'Waitlist filled'          },
       { id: 'dental-intakes',            label: 'Intakes completed'        },
@@ -660,9 +660,7 @@ export function App() {
           <AppointmentTypeScreen />
         ) : navActive === 'hc-availability' || navActive === 'availability' ? (
           <AvailabilityScreen />
-        ) : navActive === 'hc-frontdesk-overview' || navActive === 'dental-frontdesk-overview' || navActive === 'auto-frontdesk-overview' ? (
-          <HCFrontdeskOverviewScreen isDental={navActive === 'dental-frontdesk-overview'} />
-        ) : navActive === 'hc-frontdesk-overview-2' ? (
+        ) : navActive === 'hc-frontdesk-overview' || navActive === 'dental-frontdesk-overview' || navActive === 'auto-frontdesk-overview' || navActive === 'hc-frontdesk-overview-2' || navActive === 'dental-frontdesk-overview-2' ? (
           <HCFrontdeskOverview2Screen />
         ) : navActive === 'rv-all-reviews' ? (
           <ReviewsAllScreen />

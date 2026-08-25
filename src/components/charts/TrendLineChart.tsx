@@ -19,24 +19,28 @@ export interface TrendLineChartProps {
   data: TrendPoint[]
   height?: number
   color?: string
+  /** Optional Y-axis domain, e.g. `[0, 5]` for star ratings */
+  yDomain?: [number, number]
+  valueLabel?: string
 }
 
 const axisTick = { fontSize: 12, fill: '#212121', fontFamily: 'Roboto' }
 
-export function TrendLineChart({ data, height = 300, color = chartColors.resolved }: TrendLineChartProps) {
+export function TrendLineChart({ data, height = 300, color = chartColors.resolved, yDomain, valueLabel = 'Value' }: TrendLineChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RLineChart data={data} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
         <CartesianGrid stroke={chartColors.grid} vertical={false} />
         <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={{ stroke: chartColors.grid }} />
-        <YAxis tick={axisTick} tickLine={false} axisLine={false} width={44} />
+        <YAxis domain={yDomain} tick={axisTick} tickLine={false} axisLine={false} width={44} />
         <Tooltip
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null
+            const raw = Number(payload[0]?.value ?? 0)
             return (
               <ChartTooltip
                 label={String(label ?? '')}
-                items={[{ color, label: 'Value', value: Number(payload[0]?.value ?? 0) }]}
+                items={[{ color, label: valueLabel, value: raw }]}
                 accentColor={color}
               />
             )

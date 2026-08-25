@@ -16,8 +16,8 @@ export interface SankeyChartProps {
   nodes: SankeyNode[]
   links: SankeyLink[]
   height?: number
-  /** Labels for 3 or 4 column groups */
-  columnHeaders?: [string, string, string] | [string, string, string, string]
+  /** Labels for 3–5 column groups */
+  columnHeaders?: [string, string, string] | [string, string, string, string] | [string, string, string, string, string]
   /** Tooltip text for each column header keyed by index */
   columnHeaderTooltips?: Record<number, string>
   /** Per-node color overrides keyed by node index */
@@ -56,6 +56,10 @@ export interface SankeyChartProps {
    * not a proportionally shorter one. Incoming links are repositioned/rewidthed to match.
    */
   stretchColumn?: number[]
+  /** Minimum chart width — enables horizontal scroll when the container is narrower (dense multi-column funnels). */
+  minWidth?: number
+  /** Minimum node bar height (px) required before an inline label is drawn; shorter nodes show the label on hover only. */
+  minLabelHeight?: number
 }
 
 const colorAt = (i: number, overrides?: Record<number, string>) =>
@@ -76,38 +80,84 @@ interface LinkHoverState {
   y: number
 }
 
+interface NodeRenderOptions {
+  overrides?: Record<number, string>
+  measuredWidth?: number
+  columnCount: number
+  minLabelHeight: number
+  onHover?: (idx: number | null, x: number, y: number, label?: string) => void
+  onNodeClick?: (name: string) => void
+  linkHover?: LinkHoverState | null
+  clearHovers?: () => void
+  stretchOverrides?: Map<number, { y: number; height: number }>
+}
+
+function columnIndexForX(x: number, containerWidth: number, columnCount: number) {
+  const marginL = columnCount >= 5 ? 72 : 10
+  const marginR = columnCount >= 5 ? 130 : 10
+  const nodeW = 12
+  const plotW = containerWidth - marginL - marginR - nodeW
+  if (plotW <= 0 || columnCount <= 1) return 0
+  return Math.min(columnCount - 1, Math.max(0, Math.round((x - marginL) / (plotW / (columnCount - 1)))))
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function makeNode(overrides?: Record<number, string>, onHover?: (idx: number | null, x: number, y: number) => void, measuredWidth?: number, onNodeClick?: (name: string) => void, linkHover?: LinkHoverState | null, clearHovers?: () => void, stretchOverrides?: Map<number, { y: number; height: number }>) {
+function makeNode({ overrides, onHover, measuredWidth, columnCount, minLabelHeight, onNodeClick, linkHover, clearHovers, stretchOverrides }: NodeRenderOptions) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function Node({ x, y, width, height, index, payload, containerWidth }: any) {
     const [hovered, setHovered] = useState(false)
     if (payload?.name === '__phantom__' || height < 1) return null
     const stretched = stretchOverrides?.get(index)
     if (stretched) { y = stretched.y; height = stretched.height }
-    const cw = measuredWidth || containerWidth || 800
-    const onRightEdge = x > cw - 60
+    const cw = containerWidth || measuredWidth || 800
+    const colIdx = columnIndexForX(x, cw, columnCount)
+    // Anchor labels left for the last two columns so Outcome / Sub-outcome text doesn't bleed into each other.
+    const labelOnLeft = colIdx >= Math.max(1, columnCount - 2)
     const fill = colorAt(index, overrides)
     const name: string = payload.name ?? ''
     const lastSpace = name.lastIndexOf(' ')
     const labelName = lastSpace >= 0 ? name.slice(0, lastSpace) : name
     const labelPct = lastSpace >= 0 ? name.slice(lastSpace + 1) : ''
-    const lx = onRightEdge ? x - 6 : x + width + 6
-    const anchor = onRightEdge ? 'end' : 'start'
+    const lx = labelOnLeft ? x - 8 : x + width + 8
+    const anchor = labelOnLeft ? 'end' : 'start'
     const midY = y + height / 2
-    const label = labelPct ? `${labelName} ${labelPct.replace(/[()]/g, '')}` : labelName
+    const pctText = labelPct ? labelPct.replace(/[()]/g, '') : ''
+    const fullLabel = pctText ? `${labelName} ${pctText}` : labelName
+    const useTwoLine = labelName.length > 14 || colIdx >= columnCount - 2
+    const showInlineLabel = height >= minLabelHeight
+    const fontSize = colIdx >= columnCount - 1 ? 11 : 12
     const isDimmed = !!linkHover && linkHover.srcIdx !== index && linkHover.tgtIdx !== index
     return (
       <g
-        onMouseEnter={(e) => { setHovered(true); onHover?.(index, e.clientX, e.clientY) }}
+        onMouseEnter={(e) => { setHovered(true); onHover?.(index, e.clientX, e.clientY, fullLabel) }}
         onMouseLeave={() => { setHovered(false); onHover?.(null, 0, 0) }}
         onClick={() => { clearHovers?.(); onNodeClick?.(labelName) }}
         style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
         opacity={isDimmed ? 0.25 : 1}
       >
         <rect x={x} y={y} width={width} height={height} rx={2} fill={fill} />
-        <text x={lx} y={midY} textAnchor={anchor} dominantBaseline="middle" fontFamily="Roboto" fontSize={12} fontWeight={400} fill="#212121" textDecoration={hovered ? 'underline' : 'none'}>
-          {label}
-        </text>
+        {showInlineLabel && (
+          <text
+            x={lx}
+            y={midY}
+            textAnchor={anchor}
+            dominantBaseline="middle"
+            fontFamily="Roboto"
+            fontSize={fontSize}
+            fontWeight={400}
+            fill="#212121"
+            textDecoration={hovered ? 'underline' : 'none'}
+          >
+            {useTwoLine && pctText ? (
+              <>
+                <tspan x={lx} dy="-0.55em">{labelName}</tspan>
+                <tspan x={lx} dy="1.15em">{pctText}</tspan>
+              </>
+            ) : (
+              fullLabel
+            )}
+          </text>
+        )}
       </g>
     )
   }
@@ -201,6 +251,17 @@ interface BreakdownTooltipProps {
   items: Array<{ label: string; pct: string; value: number }>
   shown: boolean
 }
+function NodeTooltip({ x, y, label, shown }: { x: number; y: number; label: string; shown: boolean }) {
+  return (
+    <div
+      className={`${FLOATING_TOOLTIP_BASE} whitespace-nowrap px-md py-sm text-small text-text-primary ${floatingTooltipVisibility(shown)}`}
+      style={{ left: x + 12, top: y - 16 }}
+    >
+      {label}
+    </div>
+  )
+}
+
 function BreakdownTooltip({ x, y, items, shown }: BreakdownTooltipProps) {
   return (
     <div
@@ -247,12 +308,14 @@ function useTooltipTransition<T>(exitMs = 150) {
   return { data, shown, set }
 }
 
-export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnHeaderTooltips, nodeColors, terminalNodes, onNodeClick, nodePadding = 10, sort = true, iterations, stretchColumn }: SankeyChartProps) {
+export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnHeaderTooltips, nodeColors, terminalNodes, onNodeClick, nodePadding = 10, sort = true, iterations, stretchColumn, minWidth, minLabelHeight = 14 }: SankeyChartProps) {
   const { data: hoverState, shown: hoverShown, set: setHoverState } = useTooltipTransition<{ idx: number; x: number; y: number }>()
+  const { data: nodeLabelHover, shown: nodeLabelHoverShown, set: setNodeLabelHover } = useTooltipTransition<{ x: number; y: number; label: string }>()
   const { data: headerTooltip, shown: headerTooltipShown, set: setHeaderTooltip } = useTooltipTransition<{ text: string; x: number; y: number }>()
   const { data: linkHover, shown: linkHoverShown, set: setLinkHover } = useTooltipTransition<LinkHoverState>()
   const [measuredWidth, setMeasuredWidth] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const columnCount = columnHeaders?.length ?? 4
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -261,11 +324,23 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
     return () => ro.disconnect()
   }, [])
 
-  const handleHover = useCallback((idx: number | null, x: number, y: number) => {
-    if (idx === null) { setHoverState(null); return }
-    if (nodes[idx]?.breakdown) setHoverState({ idx, x, y })
-    else setHoverState(null)
-  }, [nodes, setHoverState])
+  const handleHover = useCallback((idx: number | null, x: number, y: number, label?: string) => {
+    if (idx === null) {
+      setHoverState(null)
+      setNodeLabelHover(null)
+      return
+    }
+    if (nodes[idx]?.breakdown) {
+      setHoverState({ idx, x, y })
+      setNodeLabelHover(null)
+    } else if (label) {
+      setNodeLabelHover({ x, y, label })
+      setHoverState(null)
+    } else {
+      setHoverState(null)
+      setNodeLabelHover(null)
+    }
+  }, [nodes, setHoverState, setNodeLabelHover])
 
   // Inject a hidden phantom node so terminalNodes don't jump to the last column.
   // Recharts forces any node with no outgoing links to maxDepth — adding a tiny
@@ -277,7 +352,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
     ? [...links, ...terminalNodes.map((i) => ({ source: i, target: phantomIndex, value: 0.001 }))]
     : links
 
-  const clearHovers = useCallback(() => { setHoverState(null); setLinkHover(null) }, [setHoverState, setLinkHover])
+  const clearHovers = useCallback(() => { setHoverState(null); setNodeLabelHover(null); setLinkHover(null) }, [setHoverState, setNodeLabelHover, setLinkHover])
 
   const nameToIndex = new Map(sankeyNodes.map((n, i) => [n.name, i]))
 
@@ -309,28 +384,45 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
     })
   }
 
-  const NodeComponent = makeNode(nodeColors, handleHover, measuredWidth, onNodeClick, linkHover, clearHovers, stretchOverrides)
+  const NodeComponent = makeNode({
+    overrides: nodeColors,
+    onHover: handleHover,
+    measuredWidth: minWidth ? Math.max(measuredWidth, minWidth) : measuredWidth,
+    columnCount,
+    minLabelHeight,
+    onNodeClick,
+    linkHover,
+    clearHovers,
+    stretchOverrides,
+  })
   const LinkComponent = makeLink(nodeColors, nameToIndex, setLinkHover, linkHover, stretchLinkOverrides)
 
   const activeBreakdown = hoverState !== null ? nodes[hoverState.idx]?.breakdown : undefined
+  const chartWidth = minWidth ? Math.max(measuredWidth, minWidth) : '100%'
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }} onMouseLeave={clearHovers}>
+    <div
+      ref={containerRef}
+      className={minWidth ? 'overflow-x-auto' : undefined}
+      style={{ position: 'relative' }}
+      onMouseLeave={clearHovers}
+    >
       {columnHeaders && measuredWidth > 0 && (() => {
-        // Recharts Sankey places column i at: marginLeft + i * (width - marginLeft - marginRight - nodeWidth) / (n-1)
-        // We center the header over the node bar (nodeWidth=12, marginLeft=10, marginRight=10)
         const n = columnHeaders.length
-        const marginL = 10, marginR = 10, nodeW = 12
-        const colX = (i: number) =>
-          marginL + i * (measuredWidth - marginL - marginR - nodeW) / (n - 1)
+        const marginL = n >= 5 ? 72 : 10
+        const marginR = n >= 5 ? 130 : 10
+        const nodeW = 12
+        const effectiveWidth = typeof chartWidth === 'number' ? chartWidth : measuredWidth
+        const plotWidth = effectiveWidth - marginL - marginR - nodeW
+        const colX = (i: number) => marginL + i * plotWidth / (n - 1)
         return (
-          <div style={{ position: 'relative', height: 20, marginBottom: 0 }}>
+          <div style={{ position: 'relative', height: 20, marginBottom: 0, minWidth: typeof chartWidth === 'number' ? chartWidth : undefined }}>
             {columnHeaders.map((label, i) => {
               const tip = columnHeaderTooltips?.[i]
               const isFirst = i === 0
               const isLast = i === n - 1
               const leftPos = isFirst ? colX(i) : isLast ? undefined : colX(i) + nodeW / 2
-              const rightPos = isLast ? measuredWidth - colX(n - 1) - nodeW : undefined
+              const rightPos = isLast ? effectiveWidth - colX(n - 1) - nodeW : undefined
               return (
                 <span
                   key={label}
@@ -362,7 +454,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
           </div>
         )
       })()}
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width={chartWidth} height={height}>
         <Sankey
           data={{ nodes: sankeyNodes, links: sankeyLinks.map((l) => {
             const si = typeof l.source === 'string' ? sankeyNodes.findIndex((n) => n.name === l.source) : l.source
@@ -373,7 +465,7 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
           sort={sort}
           iterations={iterations}
           nodeWidth={12}
-          margin={{ top: 8, right: 10, bottom: 8, left: 10 }}
+          margin={{ top: 8, right: columnCount >= 5 ? 130 : 10, bottom: 8, left: columnCount >= 5 ? 72 : 10 }}
           node={<NodeComponent />}
           link={<LinkComponent />}
         />
@@ -381,6 +473,9 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
 
       {activeBreakdown && hoverState && (
         <BreakdownTooltip x={hoverState.x} y={hoverState.y} items={activeBreakdown} shown={hoverShown} />
+      )}
+      {nodeLabelHover && (
+        <NodeTooltip x={nodeLabelHover.x} y={nodeLabelHover.y} label={nodeLabelHover.label} shown={nodeLabelHoverShown} />
       )}
       {linkHover && (
         <LinkTooltip x={linkHover.x} y={linkHover.y} sourceName={linkHover.sourceName} targetName={linkHover.targetName} value={linkHover.value} shown={linkHoverShown} />
