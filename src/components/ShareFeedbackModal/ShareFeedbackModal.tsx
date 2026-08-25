@@ -1,10 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../Icon/Icon'
+import naveenAvatar from '../../assets/help-center/naveen-avatar.jpg'
 import type { ShareFeedbackModalProps } from './ShareFeedbackModal.types'
 
 const HELP_MAX_CHARS = 500
 const HELP_MAX_FILES = 5
+
+interface Attachment {
+  id: number
+  file: File
+  url: string
+  kind: 'image' | 'video' | 'other'
+}
+
+function attachmentKind(file: File): Attachment['kind'] {
+  if (file.type.startsWith('image/')) return 'image'
+  if (file.type.startsWith('video/')) return 'video'
+  return 'other'
+}
 
 /**
  * Share feedback dialog.
@@ -19,18 +33,37 @@ export function ShareFeedbackModal({
   variant = 'coaching',
 }: ShareFeedbackModalProps) {
   const [details, setDetails] = useState('')
-  const [files, setFiles] = useState<File[]>([])
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [optedIntoResearch, setOptedIntoResearch] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const nextAttachmentId = useRef(0)
+  const attachmentsRef = useRef<Attachment[]>([])
+  attachmentsRef.current = attachments
 
   useEffect(() => {
     if (open) {
       setDetails(initialDetails)
-      setFiles([])
+      setOptedIntoResearch(false)
+      setAttachments((prev) => {
+        prev.forEach((a) => URL.revokeObjectURL(a.url))
+        return []
+      })
     } else {
       setDetails('')
-      setFiles([])
+      setOptedIntoResearch(false)
+      setAttachments((prev) => {
+        prev.forEach((a) => URL.revokeObjectURL(a.url))
+        return []
+      })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialDetails])
+
+  useEffect(() => {
+    return () => {
+      attachmentsRef.current.forEach((a) => URL.revokeObjectURL(a.url))
+    }
+  }, [])
 
   if (!open) return null
 
@@ -40,13 +73,30 @@ export function ShareFeedbackModal({
 
     function addFiles(list: FileList | null) {
       if (!list?.length) return
-      setFiles((prev) => {
+      // Snapshot into a plain array: `list` is the input's live FileList, and the
+      // caller resets `e.target.value` right after calling this, which clears that
+      // live list before this state updater actually runs.
+      const incoming = Array.from(list)
+      setAttachments((prev) => {
         const next = [...prev]
-        for (const file of Array.from(list)) {
+        for (const file of incoming) {
           if (next.length >= HELP_MAX_FILES) break
-          next.push(file)
+          next.push({
+            id: nextAttachmentId.current++,
+            file,
+            url: URL.createObjectURL(file),
+            kind: attachmentKind(file),
+          })
         }
         return next
+      })
+    }
+
+    function removeAttachment(id: number) {
+      setAttachments((prev) => {
+        const found = prev.find((a) => a.id === id)
+        if (found) URL.revokeObjectURL(found.url)
+        return prev.filter((a) => a.id !== id)
       })
     }
 
@@ -60,56 +110,77 @@ export function ShareFeedbackModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="share-feedback-title"
-          className="relative flex w-full max-w-[520px] flex-col overflow-hidden rounded-md bg-surface shadow-modal"
+          className="relative w-full max-w-[520px] rounded-md bg-surface p-2xl shadow-modal"
           onClick={(e) => e.stopPropagation()}
         >
-          <header className="flex shrink-0 items-start gap-lg px-2xl pb-md pt-2xl">
-            <div className="min-w-0 flex-1">
-              <h2
-                id="share-feedback-title"
-                className="m-0 text-h3 text-text-primary"
-              >
-                Share feedback
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="absolute right-lg top-lg flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          >
+            <Icon name="close" size={20} />
+          </button>
+
+          <div className="flex items-start gap-md pr-2xl">
+            <img
+              src={naveenAvatar}
+              alt="Naveen, CEO of Birdeye"
+              className="size-11 shrink-0 rounded-full border border-border object-cover"
+            />
+            <div className="min-w-0 pt-xs">
+              <h2 id="share-feedback-title" className="m-0 text-body text-text-primary">
+                Hi there! I&apos;m Naveen, CEO of Birdeye
               </h2>
               <p className="m-0 mt-xs text-small text-text-secondary">
-                Tell us about your experience and how we can make it better.
+                I&apos;d love to hear your thoughts and feedback.
               </p>
             </div>
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={onClose}
-              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-            >
-              <Icon name="close" size={20} />
-            </button>
-          </header>
+          </div>
 
-          <div className="min-h-0 flex-1 overflow-auto px-2xl pb-lg">
-            <label className="flex flex-col gap-sm">
-              <span className="text-body text-text-primary">
-                Your feedback <span className="text-chip-danger-text">*</span>
-              </span>
-              <span className="relative block">
-                <textarea
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value.slice(0, HELP_MAX_CHARS))}
-                  placeholder="Share your feedback, suggestions, or any issues you experienced."
-                  rows={5}
-                  className="h-[130px] w-full resize-none rounded-sm border border-border-input bg-surface px-md pb-2xl pt-md text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
-                />
-                <span className="pointer-events-none absolute bottom-sm right-md text-small text-text-tertiary">
-                  {details.length}/{HELP_MAX_CHARS}
-                </span>
-              </span>
-            </label>
+          <div className="mt-xl flex flex-col rounded-md border border-border-input bg-surface">
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value.slice(0, HELP_MAX_CHARS))}
+              placeholder="What do you think about the product or are you stuck somewhere?"
+              rows={4}
+              className="w-full resize-none rounded-md bg-transparent px-md pt-md text-body text-text-primary outline-none placeholder:text-text-tertiary"
+            />
 
-            <div className="mt-xl">
-              <p className="m-0 text-body text-text-primary">Attach files (optional)</p>
-              <p className="m-0 mt-xs text-small text-text-secondary">
-                Add images or videos to help us better understand your feedback.
-              </p>
+            {attachments.length > 0 ? (
+              <ul className="m-0 flex list-none flex-wrap gap-sm px-md pb-sm p-0">
+                {attachments.map((a) => (
+                  <li key={a.id} title={a.file.name} className="relative size-16 shrink-0">
+                    <div className="relative size-full overflow-hidden rounded-sm border border-border bg-surface-icon">
+                      {a.kind === 'image' ? (
+                        <img src={a.url} alt={a.file.name} className="size-full object-cover" />
+                      ) : a.kind === 'video' ? (
+                        <>
+                          <video src={a.url} muted className="size-full object-cover" />
+                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+                            <Icon name="play_circle" size={24} fill className="text-white" />
+                          </span>
+                        </>
+                      ) : (
+                        <span className="flex size-full items-center justify-center">
+                          <Icon name="draft" size={22} className="text-text-icon" />
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${a.file.name}`}
+                        onClick={() => removeAttachment(a.id)}
+                        className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-black text-white hover:bg-black/80"
+                      >
+                        <Icon name="close" size={11} weight={700} />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
 
+            <div className="flex items-center px-md pb-sm">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -121,62 +192,46 @@ export function ShareFeedbackModal({
                   e.target.value = ''
                 }}
               />
-
               <button
                 type="button"
+                aria-label="Attach files"
                 onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  addFiles(e.dataTransfer.files)
-                }}
-                className="mt-md flex w-full flex-col items-center justify-center rounded-md border border-dashed border-border bg-surface px-lg py-xl text-center hover:bg-surface-hover"
+                className="flex size-6 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
               >
-                <Icon name="cloud_upload" size={28} className="text-text-icon" />
-                <span className="mt-md text-body text-text-primary">
-                  Drag and drop files here, or{' '}
-                  <span className="text-text-action">browse files</span>
-                </span>
-                <span className="mt-xs text-small text-text-tertiary">
-                  PNG, JPG, JPEG, MP4 or MOV. Up to 5 files, 25 MB each.
-                </span>
+                <Icon name="attach_file" size={18} />
               </button>
-
-              {files.length > 0 ? (
-                <ul className="m-0 mt-md flex list-none flex-col gap-xs p-0">
-                  {files.map((file, i) => (
-                    <li
-                      key={`${file.name}-${i}`}
-                      className="flex items-center gap-sm rounded-sm border border-border bg-surface-icon px-md py-sm"
-                    >
-                      <Icon name="draft" size={18} className="shrink-0 text-text-icon" />
-                      <span className="min-w-0 flex-1 truncate text-small text-text-primary">
-                        {file.name}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${file.name}`}
-                        onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="flex size-6 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-                      >
-                        <Icon name="close" size={14} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
             </div>
           </div>
 
-          <footer className="flex shrink-0 items-center justify-between gap-md border-t border-border px-2xl py-lg">
+          <div className="mt-xl flex items-start gap-sm">
+            <input
+              id="share-feedback-research-optin"
+              type="checkbox"
+              checked={optedIntoResearch}
+              onChange={(e) => setOptedIntoResearch(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 rounded border-border"
+            />
+            <label
+              htmlFor="share-feedback-research-optin"
+              className="flex-1 cursor-pointer text-body text-text-secondary"
+            >
+              I&apos;m open to being contacted for future user research.{' '}
+              <a
+                href="https://docs.google.com/document/d/16P1wcCLCndIleWfhdyNOpn7sfwaM5yGWf6RdQrcW5BA/edit?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-text-action hover:underline"
+              >
+                Learn more
+              </a>
+            </label>
+          </div>
+
+          <div className="mt-xl flex items-center justify-end gap-md">
             <button
               type="button"
               onClick={onClose}
-              className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+              className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
             >
               Cancel
             </button>
@@ -185,7 +240,10 @@ export function ShareFeedbackModal({
               disabled={!canSubmit}
               onClick={() => {
                 if (!canSubmit) return
-                onSubmit(trimmed)
+                onSubmit(trimmed, {
+                  optedIntoResearch,
+                  attachments: attachments.map((a) => a.file),
+                })
               }}
               className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
                 canSubmit
@@ -195,7 +253,7 @@ export function ShareFeedbackModal({
             >
               Submit feedback
             </button>
-          </footer>
+          </div>
         </div>
       </div>,
       document.body,
