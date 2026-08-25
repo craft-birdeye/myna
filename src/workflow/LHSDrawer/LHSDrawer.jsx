@@ -1310,7 +1310,6 @@ export default function LHSDrawer({
                   (section === 'trigger' && READONLY_TRIGGER_SUBMENUS.has(subKey))
                   || (section === 'task' && READONLY_TASK_SUBMENUS.has(subKey))
                 }
-                dragAlwaysVisible
                 disabledItems={DISABLED_TASK_SUB_ITEMS}
                 inline
                 showTitle={section === 'trigger'}
@@ -1426,7 +1425,6 @@ export default function LHSDrawer({
                       }
                       viewOnly={viewOnly}
                       readOnly
-                      dragAlwaysVisible
                       inline
                       showTitle={false}
                     />
@@ -1520,7 +1518,6 @@ export default function LHSDrawer({
                   parentLabel={card.dragLabel || card.label}
                   viewOnly={viewOnly}
                   readOnly
-                  dragAlwaysVisible
                   inline
                   showTitle={false}
                 />
@@ -1562,7 +1559,6 @@ export default function LHSDrawer({
                         onItemsChange={(newItems) => handleSubItemsChange(cat.id, newItems)}
                         viewOnly={viewOnly}
                         readOnly
-                        dragAlwaysVisible
                         inline
                         showTitle={false}
                       />
@@ -1633,7 +1629,6 @@ export default function LHSDrawer({
                       parentLabel={cat.label}
                       viewOnly={viewOnly}
                       readOnly
-                      dragAlwaysVisible
                       inline
                       showTitle={false}
                     />
@@ -1652,7 +1647,6 @@ export default function LHSDrawer({
                   parentLabel={name}
                   viewOnly={viewOnly}
                   readOnly
-                  dragAlwaysVisible
                   inline
                   showTitle={false}
                   disabledItems={card.disabled ? [card.label] : null}
@@ -1719,7 +1713,6 @@ export default function LHSDrawer({
                   parentLabel={isCustom ? '__custom__' : name}
                   viewOnly={viewOnly}
                   readOnly
-                  dragAlwaysVisible
                   inline
                   showTitle={false}
                 />

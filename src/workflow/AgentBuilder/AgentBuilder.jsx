@@ -3641,7 +3641,7 @@ export default function AgentBuilder({
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
+        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
               {(onClose || explorationChrome) && (
@@ -3995,6 +3995,7 @@ export default function AgentBuilder({
               onRedo={handleRedo}
               canUndo={historyPast.length > 0}
               canRedo={historyFuture.length > 0}
+              hideUndoRedo={versionHistoryOpen}
               onHelpToggle={explorationChrome ? toggleHelpCenter : null}
               helpOpen={helpCenterOpen}
               singleAddStepSearch={sep1Chrome}

@@ -104,6 +104,10 @@
   margin-top: 0;
 }
 
+.lhs-external-apps__item--described .lhs-external-apps__item-drag {
+  align-self: center;
+}
+
 .lhs-external-apps__item-drag {
   flex-shrink: 0;
   color: #aaa;
@@ -111,11 +115,12 @@
   width: 20px;
   height: 20px;
   line-height: 1;
-  opacity: 1;
-  transition: color 0.1s;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
 }
 
 .lhs-external-apps__item:hover .lhs-external-apps__item-drag {
+  opacity: 1;
   color: #212121;
 }
 

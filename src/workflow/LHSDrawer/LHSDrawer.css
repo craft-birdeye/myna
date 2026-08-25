@@ -583,6 +583,16 @@
   justify-content: center !important;
 }
 
+/* Drag handle (6-dot grip) — hidden until the card is hovered. Chevron toggles stay visible. */
+.lhs-drawer__card-action:not(.lhs-drawer__card-action--chevron) {
+  opacity: 0 !important;
+  transition: opacity 0.12s ease !important;
+}
+
+.lhs-drawer__card:hover .lhs-drawer__card-action:not(.lhs-drawer__card-action--chevron) {
+  opacity: 1 !important;
+}
+
 /* Chevron uses chevron_right / expand_less glyphs — no rotate needed */
 
 /* ─── Card wrapper (for dropdown positioning) ─── */

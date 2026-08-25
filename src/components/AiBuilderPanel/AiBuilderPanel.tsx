@@ -140,7 +140,7 @@ function TrailThoughts({
 function TrailUserBubble({ children, first = false }: { children: ReactNode; first?: boolean }) {
   return (
     <div className={`flex justify-end ${first ? 'pt-md' : 'mt-[36px]'}`}>
-      <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary whitespace-pre-wrap">
+      <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-[12px] leading-[1.5] text-text-primary whitespace-pre-wrap">
         {children}
       </span>
     </div>
@@ -153,7 +153,7 @@ function TrailAgentReply({ paragraphs }: { paragraphs: string[] }) {
       <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
         <TrailSparkle size={14} />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+      <div className="flex min-w-0 flex-1 flex-col gap-md text-[12px] leading-6 text-text-primary">
         {paragraphs.map((paragraph, i) => (
           <p key={i} className="m-0 whitespace-pre-wrap">
             {paragraph}
@@ -216,7 +216,7 @@ function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
         if (turn.kind === 'user-files') {
           return (
             <div key={i} className="mt-[36px] flex justify-end">
-              <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-secondary">
+              <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-[12px] leading-[1.5] text-text-secondary">
                 {(turn.labels || []).join(', ')}
               </span>
             </div>
@@ -270,7 +270,9 @@ export function AiBuilderPanel({
   const [draft, setDraft] = useState('')
   const { trail, send, hasMessages } = useAiBuilderTrail(agentName)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [composerFocused, setComposerFocused] = useState(false)
   const canSend = draft.trim().length > 0
+  const composerExpanded = composerFocused || canSend || hasMessages
   const resolvedSuggestions = suggestions ?? suggestionsForAgent(agentName)
 
   useEffect(() => {
@@ -348,7 +350,7 @@ export function AiBuilderPanel({
                   WebkitMaskImage: `url("${iconAgentsPurple}")`,
                 }}
               />
-              <p className="m-0 text-[14px] leading-6 text-text-secondary">
+              <p className="m-0 text-[12px] leading-6 text-text-secondary">
                 Hi! I&apos;m here to help you. Tell me what you&apos;d like to do
               </p>
             </div>
@@ -363,7 +365,7 @@ export function AiBuilderPanel({
                   key={suggestion}
                   type="button"
                   onClick={() => handleSend(suggestion)}
-                  className="flex h-8 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-[14px] leading-6 text-text-primary hover:bg-surface-l2"
+                  className="flex h-8 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-[12px] leading-6 text-text-primary hover:bg-surface-l2"
                 >
                   {suggestion}
                 </button>
@@ -374,49 +376,94 @@ export function AiBuilderPanel({
       </div>
 
       <div className="shrink-0 px-sm pb-sm">
-        <div className="flex min-h-[156px] flex-col rounded-xl border border-border bg-surface px-lg py-lg">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            rows={2}
-            placeholder="What would you like to build? For example: Review response agent replying autonomously."
-            className="min-h-0 flex-1 resize-none bg-transparent text-[14px] leading-6 text-text-primary outline-none placeholder:text-text-tertiary"
-          />
-          <div className="mt-md flex items-center justify-between">
-            <div className="flex items-center gap-md">
+        <div
+          className={`flex rounded-xl border bg-surface transition-colors ${
+            composerFocused ? 'border-[#6834b7]' : 'border-border'
+          } ${composerExpanded ? 'min-h-[156px] flex-col px-lg py-lg' : 'h-12 flex-row items-center gap-sm px-md'}`}
+        >
+          {!composerExpanded && (
+            <>
               <button
                 type="button"
                 aria-label="Add"
-                className="flex size-7 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
               >
                 <Icon name="add" size={20} />
               </button>
               <button
                 type="button"
                 aria-label="Voice input"
-                className="flex size-7 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
               >
                 <Icon name="mic_none" size={18} />
               </button>
-            </div>
+            </>
+          )}
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onFocus={() => setComposerFocused(true)}
+            onBlur={() => setComposerFocused(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
+            rows={composerExpanded ? 2 : 1}
+            placeholder={
+              composerExpanded
+                ? 'What would you like to build? For example: Review response agent replying autonomously.'
+                : 'What would you like to build?'
+            }
+            className={`min-h-0 flex-1 resize-none bg-transparent text-[12px] leading-6 text-text-primary outline-none placeholder:text-text-tertiary ${
+              composerExpanded ? '' : 'truncate'
+            }`}
+          />
+          {!composerExpanded && (
             <button
               type="button"
               aria-label="Send"
               disabled={!canSend}
               onClick={() => handleSend()}
-              className={`flex size-9 shrink-0 items-center justify-center rounded-sm transition-colors ${
+              className={`flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors ${
                 canSend ? 'text-text-action hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary'
               }`}
             >
-              <SendIcon size={20} />
+              <SendIcon size={18} />
             </button>
-          </div>
+          )}
+          {composerExpanded && (
+            <div className="mt-md flex items-center justify-between">
+              <div className="flex items-center gap-md">
+                <button
+                  type="button"
+                  aria-label="Add"
+                  className="flex size-7 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                >
+                  <Icon name="add" size={20} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Voice input"
+                  className="flex size-7 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                >
+                  <Icon name="mic_none" size={18} />
+                </button>
+              </div>
+              <button
+                type="button"
+                aria-label="Send"
+                disabled={!canSend}
+                onClick={() => handleSend()}
+                className={`flex size-9 shrink-0 items-center justify-center rounded-sm transition-colors ${
+                  canSend ? 'text-text-action hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary'
+                }`}
+              >
+                <SendIcon size={20} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </aside>

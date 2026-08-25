@@ -113,7 +113,7 @@ export default function LHSExternalAppsGroup({
               ) : null}
             </div>
             {!viewOnly && (
-              <span className="lhs-external-apps__item-drag material-symbols-outlined lhs-external-apps__item-drag--visible">
+              <span className="lhs-external-apps__item-drag material-symbols-outlined">
                 drag_indicator
               </span>
             )}

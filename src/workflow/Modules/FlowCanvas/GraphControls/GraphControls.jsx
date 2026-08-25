@@ -32,6 +32,8 @@ export default function GraphControls({
   onRedo = () => {},
   canUndo = false,
   canRedo = false,
+  /** Version history open: undo/redo don't apply while browsing past versions. */
+  hideUndoRedo = false,
   /** When set, renders the Help center trigger as its own pill beside the editor pill.
    * Exploration-only (`response-agents-exploration`); other agents keep it top-right. */
   onHelpToggle = null,
@@ -187,31 +189,35 @@ export default function GraphControls({
 
         {!viewOnly && (
           <div className="graph-controls__rr-edit">
-            <GraphControlTooltip text="Undo" above>
-              <button
-                className="graph-controls__toggle-btn"
-                onClick={onUndo}
-                disabled={!canUndo}
-                aria-disabled={!canUndo}
-                type="button"
-                aria-label="Undo"
-              >
-                <RrIcon src={iconUndo} />
-              </button>
-            </GraphControlTooltip>
-            <GraphControlTooltip text="Redo" above>
-              <button
-                className="graph-controls__toggle-btn"
-                onClick={onRedo}
-                disabled={!canRedo}
-                aria-disabled={!canRedo}
-                type="button"
-                aria-label="Redo"
-              >
-                <RrIcon src={iconRedo} />
-              </button>
-            </GraphControlTooltip>
-            <div className="graph-controls__rr-divider" aria-hidden />
+            {!hideUndoRedo && (
+              <>
+                <GraphControlTooltip text="Undo" above>
+                  <button
+                    className="graph-controls__toggle-btn"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    aria-disabled={!canUndo}
+                    type="button"
+                    aria-label="Undo"
+                  >
+                    <RrIcon src={iconUndo} />
+                  </button>
+                </GraphControlTooltip>
+                <GraphControlTooltip text="Redo" above>
+                  <button
+                    className="graph-controls__toggle-btn"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    aria-disabled={!canRedo}
+                    type="button"
+                    aria-label="Redo"
+                  >
+                    <RrIcon src={iconRedo} />
+                  </button>
+                </GraphControlTooltip>
+                <div className="graph-controls__rr-divider" aria-hidden />
+              </>
+            )}
             <GraphControlTooltip text="Horizontal layout" above>
               <button
                 className={`graph-controls__toggle-btn${orientation === 'horizontal' ? ' graph-controls__toggle-btn--active' : ''}`}

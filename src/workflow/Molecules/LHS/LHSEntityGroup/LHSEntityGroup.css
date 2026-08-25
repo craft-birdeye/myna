@@ -242,7 +242,7 @@
 }
 
 .lhs-entity-group__item--described .lhs-entity-group__item-actions {
-  padding-top: 2px;
+  align-self: center;
 }
 
 .lhs-entity-group__item-btn {
