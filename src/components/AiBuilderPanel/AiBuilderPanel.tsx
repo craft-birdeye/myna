@@ -3,6 +3,7 @@ import { Icon } from '../Icon/Icon'
 import { SendIcon } from '../../assets/SendIcon'
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
 import type { CreateChatTurn } from '../../data/createAgentChatStore'
+import { FrontDeskDraftReviewContent } from '../AgentDraftReview/FrontDeskDraftReviewContent'
 import { AiBuilderPanelProps } from './AiBuilderPanel.types'
 import { useAiBuilderTrail } from './useAiBuilderTrail'
 
@@ -93,13 +94,13 @@ function TrailThoughts({
         aria-expanded={open}
         className="group flex items-center gap-sm text-left"
       >
-        <Icon name="bolt" size={18} className="shrink-0 text-text-icon" />
-        <span className="text-body text-text-secondary transition-colors group-hover:text-text-primary">
+        <Icon name="bolt" size={16} className="shrink-0 text-text-icon" />
+        <span className="text-[13px] leading-5 text-text-secondary transition-colors group-hover:text-text-primary">
           {label}
         </span>
         <Icon
           name={open ? 'expand_less' : 'expand_more'}
-          size={18}
+          size={16}
           className="shrink-0 text-text-icon transition-colors group-hover:text-text-primary"
         />
       </button>
@@ -109,13 +110,13 @@ function TrailThoughts({
         }`}
         aria-hidden={!open}
       >
-        <div className="ml-[9px] border-l border-border pl-lg text-body leading-6 text-text-tertiary">
+        <div className="ml-[9px] border-l border-border pl-lg text-[13px] leading-5 text-text-tertiary">
           {lines.map((line, i) => {
             if (line.startsWith('•')) {
               const bullet = line.slice(1).trimStart()
               return (
                 <div key={i} className="flex items-start gap-sm">
-                  <span className="shrink-0 text-[18px] leading-6" aria-hidden>
+                  <span className="shrink-0 text-[16px] leading-[18px]" aria-hidden>
                     •
                   </span>
                   <span className="min-w-0 flex-1">{bullet}</span>
@@ -140,7 +141,7 @@ function TrailThoughts({
 function TrailUserBubble({ children, first = false }: { children: ReactNode; first?: boolean }) {
   return (
     <div className={`flex justify-end ${first ? 'pt-md' : 'mt-[36px]'}`}>
-      <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary whitespace-pre-wrap">
+      <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-[13px] leading-5 text-text-primary whitespace-pre-wrap">
         {children}
       </span>
     </div>
@@ -150,10 +151,10 @@ function TrailUserBubble({ children, first = false }: { children: ReactNode; fir
 function TrailAgentReply({ paragraphs }: { paragraphs: string[] }) {
   return (
     <div className="mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <TrailSparkle size={14} />
+      <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <TrailSparkle size={12} />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+      <div className="flex min-w-0 flex-1 flex-col gap-sm text-[13px] leading-5 text-text-primary">
         {paragraphs.map((paragraph, i) => (
           <p key={i} className="m-0 whitespace-pre-wrap">
             {paragraph}
@@ -164,7 +165,17 @@ function TrailAgentReply({ paragraphs }: { paragraphs: string[] }) {
   )
 }
 
-function TrailDraftCard({ title, description }: { title: string; description: string }) {
+function TrailDraftCard({
+  title,
+  description,
+  variant,
+  refillAdded,
+}: {
+  title: string
+  description: string
+  variant?: 'frontdesk' | 'reminder' | 'review-response'
+  refillAdded?: boolean
+}) {
   const readyLabel = /review response/i.test(title)
     ? 'Review response agent draft is ready'
     : /review generation/i.test(title)
@@ -175,24 +186,34 @@ function TrailDraftCard({ title, description }: { title: string; description: st
           ? 'Reminder agent draft is ready'
           : `${title.replace(/^New\s+/i, '')} draft is ready`
 
+  const isFrontDesk =
+    variant === 'frontdesk' || (!variant && /front desk/i.test(title))
+
   return (
     <div className="mt-3xl flex flex-col gap-md">
-      <p className="m-0 text-body leading-6 text-text-primary">{readyLabel}</p>
+      <p className="m-0 text-[13px] leading-5 text-text-primary">{readyLabel}</p>
       <div className="rounded-md border border-border bg-surface p-lg">
-        <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-sm">
-              <span className="text-body text-text-primary">{title}</span>
-              <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
-                Draft
-              </span>
-            </div>
-            {description ? (
-              <p className="mt-xs text-body text-text-secondary">{description}</p>
-            ) : null}
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-sm">
+            <span className="min-w-0 truncate text-[14px] leading-5 tracking-[-0.28px] text-[#0d0d12]">
+              {title}
+            </span>
+            <span className="inline-flex h-5 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-[12px] leading-[18px] text-text-secondary">
+              Draft
+            </span>
           </div>
+          {description ? (
+            <p className="mt-xs text-[12px] leading-[18px] text-text-secondary">{description}</p>
+          ) : null}
         </div>
+        {isFrontDesk && (
+          <div className="ai-builder-draft-compact mt-lg">
+            <FrontDeskDraftReviewContent
+              refillAdded={Boolean(refillAdded)}
+              interactive={false}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -216,7 +237,7 @@ function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
         if (turn.kind === 'user-files') {
           return (
             <div key={i} className="mt-[36px] flex justify-end">
-              <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-secondary">
+              <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-[13px] leading-5 text-text-secondary">
                 {(turn.labels || []).join(', ')}
               </span>
             </div>
@@ -241,12 +262,14 @@ function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
               key={i}
               title={turn.title}
               description={turn.description}
+              variant={turn.variant}
+              refillAdded={turn.refillAdded}
             />
           )
         }
         if (turn.kind === 'status') {
           return (
-            <p key={i} className="mt-3xl m-0 text-center text-small text-text-tertiary">
+            <p key={i} className="mt-3xl m-0 text-center text-[12px] leading-[18px] text-text-tertiary">
               {turn.text}
             </p>
           )
@@ -311,7 +334,7 @@ export function AiBuilderPanel({
           />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="m-0 text-body text-white">Create with AI</p>
+          <p className="m-0 text-[13px] leading-5 text-white">Create with AI</p>
         </div>
         {onExpand && (
           <button
@@ -348,7 +371,7 @@ export function AiBuilderPanel({
                   WebkitMaskImage: `url("${iconAgentsPurple}")`,
                 }}
               />
-              <p className="m-0 text-[14px] leading-6 text-text-secondary">
+              <p className="m-0 text-[13px] leading-5 text-text-secondary">
                 Hi! I&apos;m here to help you. Tell me what you&apos;d like to do
               </p>
             </div>
@@ -363,7 +386,7 @@ export function AiBuilderPanel({
                   key={suggestion}
                   type="button"
                   onClick={() => handleSend(suggestion)}
-                  className="flex h-8 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-[14px] leading-6 text-text-primary hover:bg-surface-l2"
+                  className="flex h-7 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-[13px] leading-5 text-text-primary hover:bg-surface-l2"
                 >
                   {suggestion}
                 </button>
@@ -373,8 +396,8 @@ export function AiBuilderPanel({
         </div>
       </div>
 
-      <div className="shrink-0 px-sm pb-sm">
-        <div className="flex min-h-[156px] flex-col rounded-xl border border-border bg-surface px-lg py-lg">
+      <div className="shrink-0 px-lg pb-sm">
+        <div className="flex flex-col rounded-xl border border-border bg-surface px-md py-sm transition-colors focus-within:border-ai-brand">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -386,23 +409,23 @@ export function AiBuilderPanel({
             }}
             rows={2}
             placeholder="What would you like to build? For example: Review response agent replying autonomously."
-            className="min-h-0 flex-1 resize-none bg-transparent text-[14px] leading-6 text-text-primary outline-none placeholder:text-text-tertiary"
+            className="h-12 resize-none bg-transparent text-[13px] leading-5 text-text-primary outline-none placeholder:text-text-tertiary"
           />
-          <div className="mt-md flex items-center justify-between">
-            <div className="flex items-center gap-md">
+          <div className="mt-xs flex items-center justify-between">
+            <div className="flex items-center gap-xs">
               <button
                 type="button"
                 aria-label="Add"
-                className="flex size-7 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                className="flex size-6 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
               >
-                <Icon name="add" size={20} />
+                <Icon name="add" size={18} />
               </button>
               <button
                 type="button"
                 aria-label="Voice input"
-                className="flex size-7 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                className="flex size-6 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
               >
-                <Icon name="mic_none" size={18} />
+                <Icon name="mic_none" size={16} />
               </button>
             </div>
             <button
@@ -410,11 +433,11 @@ export function AiBuilderPanel({
               aria-label="Send"
               disabled={!canSend}
               onClick={() => handleSend()}
-              className={`flex size-9 shrink-0 items-center justify-center rounded-sm transition-colors ${
+              className={`flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors ${
                 canSend ? 'text-text-action hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary'
               }`}
             >
-              <SendIcon size={20} />
+              <SendIcon size={18} />
             </button>
           </div>
         </div>

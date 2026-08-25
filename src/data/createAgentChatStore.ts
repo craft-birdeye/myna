@@ -1,15 +1,21 @@
 /** Store for co-pilot chats saved via "Save agent" from the create flow.
  *  Persisted to sessionStorage so the transcript survives a reload / HMR. */
 
+export type CreateChatVariant = 'frontdesk' | 'reminder'
+
 export type CreateChatTurn =
   | { kind: 'user'; text: string }
   | { kind: 'user-files'; labels: string[] }
   | { kind: 'thoughts'; text: string; label?: string }
   | { kind: 'agent'; paragraphs: string[] }
   | { kind: 'status'; text: string }
-  | { kind: 'draft'; title: string; description: string }
-
-export type CreateChatVariant = 'frontdesk' | 'reminder'
+  | {
+      kind: 'draft'
+      title: string
+      description: string
+      variant?: CreateChatVariant | 'review-response'
+      refillAdded?: boolean
+    }
 
 export type SavedCreateChat = {
   id: string
