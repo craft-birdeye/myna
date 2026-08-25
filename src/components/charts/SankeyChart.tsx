@@ -54,8 +54,11 @@ export interface SankeyChartProps {
    * use when that column legitimately carries less total flow than its neighbors (e.g. some
    * upstream nodes are terminal and never reach it) but should still read as an equally full bar,
    * not a proportionally shorter one. Incoming links are repositioned/rewidthed to match.
+   * Prefer `stretchColumns` when more than one column needs this treatment.
    */
   stretchColumn?: number[]
+  /** Per-column stretch groups — each inner array is one Sankey column's node indices. */
+  stretchColumns?: number[][]
   /** Minimum chart width — enables horizontal scroll when the container is narrower (dense multi-column funnels). */
   minWidth?: number
   /** Minimum node bar height (px) required before an inline label is drawn; shorter nodes show the label on hover only. */
@@ -163,7 +166,7 @@ function makeNode({ overrides, onHover, measuredWidth, columnCount, minLabelHeig
   }
 }
 
-function makeLink(overrides?: Record<number, string>, nameToIndex?: Map<string, number>, onLinkHover?: (state: LinkHoverState | null) => void, linkHover?: LinkHoverState | null, stretchLinkOverrides?: Map<string, { targetY: number; targetWidth: number }>) {
+function makeLink(overrides?: Record<number, string>, nameToIndex?: Map<string, number>, onLinkHover?: (state: LinkHoverState | null) => void, linkHover?: LinkHoverState | null, stretchLinkOverrides?: Map<string, { sourceY?: number; sourceWidth?: number; targetY?: number; targetWidth?: number }>) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function Link({ sourceX, sourceY, targetX, targetY, sourceControlX, targetControlX, linkWidth, payload }: any) {
     if (payload?.target?.name === '__phantom__' || linkWidth < 0.5) return null
@@ -180,13 +183,10 @@ function makeLink(overrides?: Record<number, string>, nameToIndex?: Map<string, 
     }
     const srcIdx = resolveIdx(src)
     const tgtIdx = resolveIdx(tgt)
-    // Reposition + rewiden where the ribbon lands in a stretched target. A single stroke can't
-    // taper along its length, so this is drawn as a filled quad instead — full source-side width
-    // at the source end, full (stretched) target-side width at the target end, with curved top
-    // and bottom edges — rather than one constant-width stroked centerline.
     const stretched = stretchLinkOverrides?.get(`${srcIdx}-${tgtIdx}`)
-    if (stretched) targetY = stretched.targetY
-    const sourceHalf = linkWidth / 2
+    if (stretched?.sourceY != null) sourceY = stretched.sourceY
+    if (stretched?.targetY != null) targetY = stretched.targetY
+    const sourceHalf = (stretched?.sourceWidth ?? linkWidth) / 2
     const targetHalf = (stretched?.targetWidth ?? linkWidth) / 2
     const sourceName = stripPct(src?.name ?? '')
     const targetName = stripPct(tgt?.name ?? '')
@@ -308,7 +308,7 @@ function useTooltipTransition<T>(exitMs = 150) {
   return { data, shown, set }
 }
 
-export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnHeaderTooltips, nodeColors, terminalNodes, onNodeClick, nodePadding = 10, sort = true, iterations, stretchColumn, minWidth, minLabelHeight = 14 }: SankeyChartProps) {
+export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnHeaderTooltips, nodeColors, terminalNodes, onNodeClick, nodePadding = 10, sort = true, iterations, stretchColumn, stretchColumns, minWidth, minLabelHeight = 14 }: SankeyChartProps) {
   const { data: hoverState, shown: hoverShown, set: setHoverState } = useTooltipTransition<{ idx: number; x: number; y: number }>()
   const { data: nodeLabelHover, shown: nodeLabelHoverShown, set: setNodeLabelHover } = useTooltipTransition<{ x: number; y: number; label: string }>()
   const { data: headerTooltip, shown: headerTooltipShown, set: setHeaderTooltip } = useTooltipTransition<{ text: string; x: number; y: number }>()
@@ -360,28 +360,47 @@ export function SankeyChart({ nodes, links, height = 360, columnHeaders, columnH
   // height at their own ratio, rather than Recharts' single ratio shared across every column —
   // see the prop doc for why. margin.top/bottom below must match the <Sankey margin> prop.
   let stretchOverrides: Map<number, { y: number; height: number }> | undefined
-  let stretchLinkOverrides: Map<string, { targetY: number; targetWidth: number }> | undefined
-  if (stretchColumn?.length) {
+  let stretchLinkOverrides: Map<string, { sourceY?: number; sourceWidth?: number; targetY?: number; targetWidth?: number }> | undefined
+  const stretchGroups = stretchColumns ?? (stretchColumn?.length ? [stretchColumn] : undefined)
+  const nodeColumnValue = (idx: number) => {
+    const outgoing = links.reduce((sum, l) => sum + (l.source === idx ? l.value : 0), 0)
+    if (outgoing > 0) return outgoing
+    return links.reduce((sum, l) => sum + (l.target === idx ? l.value : 0), 0)
+  }
+  if (stretchGroups?.length) {
     const marginTop = 8
     const plotHeight = height - marginTop - 8
-    const values = stretchColumn.map((i) => links.reduce((sum, l) => sum + (l.target === i ? l.value : 0), 0))
-    const total = values.reduce((a, b) => a + b, 0)
-    const ratio = total > 0 ? (plotHeight - (stretchColumn.length - 1) * nodePadding) / total : 0
     stretchOverrides = new Map()
     stretchLinkOverrides = new Map()
-    let y = marginTop
-    stretchColumn.forEach((idx, i) => {
-      const nodeHeight = values[i] * ratio
-      stretchOverrides!.set(idx, { y, height: nodeHeight })
-      const incoming = [...links].filter((l) => l.target === idx).sort((a, b) => (a.source as number) - (b.source as number))
-      let linkY = y
-      incoming.forEach((l) => {
-        const linkHeight = l.value * ratio
-        stretchLinkOverrides!.set(`${l.source}-${l.target}`, { targetY: linkY + linkHeight / 2, targetWidth: linkHeight })
-        linkY += linkHeight
+    for (const group of stretchGroups) {
+      const values = group.map((i) => nodeColumnValue(i))
+      const total = values.reduce((a, b) => a + b, 0)
+      const ratio = total > 0 ? (plotHeight - (group.length - 1) * nodePadding) / total : 0
+      let y = marginTop
+      group.forEach((idx, i) => {
+        const nodeHeight = values[i] * ratio
+        stretchOverrides!.set(idx, { y, height: nodeHeight })
+        const incoming = [...links].filter((l) => l.target === idx).sort((a, b) => (a.source as number) - (b.source as number))
+        let inY = y
+        incoming.forEach((l) => {
+          const linkHeight = l.value * ratio
+          const key = `${l.source}-${l.target}`
+          const prev = stretchLinkOverrides!.get(key) ?? {}
+          stretchLinkOverrides!.set(key, { ...prev, targetY: inY + linkHeight / 2, targetWidth: linkHeight })
+          inY += linkHeight
+        })
+        const outgoing = [...links].filter((l) => l.source === idx).sort((a, b) => (a.target as number) - (b.target as number))
+        let outY = y
+        outgoing.forEach((l) => {
+          const linkHeight = l.value * ratio
+          const key = `${l.source}-${l.target}`
+          const prev = stretchLinkOverrides!.get(key) ?? {}
+          stretchLinkOverrides!.set(key, { ...prev, sourceY: outY + linkHeight / 2, sourceWidth: linkHeight })
+          outY += linkHeight
+        })
+        y += nodeHeight + nodePadding
       })
-      y += nodeHeight + nodePadding
-    })
+    }
   }
 
   const NodeComponent = makeNode({
