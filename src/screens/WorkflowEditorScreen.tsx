@@ -104,6 +104,8 @@ interface WorkflowEditorScreenProps {
   sep1Chrome?: boolean
   /** RHS Save follows the content instead of pinning to the panel bottom (Response agents Sep 1 only). */
   inlineRhsFooter?: boolean
+  /** Opens Settings > Account > User experience improvement program (Help center "Learn more"). */
+  onOpenUxImprovementSettings?: () => void
 }
 
 export function WorkflowEditorScreen({
@@ -131,6 +133,7 @@ export function WorkflowEditorScreen({
   explorationChrome = hideTopIdentity,
   sep1Chrome = false,
   inlineRhsFooter = false,
+  onOpenUxImprovementSettings,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -303,6 +306,7 @@ export function WorkflowEditorScreen({
             explorationChrome={explorationChrome}
             inlineRhsFooter={inlineRhsFooter}
             sep1Chrome={sep1Chrome}
+            onOpenUxImprovementSettings={onOpenUxImprovementSettings}
           />
         </Suspense>
       </div>

@@ -1,3 +1,12 @@
+import thumbGettingStarted from '../../assets/help-center/thumbnails/getting-started.jpg'
+import thumbFirstWorkflow from '../../assets/help-center/thumbnails/first-workflow.jpg'
+import thumbReviewResponse from '../../assets/help-center/thumbnails/review-response.jpg'
+import thumbTriggersTasks from '../../assets/help-center/thumbnails/triggers-tasks.jpg'
+import thumbBranchesConditions from '../../assets/help-center/thumbnails/branches-conditions.jpg'
+import thumbTestPublish from '../../assets/help-center/thumbnails/test-publish.jpg'
+import thumbLlmTasks from '../../assets/help-center/thumbnails/llm-tasks.jpg'
+import thumbCoachFeedback from '../../assets/help-center/thumbnails/coach-feedback.jpg'
+
 export type HelpCenterView = 'home' | 'videos' | 'articles'
 
 export interface HelpVideoItem {
@@ -5,6 +14,8 @@ export interface HelpVideoItem {
   title: string
   description: string
   duration: string
+  /** Placeholder thumbnail shown in the video list and video modal. */
+  thumbnail: string
 }
 
 export interface HelpArticleItem {
@@ -31,6 +42,8 @@ export interface HelpCenterPanelProps {
   onStartTour?: (tourId?: string) => void
   /** Opens the Glossary popup (Figma `15988:11969`). Optional term id pre-selects that entry. */
   onOpenGlossary?: (termId?: string) => void
+  /** Opens Settings > Account > User experience improvement program (Share feedback "Learn more"). */
+  onOpenUxImprovementSettings?: () => void
 }
 
 export const HELP_VIDEOS: HelpVideoItem[] = [
@@ -39,48 +52,56 @@ export const HELP_VIDEOS: HelpVideoItem[] = [
     title: 'Getting started with agent builder',
     description: 'Learn the basics of creating and configuring workflows',
     duration: '4:32',
+    thumbnail: thumbGettingStarted,
   },
   {
     id: 'first-workflow',
     title: 'Create your first workflow',
     description: 'Step-by-step guide to building your first automation',
     duration: '3:15',
+    thumbnail: thumbFirstWorkflow,
   },
   {
     id: 'review-response',
     title: 'Creating a Review response agent',
     description: 'Deep dive into workflow to create an agent',
     duration: '5:47',
+    thumbnail: thumbReviewResponse,
   },
   {
     id: 'triggers-tasks',
     title: 'Working with triggers and tasks',
     description: 'Connect events to actions and keep your flow organized',
     duration: '4:10',
+    thumbnail: thumbTriggersTasks,
   },
   {
     id: 'branches-conditions',
     title: 'Using branches and conditions',
     description: 'Split your flow based on review rating or other rules',
     duration: '3:40',
+    thumbnail: thumbBranchesConditions,
   },
   {
     id: 'test-publish',
     title: 'Test run and publish',
     description: 'Validate your flow before turning it on',
     duration: '4:05',
+    thumbnail: thumbTestPublish,
   },
   {
     id: 'llm-tasks',
     title: 'Configuring LLM tasks',
     description: 'Set up prompts, inputs, outputs, and context',
     duration: '5:20',
+    thumbnail: thumbLlmTasks,
   },
   {
     id: 'coach-feedback',
     title: 'Coaching your agent with feedback',
     description: 'Improve replies using recommendations and coaching',
     duration: '3:55',
+    thumbnail: thumbCoachFeedback,
   },
 ]
 

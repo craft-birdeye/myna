@@ -1064,6 +1064,8 @@ export default function AgentBuilder({
   createAiPanelOpen = false,
   /** Opens the full-page Create with AI experience (parent-owned navigation). */
   onOpenAiFullscreen = null,
+  /** Opens Settings > Account > User experience improvement program (Help center "Learn more"). */
+  onOpenUxImprovementSettings = null,
   /** Parent-controlled AI Builder dock (reopened after fullscreen expand). */
   aiBuilderPanelOpen: aiBuilderPanelOpenProp = false,
   onAiBuilderPanelOpenChange = null,
@@ -3940,6 +3942,7 @@ export default function AgentBuilder({
                     open={helpCenterOpen}
                     onClose={() => setHelpCenterOpen(false)}
                     onOpenGlossary={openGlossary}
+                    onOpenUxImprovementSettings={onOpenUxImprovementSettings}
                     onStartTour={() => {
                       setHelpCenterOpen(false);
                       if (!viewOnly) setCoachTourOpen(true);
@@ -4060,6 +4063,7 @@ export default function AgentBuilder({
                 open={helpCenterOpen}
                 onClose={() => setHelpCenterOpen(false)}
                 onOpenGlossary={openGlossary}
+                onOpenUxImprovementSettings={onOpenUxImprovementSettings}
                 onStartTour={() => {
                   setHelpCenterOpen(false);
                   if (!viewOnly) setCoachTourOpen(true);
