@@ -6,7 +6,7 @@ import {
 } from '../data/agentWorkflows'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { getLastSavedCreateChat, createChatVariantForAgent } from '../data/createAgentChatStore'
+import { getLastSavedCreateChat, createChatVariantForAgent, getRetainedCreateAiChat } from '../data/createAgentChatStore'
 import { AGENT_INSTANCE_ISSUE_COUNTS, getAgentIssues } from '../data/agentIssues'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
@@ -137,7 +137,11 @@ export function WorkflowEditorScreen({
   const shownName = displayName ?? agentName
   const createChatVariant =
     createChatVariantForAgent(shownName) ?? createChatVariantForAgent(agentName)
-  const resolvedAiTranscript = aiTranscript ?? getLastSavedCreateChat(createChatVariant)
+  const resolvedAiTranscript =
+    aiTranscript ??
+    getRetainedCreateAiChat(shownName) ??
+    getRetainedCreateAiChat(agentName) ??
+    getLastSavedCreateChat(createChatVariant)
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'

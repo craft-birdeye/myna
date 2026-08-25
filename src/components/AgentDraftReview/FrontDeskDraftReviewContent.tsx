@@ -12,11 +12,11 @@ const DRAFT_TOOLS = [
 
 const DRAFT_SETTINGS: { setting: string; value: string; confirmed: boolean; source: string }[] = [
   { setting: 'Channels', value: 'Voice + Text', confirmed: true, source: 'From your response' },
-  { setting: 'Greeting', value: '"Thanks for calling [Clinic] — how can I help you today?"', confirmed: false, source: 'default' },
-  { setting: 'Consent', value: 'Standard call-recording consent notice', confirmed: false, source: 'default' },
-  { setting: 'Voice', value: 'Warm, female (US) · standard speed', confirmed: false, source: 'default' },
-  { setting: 'Language', value: 'English (primary)', confirmed: false, source: 'default' },
-  { setting: 'Locations', value: 'All 3 clinic locations', confirmed: false, source: 'default' },
+  { setting: 'Greeting', value: '"Thanks for calling [Clinic] — how can I help you today?"', confirmed: false, source: 'Default' },
+  { setting: 'Consent', value: 'Standard call-recording consent notice', confirmed: false, source: 'Default' },
+  { setting: 'Voice', value: 'Warm, female (US) · standard speed', confirmed: false, source: 'Default' },
+  { setting: 'Language', value: 'English (primary)', confirmed: false, source: 'Default' },
+  { setting: 'Locations', value: 'All 3 clinic locations', confirmed: false, source: 'Default' },
 ]
 
 function DraftReviewSection({ label, children }: { label: string; children: ReactNode }) {
@@ -32,7 +32,7 @@ export interface FrontDeskDraftReviewContentProps {
   refillAdded?: boolean
   openProcedureName?: string | null
   onOpenProcedure?: (name: string) => void
-  /** When false, procedure rows are non-interactive (e.g. docked AI Builder trail). */
+  /** When false, rows still show hover/chevron affordance but clicks are no-ops. */
   interactive?: boolean
 }
 
@@ -94,11 +94,19 @@ export function FrontDeskDraftReviewContent({
         <div className="flex flex-col gap-xs">
           {procedures.map((p) => {
             const pressed = openProcedureName === p.open
-            const className = `flex w-full items-start gap-sm rounded-md px-sm py-sm text-left ${
-              interactive ? 'hover:bg-surface-hover' : ''
-            } ${pressed ? 'bg-surface-hover' : ''}`
-            const body = (
-              <>
+            return (
+              <button
+                key={p.label}
+                type="button"
+                aria-pressed={pressed}
+                onClick={() => {
+                  if (!interactive) return
+                  onOpenProcedure?.(p.open)
+                }}
+                className={`flex w-full cursor-pointer items-start gap-sm rounded-md px-sm py-sm text-left transition-colors hover:bg-surface-hover ${
+                  pressed ? 'bg-surface-hover' : ''
+                }`}
+              >
                 <span className="flex h-6 shrink-0 items-center">
                   <Icon name="menu_book" size={16} className="text-text-icon" />
                 </span>
@@ -106,29 +114,9 @@ export function FrontDeskDraftReviewContent({
                   <span className="text-text-primary">{p.label}</span>
                   <span className="text-text-secondary"> — {p.note}</span>
                 </span>
-                {interactive && (
-                  <span className="flex h-6 shrink-0 items-center">
-                    <Icon name="chevron_right" size={18} className="text-text-icon" />
-                  </span>
-                )}
-              </>
-            )
-            if (!interactive) {
-              return (
-                <div key={p.label} className={className}>
-                  {body}
-                </div>
-              )
-            }
-            return (
-              <button
-                key={p.label}
-                type="button"
-                aria-pressed={pressed}
-                onClick={() => onOpenProcedure?.(p.open)}
-                className={className}
-              >
-                {body}
+                <span className="flex h-6 shrink-0 items-center">
+                  <Icon name="chevron_right" size={18} className="text-text-icon" />
+                </span>
               </button>
             )
           })}

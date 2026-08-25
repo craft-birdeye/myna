@@ -148,19 +148,63 @@ function TrailUserBubble({ children, first = false }: { children: ReactNode; fir
   )
 }
 
-function TrailAgentReply({ paragraphs }: { paragraphs: string[] }) {
+function TrailAgentReply({
+  paragraphs,
+  choices,
+  onChoice,
+  dockedBanner,
+}: {
+  paragraphs: string[]
+  choices?: string[]
+  onChoice?: (label: string) => void
+  dockedBanner?: ReactNode
+}) {
+  const visibleChoices = (choices ?? []).filter((label) => label !== 'View in agent builder')
+
   return (
-    <div className="mt-3xl flex gap-sm">
-      <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <TrailSparkle size={12} />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-sm text-[13px] leading-5 text-text-primary">
-        {paragraphs.map((paragraph, i) => (
-          <p key={i} className="m-0 whitespace-pre-wrap">
-            {paragraph}
-          </p>
-        ))}
+    <div className="mt-3xl flex flex-col gap-sm">
+      <div className="flex gap-sm">
+        <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+          <TrailSparkle size={12} />
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-sm text-[13px] leading-5 text-text-primary">
+          {paragraphs.map((paragraph, i) => (
+            <p key={i} className="m-0 whitespace-pre-wrap">
+              {paragraph}
+            </p>
+          ))}
+          {visibleChoices.length > 0 && (
+            <div className="flex flex-wrap items-center gap-sm">
+              {visibleChoices.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => onChoice?.(label)}
+                  className="flex h-7 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-[13px] leading-5 text-text-primary hover:bg-surface-l2"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {dockedBanner}
+        </div>
       </div>
+    </div>
+  )
+}
+
+function KnowledgeBanner({ onGoToKnowledge }: { onGoToKnowledge?: () => void }) {
+  return (
+    <div className="flex items-start gap-sm rounded-md bg-chip-info-bg px-md py-sm">
+      <Icon name="info" size={18} className="mt-px shrink-0 text-chip-info-text" />
+      <p className="m-0 min-w-0 flex-1 text-[13px] leading-5 text-text-primary">
+        Upload FAQs and documents to your knowledge base so your agent can answer customer questions
+        accurately.{' '}
+        <button type="button" onClick={onGoToKnowledge} className="text-text-action hover:underline">
+          Go to Knowledge
+        </button>
+      </p>
     </div>
   )
 }
@@ -170,24 +214,31 @@ function TrailDraftCard({
   description,
   variant,
   refillAdded,
+  onOpenProcedure,
+  openProcedureName,
+  draftAgentName,
 }: {
   title: string
   description: string
   variant?: 'frontdesk' | 'reminder' | 'review-response'
   refillAdded?: boolean
+  onOpenProcedure?: (name: string) => void
+  openProcedureName?: string | null
+  draftAgentName?: string
 }) {
-  const readyLabel = /review response/i.test(title)
+  const displayTitle = draftAgentName?.trim() || title
+  const readyLabel = /review response/i.test(displayTitle)
     ? 'Review response agent draft is ready'
-    : /review generation/i.test(title)
+    : /review generation/i.test(displayTitle)
       ? 'Review generation agent draft is ready'
-      : /front desk/i.test(title)
+      : /front desk/i.test(displayTitle)
         ? 'Front desk agent draft is ready'
-        : /reminder/i.test(title)
+        : /reminder/i.test(displayTitle)
           ? 'Reminder agent draft is ready'
-          : `${title.replace(/^New\s+/i, '')} draft is ready`
+          : `${displayTitle.replace(/^New\s+/i, '')} draft is ready`
 
   const isFrontDesk =
-    variant === 'frontdesk' || (!variant && /front desk/i.test(title))
+    variant === 'frontdesk' || (!variant && /front desk/i.test(displayTitle))
 
   return (
     <div className="mt-3xl flex flex-col gap-md">
@@ -196,7 +247,7 @@ function TrailDraftCard({
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-sm">
             <span className="min-w-0 truncate text-[14px] leading-5 tracking-[-0.28px] text-[#0d0d12]">
-              {title}
+              {displayTitle}
             </span>
             <span className="inline-flex h-5 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-[12px] leading-[18px] text-text-secondary">
               Draft
@@ -210,7 +261,9 @@ function TrailDraftCard({
           <div className="ai-builder-draft-compact mt-lg">
             <FrontDeskDraftReviewContent
               refillAdded={Boolean(refillAdded)}
-              interactive={false}
+              interactive={Boolean(onOpenProcedure)}
+              onOpenProcedure={onOpenProcedure}
+              openProcedureName={openProcedureName}
             />
           </div>
         )}
@@ -219,8 +272,28 @@ function TrailDraftCard({
   )
 }
 
-function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
+function TrailMessages({
+  trail,
+  onOpenProcedure,
+  openProcedureName,
+  draftAgentName,
+  onChoice,
+  showKnowledgeBanner = false,
+  onGoToKnowledge,
+}: {
+  trail: CreateChatTurn[]
+  onOpenProcedure?: (name: string) => void
+  openProcedureName?: string | null
+  draftAgentName?: string
+  onChoice?: (label: string) => void
+  showKnowledgeBanner?: boolean
+  onGoToKnowledge?: () => void
+}) {
   let seenUser = false
+  /** Dock the knowledge tip under the post-draft agent reply (the one with answer pills). */
+  const postDraftAgentIndex = showKnowledgeBanner
+    ? trail.findIndex((t) => t.kind === 'agent' && (t.choices?.length ?? 0) > 0)
+    : -1
 
   return (
     <div className="flex w-full flex-col pb-md">
@@ -254,7 +327,19 @@ function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
           )
         }
         if (turn.kind === 'agent') {
-          return <TrailAgentReply key={i} paragraphs={turn.paragraphs || []} />
+          return (
+            <TrailAgentReply
+              key={i}
+              paragraphs={turn.paragraphs || []}
+              choices={turn.choices}
+              onChoice={onChoice}
+              dockedBanner={
+                i === postDraftAgentIndex ? (
+                  <KnowledgeBanner onGoToKnowledge={onGoToKnowledge} />
+                ) : undefined
+              }
+            />
+          )
         }
         if (turn.kind === 'draft') {
           return (
@@ -264,6 +349,9 @@ function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
               description={turn.description}
               variant={turn.variant}
               refillAdded={turn.refillAdded}
+              onOpenProcedure={onOpenProcedure}
+              openProcedureName={openProcedureName}
+              draftAgentName={draftAgentName}
             />
           )
         }
@@ -284,17 +372,25 @@ export function AiBuilderPanel({
   onClose,
   onExpand,
   agentName = 'agent',
+  draftAgentName,
   suggestions,
   onSend,
   className = '',
   fillShell = false,
   side = 'right',
+  onOpenProcedure,
+  openProcedureName = null,
+  onGoToKnowledge,
 }: AiBuilderPanelProps) {
   const [draft, setDraft] = useState('')
+  const [composerFocused, setComposerFocused] = useState(false)
   const { trail, send, hasMessages } = useAiBuilderTrail(agentName)
   const scrollRef = useRef<HTMLDivElement>(null)
   const canSend = draft.trim().length > 0
   const resolvedSuggestions = suggestions ?? suggestionsForAgent(agentName)
+  const identityName = `${draftAgentName ?? ''} ${agentName}`.toLowerCase()
+  const showKnowledgeBanner =
+    identityName.includes('front desk') && identityName.includes('east region')
 
   useEffect(() => {
     const el = scrollRef.current
@@ -308,6 +404,10 @@ export function AiBuilderPanel({
     send(value)
     onSend?.(value)
     setDraft('')
+  }
+
+  const handleChoice = (label: string) => {
+    handleSend(label)
   }
 
   return (
@@ -377,7 +477,17 @@ export function AiBuilderPanel({
             </div>
           )}
 
-          {hasMessages && <TrailMessages trail={trail} />}
+          {hasMessages && (
+            <TrailMessages
+              trail={trail}
+              onOpenProcedure={onOpenProcedure}
+              openProcedureName={openProcedureName}
+              draftAgentName={draftAgentName}
+              onChoice={handleChoice}
+              showKnowledgeBanner={showKnowledgeBanner}
+              onGoToKnowledge={onGoToKnowledge}
+            />
+          )}
 
           {!hasMessages && resolvedSuggestions.length > 0 && (
             <div className="flex w-full flex-col items-start gap-sm">
@@ -397,48 +507,62 @@ export function AiBuilderPanel({
       </div>
 
       <div className="shrink-0 px-lg pb-sm">
-        <div className="flex flex-col rounded-xl border border-border bg-surface px-md py-sm transition-colors focus-within:border-ai-brand">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            rows={2}
-            placeholder="What would you like to build? For example: Review response agent replying autonomously."
-            className="h-12 resize-none bg-transparent text-[13px] leading-5 text-text-primary outline-none placeholder:text-text-tertiary"
-          />
-          <div className="mt-xs flex items-center justify-between">
-            <div className="flex items-center gap-xs">
+        <div
+          className={
+            composerFocused
+              ? 'ai-gradient-border rounded-xl p-px'
+              : 'rounded-xl border border-border bg-surface p-px'
+          }
+          onFocus={() => setComposerFocused(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+              setComposerFocused(false)
+            }
+          }}
+        >
+          <div className="flex flex-col rounded-xl bg-surface px-md py-sm">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend()
+                }
+              }}
+              rows={2}
+              placeholder="Ask me anything."
+              className="h-12 resize-none bg-transparent text-[13px] leading-5 text-text-primary outline-none placeholder:text-text-tertiary"
+            />
+            <div className="mt-xs flex items-center justify-between">
+              <div className="flex items-center gap-xs">
+                <button
+                  type="button"
+                  aria-label="Add"
+                  className="flex size-6 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                >
+                  <Icon name="add" size={18} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Voice input"
+                  className="flex size-6 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                >
+                  <Icon name="mic_none" size={16} />
+                </button>
+              </div>
               <button
                 type="button"
-                aria-label="Add"
-                className="flex size-6 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
+                aria-label="Send"
+                disabled={!canSend}
+                onClick={() => handleSend()}
+                className={`flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors ${
+                  canSend ? 'text-text-action hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary'
+                }`}
               >
-                <Icon name="add" size={18} />
-              </button>
-              <button
-                type="button"
-                aria-label="Voice input"
-                className="flex size-6 items-center justify-center rounded-sm text-text-primary transition-colors hover:bg-surface-hover"
-              >
-                <Icon name="mic_none" size={16} />
+                <SendIcon size={18} />
               </button>
             </div>
-            <button
-              type="button"
-              aria-label="Send"
-              disabled={!canSend}
-              onClick={() => handleSend()}
-              className={`flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors ${
-                canSend ? 'text-text-action hover:bg-surface-hover' : 'cursor-not-allowed text-text-tertiary'
-              }`}
-            >
-              <SendIcon size={18} />
-            </button>
           </div>
         </div>
       </div>

@@ -12,6 +12,7 @@ import {
   RESPONSE_AGENTS_SEP1_NAV_ID,
 } from './data/agentNavIds'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { AiCoachSparkleIcon } from './assets/AiCoachSparkleIcon'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
 import { SearchAIL2NavPanel } from './search-ai/SearchAIL2NavPanel'
@@ -679,17 +680,6 @@ export function App() {
               {moduleTitle}
             </span>
             <div className="flex items-center gap-[6px]">
-              {/* SVG gradient def for sparkle icon stroke */}
-              <svg aria-hidden className="absolute h-0 w-0 overflow-hidden">
-                <defs>
-                  <linearGradient id="birdgpt-icon-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%"   stopColor="#9970D7" />
-                    <stop offset="55%"  stopColor="#7f87e8" />
-                    <stop offset="100%" stopColor="#2552ED" />
-                  </linearGradient>
-                </defs>
-              </svg>
-
               {/* + button — matches contenthub 2.0 QuickCreateLauncher trigger */}
               <button
                 type="button"
@@ -705,10 +695,11 @@ export function App() {
                 className="group flex h-[30px] items-center gap-[5px] rounded-md bg-surface-l2 px-[10px] transition-colors hover:bg-surface-selected"
               >
                 <span
-                  className="shrink-0 group-hover:[animation:myna-cta-icon-tilt_360ms_ease-out_1] material-symbols-outlined select-none"
-                  style={{ fontSize: 14, color: '#9970D7', fontVariationSettings: "'FILL' 1, 'wght' 400" }}
+                  className="shrink-0 text-[#9970D7] group-hover:[animation:myna-cta-icon-tilt_360ms_ease-out_1]"
                   aria-hidden
-                >auto_awesome</span>
+                >
+                  <AiCoachSparkleIcon size={14} />
+                </span>
                 <span
                   className="text-[12px] leading-none bg-gradient-to-r from-[#9970D7] via-[#7f87e8] to-[#2552ED] bg-[length:220%_100%] bg-clip-text text-transparent"
                   style={{ animation: 'l2-nav-shimmer 2.2s linear infinite' }}

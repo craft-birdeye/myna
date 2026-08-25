@@ -65,6 +65,7 @@ import {
   rememberCreateAgentChat,
   getLastSavedCreateChat,
   setCreateAiDraftTrail,
+  registerBuiltinCreateAiDraft,
 } from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
 import { FrontDeskDraftReviewContent, FRONT_DESK_DRAFT_REFILL_PROCEDURE } from '../components/AgentDraftReview/FrontDeskDraftReviewContent'
@@ -3703,6 +3704,16 @@ The blocker: this needs a pharmacy / e-prescribe integration, which isn't connec
 
 const CREATE_AGENT_REVIEW_THOUGHTS_TEXT = `The review cleanly separates "you told me" vs "I defaulted" so nothing mandatory is hidden. Publishing isn't blocked. I'll let John test before he commits — testing must run every tool in mock mode so no real appointment gets booked.`
 
+const FRONTDESK_POST_DRAFT_REPLY =
+  'I have created a Front desk agent for you to answer inbound calls, book and reschedule appointments, answer basic insurance questions, and hand off anything about billing disputes to a human.'
+
+const FRONTDESK_POST_DRAFT_PILLS = [
+  "Yes, that's right",
+  'Make changes',
+  'Test agent',
+  'View in agent builder',
+] as const
+
 const CREATE_AGENT_REFILL_REPLY_PARAGRAPHS = [
   "On it — building the refill procedure now. Here's how it'll work:",
   '• Identify the patient and pull their prescription from the EHR,',
@@ -5609,40 +5620,29 @@ function HealthcareFrontdeskCreateAgentLive({
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
                               <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
-                                I have created a Front desk agent for you to answer inbound calls, book and
-                                reschedule appointments, answer basic insurance questions, and hand off anything
-                                about billing disputes to a human.
+                                {FRONTDESK_POST_DRAFT_REPLY}
                               </p>
                             </div>
                             <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Yes, that&apos;s right
-                              </button>
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Make changes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleStartTestAgent()}
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Test agent
-                              </button>
-                              {!workflowVisible && (
+                              {FRONTDESK_POST_DRAFT_PILLS.filter(
+                                (label) => !(workflowVisible && label === 'View in agent builder'),
+                              ).map((label) => (
                                 <button
+                                  key={label}
                                   type="button"
-                                  onClick={onViewWorkflow}
+                                  onClick={() => {
+                                    if (label === 'View in agent builder') onViewWorkflow?.()
+                                    else if (label === 'Test agent') handleStartTestAgent()
+                                  }}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
-                                  View in agent builder
+                                  {label === "Yes, that's right" ? (
+                                    <>Yes, that&apos;s right</>
+                                  ) : (
+                                    label
+                                  )}
                                 </button>
-                              )}
+                              ))}
                             </div>
                             {reviewFollowUpAnswer && (
                               <>
@@ -6713,6 +6713,11 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
       refillAdded: Boolean(snap.refillAnswer?.startsWith('Add procedure')),
     })
     trail.push({ kind: 'thoughts', text: CREATE_AGENT_REVIEW_THOUGHTS_TEXT })
+    trail.push({
+      kind: 'agent',
+      paragraphs: [FRONTDESK_POST_DRAFT_REPLY],
+      choices: snap.reviewFollowUpAnswer ? undefined : [...FRONTDESK_POST_DRAFT_PILLS],
+    })
   }
 
   if (snap.reviewFollowUpAnswer) {
@@ -6744,6 +6749,25 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
 
   return trail
 }
+
+/** Demo: East region Front desk already has the full Create with AI transcript. */
+registerBuiltinCreateAiDraft(
+  'Front desk agent - East region',
+  buildCreateChatTrail({
+    variant: 'frontdesk',
+    prompt: JOHN_CREATE_PROMPT,
+    draftTitle: 'Front desk agent - East region',
+    draftDescription: FRONTDESK_BUILD_CARD.description,
+    docsFileLabels: DEMO_DOCS_ATTACHMENTS.map((f) => f.label),
+    docsProvided: true,
+    docsBuildComplete: true,
+    docsDraftReadyDone: true,
+    refillAnswer: 'Add procedure "Handling refills"',
+    refillProcedureCreated: true,
+    createAgentAnswer: 'Yes, create the agent',
+    draftBuildReady: true,
+  }),
+)
 
 /** Builds a recent-chat entry from a finished full-page co-pilot session. */
 function buildSavedCreateChat(snap: SavedCreateChatSnapshot): ChatHistoryTranscript {

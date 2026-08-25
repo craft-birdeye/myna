@@ -3952,6 +3952,7 @@ export default function AgentBuilder({
                 <div className={`agent-builder__lhs-ai${rrAiPanelClosing ? ' agent-builder__lhs-ai--closing' : ' agent-builder__lhs-ai--opening'}`}>
                   <AiBuilderPanel
                     agentName={(typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName}
+                    draftAgentName={agentName}
                     onClose={closeAiBuilderPanel}
                     onExpand={
                       onOpenAiFullscreen
@@ -3964,6 +3965,13 @@ export default function AgentBuilder({
                     className="rr-chrome-ai-panel"
                     fillShell
                     side="left"
+                    openProcedureName={lhsPreviewProcedureId}
+                    onOpenProcedure={(procedureId) => {
+                      setLhsPreviewProcedureId(procedureId);
+                      setSelectedNodeId(null);
+                      setActiveProcedureId(null);
+                      setDrawerOpen(true);
+                    }}
                   />
                 </div>
               )}
