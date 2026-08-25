@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Activity, Globe, LayoutGrid, Navigation, Search, type LucideProps } from 'lucide-react'
+import { Globe, LayoutGrid, Lightbulb, Navigation, Search, type LucideProps } from 'lucide-react'
 import { Link, TopNav } from '../components'
 import iconQrCode from '../assets/icon-qr-code.svg'
 import iconSetupStatus from '../assets/icon-setup-status.svg'
@@ -187,7 +187,7 @@ const SECTIONS: SettingsSection[] = [
       { icon: '', iconSrc: iconSupport,   label: 'Support', subtext: 'Access help resources and contact the support team' },
       { icon: 'language',                 label: 'Timezone', subtext: "Configure your account's timezone and regional settings" },
       { icon: 'grid_view',                label: 'Products', subtext: 'Manage active and inactive products available in your account' },
-      { icon: 'activity',                 label: 'User experience improvement program', subtext: 'Manage whether Birdeye analyzes your usage to improve the product' },
+      { icon: 'lightbulb',                 label: 'User experience improvement program', subtext: 'Manage whether Birdeye analyzes your usage to improve the product' },
     ],
   },
 ]
@@ -308,7 +308,7 @@ export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppo
                       >
                         {item.iconSrc
                           ? <img src={item.iconSrc} alt="" className="size-[22px] shrink-0 text-text-icon" />
-                          : (() => { const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = { near_me: Navigation, language: Globe, grid_view: LayoutGrid, activity: Activity }; const I = ICON_MAP[item.icon]; return I ? <I className="size-[22px] shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : null })()
+                          : (() => { const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = { near_me: Navigation, language: Globe, grid_view: LayoutGrid, lightbulb: Lightbulb }; const I = ICON_MAP[item.icon]; return I ? <I className="size-[22px] shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : null })()
                         }
                         <div className="flex min-w-0 flex-col">
                           <div className="flex items-center gap-sm">
