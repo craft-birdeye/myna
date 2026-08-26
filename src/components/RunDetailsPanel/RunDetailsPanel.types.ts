@@ -78,4 +78,9 @@ export interface RunDetailsPanelProps {
   onTrackFeedback?: (recommendationId: string) => void
   /** Hover "View" on a log step to focus the matching canvas node (`step.nodeId` or resolved by title). */
   onStepFocus?: (step: RunLogStep) => void
+  /** Shown in the collapsible Call details header when `callDetails` / `callDetailsContent` is set. */
+  userRating?: string
+  /** When set, renders a collapsible AI summary at the top of the Conversation tab (e.g. Reminder
+   *  multi-channel thread summary above email/voice events). */
+  conversationAiSummary?: string[]
 }
