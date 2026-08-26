@@ -133,6 +133,30 @@
   background: #f0f0f0;
 }
 
+/* Read-only mode (browsing an old version): pencil/swap are replaced with this CTA.
+   Not a real <button> — the panel wraps everything in a disabled <fieldset>, so a native
+   button would be inert. pointer-events: auto lets it stay clickable despite the ancestor's
+   pointer-events: none, so it can still open the read-only tool drawer. */
+.toolViewBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1976d2;
+  transition: background 0.12s;
+  pointer-events: auto;
+}
+
+.toolViewBtn:hover {
+  background: #f0f0f0;
+}
+
 .toolRowMain {
   flex: 1;
   display: flex;

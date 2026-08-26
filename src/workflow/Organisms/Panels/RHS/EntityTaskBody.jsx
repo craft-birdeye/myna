@@ -17,6 +17,7 @@ export default function EntityTaskBody({
    * dropped tool never looks broken before the user has had a chance to set it up.
    */
   showToolErrors = false,
+  viewOnly = false,
 }) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
@@ -125,7 +126,23 @@ export default function EntityTaskBody({
                   )}
                 </div>
                 <div className={styles.toolRowActions}>
-                  {toolNeedsConfig(tool.id) ? (
+                  {viewOnly ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className={styles.toolViewBtn}
+                      onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onOpenTool?.(tool.id);
+                        }
+                      }}
+                    >
+                      View
+                    </span>
+                  ) : toolNeedsConfig(tool.id) ? (
                     <button
                       type="button"
                       className={styles.toolConfigureBtn}
