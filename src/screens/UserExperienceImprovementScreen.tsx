@@ -180,11 +180,8 @@ export function UserExperienceImprovementScreen({ onBack }: UserExperienceImprov
           </div>
 
           <div className="flex flex-col rounded-sm bg-surface">
-            {CARDS.map((card, i) => (
-              <div
-                key={card.id}
-                className={`flex items-start gap-md p-lg ${i > 0 ? 'border-t border-border' : ''}`}
-              >
+            {CARDS.map((card) => (
+              <div key={card.id} className="flex items-start gap-md p-lg">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-[8px] bg-[#eef2f6]">
                   <Icon name={card.icon} size={20} className="text-text-icon" />
                 </span>

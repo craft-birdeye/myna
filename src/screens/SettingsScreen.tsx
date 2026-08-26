@@ -187,7 +187,7 @@ const SECTIONS: SettingsSection[] = [
       { icon: '', iconSrc: iconSupport,   label: 'Support', subtext: 'Access help resources and contact the support team' },
       { icon: 'language',                 label: 'Timezone', subtext: "Configure your account's timezone and regional settings" },
       { icon: 'grid_view',                label: 'Products', subtext: 'Manage active and inactive products available in your account' },
-      { icon: 'lightbulb',                 label: 'User experience improvement program', subtext: 'Manage whether Birdeye analyzes your usage to improve the product' },
+      { icon: 'lightbulb',                 label: 'Product research', subtext: 'Manage whether Birdeye analyzes your usage to improve the product' },
     ],
   },
 ]
@@ -300,7 +300,7 @@ export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppo
                             ? onWebWidgets
                             : item.label === 'Appointment widgets'
                               ? onAppointmentWidgets
-                              : item.label === 'User experience improvement program'
+                              : item.label === 'Product research'
                                 ? onUxImprovement
                                 : undefined
                         }
