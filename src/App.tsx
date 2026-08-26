@@ -991,7 +991,7 @@ export function App() {
                           explorationChrome={isAgentExplorationChrome(navActive)}
                           sep1Chrome={isSep1Chrome(navActive)}
                           inlineRhsFooter={navActive === RESPONSE_AGENTS_SEP1_NAV_ID}
-                          onOpenUxImprovementSettings={openUxImprovementSettings}
+                          onOpenProductResearchSettings={openUxImprovementSettings}
                         />
                       </div>
                       {workflowAiAssistOpen && (

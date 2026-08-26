@@ -31,11 +31,12 @@ export function ShareFeedbackModal({
   onSubmit,
   initialDetails = '',
   variant = 'coaching',
-  onOpenUxImprovementSettings,
+  onOpenProductResearchSettings,
 }: ShareFeedbackModalProps) {
   const [details, setDetails] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [optedIntoUxImprovement, setOptedIntoUxImprovement] = useState(false)
+  const [canReplyToFeedback, setCanReplyToFeedback] = useState(false)
+  const [wantsProductResearch, setWantsProductResearch] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const nextAttachmentId = useRef(0)
   const attachmentsRef = useRef<Attachment[]>([])
@@ -44,14 +45,16 @@ export function ShareFeedbackModal({
   useEffect(() => {
     if (open) {
       setDetails(initialDetails)
-      setOptedIntoUxImprovement(false)
+      setCanReplyToFeedback(false)
+      setWantsProductResearch(false)
       setAttachments((prev) => {
         prev.forEach((a) => URL.revokeObjectURL(a.url))
         return []
       })
     } else {
       setDetails('')
-      setOptedIntoUxImprovement(false)
+      setCanReplyToFeedback(false)
+      setWantsProductResearch(false)
       setAttachments((prev) => {
         prev.forEach((a) => URL.revokeObjectURL(a.url))
         return []
@@ -145,11 +148,11 @@ export function ShareFeedbackModal({
               onChange={(e) => setDetails(e.target.value.slice(0, HELP_MAX_CHARS))}
               placeholder="What do you think about the agent builder? Are you stuck somewhere?"
               rows={4}
-              className="w-full resize-none rounded-md bg-transparent px-md pt-md text-body text-text-primary outline-none placeholder:text-text-tertiary"
+              className="w-full resize-none rounded-md bg-transparent px-md pb-md pt-md text-body text-text-primary outline-none placeholder:text-text-tertiary"
             />
 
             {attachments.length > 0 ? (
-              <ul className="m-0 flex list-none flex-wrap gap-sm px-md pb-sm p-0">
+              <ul className="m-0 flex list-none flex-wrap gap-sm px-md pb-md p-0">
                 {attachments.map((a) => (
                   <li key={a.id} title={a.file.name} className="relative size-16 shrink-0">
                     <div className="relative size-full overflow-hidden rounded-sm border border-border bg-surface-icon">
@@ -204,29 +207,46 @@ export function ShareFeedbackModal({
             </div>
           </div>
 
-          <div className="mt-xl flex items-start gap-sm rounded-md bg-surface-muted p-lg">
-            <input
-              id="share-feedback-ux-optin"
-              type="checkbox"
-              checked={optedIntoUxImprovement}
-              onChange={(e) => setOptedIntoUxImprovement(e.target.checked)}
-              className="mt-0.5 size-4 shrink-0 rounded border-border"
-            />
-            <div className="min-w-0 flex-1">
-              <label htmlFor="share-feedback-ux-optin" className="cursor-pointer text-body text-text-primary">
-                Join user experience improvement program
+          <div className="mt-xl flex flex-col gap-md">
+            <span className="text-xs uppercase tracking-wide text-text-tertiary">
+              Birdeye opt-in options
+            </span>
+
+            <div className="flex items-start gap-sm">
+              <input
+                id="share-feedback-can-reply"
+                type="checkbox"
+                checked={canReplyToFeedback}
+                onChange={(e) => setCanReplyToFeedback(e.target.checked)}
+                className="mt-0.5 size-4 shrink-0 rounded border-border"
+              />
+              <label
+                htmlFor="share-feedback-can-reply"
+                className="cursor-pointer text-body text-text-secondary"
+              >
+                Yes, Birdeye teams can reply to my feedback and follow up if they need more details.
+                Without this, I won&apos;t hear back.
               </label>
-              <p className="mt-xs text-small text-text-secondary">
-                Help us build a better product. We analyze how you use the product to catch issues and
-                improve faster.{' '}
+            </div>
+
+            <div className="flex items-start gap-sm">
+              <input
+                id="share-feedback-product-research"
+                type="checkbox"
+                checked={wantsProductResearch}
+                onChange={(e) => setWantsProductResearch(e.target.checked)}
+                className="mt-0.5 size-4 shrink-0 rounded border-border"
+              />
+              <label htmlFor="share-feedback-product-research" className="cursor-pointer text-body text-text-secondary">
+                I&apos;d like to participate in product research.{' '}
                 <button
                   type="button"
-                  onClick={() => onOpenUxImprovementSettings?.()}
+                  onClick={() => onOpenProductResearchSettings?.()}
                   className="text-text-action hover:underline"
                 >
                   Learn more
                 </button>
-              </p>
+              </label>
             </div>
           </div>
 
@@ -244,7 +264,8 @@ export function ShareFeedbackModal({
               onClick={() => {
                 if (!canSubmit) return
                 onSubmit(trimmed, {
-                  optedIntoUxImprovement,
+                  canReplyToFeedback,
+                  wantsProductResearch,
                   attachments: attachments.map((a) => a.file),
                 })
               }}

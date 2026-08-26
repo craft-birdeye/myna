@@ -87,7 +87,7 @@ function ConfirmDialog({ open, onConfirm, onCancel }: ConfirmDialogProps) {
       <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm" onClick={onCancel} />
       <div className="fixed left-1/2 top-[72px] z-[201] w-[480px] -translate-x-1/2 rounded-xl bg-surface shadow-modal">
         <div className="px-2xl pt-xl">
-          <p className="text-body text-text-primary">Turn off the user experience improvement program?</p>
+          <p className="text-body text-text-primary">Turn off product research?</p>
           <p className="mt-sm text-body text-text-secondary">
             We&apos;ll stop collecting new usage data right away. Data we&apos;ve already collected won&apos;t
             be affected.
@@ -144,22 +144,19 @@ export function UserExperienceImprovementScreen({ onBack }: UserExperienceImprov
           Account
         </Link>
         <ChevronRight className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
-        <span className="text-body text-text-primary">User experience improvement program</span>
+        <span className="text-body text-text-primary">Product research</span>
       </div>
 
       {/* Header */}
-      <div className="bg-surface px-2xl py-xl">
-        <h1 className="text-h3 text-text-primary">User experience improvement program</h1>
-        <p className="mt-xs text-body text-text-secondary">
-          Manage whether Birdeye analyzes your usage to improve the product.
-        </p>
+      <div className="bg-surface px-2xl pt-xl pb-md">
+        <h1 className="text-h3 text-text-primary">Product research</h1>
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto bg-surface px-2xl pb-2xl">
-        <div className="flex max-w-[750px] flex-col gap-md pt-xl">
+        <div className="flex max-w-[750px] flex-col gap-md pt-md">
           <div className="flex items-center justify-between gap-lg rounded-sm bg-surface-muted p-lg">
-            <span className="text-body text-text-primary">Join User experience improvement program</span>
+            <span className="text-body text-text-primary">Join product research</span>
             <Toggle checked={shareUsageData} onChange={handleToggleChange} />
           </div>
 
