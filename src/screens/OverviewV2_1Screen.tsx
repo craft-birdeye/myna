@@ -918,11 +918,11 @@ function AiWorkforceSummaryCard({
         >
           <BirdsFlatInlineIcon className={bannerOnly ? 'text-white' : 'text-text-icon'} />
           <p
-            className={`m-0 min-w-0 flex-1 truncate ${
+            className={`m-0 min-w-0 flex-1 ${
               bannerOnly ? `${EMPTY_BANNER_TEXT_CLASS} text-white` : 'text-[16px] leading-6 tracking-[-0.32px] text-text-primary'
             }`}
           >
-            Introducing AI co-workers - Jay, Myna and Robin. Together they can save up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up your agents and start saving today.
+            Meet your new AI coworkers. Jay, Myna, and Robin cover reviews, conversations, and appointments so you can focus on your business.
           </p>
           {dataState === 'empty' && (
             <button
