@@ -74,4 +74,9 @@ export interface RunDetailsPanelProps {
   agentName?: string
   /** Navigates to the recommendation a message's feedback landed on (see agentName). */
   onTrackFeedback?: (recommendationId: string) => void
+  /** Shown in the collapsible Call details header when `callDetails` / `callDetailsContent` is set. */
+  userRating?: string
+  /** When set, renders a collapsible AI summary at the top of the Conversation tab (e.g. Reminder
+   *  multi-channel thread summary above email/voice events). */
+  conversationAiSummary?: string[]
 }

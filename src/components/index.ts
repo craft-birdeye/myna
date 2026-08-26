@@ -4,7 +4,12 @@ export { AiAssistPanel } from './AiAssistPanel/AiAssistPanel'
 export type { AiAssistPanelProps } from './AiAssistPanel/AiAssistPanel.types'
 export { AiBuilderPanel } from './AiBuilderPanel/AiBuilderPanel'
 export type { AiBuilderPanelProps } from './AiBuilderPanel/AiBuilderPanel.types'
-export { RunConversationThread, RunDetailsPanel } from './RunDetailsPanel/RunDetailsPanel'
+export {
+  CallTranscriptSection,
+  getUserRatingForLogStatus,
+  RunConversationThread,
+  RunDetailsPanel,
+} from './RunDetailsPanel/RunDetailsPanel'
 export type {
   RunConversationEntry,
   RunDetailsPanelProps,
@@ -162,6 +167,8 @@ export type { ChartStat, ChartStatRowProps } from './charts/ChartStatRow'
 export type { SummaryStat, SummaryStatsProps } from './charts/SummaryStats'
 export { CallRecordingPlayer } from './CallRecordingPlayer/CallRecordingPlayer'
 export type { CallRecordingPlayerProps } from './CallRecordingPlayer/CallRecordingPlayer.types'
+export { CallAiSummary, DEFAULT_CALL_AI_SUMMARY } from './CallAiSummary/CallAiSummary'
+export type { CallAiSummaryProps } from './CallAiSummary/CallAiSummary.types'
 export { VoicemailMessage } from './VoicemailMessage/VoicemailMessage'
 export type { VoicemailMessageProps } from './VoicemailMessage/VoicemailMessage.types'
 export { VoiceChatDrawer } from './VoiceChatDrawer/VoiceChatDrawer'

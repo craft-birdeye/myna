@@ -17,6 +17,7 @@ import {
   type WorkflowNodeSeed,
 } from '../data/logRunSteps'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
+import { REMINDER_CONVERSATION_AI_SUMMARY } from '../data/reminderInboxConversation'
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
 
@@ -53,6 +54,17 @@ function parseDurationSecs(duration: string): number {
   if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2])
   const secsOnly = Number(duration)
   return Number.isFinite(secsOnly) ? secsOnly : 332
+}
+
+function formatDurationLabel(secs: number): string {
+  const mins = Math.floor(secs / 60)
+  const rem = secs % 60
+  return `${mins}m ${String(rem).padStart(2, '0')}s`
+}
+
+function startTimeLabel(timestamp: string): string {
+  const match = timestamp.match(/(\d{1,2}:\d{2}\s*[ap]m)/i)
+  return match?.[1] ?? timestamp
 }
 
 function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
@@ -450,6 +462,8 @@ export function RunDetailView({
   const isReminder = agentName === 'Reminder agent'
   const hasVoiceCall = row.channel.toLowerCase().includes('voice')
   const totalSecs = parseDurationSecs(row.duration)
+  const displayCaller =
+    row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : '(032) 902 9023'
   const agentWorkflow = resolveAgentWorkflowForLog(instanceName, agentName)
   const legacyLogSteps = isReviewResponse
     ? buildReviewResponseRunSteps(row)
@@ -577,6 +591,21 @@ export function RunDetailView({
               durationSecs={isReminder ? totalSecs : undefined}
               agentName={isReminder ? instanceName : undefined}
               onTrackFeedback={isReminder ? onTrackFeedback : undefined}
+              callDetails={
+                isReminder && hasVoiceCall
+                  ? {
+                      callerNumber: displayCaller,
+                      languageDetected: 'English',
+                      duration: formatDurationLabel(totalSecs),
+                      sidNumber: 'CA45 T78 932',
+                      startTime: startTimeLabel(row.timestamp),
+                      callEndReason: 'User ended the conversation',
+                      routedVia: instanceName,
+                    }
+                  : undefined
+              }
+              userRating={isReminder && hasVoiceCall ? getUserRatingForLogStatus(row.status) : undefined}
+              conversationAiSummary={isReminder ? REMINDER_CONVERSATION_AI_SUMMARY : undefined}
             />
           ) : (
             <LogDetailsPanel

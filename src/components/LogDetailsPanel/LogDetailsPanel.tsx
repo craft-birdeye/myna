@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import voicemailSample from '../../assets/voicemail_sample.mp3'
-import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
 import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { AGENT_LANGUAGES } from '../../data/agentLanguages'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import type { Channel } from '../../data/recommendationsData'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
+import { CallAiSummary } from '../CallAiSummary/CallAiSummary'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import { Chip } from '../Chip/Chip'
 import type { ChipVariant } from '../Chip/Chip.types'
@@ -21,6 +21,7 @@ import {
   UserRatingDisplay,
 } from '../RunDetailsPanel/RunDetailsPanel'
 import type { RunLogStep } from '../RunDetailsPanel/RunDetailsPanel.types'
+import { REMINDER_CONVERSATION_AI_SUMMARY } from '../../data/reminderInboxConversation'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import { Toast } from '../Toast/Toast'
 import { Tooltip } from '../Tooltip/Tooltip'
@@ -448,58 +449,6 @@ function formatDurationLabel(secs: number): string {
   const mins = Math.floor(secs / 60)
   const rem = secs % 60
   return `${mins}m ${String(rem).padStart(2, '0')}s`
-}
-
-const DEFAULT_CALL_AI_SUMMARY = [
-  'Caller reported a severe headache they believe is a migraine.',
-  'Agent confirmed the pain is general head pain, not dental or jaw-related.',
-  'Patient record was found and the caller was guided toward next steps for care.',
-]
-
-const REMINDER_CALL_AI_SUMMARY = [
-  'Caller confirmed their upcoming routine checkup appointment.',
-  'Agent shared arrival guidance and what to bring to the visit.',
-  'Insurance coverage questions were routed to the Front desk agent.',
-]
-
-function CallAiSummary({ bullets = DEFAULT_CALL_AI_SUMMARY }: { bullets?: string[] }) {
-  const [open, setOpen] = useState(true)
-
-  return (
-    <div className="ai-summary-panel mt-lg">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-xs text-left"
-      >
-        <span
-          className="ai-gradient-icon size-4 shrink-0"
-          style={{
-            WebkitMaskImage: `url("${iconAgentsPurple}")`,
-            maskImage: `url("${iconAgentsPurple}")`,
-          }}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1 text-body text-text-primary">AI summary</span>
-        <Icon
-          name={open ? 'expand_less' : 'expand_more'}
-          size={20}
-          className="shrink-0 text-text-icon"
-        />
-      </button>
-      {open && (
-        <ul className="mt-sm flex flex-col gap-xs">
-          {bullets.map((line) => (
-            <li key={line} className="flex items-start gap-sm text-small text-text-secondary">
-              <span className="mt-[7px] size-[5px] shrink-0 rounded-full bg-text-tertiary" />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
 }
 
 const ORIGINAL_TRANSCRIPT = {
@@ -1230,21 +1179,7 @@ export function LogDetailsPanel({
                 className="min-h-0 flex-1 overflow-y-auto px-lg pb-2xl [scrollbar-gutter:stable_both-edges]"
               >
                 <div className="flex flex-col gap-3xl pt-lg">
-                  {showCallDetails && (
-                    <CollapsibleCallDetails userRating={displayUserRating}>
-                      <CallDetailsTab
-                        callerNumber={displayCaller}
-                        languageDetected={languageDetected}
-                        durationSecs={totalSecs}
-                        sidNumber={sidNumber}
-                        startTime={startTimeLabel(row.timestamp)}
-                        callEndReason={callEndReason}
-                        routedVia={routedVia}
-                        callEndResultBadge={callEndResultBadge}
-                        userRating={displayUserRating}
-                      />
-                    </CollapsibleCallDetails>
-                  )}
+                  <CallAiSummary bullets={REMINDER_CONVERSATION_AI_SUMMARY} className="mt-0" />
                   {/* Top spacing lives here (not on the scroll container) — the sticky waveform
                    *  below anchors to `top: 0` of the scroll container's padding edge, so any
                    *  padding-top on the container itself would leave a permanent gap once stuck. */}
@@ -1258,6 +1193,21 @@ export function LogDetailsPanel({
                   {hasVoiceCall && (
                     <>
                       <ChatSystemLabel text="Voice call started" />
+                      {showCallDetails && (
+                        <CollapsibleCallDetails userRating={displayUserRating}>
+                          <CallDetailsTab
+                            callerNumber={displayCaller}
+                            languageDetected={languageDetected}
+                            durationSecs={totalSecs}
+                            sidNumber={sidNumber}
+                            startTime={startTimeLabel(row.timestamp)}
+                            callEndReason={callEndReason}
+                            routedVia={routedVia}
+                            callEndResultBadge={callEndResultBadge}
+                            userRating={displayUserRating}
+                          />
+                        </CollapsibleCallDetails>
+                      )}
                       <div className="sticky top-0 z-10 bg-surface pb-md pt-sm">
                         <div className="border border-transparent px-lg">
                           <p className="m-0 mb-sm text-[13px] tracking-[-0.26px] text-[#555]">
@@ -1271,7 +1221,6 @@ export function LogDetailsPanel({
                           />
                         </div>
                       </div>
-                      <CallAiSummary bullets={REMINDER_CALL_AI_SUMMARY} />
                       <CallTranscriptSection>
                         {transcriptNodes}
                       </CallTranscriptSection>

@@ -3,6 +3,7 @@ import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendati
 import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
+import { CallAiSummary } from '../CallAiSummary/CallAiSummary'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
@@ -480,6 +481,10 @@ export interface RunConversationThreadProps {
   onCoachAgent?: (messageId: string) => void
   /** 'diagnostics'-mode only — navigates to the recommendation this message's feedback landed on. */
   onTrackFeedback?: (recId: string) => void
+  /** Collapsible call-details body — when set, renders below the voice-call system label
+   *  (`insertCallRecordingAfter`) instead of at the top of the thread. */
+  callDetailsContent?: ReactNode
+  callDetailsUserRating?: string
 }
 
 /** Diagnostics-mode meta line — "LLM : X • TTS : Y", each label wrapped in an explanatory
@@ -568,6 +573,8 @@ export function RunConversationThread({
   recIdByMessage,
   onCoachAgent,
   onTrackFeedback,
+  callDetailsContent,
+  callDetailsUserRating,
 }: RunConversationThreadProps) {
   const transcriptStartIdx = callTranscriptSplitIndex(entries, showCallRecording)
   const useCallTranscriptSection = transcriptStartIdx >= 0
@@ -581,6 +588,11 @@ export function RunConversationThread({
           <div className={padTopWhenFirst && index === 0 ? 'pt-lg' : undefined}>
             <ChatSystemLabel text={entry.text} />
           </div>
+          {showCallRecording && entry.insertCallRecordingAfter && callDetailsContent && (
+            <CollapsibleCallDetails userRating={callDetailsUserRating}>
+              {callDetailsContent}
+            </CollapsibleCallDetails>
+          )}
           {showCallRecording && entry.insertCallRecordingAfter && (
             <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
               <div className="border border-transparent px-lg">
@@ -687,9 +699,15 @@ export function RunDetailsPanel({
   callDetailsContent,
   agentName,
   onTrackFeedback,
+  userRating,
+  conversationAiSummary,
 }: RunDetailsPanelProps) {
   const [tab, setTab] = useState<'logs' | 'conversation'>('conversation')
   const hasCallDetails = Boolean(callDetails || callDetailsContent)
+  const inlineCallDetails = hasCallDetails && showCallRecording
+  const topCallDetails = hasCallDetails && !showCallRecording
+  const resolvedCallDetailsContent =
+    callDetailsContent ?? (callDetails ? <CallDetailsTab {...callDetails} /> : null)
   // The sticky waveform anchors to `top: 0` of this scroll container's padding edge — any
   // padding-top here would leave a permanent gap once it's stuck, so that spacing moves onto the
   // conversation thread's first entry instead (see `RunConversationThread`).
@@ -778,9 +796,14 @@ export function RunDetailsPanel({
               conversationContent
             ) : (
               <div className="h-full overflow-y-auto">
-                {hasCallDetails && (
-                  <CollapsibleCallDetails>
-                    {callDetailsContent ?? (callDetails && <CallDetailsTab {...callDetails} />)}
+                {conversationAiSummary && conversationAiSummary.length > 0 && (
+                  <div className="pt-lg">
+                    <CallAiSummary bullets={conversationAiSummary} className="mt-0" />
+                  </div>
+                )}
+                {topCallDetails && (
+                  <CollapsibleCallDetails userRating={userRating}>
+                    {resolvedCallDetailsContent}
                   </CollapsibleCallDetails>
                 )}
                 <RunConversationThread
@@ -791,6 +814,8 @@ export function RunDetailsPanel({
                   recIdByMessage={recIdByMessage}
                   onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
                   onTrackFeedback={onTrackFeedback}
+                  callDetailsContent={inlineCallDetails ? resolvedCallDetailsContent : undefined}
+                  callDetailsUserRating={inlineCallDetails ? userRating : undefined}
                 />
               </div>
             )}
