@@ -1,7 +1,9 @@
 /** Extra context passed alongside the feedback text — currently only populated by the `help` variant. */
 export interface ShareFeedbackSubmitMeta {
-  /** Whether the user joined the user experience improvement program (usage-data analytics opt-in). */
-  optedIntoUxImprovement: boolean
+  /** Whether the user is OK with Birdeye replying/following up on this feedback. */
+  canReplyToFeedback: boolean
+  /** Whether the user wants to be considered for product research. */
+  wantsProductResearch: boolean
   attachments: File[]
 }
 
@@ -17,8 +19,8 @@ export interface ShareFeedbackModalProps {
    */
   variant?: 'coaching' | 'help'
   /**
-   * `help` variant only — opens Settings > Account > User experience improvement
-   * program (the opt-in checkbox's "Learn more" link).
+   * `help` variant only — opens Settings > Account > Product research (the
+   * "I'd like to participate in product research" checkbox's "Learn more" link).
    */
-  onOpenUxImprovementSettings?: () => void
+  onOpenProductResearchSettings?: () => void
 }

@@ -53,7 +53,7 @@ export function HelpCenterPanel({
   onClose,
   onStartTour,
   onOpenGlossary,
-  onOpenUxImprovementSettings,
+  onOpenProductResearchSettings,
 }: HelpCenterPanelProps) {
   const [view, setView] = useState<HelpCenterView>('home')
   const [query, setQuery] = useState('')
@@ -271,7 +271,7 @@ export function HelpCenterPanel({
           setFeedbackOpen(false)
           setFeedbackToastVisible(true)
         }}
-        onOpenUxImprovementSettings={onOpenUxImprovementSettings}
+        onOpenProductResearchSettings={onOpenProductResearchSettings}
       />
 
       <Toast
