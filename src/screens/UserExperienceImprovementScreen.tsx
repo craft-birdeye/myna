@@ -120,7 +120,10 @@ interface UserExperienceImprovementScreenProps {
 
 export function UserExperienceImprovementScreen({ onBack }: UserExperienceImprovementScreenProps) {
   const [shareUsageData, setShareUsageData] = useState(false)
+  const [savedShareUsageData, setSavedShareUsageData] = useState(false)
   const [confirmOff, setConfirmOff] = useState(false)
+
+  const canSave = shareUsageData !== savedShareUsageData
 
   function handleToggleChange(next: boolean) {
     if (!next) {
@@ -128,6 +131,10 @@ export function UserExperienceImprovementScreen({ onBack }: UserExperienceImprov
       return
     }
     setShareUsageData(true)
+  }
+
+  function handleSave() {
+    setSavedShareUsageData(shareUsageData)
   }
 
   return (
@@ -148,15 +155,27 @@ export function UserExperienceImprovementScreen({ onBack }: UserExperienceImprov
       </div>
 
       {/* Header */}
-      <div className="bg-surface px-2xl pt-xl pb-md">
+      <div className="flex items-center justify-between gap-lg bg-surface px-2xl pt-xl pb-md">
         <h1 className="text-h3 text-text-primary">Product research</h1>
+        <button
+          type="button"
+          disabled={!canSave}
+          onClick={canSave ? handleSave : undefined}
+          className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+            canSave
+              ? 'bg-primary text-white hover:bg-primary-hover'
+              : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+          }`}
+        >
+          Save
+        </button>
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto bg-surface px-2xl pb-2xl">
         <div className="flex max-w-[750px] flex-col gap-md pt-md">
           <div className="flex items-center justify-between gap-lg rounded-sm bg-surface-muted p-lg">
-            <span className="text-body text-text-primary">Join product research</span>
+            <span className="text-body text-text-primary">Participate in product research</span>
             <Toggle checked={shareUsageData} onChange={handleToggleChange} />
           </div>
 
