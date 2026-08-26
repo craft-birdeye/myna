@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SingleSelect, FormInput } from '../../../elemental-stubs';
 import styles from './ControlBranchBody.module.css';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const BASED_ON_OPTIONS = [
   { value: 'conditions', label: 'Conditions' },

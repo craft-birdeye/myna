@@ -23,7 +23,7 @@
   line-height: 18px;
   letter-spacing: -0.24px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   white-space: nowrap;
 }
 
@@ -63,7 +63,7 @@
   padding: 0;
   cursor: pointer;
   color: #1976d2;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   line-height: 1;
 }
 
@@ -112,7 +112,7 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   transition: background 0.1s;
 }
 
@@ -147,5 +147,5 @@
   font-size: 13px;
   color: #212121;
   line-height: 18px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }

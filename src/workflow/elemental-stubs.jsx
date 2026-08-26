@@ -9,9 +9,26 @@
  * Styled to look clean but deliberately lightweight: no external deps.
  */
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import './Molecules/Conditions/Conditions.css';
 
 const font = '"Roboto", arial, sans-serif';
+
+/* ─── Color tokens (mirrors @birdeye/elemental/core/sass/js/colors.js) ──── */
+export const gray900 = '#212121';
+export const gray90 = '#8f8f8f';
+export const gray2000 = '#d6d6d6';
+export const red100 = '#de1b0c';
+export const white = '#ffffff';
+export const blue20 = '#e8f1fc';
+export const blue50 = '#d1e5f9';
+export const blue100 = '#1a73e8';
+export const green20 = '#f1faf0';
+export const green50 = '#c8e6c9';
+export const green300 = '#377e2c';
+export const gray30 = '#f5f5f5';
+export const gray60 = '#e0e0e0';
+export const gray300 = '#757575';
 
 /* ─── FormInput ─────────────────────────────────────────────────────────── */
 export function FormInput({
@@ -71,7 +88,7 @@ export function FormInput({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#757575',
+            color: '#717182',
             fontFamily: font,
           }}
         >
@@ -93,19 +110,21 @@ export function FormInput({
         style={{
           height: 36,
           padding: '0 12px',
-          border: noBorder ? 'none' : '1px solid #c5cad3',
+          border: noBorder ? 'none' : '1px solid #e5e9f0',
           borderRadius: noBorder ? 0 : 4,
           fontSize: 14,
+          lineHeight: '20px',
+          letterSpacing: '-0.28px',
           fontFamily: font,
-          color: '#212121',
-          background: readOnly ? '#FAFAFA' : disabled ? '#f5f5f5' : '#fff',
+          color: '#0d0d12',
+          background: readOnly ? '#fafafa' : disabled ? '#f5f5f5' : '#fff',
           outline: 'none',
           boxSizing: 'border-box',
           width: '100%',
           cursor: readOnly ? 'default' : undefined,
         }}
         onFocus={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#c5cad3'; }}
+        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#e5e9f0'; }}
       />
     </div>
   );
@@ -134,7 +153,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#757575',
+            color: '#717182',
             fontFamily: font,
           }}
         >
@@ -150,7 +169,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#757575',
+            color: '#717182',
             fontFamily: font,
           }}
         >
@@ -169,21 +188,22 @@ export function TextArea({
         readOnly={readOnly}
         style={{
           padding: '8px 12px',
-          border: '1px solid #c5cad3',
+          border: '1px solid #e5e9f0',
           borderRadius: 4,
           fontSize: 14,
           fontFamily: font,
-          color: '#212121',
-          background: readOnly ? '#FAFAFA' : disabled ? '#f5f5f5' : '#fff',
+          color: '#0d0d12',
+          background: readOnly ? '#fafafa' : disabled ? '#f5f5f5' : '#fff',
           outline: 'none',
           resize: readOnly ? 'none' : 'vertical',
           boxSizing: 'border-box',
           width: '100%',
           lineHeight: '20px',
+          letterSpacing: '-0.28px',
           cursor: readOnly ? 'default' : undefined,
         }}
         onFocus={(e) => { if (!readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = '#c5cad3'; }}
+        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = '#e5e9f0'; }}
       />
     </div>
   );
@@ -245,6 +265,85 @@ export function SingleSelect({
               )}
             </li>
           ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Checkbox multi-select using the same tc-dropdown chrome as SingleSelect. */
+export function MultiSelect({
+  name,
+  selected = [],
+  options = [],
+  onChange,
+  placeholder = 'Select',
+  disabled,
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const selectedSet = new Set(selected);
+
+  useEffect(() => {
+    if (!open || disabled) return undefined;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open, disabled]);
+
+  const displayLabel = selected.length === 0
+    ? placeholder
+    : selected.length === 1
+      ? (options.find((o) => o.value === selected[0])?.label || '1 selected')
+      : `${selected.length} selected`;
+
+  const toggle = (value) => {
+    const next = selectedSet.has(value)
+      ? selected.filter((v) => v !== value)
+      : [...selected, value];
+    onChange?.(next);
+  };
+
+  return (
+    <div className="tc-dropdown" ref={ref}>
+      <button
+        type="button"
+        id={name}
+        name={name}
+        className={`tc-dropdown__trigger${open ? ' tc-dropdown__trigger--open' : ''}${disabled ? ' tc-dropdown__trigger--readonly' : ''}`}
+        onClick={() => { if (!disabled) setOpen((v) => !v); }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        disabled={disabled}
+      >
+        <span className={`tc-dropdown__value${selected.length === 0 ? ' tc-dropdown__value--placeholder' : ''}`}>
+          {displayLabel}
+        </span>
+        <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
+      </button>
+      {open && !disabled && (
+        <ul className="tc-dropdown__menu" role="listbox" aria-multiselectable="true">
+          {options.map((opt) => {
+            const isSelected = selectedSet.has(opt.value);
+            return (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={isSelected}
+                className={`tc-dropdown__option tc-dropdown__option--multi${isSelected ? ' tc-dropdown__option--selected' : ''}`}
+                onClick={() => toggle(opt.value)}
+              >
+                <span className={`tc-dropdown__checkbox${isSelected ? ' tc-dropdown__checkbox--checked' : ''}`}>
+                  {isSelected && (
+                    <span className="material-symbols-outlined tc-dropdown__checkbox-icon">check</span>
+                  )}
+                </span>
+                {opt.label}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -591,5 +690,53 @@ export function DrawerHeader({ title = '', onBack, actions = [] }) {
   );
 }
 
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+export function Modal({ dialogOptions = {}, children }) {
+  const {
+    isOpen = true,
+    onCloseModal,
+    shouldCloseOnOverlayClick = true,
+    shouldCloseOnEsc = true,
+    dialogStyles = {},
+  } = dialogOptions;
+
+  useEffect(() => {
+    if (!isOpen || !shouldCloseOnEsc) return;
+    function handleKey(e) {
+      if (e.key === 'Escape') onCloseModal?.();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isOpen, shouldCloseOnEsc, onCloseModal]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(33, 33, 33, 0.5)',
+        zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+      onClick={(e) => {
+        if (shouldCloseOnOverlayClick && e.target === e.currentTarget) onCloseModal?.();
+      }}
+    >
+      <div
+        style={{
+          background: white,
+          borderRadius: 4,
+          boxShadow: '0px 4px 8px 0px rgba(33, 33, 33, 0.18)',
+          maxHeight: 'calc(100vh - 60px)',
+          overflow: 'auto',
+          ...dialogStyles.content,
+        }}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /* ─── Default export for convenience ────────────────────────────────────── */
-export default { FormInput, TextArea, SingleSelect, Chip, Toggle, Button, TabHeader, Tooltip, DrawerHeader };
+export default { FormInput, TextArea, SingleSelect, MultiSelect, Chip, Toggle, Button, TabHeader, Tooltip, DrawerHeader, Modal };

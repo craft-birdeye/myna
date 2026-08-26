@@ -68,7 +68,7 @@
   color: #212121;
   line-height: 24px;
   letter-spacing: -0.36px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Two-panel row fills remaining height */
@@ -76,7 +76,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 /* ─── Left panel — builder form ─────────────────────────────────────────────── */
@@ -208,7 +208,7 @@
   border-radius: 6px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__type-btn:hover {
@@ -337,7 +337,7 @@
   padding: 6px 8px 6px 12px;
   border: 1px solid #eaeaea;
   border-radius: 4px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   color: #212121;
   outline: none;
@@ -358,7 +358,7 @@
   cursor: pointer;
   font-size: 12px;
   color: #1976d2;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 /* ─── Add field button ───────────────────────────────────────────────────────── */
@@ -373,7 +373,7 @@
   border: 1px solid #c5d0e6;
   border-radius: 6px;
   cursor: pointer;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   color: #1976d2;
   transition: background 0.15s, border-color 0.15s;
@@ -408,7 +408,7 @@
   padding: 8px 8px 8px 12px;
   border: 1px solid #eaeaea;
   border-radius: 4px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   color: #212121;
   box-sizing: border-box;
@@ -425,7 +425,7 @@
   padding: 8px 8px 8px 12px;
   border: 1px solid #eaeaea;
   border-radius: 4px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   color: #212121;
   box-sizing: border-box;
@@ -452,7 +452,7 @@
   color: #212121;
   font-weight: 400;
   line-height: 18px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__prev-input {
@@ -463,7 +463,7 @@
   padding: 0 12px;
   font-size: 14px;
   color: #aaa;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   box-sizing: border-box;
   width: 100%;
 }
@@ -476,7 +476,7 @@
   padding: 10px 12px;
   font-size: 14px;
   color: #aaa;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   box-sizing: border-box;
   width: 100%;
 }
@@ -493,7 +493,7 @@
   gap: 10px;
   font-size: 14px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__prev-option-dot {
@@ -520,7 +520,7 @@
   padding: 0 12px;
   font-size: 14px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -534,7 +534,7 @@
   justify-content: space-between;
   font-size: 14px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__prev-toggle-track {
@@ -569,13 +569,13 @@
   font-size: 13px;
   font-weight: 500;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__fields-count {
   font-size: 12px;
   color: #888;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__divider {
@@ -595,7 +595,7 @@
   gap: 8px;
   font-size: 13px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   user-select: none;
   line-height: 20px;
@@ -650,7 +650,7 @@
   font-size: 11px;
   color: #8f8f8f;
   line-height: 16px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   margin-top: -2px;
 }
 
@@ -719,7 +719,7 @@
   padding: 2px 8px;
   font-size: 12px;
   color: #1976d2;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__prev-variable-icon {
@@ -758,7 +758,7 @@
   padding: 2px 8px;
   font-size: 12px;
   color: #212121;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .ctb__prev-tag-x {
@@ -770,6 +770,6 @@
 .ctb__prev-tags-placeholder {
   font-size: 13px;
   color: #aaa;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 

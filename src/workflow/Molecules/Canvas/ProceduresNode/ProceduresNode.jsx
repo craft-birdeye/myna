@@ -34,6 +34,7 @@ export default function ProceduresNode({
   onRemoveProcedure,
   onSelectProcedure,
   selectedProcedureId = null,
+  runStatus,
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [on, setOn] = useState(toggleEnabled);
@@ -91,6 +92,7 @@ export default function ProceduresNode({
       <CanvasNodeHeader
         nodeType="procedures"
         label="Procedures"
+        runStatus={runStatus}
         hasToggle={hasToggle}
         toggleEnabled={on}
         toggleDisabled={toggleDisabled}

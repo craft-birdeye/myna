@@ -56,6 +56,27 @@
   background: #fff;
 }
 
+/*
+ * Tool whose own config drawer still has unfilled mandatory fields — an inline icon beside
+ * the name, with the reason in a hover tooltip so the error costs no vertical space.
+ */
+.toolErrorIcon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: #d32f2f;
+}
+
+/* `:global` — CSS Modules scopes every bare class, so an unwrapped
+   `.material-symbols-outlined` would be hashed and never match the glyph. */
+.toolErrorIcon :global(.material-symbols-outlined) {
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
+}
+
 .toolRow {
   display: flex;
   align-items: center;
@@ -88,6 +109,52 @@
 .toolActionBtn:hover {
   background: #f0f0f0;
   color: #212121;
+}
+
+/* Shown in place of edit/swap while the tool's mandatory config is unset.
+   28px tall to match .toolActionBtn so the row doesn't shift between states. */
+.toolConfigureBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1976d2;
+  transition: background 0.12s;
+}
+
+.toolConfigureBtn:hover {
+  background: #f0f0f0;
+}
+
+/* Read-only mode (browsing an old version): pencil/swap are replaced with this CTA.
+   Not a real <button> — the panel wraps everything in a disabled <fieldset>, so a native
+   button would be inert. pointer-events: auto lets it stay clickable despite the ancestor's
+   pointer-events: none, so it can still open the read-only tool drawer. */
+.toolViewBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1976d2;
+  transition: background 0.12s;
+  pointer-events: auto;
+}
+
+.toolViewBtn:hover {
+  background: #f0f0f0;
 }
 
 .toolRowMain {
@@ -137,7 +204,9 @@
 }
 
 .toolName {
-  flex: 1;
+  /* Not `flex: 1` — the name must hug its text so the error icon sits beside it rather
+     than being pushed to the far edge of the row. `.toolRowMain` still owns the space. */
+  flex: 0 1 auto;
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.28px;

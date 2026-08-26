@@ -1,182 +1,130 @@
-import React, { useState, useRef, useEffect } from 'react';
-import Modal from '@birdeye/elemental/core/atoms/Modal/index.js';
-import { Button } from '../../../elemental-stubs';
-import {
-  gray900, gray2000, red100, white,
-} from '@birdeye/elemental/core/sass/js/colors.js';
-import CloseIcon from '../../../Molecules/RHS/RHSHeader/icons/close.svg';
+import React, { useState, useRef } from 'react';
+import { AeroFormModal } from '../../../../components/AeroFormModal/AeroFormModal';
 import DataType from '../../../Molecules/DataType/DataType';
-import VariableSelectionModal from '../VariableSelectionModal/VariableSelectionModal';
+import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
+import FieldPickerModal from '../FieldPickerModal/FieldPickerModal.jsx';
+import styles from './AddInputFieldModal.module.css';
 
-const font = '"Roboto", arial, sans-serif';
+const INPUT_FIELD_MODAL_SUBTITLE =
+  'Input fields add context to your prompt and are automatically included when generating the output.';
+const INPUT_FIELDS_LEARN_MORE_HREF =
+  'https://help.birdeye.com/hc/en-us/articles/input-fields-in-workflows';
 
-export default function AddInputFieldModal({ onClose, onAdd }) {
+function FieldLabel({ children, required = false }) {
+  return (
+    <div className="flex items-center gap-xs">
+      <span className="text-small text-text-primary">{children}</span>
+      {required && <span className="text-small text-chip-danger-text">*</span>}
+    </div>
+  );
+}
+
+export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLearnMore }) {
   const [fieldName, setFieldName] = useState('');
+  const [fieldValueText, setFieldValueText] = useState('');
   const [fieldValueChips, setFieldValueChips] = useState([]);
-  const [variablePickerOpen, setVariablePickerOpen] = useState(false);
-  const [dropdownStyle, setDropdownStyle] = useState({});
+  const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
   const fieldValueRef = useRef(null);
+  const textInputRef = useRef(null);
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (fieldValueRef.current && !fieldValueRef.current.contains(e.target)) {
-        setVariablePickerOpen(false);
-      }
-    }
-    if (variablePickerOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [variablePickerOpen]);
-
-  function openVariablePicker() {
-    if (fieldValueRef.current) {
-      const rect = fieldValueRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: 'fixed',
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        right: 'auto',
-        marginTop: 0,
-        zIndex: 9999,
-      });
-    }
-    setVariablePickerOpen(true);
-  }
+  const hasFieldValue = fieldValueChips.length > 0 || fieldValueText.trim().length > 0;
 
   function removeChip(index) {
     setFieldValueChips((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleFieldSelect(value, name) {
+    const label = name || value;
+    setFieldValueChips((prev) => (prev.includes(label) ? prev : [...prev, label]));
+    setFieldPickerOpen(false);
+    requestAnimationFrame(() => textInputRef.current?.focus());
+  }
+
   function handleAdd() {
-    if (!fieldName || fieldValueChips.length === 0) return;
-    onAdd({ fieldName, fieldValue: fieldValueChips });
+    if (!fieldName || !hasFieldValue) return;
+    const fieldValue = [
+      ...fieldValueChips,
+      ...(fieldValueText.trim() ? [fieldValueText.trim()] : []),
+    ];
+    onAdd({ fieldName, fieldValue });
     onClose();
   }
 
   return (
     <>
-      <Modal
-        dialogOptions={{
-          isOpen: true,
-          onCloseModal: onClose,
-          shouldCloseOnOverlayClick: true,
-          shouldCloseOnEsc: true,
-          showCloseIcon: false,
-          title: 'Add input field',
-          dialogStyles: {
-            content: { padding: 0, maxWidth: 600 },
-          },
-        }}
+      <AeroFormModal
+        title="Add input field"
+        subtitle={INPUT_FIELD_MODAL_SUBTITLE}
+        learnMoreHref={onLearnMore ? undefined : INPUT_FIELDS_LEARN_MORE_HREF}
+        onLearnMore={onLearnMore}
+        onClose={onClose}
+        onPrimary={handleAdd}
+        primaryDisabled={!fieldName || !hasFieldValue}
+        zIndex={zIndex}
+        panelClassName="h-[360px]"
       >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 12px' }}>
-          <span style={{ fontSize: 16, fontWeight: 400, lineHeight: '24px', letterSpacing: '-0.32px', color: gray900, fontFamily: font }}>
-            Add input field
-          </span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
-            <img src={CloseIcon} alt="Close" style={{ width: 24, height: 24 }} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '0 24px' }}>
-          {/* Field name */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', color: gray900, fontFamily: font }}>
-                Field name
-              </span>
-              <span style={{ fontSize: 12, lineHeight: '18px', color: red100, fontFamily: font }}>*</span>
-            </div>
+        <div className="flex flex-col gap-xl pb-md">
+          <label className="flex flex-col gap-xs">
+            <FieldLabel required>Field name</FieldLabel>
             <input
               type="text"
+              className={styles.fieldInput}
               value={fieldName}
               onChange={(e) => setFieldName(e.target.value)}
-              placeholder="Enter field name"
-              style={{
-                width: '100%', height: 36, border: `1px solid ${gray2000}`, borderRadius: 4,
-                padding: '0 12px', fontSize: 14, lineHeight: '20px', letterSpacing: '-0.28px',
-                color: gray900, fontFamily: font, outline: 'none', boxSizing: 'border-box',
-                background: white,
-              }}
+              placeholder="Field name"
             />
-          </div>
+          </label>
 
-          {/* Field value */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', color: gray900, fontFamily: font }}>
-                Field value
-              </span>
-              <span style={{ fontSize: 12, lineHeight: '18px', color: red100, fontFamily: font }}>*</span>
-            </div>
-            <div ref={fieldValueRef} style={{ display: 'flex' }}>
-              <div
-                onClick={openVariablePicker}
-                style={{
-                  flex: 1, minHeight: 36, border: `1px solid ${gray2000}`, borderRadius: '4px 0 0 4px',
-                  padding: '4px 8px', display: 'flex', flexWrap: 'wrap', alignItems: 'center',
-                  gap: 6, boxSizing: 'border-box', background: white, cursor: 'pointer',
-                }}
-              >
-                {fieldValueChips.length === 0 && (
-                  <span style={{ fontSize: 14, lineHeight: '20px', color: '#8f8f8f', fontFamily: font, userSelect: 'none' }}>
-                    Select field value
-                  </span>
-                )}
-                {fieldValueChips.map((chip, i) => (
-                  <DataType
-                    key={`${chip}-${i}`}
-                    type="variable"
-                    label={chip}
-                    onRemove={(e) => { e.stopPropagation(); removeChip(i); }}
-                  />
-                ))}
-              </div>
+          <label className="flex flex-col gap-xs">
+            <FieldLabel required>Field value</FieldLabel>
+            <div
+              ref={fieldValueRef}
+              className={styles.fieldValueBox}
+              onClick={() => textInputRef.current?.focus()}
+            >
+              {fieldValueChips.map((chip, i) => (
+                <DataType
+                  key={`${chip}-${i}`}
+                  type="variable"
+                  label={chip}
+                  onRemove={(e) => { e.stopPropagation(); removeChip(i); }}
+                />
+              ))}
+              <input
+                ref={textInputRef}
+                type="text"
+                className={styles.fieldValueText}
+                value={fieldValueText}
+                onChange={(e) => setFieldValueText(e.target.value)}
+                placeholder={fieldValueChips.length === 0 ? 'Field value' : ''}
+              />
               <button
                 type="button"
-                onClick={openVariablePicker}
-                style={{
-                  width: 40, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: '#ecf5fd', borderRadius: '0 4px 4px 0',
-                  border: `1px solid #d1e5f9`, borderLeft: 'none',
-                  cursor: 'pointer', padding: 0,
+                className={styles.insertFieldBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFieldPickerOpen(true);
                 }}
+                aria-label="Insert field"
+                title="Insert field"
               >
-                <span
-                  className="material-symbols-outlined"
-                  style={{
-                    fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
-                    fontSize: 16, width: 16, height: 16, lineHeight: 1,
-                    color: '#1a73e8', overflow: 'hidden',
-                  }}
-                >
-                  data_object
-                </span>
+                <VariableIcon />
               </button>
             </div>
-          </div>
+          </label>
         </div>
+      </AeroFormModal>
 
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '12px 24px 24px' }}>
-          <Button type="link" label="Cancel" onClick={onClose} />
-          <Button type="primary" label="Add" onClick={handleAdd} disabled={!fieldName || fieldValueChips.length === 0} />
-        </div>
-      </Modal>
-
-      <VariableSelectionModal
-        dropdown
-        isOpen={variablePickerOpen}
-        onClose={() => setVariablePickerOpen(false)}
-        onVariableSelect={(variable) => {
-          setFieldValueChips((prev) => [...prev, variable]);
-          setVariablePickerOpen(false);
-        }}
-        dropdownStyle={dropdownStyle}
-      />
+      {fieldPickerOpen && (
+        <FieldPickerModal
+          onClose={() => setFieldPickerOpen(false)}
+          onSelectField={handleFieldSelect}
+          anchorEl={fieldValueRef.current}
+          placement="dropdown"
+          showTriggerFields
+          overlayZIndex={zIndex + 100}
+        />
+      )}
     </>
   );
 }

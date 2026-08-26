@@ -20,7 +20,7 @@
 .app-shell {
   display: flex;
   height: 100vh;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   background: #f4f6f7;
 }

@@ -41,12 +41,66 @@
   flex-shrink: 0;
 }
 
+/* Same rr-chrome assets as the left floater; match prior card glyph size. */
+.cnh__floater-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .cnh__node-icon--subagent .material-symbols-outlined {
   color: #6834b7;
 }
 
 .cnh__node-icon--loop .material-symbols-outlined {
   color: #5071ce;
+  font-size: 16px !important;
+  width: 16px;
+  height: 16px;
+}
+
+/* Run test (exploration only): swaps the type glyph while a node executes / once it's done. */
+@keyframes cnh-run-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cnh__run-spinner {
+  animation: cnh-run-spin 0.9s linear infinite;
+}
+
+/*
+ * Saved-with-missing-config error, sits before the toggle. `!important` for the same reason
+ * as .cnh__run-done — `.cnh`/`.flow-canvas .material-symbols-outlined` pin size at equal
+ * specificity.
+ */
+.cnh__error-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: #d32f2f;
+  cursor: default;
+}
+
+.cnh .cnh__error-icon .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  color: inherit;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
+}
+
+/*
+ * `!important` because both `.cnh .material-symbols-outlined` (above) and
+ * `.flow-canvas .material-symbols-outlined` (FlowCanvas.css, later in bundle order) pin
+ * FILL 0 at the same specificity — same reason `.cnh__btn-icon` uses it below.
+ */
+.cnh .cnh__run-done {
+  color: #4caf50;
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
   font-size: 16px !important;
   width: 16px;
   height: 16px;

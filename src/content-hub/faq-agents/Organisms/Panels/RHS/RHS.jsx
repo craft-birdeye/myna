@@ -113,7 +113,7 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
         boxShadow: '0 2px 12px rgba(33, 33, 33, 0.12)',
         border: '1px solid #e5e9f0',
         overflow: 'hidden',
-        fontFamily: '"Roboto", arial, sans-serif',
+        fontFamily: '"Inter", arial, sans-serif',
       }}>
         <RHSSidePanelHeader
           title={title || 'Title'}
@@ -147,7 +147,7 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
             background: '#ffffff',
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#8f8f8f' }}>visibility</span>
-            <span style={{ fontSize: 12, color: '#8f8f8f', fontFamily: '"Roboto", arial, sans-serif', letterSpacing: '-0.24px' }}>
+            <span style={{ fontSize: 12, color: '#8f8f8f', fontFamily: '"Inter", arial, sans-serif', letterSpacing: '-0.24px' }}>
               View only — editing is disabled
             </span>
           </div>

@@ -18,6 +18,8 @@ export default function AddStepButton({
   onDrop,
   showPasteOption = false,
   onPaste,
+  /** One full-width search across both panes instead of one per pane (Sep 1 only). */
+  singleSearch = false,
   /** When true, the + control is display-only (no click / menu). Drag-drop still works. */
   disableClick = false,
 }) {
@@ -199,6 +201,7 @@ export default function AddStepButton({
         anchorRef={btnRef}
         product={product}
         agentName={agentName}
+        singleSearch={singleSearch}
         onClose={() => setMenuOpen(false)}
         onSelect={(payload) => {
           onSelect?.(payload);

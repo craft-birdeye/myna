@@ -4,6 +4,7 @@ import {
   AdditionalVoiceDrawer,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
   Icon,
   IntegrationsPickerDrawer,
   LanguageFlag,
@@ -30,22 +31,13 @@ import {
   VariableIcon,
 } from '../workflow/Molecules/Inputs/PromptToolbarIcons.jsx'
 import FieldPickerModal from '../workflow/Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx'
+import { useAgentSystemPromptStore } from '../data/AgentSystemPromptStoreContext'
 
 interface AgentSettingsTabProps {
   product?: string
   agentName?: string
   onOpenIntegrationSettings?: (integrationId: string) => void
 }
-
-const FRONTDESK_SYSTEM_PROMPT = `# Personality
-You are Myna, the elegant and attentive reservations specialist at the Grand Hotel. You make every caller feel like a VIP — refined, warm, and effortlessly capable. You handle reservation requests with the calm efficiency of someone who has booked thousands of stays.
-
-# Environment
-You handle inbound calls for hotel reservations: new bookings, modifications, cancellations, and general questions about the property. Callers may be planning a special trip, calling on behalf of a guest, or checking on a stay they've already booked. Booking system, room types, and rate plans are managed by the workspace owner — only quote details that are explicitly available to you in this conversation.
-
-# Tone
-- Warm and refined hospitality — never stuffy.
-- Attentive to details: dates, room preferences, special requests (anniversary, accessibility, dietary).`
 
 const FRONTDESK_GREETING =
   'Thank you for calling Rock Dental Brands — my name is Myna, your virtual assistant. How can I help you today?'
@@ -813,22 +805,25 @@ function ReminderSettings() {
 
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
-          Default voice <span className="text-chip-danger-text">*</span>
+          Default persona <span className="text-chip-danger-text">*</span>
         </label>
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="flex h-9 w-full items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
-        >
-          <span
-            className={`min-w-0 flex-1 truncate text-left text-body ${
-              voice ? 'text-text-primary' : 'text-text-tertiary'
-            }`}
+        <div className="flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
           >
-            {voice || 'Select'}
-          </span>
-          <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-        </button>
+            <span
+              className={`min-w-0 flex-1 truncate text-left text-body ${
+                voice ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {voice || 'Select'}
+            </span>
+            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+          </button>
+          <VoicePreviewButton voiceLabel={voice} speed={voiceSpeed} disabled={!voice} />
+        </div>
         <DefaultVoiceDrawer
           open={drawerOpen}
           voice={voice}
@@ -840,7 +835,7 @@ function ReminderSettings() {
 
       <div className="flex flex-col gap-xs">
         {additionalVoiceConfigs.length > 0 && (
-          <label className="text-small text-text-secondary">Additional voice</label>
+          <label className="text-small text-text-secondary">Additional persona</label>
         )}
         {additionalVoiceConfigs.length > 0 ? (
           <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
@@ -895,7 +890,7 @@ function ReminderSettings() {
             className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
           >
             <Icon name="add_circle" size={18} className="text-primary" />
-            Add additional voice
+            Add additional persona
           </button>
         )}
         <AdditionalVoiceDrawer
@@ -968,8 +963,89 @@ function ReminderSettings() {
 }
 
 /** Flat Front desk settings (system prompt → language → voice → greeting → recording). */
+/* ── Front desk settings shell ─────────────────────────────────────────────
+ * Three levels of separation, no font-weight (§6.6):
+ *   card (white on tinted ground) → section title → sub-panel → 12px field label.
+ * Local to the Front desk page; other agents keep the flat layout.
+ */
+
+/** Level 1 — a titled section card. */
+function SettingsCard({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-[var(--s-bg-secondary)]">
+      <div className="px-2xl pt-lg">
+        <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h3>
+        {description && (
+          <p className="m-0 mt-xs text-small text-text-secondary">{description}</p>
+        )}
+      </div>
+      <div className="flex flex-col gap-2xl px-2xl pb-2xl pt-lg">{children}</div>
+    </section>
+  )
+}
+
+/** Level 2 — a titled sub-panel inside a card (TTS / STT). */
+function SettingsSubPanel({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-lg">
+      <h4 className="m-0 text-body text-text-primary">{title}</h4>
+      <div className="flex flex-col gap-lg">{children}</div>
+    </div>
+  )
+}
+
+/** Level 4 — a selectable option row; the selected one tints and hosts its own detail field. */
+function SettingsOptionRow({
+  name,
+  checked,
+  onSelect,
+  label,
+  description,
+  children,
+}: {
+  name: string
+  checked: boolean
+  onSelect: () => void
+  label: string
+  description?: string
+  children?: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="flex cursor-pointer items-start gap-sm">
+        <input
+          type="radio"
+          name={name}
+          checked={checked}
+          onChange={onSelect}
+          className="mt-[3px] accent-primary"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-body text-text-primary">{label}</span>
+          {description && <span className="mt-[2px] block text-small text-text-tertiary">{description}</span>}
+        </span>
+      </label>
+      {checked && children && <div className="mt-sm pl-2xl">{children}</div>}
+    </div>
+  )
+}
+
 function FrontDeskSettings() {
-  const [systemPrompt, setSystemPrompt] = useState(FRONTDESK_SYSTEM_PROMPT)
+  const { systemPrompt, setSystemPrompt } = useAgentSystemPromptStore()
   const [language, setLanguage] = useState<AgentLanguageId>('en')
   const [additionalLanguages, setAdditionalLanguages] = useState<AgentLanguageId[]>([])
   const [additionalFieldVisible, setAdditionalFieldVisible] = useState(false)
@@ -1092,12 +1168,13 @@ function FrontDeskSettings() {
   }
 
   return (
-    <div className="flex w-full max-w-[720px] flex-col gap-md">
+    <div className="flex w-full max-w-[720px] flex-col gap-2xl">
+      <SettingsCard title="General" description="Core behaviour and language for this agent">
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
         <div className="flex items-center gap-xs">
-          <label className="text-body text-text-primary">System prompt</label>
-          <span className="text-body text-chip-danger-text" aria-hidden>
+          <label className="text-small text-text-secondary">System prompt</label>
+          <span className="text-small text-chip-danger-text" aria-hidden>
             *
           </span>
         </div>
@@ -1156,7 +1233,7 @@ function FrontDeskSettings() {
       <div className="flex flex-col gap-md pt-sm">
         <div className="flex flex-col gap-sm">
           <div>
-            <label className="text-body text-text-primary">Language</label>
+            <label className="text-small text-text-secondary">Language</label>
             <p className="mt-[2px] text-small text-text-secondary">
               Choose the default and additional languages the agent will communicate in.
             </p>
@@ -1188,7 +1265,7 @@ function FrontDeskSettings() {
 
         {additionalFieldVisible ? (
           <div className="flex flex-col gap-sm">
-            <label className="text-body text-text-primary">Additional language</label>
+            <label className="text-small text-text-secondary">Additional language</label>
             <div ref={additionalRef} className="relative">
               <div
                 className={`flex min-h-9 w-full items-center gap-sm rounded-md border bg-surface py-xs pr-sm transition-colors ${
@@ -1257,44 +1334,46 @@ function FrontDeskSettings() {
         )}
       </div>
 
-      {/* Voice call settings */}
-      <div className="flex flex-col gap-md pt-3xl">
-        <h2 className="text-[16px] font-medium leading-6 tracking-[-0.32px] text-text-primary">
-          Voice call settings
-        </h2>
+      </SettingsCard>
 
-        <TtsModelSettings />
+      <SettingsCard title="Voice call settings" description="Speech engines, voice and call behaviour">
+        <SettingsSubPanel title="Text-to-speech (TTS)">
+        <TtsModelSettings hideHeading />
 
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
-            Default voice <span className="text-chip-danger-text">*</span>
+            Default persona <span className="text-chip-danger-text">*</span>
           </label>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flex h-9 w-full items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
-          >
-            <span
-              className={`min-w-0 flex-1 truncate text-left text-body ${
-                voice ? 'text-text-primary' : 'text-text-tertiary'
-              }`}
+          <div className="flex items-center gap-sm">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
             >
-              {voice || 'Select'}
-            </span>
-            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-          </button>
+              <span
+                className={`min-w-0 flex-1 truncate text-left text-body ${
+                  voice ? 'text-text-primary' : 'text-text-tertiary'
+                }`}
+              >
+                {voice || 'Select'}
+              </span>
+              <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+            </button>
+            <VoicePreviewButton voiceLabel={voice} speed={voiceSpeed} disabled={!voice} />
+          </div>
           <DefaultVoiceDrawer
             open={drawerOpen}
             voice={voice}
             speed={voiceSpeed}
             onClose={() => setDrawerOpen(false)}
             onSave={handleDefaultVoiceSave}
+            terminology="persona"
           />
         </div>
 
         <div className="flex flex-col gap-xs">
           {additionalVoiceConfigs.length > 0 && (
-            <label className="text-small text-text-secondary">Additional voice</label>
+            <label className="text-small text-text-secondary">Additional persona</label>
           )}
           {additionalVoiceConfigs.length > 0 ? (
             <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
@@ -1349,7 +1428,7 @@ function FrontDeskSettings() {
               className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
             >
               <Icon name="add_circle" size={18} className="text-primary" />
-              Add additional voice
+              Add additional persona
             </button>
           )}
           <AdditionalVoiceDrawer
@@ -1360,52 +1439,50 @@ function FrontDeskSettings() {
             defaultVoice={voice}
             onClose={closeAdditionalDrawer}
             onSave={handleSaveAdditionalVoice}
+            terminology="persona"
           />
         </div>
 
         <TtsFailoverSettings />
+        </SettingsSubPanel>
 
-        <VoiceCallEngineSettings />
-      </div>
+        <div className="border-t border-border pt-2xl">
+          <SettingsSubPanel title="Speech-to-text (STT)">
+          <VoiceCallEngineSettings hideHeading />
 
-      {/* Greeting message */}
-      <div className="flex flex-col gap-xs">
-        <label className="text-body text-text-primary">Greeting message</label>
-        <textarea
-          value={greeting}
-          onChange={(e) => setGreeting(e.target.value)}
-          rows={4}
-          className={`${INPUT_CLASS} resize-none py-sm`}
-        />
-      </div>
-
-      {/* Recording */}
-      <div className="pt-sm">
-        <p className="text-body text-text-primary">Call recording</p>
-        <div className="mt-sm flex flex-col gap-sm">
-          <label className="flex cursor-pointer items-center gap-sm">
-            <input
-              type="radio"
-              name="frontdesk-recording"
-              checked={recording === 'off'}
-              onChange={() => setRecording('off')}
-              className="accent-primary"
+          {/* Engine config above, call behaviour below */}
+          <div className="flex flex-col gap-lg border-t border-border pt-lg">
+          <div className="flex flex-col gap-xs">
+            <label className="text-small text-text-secondary">Greeting message</label>
+            <p className="text-small text-text-tertiary">
+              First thing the agent says when a call connects.
+            </p>
+            <textarea
+              value={greeting}
+              onChange={(e) => setGreeting(e.target.value)}
+              rows={4}
+              className={`${INPUT_CLASS} resize-none py-sm`}
             />
-            <span className="text-body text-text-primary">Off</span>
-          </label>
-          <div>
-            <label className="flex cursor-pointer items-center gap-sm">
-              <input
-                type="radio"
+          </div>
+
+          {/* Call recording — option rows so the consent field clearly belongs to its option */}
+          <div className="flex flex-col gap-xs">
+            <label className="text-small text-text-secondary">Call recording</label>
+            <div className="mt-xs flex flex-col gap-md">
+              <SettingsOptionRow
+                name="frontdesk-recording"
+                checked={recording === 'off'}
+                onSelect={() => setRecording('off')}
+                label="Off"
+                description="Calls are never recorded."
+              />
+              <SettingsOptionRow
                 name="frontdesk-recording"
                 checked={recording === 'announced'}
-                onChange={() => setRecording('announced')}
-                className="accent-primary"
-              />
-              <span className="text-body text-text-primary">Record only after obtaining consent</span>
-            </label>
-            {recording === 'announced' && (
-              <div className="mt-sm pl-2xl">
+                onSelect={() => setRecording('announced')}
+                label="Record only after obtaining consent"
+                description="Plays a consent line before recording starts."
+              >
                 <label className="mb-xs block text-small text-text-secondary">Consent message</label>
                 <textarea
                   value={consent}
@@ -1413,11 +1490,13 @@ function FrontDeskSettings() {
                   rows={3}
                   className={`${INPUT_CLASS} resize-none py-sm`}
                 />
-              </div>
-            )}
+              </SettingsOptionRow>
+            </div>
           </div>
         </div>
-      </div>
+        </SettingsSubPanel>
+        </div>
+      </SettingsCard>
     </div>
   )
 }
@@ -1638,12 +1717,13 @@ export function AgentSettingsTab({
       )
     }
     return (
-      <div className="flex gap-2xl px-2xl pt-lg pb-2xl">
+      // White ground; cards are separated by their border + header hairline. The cards fill the
+      // width left of a 350px reserved gutter, so the whitespace is constant at any viewport.
+      <div className="flex min-h-full bg-surface px-2xl pt-lg pb-2xl">
         <div className="flex min-w-0 flex-1 flex-col">
           <FrontDeskSettings />
         </div>
-        {/* Same right-column width as ProcedureDetailScreen Context panel */}
-        <div className="w-[400px] shrink-0" aria-hidden />
+        <div className="w-[350px] shrink-0" aria-hidden />
       </div>
     )
   }

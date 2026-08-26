@@ -165,6 +165,24 @@
   -webkit-mask-position: center;
   mask-position: center;
 }
+
+/* Create with AI docked panel — draft recap: 13px body, 12px min for small */
+.ai-builder-draft-compact .text-body {
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: -0.26px;
+}
+.ai-builder-draft-compact .text-small {
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+}
+.ai-builder-draft-compact .leading-6 {
+  line-height: 20px;
+}
+.ai-builder-draft-compact .leading-tight {
+  line-height: 18px;
+}
 /* Two-star sparkle mask — fill inherits parent color (action blue, summary violet, etc.). */
 .ai-flat-sparkle-icon {
   display: inline-block;

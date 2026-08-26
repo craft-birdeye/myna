@@ -30,7 +30,7 @@ import ShareModal from '../../Organisms/Modals/ShareModal/ShareModal';
 import { getAgentsByModuleSlug, getCustomToolsByIds } from '../../services/agentService';
 import styles from './AgentsDashboardTemplate.module.css';
 
-const font = '"Roboto", sans-serif';
+const font = '"Inter", sans-serif';
 
 /* ─── Empty state copy per agent section ─── */
 

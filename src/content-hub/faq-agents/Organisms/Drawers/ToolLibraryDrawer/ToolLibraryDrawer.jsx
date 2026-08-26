@@ -11,7 +11,7 @@ import {
 import '../CustomToolBuilder/CustomToolBuilder.css';
 import styles from './ToolLibraryDrawer.module.css';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 /* ─── Native slide-in drawer wrapper ─── */
 function NativeDrawer({ isOpen, onClose, children, width = 960 }) {

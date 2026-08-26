@@ -1,0 +1,252 @@
+/* Aero DS tokens (see tailwind.config.ts) — keep values in sync with design tokens. */
+
+.hrd {
+  font-family: 'Roboto', sans-serif;
+  color: #0d0d12; /* text/primary */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.hrd__panel {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 650px;
+  max-width: calc(92vw - 8px);
+  height: calc(100% - 16px);
+  background: #ffffff; /* surface */
+  border-radius: 16px; /* Corner Radius/xl — drawer shell */
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22); /* shadow-modal */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  font-family: 'Roboto', sans-serif;
+  color: #0d0d12;
+}
+
+.hrd__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 24px 16px; /* 2xl / lg — matches Add a tool */
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.hrd__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* spacing/sm */
+  min-width: 0;
+}
+
+.hrd__back {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #303030; /* text/icon */
+  border-radius: 4px; /* Corner Radius/sm */
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.hrd__back:hover {
+  background: #f2f4f7; /* surface/hover */
+}
+
+.hrd__title {
+  font-size: 18px; /* Heading 3 */
+  line-height: 26px;
+  letter-spacing: -0.36px;
+  font-weight: 400;
+  color: #0d0d12; /* text/primary */
+}
+
+.hrd__save {
+  height: 36px;
+  padding: 0 16px; /* spacing/lg */
+  background: #1976d2; /* primary */
+  color: #ffffff;
+  border: none;
+  border-radius: 4px; /* Corner Radius/sm */
+  cursor: pointer;
+  font-size: 14px; /* Body 2 */
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  font-family: inherit;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+.hrd__save:hover:not(:disabled) {
+  background: #1565c0; /* primary/hover */
+}
+
+.hrd__save:disabled {
+  background: #e5e9f0; /* surface/selected */
+  color: #9ca3af; /* text/tertiary */
+  cursor: not-allowed;
+}
+
+.hrd__body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* spacing/2xl */
+  padding: 0 24px 32px;
+  flex: 1;
+}
+
+.hrd__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* spacing/sm */
+}
+
+.hrd__label {
+  font-size: 14px; /* Body 2 */
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
+}
+
+.hrd__required {
+  color: #de1b0c; /* chip/danger/text */
+}
+
+.hrd__radios {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* spacing/md */
+}
+
+.hrd__radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.hrd__radio--compact {
+  align-items: center;
+}
+
+.hrd__radio-input {
+  margin: 2px 0 0;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: #1976d2;
+  cursor: pointer;
+}
+
+.hrd__radio--compact .hrd__radio-input {
+  margin: 0;
+}
+
+.hrd__radio-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hrd__radio-label {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
+}
+
+.hrd__radio-hint {
+  font-size: 12px; /* Small Body */
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182; /* text/secondary */
+}
+
+/* Indented nested control under a radio option */
+.hrd__indent-wrap {
+  margin-left: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Custom response textarea with insert-field control */
+.hrd__textarea-box {
+  position: relative;
+  border: 1px solid #e5e9f0; /* border/input */
+  border-radius: 4px; /* Corner Radius/sm — chrome */
+  background: #ffffff;
+  box-sizing: border-box;
+  transition: border-color 0.12s ease;
+}
+
+.hrd__textarea-box:hover {
+  border-color: #cccccc; /* border/strong */
+}
+
+.hrd__textarea-box:focus-within,
+.hrd__textarea-box--open {
+  border-color: #1976d2;
+}
+
+.hrd__textarea {
+  display: block;
+  width: 100%;
+  min-height: 140px;
+  padding: 10px 12px 36px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  font-weight: 400;
+  color: #0d0d12;
+  background: transparent;
+}
+
+.hrd__textarea::placeholder {
+  color: #9ca3af; /* text/tertiary */
+}
+
+.hrd__insert-field {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #303030; /* text/icon */
+  border-radius: 4px;
+}
+
+.hrd__insert-field:hover {
+  background: #f2f4f7;
+}
+
+.hrd__insert-field:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 1px;
+}

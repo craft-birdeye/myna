@@ -1,40 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, type ComponentType } from 'react'
 import { createPortal } from 'react-dom'
+import { getAgentWorkflows } from '../../data/agentWorkflows'
+import { useProcedureStore } from '../../data/ProcedureStoreContext'
 import { Icon } from '../Icon/Icon'
 import type { AgentLibraryPreviewModalProps } from './AgentLibraryPreviewModal.types'
+import { isFrontDeskCanvasAgent } from '../../workflow/LHSDrawer/LHSDrawer'
 
-const ZOOM_OPTIONS = [50, 75, 100, 125, 150] as const
-const ZOOM_MIN = 50
-const ZOOM_MAX = 150
-const ZOOM_STEP = 25
+// @ts-ignore
+import AgentBuilderRaw from '../../workflow/AgentBuilder/AgentBuilder'
+const AgentBuilder = AgentBuilderRaw as unknown as ComponentType<Record<string, unknown>>
 
-function clampZoom(value: number) {
-  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value)))
-}
-
-function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false
-  const tag = target.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
-}
-
-function SparkleMark({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M10 2.5 10.95 7.05 15.5 8 10.95 8.95 10 13.5 9.05 8.95 4.5 8 9.05 7.05 10 2.5Z"
-        fill="#6834B7"
-      />
-      <path
-        d="M15.2 1.8 15.55 3.45 17.2 3.8 15.55 4.15 15.2 5.8 14.85 4.15 13.2 3.8 14.85 3.45 15.2 1.8Z"
-        fill="#6834B7"
-      />
-      <path
-        d="M16.6 6.4 16.85 7.55 18 7.8 16.85 8.05 16.6 9.2 16.35 8.05 15.2 7.8 16.35 7.55 16.6 6.4Z"
-        fill="#6834B7"
-      />
-    </svg>
-  )
+const EMPTY_WORKFLOW = {
+  nodes: [],
+  nodeDetails: { '__start__': { agentName: '', goals: '', outcomes: '', locations: [] } },
 }
 
 export function AgentLibraryPreviewModal({
@@ -43,148 +21,36 @@ export function AgentLibraryPreviewModal({
   onClose,
   onUseAgent,
 }: AgentLibraryPreviewModalProps) {
-  const [zoom, setZoom] = useState(100)
-  const [zoomOpen, setZoomOpen] = useState(false)
-  const zoomRef = useRef<HTMLDivElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
-  const canvasRef = useRef<HTMLDivElement | null>(null)
-  const zoomValueRef = useRef(zoom)
-  const gestureStartZoomRef = useRef(100)
+  const { procedures } = useProcedureStore()
 
   useEffect(() => {
-    zoomValueRef.current = zoom
-  }, [zoom])
-
-  useEffect(() => {
-    if (!open) {
-      setZoom(100)
-      setZoomOpen(false)
-      return
-    }
-    // Focus the dialog so keyboard shortcuts work immediately.
+    if (!open) return
     const id = window.requestAnimationFrame(() => dialogRef.current?.focus())
     return () => window.cancelAnimationFrame(id)
   }, [open])
 
-  // Keyboard zoom (+ / - / = / 0, with or without ⌘/Ctrl), capture phase so browser page-zoom doesn't win.
-  useEffect(() => {
-    if (!open) return
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (isEditableTarget(e.target)) return
-
-      const key = e.key
-      const code = e.code
-      const withMod = e.metaKey || e.ctrlKey
-
-      const zoomIn =
-        key === '+' ||
-        key === '=' ||
-        code === 'NumpadAdd' ||
-        code === 'Equal' ||
-        (withMod && (key === '+' || key === '=' || code === 'Equal' || code === 'NumpadAdd'))
-      const zoomOut =
-        key === '-' ||
-        key === '_' ||
-        code === 'NumpadSubtract' ||
-        code === 'Minus' ||
-        (withMod && (key === '-' || key === '_' || code === 'Minus' || code === 'NumpadSubtract'))
-      const zoomReset =
-        !withMod && (key === '0' || code === 'Digit0' || code === 'Numpad0')
-
-      if (zoomIn) {
-        e.preventDefault()
-        e.stopPropagation()
-        setZoom((z) => clampZoom(z + ZOOM_STEP))
-        setZoomOpen(false)
-        return
-      }
-      if (zoomOut) {
-        e.preventDefault()
-        e.stopPropagation()
-        setZoom((z) => clampZoom(z - ZOOM_STEP))
-        setZoomOpen(false)
-        return
-      }
-      if (zoomReset) {
-        e.preventDefault()
-        e.stopPropagation()
-        setZoom(100)
-        setZoomOpen(false)
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown, true)
-    return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [open])
-
-  // Trackpad pinch (wheel + ctrl/meta) and Safari gesture events on the canvas.
-  useEffect(() => {
-    if (!open) return
-    const el = canvasRef.current
-    if (!el) return
-
-    const onWheel = (e: WheelEvent) => {
-      // Trackpad pinch is delivered as a ctrl/meta wheel event in Chromium/Firefox.
-      if (!(e.ctrlKey || e.metaKey)) return
-      e.preventDefault()
-      e.stopPropagation()
-      const next = clampZoom(zoomValueRef.current - e.deltaY * 0.45)
-      zoomValueRef.current = next
-      setZoom(next)
-      setZoomOpen(false)
-    }
-
-    const onGestureStart = (e: Event) => {
-      e.preventDefault()
-      gestureStartZoomRef.current = zoomValueRef.current
-    }
-
-    const onGestureChange = (e: Event) => {
-      e.preventDefault()
-      const scale = (e as Event & { scale?: number }).scale ?? 1
-      const next = clampZoom(gestureStartZoomRef.current * scale)
-      zoomValueRef.current = next
-      setZoom(next)
-      setZoomOpen(false)
-    }
-
-    const onGestureEnd = (e: Event) => {
-      e.preventDefault()
-    }
-
-    el.addEventListener('wheel', onWheel, { passive: false })
-    el.addEventListener('gesturestart', onGestureStart as EventListener, { passive: false })
-    el.addEventListener('gesturechange', onGestureChange as EventListener, { passive: false })
-    el.addEventListener('gestureend', onGestureEnd as EventListener, { passive: false })
-
-    return () => {
-      el.removeEventListener('wheel', onWheel)
-      el.removeEventListener('gesturestart', onGestureStart as EventListener)
-      el.removeEventListener('gesturechange', onGestureChange as EventListener)
-      el.removeEventListener('gestureend', onGestureEnd as EventListener)
-    }
-  }, [open, data])
-
-  useEffect(() => {
-    if (!zoomOpen) return
-    const onPointerDown = (e: MouseEvent) => {
-      if (zoomRef.current && !zoomRef.current.contains(e.target as Node)) {
-        setZoomOpen(false)
-      }
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setZoomOpen(false)
-    }
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [zoomOpen])
-
   if (!open || !data) return null
+
+  const product = data.product ?? 'healthcare'
+  const isHCProduct = product === 'healthcare' || product === 'dental'
+  const agentKey = data.workflowAgentName ?? 'Front desk agent'
+  const base = getAgentWorkflows(product)[agentKey] ?? EMPTY_WORKFLOW
+  const workflow = {
+    nodes: base.nodes,
+    nodeDetails: {
+      ...base.nodeDetails,
+      '__start__': {
+        ...(base.nodeDetails?.['__start__'] ?? {}),
+        agentName: data.name,
+        goals: data.goal,
+        outcomes: data.outcome,
+      },
+    },
+  }
+  const filteredProcedures = procedures.filter((p) =>
+    isHCProduct ? p.category === 'Healthcare Frontdesk' : p.category !== 'Healthcare Frontdesk',
+  )
 
   return createPortal(
     <div
@@ -218,7 +84,6 @@ export function AgentLibraryPreviewModal({
         </div>
 
         <div className="flex min-h-0 flex-1">
-          {/* pr-xl = lg (16) + 4px extra right padding */}
           <aside className="flex w-[300px] shrink-0 flex-col gap-xl overflow-y-auto border-r border-border py-xl pl-lg pr-xl">
             <div className="flex flex-col gap-xs">
               <span className="text-small text-text-secondary">Name</span>
@@ -234,102 +99,58 @@ export function AgentLibraryPreviewModal({
             </div>
           </aside>
 
-          <div ref={canvasRef} className="relative min-w-0 flex-1 overflow-auto bg-surface-l2 overscroll-contain">
-            <div className="absolute right-lg top-lg z-10" ref={zoomRef}>
-              <div className="flex h-9 items-center rounded-full border border-border bg-surface shadow-dropdown">
-                <button
-                  type="button"
-                  aria-label="Zoom out"
-                  disabled={zoom <= ZOOM_MIN}
-                  onClick={() => setZoom((z) => clampZoom(z - ZOOM_STEP))}
-                  className="flex size-8 items-center justify-center rounded-full text-text-icon hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Icon name="remove" size={18} />
-                </button>
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={zoomOpen}
-                  aria-label="Zoom level"
-                  onClick={() => setZoomOpen((open) => !open)}
-                  className="flex min-w-[52px] items-center justify-center px-xs text-small text-text-primary hover:bg-surface-hover"
-                >
-                  {zoom}%
-                </button>
-                <button
-                  type="button"
-                  aria-label="Zoom in"
-                  disabled={zoom >= ZOOM_MAX}
-                  onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}
-                  className="flex size-8 items-center justify-center rounded-full text-text-icon hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Icon name="add" size={18} />
-                </button>
-              </div>
-              {zoomOpen && (
-                <div
-                  role="listbox"
-                  aria-label="Zoom level"
-                  className="absolute right-0 top-[calc(100%+4px)] z-20 min-w-[88px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
-                >
-                  {ZOOM_OPTIONS.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      role="option"
-                      aria-selected={zoom === option}
-                      onClick={() => {
-                        setZoom(option)
-                        setZoomOpen(false)
-                      }}
-                      className={`block w-full px-md py-sm text-left text-small hover:bg-surface-hover ${
-                        zoom === option ? 'bg-surface-selected text-text-primary' : 'text-text-primary'
-                      }`}
-                    >
-                      {option}%
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex origin-top justify-center px-2xl py-3xl">
-              <div
-                className="flex flex-col items-center gap-0 will-change-transform"
-                style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
+          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+            <style>{`
+              .library-preview-wf { height: 100%; }
+              .library-preview-wf .faq-ab-embedded { height: 100% !important; }
+              .library-preview-wf .faq-ab-embedded--rr-chrome .agent-builder-wrapper,
+              .library-preview-wf .agent-builder--rr-chrome,
+              .library-preview-wf .agent-builder-wrapper,
+              .library-preview-wf .agent-builder__canvas,
+              .library-preview-wf .flow-canvas,
+              .library-preview-wf .flow-canvas .react-flow,
+              .library-preview-wf .flow-canvas .react-flow__renderer,
+              .library-preview-wf .flow-canvas .react-flow__pane {
+                background-color: #f2f4f7 !important;
+                background-image: none !important;
+              }
+              .library-preview-wf .agent-builder-wrapper { margin: 0 !important; border-radius: 0 !important; overflow: hidden !important; }
+              .library-preview-wf .agent-builder { border-radius: 0 !important; overflow: hidden !important; padding: 0 !important; gap: 0 !important; }
+              .library-preview-wf .flow-canvas { border-radius: 0 !important; }
+              .library-preview-wf .flow-canvas__toolbar-anchor--rr-chrome { top: auto !important; bottom: 16px !important; left: 16px !important; right: auto !important; }
+              .library-preview-wf .graph-controls__toggle,
+              .library-preview-wf .rr-chrome-top,
+              .library-preview-wf .rr-chrome-help-wrap,
+              .library-preview-wf .ab-view-badge { display: none !important; }
+              .library-preview-wf .cnh__toggle, .library-preview-wf .cnh__toggle * { cursor: default !important; }
+              .library-preview-wf .cnh__toggle { opacity: 0.75; }
+            `}</style>
+            <div className="library-preview-wf">
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-sm text-text-tertiary">
+                    Loading workflow…
+                  </div>
+                }
               >
-                <div className="flex w-full max-w-[420px] items-center gap-sm rounded-lg border border-border bg-surface px-md py-md shadow-dropdown">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-ai-summary">
-                    <SparkleMark size={18} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-body text-text-primary">{data.name}</p>
-                    <p className="text-small text-text-secondary">{data.locationsLabel ?? 'All locations'}</p>
-                  </div>
-                </div>
-
-                <div className="h-8 w-px bg-ai-summary-border" />
-
-                {data.steps.map((step, index) => (
-                  <div key={`${step.title}-${index}`} className="flex w-full max-w-[420px] flex-col items-center">
-                    <div className="w-full rounded-md border border-border bg-surface p-lg shadow-dropdown">
-                      <div className="mb-sm flex items-center gap-xs">
-                        <Icon
-                          name={step.kind === 'trigger' ? 'bolt' : 'task_alt'}
-                          size={16}
-                          className={step.kind === 'trigger' ? 'text-chip-danger-text' : 'text-text-action'}
-                        />
-                        <span className={`text-small ${step.kind === 'trigger' ? 'text-chip-danger-text' : 'text-text-action'}`}>
-                          {step.kind === 'trigger' ? 'Trigger' : 'Task'}
-                        </span>
-                      </div>
-                      <p className="text-body text-text-primary">{step.title}</p>
-                      <p className="mt-xs text-small text-text-secondary">{step.description}</p>
-                    </div>
-                    {index < data.steps.length - 1 && <div className="h-8 w-px bg-ai-summary-border" />}
-                  </div>
-                ))}
-              </div>
+                <AgentBuilder
+                  key={`${agentKey}::${data.id}::${product}`}
+                  pageTitle={data.name}
+                  appTitle={data.name}
+                  viewOnly
+                  hideLhs
+                  product={product}
+                  moduleSlug="myna"
+                  moduleContext="myna"
+                  sectionContext="workflow"
+                  navItems={[]}
+                  initialNodes={workflow.nodes}
+                  initialNodeDetails={workflow.nodeDetails}
+                  procedures={filteredProcedures}
+                  showProceduresPalette={isFrontDeskCanvasAgent(agentKey, data.name)}
+                  defaultOpenSection="Tasks"
+                />
+              </Suspense>
             </div>
           </div>
         </div>

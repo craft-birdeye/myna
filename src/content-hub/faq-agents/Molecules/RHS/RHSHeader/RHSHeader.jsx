@@ -33,7 +33,7 @@ export default function RHSPanelHeader({
         lineHeight: '24px',
         letterSpacing: '-0.32px',
         color: '#555555',
-        fontFamily: '"Roboto", arial, sans-serif',
+        fontFamily: '"Inter", arial, sans-serif',
       }}>
         {title}
       </span>

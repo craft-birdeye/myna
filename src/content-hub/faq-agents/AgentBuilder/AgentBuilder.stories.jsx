@@ -108,7 +108,7 @@ const FILLED_NODES = [
     id: 'path-none',
     type: 'branchPath',
     position: { x: CENTER_X + 430, y: 1100 },
-    data: { label: 'No conditions met', hasIcons: false },
+    data: { label: 'Fallback', hasIcons: false },
   },
   // Tasks below paths
   {
@@ -200,7 +200,7 @@ const FILLED_NODE_DATA = {
     logic: 'OR',
   },
   'path-none': {
-    branchName: 'No conditions met',
+    branchName: 'Fallback',
     description: 'Default path when no other branch conditions are matched',
     logic: 'OR',
   },

@@ -98,6 +98,12 @@
   box-shadow: 0px 4px 16px 0px rgba(33, 33, 33, 0.12);
 }
 
+/* Saved with a tool still missing mandatory config. `:not(--selected)` so clicking the node
+   shows the normal blue selection border instead of looking like the error was resolved. */
+.canvas-node--error:not(.canvas-node--selected) {
+  border-color: #d32f2f;
+}
+
 .canvas-node--selected {
   border-color: #1976d2;
 }
@@ -165,33 +171,4 @@
   line-height: 14px;
   letter-spacing: -0.1px;
   color: #8a8578;
-}
-
-.canvas-node__add-branch {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 8px;
-  width: 100%;
-  height: 32px;
-  border: 1px dashed #ccd5e4;
-  border-radius: 4px;
-  background: #fff;
-  color: #1976d2;
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-  line-height: 20px;
-  letter-spacing: -0.28px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.canvas-node__add-branch:hover {
-  background: #f5f9ff;
-  border-color: #1976d2;
-}
-
-.canvas-node__add-branch .material-symbols-outlined {
-  font-size: 18px;
 }

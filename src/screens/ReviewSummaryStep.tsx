@@ -342,60 +342,34 @@ export function ReviewSummaryStep({
                   </ReadField>
                 )}
 
-                <div
-                  className={`grid gap-md ${
-                    ttsFailoverSettings.ttsFailover === 'Manual' ? 'grid-cols-2' : 'grid-cols-1'
-                  }`}
-                >
-                  <ReadField label="Failover policy">
-                    <SelectValue value={ttsFailoverSettings.ttsFailover} />
-                  </ReadField>
-                  {ttsFailoverSettings.ttsFailover === 'Manual' && (
-                    <ReadField label="Failover model" required>
-                      <SelectValue value={ttsFailoverSettings.ttsFailoverModel} />
-                    </ReadField>
-                  )}
-                </div>
+                <ReadField label="Failover model" required>
+                  <SelectValue value={ttsFailoverSettings.ttsFailoverModel} />
+                </ReadField>
 
-                {ttsFailoverSettings.ttsFailover === 'Manual' && (
-                  <>
-                    <ReadField label="Voice" required>
-                      <div className={`${READONLY_SHELL} flex h-9 items-center gap-sm px-md pr-sm`}>
-                        <span className="min-w-0 flex-1 truncate">
-                          {ttsFailoverSettings.failoverVoice || '—'}
-                        </span>
-                        <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
-                      </div>
-                    </ReadField>
-                    {ttsFailoverSettings.failoverAdditionalVoiceConfigs.length > 0 && (
-                      <ReadField label="Additional voice">
-                        <VoiceChipList
-                          configs={ttsFailoverSettings.failoverAdditionalVoiceConfigs}
-                        />
-                      </ReadField>
-                    )}
-                  </>
+                <ReadField label="Persona" required>
+                  <div className={`${READONLY_SHELL} flex h-9 items-center gap-sm px-md pr-sm`}>
+                    <span className="min-w-0 flex-1 truncate">
+                      {ttsFailoverSettings.failoverVoice || '—'}
+                    </span>
+                    <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+                  </div>
+                </ReadField>
+                {ttsFailoverSettings.failoverAdditionalVoiceConfigs.length > 0 && (
+                  <ReadField label="Additional persona">
+                    <VoiceChipList
+                      configs={ttsFailoverSettings.failoverAdditionalVoiceConfigs}
+                    />
+                  </ReadField>
                 )}
 
-                <div className="flex flex-col gap-md pt-lg">
+                <div className="flex flex-col gap-md pt-3xl">
                   <h5 className="text-body text-text-primary">Speech-to-text (STT)</h5>
                   <ReadField label="Primary model" required>
                     <SelectValue value={sttSettings.sttModel} />
                   </ReadField>
-                  <div
-                    className={`grid gap-md ${
-                      sttSettings.sttFailover === 'Manual' ? 'grid-cols-2' : 'grid-cols-1'
-                    }`}
-                  >
-                    <ReadField label="Failover policy">
-                      <SelectValue value={sttSettings.sttFailover} />
-                    </ReadField>
-                    {sttSettings.sttFailover === 'Manual' && (
-                      <ReadField label="Failover model" required>
-                        <SelectValue value={sttSettings.sttFailoverModel} />
-                      </ReadField>
-                    )}
-                  </div>
+                  <ReadField label="Failover model" required>
+                    <SelectValue value={sttSettings.sttFailoverModel} />
+                  </ReadField>
                   <ReadField label="Enable interruptions">
                     <TextBox value={sttSettings.interruptions ? 'On' : 'Off'} />
                   </ReadField>

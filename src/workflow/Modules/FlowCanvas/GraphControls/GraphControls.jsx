@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import GraphControlTooltip from './GraphControlTooltip';
 import iconUndo from '../../../../assets/rr-chrome/icon-undo.svg';
 import iconRedo from '../../../../assets/rr-chrome/icon-redo.svg';
-import iconLayoutCols from '../../../../assets/rr-chrome/icon-layout-cols.svg';
-import iconLayoutRows from '../../../../assets/rr-chrome/icon-layout-rows.svg';
 import iconZoomIn from '../../../../assets/rr-chrome/icon-zoom-in.svg';
 import iconZoomOut from '../../../../assets/rr-chrome/icon-zoom-out.svg';
 import iconFit from '../../../../assets/rr-chrome/icon-fit.svg';
@@ -34,6 +32,12 @@ export default function GraphControls({
   onRedo = () => {},
   canUndo = false,
   canRedo = false,
+  /** Version history open: undo/redo don't apply while browsing past versions. */
+  hideUndoRedo = false,
+  /** When set, renders the Help center trigger as its own pill beside the editor pill.
+   * Exploration-only (`response-agents-exploration`); other agents keep it top-right. */
+  onHelpToggle = null,
+  helpOpen = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   /** Sticky footer selection: 'fill' | 'fit' | null (percentage active). */
@@ -185,31 +189,35 @@ export default function GraphControls({
 
         {!viewOnly && (
           <div className="graph-controls__rr-edit">
-            <GraphControlTooltip text="Undo" above>
-              <button
-                className="graph-controls__toggle-btn"
-                onClick={onUndo}
-                disabled={!canUndo}
-                aria-disabled={!canUndo}
-                type="button"
-                aria-label="Undo"
-              >
-                <RrIcon src={iconUndo} />
-              </button>
-            </GraphControlTooltip>
-            <GraphControlTooltip text="Redo" above>
-              <button
-                className="graph-controls__toggle-btn"
-                onClick={onRedo}
-                disabled={!canRedo}
-                aria-disabled={!canRedo}
-                type="button"
-                aria-label="Redo"
-              >
-                <RrIcon src={iconRedo} />
-              </button>
-            </GraphControlTooltip>
-            <div className="graph-controls__rr-divider" aria-hidden />
+            {!hideUndoRedo && (
+              <>
+                <GraphControlTooltip text="Undo" above>
+                  <button
+                    className="graph-controls__toggle-btn"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    aria-disabled={!canUndo}
+                    type="button"
+                    aria-label="Undo"
+                  >
+                    <RrIcon src={iconUndo} />
+                  </button>
+                </GraphControlTooltip>
+                <GraphControlTooltip text="Redo" above>
+                  <button
+                    className="graph-controls__toggle-btn"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    aria-disabled={!canRedo}
+                    type="button"
+                    aria-label="Redo"
+                  >
+                    <RrIcon src={iconRedo} />
+                  </button>
+                </GraphControlTooltip>
+                <div className="graph-controls__rr-divider" aria-hidden />
+              </>
+            )}
             <GraphControlTooltip text="Horizontal layout" above>
               <button
                 className={`graph-controls__toggle-btn${orientation === 'horizontal' ? ' graph-controls__toggle-btn--active' : ''}`}
@@ -217,7 +225,7 @@ export default function GraphControls({
                 type="button"
                 aria-label="Horizontal layout"
               >
-                <RrIcon src={iconLayoutCols} />
+                <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </GraphControlTooltip>
             <GraphControlTooltip text="Vertical layout" above>
@@ -227,9 +235,27 @@ export default function GraphControls({
                 type="button"
                 aria-label="Vertical layout"
               >
-                <RrIcon src={iconLayoutRows} />
+                <span className="material-symbols-outlined">arrow_downward</span>
               </button>
             </GraphControlTooltip>
+
+            {/* Own pill — a DOM child only so it can anchor 12px off this pill's right edge
+                without hardcoding that pill's width. */}
+            {onHelpToggle && (
+              <div className="graph-controls__rr-help">
+                <GraphControlTooltip text="Help center" above>
+                  <button
+                    type="button"
+                    className={`graph-controls__toggle-btn${helpOpen ? ' graph-controls__toggle-btn--active' : ''}`}
+                    onClick={onHelpToggle}
+                    aria-label="Help center"
+                    aria-pressed={helpOpen}
+                  >
+                    <span className="material-symbols-outlined">help</span>
+                  </button>
+                </GraphControlTooltip>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../../elemental-stubs';
-import CloseIcon from '../RHSHeader/icons/close.svg';
 import PromptStrength from '../../PromptStrength/PromptStrength';
-
-const font = '"Roboto", arial, sans-serif';
+import styles from './RHSFooter.module.css';
 
 const SUGGESTIONS = [
   'Add examples of reviews and expected outputs to improve accuracy',
@@ -21,32 +19,31 @@ export default function RHSPanelFooter({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div style={{
-      background: '#ffffff',
-      padding: '16px 16px 24px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 16,
-      boxShadow: expanded ? '0px 2px 12px 0px rgba(33,33,33,0.06)' : 'none',
-      transition: 'box-shadow 0.2s ease',
-    }}>
+    <div className={`${styles.footer}${expanded ? ` ${styles['footer--raised']}` : ''}`}>
       {showPromptStrength && expanded && (
         <>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
+              type="button"
               onClick={() => setExpanded(false)}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              className={styles.closeSuggestions}
               aria-label="Close suggestions"
             >
-              <img src={CloseIcon} alt="Close" style={{ width: 16, height: 16 }} />
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize: 16,
+                  fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+                }}
+              >
+                close
+              </span>
             </button>
           </div>
-          <p style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', letterSpacing: '-0.24px', color: '#8f8f8f', fontFamily: font, margin: 0 }}>
-            Suggestions to improve your prompt
-          </p>
-          <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <p className={styles.suggestionsLabel}>Suggestions to improve your prompt</p>
+          <ul className={styles.suggestionsList}>
             {SUGGESTIONS.map((s) => (
-              <li key={s} style={{ fontSize: 12, fontWeight: 400, lineHeight: '18px', letterSpacing: '-0.24px', color: '#8f8f8f', fontFamily: font }}>
+              <li key={s} className={styles.suggestionsItem}>
                 {s}
               </li>
             ))}

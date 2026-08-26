@@ -4,19 +4,33 @@
   position: absolute;
   top: 72px;
   left: var(--rr-chrome-lhs-panel-left, 76px);
-  bottom: 16px;
+  /* Stop short of the bottom so the zoom controls stay visible below (matches .rr-chrome-palette). */
+  bottom: 96px;
   z-index: 56;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: var(--rr-chrome-lhs-panel-width, 360px);
-  max-height: calc(100% - 88px);
+  max-height: calc(100% - 168px);
   overflow: hidden;
   border: 1px solid #e5e9f0;
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
   font-family: 'Roboto', sans-serif;
+}
+
+/*
+ * Exploration only: header lives in the canvas chrome instead (Cancel / Restore),
+ * so the panel is a bare flat list flush-left with the identity card above it.
+ */
+.rr-version-history--canvas {
+  left: 16px;
+}
+
+/* Canvas variant has no title header, so the list supplies the top inset itself. */
+.rr-version-history--canvas .rr-version-history__list {
+  padding-top: 12px;
 }
 
 .rr-version-history__header {

@@ -46,7 +46,9 @@ export type LogTranscriptEntry =
       tts?: string
       knowledgeBase?: string
       toolCall?: LogToolCall
-      /** Shown at the end of the meta line (e.g. "5:31 PM"). */
+      /** Spoken/message duration shown next to Coach agent (e.g. "4s"). */
+      durationLabel?: string
+      /** @deprecated Prefer `durationLabel`. */
       time?: string
     }
   | { id: string; role: 'caller'; text: string; durationLabel?: string; time?: string }
@@ -73,4 +75,12 @@ export interface LogDetailsPanelProps {
   routedVia?: string
   /** Whether to show the "Call details" tab at all — some agents (e.g. Reminder) don't have one. */
   showCallDetails?: boolean
+  /** Front desk exploration: show status chip above the call-end-reason copy. */
+  callEndResultBadge?: string
+  /** Front desk exploration: e.g. "4 of 5". */
+  userRating?: string
+  /** Front desk exploration: language / translate control under AI summary. */
+  showTranscriptTranslation?: boolean
+  /** Click a log step to focus the matching canvas node. */
+  onStepFocus?: (step: RunLogStep) => void
 }

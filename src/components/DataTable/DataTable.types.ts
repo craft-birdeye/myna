@@ -10,9 +10,11 @@ export interface Column<T> {
   sortable?: boolean
   /** Allow the user to drag-resize this column (default true). */
   resizable?: boolean
-  /** When false, last-column cells render content without single-line truncation. */
+  /** When false, skips truncation + hover tooltip (e.g. chips, custom cells with their own tooltip). */
   truncate?: boolean
   render?: (value: T[keyof T], row: T) => ReactNode
+  /** Tooltip copy when the cell truncates; defaults to the cell's text content. */
+  tooltip?: (value: T[keyof T], row: T) => string | undefined
   /** Custom header cell content; receives sort state and toggle handler. */
   headerRender?: (context: {
     sorted: boolean
@@ -56,6 +58,10 @@ export interface DataTableProps<T = Record<string, unknown>> {
   rowMenuItems?: RowMenuItem<T>[]
   /** Hide the horizontal scrollbar until the user hovers over the table. */
   scrollOnHover?: boolean
+  /** Initial sort column key (e.g. `'reviewsResponded'`). */
+  initialSortKey?: string
+  /** Initial sort direction when `initialSortKey` is set. Defaults to `'asc'`. */
+  initialSortDir?: SortDir
   /** Returns extra className(s) for the <tr> — use for row-level styling like disabled/dimmed. */
   rowClassName?: (row: T, index: number) => string
   /** Row height in px. Defaults to 48 (h-12). */

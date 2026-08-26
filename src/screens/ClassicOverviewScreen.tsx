@@ -1093,7 +1093,8 @@ export function ClassicOverviewScreen({ userName = 'Rupa', onSwitchToAgentic }: 
                   Switch to agentic overview
                 </button>
               )}
-              <DataStateDropdown value={dataState} onChange={setDataState} />
+              {/* DataStateDropdown hidden — kept in code (state defaults to 'Current') so it can be
+                  re-enabled later without rebuilding the co-worker-tabs/zero-state preview logic. */}
               <DateRangeDropdown value={dateRange} onChange={setDateRange} />
             </div>
           </div>

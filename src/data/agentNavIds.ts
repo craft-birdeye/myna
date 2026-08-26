@@ -3,6 +3,7 @@ export const RESPONSE_AGENTS_EXPLORATION_NAV_ID = 'response-agents-exploration'
 export const RESPONSE_AGENTS_SEP1_NAV_ID = 'response-agents-sep-1'
 export const FRONTDESK_EXPLORATION_NAV_ID = 'frontdesk-agent-exploration'
 export const FRONTDESK_SEP1_NAV_ID = 'frontdesk-agent-sep-1'
+export const REMINDER_SEP1_NAV_ID = 'reminder-agent-sep-1'
 
 const EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS = new Set([
   RESPONSE_AGENTS_EXPLORATION_NAV_ID,
@@ -18,8 +19,25 @@ export function isFrontdeskExplorationChrome(navId?: string | null) {
   return navId === FRONTDESK_EXPLORATION_NAV_ID || navId === FRONTDESK_SEP1_NAV_ID
 }
 
+export function isReminderExplorationChrome(navId?: string | null) {
+  return navId === REMINDER_SEP1_NAV_ID
+}
+
 export function isAgentExplorationChrome(navId?: string | null) {
-  return isResponseAgentsExplorationChrome(navId) || isFrontdeskExplorationChrome(navId)
+  return (
+    isResponseAgentsExplorationChrome(navId) ||
+    isFrontdeskExplorationChrome(navId) ||
+    isReminderExplorationChrome(navId)
+  )
+}
+
+/** Labelled LHS stack, single add-step search, outlined icons — Sep 1 variants only. */
+export function isSep1Chrome(navId?: string | null) {
+  return (
+    navId === RESPONSE_AGENTS_SEP1_NAV_ID ||
+    navId === FRONTDESK_SEP1_NAV_ID ||
+    navId === REMINDER_SEP1_NAV_ID
+  )
 }
 
 /** LLM task Setup/Configure layout (body tabs, Continue footer) — exploration nav ids only, not Sep 1. Chip two-line collapse applies to all exploration chrome incl. Sep 1. */

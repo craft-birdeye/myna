@@ -2,6 +2,8 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
+// @ts-expect-error JS module — same canvas node-header glyphs as AgentBuilder
+import { BranchIcon, ProcedureIcon, TaskIcon, TriggerIcon } from '../../workflow/Molecules/Canvas/CanvasNodeIcons'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import { CallAiSummary } from '../CallAiSummary/CallAiSummary'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
@@ -54,13 +56,27 @@ export function resolveStepDurationMs(step: RunLogStep): number {
   return step.durationMs ?? DEFAULT_STEP_DURATION_MS[step.type]
 }
 
-/** Node-type icon + colour, matched to the canvas node-card glyphs. Shared with `TestRunPanel`. */
+/** Node-type icon + colour. Trigger/task/branch/procedures use the canvas header SVGs. Shared with `TestRunPanel`. */
 export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
-  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
+  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Action' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
   branch: { icon: 'account_tree', colorClass: 'text-[#5071CE]', label: 'Branch' },
   procedures: { icon: 'menu_book', colorClass: 'text-[#37A248]', label: 'Procedures' },
+}
+
+const CANVAS_TYPE_ICON = {
+  trigger: TriggerIcon,
+  task: TaskIcon,
+  branch: BranchIcon,
+  procedures: ProcedureIcon,
+} as const
+
+export function StepTypeIcon({ type, size = 16 }: { type: RunLogStep['type']; size?: number }) {
+  const CanvasIcon = type in CANVAS_TYPE_ICON ? CANVAS_TYPE_ICON[type as keyof typeof CANVAS_TYPE_ICON] : null
+  if (CanvasIcon) return <CanvasIcon size={size} />
+  const meta = TYPE_META[type]
+  return <Icon name={meta.icon} size={size} className={`shrink-0 ${meta.colorClass}`} />
 }
 
 const DEFAULT_STEPS: RunLogStep[] = [
@@ -211,7 +227,13 @@ export function FieldList({ fields }: { fields: RunLogField[] }) {
   )
 }
 
-function RunLogStepRow({ step }: { step: RunLogStep }) {
+function RunLogStepRow({
+  step,
+  onStepFocus,
+}: {
+  step: RunLogStep
+  onStepFocus?: (step: RunLogStep) => void
+}) {
   const [outputOpen, setOutputOpen] = useState(true)
   const [inputsOpen, setInputsOpen] = useState(false)
   const [toolOpen, setToolOpen] = useState(false)
@@ -224,19 +246,38 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
         ? 'Procedure output'
         : step.type === 'branch'
           ? 'Branch output'
-          : 'Task output')
+          : 'Action output')
+
+  const focusable = Boolean(onStepFocus)
 
   return (
-    <div className="relative flex gap-md">
+    <div className={`relative flex gap-md ${focusable ? 'group/step' : ''}`}>
       <div className="absolute bottom-0 left-[9px] top-[24px] w-px bg-border" aria-hidden />
       <Icon name="check_circle" size={20} fill className="relative z-10 mt-[2px] shrink-0 text-accent-positive" />
       <div className="min-w-0 flex-1 pb-2xl">
         <div className="flex items-center justify-between gap-sm text-small text-text-tertiary">
           <div className="flex min-w-0 items-center gap-xs">
-            <Icon name={meta.icon} size={16} className={`shrink-0 ${meta.colorClass}`} />
+            <StepTypeIcon type={step.type} />
             {meta.label}
           </div>
-          <span className="shrink-0 tabular-nums">{formatStepDuration(resolveStepDurationMs(step))}</span>
+          <div className="relative flex h-5 shrink-0 items-center justify-end">
+            <span
+              className={`tabular-nums transition-opacity ${
+                focusable ? 'group-hover/step:opacity-0' : ''
+              }`}
+            >
+              {formatStepDuration(resolveStepDurationMs(step))}
+            </span>
+            {focusable && (
+              <button
+                type="button"
+                onClick={() => onStepFocus?.(step)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-body text-text-action opacity-0 outline-none transition-opacity group-hover/step:opacity-100 focus-visible:opacity-100"
+              >
+                View
+              </button>
+            )}
+          </div>
         </div>
         <p className="mt-xs text-body text-text-primary">
           {step.stepNumber}. {step.title}
@@ -307,11 +348,17 @@ function RunLogStepRow({ step }: { step: RunLogStep }) {
   )
 }
 
-function LogsTab({ steps }: { steps: RunLogStep[] }) {
+function LogsTab({
+  steps,
+  onStepFocus,
+}: {
+  steps: RunLogStep[]
+  onStepFocus?: (step: RunLogStep) => void
+}) {
   return (
     <div className="flex flex-col">
       {steps.map((step) => (
-        <RunLogStepRow key={step.id} step={step} />
+        <RunLogStepRow key={step.id} step={step} onStepFocus={onStepFocus} />
       ))}
       <div className="flex items-center gap-md">
         <Icon name="check_circle" size={20} fill className="shrink-0 text-accent-positive" />
@@ -377,26 +424,31 @@ export function UserRatingDisplay({ rating }: { rating: string }) {
   )
 }
 
-/** First section on the Conversation tab — collapsed by default; arrow toggles the fields. */
+/** First section on the Conversation tab — collapsed on first land; arrow toggles the fields. */
 export function CollapsibleCallDetails({
   children,
   userRating,
+  title = 'Details',
+  defaultOpen = false,
 }: {
   children: ReactNode
   userRating?: string
+  /** "Call details" for voice transcripts; "Details" for chat/SMS/email. */
+  title?: string
+  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div className="mb-lg shrink-0 rounded-sm border border-border">
+    <div className="mb-lg shrink-0 overflow-hidden rounded-md border border-border bg-surface">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-sm px-lg py-sm text-left"
+        className="flex w-full items-center justify-between gap-sm px-lg py-md text-left transition-colors hover:bg-surface-hover"
       >
         <span className="flex min-w-0 flex-1 items-center gap-sm">
-          <span className="text-[13px] tracking-[-0.26px] text-[#555]">Call details</span>
+          <span className="text-body text-text-primary">{title}</span>
           {userRating ? <UserRatingDisplay rating={userRating} /> : null}
         </span>
         <Icon
@@ -405,7 +457,7 @@ export function CollapsibleCallDetails({
           className="shrink-0 text-text-icon"
         />
       </button>
-      {open && <div className="px-lg pb-md">{children}</div>}
+      {open && <div className="border-t border-border px-lg py-md">{children}</div>}
     </div>
   )
 }
@@ -596,9 +648,6 @@ export function RunConversationThread({
           {showCallRecording && entry.insertCallRecordingAfter && (
             <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
               <div className="border border-transparent px-lg">
-                <p className="m-0 mb-sm text-[13px] tracking-[-0.26px] text-[#555]">
-                  Call recording
-                </p>
                 <CallRecordingPlayer
                   audioUrl={audioUrl}
                   durationSecs={durationSecs}
@@ -699,6 +748,7 @@ export function RunDetailsPanel({
   callDetailsContent,
   agentName,
   onTrackFeedback,
+  onStepFocus,
   userRating,
   conversationAiSummary,
 }: RunDetailsPanelProps) {
@@ -747,15 +797,15 @@ export function RunDetailsPanel({
   }
 
   return (
-    <div className="preview-panel log-details-panel flex h-full w-[600px] min-w-[360px] flex-col overflow-hidden">
+    <div className="log-details-panel flex h-full w-[460px] min-w-[360px] flex-col overflow-hidden rounded-xl border border-border bg-surface">
       {showHeader && (
-        <div className="flex h-[60px] shrink-0 items-center justify-between px-lg">
-          <h2 className="m-0 text-body text-text-primary">{title}</h2>
+        <div className="flex h-16 shrink-0 items-center justify-between px-2xl">
+          <h2 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h2>
           {onViewConversation && (
             <button
               type="button"
               onClick={onViewConversation}
-              className="flex items-center gap-xs text-body text-text-action hover:text-primary-hover"
+              className="flex items-center gap-xs rounded-sm px-sm py-xs text-body text-text-action transition-colors hover:bg-surface-hover"
             >
               View conversation
               <Icon name="open_in_new" size={16} />
@@ -765,7 +815,7 @@ export function RunDetailsPanel({
       )}
 
       {showTabs && (
-        <div className={`shrink-0 px-lg ${showHeader ? '' : 'pt-sm'}`}>
+        <div className={`shrink-0 px-2xl ${showHeader ? '' : 'pt-lg'}`}>
           <Tabs
             tabs={[
               { id: 'conversation', label: conversationTabLabel },
@@ -779,15 +829,15 @@ export function RunDetailsPanel({
 
       {(!showTabs || tab === 'logs') ? (
         <div
-          className={`min-h-0 flex-1 overflow-y-auto px-lg pb-lg ${
+          className={`min-h-0 flex-1 overflow-y-auto px-2xl pb-2xl ${
             skipContainerTopPadding ? '' : 'pt-lg'
           }`}
         >
-          <LogsTab steps={steps} />
+          <LogsTab steps={steps} onStepFocus={onStepFocus} />
         </div>
       ) : (
         <div
-          className={`flex min-h-0 flex-1 flex-col overflow-hidden px-lg pb-lg ${
+          className={`flex min-h-0 flex-1 flex-col overflow-hidden px-2xl pb-2xl ${
             skipContainerTopPadding ? '' : 'pt-lg'
           }`}
         >
@@ -802,7 +852,7 @@ export function RunDetailsPanel({
                   </div>
                 )}
                 {topCallDetails && (
-                  <CollapsibleCallDetails userRating={userRating}>
+                  <CollapsibleCallDetails title="Details" userRating={userRating}>
                     {resolvedCallDetailsContent}
                   </CollapsibleCallDetails>
                 )}

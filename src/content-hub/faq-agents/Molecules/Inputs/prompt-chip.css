@@ -38,7 +38,7 @@
   line-height: 16px;
   color: #555;
   white-space: nowrap;
-  font-family: 'Inter', 'Roboto', sans-serif;
+  font-family: 'Inter', 'Inter', sans-serif;
 }
 
 .prompt-chip-del {
@@ -66,7 +66,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-family: 'Inter', 'Roboto', sans-serif;
+  font-family: 'Inter', 'Inter', sans-serif;
   min-width: 40px;
   max-width: 120px;
   padding: 0;

@@ -217,7 +217,8 @@
 }
 
 .graph-controls__rr-zoom,
-.graph-controls__rr-edit {
+.graph-controls__rr-edit,
+.graph-controls__rr-help {
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -237,6 +238,22 @@
   bottom: 0;
 }
 
+/*
+ * Own pill, not part of the editor pill's grouping — it sits outside that pill's border and
+ * keeps its own shell. Anchored to the editor pill's right edge (a DOM child, taken out of
+ * flow) so the 12px gap holds at any pill width and the editor pill stays dead-centre.
+ */
+.graph-controls__rr-help {
+  position: absolute;
+  /* 100% resolves against the parent's padding box, so +1px covers its right border. */
+  left: calc(100% + 1px + 12px);
+  top: -1px;
+  gap: 0;
+  padding: 8px;
+  width: 40px;
+  justify-content: center;
+}
+
 .graph-controls__rr-divider {
   width: 1px;
   height: 18px;
@@ -251,6 +268,14 @@
   width: 18px;
   height: 18px;
   pointer-events: none;
+}
+
+/* Layout-orientation arrows sit beside 18px SVG icons in this group, so they render at 18px
+   rather than the 16px used by the legacy (non-chrome) toolbar. */
+.graph-controls__rr-edit .graph-controls__toggle-btn .material-symbols-outlined {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
 }
 
 .graph-controls__rr-zoom .graph-controls__zoom-btn,

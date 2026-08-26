@@ -42,4 +42,9 @@ export interface ContextModalProps {
   onSave: (result: ContextModalResult) => void
   /** Stack above nested drawers (default 110). */
   overlayZIndex?: number
+  /** Optional docs link shown inline after the subtitle. */
+  learnMoreHref?: string
+  /** Prefer over href — opens in-app help (e.g. glossary) instead of an external page. */
+  onLearnMore?: () => void
+  learnMoreLabel?: string
 }

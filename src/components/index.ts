@@ -10,6 +10,8 @@ export {
   RunConversationThread,
   RunDetailsPanel,
 } from './RunDetailsPanel/RunDetailsPanel'
+export { TestRunPanel } from './TestRunPanel/TestRunPanel'
+export type { TestRunPanelProps, TestRunStepStatus } from './TestRunPanel/TestRunPanel.types'
 export type {
   RunConversationEntry,
   RunDetailsPanelProps,
@@ -53,6 +55,7 @@ export {
   AGENT_VOICE_OPTIONS,
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
+  VoicePreviewButton,
 } from './VoiceSettingsDrawers/VoiceSettingsDrawers'
 export type {
   AdditionalVoiceConfig,
@@ -65,6 +68,7 @@ export type {
   BookTestAppointmentModalProps,
   BookTestAppointmentValues,
 } from './BookTestAppointmentModal/BookTestAppointmentModal.types'
+export { AeroFormModal } from './AeroFormModal/AeroFormModal'
 export { ContextModal } from './ContextModal/ContextModal'
 export { CustomizeColumnsDrawer } from './CustomizeColumnsDrawer/CustomizeColumnsDrawer'
 export { EmptyHintField } from './EmptyHintField/EmptyHintField'
@@ -119,8 +123,29 @@ export { QuickSendModal } from './QuickSendModal/QuickSendModal'
 export { Toast } from './Toast/Toast'
 export { ShareFeedbackModal } from './ShareFeedbackModal/ShareFeedbackModal'
 export type { ShareFeedbackModalProps } from './ShareFeedbackModal/ShareFeedbackModal.types'
-export { EstimateSavingsModal } from './EstimateSavingsModal/EstimateSavingsModal'
-export type { EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { EstimateSavingsModal, REVIEW_RESPONSE_SAVINGS_COPY, parseTimeSavedHours } from './EstimateSavingsModal/EstimateSavingsModal'
+export type { EstimateSavingsCopy, EstimateSavingsModalProps, EstimateSavingsValues, SavingsMode } from './EstimateSavingsModal/EstimateSavingsModal.types'
+export { AgentsIntroVideoModal } from './AgentsIntroVideoModal/AgentsIntroVideoModal'
+export type { AgentsIntroVideoModalProps } from './AgentsIntroVideoModal/AgentsIntroVideoModal.types'
+export { WorkflowCoachTour } from './WorkflowCoachTour/WorkflowCoachTour'
+export { WORKFLOW_COACH_STEPS } from './WorkflowCoachTour/WorkflowCoachTour.types'
+export type {
+  WorkflowCoachTourProps,
+  WorkflowCoachStep,
+  WorkflowCoachPlacement,
+} from './WorkflowCoachTour/WorkflowCoachTour.types'
+export { HelpCenterPanel } from './HelpCenterPanel/HelpCenterPanel'
+export { GlossaryModal } from './HelpCenterPanel/GlossaryModal'
+export type { GlossaryModalProps } from './HelpCenterPanel/GlossaryModal'
+export type {
+  HelpCenterPanelProps,
+  HelpCenterView,
+  HelpVideoItem,
+  HelpArticleItem,
+  HelpGlossaryItem,
+  HelpDictionaryItem,
+} from './HelpCenterPanel/HelpCenterPanel.types'
+export { HELP_GLOSSARY, HELP_DICTIONARY } from './HelpCenterPanel/HelpCenterPanel.types'
 export { AgentLibraryPreviewModal } from './AgentLibraryPreviewModal/AgentLibraryPreviewModal'
 export type {
   AgentLibraryPreviewData,
@@ -166,7 +191,7 @@ export type { TrendPoint, TrendLineChartProps } from './charts/TrendLineChart'
 export type { ChartStat, ChartStatRowProps } from './charts/ChartStatRow'
 export type { SummaryStat, SummaryStatsProps } from './charts/SummaryStats'
 export { CallRecordingPlayer } from './CallRecordingPlayer/CallRecordingPlayer'
-export type { CallRecordingPlayerProps } from './CallRecordingPlayer/CallRecordingPlayer.types'
+export type { CallRecordingPlayerProps, CallRecordingPlayerHandle } from './CallRecordingPlayer/CallRecordingPlayer.types'
 export { CallAiSummary, DEFAULT_CALL_AI_SUMMARY } from './CallAiSummary/CallAiSummary'
 export type { CallAiSummaryProps } from './CallAiSummary/CallAiSummary.types'
 export { VoicemailMessage } from './VoicemailMessage/VoicemailMessage'
@@ -181,6 +206,7 @@ export type { ChartTooltipItem, ChartTooltipProps } from './charts/ChartTooltip'
 
 export type { LinkProps } from './Link/Link.types'
 export type { ChipProps, ChipVariant } from './Chip/Chip.types'
+export type { AeroFormModalProps } from './AeroFormModal/AeroFormModal.types'
 export type { ContextModalProps, ContextModalResult } from './ContextModal/ContextModal.types'
 export type {
   CustomizeColumnsDrawerProps,

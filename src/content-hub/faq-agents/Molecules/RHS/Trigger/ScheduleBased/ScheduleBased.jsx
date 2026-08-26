@@ -3,7 +3,7 @@ import { FormInput, TextArea, SingleSelect } from '../../../../elemental-stubs';
 import RHSPanelHeader from '../../RHSHeader/RHSHeader';
 import RHSPanelFooter from '../../RHSFooter/RHSFooter';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 export function ScheduleBasedBody({
   triggerName = '',

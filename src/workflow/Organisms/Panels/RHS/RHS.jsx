@@ -18,6 +18,7 @@ import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
 import SendResponseTaskBody from './SendResponseTaskBody';
+import styles from './RHS.module.css';
 
 const VARIANTS = {
   start: {
@@ -87,7 +88,7 @@ const VARIANTS = {
   },
   controlBranch: {
     body: ControlBranchBody,
-    showActions: true,
+    showActions: false,
     showPromptStrength: false,
   },
   conversationTrigger: {
@@ -112,29 +113,28 @@ const VARIANTS = {
   },
 };
 
+/** Renders as <fieldset> in read-only mode (so nested controls are natively disabled),
+ *  otherwise a plain <div>. */
+function FieldsetOrDiv({ as: Tag = 'div', children, ...rest }) {
+  return <Tag {...rest}>{children}</Tag>;
+}
+
 const PANEL_WIDTH = {
   procedureDetail: 500,
   createCustomProcedure: 500,
 };
 
-export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive' }) {
+const DEFAULT_PANEL_WIDTH = 450;
+
+export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false, saveLabel, showPromptStrength: showPromptStrengthProp, titleLayoutMenu = null, titleTabMenu = null }) {
   const config = VARIANTS[variant];
   const Body = config.body;
-  const panelWidth = PANEL_WIDTH[variant] ?? 390;
+  const panelWidth = PANEL_WIDTH[variant] ?? DEFAULT_PANEL_WIDTH;
+  const showPromptStrength = showPromptStrengthProp ?? config.showPromptStrength;
+  const resolvedSaveLabel = saveLabel ?? 'Save';
 
   return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: panelWidth,
-        height: '100%',
-        background: '#ffffff',
-        borderRadius: 12,
-        boxShadow: '0 2px 12px 1px rgba(33, 33, 33, 0.06)',
-        border: '1px solid #e5e9f0',
-        overflow: 'hidden',
-        fontFamily: '"Roboto", arial, sans-serif',
-      }}>
+      <div className={styles['rhs-panel']} style={{ width: panelWidth }}>
         <RHSSidePanelHeader
           title={title || 'Title'}
           onPreview={viewOnly ? undefined : onPreview}
@@ -142,19 +142,28 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           onBack={onBack}
           showActions={viewOnly || variant === 'procedureDetail' || variant === 'createCustomProcedure' ? false : config.showActions}
           showMoreMenu={false}
+          titleLayoutMenu={titleLayoutMenu}
+          titleTabMenu={titleTabMenu}
         />
 
-        <div style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          padding: '16px 15px',
-          boxSizing: 'border-box',
-        }}>
-          <div style={{
-            pointerEvents: viewOnly ? 'none' : undefined,
-            userSelect: viewOnly ? 'text' : undefined,
-          }}>
+        {/* `inlineFooter`: body shrinks-to-fit instead of stretching, so a short panel lets
+            the Save button sit right under the content. Once the content is tall enough to
+            scroll the body fills the space again and the footer lands at the bottom as usual. */}
+        <div
+          className={`${styles['rhs-panel__body']}${inlineFooter ? ` ${styles['rhs-panel__body--inline']}` : ''}`}
+        >
+          {/* Read-only mode uses a disabled <fieldset>, not just pointer-events: that natively
+              disables every nested control so Tab-and-type can't edit the panel either. The
+              pointer-events guard stays for non-form click handlers (swatch pickers etc.). */}
+          <FieldsetOrDiv
+            as={viewOnly ? 'fieldset' : 'div'}
+            {...(viewOnly ? { disabled: true, className: 'rhs-readonly' } : {})}
+            style={{
+              pointerEvents: viewOnly ? 'none' : undefined,
+              userSelect: viewOnly ? 'text' : undefined,
+              ...(viewOnly ? { border: 0, margin: 0, padding: 0, minWidth: 0 } : {}),
+            }}
+          >
             <Body
               {...(bodyProps || {})}
               viewOnly={viewOnly}
@@ -164,14 +173,14 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
                 ?? (variant === 'procedureDetail' || variant === 'createCustomProcedure')
               }
             />
-          </div>
+          </FieldsetOrDiv>
         </div>
 
         {!viewOnly && (
           <RHSPanelFooter
             onSave={onSave}
-            saveLabel="Save"
-            showPromptStrength={config.showPromptStrength}
+            saveLabel={resolvedSaveLabel}
+            showPromptStrength={showPromptStrength}
           />
         )}
       </div>

@@ -6,6 +6,7 @@ import {
   DEFAULT_AGENT_VOICE,
   DefaultVoiceDrawer,
   AdditionalVoiceDrawer,
+  VoicePreviewButton,
   type AdditionalVoiceConfig,
 } from '../VoiceSettingsDrawers/VoiceSettingsDrawers'
 import { getAgentLanguage } from '../../data/agentLanguages'
@@ -13,8 +14,8 @@ import { getAgentLanguage } from '../../data/agentLanguages'
 export const STT_MODELS = ['Deepgram_flux', 'Deepgram', 'AssemblyAI']
 export const TTS_MODELS = ['Cartesia', 'ElevenLabs', 'OpenAI']
 export const FAILOVER_POLICIES = ['Automatic', 'Manual', 'Disabled']
-export const STT_FAILOVER_MODELS = ['Assembly AI', 'Deepgram', 'Google STT']
-export const TTS_FAILOVER_MODELS = ['ElevenLabs', 'OpenAI', 'Cartesia']
+export const STT_FAILOVER_MODELS = ['Assembly AI', 'Deepgram', 'Google STT', 'Best available']
+export const TTS_FAILOVER_MODELS = ['Eleven Labs', 'OpenAI', 'Cartesia', 'Best available']
 
 export interface TtsModelSettingsValue {
   ttsModel: string
@@ -40,7 +41,7 @@ export const DEFAULT_TTS_MODEL_SETTINGS: TtsModelSettingsValue = {
 }
 
 export const DEFAULT_TTS_FAILOVER_SETTINGS: TtsFailoverSettingsValue = {
-  ttsFailover: 'Automatic',
+  ttsFailover: 'Manual',
   ttsFailoverModel: TTS_FAILOVER_MODELS[0],
   failoverVoice: DEFAULT_AGENT_VOICE,
   failoverVoiceSpeed: 1,
@@ -49,8 +50,8 @@ export const DEFAULT_TTS_FAILOVER_SETTINGS: TtsFailoverSettingsValue = {
 
 export const DEFAULT_STT_SETTINGS: SttSettingsValue = {
   sttModel: 'Deepgram_flux',
-  sttFailover: 'Automatic',
-  sttFailoverModel: 'Assembly AI',
+  sttFailover: 'Manual',
+  sttFailoverModel: STT_FAILOVER_MODELS[0],
   interruptions: true,
 }
 
@@ -135,9 +136,12 @@ function SettingsSelect({
 export function TtsModelSettings({
   value,
   onChange,
+  /** Suppresses the built-in heading when the caller renders its own (e.g. a sub-panel header). */
+  hideHeading = false,
 }: {
   value?: TtsModelSettingsValue
   onChange?: (next: TtsModelSettingsValue) => void
+  hideHeading?: boolean
 } = {}) {
   const [internal, setInternal] = useState(DEFAULT_TTS_MODEL_SETTINGS)
   const settings = value ?? internal
@@ -145,7 +149,7 @@ export function TtsModelSettings({
 
   return (
     <div className="flex flex-col gap-md">
-      <h3 className="text-body text-text-primary">Text-to-speech (TTS)</h3>
+      {!hideHeading && <h3 className="text-body text-text-primary">Text-to-speech (TTS)</h3>}
       <div className="flex flex-col gap-xs">
         <label className="text-small text-text-secondary">
           Primary model <span className="text-chip-danger-text">*</span>
@@ -160,7 +164,7 @@ export function TtsModelSettings({
   )
 }
 
-/** TTS failover policy/model + a mirrored Default voice/Add additional voice for the
+/** TTS failover model + a mirrored Default voice/Add additional voice for the
  *  failover path — shown after Default voice / Add additional voice, before Speech-to-text. */
 export function TtsFailoverSettings({
   value,
@@ -233,133 +237,123 @@ export function TtsFailoverSettings({
 
   return (
     <div className="flex flex-col gap-md">
-      <div className="grid grid-cols-2 gap-md">
-        <div className="flex flex-col gap-xs">
-          <label className="flex items-center gap-xs text-small text-text-secondary">
-            Failover policy
-            <InfoTooltip text="What happens if the primary text-to-speech model is unavailable." variant="brief" />
-          </label>
-          <SettingsSelect
-            value={settings.ttsFailover}
-            options={FAILOVER_POLICIES}
-            onChange={(ttsFailover) => update({ ...settings, ttsFailover })}
-          />
-        </div>
-        {settings.ttsFailover === 'Manual' && (
-          <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">
-              Failover model <span className="text-chip-danger-text">*</span>
-            </label>
-            <SettingsSelect
-              value={settings.ttsFailoverModel}
-              options={TTS_FAILOVER_MODELS}
-              onChange={(ttsFailoverModel) => update({ ...settings, ttsFailoverModel })}
-            />
-          </div>
-        )}
+      <div className="flex flex-col gap-xs">
+        <label className="text-small text-text-secondary">
+          Failover model <span className="text-chip-danger-text">*</span>
+        </label>
+        <SettingsSelect
+          value={settings.ttsFailoverModel}
+          options={TTS_FAILOVER_MODELS}
+          onChange={(ttsFailoverModel) => update({ ...settings, ttsFailoverModel, ttsFailover: 'Manual' })}
+        />
       </div>
 
-      {settings.ttsFailover === 'Manual' && (
-        <>
-          <div className="flex flex-col gap-xs">
-            <label className="text-small text-text-secondary">
-              Voice <span className="text-chip-danger-text">*</span>
-            </label>
+      <div className="flex flex-col gap-xs">
+        <label className="text-small text-text-secondary">
+          Persona <span className="text-chip-danger-text">*</span>
+        </label>
+        <div className="flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={() => setFailoverDrawerOpen(true)}
+            className="flex h-9 min-w-0 flex-1 items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
+          >
+            <span
+              className={`min-w-0 flex-1 truncate text-left text-body ${
+                settings.failoverVoice ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {settings.failoverVoice || 'Select'}
+            </span>
+            <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+          </button>
+          <VoicePreviewButton
+            voiceLabel={settings.failoverVoice}
+            speed={settings.failoverVoiceSpeed}
+            disabled={!settings.failoverVoice}
+          />
+        </div>
+        <DefaultVoiceDrawer
+          open={failoverDrawerOpen}
+          voice={settings.failoverVoice}
+          speed={settings.failoverVoiceSpeed}
+          onClose={() => setFailoverDrawerOpen(false)}
+          onSave={handleFailoverVoiceSave}
+          terminology="persona"
+        />
+      </div>
+
+      <div className="flex flex-col gap-xs">
+        {settings.failoverAdditionalVoiceConfigs.length > 0 && (
+          <label className="text-small text-text-secondary">Additional persona</label>
+        )}
+        {settings.failoverAdditionalVoiceConfigs.length > 0 ? (
+          <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
+            <div className="flex flex-wrap gap-sm">
+              {settings.failoverAdditionalVoiceConfigs.map((cfg) => {
+                const lang = getAgentLanguage(cfg.language)
+                return (
+                  <button
+                    key={cfg.label}
+                    type="button"
+                    onClick={() => openEditFailoverAdditionalVoice(cfg)}
+                    className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary hover:bg-surface-hover"
+                  >
+                    <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
+                    <span className="truncate">{cfg.label}</span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Remove ${cfg.label}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveFailoverAdditionalVoice(cfg.label)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleRemoveFailoverAdditionalVoice(cfg.label)
+                        }
+                      }}
+                      className="flex size-4 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
+                    >
+                      <Icon name="close" size={14} />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
             <button
               type="button"
-              onClick={() => setFailoverDrawerOpen(true)}
-              className="flex h-9 w-full items-center gap-sm rounded-md border border-border-input bg-surface pl-md pr-sm transition-colors hover:bg-surface-l2 focus:border-primary focus:outline-none focus-visible:border-primary"
+              onClick={openAddFailoverAdditionalVoice}
+              className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
             >
-              <span
-                className={`min-w-0 flex-1 truncate text-left text-body ${
-                  settings.failoverVoice ? 'text-text-primary' : 'text-text-tertiary'
-                }`}
-              >
-                {settings.failoverVoice || 'Select'}
-              </span>
-              <Icon name="chevron_right" size={20} className="shrink-0 text-text-icon" />
+              <Icon name="add_circle" size={18} className="text-primary" />
+              Add
             </button>
-            <DefaultVoiceDrawer
-              open={failoverDrawerOpen}
-              voice={settings.failoverVoice}
-              speed={settings.failoverVoiceSpeed}
-              onClose={() => setFailoverDrawerOpen(false)}
-              onSave={handleFailoverVoiceSave}
-            />
           </div>
-
-          <div className="flex flex-col gap-xs">
-            {settings.failoverAdditionalVoiceConfigs.length > 0 && (
-              <label className="text-small text-text-secondary">Additional voice</label>
-            )}
-            {settings.failoverAdditionalVoiceConfigs.length > 0 ? (
-              <div className="flex flex-col gap-lg rounded-sm border border-border-input bg-surface px-[10px] py-sm">
-                <div className="flex flex-wrap gap-sm">
-                  {settings.failoverAdditionalVoiceConfigs.map((cfg) => {
-                    const lang = getAgentLanguage(cfg.language)
-                    return (
-                      <button
-                        key={cfg.label}
-                        type="button"
-                        onClick={() => openEditFailoverAdditionalVoice(cfg)}
-                        className="flex h-7 max-w-full items-center gap-xs rounded-sm bg-chip-neutral-bg px-sm text-body text-text-primary hover:bg-surface-hover"
-                      >
-                        <LanguageFlag countryCode={lang.countryCode} label={lang.label} size="sm" />
-                        <span className="truncate">{cfg.label}</span>
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Remove ${cfg.label}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRemoveFailoverAdditionalVoice(cfg.label)
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              handleRemoveFailoverAdditionalVoice(cfg.label)
-                            }
-                          }}
-                          className="flex size-4 shrink-0 items-center justify-center text-text-icon hover:text-text-primary"
-                        >
-                          <Icon name="close" size={14} />
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-                <button
-                  type="button"
-                  onClick={openAddFailoverAdditionalVoice}
-                  className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
-                >
-                  <Icon name="add_circle" size={18} className="text-primary" />
-                  Add
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={openAddFailoverAdditionalVoice}
-                className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
-              >
-                <Icon name="add_circle" size={18} className="text-primary" />
-                Add additional voice
-              </button>
-            )}
-            <AdditionalVoiceDrawer
-              open={failoverAdditionalDrawerOpen}
-              initialConfig={editingFailoverAdditionalVoice}
-              defaultLanguage="en"
-              defaultSpeed={settings.failoverVoiceSpeed}
-              defaultVoice={settings.failoverVoice}
-              onClose={closeFailoverAdditionalDrawer}
-              onSave={handleSaveFailoverAdditionalVoice}
-            />
-          </div>
-        </>
-      )}
+        ) : (
+          <button
+            type="button"
+            onClick={openAddFailoverAdditionalVoice}
+            className="flex items-center gap-sm self-start text-body text-text-action hover:text-primary-hover"
+          >
+            <Icon name="add_circle" size={18} className="text-primary" />
+            Add additional persona
+          </button>
+        )}
+        <AdditionalVoiceDrawer
+          open={failoverAdditionalDrawerOpen}
+          initialConfig={editingFailoverAdditionalVoice}
+          defaultLanguage="en"
+          defaultSpeed={settings.failoverVoiceSpeed}
+          defaultVoice={settings.failoverVoice}
+          onClose={closeFailoverAdditionalDrawer}
+          onSave={handleSaveFailoverAdditionalVoice}
+          terminology="persona"
+        />
+      </div>
     </div>
   )
 }
@@ -368,18 +362,21 @@ export function TtsFailoverSettings({
 export function VoiceCallEngineSettings({
   value,
   onChange,
+  /** Suppresses the built-in heading + top padding when rendered inside a sub-panel. */
+  hideHeading = false,
 }: {
   value?: SttSettingsValue
   onChange?: (next: SttSettingsValue) => void
+  hideHeading?: boolean
 } = {}) {
   const [internal, setInternal] = useState(DEFAULT_STT_SETTINGS)
   const settings = value ?? internal
   const update = onChange ?? setInternal
 
   return (
-    <div className="flex flex-col pt-lg">
+    <div className={`flex flex-col ${hideHeading ? "" : "pt-lg"}`}>
       <div className="flex flex-col gap-md">
-        <h3 className="text-body text-text-primary">Speech-to-text (STT)</h3>
+        {!hideHeading && <h3 className="text-body text-text-primary">Speech-to-text (STT)</h3>}
         <div className="flex flex-col gap-xs">
           <label className="text-small text-text-secondary">
             Primary model <span className="text-chip-danger-text">*</span>
@@ -390,30 +387,17 @@ export function VoiceCallEngineSettings({
             onChange={(sttModel) => update({ ...settings, sttModel })}
           />
         </div>
-        <div className="grid grid-cols-2 gap-md">
-          <div className="flex flex-col gap-xs">
-            <label className="flex items-center gap-xs text-small text-text-secondary">
-              Failover policy
-              <InfoTooltip text="What happens if the primary speech-to-text model is unavailable." variant="brief" />
-            </label>
-            <SettingsSelect
-              value={settings.sttFailover}
-              options={FAILOVER_POLICIES}
-              onChange={(sttFailover) => update({ ...settings, sttFailover })}
-            />
-          </div>
-          {settings.sttFailover === 'Manual' && (
-            <div className="flex flex-col gap-xs">
-              <label className="text-small text-text-secondary">
-                Failover model <span className="text-chip-danger-text">*</span>
-              </label>
-              <SettingsSelect
-                value={settings.sttFailoverModel}
-                options={STT_FAILOVER_MODELS}
-                onChange={(sttFailoverModel) => update({ ...settings, sttFailoverModel })}
-              />
-            </div>
-          )}
+        <div className="flex flex-col gap-xs">
+          <label className="text-small text-text-secondary">
+            Failover model <span className="text-chip-danger-text">*</span>
+          </label>
+          <SettingsSelect
+            value={settings.sttFailoverModel}
+            options={STT_FAILOVER_MODELS}
+            onChange={(sttFailoverModel) =>
+              update({ ...settings, sttFailoverModel, sttFailover: 'Manual' })
+            }
+          />
         </div>
       </div>
 

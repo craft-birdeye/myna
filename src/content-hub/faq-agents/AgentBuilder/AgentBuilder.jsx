@@ -36,7 +36,7 @@ class RHSErrorBoundary extends React.Component {
           padding: 24, boxSizing: 'border-box',
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: 28, color: '#de1b0c' }}>error</span>
-          <span style={{ fontSize: 13, color: '#555', fontFamily: '"Roboto", sans-serif', textAlign: 'center' }}>
+          <span style={{ fontSize: 13, color: '#555', fontFamily: '"Inter", sans-serif', textAlign: 'center' }}>
             Could not render this panel.
           </span>
           <button
@@ -898,13 +898,13 @@ export default function AgentBuilder({
         branches: [
           { id: path1Id, name: 'Branch 1' },
           { id: path2Id, name: 'Branch 2' },
-          { id: fallbackId, name: 'No conditions met', isFallback: true },
+          { id: fallbackId, name: 'Fallback', isFallback: true },
         ],
       });
       extraDetails = {
         [path1Id]: { branchName: 'Branch 1', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
         [path2Id]: { branchName: 'Branch 2', description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [] },
-        [fallbackId]: { branchName: 'No conditions met', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
+        [fallbackId]: { branchName: 'Fallback', description: '', conditions: [], parentId: id, isBranchPath: true, isFallback: true, nodes: [] },
       };
     }
 
@@ -1290,19 +1290,6 @@ export default function AgentBuilder({
 
       {/* ─── Builder body ─── */}
       <div className="agent-builder-wrapper" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: 'transparent' }}>
-        {viewOnly && (
-          <div className="ab-view-banner">
-            <span className="material-symbols-outlined">visibility</span>
-            <span>You&apos;re viewing a shared workflow. Editing is disabled.</span>
-            <a
-              className="ab-view-banner__link"
-              href={`mailto:?subject=Request edit access – ${agentName}`}
-            >
-              Request edit access
-            </a>
-          </div>
-        )}
-
         <div className="agent-builder">
           <div className="agent-builder__lhs">
             <LHSDrawer

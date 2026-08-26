@@ -23,7 +23,7 @@
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   overflow: hidden;
   text-align: left !important;
@@ -147,7 +147,7 @@
 
 .rhs-drawer__field .form-input-wrapper input {
   font-size: 14px !important;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   color: #212121 !important;
   padding: 8px 12px !important;
   height: 100% !important;
@@ -174,7 +174,7 @@
 .rhs-drawer__textarea textarea {
   min-height: 80px !important;
   font-size: 14px !important;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   color: #212121 !important;
   border: 1px solid #ccc !important;
   border-radius: 4px !important;
@@ -314,7 +314,7 @@
   border-radius: 4px !important;
   padding: 0 12px !important;
   font-size: 14px !important;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   color: #212121 !important;
   display: flex !important;
   align-items: center !important;
@@ -339,7 +339,7 @@
 .rhs-drawer__stacked-select [class*="select-item"] {
   padding: 8px 12px !important;
   font-size: 14px !important;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   color: #212121 !important;
   cursor: pointer !important;
 }
@@ -467,7 +467,7 @@
 .rhs-drawer__tag-select-dropdown [class*="select-item"] {
   padding: 8px 12px !important;
   font-size: 14px !important;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   color: #212121 !important;
   cursor: pointer !important;
 }
@@ -489,7 +489,7 @@
   border-radius: 4px;
   padding: 0 12px;
   font-size: 14px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   outline: none;
   background: #fff;
@@ -532,7 +532,7 @@
   color: #1976d2;
   font-size: 14px;
   font-weight: 400;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .rhs-drawer__add-condition .material-symbols-outlined {
@@ -551,7 +551,7 @@
   color: #1976d2;
   font-size: 14px;
   font-weight: 400;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   display: inline;
 }
 
@@ -581,7 +581,7 @@
   color: #1976d2;
   font-size: 14px;
   font-weight: 400;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .rhs-drawer__add-inline-btn .material-symbols-outlined {
@@ -602,7 +602,7 @@
   color: #8f8f8f;
   font-size: 13px;
   font-weight: 400;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .rhs-drawer__generate-btn .material-symbols-outlined {
@@ -626,7 +626,7 @@
   outline: none !important;
   padding: 8px 12px !important;
   font-size: 14px !important;
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   color: #212121 !important;
   line-height: 20px !important;
   resize: vertical !important;
@@ -715,7 +715,7 @@
   color: #212121;
   font-size: 12px;
   font-weight: 400;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-style: italic;
 }
 
@@ -856,7 +856,7 @@
   border: none;
   outline: none;
   font-size: 14px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #212121;
   line-height: 20px;
   background: transparent;

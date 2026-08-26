@@ -10,7 +10,7 @@
  */
 import React, { useState, useRef, useEffect } from 'react';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 /* ─── FormInput ─────────────────────────────────────────────────────────── */
 export function FormInput({

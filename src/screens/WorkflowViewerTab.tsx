@@ -2,7 +2,7 @@
  * WorkflowViewerTab
  * View-only workflow canvas on the Workflow tab of AgentInstanceScreen.
  * - No LHS drawer, no yellow banner, no editing
- * - Edit pencil lives inside the existing floating zoom toolbar (via onEdit prop)
+ * - Floating top chrome shows only Edit workflow (pencil, via onEdit) + Run test (play)
  * - Canvas has left/right padding and rounded corners
  */
 import React, { Suspense } from 'react'
@@ -68,11 +68,26 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
       {/* Scoped CSS overrides */}
       <style>{`
         .wf-viewer .faq-ab-embedded       { height: 100% !important; }
-        .wf-viewer .agent-builder-wrapper { background-color: #f8f9fb !important; background-image: radial-gradient(circle, #c8cdd8 1px, transparent 1px) !important; background-size: 28px 28px !important; margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
+        /* Flat canvas — #F2F4F7 (no dot grid). Cover every layer that paints bg. */
+        .wf-viewer .faq-ab-embedded--rr-chrome .agent-builder-wrapper,
+        .wf-viewer .agent-builder--rr-chrome,
+        .wf-viewer .agent-builder-wrapper,
+        .wf-viewer .agent-builder__canvas,
+        .wf-viewer .flow-canvas,
+        .wf-viewer .flow-canvas .react-flow,
+        .wf-viewer .flow-canvas .react-flow__renderer,
+        .wf-viewer .flow-canvas .react-flow__pane {
+          background-color: #f2f4f7 !important;
+          background-image: none !important;
+        }
+        .wf-viewer .agent-builder-wrapper { margin: 0 20px 20px !important; border-radius: 12px !important; overflow: hidden !important; }
         .wf-viewer .agent-builder         { border-radius: 12px !important; overflow: hidden !important; padding: 0 !important; gap: 0 !important; }
         .wf-viewer .flow-canvas           { border-radius: 12px !important; }
         .wf-viewer .flow-canvas__toolbar-anchor--rr-chrome { top: auto !important; bottom: 16px !important; left: 16px !important; right: 16px !important; }
         .wf-viewer .graph-controls__toggle { display: none !important; }
+        /* Node toggles are disabled here (state display, not a control) — don't invite clicks. */
+        .wf-viewer .cnh__toggle, .wf-viewer .cnh__toggle * { cursor: default !important; }
+        .wf-viewer .cnh__toggle { opacity: 0.75; }
       `}</style>
 
       <div className="wf-viewer" style={{ height: '100%' }}>
@@ -86,6 +101,7 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
             pageTitle={shownName}
             appTitle={shownName}
             viewOnly={true}
+            viewChromeActions
             onEdit={onEdit}
             product={product ?? 'automotive'}
             moduleSlug="myna"

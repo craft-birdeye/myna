@@ -132,6 +132,8 @@ export default function AddStepMenu({
   agentName = '',
   onClose,
   onSelect,
+  /** Sep 1: one full-width search above both panes instead of one per pane. */
+  singleSearch = false,
 }) {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
@@ -182,12 +184,19 @@ export default function AddStepMenu({
   if (!open || !anchorRect) return null;
 
   const q = leftSearch.trim().toLowerCase();
-  const filteredTasks = taskCards.filter((c) => !q || c.label.toLowerCase().includes(q));
-  const filteredControls = controlCards.filter((c) => !q || c.label.toLowerCase().includes(q));
+  // Single-search mode: the open category stays listed even when it doesn't match the
+  // query, so the results on the right are never shown against a blank nav column.
+  const keepsNavRow = (c) =>
+    !q
+    || c.label.toLowerCase().includes(q)
+    || (singleSearch && (c.subKey || c.label) === activeSubKey);
+  const filteredTasks = taskCards.filter(keepsNavRow);
+  const filteredControls = controlCards.filter(keepsNavRow);
 
   const activeCard = taskCards.find((c) => (c.subKey || c.label) === activeSubKey);
   const activeGroup = activeSubKey ? subItemsMap[activeSubKey] : null;
-  const rightQ = rightSearch.trim().toLowerCase();
+  // Single-search mode: the one query filters the detail list too.
+  const rightQ = (singleSearch ? leftSearch : rightSearch).trim().toLowerCase();
   const disabledItems = new Set(['In call text']);
   const detailItems = (activeGroup?.items || []).filter((item) => {
     const label = itemLabel(item);
@@ -218,7 +227,7 @@ export default function AddStepMenu({
   function handleNavClick(card, section) {
     if (card.action === 'chevron') {
       setActiveSubKey(card.subKey || card.label);
-      setRightSearch('');
+      if (!singleSearch) setRightSearch('');
       return;
     }
     const type = section === 'control' ? card.nodeType : 'task';
@@ -249,8 +258,16 @@ export default function AddStepMenu({
         onMouseDown={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
+      {singleSearch && (
+        <div className="add-step-menu__search-row">
+          <SearchField value={leftSearch} onChange={setLeftSearch} autoFocus />
+        </div>
+      )}
+      <div className="add-step-menu__panes">
       <div className="add-step-menu__pane add-step-menu__pane--nav">
-        <SearchField value={leftSearch} onChange={setLeftSearch} autoFocus={!expanded} />
+        {!singleSearch && (
+          <SearchField value={leftSearch} onChange={setLeftSearch} autoFocus={!expanded} />
+        )}
 
         {filteredTasks.length > 0 && (
           <div className="add-step-menu__section">
@@ -291,7 +308,9 @@ export default function AddStepMenu({
 
       {expanded && (
         <div className="add-step-menu__pane add-step-menu__pane--detail">
-          <SearchField value={rightSearch} onChange={setRightSearch} autoFocus />
+          {!singleSearch && (
+            <SearchField value={rightSearch} onChange={setRightSearch} autoFocus />
+          )}
           <div className="add-step-menu__detail-list">
             {detailItems.map((item) => {
               const label = itemLabel(item);
@@ -314,6 +333,7 @@ export default function AddStepMenu({
           </div>
         </div>
       )}
+      </div>
       </div>
     </>,
     document.body,

@@ -27,7 +27,7 @@
   transition: background 0.15s;
   width: 100%;
   box-sizing: border-box;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .lhs-node:hover {

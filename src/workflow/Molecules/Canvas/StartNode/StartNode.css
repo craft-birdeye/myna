@@ -55,9 +55,13 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #212121;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .start-node__subtitle {

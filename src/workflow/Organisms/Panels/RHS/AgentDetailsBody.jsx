@@ -24,6 +24,8 @@ export default function AgentDetailsBody({
   viewOnly = false,
   /** Bumped by the canvas's "Add locations" link to jump straight to the Locations picker. */
   autoOpenLocationsToken = 0,
+  /** Exploration: Select by includes custom fields (managers, departments). */
+  includeCustomFields = false,
 }) {
   const [internalValues, setInternalValues] = useState({
     agentName: '',
@@ -81,6 +83,7 @@ export default function AgentDetailsBody({
         selectedIds={(values.locations || []).map((l) => l.id)}
         onBack={() => setShowLocations(false)}
         onSave={handleLocationsSave}
+        includeCustomFields={includeCustomFields}
       />
     );
   }

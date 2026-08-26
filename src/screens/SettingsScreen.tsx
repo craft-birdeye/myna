@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Globe, LayoutGrid, Navigation, Search, type LucideProps } from 'lucide-react'
+import { Globe, LayoutGrid, Lightbulb, Navigation, Search, type LucideProps } from 'lucide-react'
 import { Link, TopNav } from '../components'
 import iconQrCode from '../assets/icon-qr-code.svg'
 import iconSetupStatus from '../assets/icon-setup-status.svg'
@@ -187,11 +187,12 @@ const SECTIONS: SettingsSection[] = [
       { icon: '', iconSrc: iconSupport,   label: 'Support', subtext: 'Access help resources and contact the support team' },
       { icon: 'language',                 label: 'Timezone', subtext: "Configure your account's timezone and regional settings" },
       { icon: 'grid_view',                label: 'Products', subtext: 'Manage active and inactive products available in your account' },
+      { icon: 'lightbulb',                 label: 'User experience improvement program', subtext: 'Manage whether Birdeye analyzes your usage to improve the product' },
     ],
   },
 ]
 
-export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppointmentWidgets }: { initialTab?: string | null; onTabConsumed?: () => void; onWebWidgets?: () => void; onAppointmentWidgets?: () => void }) {
+export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppointmentWidgets, onUxImprovement }: { initialTab?: string | null; onTabConsumed?: () => void; onWebWidgets?: () => void; onAppointmentWidgets?: () => void; onUxImprovement?: () => void }) {
   const [query, setQuery] = useState('')
   const [activeNav, setActiveNav] = useState(initialTab ?? SETTINGS_NAV[0])
 
@@ -294,12 +295,20 @@ export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppo
                       <button
                         key={item.label}
                         type="button"
-                        onClick={item.label === 'Web widgets' ? onWebWidgets : item.label === 'Appointment widgets' ? onAppointmentWidgets : undefined}
+                        onClick={
+                          item.label === 'Web widgets'
+                            ? onWebWidgets
+                            : item.label === 'Appointment widgets'
+                              ? onAppointmentWidgets
+                              : item.label === 'User experience improvement program'
+                                ? onUxImprovement
+                                : undefined
+                        }
                         className="group flex h-[88px] items-center gap-md overflow-hidden rounded-sm px-sm text-left hover:bg-surface-hover"
                       >
                         {item.iconSrc
                           ? <img src={item.iconSrc} alt="" className="size-[22px] shrink-0 text-text-icon" />
-                          : (() => { const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = { near_me: Navigation, language: Globe, grid_view: LayoutGrid }; const I = ICON_MAP[item.icon]; return I ? <I className="size-[22px] shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : null })()
+                          : (() => { const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = { near_me: Navigation, language: Globe, grid_view: LayoutGrid, lightbulb: Lightbulb }; const I = ICON_MAP[item.icon]; return I ? <I className="size-[22px] shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth /> : null })()
                         }
                         <div className="flex min-w-0 flex-col">
                           <div className="flex items-center gap-sm">

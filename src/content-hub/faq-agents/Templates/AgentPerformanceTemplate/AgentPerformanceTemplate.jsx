@@ -7,7 +7,7 @@ import SecondaryRailNav from '../../Organisms/Nav/SecondaryRailNav/SecondaryRail
 import MetricCard from '../../Molecules/MetricCard/MetricCard';
 import PerformanceTable from '../../Organisms/DataViews/PerformanceTable/PerformanceTable';
 
-const font = '"Roboto", sans-serif';
+const font = '"Inter", sans-serif';
 
 const STATUS_COLOR = { Running: 'green', Paused: 'yellow', Draft: 'grey' };
 

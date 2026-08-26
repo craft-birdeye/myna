@@ -31,6 +31,25 @@ const EXPLORATION_FRONTDESK_STATUS_LABEL: Record<string, string> = {
 
 const EXPLORATION_NOT_RESOLVED_INTENTS = ['Aborted', 'Transferred to human'] as const
 
+const NEGATIVE_LOG_STATUS_TOOLTIP = 'Placeholder for actual error'
+
+const NEGATIVE_LOG_STATUSES = new Set(['Failed', 'Not resolved', 'Aborted'])
+
+function renderLogStatusCell(
+  value: unknown,
+  variantMap: Record<string, ChipVariant> = STATUS_VARIANT,
+) {
+  const label = String(value)
+  const variant = variantMap[label] ?? 'neutral'
+  const chip = <Chip label={label} variant={variant} />
+  if (!NEGATIVE_LOG_STATUSES.has(label)) return chip
+  return (
+    <Tooltip variant="detail" side="top" content={NEGATIVE_LOG_STATUS_TOOLTIP}>
+      <span className="inline-flex">{chip}</span>
+    </Tooltip>
+  )
+}
+
 function mapExplorationFrontDeskStatus(status: string): string {
   return EXPLORATION_FRONTDESK_STATUS_LABEL[status] ?? status
 }
@@ -70,7 +89,7 @@ const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     label: 'Status',
     width: 130,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 200, sortable: true },
   { key: 'channel', label: 'Source', width: 120, sortable: true },
@@ -116,7 +135,7 @@ const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   {
     key: 'topic',
@@ -135,7 +154,7 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
@@ -149,7 +168,7 @@ const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
   { key: 'source', label: 'Source', width: 180, sortable: true },
@@ -159,20 +178,9 @@ const RATING_CELL = (v: unknown) => <span>{typeof v === 'number' ? `${v} star` :
 const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
 const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
 
-const REVIEW_EXPLORATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
-  { key: 'contact', label: 'Contact', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
-  { key: 'source', label: 'Channel', width: 160, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
-  {
-    key: 'status',
-    label: 'Status',
-    width: 130,
-    sortable: true,
-    truncate: false,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
-  },
-  { key: 'comment', label: 'Intent', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
-]
+function withoutLogDuration<T>(columns: Column<T>[]): Column<T>[] {
+  return columns.filter((col) => col.key !== 'duration')
+}
 
 const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 200, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
@@ -183,7 +191,7 @@ const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
     width: 130,
     sortable: true,
     truncate: false,
-    render: (v) => <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Reviewer name', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
   { key: 'rating', label: 'Review rating', width: 140, truncate: false, render: RATING_CELL },
@@ -204,9 +212,7 @@ const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => (
-      <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />
-    ),
+    render: (v) => renderLogStatusCell(v, PREVISIT_STATUS_VARIANT),
   },
   { key: 'contact', label: 'Contact', width: 200, sortable: true },
   { key: 'channel', label: 'Channel', width: 120, sortable: true },
@@ -220,7 +226,7 @@ const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
     label: 'Status',
     width: 140,
     sortable: true,
-    render: (v) => <Chip label={String(v)} variant={PREVISIT_STATUS_VARIANT[String(v)] ?? 'neutral'} />,
+    render: (v) => renderLogStatusCell(v, PREVISIT_STATUS_VARIANT),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
 ]
@@ -242,7 +248,7 @@ function logRowsForAgent(agentName?: string): Record<string, unknown>[] {
  * Filter fields for the Logs tab, with options derived from the agent's own rows so the panel
  * can never offer a value that filters to nothing. Ids match the row keys they filter on.
  */
-export function getLogFilterFields(agentName?: string, opts?: { explorationLogLayout?: boolean }) {
+export function getLogFilterFields(agentName?: string, opts?: { explorationFrontDeskStatus?: boolean }) {
   const rows = logRowsForAgent(agentName)
   const distinct = (pick: (r: Record<string, unknown>) => unknown) =>
     Array.from(
@@ -251,7 +257,7 @@ export function getLogFilterFields(agentName?: string, opts?: { explorationLogLa
   const asOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }))
 
   const statusValues = distinct((r) => r.status)
-  const statusOptions = opts?.explorationLogLayout
+  const statusOptions = opts?.explorationFrontDeskStatus
     ? asOptions(statusValues.map(mapExplorationFrontDeskStatus))
     : asOptions(statusValues)
 
@@ -260,7 +266,7 @@ export function getLogFilterFields(agentName?: string, opts?: { explorationLogLa
     // The two log shapes name this column `source` (reviews) or `channel` (conversations).
     {
       id: 'source',
-      label: opts?.explorationLogLayout ? 'Channel' : 'Source',
+      label: opts?.explorationFrontDeskStatus ? 'Channel' : 'Source',
       options: asOptions(distinct((r) => r.source ?? r.channel)),
     },
   ]
@@ -277,7 +283,7 @@ export function applyLogFilters<T extends Record<string, unknown>>(
   rows: T[],
   query: string,
   filters: Record<string, string[]>,
-  opts?: { explorationLogLayout?: boolean },
+  opts?: { explorationFrontDeskStatus?: boolean },
 ): T[] {
   const q = query.trim().toLowerCase()
   return rows.filter((row) => {
@@ -289,7 +295,7 @@ export function applyLogFilters<T extends Record<string, unknown>>(
       const cell = key === 'source' ? (row.source ?? row.channel) : row[key]
       if (cell == null) return true
       const cellStr = String(cell)
-      if (key === 'status' && opts?.explorationLogLayout) {
+      if (key === 'status' && opts?.explorationFrontDeskStatus) {
         return values.includes(mapExplorationFrontDeskStatus(cellStr))
       }
       return values.includes(cellStr)
@@ -305,7 +311,7 @@ export function getNavigableLogRows(
   agentName?: string,
   searchQuery = '',
   filters: Record<string, string[]> = {},
-  opts?: { explorationLogLayout?: boolean; explorationFrontDeskStatus?: boolean },
+  opts?: { explorationFrontDeskStatus?: boolean },
 ): HealthcareLogRow[] {
   let rows: HealthcareLogRow[]
   if (agentName === 'Reminder agent') {
@@ -338,10 +344,10 @@ interface AgentLogsTabProps {
   searchQuery?: string
   /** Header filter selections, keyed by `LOG_FILTER_FIELDS` id. */
   filters?: Record<string, string[]>
-  /** Exploration chrome: Contact and Channel before Status; review layout omits Duration. */
-  explorationLogLayout?: boolean
-  /** Front desk exploration only: Complete→Resolved, Failed→Not resolved row mapping. */
+  /** Front desk exploration only: Complete→Resolved, Failed→Not resolved. */
   explorationFrontDeskStatus?: boolean
+  /** Marketing suite exploration: hide Duration on review/listings logs. */
+  hideLogDuration?: boolean
 }
 
 export function AgentLogsTab({
@@ -349,12 +355,12 @@ export function AgentLogsTab({
   onViewRun,
   searchQuery = '',
   filters = {},
-  explorationLogLayout = false,
   explorationFrontDeskStatus = false,
+  hideLogDuration = false,
 }: AgentLogsTabProps) {
   /** Narrows a row set by the header search + filters. */
   const f = <T extends Record<string, unknown>>(rows: T[]) =>
-    applyLogFilters(rows, searchQuery, filters, { explorationLogLayout })
+    applyLogFilters(rows, searchQuery, filters, { explorationFrontDeskStatus })
 
   const mapStatus = (rows: HealthcareLogRow[]) =>
     explorationFrontDeskStatus ? withExplorationFrontDeskLogs(rows) : rows
@@ -378,11 +384,15 @@ export function AgentLogsTab({
   }
 
   if (agentName?.startsWith('Review response agent')) {
+    const columns = hideLogDuration
+      ? withoutLogDuration(REVIEW_RESPONSE_LOG_COLUMNS)
+      : REVIEW_RESPONSE_LOG_COLUMNS
     return (
       <div className="px-lg py-lg">
         <DataTable
-          columns={explorationLogLayout ? REVIEW_EXPLORATION_LOG_COLUMNS : REVIEW_RESPONSE_LOG_COLUMNS}
+          columns={columns}
           data={f(REVIEW_RESPONSE_LOGS_ROWS)}
+          onRowClick={(row) => onViewRun?.(toHealthcareLogRow(row as ReviewResponseLogRow))}
           rowAction={{
             icon: 'visibility',
             label: 'View log',
@@ -399,6 +409,7 @@ export function AgentLogsTab({
         <DataTable
           columns={REVIEW_GENERATION_LOG_COLUMNS}
           data={f(REVIEW_GENERATION_LOGS_ROWS)}
+          onRowClick={(row) => onViewRun?.(toReviewGenerationLogRow(row as ReviewResponseLogRow))}
           rowAction={{
             icon: 'visibility',
             label: 'View log',

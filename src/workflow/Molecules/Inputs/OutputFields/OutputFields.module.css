@@ -8,6 +8,10 @@
   gap: 6px;
 }
 
+.wrapCompact {
+  gap: 2px;
+}
+
 .labelRow {
   display: flex;
   align-items: center;
@@ -20,20 +24,101 @@
   font-weight: 400;
   line-height: 18px;
   letter-spacing: -0.24px;
-  color: #212121;
+  color: #717182; /* text/secondary */
   font-family: 'Roboto', sans-serif;
   white-space: nowrap;
 }
 
 .infoIcon {
   font-size: 16px;
-  color: #8f8f8f;
+  color: #303030;
   cursor: pointer;
+  opacity: 0.55;
 }
 
-/* ─── Chip container: chips wrap row + Add below ─── */
+/* Exploration: "+ Add" + generate icon on the label row. */
+.labelActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fieldAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.fieldAddBtn :global(.material-symbols-outlined) {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.fieldAddBtnLabel {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+.fieldAddBtn:hover {
+  color: #1565c0;
+}
+
+.labelAddWrap {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.addLink {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  color: #1976d2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  font-family: 'Roboto', arial, sans-serif;
+  align-self: flex-start;
+}
+
+.addLink:hover {
+  color: #1565c0;
+}
+
+.generateIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.generateIconBtn:hover {
+  opacity: 0.8;
+}
 
 .chipContainer {
+  position: relative;
   border: 1px solid #e5e9f0;
   border-radius: 4px;
   padding: 16px 10px;
@@ -45,11 +130,69 @@
   background: #fff;
 }
 
+.chipContainerCompact {
+  padding: 8px 10px;
+  gap: 4px;
+}
+
+.chipContainerEmpty {
+  padding: 8px 10px;
+  gap: 0;
+  min-height: 0;
+}
+
+.chipMeasure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  left: 10px;
+  right: 10px;
+  top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.chipMeasureCompact {
+  top: 8px;
+  gap: 8px;
+}
+
+.chipMeasureItem {
+  display: inline-flex;
+  max-width: 100%;
+}
+
 .chipWrap {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   align-items: flex-start;
+}
+
+.chipWrapCompact {
+  gap: 8px;
+}
+
+.moreLink {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #1976d2; /* text/action */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: 'Roboto', arial, sans-serif;
+  align-self: flex-start;
+  text-align: left;
+}
+
+.moreLink:hover {
+  color: #1565c0; /* primary/hover */
+  text-decoration: underline;
 }
 
 .addBtn {
@@ -62,20 +205,22 @@
   cursor: pointer;
   color: #1976d2;
   font-family: 'Roboto', sans-serif;
+  line-height: 1;
 }
 
 .addBtn .material-symbols-outlined {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
   line-height: 1;
   overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
 .addBtnLabel {
-  font-size: 12px;
-  line-height: 18px;
-  letter-spacing: -0.24px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
 }
 
 .addRow {

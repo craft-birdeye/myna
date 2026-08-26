@@ -5,10 +5,10 @@ import './VariableSelectionModal.css';
 
 const DEFAULT_NODES = [
   { id: '1', label: '1.Trigger', count: 4 },
-  { id: '2', label: '2.Task: Identify relevant...', count: 4 },
-  { id: '3', label: '3.Task: custom tokens', count: 5 },
-  { id: '4', label: '4.Task: Generate resp...', count: 2 },
-  { id: '5', label: '5.Task : Send a review r...', count: 5 },
+  { id: '2', label: '2.Action: Identify relevant...', count: 4 },
+  { id: '3', label: '3.Action: custom tokens', count: 5 },
+  { id: '4', label: '4.Action: Generate resp...', count: 2 },
+  { id: '5', label: '5.Action: Send a review r...', count: 5 },
 ];
 
 const DEFAULT_VARIABLES = [

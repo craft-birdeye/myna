@@ -9,8 +9,10 @@
 .add-step-menu {
   position: fixed;
   z-index: 10050;
+  /* Column so the optional full-width search row can sit above the panes; the panes
+     themselves keep their original side-by-side row inside `__panes`. */
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
   width: 240px;
   min-height: 320px;
   background: #fff;
@@ -25,6 +27,20 @@
 
 .add-step-menu--expanded {
   width: 560px;
+}
+
+/* Holds the original two-column pane layout. */
+.add-step-menu__panes {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Sep 1 only: one search spanning the full menu width, above both panes. */
+.add-step-menu__search-row {
+  flex-shrink: 0;
+  padding: 12px 12px 0;
 }
 
 .add-step-menu__pane {

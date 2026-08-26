@@ -6,7 +6,7 @@ import {
 } from '../data/agentWorkflows'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
-import { getLastSavedCreateChat, createChatVariantForAgent } from '../data/createAgentChatStore'
+import { getLastSavedCreateChat, createChatVariantForAgent, getRetainedCreateAiChat } from '../data/createAgentChatStore'
 import { AGENT_INSTANCE_ISSUE_COUNTS, getAgentIssues } from '../data/agentIssues'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
@@ -94,6 +94,18 @@ interface WorkflowEditorScreenProps {
   aiTranscript?: import('../data/createAgentChatStore').SavedCreateChat | null
   /** When true, Create with AI uses help-oriented copy for an already-built agent. */
   existingAgent?: boolean
+  /** Hides the in-canvas title/status row (identity rendered in the header back cluster). */
+  hideTopIdentity?: boolean
+  /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. Sep 1 keeps the card. */
+  hideCanvasStartNode?: boolean
+  /** Exploration editor UX (help RHS, version history, chip collapse, etc.). Sep 1 keeps the canvas agent-details card. */
+  explorationChrome?: boolean
+  /** Sep 1 chrome — red "N Errors" chip after the run-test icon (both Sep 1 agents). */
+  sep1Chrome?: boolean
+  /** RHS Save follows the content instead of pinning to the panel bottom (Response agents Sep 1 only). */
+  inlineRhsFooter?: boolean
+  /** Opens Settings > Account > Product research (Help center "Learn more"). */
+  onOpenProductResearchSettings?: () => void
 }
 
 export function WorkflowEditorScreen({
@@ -116,13 +128,23 @@ export function WorkflowEditorScreen({
   lhsDefaultTab = 'Create manually',
   aiTranscript = null,
   existingAgent,
+  hideTopIdentity = false,
+  hideCanvasStartNode = hideTopIdentity,
+  explorationChrome = hideTopIdentity,
+  sep1Chrome = false,
+  inlineRhsFooter = false,
+  onOpenProductResearchSettings,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
   const shownName = displayName ?? agentName
   const createChatVariant =
     createChatVariantForAgent(shownName) ?? createChatVariantForAgent(agentName)
-  const resolvedAiTranscript = aiTranscript ?? getLastSavedCreateChat(createChatVariant)
+  const resolvedAiTranscript =
+    aiTranscript ??
+    getRetainedCreateAiChat(shownName) ??
+    getRetainedCreateAiChat(agentName) ??
+    getLastSavedCreateChat(createChatVariant)
   const isHCProduct = product === 'healthcare' || product === 'dental'
   const isPreVisit = agentBaseName === 'Pre-visit agent'
   const isWaitlist = agentBaseName === 'Waitlist agent'
@@ -212,7 +234,7 @@ export function WorkflowEditorScreen({
             },
           },
         }
-    : isHC && agentBaseName === 'Front desk agent'
+    : isHC && (agentBaseName === 'Front desk agent' || agentBaseName === 'Front desk agent (exploration)')
       ? {
           nodes: baseWorkflow.nodes,
           nodeDetails: {
@@ -228,10 +250,10 @@ export function WorkflowEditorScreen({
   // Create-from-scratch opens an empty canvas — never show "Running".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0
-  const publishDisabled = issueCount > 0
 
   const AGENT_NAV_MAP: Record<string, string> = {
     'Front desk agent': 'frontdesk',
+    'Front desk agent (exploration)': 'frontdesk',
     'Reminder agent': 'inbox',
     'Outreach agent': 'marketing',
     'Pre-visit agent': 'frontdesk',
@@ -262,7 +284,7 @@ export function WorkflowEditorScreen({
             showProceduresPalette={isFrontDeskAgent}
             onAddProcedure={addProcedure}
             initialStatus={resolvedStatus}
-            publishDisabled={publishDisabled}
+            publishDisabled={false}
             issueCount={issueCount}
             issues={getAgentIssues(agentName)}
             defaultOpenSection={isEmptyScratch ? 'Trigger' : 'Tasks'}
@@ -279,6 +301,12 @@ export function WorkflowEditorScreen({
             lhsDefaultTab={lhsDefaultTab}
             aiTranscript={resolvedAiTranscript}
             existingAgent={resolvedExistingAgent}
+            hideTopIdentity={hideTopIdentity}
+            hideCanvasStartNode={hideCanvasStartNode}
+            explorationChrome={explorationChrome}
+            inlineRhsFooter={inlineRhsFooter}
+            sep1Chrome={sep1Chrome}
+            onOpenProductResearchSettings={onOpenProductResearchSettings}
           />
         </Suspense>
       </div>

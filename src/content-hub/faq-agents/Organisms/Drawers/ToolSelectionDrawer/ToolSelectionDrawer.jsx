@@ -22,7 +22,7 @@ function TabHeader({ tabs, activeTab, onTabChange }) {
     <div style={{ display: 'flex', borderBottom: '1px solid #e5e9f0' }}>
       {tabs.map((t) => (
         <button key={t.id || t.label} type="button" onClick={() => onTabChange(t.id || t.label)}
-          style={{ padding: '10px 16px', border: 'none', background: 'none', fontSize: 14, fontFamily: '"Roboto",sans-serif', cursor: 'pointer', borderBottom: activeTab === (t.id || t.label) ? '2px solid #1976d2' : '2px solid transparent', color: activeTab === (t.id || t.label) ? '#1976d2' : '#555', marginBottom: -1 }}>
+          style={{ padding: '10px 16px', border: 'none', background: 'none', fontSize: 14, fontFamily: '"Inter",sans-serif', cursor: 'pointer', borderBottom: activeTab === (t.id || t.label) ? '2px solid #1976d2' : '2px solid transparent', color: activeTab === (t.id || t.label) ? '#1976d2' : '#555', marginBottom: -1 }}>
           {t.label || t}
         </button>
       ))}
@@ -85,7 +85,7 @@ function ExternalLogo({ color, initials }) {
         textAnchor="middle"
         fill="#fff"
         fontSize={initials.length > 1 ? '11' : '14'}
-        fontFamily="Roboto, Arial, sans-serif"
+        fontFamily="Inter, Arial, sans-serif"
         fontWeight="600"
       >
         {initials}

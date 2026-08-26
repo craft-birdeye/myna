@@ -65,8 +65,10 @@ import {
   rememberCreateAgentChat,
   getLastSavedCreateChat,
   setCreateAiDraftTrail,
+  registerBuiltinCreateAiDraft,
 } from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
+import { FrontDeskDraftReviewContent, FRONT_DESK_DRAFT_REFILL_PROCEDURE } from '../components/AgentDraftReview/FrontDeskDraftReviewContent'
 import { useAiBuilderTrail } from '../components/AiBuilderPanel/useAiBuilderTrail'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -271,10 +273,10 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
   ],
   'Reminder agent': [
-    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min' },
-    { region: 'East region',  status: 'Running', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min' },
-    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min' },
-    { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       interactions: '407',  fcr: '68%', aht: '1m 55s', escalation: '15%', locations: '140', bookings: '60',  confirmed: '10', confirmRate: '16.7%', timeSaved: '6 min' },
+    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min', issues: AGENT_INSTANCE_ISSUE_COUNTS['Reminder agent - North region'], instanceName: 'Reminder agent - North region' },
+    { region: 'East region',  status: 'Running', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min', instanceName: 'Reminder agent - East region' },
+    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min', instanceName: 'Reminder agent - South region' },
+    { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       interactions: '407',  fcr: '68%', aht: '1m 55s', escalation: '15%', locations: '140', bookings: '60',  confirmed: '10', confirmRate: '16.7%', timeSaved: '6 min', instanceName: 'Reminder agent - West region' },
   ],
   'Outreach agent': [
     { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '920', fcr: '42%', aht: '2m 45s', escalation: '9%',  locations: '358' },
@@ -365,24 +367,33 @@ const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l })
 // ── Library template cards for the create-agent empty state ───────────────
 const LIBRARY_TEMPLATES = [
   {
-    id: 'routing',
-    title: 'Routing and triage',
-    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+    id: 'sms-webchat',
+    title: 'SMS and Webchat',
+    description:
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat' as const,
+    tone: 'info' as const,
   },
   {
     id: 'new-patient',
     title: 'New patient intake',
     description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
+    glyph: 'intake' as const,
+    tone: 'success' as const,
   },
   {
     id: 'established',
     title: 'Established patient scheduling',
     description: 'Validates existing records, checks coverage, and books or reschedules follow-up visits with preferred providers',
+    glyph: 'scheduling' as const,
+    tone: 'ai' as const,
   },
   {
     id: 'urgent',
     title: 'Urgent escalations',
     description: 'Detects high-risk symptoms, follows escalation policy, and hands off immediately to clinical staff or emergency guidance',
+    glyph: 'routing' as const,
+    tone: 'danger' as const,
   },
 ]
 
@@ -444,10 +455,11 @@ function toLibraryPreviewData(
 
 const HEALTHCARE_FRONTDESK_CREATE_CARDS: CreateLibraryCard[] = [
   {
-    id: 'routing',
-    title: 'Routing and triage',
-    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
-    glyph: 'routing',
+    id: 'sms-webchat',
+    title: 'SMS and Webchat',
+    description:
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat',
     tone: 'info',
   },
   {
@@ -757,9 +769,10 @@ const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
     {
-      id: 'routing',
-      title: 'Routing and triage',
-      description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+      id: 'sms-webchat',
+      title: 'SMS and Webchat',
+      description:
+        'Handles customer conversations using your configured skills, procedures, and tools.',
     },
     {
       id: 'new-patient',
@@ -2060,6 +2073,80 @@ function ReviewAgentReply({
   )
 }
 
+/** Demo trigger: picking this pill simulates a mid-stream API failure. */
+function isSourcesStreamFailDemo(text: string) {
+  return /^facebook only\.?$/i.test(text.trim())
+}
+
+const SOURCES_STREAM_FAIL_PARTIAL =
+  "Got it — I'll limit the trigger to Facebook reviews only. Next I'll narrow loc"
+
+/** Streams a partial assistant reply, then surfaces an inline failure + Retry. */
+function GhostwriterStreamFailTurn({
+  onFail,
+}: {
+  onFail: (partial: string) => void
+}) {
+  const onFailRef = useRef(onFail)
+  onFailRef.current = onFail
+
+  const { typed, done } = useTypewriter(SOURCES_STREAM_FAIL_PARTIAL, {
+    charsPerTick: 3,
+    intervalMs: 18,
+  })
+
+  useEffect(() => {
+    if (!done) return
+    // Brief pause after the last token so the cut feels like a dropped stream.
+    const t = window.setTimeout(() => onFailRef.current(SOURCES_STREAM_FAIL_PARTIAL), 280)
+    return () => window.clearTimeout(t)
+  }, [done])
+
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm" aria-live="polite">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning />
+      </span>
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <p className="whitespace-pre-wrap">
+          {typed}
+          <TypingCaret />
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Inline stream-failure state (ChatGPT / Claude / Fin pattern) — not a toast. */
+function GhostwriterStreamFailError({
+  partial,
+  onRetry,
+}: {
+  partial: string
+  onRetry: () => void
+}) {
+  return (
+    <div className="agent-build-fade mt-3xl flex gap-sm" role="alert">
+      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+        <SparkleLoader size={14} spinning={false} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-sm text-body leading-6">
+        {partial ? (
+          <p className="whitespace-pre-wrap text-text-primary">{partial}</p>
+        ) : null}
+        <p className="text-text-secondary">Couldn&apos;t generate a response</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="flex h-9 w-fit items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  )
+}
+
 type ReviewChoiceStep = {
   /** Scripted demo reply pre-filled when the user clicks the composer. */
   composerFill: string
@@ -2184,7 +2271,6 @@ function ReviewBuildingCard({
       </p>
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -2263,6 +2349,10 @@ function ReviewResponseThread({
 }) {
   const [introDone, setIntroDone] = useState(false)
   const [sourcesAnswer, setSourcesAnswer] = useState('')
+  /** none → happy path; attempting/failed → Facebook-only stream-fail demo; ok → recovered via Retry. */
+  const [sourcesStreamPhase, setSourcesStreamPhase] = useState<'none' | 'attempting' | 'failed' | 'ok'>('none')
+  const [sourcesStreamPartial, setSourcesStreamPartial] = useState('')
+  const [sourcesStreamAttemptKey, setSourcesStreamAttemptKey] = useState(0)
   const [sourcesThoughtsOpen, setSourcesThoughtsOpen] = useState(true)
   const [sourcesReplyReady, setSourcesReplyReady] = useState(false)
   const [sourcesReplyDone, setSourcesReplyDone] = useState(false)
@@ -2324,6 +2414,27 @@ function ReviewResponseThread({
                       ? 'build'
                       : null
 
+  const applySourcesAnswer = (raw: string, { recoverFail = false }: { recoverFail?: boolean } = {}) => {
+    const text = raw.trim()
+    if (!text) return
+    const fill = REVIEW_RESPONSE_CHOICES.sources.composerFill
+    const next =
+      text === 'All sources' || text === fill
+        ? fill
+        : text
+    setSourcesThoughtsOpen(true)
+    setSourcesReplyReady(false)
+    setSourcesReplyDone(false)
+    setSourcesStreamPartial('')
+    if (recoverFail || !isSourcesStreamFailDemo(next)) {
+      setSourcesStreamPhase('ok')
+    } else {
+      setSourcesStreamPhase('attempting')
+      setSourcesStreamAttemptKey((k) => k + 1)
+    }
+    setSourcesAnswer(next)
+  }
+
   const applyAnswer = (raw: string) => {
     const text = raw.trim()
     if (!text || !awaitingStep) return
@@ -2331,9 +2442,7 @@ function ReviewResponseThread({
 
     switch (awaitingStep) {
       case 'sources':
-        setSourcesAnswer(
-          text === 'All sources' || text === fill ? fill : text,
-        )
+        applySourcesAnswer(text)
         break
       case 'locations':
         if (text === 'Select locations') {
@@ -2378,22 +2487,41 @@ function ReviewResponseThread({
     }
   }
 
+  const handleSourcesStreamRetry = () => {
+    // Re-send the same user prompt; this time the stream succeeds (no auto-retry loop).
+    applySourcesAnswer(sourcesAnswer || 'Facebook only', { recoverFail: true })
+  }
+
   useEffect(() => {
-    if (!pendingAnswer?.trim() || !awaitingStep) return
+    if (!pendingAnswer?.trim()) return
+    // While a failed turn sits inline, composer stays live — a new send rephrases.
+    if (sourcesStreamPhase === 'failed') {
+      applySourcesAnswer(pendingAnswer)
+      onPendingAnswerConsumed?.()
+      return
+    }
+    if (!awaitingStep) return
     applyAnswer(pendingAnswer)
     onPendingAnswerConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingAnswer, awaitingStep])
+  }, [pendingAnswer, awaitingStep, sourcesStreamPhase])
 
   useEffect(() => {
+    if (sourcesStreamPhase === 'failed' && sourcesAnswer) {
+      onComposerFillChange?.(sourcesAnswer)
+      return
+    }
     onComposerFillChange?.(
       awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep].composerFill : null,
     )
-  }, [awaitingStep, onComposerFillChange])
+  }, [awaitingStep, onComposerFillChange, sourcesStreamPhase, sourcesAnswer])
+
+  const sourcesAwaitingReply =
+    Boolean(sourcesAnswer) && !sourcesReplyDone && sourcesStreamPhase !== 'failed'
 
   const busy =
     !introDone ||
-    (Boolean(sourcesAnswer) && !sourcesReplyDone) ||
+    sourcesAwaitingReply ||
     (Boolean(locationsAnswer) && !locationsReplyDone) ||
     (Boolean(spamOkAnswer) && !spamAlertDone) ||
     (Boolean(spamAlertAnswer) && !spamEmailDone) ||
@@ -2425,8 +2553,10 @@ function ReviewResponseThread({
 
     if (sourcesAnswer) {
       trail.push({ kind: 'user', text: sourcesAnswer })
-      trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS })
-      if (sourcesReplyReady || sourcesReplyDone) pushAgent(REVIEW_RESPONSE_SOURCES_REPLY)
+      if (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') {
+        trail.push({ kind: 'thoughts', text: REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS })
+        if (sourcesReplyReady || sourcesReplyDone) pushAgent(REVIEW_RESPONSE_SOURCES_REPLY)
+      }
     }
     if (locationsAnswer) {
       trail.push({ kind: 'user', text: locationsAnswer })
@@ -2473,6 +2603,7 @@ function ReviewResponseThread({
         kind: 'draft',
         title: REVIEW_RESPONSE_BUILD_CARD.title,
         description: REVIEW_RESPONSE_BUILD_CARD.description,
+        variant: 'review-response',
       })
     }
     if (postDraftDone) {
@@ -2486,6 +2617,7 @@ function ReviewResponseThread({
   }, [
     onTrailChange,
     sourcesAnswer,
+    sourcesStreamPhase,
     sourcesReplyReady,
     sourcesReplyDone,
     locationsAnswer,
@@ -2542,7 +2674,22 @@ function ReviewResponseThread({
         <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
       )}
       {sourcesAnswer && <UserBubble>{sourcesAnswer}</UserBubble>}
-      {sourcesAnswer && (
+      {sourcesAnswer && sourcesStreamPhase === 'attempting' && (
+        <GhostwriterStreamFailTurn
+          key={sourcesStreamAttemptKey}
+          onFail={(partial) => {
+            setSourcesStreamPartial(partial)
+            setSourcesStreamPhase('failed')
+          }}
+        />
+      )}
+      {sourcesAnswer && sourcesStreamPhase === 'failed' && (
+        <GhostwriterStreamFailError
+          partial={sourcesStreamPartial}
+          onRetry={handleSourcesStreamRetry}
+        />
+      )}
+      {sourcesAnswer && (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') && (
         <>
           <CreateAgentThinkingPanel
             open={sourcesThoughtsOpen}
@@ -3083,7 +3230,6 @@ function ReminderBuildingCard({
           When the workflow canvas is open, collapse to title + one-liner only. */}
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -3109,7 +3255,7 @@ function ReminderBuildingCard({
         </div>
 
         {!done ? (
-          <div className="mt-md flex flex-col gap-sm pl-lg">
+          <div className="mt-md flex flex-col gap-sm">
             {REMINDER_DESIGN_STEPS.map((s, i) => {
               const isDone = i < displayStep
               const isActive = i === displayStep
@@ -3128,7 +3274,7 @@ function ReminderBuildingCard({
             })}
           </div>
         ) : !collapsed ? (
-          <div className="agent-build-fade mt-lg flex flex-col gap-lg pl-lg">
+          <div className="agent-build-fade mt-lg">
             <ReminderDraftReviewContent
               openProcedureName={openProcedureName}
               onOpenProcedure={onOpenProcedure}
@@ -3561,13 +3707,23 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
 
 // Built live when John opts to add a refill procedure. Must match a procedure
 // name in HC_PROCEDURES so the card can open it in the preview panel.
-const REFILL_PROCEDURE_NAME = 'Handle prescription refill request'
+const REFILL_PROCEDURE_NAME = FRONT_DESK_DRAFT_REFILL_PROCEDURE
 
 const CREATE_AGENT_REFILL_THOUGHTS_TEXT = `Refills are 7% of calls — worth building. A typical refill call: a patient says "I need a refill on my lisinopril." The agent has to identify the patient, pull the prescription from the EHR, confirm the medication and pharmacy, then route the refill to the prescriber for approval — it can't approve refills itself.
 
 The blocker: this needs a pharmacy / e-prescribe integration, which isn't connected yet. So I'll build the procedure with the right steps and tool references, but flag the pharmacy tool as "needs connection" so it's clear this can't go live until someone wires it up. Guardrails stay intact — never give dosage or clinical advice, and controlled substances always go to a human.`
 
 const CREATE_AGENT_REVIEW_THOUGHTS_TEXT = `The review cleanly separates "you told me" vs "I defaulted" so nothing mandatory is hidden. Publishing isn't blocked. I'll let John test before he commits — testing must run every tool in mock mode so no real appointment gets booked.`
+
+const FRONTDESK_POST_DRAFT_REPLY =
+  'I have created a Front desk agent for you to answer inbound calls, book and reschedule appointments, answer basic insurance questions, and hand off anything about billing disputes to a human.'
+
+const FRONTDESK_POST_DRAFT_PILLS = [
+  "Yes, that's right",
+  'Make changes',
+  'Test agent',
+  'View in agent builder',
+] as const
 
 const CREATE_AGENT_REFILL_REPLY_PARAGRAPHS = [
   "On it — building the refill procedure now. Here's how it'll work:",
@@ -3642,164 +3798,12 @@ function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
   )
 }
 
-// ── Draft review card ("Your draft is ready — here's everything I built") ──
-const DRAFT_TOOLS = ['Appointment scheduler', 'Patient records (EHR)', 'Insurance verification', 'Human handoff']
-
-const DRAFT_SETTINGS: { setting: string; value: string; confirmed: boolean; source: string }[] = [
-  { setting: 'Channels', value: 'Voice + Text', confirmed: true, source: 'From your response' },
-  { setting: 'Greeting', value: '"Thanks for calling [Clinic] — how can I help you today?"', confirmed: false, source: 'default' },
-  { setting: 'Consent', value: 'Standard call-recording consent notice', confirmed: false, source: 'default' },
-  { setting: 'Voice', value: 'Warm, female (US) · standard speed', confirmed: false, source: 'default' },
-  { setting: 'Language', value: 'English (primary)', confirmed: false, source: 'default' },
-  { setting: 'Locations', value: 'All 3 clinic locations', confirmed: false, source: 'default' },
-]
-
 function DraftReviewSection({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-xs">
       <p className="text-small text-text-tertiary">{label}</p>
       {children}
     </div>
-  )
-}
-
-function DraftReviewCard({
-  refillAdded,
-  openProcedureName,
-  onOpenProcedure,
-}: {
-  refillAdded: boolean
-  openProcedureName: string | null
-  onOpenProcedure: (name: string) => void
-}) {
-  const procedures: { label: string; note: ReactNode; open: string }[] = [
-    {
-      label: 'Book an appointment',
-      note: 'from your transcripts + SOP · verifies insurance eligibility before confirming a new-patient visit (per your SOP)',
-      open: 'Book, cancel, reschedule appointment',
-    },
-    { label: 'Reschedule an appointment', note: 'from your transcripts', open: 'Reschedule appointment' },
-    {
-      label: 'Answer insurance questions',
-      note: (
-        <>
-          answers from{' '}
-          <span className="inline-flex items-center gap-xs text-text-primary">
-            <Icon name="attach_file" size={14} className="text-text-icon" />
-            insurance-faq.pdf
-          </span>
-        </>
-      ),
-      open: 'Verify insurance',
-    },
-    {
-      label: 'Escalate billing disputes',
-      note: 'from your SOP · also escalates any caller who explicitly asks for a human',
-      open: 'Talk to human',
-    },
-  ]
-  if (refillAdded) {
-    procedures.push({
-      label: 'Handle prescription refills',
-      note: 'flagged — needs a pharmacy integration before it can go live',
-      open: REFILL_PROCEDURE_NAME,
-    })
-  }
-
-  return (
-    <>
-      <DraftReviewSection label="What it does">
-        <p className="text-body leading-6 text-text-primary">
-          Answers inbound conversations on voice and text, books and reschedules appointments, answers insurance
-          questions from your FAQ, and hands off billing disputes to a human.
-        </p>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="When it runs">
-        <p className="text-body leading-6 text-text-primary">Whenever a conversation starts on voice or text.</p>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Procedures — tap to open and read the steps">
-        <div className="flex flex-col gap-xs">
-          {procedures.map((p) => {
-            const pressed = openProcedureName === p.open
-            return (
-              <button
-                key={p.label}
-                type="button"
-                aria-pressed={pressed}
-                onClick={() => onOpenProcedure(p.open)}
-                className={`flex items-start gap-sm rounded-md px-sm py-sm text-left hover:bg-surface-hover ${
-                  pressed ? 'bg-surface-hover' : ''
-                }`}
-              >
-                <span className="flex h-6 shrink-0 items-center">
-                  <Icon name="menu_book" size={16} className="text-text-icon" />
-                </span>
-                <span className="min-w-0 flex-1 text-body leading-6">
-                  <span className="text-text-primary">{p.label}</span>
-                  <span className="text-text-secondary"> — {p.note}</span>
-                </span>
-                <span className="flex h-6 shrink-0 items-center">
-                  <Icon name="chevron_right" size={18} className="text-text-icon" />
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Tools it can use">
-        <div className="flex flex-col gap-xs">
-          {DRAFT_TOOLS.map((tool) => (
-            <div key={tool} className="flex w-full items-center gap-sm rounded-md px-sm py-sm">
-              <Icon name="build" size={18} className="shrink-0 text-text-icon" />
-              <span className="inline-flex min-w-0 items-center gap-xs text-body text-text-primary">
-                {tool}
-                <Icon name="check_circle" size={16} className="shrink-0 text-accent-positive" />
-              </span>
-            </div>
-          ))}
-        </div>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Settings">
-        <div className="flex flex-col gap-sm">
-          {DRAFT_SETTINGS.map((row) => (
-            <div key={row.setting} className="flex flex-col">
-              <span className="text-small leading-tight text-text-tertiary">{row.setting}</span>
-              <div className="flex flex-wrap items-center gap-sm">
-                <span className="text-body leading-6 text-text-primary">{row.value}</span>
-                <span
-                  className={`inline-flex shrink-0 items-center gap-xs text-small ${
-                    row.confirmed
-                      ? 'rounded-full bg-chip-success-bg px-sm py-xs text-chip-success-text'
-                      : 'h-5 rounded-sm bg-surface-l2 px-sm text-text-tertiary'
-                  }`}
-                >
-                  {row.confirmed && <Icon name="check_circle" size={14} className="shrink-0" />}
-                  {row.source}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Still needed before publish">
-        <p className="text-body leading-6 text-text-primary">
-          Nothing — every required setting is filled (some by default).
-        </p>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="What I left out">
-        <p className="text-body leading-6 text-text-primary">
-          {refillAdded
-            ? 'Nothing — I also built the prescription refill procedure, flagged until you connect a pharmacy integration.'
-            : "Prescription refills (needs a pharmacy integration you haven't connected)."}
-        </p>
-      </DraftReviewSection>
-    </>
   )
 }
 
@@ -3966,7 +3970,6 @@ function FrontdeskBuildingCard({
 
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -3992,7 +3995,7 @@ function FrontdeskBuildingCard({
         </div>
 
         {!done ? (
-          <div className="mt-md flex flex-col gap-sm pl-lg">
+          <div className="mt-md flex flex-col gap-sm">
             {steps.map((s, i) => {
               const isDone = i < displayStep
               const isActive = i === displayStep
@@ -4011,8 +4014,8 @@ function FrontdeskBuildingCard({
             })}
           </div>
         ) : (
-          <div className="agent-build-fade mt-lg flex flex-col gap-lg pl-lg">
-            <DraftReviewCard
+          <div className="agent-build-fade mt-lg">
+            <FrontDeskDraftReviewContent
               refillAdded={refillAdded}
               openProcedureName={openProcedureName}
               onOpenProcedure={onOpenProcedure}
@@ -5628,40 +5631,29 @@ function HealthcareFrontdeskCreateAgentLive({
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
                               <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
-                                I have created a Front desk agent for you to answer inbound calls, book and
-                                reschedule appointments, answer basic insurance questions, and hand off anything
-                                about billing disputes to a human.
+                                {FRONTDESK_POST_DRAFT_REPLY}
                               </p>
                             </div>
                             <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Yes, that&apos;s right
-                              </button>
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Make changes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleStartTestAgent()}
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Test agent
-                              </button>
-                              {!workflowVisible && (
+                              {FRONTDESK_POST_DRAFT_PILLS.filter(
+                                (label) => !(workflowVisible && label === 'View in agent builder'),
+                              ).map((label) => (
                                 <button
+                                  key={label}
                                   type="button"
-                                  onClick={onViewWorkflow}
+                                  onClick={() => {
+                                    if (label === 'View in agent builder') onViewWorkflow?.()
+                                    else if (label === 'Test agent') handleStartTestAgent()
+                                  }}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
-                                  View in agent builder
+                                  {label === "Yes, that's right" ? (
+                                    <>Yes, that&apos;s right</>
+                                  ) : (
+                                    label
+                                  )}
                                 </button>
-                              )}
+                              ))}
                             </div>
                             {reviewFollowUpAnswer && (
                               <>
@@ -6213,9 +6205,9 @@ function HealthcareFrontdeskCreateAgentLive({
     ]
     const frontdeskQuickStarts = [
       {
-        label: 'Routing and triage',
+        label: 'SMS and Webchat',
         prompt:
-          'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
+          'Create a Front desk agent that handles customer conversations over SMS and webchat using configured skills, procedures, and tools.',
       },
       {
         label: 'New patient intake',
@@ -6663,6 +6655,7 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
             kind: 'draft',
             title: snap.draftTitle,
             description: snap.draftDescription,
+            variant: 'reminder',
           })
         }
       }
@@ -6727,8 +6720,15 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
       kind: 'draft',
       title: snap.draftTitle,
       description: snap.draftDescription,
+      variant: snap.variant === 'reminder' ? 'reminder' : 'frontdesk',
+      refillAdded: Boolean(snap.refillAnswer?.startsWith('Add procedure')),
     })
     trail.push({ kind: 'thoughts', text: CREATE_AGENT_REVIEW_THOUGHTS_TEXT })
+    trail.push({
+      kind: 'agent',
+      paragraphs: [FRONTDESK_POST_DRAFT_REPLY],
+      choices: snap.reviewFollowUpAnswer ? undefined : [...FRONTDESK_POST_DRAFT_PILLS],
+    })
   }
 
   if (snap.reviewFollowUpAnswer) {
@@ -6753,11 +6753,32 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
       kind: 'draft',
       title: snap.draftTitle,
       description: snap.draftDescription,
+      variant: snap.variant === 'reminder' ? 'reminder' : 'frontdesk',
+      refillAdded: Boolean(snap.refillAnswer?.startsWith('Add procedure')),
     })
   }
 
   return trail
 }
+
+/** Demo: East region Front desk already has the full Create with AI transcript. */
+registerBuiltinCreateAiDraft(
+  'Front desk agent - East region',
+  buildCreateChatTrail({
+    variant: 'frontdesk',
+    prompt: JOHN_CREATE_PROMPT,
+    draftTitle: 'Front desk agent - East region',
+    draftDescription: FRONTDESK_BUILD_CARD.description,
+    docsFileLabels: DEMO_DOCS_ATTACHMENTS.map((f) => f.label),
+    docsProvided: true,
+    docsBuildComplete: true,
+    docsDraftReadyDone: true,
+    refillAnswer: 'Add procedure "Handling refills"',
+    refillProcedureCreated: true,
+    createAgentAnswer: 'Yes, create the agent',
+    draftBuildReady: true,
+  }),
+)
 
 /** Builds a recent-chat entry from a finished full-page co-pilot session. */
 function buildSavedCreateChat(snap: SavedCreateChatSnapshot): ChatHistoryTranscript {
@@ -7011,7 +7032,6 @@ function HistoryChatReplay({
                       </p>
                       <div className="rounded-md border border-border bg-surface p-lg">
                         <div className="flex items-start gap-sm">
-                          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
                           <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-sm">
                               <span className="text-body text-text-primary">{turn.title}</span>
@@ -7056,7 +7076,6 @@ function HistoryChatReplay({
                   </p>
                   <div className="rounded-md border border-border bg-surface p-lg">
                     <div className="flex items-start gap-sm">
-                      <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-sm">
                           <span className="text-body text-text-primary">{chat.draftTitle}</span>
@@ -8057,6 +8076,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 hideTopIdentity={isExplorationAgents}
                 hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
                 explorationChrome={isExplorationAgents}
+                sep1Chrome={isSep1Agents}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}

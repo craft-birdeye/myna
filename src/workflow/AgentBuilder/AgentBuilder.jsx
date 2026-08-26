@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import LHSDrawer, {
   isFrontDeskAgent as agentNameIsFrontDesk,
   isFrontDeskCanvasAgent,
@@ -17,6 +18,9 @@ import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolVi
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
+import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
+import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
+import { WorkflowCoachTour } from '../../components/WorkflowCoachTour/WorkflowCoachTour';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -24,6 +28,7 @@ import QueryConfigDrawer from '../Organisms/Drawers/QueryConfigDrawer/QueryConfi
 import AssignContactStatusDrawer from '../Organisms/Drawers/AssignContactStatusDrawer/AssignContactStatusDrawer';
 import AssignConversationDrawer from '../Organisms/Drawers/AssignConversationDrawer/AssignConversationDrawer';
 import AssignConversationStatusDrawer from '../Organisms/Drawers/AssignConversationStatusDrawer/AssignConversationStatusDrawer';
+import HandleResponseDrawer, { isHandleResponseConfigComplete } from '../Organisms/Drawers/HandleResponseDrawer/HandleResponseDrawer';
 import ToolLibraryDrawer from '../Organisms/Drawers/ToolLibraryDrawer/ToolLibraryDrawer';
 import AddToolDrawer from '../Organisms/Drawers/AddToolDrawer/AddToolDrawer';
 import {
@@ -53,21 +58,70 @@ import iconRrHistory from '../../assets/rr-chrome/icon-history.svg';
 import iconRrPreview from '../../assets/rr-chrome/icon-preview.svg';
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg';
 import { Tooltip } from '../../components/Tooltip/Tooltip';
+import { Icon } from '../../components/Icon/Icon';
 import { AiBuilderPanel } from '../../components/AiBuilderPanel/AiBuilderPanel';
+import { TestRunPanel } from '../../components/TestRunPanel/TestRunPanel';
+import { Toast } from '../../components/Toast/Toast';
+import { buildTestRunSteps } from '../../data/testRunSteps';
+import { useTestRun } from '../../hooks/useTestRun';
 import { getAgentIssues } from '../../data/agentIssues';
-import VersionHistoryPanel from './VersionHistoryPanel';
+import VersionHistoryPanel, { DEFAULT_VERSIONS as VERSION_HISTORY_VERSIONS } from './VersionHistoryPanel';
 import './AgentBuilder.css';
 
 const START_NODE_ID = '__start__';
+/* Stable identity — `useTestRun` restarts whenever its `steps` reference changes. */
+const EMPTY_TEST_RUN_STEPS = [];
 const END_NODE_ID = '__end__';
 // Synthetic node (not part of nodeList) that reserves step 1 for the trigger while none exists.
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
 
-/** RR chrome header title — ellipsizes past a fixed max width; full name on hover. */
-function RrChromeAgentTitle({ text }) {
+/** RR chrome header title — ellipsizes past a fixed max width; full name on hover only when truncated. */
+function RrChromeAgentTitle({ text, onClick }) {
+  const textRef = useRef(null);
+  const [truncated, setTruncated] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+
+    const check = () => {
+      setTruncated(el.scrollWidth > el.clientWidth + 1);
+    };
+
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    if (el.parentElement) ro.observe(el.parentElement);
+    return () => ro.disconnect();
+  }, [text]);
+
   return (
-    <Tooltip content={text} variant="detail" side="bottom" className="rr-chrome-top__title-tip">
-      <span className="ab-header-title">{text}</span>
+    <Tooltip
+      content={text}
+      variant="detail"
+      side="bottom"
+      className="rr-chrome-top__title-tip"
+      disabled={!truncated}
+    >
+      {onClick ? (
+        <button
+          type="button"
+          className="ab-header-title ab-header-title--button"
+          onClick={onClick}
+          aria-label={`Open agent details for ${text}`}
+        >
+          <span ref={textRef} className="ab-header-title__text">
+            {text}
+          </span>
+          <span className="material-symbols-outlined ab-header-title__edit" aria-hidden>
+            edit
+          </span>
+        </button>
+      ) : (
+        <span ref={textRef} className="ab-header-title">
+          {text}
+        </span>
+      )}
     </Tooltip>
   );
 }
@@ -155,7 +209,20 @@ function makeNodeDetails(type, label) {
     const firstId = label && label !== 'Custom' ? label : null;
     return { procedureIds: firstId ? [firstId] : [] };
   }
-  if (type === 'branch') return { basedOn: 'conditions', branches: [] };
+  if (type === 'branch') {
+    return {
+      basedOn: 'conditions',
+      branchNodeTitle: 'Based on conditions',
+      description: 'Build condition-specific flows',
+      mergeBranches: true,
+      // Paths are fully seeded on drop (with node-scoped ids). Keep a named
+      // placeholder here so the RHS never opens on an empty Branches list.
+      branches: [
+        { id: 'pending-path-1', name: 'Branch 1' },
+        { id: 'pending-path-fallback', name: 'Fallback branch', isFallback: true },
+      ],
+    };
+  }
   if (type === 'subagent') return { selectedAgent: '', name: '', description: '' };
   if (type === 'delay') return { name: '', duration: '', unit: '' };
   if (type === 'parallel') return { nodeName: '', description: '', branches: [{ name: '' }, { name: '' }] };
@@ -223,6 +290,11 @@ const TASK_DROP_DEFAULTS = {
   'Assign tags': {
     description: 'Add tags to a review',
     selectedTools: ['assign-tags'],
+  },
+  'Handle response': {
+    description:
+      'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
+    selectedTools: ['handle-response'],
   },
 };
 
@@ -347,6 +419,15 @@ function isTaskConfigIncomplete(_item, _details = {}) {
   return false;
 }
 
+/**
+ * True when a task's tool still has unfilled mandatory config. Checked on RHS Save (not on
+ * drop), so the canvas card only flags an error once the user has tried to commit the task.
+ */
+function taskHasToolConfigError(details = {}) {
+  const tools = details.selectedTools || [];
+  return tools.includes('handle-response') && !isHandleResponseConfigComplete(details.handleResponse);
+}
+
 function getNodeBlockHeight(item, nodeId, nodeDetails, product = 'automotive') {
   if (item?.flowType === 'procedures') {
     const ids = nodeDetails?.[nodeId]?.procedureIds ?? [];
@@ -381,7 +462,8 @@ function mapProcedureItems(procedureIds = [], nodeDetails, nodeId, product) {
   });
 }
 
-function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive', collapsedBranches = {}, collapsedBranchPaths = {}) {
+function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive', collapsedBranches = {}, collapsedBranchPaths = {}, options = {}) {
+  const { hideStartNode = false } = options;
   let y = 0;
   const nodes = [];
   const edges = [];
@@ -392,21 +474,23 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   // Shared sequential step counter — incremented for every rendered content node
   let stepCounter = hasTrigger ? 0 : 1;
 
-  nodes.push({
-    id: START_NODE_ID,
-    type: 'start',
-    position: { x: 0, y },
-    data: {
-      title: startData.title,
-      subtitle: startData.subtitle,
-      subtitleIsLink: startData.subtitleIsLink,
-      onSubtitleClick: startData.onSubtitleClick,
-    },
-  });
-  y += FLOW_START_GAP;
+  if (!hideStartNode) {
+    nodes.push({
+      id: START_NODE_ID,
+      type: 'start',
+      position: { x: 0, y },
+      data: {
+        title: startData.title,
+        subtitle: startData.subtitle,
+        subtitleIsLink: startData.subtitleIsLink,
+        onSubtitleClick: startData.onSubtitleClick,
+      },
+    });
+    y += FLOW_START_GAP;
+  }
 
   let lastNodeY = 0;
-  let lastNodeBlockHeight = FLOW_START_NODE_HEIGHT;
+  let lastNodeBlockHeight = hideStartNode ? 0 : FLOW_START_NODE_HEIGHT;
 
   // Trigger placeholder — sits at step 1's position, above any tasks, until a trigger lands.
   if (!hasTrigger) {
@@ -416,18 +500,22 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       position: { x: 0, y },
       data: {},
     });
-    edges.push({
-      id: `e-${START_NODE_ID}-${TRIGGER_PLACEHOLDER_ID}`,
-      source: START_NODE_ID,
-      target: TRIGGER_PLACEHOLDER_ID,
-      type: 'addButton',
-    });
+    if (!hideStartNode) {
+      edges.push({
+        id: `e-${START_NODE_ID}-${TRIGGER_PLACEHOLDER_ID}`,
+        source: START_NODE_ID,
+        target: TRIGGER_PLACEHOLDER_ID,
+        type: 'addButton',
+      });
+    }
     lastNodeY = y;
     lastNodeBlockHeight = FLOW_TRIGGER_PLACEHOLDER_HEIGHT;
     y += FLOW_TRIGGER_PLACEHOLDER_HEIGHT + FLOW_CONNECTOR_GAP;
   }
 
-  const entryId = hasTrigger ? START_NODE_ID : TRIGGER_PLACEHOLDER_ID;
+  const entryId = hasTrigger
+    ? (hideStartNode ? null : START_NODE_ID)
+    : TRIGGER_PLACEHOLDER_ID;
 
   nodeList.forEach((item, i) => {
     const nodeId = item.id;
@@ -533,13 +621,15 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
     // No "+" between the trigger placeholder and the first task — that slot is reserved for
     // the trigger, so nothing may be inserted above the first real node there.
     const fromPlaceholder = i === 0 && prevId === TRIGGER_PLACEHOLDER_ID;
-    edges.push({
-      id: `e-${prevId}-${nodeId}`,
-      source: prevId,
-      target: nodeId,
-      type: 'addButton',
-      data: { betweenCards: true, ...((prevIsProcedures || fromPlaceholder) ? { hideAddButton: true } : {}) },
-    });
+    if (prevId != null) {
+      edges.push({
+        id: `e-${prevId}-${nodeId}`,
+        source: prevId,
+        target: nodeId,
+        type: 'addButton',
+        data: { betweenCards: true, ...((prevIsProcedures || fromPlaceholder) ? { hideAddButton: true } : {}) },
+      });
+    }
 
     if (item.flowType === 'branch' || item.flowType === 'voiceCall') {
       const isVoiceCall = item.flowType === 'voiceCall';
@@ -667,6 +757,8 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
               isVoiceCallBranch: isVoiceCall || !!branch.isVoiceCallBranch,
               collapsed: pathCollapsed,
               hiddenCount: branchNodes.length,
+              // Keep at least two paths (e.g. Branch 1 + Fallback).
+              canDeletePath: !isVoiceCall && !branch.isVoiceCallBranch && !branch.isFallback && branches.length > 2,
             },
           });
           edges.push({ id: `e-${fanSourceId}-${branch.id}`, source: fanSourceId, target: branch.id, type: 'branchFan' });
@@ -766,6 +858,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                       isVoiceCallBranch: false,
                       collapsed: innerPathCollapsed,
                       hiddenCount: innerBranchNodes.length,
+                      canDeletePath: !innerBranch.isFallback && innerBranches.length > 2,
                     },
                   });
                   edges.push({ id: `e-${innerStemId}-${innerBranch.id}`, source: innerStemId, target: innerBranch.id, type: 'branchFan' });
@@ -922,6 +1015,14 @@ function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
   return clonedEntry;
 }
 
+function publishBlockedCopy(count) {
+  const label = count === 1 ? 'error' : 'errors';
+  return {
+    title: 'Resolve errors to publish',
+    body: `Fix ${count} ${label} in your workflow before publishing.`,
+  };
+}
+
 export default function AgentBuilder({
   agentId: propAgentId,
   agentSlug: propAgentSlug,
@@ -944,6 +1045,10 @@ export default function AgentBuilder({
   onEdit,
   onView,
   viewOnly = false,
+  /** View-only canvases that should show edit/run actions instead of the name + status chrome. */
+  viewChromeActions = false,
+  /** Set false to make node cards inert (no RHS on click) — used by the read-only log run view. */
+  nodesInteractive = true,
   product = 'automotive',
   procedures = null,
   onAddProcedure,
@@ -959,6 +1064,8 @@ export default function AgentBuilder({
   createAiPanelOpen = false,
   /** Opens the full-page Create with AI experience (parent-owned navigation). */
   onOpenAiFullscreen = null,
+  /** Opens Settings > Account > Product research (Help center "Learn more"). */
+  onOpenProductResearchSettings = null,
   /** Parent-controlled AI Builder dock (reopened after fullscreen expand). */
   aiBuilderPanelOpen: aiBuilderPanelOpenProp = false,
   onAiBuilderPanelOpenChange = null,
@@ -975,6 +1082,22 @@ export default function AgentBuilder({
   existingAgent = false,
   /** When set by the parent, forces the Procedures floater on/off (preferred over name sniffing). */
   showProceduresPalette = null,
+  /** Hides in-canvas agent name + status (identity rendered in the header back cluster). */
+  hideTopIdentity = false,
+  /** RHS Save follows the content instead of pinning to the panel bottom (Sep 1 only). */
+  inlineRhsFooter = false,
+  /** Sep 1 chrome: inline RHS footer + other Sep-1-only treatments. */
+  sep1Chrome = false,
+  /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. */
+  hideCanvasStartNode = hideTopIdentity,
+  /** Exploration editor UX — defaults to hideTopIdentity for backward compatibility. */
+  explorationChrome = hideTopIdentity,
+  /** Log run view: node IDs that completed in this run — show green check on the header icon. */
+  logDoneNodeIds = null,
+  /** External canvas focus (e.g. clicking a log step in RunDetailView). */
+  externalFocusNodeId = null,
+  /** Bumped when the same node is focused again so the canvas re-pans. */
+  externalFocusNonce = 0,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -997,6 +1120,9 @@ export default function AgentBuilder({
   const [navId, setNavId] = useState(activeNavId);
   const [nodeList, setNodeList] = useState(() => initialNodes || []);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  /** When a canvas branch-path chip is clicked, expand that path in the Branch RHS. */
+  const [focusBranchPathId, setFocusBranchPathId] = useState(null);
+  const [focusBranchPathNonce, setFocusBranchPathNonce] = useState(0);
   /** Parent branch nodes whose path arms are collapsed on the canvas. */
   const [collapsedBranches, setCollapsedBranches] = useState({});
   /** Individual branch-path chips whose child steps are collapsed. */
@@ -1005,6 +1131,10 @@ export default function AgentBuilder({
   const [clipboard, setClipboard] = useState(null);
   // Tracks which procedure is open in the detail view (UI-only, not persisted)
   const [activeProcedureId, setActiveProcedureId] = useState(null);
+  /** Exploration LLM task: Setup vs Configure tab (footer Continue / prompt strength). */
+  const [llmTaskTab, setLlmTaskTab] = useState('setup');
+  /** Exploration LLM task: Option 1 = body tabs, Option 2 = header Setup/Configure menu. */
+  const [llmTaskLayoutOption, setLlmTaskLayoutOption] = useState('option1');
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
   const externalPreviewRef = useRef(null);
 
@@ -1038,6 +1168,9 @@ export default function AgentBuilder({
   const [assignContactStatusToolOpen, setAssignContactStatusToolOpen] = useState(false);
   const [assignConversationToolOpen, setAssignConversationToolOpen] = useState(false);
   const [assignConversationStatusToolOpen, setAssignConversationStatusToolOpen] = useState(false);
+  const [handleResponseToolOpen, setHandleResponseToolOpen] = useState(false);
+  /** Node ids whose Task details were saved while a tool still had missing mandatory config. */
+  const [taskErrorNodeIds, setTaskErrorNodeIds] = useState(() => new Set());
   const [toolPickerOpen, setToolPickerOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // RHS panel stays mounted a beat past `drawerOpen` turning false so it can
@@ -1046,10 +1179,24 @@ export default function AgentBuilder({
   const [rhsClosing, setRhsClosing] = useState(false);
   const rhsRenderedRef = useRef(false);
   const rhsCloseTimeoutRef = useRef(null);
+  // Exploration: Help center shares the node-config RHS slot, so it needs the same
+  // stay-mounted-through-the-slide-out treatment.
+  const [helpRendered, setHelpRendered] = useState(false);
+  const [helpClosing, setHelpClosing] = useState(false);
+  const helpRenderedRef = useRef(false);
+  const helpCloseTimeoutRef = useRef(null);
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
   /** Review-response left floater: which palette section is open (Trigger / Tasks / Controls). */
-  const [paletteSection, setPaletteSection] = useState(null);
+  const [paletteSection, setPaletteSection] = useState(
+    defaultOpenSection === 'Trigger' ? 'Trigger' : null,
+  );
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  /** Which version the history panel is previewing (first entry = the live one). */
+  const [versionHistorySelectedId, setVersionHistorySelectedId] = useState(
+    () => VERSION_HISTORY_VERSIONS[0]?.id ?? null,
+  );
+  /** Version id the "Version restored" toast can send you back to via Undo. */
+  const [restoredVersionId, setRestoredVersionId] = useState(null);
   const [rrAiPanelOpen, setRrAiPanelOpen] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelRendered, setRrAiPanelRendered] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelClosing, setRrAiPanelClosing] = useState(false);
@@ -1091,6 +1238,40 @@ export default function AgentBuilder({
   });
   const [agentStatus, setAgentStatus] = useState(initialStatus || 'Draft');
 
+  /* ─── Test run ─── */
+  const [testRunOpen, setTestRunOpen] = useState(false);
+  // First-time coach queue on the edit canvas — Help center "Start tour" also reopens it.
+  const [coachTourOpen, setCoachTourOpen] = useState(false);
+  const [helpCenterOpen, setHelpCenterOpen] = useState(false);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [glossaryTermId, setGlossaryTermId] = useState(undefined);
+  const openGlossary = (termId) => {
+    setGlossaryTermId(termId || undefined);
+    setGlossaryOpen(true);
+  };
+  const closeGlossary = () => {
+    setGlossaryOpen(false);
+    setGlossaryTermId(undefined);
+  };
+  // Rebuilt only while the panel is open so the run isn't restarted by unrelated edits.
+  const testRunSteps = useMemo(
+    () => (testRunOpen ? buildTestRunSteps(nodeList, nodeDetails) : EMPTY_TEST_RUN_STEPS),
+    [testRunOpen, nodeList, nodeDetails],
+  );
+  const testRun = useTestRun(testRunSteps);
+  const testRunActiveId = testRunOpen ? testRun.activeNodeId : null;
+  // Canvas highlighting for the executing / finished nodes, keyed by react-flow's data-id.
+  const testRunCss = testRunOpen
+    ? [
+        ...testRun.doneNodeIds.map(
+          (id) => `.react-flow__node[data-id="${id}"] .canvas-node { border: 1px solid #4caf50 !important; box-shadow: 0 2px 12px 0 rgba(33, 33, 33, 0.06) !important; }`,
+        ),
+        testRunActiveId
+          ? `.react-flow__node[data-id="${testRunActiveId}"] .canvas-node { border: 1px solid #1976d2 !important; animation: ab-test-run-pulse 2.6s ease-in-out infinite; }`
+          : '',
+      ].join('\n')
+    : '';
+
   /* ─── Sync live procedure library into the procedureService registry ─── */
   useEffect(() => {
     setLiveProcedures(procedures);
@@ -1123,6 +1304,29 @@ export default function AgentBuilder({
       if (rhsCloseTimeoutRef.current) clearTimeout(rhsCloseTimeoutRef.current);
     };
   }, [drawerOpen]);
+
+  /* ─── Help center panel: same slide in/out lifecycle as the node RHS ─── */
+  useEffect(() => {
+    if (helpCenterOpen) {
+      if (helpCloseTimeoutRef.current) {
+        clearTimeout(helpCloseTimeoutRef.current);
+        helpCloseTimeoutRef.current = null;
+      }
+      setHelpClosing(false);
+      setHelpRendered(true);
+      helpRenderedRef.current = true;
+    } else if (helpRenderedRef.current) {
+      setHelpClosing(true);
+      helpCloseTimeoutRef.current = setTimeout(() => {
+        helpRenderedRef.current = false;
+        setHelpRendered(false);
+        setHelpClosing(false);
+      }, 260);
+    }
+    return () => {
+      if (helpCloseTimeoutRef.current) clearTimeout(helpCloseTimeoutRef.current);
+    };
+  }, [helpCenterOpen]);
 
   /* ─── Review-response AI panel slide in/out ─── */
   useEffect(() => {
@@ -1285,6 +1489,7 @@ export default function AgentBuilder({
   /* ─── Header three-dots menu ─── */
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
+  const [publishBlockedModalOpen, setPublishBlockedModalOpen] = useState(false);
   const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
   const publishMenuRef = useRef(null);
@@ -1356,6 +1561,36 @@ export default function AgentBuilder({
   const resolveIssuesList =
     (Array.isArray(issues) && issues.length > 0 ? issues : null) ||
     getAgentIssues(entryAgentName);
+
+  const issuesByNodeId = useMemo(() => {
+    const map = new Map();
+    resolveIssuesList.forEach((issue) => {
+      if (!issue.nodeId) return;
+      const existing = map.get(issue.nodeId) || [];
+      map.set(issue.nodeId, [...existing, issue]);
+    });
+    return map;
+  }, [resolveIssuesList]);
+
+  const [canvasFocusNodeId, setCanvasFocusNodeId] = useState(null);
+
+  // Parent-driven focus (log step click) — also expand any collapsed branch that holds the node.
+  useEffect(() => {
+    if (!externalFocusNodeId) return;
+    const located = locateNodeContainer(externalFocusNodeId, nodeList, nodeDetails);
+    if (located?.containerId) {
+      const branchPathId = located.containerId;
+      const parentBranchId = nodeDetails[branchPathId]?.parentId;
+      if (parentBranchId) {
+        setCollapsedBranches((prev) => ({ ...prev, [parentBranchId]: false }));
+      }
+      setCollapsedBranchPaths((prev) => ({ ...prev, [branchPathId]: false }));
+    }
+    // Clear first so re-focusing the same id still triggers FlowCanvas's pan effect.
+    setCanvasFocusNodeId(null);
+    const frame = requestAnimationFrame(() => setCanvasFocusNodeId(externalFocusNodeId));
+    return () => cancelAnimationFrame(frame);
+  }, [externalFocusNodeId, externalFocusNonce, nodeList, nodeDetails]);
 
   // Undo/redo history for the floating-chrome canvas toolbar.
   const [historyPast, setHistoryPast] = useState([]);
@@ -1506,6 +1741,20 @@ export default function AgentBuilder({
     }
   }, [buildAgentPayload, onSaveAgent]);
 
+  const handlePublishAttempt = useCallback(() => {
+    if (issueCount > 0) {
+      setPublishMenuOpen(false);
+      setPublishBlockedModalOpen(true);
+      return;
+    }
+    handlePublish();
+  }, [issueCount, handlePublish]);
+
+  const handleViewPublishErrors = useCallback(() => {
+    setPublishBlockedModalOpen(false);
+    setResolveIssuesOpen(true);
+  }, []);
+
   const handleSaveAsDraft = useCallback(async () => {
     setPublishMenuOpen(false);
     clearTimeout(saveTimerRef.current);
@@ -1517,6 +1766,40 @@ export default function AgentBuilder({
       onSaveAgent?.(false, payload);
     } catch (e) {
       console.error('Save as draft failed', e);
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handlePause = useCallback(async () => {
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Paused');
+    if (!payload) {
+      setAgentStatus('Paused');
+      return;
+    }
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Paused');
+      onSaveAgent?.(false, payload);
+    } catch (e) {
+      console.error('Pause failed', e);
+      setAgentStatus('Paused');
+    }
+  }, [buildAgentPayload, onSaveAgent]);
+
+  const handleResume = useCallback(async () => {
+    clearTimeout(saveTimerRef.current);
+    const payload = buildAgentPayload('Running');
+    if (!payload) {
+      setAgentStatus('Running');
+      return;
+    }
+    try {
+      await saveAgent(payload.id, payload);
+      setAgentStatus('Running');
+      onSaveAgent?.(true, payload);
+    } catch (e) {
+      console.error('Resume failed', e);
+      setAgentStatus('Running');
     }
   }, [buildAgentPayload, onSaveAgent]);
 
@@ -1805,32 +2088,6 @@ export default function AgentBuilder({
     setClipboard(null);
   }, [clipboard, nodeList, nodeDetails, selectedNodeId]);
 
-  const handleAddBranchPath = useCallback((branchNodeId) => {
-    const newPathId = `${branchNodeId}-path-${Date.now()}`;
-    setNodeDetails((prev) => {
-      const nodeD = prev[branchNodeId] || {};
-      const existing = nodeD.branches || [];
-      const nonFallback = existing.filter((b) => !b.isFallback);
-      const fallback = existing.filter((b) => b.isFallback);
-      const pathNumber = nonFallback.length + 1;
-      const newPath = { id: newPathId, name: `Branch ${pathNumber}` };
-      return {
-        ...prev,
-        [branchNodeId]: {
-          ...nodeD,
-          branches: [...nonFallback, newPath, ...fallback],
-        },
-        [newPathId]: {
-          branchName: newPath.name,
-          description: '',
-          conditions: [],
-          parentId: branchNodeId,
-          isBranchPath: true,
-        },
-      };
-    });
-  }, []);
-
   const handleMoveNode = useCallback((nodeId, direction) => {
     setNodeList((prev) => {
       const idx = prev.findIndex((n) => n.id === nodeId);
@@ -1874,6 +2131,10 @@ export default function AgentBuilder({
     setNodeDetails((prev) => {
       const copy = { ...prev };
       const parentId = copy[branchPathId]?.parentId;
+      const siblingCount = parentId ? (copy[parentId]?.branches || []).length : 0;
+      // Never drop below two paths on a condition branch.
+      if (parentId && siblingCount <= 2) return prev;
+      if (copy[branchPathId]?.isFallback) return prev;
       if (parentId) {
         copy[parentId] = {
           ...copy[parentId],
@@ -1948,6 +2209,14 @@ export default function AgentBuilder({
     setStartLocationsOpenToken((t) => t + 1);
   };
 
+  // Shared open path for the header agent name and the canvas start-node card.
+  const handleOpenAgentDetails = useCallback(() => {
+    setPaletteSection(null);
+    setVersionHistoryOpen(false);
+    setSelectedNodeId(START_NODE_ID);
+    setDrawerOpen(true);
+  }, []);
+
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
   const locationCount = startLocations.length;
@@ -1962,6 +2231,44 @@ export default function AgentBuilder({
     subtitleIsLink: locationCount === 0,
     onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
   };
+  // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
+  const isScratchCreate = explorationChrome && !existingAgent;
+  /**
+   * Exploration only: while the version history panel is open the canvas turns into a
+   * read-only "browsing an old version" surface — no add-node palette, no build/run
+   * actions, and Publish is swapped for a Restore CTA.
+   */
+  const versionHistoryMode = versionHistoryOpen && explorationChrome;
+  const selectedVersion =
+    VERSION_HISTORY_VERSIONS.find((v) => v.id === versionHistorySelectedId)
+    || VERSION_HISTORY_VERSIONS[0];
+  /** The live version can't be restored onto itself, so Restore stays disabled there. */
+  const viewingLiveVersion = selectedVersion?.status === 'Running';
+  const rhsViewOnly = viewOnly || versionHistoryMode;
+  const closeVersionHistory = () => {
+    setVersionHistoryOpen(false);
+    setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
+  };
+  /**
+   * Anything occupying the 450px right slot — node config, Help center, or Test details.
+   * Drives the exploration actions pill sliding left so the panel never covers it.
+   */
+  // Preview (Front desk play) sits in the same right slot as node config / Help / Test details —
+  // slide the top-right chrome left so Pause / Publish don't overlap it.
+  const rightPanelOpen =
+    rhsRendered || helpRendered || testRunOpen || (previewOpen && !isReviewResponseAgent);
+  /** Shared by the top-right floater and (exploration) the bottom editor-row pill. */
+  const toggleHelpCenter = () => {
+    setVersionHistoryOpen(false);
+    setHelpCenterOpen((open) => {
+      // Exploration: help occupies the node-config RHS slot, so the two can't coexist.
+      if (!open && explorationChrome) {
+        handleCloseDrawer();
+        setPreviewOpen(false);
+      }
+      return !open;
+    });
+  };
   const { nodes: rawNodes, edges } = buildFlow(
     nodeList,
     startData,
@@ -1969,6 +2276,7 @@ export default function AgentBuilder({
     product,
     collapsedBranches,
     collapsedBranchPaths,
+    { hideStartNode: hideCanvasStartNode },
   );
 
   const nodes = rawNodes.map((n) => {
@@ -1988,8 +2296,9 @@ export default function AgentBuilder({
         data: {
           ...n.data,
           viewOnly,
+          focusBranchPathId,
           onDelete:
-            viewOnly || n.data.isFallback || n.data.isVoiceCallBranch
+            viewOnly || n.data.isFallback || n.data.isVoiceCallBranch || !n.data.canDeletePath
               ? undefined
               : () => handleDeleteBranchPath(n.id),
           onToggleCollapse: () => handleToggleBranchPathCollapse(n.id),
@@ -1997,6 +2306,12 @@ export default function AgentBuilder({
       };
     }
     if (n.type === 'branchEnd') return n;
+    const nodeIssueList = issuesByNodeId.get(n.id);
+    const hasAgentIssue = !!(nodeIssueList?.length);
+    const hasTaskSaveError = taskErrorNodeIds.has(n.id);
+    const issueLabel = hasAgentIssue ? nodeIssueList[0].title : undefined;
+    const issueTooltip = issueLabel
+      || (hasTaskSaveError ? 'Missing mandatory fields' : undefined);
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
       onDelete: () => handleDeleteNode(n.id),
@@ -2008,8 +2323,20 @@ export default function AgentBuilder({
       onMoveDown: () => handleMoveNode(n.id, 'down'),
       canMoveUp: !viewOnly && nodeIdx > 0,
       canMoveDown: !viewOnly && nodeIdx !== -1 && nodeIdx < nodeList.length - 1,
+      hasError: explorationChrome && (hasTaskSaveError || hasAgentIssue),
+      showConfigWarning: !!(n.data.showConfigWarning && !hasAgentIssue && !hasTaskSaveError),
+      errorTooltip: issueTooltip,
+      // Log run view + exploration Run test: swap the header glyph for a spinner/check.
+      runStatus: logDoneNodeIds?.includes(n.id)
+        ? 'done'
+        : !explorationChrome || !testRunOpen
+          ? undefined
+          : n.id === testRunActiveId
+            ? 'running'
+            : testRun.doneNodeIds.includes(n.id)
+              ? 'done'
+              : undefined,
     };
-    if (n.type === 'branch') extra.onAddBranch = () => handleAddBranchPath(n.id);
     if (n.type === 'task' && !viewOnly) {
       extra.onToggleChange = (enabled) => handleNodeToggleChange(n.id, enabled);
     }
@@ -2081,6 +2408,11 @@ export default function AgentBuilder({
     branchChildNodes.find((n) => n.id === selectedNodeId) ||
     branchPathNodes.find((n) => n.id === selectedNodeId);
 
+  // Procedure RHS is 500px (vs the default 450); chrome needs the wider offset.
+  const rightPanelWide =
+    rhsRendered
+    && (Boolean(lhsPreviewProcedureId) || Boolean(activeProcedureId));
+
   const handleNodesReorder = useCallback((newIdOrder) => {
     setNodeList((prev) => {
       const byId = Object.fromEntries(prev.map((n) => [n.id, n]));
@@ -2125,7 +2457,8 @@ export default function AgentBuilder({
       : label;
     let details = makeNodeDetails(effectiveType, effectiveType === 'procedures' ? procedureSeed : label);
     if (effectiveType === 'trigger' && label === 'Reviews' && REVIEWS_TRIGGER_LEAF_COPY[description]) {
-      details = { ...details, triggerName: description, description: REVIEWS_TRIGGER_LEAF_COPY[description] };
+      // Seed trigger name from the palette leaf; description stays optional (+ Add description).
+      details = { ...details, triggerName: description, description: '' };
     }
     if (effectiveType === 'task' && description && label !== 'Custom') {
       const taskDefaults = TASK_DROP_DEFAULTS[description] || {};
@@ -2178,6 +2511,7 @@ export default function AgentBuilder({
         return { ...copy, [id]: details };
       });
 
+      setFocusBranchPathId(null);
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(null);
@@ -2212,6 +2546,7 @@ export default function AgentBuilder({
           [id]: details,
         };
       });
+      setFocusBranchPathId(null);
       setSelectedNodeId(id);
       setDrawerOpen(true);
       setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
@@ -2300,12 +2635,12 @@ export default function AgentBuilder({
           mergeBranches: true,
           branches: [
             { id: path1Id, name: 'Branch 1' },
-            { id: fallbackId, name: 'No conditions met', isFallback: true },
+            { id: fallbackId, name: 'Fallback branch', isFallback: true },
           ],
         });
         extraDetails = {
           [path1Id]: makePath({ branchName: 'Branch 1' }),
-          [fallbackId]: makePath({ branchName: 'No conditions met', isFallback: true }),
+          [fallbackId]: makePath({ branchName: 'Fallback branch', isFallback: true }),
         };
       }
     }
@@ -2341,6 +2676,7 @@ export default function AgentBuilder({
       ...extraDetails,
     }));
 
+    setFocusBranchPathId(null);
     setSelectedNodeId(id);
     setDrawerOpen(true);
     setActiveProcedureId(type === 'procedures' && procedureSeed === CUSTOM_PROCEDURE_ID ? CUSTOM_PROCEDURE_ID : null);
@@ -2353,26 +2689,116 @@ export default function AgentBuilder({
     if (node.type === 'end' || node.type === 'branchEnd' || node.type === 'triggerPlaceholder' || node.type === 'branchCollapse') return;
     // Voice call branches are hard-coded and non-editable — block RHS open
     if (node.data?.isVoiceCallBranch) return;
+    // Start node shares the Agent details panel with the chrome header title.
+    if (node.type === 'start' || node.id === START_NODE_ID) {
+      setPaletteSection(null);
+      // Exploration: version history docks on the left, so it stays open and the
+      // node config opens read-only beside it.
+      if (!explorationChrome) setVersionHistoryOpen(false);
+      if (explorationChrome) {
+        setHelpCenterOpen(false);
+        setPreviewOpen(false);
+      }
+      setFocusBranchPathId(null);
+      setSelectedNodeId(START_NODE_ID);
+      setDrawerOpen(true);
+      return;
+    }
+    // Path chips open the parent Branch panel with that path's accordion expanded.
+    if (node.type === 'branchPath') {
+      const parentId = node.data?.parentId
+        || latestRef.current.nodeDetails?.[node.id]?.parentId;
+      if (!parentId) return;
+      setPaletteSection(null);
+      if (!explorationChrome) setVersionHistoryOpen(false);
+      if (explorationChrome) {
+        setHelpCenterOpen(false);
+        setPreviewOpen(false);
+      }
+      setFocusBranchPathId(node.id);
+      setFocusBranchPathNonce((n) => n + 1);
+      setSelectedNodeId(parentId);
+      setDrawerOpen(true);
+      return;
+    }
     // AI Builder docks on the left; node config uses the right pane — both can stay open.
     setPaletteSection(null);
-    setVersionHistoryOpen(false);
+    if (!explorationChrome) setVersionHistoryOpen(false);
+    // Exploration: help / preview share the node-config RHS slot, so opening a node closes them.
+    if (explorationChrome) {
+      setHelpCenterOpen(false);
+      setPreviewOpen(false);
+    }
+    setFocusBranchPathId(null);
     setSelectedNodeId(node.id);
     setDrawerOpen(true);
     if (node.data?.title) {
       setAiNodeContext({ id: node.id, type: node.type, title: node.data.title });
     }
-  }, []);
+  }, [explorationChrome]);
+
+  useEffect(() => {
+    setLlmTaskTab('setup');
+  }, [selectedNodeId]);
 
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
     setSelectedNodeId(null);
+    setFocusBranchPathId(null);
     setActiveProcedureId(null);
     setLhsPreviewProcedureId(null);
+    setLlmTaskTab('setup');
     // Do not reopen AI Builder — user closed config and should return to a clean canvas
     // (FAB remains available to reopen AI explicitly).
   }, []);
 
+  /** Open a task on the canvas that has a publish-blocking issue. */
+  const navigateToIssueNode = useCallback((nodeId) => {
+    if (!nodeId) return;
+    setResolveIssuesOpen(false);
+    setPublishBlockedModalOpen(false);
+    setPaletteSection(null);
+    setHelpCenterOpen(false);
+    setVersionHistoryOpen(false);
+
+    const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
+    if (located?.containerId) {
+      const branchPathId = located.containerId;
+      const parentBranchId = nodeDetails[branchPathId]?.parentId;
+      if (parentBranchId) {
+        setCollapsedBranches((prev) => ({ ...prev, [parentBranchId]: false }));
+      }
+      setCollapsedBranchPaths((prev) => ({ ...prev, [branchPathId]: false }));
+      setFocusBranchPathId(branchPathId);
+    } else {
+      setFocusBranchPathId(null);
+    }
+
+    setSelectedNodeId(nodeId);
+    setDrawerOpen(true);
+    setCanvasFocusNodeId(nodeId);
+  }, [nodeList, nodeDetails]);
+
   const currentDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
+
+  /**
+   * Task details Save — validates the node's tool config and flags the canvas card when a
+   * mandatory field is still missing (cleared again once the tool is configured and re-saved).
+   */
+  const handleSaveTaskDetails = () => {
+    const id = selectedNodeId;
+    if (id) {
+      const hasError = taskHasToolConfigError(nodeDetails[id]);
+      setTaskErrorNodeIds((prev) => {
+        if (hasError === prev.has(id)) return prev;
+        const next = new Set(prev);
+        if (hasError) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
+    handleCloseDrawer();
+  };
 
   /* ─── Shared onFieldChange for the active node ─── */
   const activeFieldChange = useCallback(
@@ -2477,7 +2903,8 @@ export default function AgentBuilder({
           key={`lhs-preview-${lhsPreviewProcedureId}`}
           variant="procedureDetail"
           title={mergedProc.name}
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           onBack={closeLhsPreview}
           bodyProps={{
@@ -2514,7 +2941,8 @@ export default function AgentBuilder({
         <RHS
           variant="agentDetails"
           title="Agent details"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             values: startDetails,
@@ -2525,6 +2953,7 @@ export default function AgentBuilder({
               }));
             },
             autoOpenLocationsToken: startLocationsOpenToken,
+            includeCustomFields: explorationChrome,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -2537,7 +2966,8 @@ export default function AgentBuilder({
         <RHS
           variant="branch"
           title="Branch"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2582,7 +3012,8 @@ export default function AgentBuilder({
         <RHS
           variant="conversationTrigger"
           title="Trigger"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2596,7 +3027,8 @@ export default function AgentBuilder({
         <RHS
           variant={(isReviewResponseAgent || isReviewGenerationAgent) ? 'reviewTrigger' : 'entityTrigger'}
           title="Trigger"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2613,7 +3045,8 @@ export default function AgentBuilder({
         <RHS
           variant="controlBranch"
           title="Branch"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={false}
           product={product}
           bodyProps={{
             initialValues: {
@@ -2622,10 +3055,17 @@ export default function AgentBuilder({
               mergeBranches: currentDetails.mergeBranches ?? true,
               branchNodeId: selectedNodeId,
               pathDetails,
+              initialExpandedPathId: focusBranchPathId,
+              expandNonce: focusBranchPathNonce,
             },
             onFieldChange: activeFieldChange,
             onPathFieldChange: (pathId, field, value) => handleNodeFieldChange(pathId, field, value),
             onDeleteBranch: (branchId) => handleDeleteBranchPath(branchId),
+            onFocusBranchPath: (pathId) => {
+              setFocusBranchPathId(pathId);
+              if (pathId) setFocusBranchPathNonce((n) => n + 1);
+            },
+            onOpenGlossary: openGlossary,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -2638,7 +3078,8 @@ export default function AgentBuilder({
         <RHS
           variant="subagent"
           title="Sub-agent"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2652,7 +3093,8 @@ export default function AgentBuilder({
         <RHS
           variant="delay"
           title="Delay"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2666,7 +3108,8 @@ export default function AgentBuilder({
         <RHS
           variant="parallel"
           title="Parallel tasks"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2680,7 +3123,8 @@ export default function AgentBuilder({
         <RHS
           variant="loop"
           title="Loop"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
@@ -2701,7 +3145,8 @@ export default function AgentBuilder({
               key="proc-create-custom"
               variant="createCustomProcedure"
               title="Create custom procedure"
-              viewOnly={viewOnly}
+              viewOnly={rhsViewOnly}
+              inlineFooter={inlineRhsFooter}
               product={product}
               onBack={() => setActiveProcedureId(null)}
               bodyProps={{
@@ -2732,7 +3177,8 @@ export default function AgentBuilder({
             key={`proc-detail-${activeProcedureId}`}
             variant="procedureDetail"
             title={mergedProc.name}
-            viewOnly={viewOnly}
+            viewOnly={rhsViewOnly}
+            inlineFooter={inlineRhsFooter}
             product={product}
             onBack={() => setActiveProcedureId(null)}
             bodyProps={{
@@ -2756,7 +3202,8 @@ export default function AgentBuilder({
           key="proc-list"
           variant="procedureTask"
           title="Procedures"
-          viewOnly={viewOnly}
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2769,14 +3216,46 @@ export default function AgentBuilder({
       );
     }
 
-    if (data.hasAiIcon || data.subtype === 'Custom') {
+    if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).includes('handle-response'))) {
+      const llmTaskExplorationLayout = explorationChrome && !sep1Chrome;
+      const llmTaskOption2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option2';
       return (
         <RHS
           variant="llmTask"
-          title="Task"
-          viewOnly={viewOnly}
+          title="Action"
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
-          bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange, onOpenToolDrawer: () => setToolPickerOpen(true), onOpenTool: openToolByName }}
+          saveLabel="Save"
+          showPromptStrength={llmTaskExplorationLayout ? true : undefined}
+          titleLayoutMenu={llmTaskExplorationLayout ? {
+            value: llmTaskLayoutOption,
+            options: [
+              { value: 'option1', label: 'Option 1' },
+              { value: 'option2', label: 'Option 2' },
+            ],
+            onChange: setLlmTaskLayoutOption,
+          } : null}
+          titleTabMenu={llmTaskOption2 ? {
+            value: llmTaskTab,
+            options: [
+              { value: 'setup', label: 'Setup' },
+              { value: 'configure', label: 'Configure' },
+            ],
+            onChange: setLlmTaskTab,
+          } : null}
+          bodyProps={{
+            initialValues: currentDetails,
+            onFieldChange: activeFieldChange,
+            onOpenToolDrawer: () => setToolPickerOpen(true),
+            onOpenTool: openToolByName,
+            collapseChipsToOneLine: llmTaskExplorationLayout,
+            collapseChipsToTwoLines: explorationChrome,
+            setupConfigureInHeader: llmTaskOption2,
+            activeTab: llmTaskTab,
+            onTabChange: llmTaskExplorationLayout ? setLlmTaskTab : undefined,
+            onOpenGlossary: openGlossary,
+          }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
         />
@@ -2787,8 +3266,9 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="voiceCallTask"
-          title="Task"
-          viewOnly={viewOnly}
+          title="Action"
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2812,8 +3292,9 @@ export default function AgentBuilder({
       return (
         <RHS
           variant="sendResponseTask"
-          title="Task"
-          viewOnly={viewOnly}
+          title="Action"
+          viewOnly={rhsViewOnly}
+          inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             initialValues: currentDetails,
@@ -2828,17 +3309,21 @@ export default function AgentBuilder({
     return (
       <RHS
         variant="entityTask"
-        title="Task details"
-        viewOnly={viewOnly}
+        title="Action"
+        viewOnly={rhsViewOnly}
+        inlineFooter={inlineRhsFooter}
         bodyProps={{
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
+          // Only surface tool errors once this task has been saved in that state.
+          showToolErrors: taskErrorNodeIds.has(selectedNodeId) || issuesByNodeId.has(selectedNodeId),
           onOpenTool: (toolId) => {
             if (toolId === 'reminder-tool') { setReminderToolOpen(true); return; }
             if (toolId === 'get-unscheduled-treatment-plans') { setQueryConfigOpen(true); return; }
             if (toolId === 'assign-contact-status') { setAssignContactStatusToolOpen(true); return; }
             if (toolId === 'assign-conversation') { setAssignConversationToolOpen(true); return; }
             if (toolId === 'assign-conversation-status') { setAssignConversationStatusToolOpen(true); return; }
+            if (toolId === 'handle-response') { setHandleResponseToolOpen(true); return; }
             getCustomToolsByIds([toolId]).then((tools) => {
               if (tools[0]) setViewingTool(tools[0]);
             });
@@ -2846,102 +3331,217 @@ export default function AgentBuilder({
           onSwapTool: () => setToolPickerOpen(true),
         }}
         onClose={handleCloseDrawer}
-        onSave={handleCloseDrawer}
+        onSave={handleSaveTaskDetails}
       />
     );
   };
 
-  /* ─── Header actions: Publish + three-dots menu (or view-only badge) ─── */
-  const headerActions = viewOnly ? (
-    <div className="ab-view-badge">
-      <span className="material-symbols-outlined">visibility</span>
-      View only
+  /* ─── Header actions: Publish + three-dots menu (or view-only chrome) ─── */
+  const handleRunTest = () => {
+    // Front desk: voice/chat preview instead of the step-log test run.
+    if (isFrontDeskAgentName) {
+      setTestRunOpen(false);
+      setDrawerOpen(false);
+      setSelectedNodeId(null);
+      setTestAppointment(null);
+      if (explorationChrome) setHelpCenterOpen(false);
+      setPreviewOpen(true);
+      return;
+    }
+    setPreviewOpen(false);
+    setTestRunOpen(true);
+  };
+
+  const viewChromeButtons = (
+    <div className="ab-header-actions ab-header-actions--view-mode">
+      <div className="rr-chrome-mode-switch" role="group" aria-label="Workflow mode">
+        <button
+          type="button"
+          className="rr-chrome-mode-btn rr-chrome-mode-btn--active"
+          aria-current="true"
+          aria-label="View-only"
+        >
+          <span className="material-symbols-outlined" aria-hidden>visibility</span>
+          <span>View-only</span>
+        </button>
+        <button
+          type="button"
+          className="rr-chrome-mode-btn"
+          onClick={onEdit}
+          aria-label="Edit"
+        >
+          <span className="material-symbols-outlined" aria-hidden>edit</span>
+          <span>Edit</span>
+        </button>
+      </div>
+      <button
+        type="button"
+        className="rr-chrome-run-test"
+        onClick={handleRunTest}
+        aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
+      >
+        <span className="material-symbols-outlined rr-chrome-run-test__play" aria-hidden>play_arrow</span>
+        <span>{isFrontDeskAgentName ? 'Preview' : 'Run test'}</span>
+      </button>
     </div>
-  ) : (
-    <div className="ab-header-actions">
-      {issueCount > 0 && (
-        <div className="ab-resolve-issues" ref={resolveIssuesRef}>
-          <button
-            type="button"
-            className="ab-resolve-issues__trigger"
-            aria-expanded={resolveIssuesOpen}
-            aria-haspopup="dialog"
-            onClick={() => {
-              setPublishMenuOpen(false);
-              setHeaderMenuOpen(false);
-              setResolveIssuesOpen((open) => !open);
-            }}
-          >
-            <span className="material-symbols-outlined" aria-hidden>error</span>
-            Resolve issues ({issueCount})
-          </button>
-          {resolveIssuesOpen && (
-            <div className="ab-resolve-issues__popover" role="dialog" aria-label="Resolve issues">
-              <div className="ab-resolve-issues__heading">
-                {issueCount} {issueCount === 1 ? 'issue' : 'issues'} to resolve
-              </div>
-              <ul className="ab-resolve-issues__list">
-                {(resolveIssuesList.length > 0
-                  ? resolveIssuesList
-                  : Array.from({ length: issueCount }, (_, i) => ({
-                      id: `issue-${i + 1}`,
-                      title: `Issue ${i + 1}`,
-                      description: 'Review this item before publishing.',
-                    }))
-                ).map((issue) => (
-                  <li key={issue.id}>
-                    <button
-                      type="button"
-                      className="ab-resolve-issues__item"
-                      onClick={() => setResolveIssuesOpen(false)}
-                    >
-                      <span className="material-symbols-outlined ab-resolve-issues__item-icon" aria-hidden>
-                        error
-                      </span>
-                      <span className="ab-resolve-issues__item-body">
-                        <span className="ab-resolve-issues__item-title">{issue.title}</span>
-                        {issue.description ? (
-                          <span className="ab-resolve-issues__item-desc">{issue.description}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+  );
+
+  // Restore applies straight away (no confirm step), drops back to the live editor
+  // and confirms with a toast whose Undo reopens history on the same version.
+  const handleRestoreVersion = () => {
+    setRestoredVersionId(versionHistorySelectedId);
+    closeVersionHistory();
+  };
+
+  const handleUndoRestore = () => {
+    setVersionHistorySelectedId(restoredVersionId);
+    setRestoredVersionId(null);
+    setVersionHistoryOpen(true);
+  };
+
+  /**
+   * Issue-count affordance. Exploration chrome shows a red "N errors" chip after the
+   * run-test icon; legacy agents keep the original text trigger before the icons.
+   * Both open the same issues popover.
+   */
+  const resolveIssues = (
+    <div className="ab-resolve-issues" ref={resolveIssuesRef}>
+      <button
+        type="button"
+        className={explorationChrome ? 'ab-error-chip' : 'ab-resolve-issues__trigger'}
+        aria-expanded={resolveIssuesOpen}
+        aria-haspopup="dialog"
+        onClick={() => {
+          setPublishMenuOpen(false);
+          setHeaderMenuOpen(false);
+          setResolveIssuesOpen((open) => !open);
+        }}
+      >
+        <span className="material-symbols-outlined" aria-hidden>error</span>
+        {explorationChrome
+          ? `${issueCount} ${issueCount === 1 ? 'error' : 'errors'}`
+          : `Resolve issues (${issueCount})`}
+      </button>
+      {resolveIssuesOpen && (
+        <div
+          className={`ab-resolve-issues__popover${explorationChrome ? ' ab-resolve-issues__popover--anchor-right' : ''}`}
+          role="dialog"
+          aria-label="Resolve issues"
+        >
+          <div className="ab-resolve-issues__heading">
+            {issueCount} {issueCount === 1 ? 'issue' : 'issues'} to resolve
+          </div>
+          <ul className="ab-resolve-issues__list">
+            {(resolveIssuesList.length > 0
+              ? resolveIssuesList
+              : Array.from({ length: issueCount }, (_, i) => ({
+                  id: `issue-${i + 1}`,
+                  title: `Issue ${i + 1}`,
+                  description: 'Review this item before publishing.',
+                }))
+            ).map((issue) => (
+              <li key={issue.id}>
+                <button
+                  type="button"
+                  className="ab-resolve-issues__item"
+                  onClick={() => {
+                    if (issue.nodeId) navigateToIssueNode(issue.nodeId);
+                    else setResolveIssuesOpen(false);
+                  }}
+                >
+                  <span className="material-symbols-outlined ab-resolve-issues__item-icon" aria-hidden>
+                    error
+                  </span>
+                  <span className="ab-resolve-issues__item-body">
+                    <span className="ab-resolve-issues__item-title">{issue.title}</span>
+                    {issue.description ? (
+                      <span className="ab-resolve-issues__item-desc">{issue.description}</span>
+                    ) : null}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
+    </div>
+  );
+
+  const headerActions = viewOnly ? (
+    viewChromeActions ? viewChromeButtons : (
+      <div className="ab-view-badge">
+        <span className="material-symbols-outlined">visibility</span>
+        View only
+      </div>
+    )
+  ) : versionHistoryMode ? (
+    // Nothing to cancel or restore while the live version is selected — the whole
+    // pill is hidden rather than shown empty; Back exits history in that state.
+    viewingLiveVersion ? null : (
+      <div className="ab-header-actions">
+        <button
+          type="button"
+          className="ab-header-cancel-btn"
+          aria-label="Cancel"
+          onClick={closeVersionHistory}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="ab-header-restore-btn"
+          aria-label="Restore this version"
+          onClick={handleRestoreVersion}
+        >
+          Restore
+        </button>
+      </div>
+    )
+  ) : (
+    <div className="ab-header-actions">
+      {issueCount > 0 && !explorationChrome && resolveIssues}
       {/* Cloud save / version history — matches Figma 15324:121197 */}
+      {!isScratchCreate && (
+        <Tooltip
+          content="Version history"
+          variant="brief"
+          side="bottom"
+        >
+          <button
+            type="button"
+            className="ab-header-cloud-btn"
+            onClick={() => {
+              setPaletteSection(null);
+              if (!versionHistoryOpen) closeAiBuilderPanel();
+              // Always reopen on the live version rather than the last one browsed.
+              setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
+              setVersionHistoryOpen((open) => !open);
+              setHelpCenterOpen(false);
+            }}
+            aria-label="Version history"
+            aria-pressed={versionHistoryOpen}
+          >
+            <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
+          </button>
+        </Tooltip>
+      )}
       <Tooltip
-        content="Version history"
+        content={isFrontDeskAgentName ? 'Preview' : 'Run test'}
         variant="brief"
         side="bottom"
       >
         <button
           type="button"
           className="ab-header-cloud-btn"
-          onClick={() => {
-            setPaletteSection(null);
-            if (!versionHistoryOpen) closeAiBuilderPanel();
-            setVersionHistoryOpen((open) => !open);
-          }}
-          aria-label="Version history"
-          aria-pressed={versionHistoryOpen}
-        >
-          <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
-        </button>
-      </Tooltip>
-      <Tooltip content="Run test" variant="brief" side="bottom">
-        <button
-          type="button"
-          className="ab-header-cloud-btn"
-          onClick={() => {}}
-          aria-label="Run test"
+          onClick={handleRunTest}
+          aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
+          data-tour-id="test-run"
+          disabled={isScratchCreate}
         >
           <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
         </button>
       </Tooltip>
+      {issueCount > 0 && explorationChrome && resolveIssues}
       {isTemplateMode ? (
         <Button
           theme="primary"
@@ -2949,40 +3549,64 @@ export default function AgentBuilder({
           onClick={handleSaveTemplate}
         />
       ) : (
-        <div className="ab-publish-split" ref={publishMenuRef}>
-          <button
-            type="button"
-            className="ab-publish-split__main"
-            aria-label="Publish"
-            disabled={publishDisabled || issueCount > 0}
-            onClick={handlePublish}
-          >
-            Publish
-          </button>
-          <button
-            type="button"
-            className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
-            aria-label="More publish options"
-            aria-haspopup="menu"
-            aria-expanded={publishMenuOpen}
-            disabled={publishDisabled || issueCount > 0}
-            onClick={() => setPublishMenuOpen((open) => !open)}
-          >
-            <span className="material-symbols-outlined">expand_more</span>
-          </button>
-          {publishMenuOpen && (
-            <div className="ab-publish-split__menu" role="menu">
-              <button
-                type="button"
-                className="ab-publish-split__menu-item"
-                role="menuitem"
-                onClick={handleSaveAsDraft}
-              >
-                Save as draft
-              </button>
-            </div>
+        <>
+          {/* Exploration only: Pause / Resume beside Publish for live agents */}
+          {explorationChrome && agentStatus === 'Running' && (
+            <button
+              type="button"
+              className="ab-header-pause-btn"
+              aria-label="Pause"
+              onClick={handlePause}
+            >
+              Pause
+            </button>
           )}
-        </div>
+          {explorationChrome && agentStatus === 'Paused' && (
+            <button
+              type="button"
+              className="ab-header-pause-btn"
+              aria-label="Resume"
+              onClick={handleResume}
+            >
+              Resume
+            </button>
+          )}
+          <div className="ab-publish-split" ref={publishMenuRef}>
+            <button
+              type="button"
+              className="ab-publish-split__main"
+              aria-label="Publish"
+              data-tour-id="publish"
+              disabled={publishDisabled}
+              onClick={handlePublishAttempt}
+            >
+              Publish
+            </button>
+            <button
+              type="button"
+              className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
+              aria-label="More publish options"
+              aria-haspopup="menu"
+              aria-expanded={publishMenuOpen}
+              disabled={publishDisabled}
+              onClick={() => setPublishMenuOpen((open) => !open)}
+            >
+              <span className="material-symbols-outlined">expand_more</span>
+            </button>
+            {publishMenuOpen && (
+              <div className="ab-publish-split__menu" role="menu">
+                <button
+                  type="button"
+                  className="ab-publish-split__menu-item"
+                  role="menuitem"
+                  onClick={handleSaveAsDraft}
+                >
+                  Save as draft
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -3019,52 +3643,145 @@ export default function AgentBuilder({
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        {viewOnly && (
-          <div className="ab-view-banner">
-            <span className="material-symbols-outlined">visibility</span>
-            <span>You&apos;re viewing a shared workflow. Editing is disabled.</span>
-            <a
-              className="ab-view-banner__link"
-              href={`mailto:?subject=Request edit access – ${agentName}`}
-            >
-              Request edit access
-            </a>
-          </div>
-        )}
-
-        <div className={`agent-builder agent-builder--rr-chrome${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}`}>
+        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
-              {onClose && (
-                <button
-                  type="button"
-                  className="rr-chrome-back"
-                  onClick={onClose}
-                  aria-label="Back"
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-                    <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
-                  </svg>
-                  <span>Back</span>
-                </button>
+              {(onClose || explorationChrome) && (
+                <div className={`rr-chrome-back-cluster${explorationChrome ? ' rr-chrome-back-cluster--identity' : ''}`}>
+                  {onClose && (
+                    <button
+                      type="button"
+                      className="rr-chrome-back"
+                      // Browsing version history: Back returns to the canvas rather
+                      // than leaving the editor for the agent list.
+                      onClick={versionHistoryMode ? closeVersionHistory : onClose}
+                      aria-label="Back"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                        <path d="M5.98854 10.6267L8.73215 13.3703C8.85608 13.4943 8.91724 13.6393 8.91565 13.8054C8.91403 13.9715 8.85287 14.1192 8.73215 14.2485C8.60288 14.3778 8.45438 14.4446 8.28665 14.4488C8.11892 14.4531 7.97042 14.3906 7.84115 14.2613L4.10877 10.529C3.95813 10.3783 3.88281 10.2026 3.88281 10.0017C3.88281 9.80088 3.95813 9.62514 4.10877 9.4745L7.84115 5.74212C7.96508 5.61819 8.11224 5.55703 8.28265 5.55862C8.45305 5.56024 8.60288 5.62567 8.73215 5.75494C8.85287 5.88421 8.91537 6.03058 8.91965 6.19404C8.92392 6.3575 8.86142 6.50386 8.73215 6.63312L5.98854 9.37675H15.7931C15.9704 9.37675 16.1189 9.43658 16.2386 9.55623C16.3582 9.67588 16.418 9.82438 16.418 10.0017C16.418 10.1791 16.3582 10.3276 16.2386 10.4472C16.1189 10.5669 15.9704 10.6267 15.7931 10.6267H5.98854Z" fill="currentColor"/>
+                      </svg>
+                      {!explorationChrome && <span>Back</span>}
+                    </button>
+                  )}
+                  {explorationChrome && versionHistoryMode && (
+                    <div className="rr-chrome-identity">
+                      <div className="rr-chrome-identity__row">
+                        <span className="rr-chrome-identity__name">Version history</span>
+                        <span className="rr-chrome-identity__version-sep" aria-hidden>·</span>
+                        <span className="rr-chrome-identity__version-stamp">
+                          {selectedVersion?.stamp || selectedVersion?.title}
+                        </span>
+                        {viewingLiveVersion && (
+                          <span className="ab-header-status ab-header-status--running ab-header-status--dot">
+                            Running
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {explorationChrome && !versionHistoryMode && (
+                    <div className="rr-chrome-identity">
+                      <div className="rr-chrome-identity__row">
+                        <div className="rr-chrome-identity__name-group">
+                          <button
+                            type="button"
+                            className="rr-chrome-identity__title"
+                            onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                            aria-label={`Open agent details for ${agentName || 'Untitled agent'}`}
+                          >
+                            <span className="rr-chrome-identity__name">
+                              {agentName || 'Untitled agent'}
+                            </span>
+                          </button>
+                        </div>
+                        {nodesInteractive && (
+                          <Tooltip content="Edit" variant="brief" side="bottom">
+                            <button
+                              type="button"
+                              className="ab-header-cloud-btn"
+                              onClick={handleOpenAgentDetails}
+                              aria-label="Edit"
+                            >
+                              <span className="material-symbols-outlined ab-header-cloud-btn__material" aria-hidden>
+                                edit
+                              </span>
+                            </button>
+                          </Tooltip>
+                        )}
+                        {agentStatus === 'Draft' && existingAgent ? (
+                          <span className="ab-header-status ab-header-status--draft ab-header-status--with-live">
+                            <span>Draft</span>
+                            <span className="ab-header-status__divider" aria-hidden />
+                            <button
+                              type="button"
+                              className="ab-header-status__view-live"
+                              onClick={() => setAgentStatus('Running')}
+                            >
+                              View live
+                            </button>
+                          </span>
+                        ) : (
+                          <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                            {agentStatus}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
-              <div className="rr-chrome-top">
-                <RrChromeAgentTitle text={agentName || 'Untitled agent'} />
-                <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
-                  {agentStatus}
-                </span>
-                <div className="rr-chrome-top__spacer" aria-hidden />
+              {/* Exploration renders this trigger in the bottom editor row instead (GraphControls). */}
+              {!viewOnly && !explorationChrome && (
+                <div className="rr-chrome-help-wrap">
+                  <Tooltip content="Help center" variant="brief" side="bottom">
+                    <button
+                      type="button"
+                      className={`rr-chrome-help${helpCenterOpen ? ' rr-chrome-help--active' : ''}`}
+                      aria-label="Help center"
+                      aria-pressed={helpCenterOpen}
+                      onClick={toggleHelpCenter}
+                    >
+                      <span className="material-symbols-outlined" aria-hidden>help</span>
+                    </button>
+                  </Tooltip>
+                </div>
+              )}
+
+              {/* Version history on the live version has no actions — skip the pill entirely
+                  so an empty white chip doesn't float over the canvas. */}
+              {!(versionHistoryMode && !headerActions) && (
+              <div
+                className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
+                  explorationChrome ? ' rr-chrome-top--right' : ''
+                }${explorationChrome && rightPanelOpen ? ' rr-chrome-top--rhs-open' : ''}${
+                  explorationChrome && rightPanelWide ? ' rr-chrome-top--rhs-wide' : ''
+                }`}
+              >
+                {!(viewOnly && viewChromeActions) && !explorationChrome && (
+                  <>
+                    <RrChromeAgentTitle
+                      text={agentName || 'Untitled agent'}
+                      onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                    />
+                    <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                      {agentStatus}
+                    </span>
+                    <div className="rr-chrome-top__spacer" aria-hidden />
+                  </>
+                )}
                 {headerActions}
               </div>
+              )}
 
-              {!viewOnly && (
-                <div className="rr-chrome-left-stack">
+              {!viewOnly && !versionHistoryMode && (
+                <div className={`rr-chrome-left-stack${sep1Chrome ? ' rr-chrome-left-stack--labelled' : ''}`}>
                   <Tooltip content="Create with AI" variant="brief" side="right">
                     <button
                       type="button"
                       className={`rr-chrome-left-ai${rrAiPanelOpen ? ' rr-chrome-left-ai--active' : ''}`}
                       aria-label="Create with AI"
+                      data-tour-id="create-with-ai"
                       aria-pressed={rrAiPanelOpen}
                       onClick={() => {
                         setPaletteSection(null);
@@ -3088,22 +3805,54 @@ export default function AgentBuilder({
                         }}
                         aria-hidden
                       />
+                      {sep1Chrome && <span className="rr-chrome-left-label">AI</span>}
                     </button>
                   </Tooltip>
                   <div className="rr-chrome-left-floater" role="toolbar" aria-label="Add nodes">
                     {[
-                      { id: 'Trigger', src: iconRrTrigger, label: 'Trigger' },
+                      {
+                        id: 'Trigger',
+                        src: iconRrTrigger,
+                        icon: 'bolt',
+                        color: '#FE9A00',
+                        label: 'Trigger',
+                        tourId: 'trigger',
+                      },
                       ...(showProceduresFloater
-                        ? [{ id: 'Procedures', src: iconRrProcedures, label: 'Procedures' }]
+                        ? [{
+                            id: 'Procedures',
+                            src: iconRrProcedures,
+                            icon: 'menu_book',
+                            color: '#7C3AED',
+                            label: 'Procedures',
+                            tourId: null,
+                          }]
                         : []),
-                      { id: 'Tasks', src: iconRrTasks, label: 'Task' },
-                      { id: 'Controls', src: iconRrControls, label: 'Controls' },
-                    ].map((item) => (
-                      <Tooltip key={item.id} content={item.label} variant="brief" side="right">
+                      {
+                        id: 'Tasks',
+                        src: iconRrTasks,
+                        icon: 'description',
+                        color: '#00C950',
+                        label: 'Action',
+                        underLabel: 'Actions',
+                        tourId: 'tasks',
+                      },
+                      {
+                        id: 'Controls',
+                        src: iconRrControls,
+                        icon: 'account_tree',
+                        color: '#62748E',
+                        label: 'Controls',
+                        tourId: 'controls',
+                      },
+                    ].map((item) => {
+                      const displayLabel = sep1Chrome ? (item.underLabel || item.label) : item.label;
+                      const btn = (
                         <button
                           type="button"
                           className={`rr-chrome-left-floater__btn${paletteSection === item.id ? ' rr-chrome-left-floater__btn--active' : ''}`}
-                          aria-label={item.label}
+                          aria-label={displayLabel}
+                          data-tour-id={item.tourId || undefined}
                           aria-pressed={paletteSection === item.id}
                           onClick={() => {
                             setVersionHistoryOpen(false);
@@ -3117,10 +3866,27 @@ export default function AgentBuilder({
                             setPaletteSection((prev) => (prev === item.id ? null : item.id));
                           }}
                         >
-                          <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                          {/* Filled glyphs only on exploration chrome — Sep 1 keeps outlined SVGs. */}
+                          {explorationChrome && !sep1Chrome ? (
+                            <span className="rr-chrome-left-floater__icon" style={{ color: item.color }} aria-hidden>
+                              <Icon name={item.icon} size={20} fill />
+                            </span>
+                          ) : (
+                            <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
+                          )}
+                          {sep1Chrome && <span className="rr-chrome-left-label">{displayLabel}</span>}
                         </button>
-                      </Tooltip>
-                    ))}
+                      );
+                      // Sep 1 shows labels under icons — skip redundant tooltips (Create with AI keeps its tooltip).
+                      if (sep1Chrome) {
+                        return <React.Fragment key={item.id}>{btn}</React.Fragment>;
+                      }
+                      return (
+                        <Tooltip key={item.id} content={displayLabel} variant="brief" side="right">
+                          {btn}
+                        </Tooltip>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -3151,13 +3917,45 @@ export default function AgentBuilder({
               )}
 
               {versionHistoryOpen && !viewOnly && (
-                <VersionHistoryPanel onClose={() => setVersionHistoryOpen(false)} />
+                <VersionHistoryPanel
+                  variant={versionHistoryMode ? 'canvas' : 'default'}
+                  selectedId={versionHistorySelectedId}
+                  onSelect={setVersionHistorySelectedId}
+                  onClose={closeVersionHistory}
+                />
+              )}
+
+              {/* Clears the app nav and the canvas header pill, which the default top-6 sits on top of. */}
+              <Toast
+                message="Version restored successfully"
+                visible={!!restoredVersionId}
+                actionLabel="Undo"
+                onAction={handleUndoRestore}
+                onClose={() => setRestoredVersionId(null)}
+                className="!top-[124px]"
+              />
+
+              {/* Exploration opens Help center in the node-config RHS slot instead (below). */}
+              {helpCenterOpen && !explorationChrome && (
+                <div className="rr-chrome-right-panel rr-chrome-right-panel--help">
+                  <HelpCenterPanel
+                    open={helpCenterOpen}
+                    onClose={() => setHelpCenterOpen(false)}
+                    onOpenGlossary={openGlossary}
+                    onOpenProductResearchSettings={onOpenProductResearchSettings}
+                    onStartTour={() => {
+                      setHelpCenterOpen(false);
+                      if (!viewOnly) setCoachTourOpen(true);
+                    }}
+                  />
+                </div>
               )}
 
               {rrAiPanelRendered && !viewOnly && (
                 <div className={`agent-builder__lhs-ai${rrAiPanelClosing ? ' agent-builder__lhs-ai--closing' : ' agent-builder__lhs-ai--opening'}`}>
                   <AiBuilderPanel
                     agentName={(typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName}
+                    draftAgentName={agentName}
                     onClose={closeAiBuilderPanel}
                     onExpand={
                       onOpenAiFullscreen
@@ -3170,6 +3968,13 @@ export default function AgentBuilder({
                     className="rr-chrome-ai-panel"
                     fillShell
                     side="left"
+                    openProcedureName={lhsPreviewProcedureId}
+                    onOpenProcedure={(procedureId) => {
+                      setLhsPreviewProcedureId(procedureId);
+                      setSelectedNodeId(null);
+                      setActiveProcedureId(null);
+                      setDrawerOpen(true);
+                    }}
                   />
                 </div>
               )}
@@ -3180,7 +3985,7 @@ export default function AgentBuilder({
             <FlowCanvas
               nodes={nodes}
               edges={edges}
-              onNodeClick={handleNodeClick}
+              onNodeClick={nodesInteractive ? handleNodeClick : undefined}
               onDropNode={viewOnly ? undefined : handleDropNode}
               onNodesReorder={viewOnly ? undefined : handleNodesReorder}
               hasClipboard={!viewOnly && !!clipboard}
@@ -3194,12 +3999,17 @@ export default function AgentBuilder({
               rrChrome
               initialZoom={initialZoom}
               runDisabled={runDisabled}
+              focusNodeId={testRunOpen ? testRunActiveId : canvasFocusNodeId}
               onEdit={onEdit}
               onView={onView}
               onUndo={handleUndo}
               onRedo={handleRedo}
               canUndo={historyPast.length > 0}
               canRedo={historyFuture.length > 0}
+              hideUndoRedo={versionHistoryOpen}
+              onHelpToggle={explorationChrome ? toggleHelpCenter : null}
+              helpOpen={helpCenterOpen}
+              singleAddStepSearch={sep1Chrome}
               onRun={() => {
                 if (isReviewResponseAgent) return;
                 if (isReminderAgent) {
@@ -3218,6 +4028,21 @@ export default function AgentBuilder({
             </div>
           )}
 
+          {testRunOpen && (
+            <>
+              <style>{testRunCss}</style>
+              <div className="agent-builder__rhs agent-builder__rhs--opening">
+                <TestRunPanel
+                  steps={testRunSteps}
+                  stepStatuses={testRun.stepStatuses}
+                  activeIndex={testRun.activeIndex}
+                  status={testRun.status}
+                  onExit={() => setTestRunOpen(false)}
+                />
+              </div>
+            </>
+          )}
+
           {rhsRendered && (
             <div
               key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}
@@ -3229,8 +4054,26 @@ export default function AgentBuilder({
             </div>
           )}
 
+          {/* Exploration: Help center uses the same RHS slot + slide as the node cards. */}
+          {helpRendered && explorationChrome && (
+            <div
+              className={`agent-builder__rhs agent-builder__rhs--help${helpClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}
+            >
+              <HelpCenterPanel
+                open={helpCenterOpen}
+                onClose={() => setHelpCenterOpen(false)}
+                onOpenGlossary={openGlossary}
+                onOpenProductResearchSettings={onOpenProductResearchSettings}
+                onStartTour={() => {
+                  setHelpCenterOpen(false);
+                  if (!viewOnly) setCoachTourOpen(true);
+                }}
+              />
+            </div>
+          )}
+
           {previewOpen && !isReviewResponseAgent && (
-            <div className="agent-builder__preview">
+            <div className="agent-builder__rhs agent-builder__rhs--opening">
               <PreviewPanel
                 onClose={() => {
                   setPreviewOpen(false);
@@ -3243,6 +4086,64 @@ export default function AgentBuilder({
                 onEditAppointment={() => setBookTestModalOpen(true)}
               />
             </div>
+          )}
+
+          {/* ─── Publish blocked alert (viewport overlay — L1 + top nav + canvas) ─── */}
+          {publishBlockedModalOpen && createPortal(
+            <div
+              className={`ab-publish-blocked-overlay${
+                rightPanelOpen
+                  ? rightPanelWide
+                    ? ' ab-publish-blocked-overlay--rhs-wide'
+                    : ' ab-publish-blocked-overlay--rhs-open'
+                  : ''
+              }`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setPublishBlockedModalOpen(false);
+              }}
+            >
+              <div
+                className="ab-publish-blocked-dialog"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ab-publish-blocked-title"
+              >
+                <div className="ab-publish-blocked-dialog__header">
+                  <h2 id="ab-publish-blocked-title" className="ab-publish-blocked-dialog__title">
+                    {publishBlockedCopy(issueCount).title}
+                  </h2>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setPublishBlockedModalOpen(false)}
+                    className="ab-publish-blocked-dialog__close"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <p className="ab-publish-blocked-dialog__body">
+                  {publishBlockedCopy(issueCount).body}
+                </p>
+                <div className="ab-publish-blocked-dialog__footer">
+                  <button
+                    type="button"
+                    className="ab-publish-blocked-dialog__cancel"
+                    onClick={() => setPublishBlockedModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="ab-publish-blocked-dialog__primary"
+                    onClick={handleViewPublishErrors}
+                  >
+                    View errors
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
           )}
         </div>
       </div>
@@ -3290,6 +4191,16 @@ export default function AgentBuilder({
 
       {/* ─── Assign conversation status tool drawer ─── */}
       <AssignConversationStatusDrawer isOpen={assignConversationStatusToolOpen} onClose={() => setAssignConversationStatusToolOpen(false)} />
+
+      <HandleResponseDrawer
+        isOpen={handleResponseToolOpen}
+        value={currentDetails.handleResponse}
+        onClose={() => setHandleResponseToolOpen(false)}
+        onSave={(config) => {
+          activeFieldChange('handleResponse', config);
+          setHandleResponseToolOpen(false);
+        }}
+      />
 
       {/* ─── Tool configuration overlay ─── */}
       {viewingTool && (
@@ -3350,6 +4261,16 @@ export default function AgentBuilder({
         accept=".json"
         className="ab-hidden-input"
         onChange={handleImport}
+      />
+
+      {!viewOnly && (
+        <WorkflowCoachTour open={coachTourOpen} onClose={() => setCoachTourOpen(false)} />
+      )}
+
+      <GlossaryModal
+        open={glossaryOpen}
+        onClose={closeGlossary}
+        initialTermId={glossaryTermId}
       />
     </div>
   );

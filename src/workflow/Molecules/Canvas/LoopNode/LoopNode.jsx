@@ -159,7 +159,7 @@ function computeArmWidth(nodes, nodeDetails) {
 }
 
 function nodeTypeLabel(flowType) {
-  return { task: 'Task', delay: 'Delay', voiceCall: 'Voice call', branch: 'Branch' }[flowType] || 'Task';
+  return { task: 'Action', delay: 'Delay', voiceCall: 'Voice call', branch: 'Branch' }[flowType] || 'Action';
 }
 
 function InlineConnLine({ height = INLINE_CONN_H }) {
@@ -453,7 +453,7 @@ export default function LoopNode({
                   >
                     <CanvasNode
                       nodeType="task"
-                      label="Task"
+                      label="Action"
                       stepNumber={child.stepNumber}
                       title={child.title}
                       description={child.subtitle}

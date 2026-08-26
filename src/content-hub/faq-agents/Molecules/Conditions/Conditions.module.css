@@ -78,7 +78,7 @@
 .optionInput {
   flex: 1;
   font-size: 13px;
-  font-family: 'Roboto', arial, sans-serif;
+  font-family: 'Inter', arial, sans-serif;
   color: #212121;
   background: transparent;
   border: none;
@@ -136,7 +136,7 @@
   gap: 2px;
   font-size: 12px;
   font-weight: 500;
-  font-family: 'Roboto', arial, sans-serif;
+  font-family: 'Inter', arial, sans-serif;
   color: #1976d2;
   background: none;
   border: none;

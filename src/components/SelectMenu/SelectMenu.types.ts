@@ -1,6 +1,8 @@
 export interface SelectOption {
   value: string
   label: string
+  /** When true, shows a trailing chevron (submenu / drill-in affordance). */
+  showChevron?: boolean
 }
 
 export interface SelectMenuProps {

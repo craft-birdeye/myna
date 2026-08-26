@@ -445,13 +445,9 @@ export function IconRail({
             className="flex h-full w-full items-center gap-md px-[12px] transition-colors hover:bg-black/5"
           >
             <img src={logoSrc} alt="" className="size-7 shrink-0" />
-            <span className="flex min-w-0 flex-1 items-center gap-xs opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-              <span className="truncate text-h3 text-text-primary">{brand}</span>
-              <Icon
-                name={switcherOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                size={18}
-                className="shrink-0 text-text-secondary"
-              />
+            {/* No chevron — dropdown is hidden until clicked, giving no visual cue */}
+            <span className="flex min-w-0 flex-1 items-center opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              <span className="truncate text-h3 text-text-primary">Birdeye</span>
             </span>
           </button>
 
@@ -479,47 +475,30 @@ export function IconRail({
         </div>
 
         {/* ── Main nav items ── */}
+        {/* ── COLLAPSED: visible groups + More button (hidden when rail is hovered-open) ── */}
         <div
           ref={navContainerRef}
-          className="l1-rail-nav flex flex-1 flex-col gap-[6px] overflow-hidden py-[6px]"
+          className="l1-rail-nav flex flex-1 flex-col gap-[6px] overflow-hidden py-[6px] group-hover:hidden"
         >
-          {visibleGroups.map((group, gi) => (
+          {visibleGroups.map((group) => (
             <div key={group.id} className="flex flex-col gap-[6px]">
-              {gi > 0 && (
-                <span
-                  className="my-xs h-px bg-black/10"
-                  style={{ marginLeft: RAIL_ICON_PX, marginRight: RAIL_ICON_PX }}
-                />
-              )}
               {group.header && (
                 <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-200 group-hover:grid-rows-[1fr] group-hover:opacity-100">
                   <div
                     className="flex min-h-0 items-center overflow-hidden"
                     style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
                   >
-                    {group.headerIcon ? (
-                      <span className="flex size-7 shrink-0 items-center justify-center">
-                        <img src={group.headerIcon} alt="" className="size-[18px] rounded-full" />
-                      </span>
-                    ) : null}
-                    <p className={`min-w-0 truncate text-body text-text-tertiary ${group.headerIcon ? 'ml-[10px]' : ''}`}>
+                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-muted">
                       {group.header}
                     </p>
                   </div>
                 </div>
               )}
               {group.items.map((item) => (
-                <NavTab
-                  key={item.id}
-                  item={item}
-                  active={item.id === activeId}
-                  onSelect={onSelect}
-                />
+                <NavTab key={item.id} item={item} active={item.id === activeId} onSelect={onSelect} />
               ))}
             </div>
           ))}
-
-          {/* Three-dots overflow button */}
           {hasOverflow && (
             <button
               ref={dotsBtnRef}
@@ -533,11 +512,31 @@ export function IconRail({
               <span className="flex size-6 shrink-0 items-center justify-center text-text-icon">
                 <Icon name="more_horiz" size={18} />
               </span>
-              <span className="relative text-body text-text-secondary opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                More
-              </span>
             </button>
           )}
+        </div>
+
+        {/* ── EXPANDED: all groups, scrollable, no More button (shown only when hovered-open) ── */}
+        <div className="l1-rail-nav hidden flex-1 flex-col gap-[6px] overflow-y-auto py-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden group-hover:flex">
+          {groups.map((group) => (
+            <div key={group.id} className="flex flex-col gap-[6px]">
+              {group.header && (
+                <div className="grid grid-rows-[1fr]">
+                  <div
+                    className="flex min-h-0 items-center overflow-hidden"
+                    style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
+                  >
+                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-muted">
+                      {group.header}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {group.items.map((item) => (
+                <NavTab key={item.id} item={item} active={item.id === activeId} onSelect={onSelect} />
+              ))}
+            </div>
+          ))}
         </div>
 
         {/* ── Bottom — Settings, Help, Profile ── */}

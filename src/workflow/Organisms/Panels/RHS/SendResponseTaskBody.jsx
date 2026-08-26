@@ -77,7 +77,7 @@ export default function SendResponseTaskBody({ initialValues = {}, onFieldChange
       <FormInput
         name="taskName"
         type="text"
-        label="Task name"
+        label="Action name"
         placeholder="Enter name"
         value={taskName}
         onChange={handleTaskName}

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const font = '"Roboto", arial, sans-serif';
+const font = '"Inter", arial, sans-serif';
 
 const STRENGTH_COLOR = {
   Weak: '#de1b0c',

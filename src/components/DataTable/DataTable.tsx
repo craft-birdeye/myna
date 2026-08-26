@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -10,6 +10,7 @@ import {
   BookOpen, FileText, Star, Tag, Link, ExternalLink,
   MessageSquare, CalendarPlus, Wrench,
 } from 'lucide-react'
+import { Tooltip } from '../Tooltip/Tooltip'
 import { Column, DataTableProps, SortDir } from './DataTable.types'
 
 /** Map from legacy Material Symbols names → Lucide components, for dynamic icon props. */
@@ -73,6 +74,68 @@ function DynamicIcon({ name, className }: { name: string; className?: string }) 
 const DEFAULT_WIDTH = 160
 const DEFAULT_MIN_WIDTH = 80
 
+/** Header label that shows a tooltip only when `line-clamp-2` actually truncates. */
+function HeaderLabel({ label, className }: { label: string; className: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [truncated, setTruncated] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => {
+      setTruncated(el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [label])
+
+  return (
+    <Tooltip content={label} variant="detail" disabled={!truncated} className="!block min-w-0 max-w-full flex-1 overflow-hidden">
+      <span ref={ref} className={className}>
+        {label}
+      </span>
+    </Tooltip>
+  )
+}
+
+/** Body cell that shows a tooltip with the full value only when single-line truncation applies. */
+function TruncatedCell({ children, tooltip }: { children: ReactNode; tooltip?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [truncated, setTruncated] = useState(false)
+  const [measuredText, setMeasuredText] = useState('')
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => {
+      setTruncated(el.scrollWidth > el.clientWidth + 1)
+      setMeasuredText(el.textContent?.trim() ?? '')
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [children, tooltip])
+
+  const tooltipText = tooltip ?? measuredText
+
+  return (
+    <Tooltip
+      content={tooltipText}
+      variant="detail"
+      side="top"
+      disabled={!truncated || !tooltipText}
+      className="!block min-w-0 max-w-full overflow-hidden"
+    >
+      <span ref={ref} className="block min-w-0 truncate">
+        {children}
+      </span>
+    </Tooltip>
+  )
+}
+
 export function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
@@ -82,6 +145,8 @@ export function DataTable<T extends Record<string, unknown>>({
   rowActions,
   rowMenuItems,
   scrollOnHover = false,
+  initialSortKey,
+  initialSortDir = 'asc',
   rowClassName,
   rowHeight = 48,
 }: DataTableProps<T>) {
@@ -90,7 +155,10 @@ export function DataTable<T extends Record<string, unknown>>({
     columns.forEach((c) => (init[String(c.key)] = c.width ?? DEFAULT_WIDTH))
     return init
   })
-  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({ key: null, dir: 'asc' })
+  const [sort, setSort] = useState<{ key: string | null; dir: SortDir }>({
+    key: initialSortKey ?? null,
+    dir: initialSortDir,
+  })
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ rowIndex: number; top: number; left: number } | null>(null)
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
@@ -102,6 +170,10 @@ export function DataTable<T extends Record<string, unknown>>({
       return next
     })
   }, [columns])
+
+  useEffect(() => {
+    setSort({ key: initialSortKey ?? null, dir: initialSortDir })
+  }, [initialSortKey, initialSortDir])
 
   const sortedData = useMemo(() => {
     if (!sort.key) return data
@@ -161,7 +233,10 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className={`overflow-x-auto${scrollOnHover ? ' scroll-on-hover' : ''}`}>
-      <table className="text-left" style={{ tableLayout: 'fixed', width: '100%', minWidth: totalWidth }}>
+      {/* minWidth on an inner wrapper — `min-width` on <table> is ignored, which lets
+          columns squeeze and header labels paint into the next column. */}
+      <div className="w-full" style={{ minWidth: totalWidth }}>
+      <table className="w-full text-left" style={{ tableLayout: 'fixed' }}>
         <colgroup>
           {columns.map((col) => (
             <col key={String(col.key)} style={{ width: widths[String(col.key)] ?? DEFAULT_WIDTH }} />
@@ -175,7 +250,7 @@ export function DataTable<T extends Record<string, unknown>>({
               const resizable = col.resizable !== false
               const showDivider = i < columns.length - 1
               return (
-                <th key={key} className="relative h-12 border-b border-border px-[10px] align-middle font-normal">
+                <th key={key} className="relative min-h-12 min-w-0 overflow-hidden whitespace-normal border-b border-border px-[10px] py-xs align-middle font-normal">
                   {col.headerRender ? (
                     col.headerRender({
                       sorted,
@@ -186,11 +261,12 @@ export function DataTable<T extends Record<string, unknown>>({
                     <button
                       type="button"
                       onClick={() => toggleSort(col)}
-                      className={`group/hdr flex min-w-0 items-center gap-xs ${col.sortable ? '' : 'cursor-default'}`}
+                      className={`group/hdr flex w-full min-w-0 items-center gap-xs ${col.sortable ? '' : 'cursor-default'}`}
                     >
-                      <span className={`truncate text-small ${sorted ? 'text-text-primary' : 'text-text-icon'}`}>
-                        {col.label}
-                      </span>
+                      <HeaderLabel
+                        label={col.label}
+                        className={`w-full min-w-0 overflow-hidden text-left text-small line-clamp-2 max-h-[2lh] ${sorted ? 'text-text-primary' : 'text-text-icon'}`}
+                      />
                       {col.sortable && (
                         sorted && sort.dir === 'asc'
                           ? <ChevronUp
@@ -236,17 +312,24 @@ export function DataTable<T extends Record<string, unknown>>({
             >
               {columns.map((col, ci) => {
                 const isLast = ci === columns.length - 1
-                const content = col.render ? col.render(row[col.key], row) : String(row[col.key] ?? '')
-                const wrapTruncate = isLast && col.truncate !== false
+                const rawValue = row[col.key]
+                const content = col.render ? col.render(rawValue, row) : String(rawValue ?? '')
+                const useTruncatedCell = col.truncate !== false
+                const cellTooltip = col.tooltip?.(rawValue, row)
+                const cellContent = useTruncatedCell ? (
+                  <TruncatedCell tooltip={cellTooltip}>{content}</TruncatedCell>
+                ) : (
+                  content
+                )
                 return (
                   <td
                     key={String(col.key)}
                     style={{ height: rowHeight }}
                   className={`px-[10px] align-middle text-body text-text-primary ${
-                      isLast ? 'relative' : 'truncate'
+                      isLast ? 'relative min-w-0 overflow-hidden' : 'min-w-0 overflow-hidden'
                     }`}
                   >
-                    {wrapTruncate ? <span className="block truncate">{content}</span> : content}
+                    {cellContent}
 
                     {/* Row hover CTAs anchored to the right edge */}
                     {isLast && hasRowCtas && (
@@ -310,6 +393,7 @@ export function DataTable<T extends Record<string, unknown>>({
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* Tooltip — fixed so it is never clipped by overflow containers */}
       {tooltip && (

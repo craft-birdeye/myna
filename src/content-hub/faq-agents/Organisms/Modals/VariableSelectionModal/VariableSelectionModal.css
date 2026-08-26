@@ -16,7 +16,7 @@
   width: 460px;
   display: flex;
   flex-direction: column;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 /* ─── Header ─── */
@@ -95,7 +95,7 @@
   justify-content: center;
   padding: 8px;
   border-radius: 4px;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
@@ -148,7 +148,7 @@
   min-width: 0;
   border: none;
   outline: none;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
@@ -205,7 +205,7 @@
 .variable-selection-modal__node-label {
   flex: 1;
   min-width: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -220,7 +220,7 @@
 }
 
 .variable-selection-modal__node-count {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;

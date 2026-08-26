@@ -18,6 +18,9 @@ export default {
           shell: '#e0e5eb',         // page/gutter/L1/topbar chrome
           hover: '#f2f4f7',         // bg/primary/hover (hover states)
           selected: '#e5e9f0',      // New/Selected · bg/primary/Selected
+          subtle: '#f7f7f7',        // neutral light grey (no blue cast) — section header bands
+          muted: '#fafafa',         // secondary surface — settings section cards
+          icon: '#eef2f6',          // Help center / icon well (Figma Help_Drawer)
           'selected-l1': '#c7d6f6', // New/Selected (L1)
         },
         accent: {
@@ -45,6 +48,7 @@ export default {
           primary: '#0d0d12', // text/onLightSurface/Primary (Birdeye brand near-black)
           secondary: '#717182', // text/onLightSurface/Secondary
           tertiary: '#9ca3af', // text/onLightSurface/Tertiary
+          muted: '#8F8F8F', // L1 rail section headers (Marketing / Operations / Customer experience)
           action: '#1976D2', // text/onLightSurface/action/primary
           icon: '#303030', // icon/primary/default
         },
@@ -60,6 +64,11 @@ export default {
           empty: '#B9BCC0', // empty / unfilled review star
         },
         tooltip: { DEFAULT: '#252525' }, // Gray/800 — Tooltip / Web (Aero DS, node 2180:72)
+        helpThumb: {
+          purple: '#7B61FF',
+          teal: '#2BB0A6',
+          orange: '#E87A3A',
+        },
         // ── Contenthub 2.0 shadcn tokens (for copied contenthub UI components) ──
         background:  'var(--background)',
         foreground:  'var(--foreground)',

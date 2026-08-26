@@ -76,7 +76,7 @@ export const MODULE_NAV = {
     menuItems: standardSections(['Conversation intent routing agents', 'Inbox reply assistant agents']),
   },
   search: {
-    title: 'Search AI',
+    title: 'AI Search',
     ctaLabel: 'Create agent',
     defaultItemId: 'faq-generation-agents',
     menuItems: expandedSections([

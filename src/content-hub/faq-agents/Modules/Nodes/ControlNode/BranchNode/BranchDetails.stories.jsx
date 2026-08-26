@@ -114,7 +114,7 @@ const CANVAS_NODES = [
     id: 'path-none',
     type: 'branchPath',
     position: { x: 520, y: 240 },
-    data: { label: 'No conditions met', hasIcons: false },
+    data: { label: 'Fallback', hasIcons: false },
   },
   {
     id: 'task-support',

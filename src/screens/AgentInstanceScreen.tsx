@@ -526,8 +526,8 @@ export function AgentInstanceScreen({
       : METRICS_BY_AGENT[agentName]
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
-  const explorationLogLayout = workflowButtonOpensEditor
   const explorationFrontDeskStatus = workflowButtonOpensEditor && isFrontdeskAgent
+  const hideMarketingLogDuration = isReviewResponse || isReviewGeneration
   const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
         if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
@@ -622,7 +622,6 @@ export function AgentInstanceScreen({
 
   if (selectedRun) {
     const navigableRuns = getNavigableLogRows(agentName, logsQuery, logsFilters, {
-      explorationLogLayout,
       explorationFrontDeskStatus,
     })
     return (
@@ -637,7 +636,6 @@ export function AgentInstanceScreen({
             onBack={() => setSelectedRun(null)}
             onEditAgent={() => onEditAgent?.(instanceName)}
             explorationFrontDeskStatus={explorationFrontDeskStatus}
-            explorationLogLayout={explorationLogLayout}
             onTrackFeedback={(recommendationId) => {
               setSelectedRun(null)
               setActiveTab('recommendation')
@@ -923,7 +921,7 @@ export function AgentInstanceScreen({
                   searchQuery={supportsHeaderSearch ? logsQuery : ''}
                   filters={supportsHeaderSearch ? logsFilters : undefined}
                   explorationFrontDeskStatus={explorationFrontDeskStatus}
-            explorationLogLayout={explorationLogLayout}
+                  hideLogDuration={hideMarketingLogDuration}
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
@@ -946,7 +944,7 @@ export function AgentInstanceScreen({
         {showHeaderSearch && (
           <FilterPanel
             open={isOutcomesTab ? outcomesFilterOpen : logsFilterOpen}
-            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName, { explorationLogLayout })}
+            fields={isOutcomesTab ? outcomesFilterFields : getLogFilterFields(agentName, { explorationFrontDeskStatus })}
             selections={isOutcomesTab ? outcomesFilters : logsFilters}
             onSelectionsChange={isOutcomesTab ? setOutcomesFilters : setLogsFilters}
             onClose={() =>

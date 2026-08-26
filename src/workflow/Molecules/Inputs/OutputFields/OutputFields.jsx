@@ -1,6 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import VariableChip, { CHIP_TYPES, DataTypeIcon } from '../VariableChip/VariableChip';
 import AiWandIcon from '../../../Organisms/Panels/RHS/icons/ai_text_grammar_wand.svg';
+import AddOutputFieldModal from '../../../Organisms/Modals/AddOutputFieldModal/AddOutputFieldModal';
+import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
+import { useTwoLineChipCollapse } from '../chipTwoLineCollapse';
 import styles from './OutputFields.module.css';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -24,14 +27,40 @@ function Spinner() {
   return <div className={styles.spinner} />;
 }
 
-export default function OutputFields({ fields = [], onFieldsChange, showInfo }) {
+export default function OutputFields({
+  fields = [],
+  onFieldsChange,
+  showInfo,
+  infoTooltip,
+  infoLearnMoreHref,
+  infoOnLearnMore,
+  /** Exploration: bordered box, two chip lines + "View N more". */
+  collapseToTwoLines = false,
+  /** Exploration: "+ Add" on the label row instead of inside the chip box. */
+  addInLabelRow = false,
+  onOpenGlossary,
+}) {
   const normalizedFields = normalizeFields(fields);
   const [generateState, setGenerateState] = useState('idle');
   const [addingNew, setAddingNew] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerFor, setPickerFor] = useState(null);
   const [pendingType, setPendingType] = useState('variable');
+  const [expanded, setExpanded] = useState(false);
+  const [outputModalOpen, setOutputModalOpen] = useState(false);
   const pickerRef = useRef(null);
+  const measureRef = useRef(null);
+
+  const { visibleCount, hiddenCount, showViewMore } = useTwoLineChipCollapse({
+    enabled: collapseToTwoLines,
+    expanded: expanded || addingNew,
+    itemCount: normalizedFields.length,
+    measureRef,
+  });
+
+  const visibleFields = collapseToTwoLines && !expanded && !addingNew
+    ? normalizedFields.slice(0, visibleCount)
+    : normalizedFields;
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -44,7 +73,24 @@ export default function OutputFields({ fields = [], onFieldsChange, showInfo }) 
     return () => document.removeEventListener('mousedown', handler);
   }, [pickerOpen]);
 
-  const openForAdd = () => { setPickerFor('add'); setPickerOpen(true); };
+  useLayoutEffect(() => {
+    if (!collapseToTwoLines) setExpanded(false);
+  }, [collapseToTwoLines, normalizedFields.length]);
+
+  const openForAdd = () => {
+    if (collapseToTwoLines) {
+      setOutputModalOpen(true);
+      return;
+    }
+    setExpanded(true);
+    setPickerFor('add');
+    setPickerOpen(true);
+  };
+
+  const handleOutputModalAdd = ({ fieldName }) => {
+    onFieldsChange?.([...normalizedFields, { value: fieldName, type: 'variable' }]);
+    setOutputModalOpen(false);
+  };
   const openForChip = (i) => { setPickerFor(i); setPickerOpen(true); };
 
   const selectType = (type) => {
@@ -83,66 +129,93 @@ export default function OutputFields({ fields = [], onFieldsChange, showInfo }) 
   };
 
   const hasChips = normalizedFields.length > 0 || addingNew;
+  const isEmpty = normalizedFields.length === 0 && !addingNew;
+  const showLabelAdd = addInLabelRow && !isEmpty;
+  const showInlineAdd = !addInLabelRow || isEmpty;
 
-  return (
-    <div className={styles.wrap}>
-      <div className={styles.labelRow}>
-        <span className={styles.label}>Output fields</span>
-        {showInfo && <span className={`material-symbols-outlined ${styles.infoIcon}`}>info</span>}
-      </div>
+  const chipsBlock = hasChips && (
+    <div className={`${styles.chipWrap}${addInLabelRow ? ` ${styles.chipWrapCompact}` : ''}`}>
+      {visibleFields.map((f, i) => (
+        <VariableChip
+          key={`${f.value}-${i}`}
+          value={f.value}
+          type={f.type}
+          onChange={(v) => onChipChange(i, v)}
+          onDelete={() => onChipDelete(i)}
+          onSwatchClick={() => openForChip(i)}
+        />
+      ))}
+      {addingNew && (
+        <VariableChip
+          value=""
+          type={pendingType}
+          autoFocus
+          onChange={onCommitAdd}
+          onDelete={() => setAddingNew(false)}
+        />
+      )}
+    </div>
+  );
 
-      <div className={styles.chipContainer}>
-        {hasChips && (
-          <div className={styles.chipWrap}>
-            {normalizedFields.map((f, i) => (
-              <VariableChip
-                key={i}
-                value={f.value}
-                type={f.type}
-                onChange={(v) => onChipChange(i, v)}
-                onDelete={() => onChipDelete(i)}
-                onSwatchClick={() => openForChip(i)}
-              />
-            ))}
-            {addingNew && (
-              <VariableChip
-                value=""
-                type={pendingType}
-                autoFocus
-                onChange={onCommitAdd}
-                onDelete={() => setAddingNew(false)}
-              />
-            )}
-          </div>
-        )}
-        <div className={styles.addRow} ref={pickerRef}>
-          <button className={styles.addBtn} type="button" onClick={openForAdd}>
-            <span className="material-symbols-outlined">add_circle</span>
-            <span className={styles.addBtnLabel}>Add</span>
-          </button>
-          {pickerOpen && (
-            <div className={styles.typePicker}>
-              {CHIP_TYPES.map((ct) => (
-                <button
-                  key={ct.type}
-                  className={styles.typePickerItem}
-                  type="button"
-                  onClick={() => selectType(ct.type)}
-                >
-                  <span className={`${styles.typePickerSwatch} ${styles[`tpSwatch${cap(ct.type)}`] || ''}`}>
-                    {ct.icon
-                      ? <span className={`material-symbols-outlined ${styles[`tpIcon${cap(ct.type)}`] || ''}`}>{ct.icon}</span>
-                      : <DataTypeIcon />
-                    }
-                  </span>
-                  <span className={styles.typePickerLabel}>{ct.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+  const measureLayer = collapseToTwoLines && !expanded && !addingNew && normalizedFields.length > 0 && (
+    <div
+      ref={measureRef}
+      className={`${styles.chipMeasure}${addInLabelRow ? ` ${styles.chipMeasureCompact}` : ''}`}
+      aria-hidden
+    >
+      {normalizedFields.map((f, i) => (
+        <span key={`m-${f.value}-${i}`} data-chip-measure className={styles.chipMeasureItem}>
+          <VariableChip value={f.value} type={f.type} />
+        </span>
+      ))}
+    </div>
+  );
 
+  const viewMoreBtn = showViewMore && (
+    <button
+      type="button"
+      className={styles.moreLink}
+      onClick={() => setExpanded(true)}
+    >
+      {`View ${hiddenCount} more`}
+    </button>
+  );
+
+  const typePicker = pickerOpen && (
+    <div className={styles.typePicker}>
+      {CHIP_TYPES.map((ct) => (
+        <button
+          key={ct.type}
+          className={styles.typePickerItem}
+          type="button"
+          onClick={() => selectType(ct.type)}
+        >
+          <span className={`${styles.typePickerSwatch} ${styles[`tpSwatch${cap(ct.type)}`] || ''}`}>
+            {ct.icon
+              ? <span className={`material-symbols-outlined ${styles[`tpIcon${cap(ct.type)}`] || ''}`}>{ct.icon}</span>
+              : <DataTypeIcon />
+            }
+          </span>
+          <span className={styles.typePickerLabel}>{ct.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const showChipBox = !addInLabelRow || hasChips || isEmpty;
+
+  const inlineAddRow = showInlineAdd && (
+    <div className={styles.addRow} ref={pickerRef}>
+      <button className={styles.addBtn} type="button" onClick={openForAdd}>
+        <span className="material-symbols-outlined">add_circle</span>
+        <span className={styles.addBtnLabel}>Add</span>
+      </button>
+      {typePicker}
+    </div>
+  );
+
+  const generateUi = (
+    <>
       {generateState === 'idle' && (
         <button className={styles.generateBtn} type="button" onClick={handleGenerate}>
           <img src={AiWandIcon} alt="" className={styles.generateIcon} />
@@ -179,6 +252,56 @@ export default function OutputFields({ fields = [], onFieldsChange, showInfo }) 
             </button>
           </div>
         </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className={`${styles.wrap}${addInLabelRow ? ` ${styles.wrapCompact}` : ''}`}>
+      <div className={styles.labelRow}>
+        <span className={styles.label}>Output fields</span>
+        {showInfo && infoTooltip ? (
+          <InfoTooltip
+            text={infoTooltip}
+            variant="detail"
+            learnMoreHref={infoOnLearnMore ? undefined : infoLearnMoreHref}
+            onLearnMore={infoOnLearnMore}
+          />
+        ) : showInfo ? (
+          <span className={`material-symbols-outlined ${styles.infoIcon}`}>info</span>
+        ) : null}
+        {showLabelAdd && (
+          <div className={styles.labelAddWrap} ref={pickerRef}>
+            <button type="button" className={styles.fieldAddBtn} onClick={openForAdd}>
+              <span className="material-symbols-outlined">add_circle</span>
+              <span className={styles.fieldAddBtnLabel}>Add</span>
+            </button>
+            {typePicker}
+          </div>
+        )}
+      </div>
+
+      {showChipBox && (
+        <div
+          className={`${styles.chipContainer}${
+            addInLabelRow && !isEmpty ? ` ${styles.chipContainerCompact}` : ''
+          }${addInLabelRow && isEmpty ? ` ${styles.chipContainerEmpty}` : ''}`}
+        >
+          {measureLayer}
+          {chipsBlock}
+          {viewMoreBtn}
+          {inlineAddRow}
+        </div>
+      )}
+
+      {generateUi}
+
+      {outputModalOpen && (
+        <AddOutputFieldModal
+          onClose={() => setOutputModalOpen(false)}
+          onAdd={handleOutputModalAdd}
+          onLearnMore={onOpenGlossary ? () => onOpenGlossary('output-field') : undefined}
+        />
       )}
     </div>
   );

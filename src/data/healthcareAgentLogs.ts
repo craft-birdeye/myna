@@ -1,6 +1,6 @@
 import type { Metric } from '../components/MetricTiles/MetricTiles.types'
 
-export type LogStatus = 'Complete' | 'Failed' | 'In progress'
+export type LogStatus = 'Complete' | 'Completed' | 'Failed' | 'In progress' | 'Resolved' | 'Not resolved' | 'Aborted'
 
 export type LogStepId = 'trigger' | 'procedures'
 
@@ -15,7 +15,10 @@ export interface HealthcareLogRow {
   implementedSteps?: LogStepId[]
   /** Explicit canvas node ids to highlight; when set, overrides branch-path inference. */
   executedNodeIds?: string[]
-  [key: string]: string | string[] | LogStepId[] | undefined
+  /** Review-response rows only: star rating and reviewer comment on the underlying review. */
+  rating?: number
+  comment?: string
+  [key: string]: string | number | string[] | LogStepId[] | undefined
 }
 
 export const HEALTHCARE_LOGS_METRICS: Metric[] = [
@@ -94,7 +97,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: 'Dana Whitfield',
     channel: 'Voice call',
     duration: '0:53',
-    topic: 'Tooth pain screening',
+    topic: 'Appointment booked',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -103,7 +106,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: 'Robert Cho',
     channel: 'Voice call',
     duration: '1:36',
-    topic: 'New patient scheduling',
+    topic: 'Appointment cancelled',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -112,7 +115,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: '+1 (628) 555-0110',
     channel: 'Web chat',
     duration: '1:11',
-    topic: 'Appointment reschedule',
+    topic: 'Appointment booked',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -121,7 +124,7 @@ export const HEALTHCARE_LOGS_ROWS: HealthcareLogRow[] = [
     contact: '+1 (310) 555-0190',
     channel: 'Web chat',
     duration: '1:04',
-    topic: 'Emergency dental concern',
+    topic: 'Appointment cancelled',
     implementedSteps: ['trigger'],
   },
   {
@@ -188,46 +191,100 @@ export interface ReviewResponseLogRow {
   status: LogStatus
   contact: string
   source: string
+  duration?: string
+  /** Star rating on the underlying review; absent for rows with no rating (e.g. direct feedback). */
+  rating?: number
+  comment?: string
   implementedSteps?: LogStepId[]
   executedNodeIds?: string[]
-  [key: string]: string | string[] | LogStepId[] | undefined
+  [key: string]: string | number | string[] | LogStepId[] | undefined
 }
 
 export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
   {
     timestamp: 'Feb 25, 2024, 5:30 pm',
-    status: 'Complete',
-    contact: 'Dana Whitfield',
-    source: 'Google',
+    status: 'Completed',
+    contact: 'Sarah Chen',
+    source: 'Birdeye',
+    duration: '0:24',
+    rating: 2,
+    comment:
+      'Very disappointed with the service. The wait time was longer than expected and staff seemed rushed when I asked about my appointment.',
     implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 22, 2024, 3:47 pm',
+    status: 'Completed',
+    contact: 'Marcus Webb',
+    source: 'Google',
+    duration: '0:09',
+    rating: 5,
+    comment:
+      'Dr. Patel explained everything clearly and the front desk got me checked in quickly. Best visit I have had in years.',
+    implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 19, 2024, 3:41 pm',
+    status: 'Failed',
+    contact: 'Marcus Webb',
+    source: 'Google',
+    duration: '0:04',
+    rating: 5,
+    comment:
+      'Dr. Patel explained everything clearly and the front desk got me checked in quickly. Best visit I have had in years.',
+    implementedSteps: ['trigger'],
+  },
+  {
+    timestamp: 'Feb 15, 2024, 11:02 am',
+    status: 'Completed',
+    contact: 'Priya Anand',
+    source: 'Direct Feedback',
+    duration: '0:15',
+    comment:
+      'Thanks for following up on my billing question — the explanation was clear and I got it sorted the same day.',
+    implementedSteps: ['trigger', 'procedures'],
+  },
+  {
+    timestamp: 'Feb 12, 2024, 3:36 pm',
+    status: 'Aborted',
+    contact: 'Marcus Webb',
+    source: 'Google',
+    duration: '0:09',
+    rating: 5,
+    comment:
+      'Dr. Patel explained everything clearly and the front desk got me checked in quickly. Best visit I have had in years.',
+    implementedSteps: ['trigger'],
   },
   {
     timestamp: 'Feb 09, 2024, 5:30 pm',
-    status: 'Complete',
-    contact: 'Robert Cho',
+    status: 'Completed',
+    contact: 'Elena Vasquez',
     source: 'Yelp',
+    duration: '0:25',
+    rating: 5,
+    comment:
+      'Scheduling was easy online and the hygienist was gentle and thorough. Will definitely recommend to friends.',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
-    timestamp: 'Feb 05, 2024, 5:30 pm',
-    status: 'Failed',
-    contact: '+1 (628) 555-0110',
-    source: 'Facebook',
-    implementedSteps: ['trigger'],
+    timestamp: 'Feb 05, 2024, 2:47 pm',
+    status: 'Completed',
+    contact: '—',
+    source: '—',
+    duration: '0:12',
+    comment: 'Appreciated the callback about my test results — saved me a trip to the office.',
+    implementedSteps: ['trigger', 'procedures'],
   },
   {
-    timestamp: 'Jan 25, 2024, 5:30 pm',
-    status: 'Failed',
-    contact: '+1 (310) 555-0190',
-    source: 'Google',
-    implementedSteps: ['trigger'],
-  },
-  {
-    timestamp: 'Jan 18, 2024, 5:30 pm',
-    status: 'In progress',
-    contact: 'Elena Sokolova',
+    timestamp: 'Jan 25, 2024, 9:05 am',
+    status: 'Completed',
+    contact: 'David Kim',
     source: 'Birdeye',
-    implementedSteps: ['trigger'],
+    duration: '0:27',
+    rating: 5,
+    comment:
+      'Smooth check-in, on-time appointment, and the team answered all my insurance questions without making me wait.',
+    implementedSteps: ['trigger', 'procedures'],
   },
 ]
 
@@ -238,11 +295,13 @@ export function toHealthcareLogRow(row: ReviewResponseLogRow): HealthcareLogRow 
     status: row.status,
     contact: row.contact,
     channel: row.source,
-    duration: '—',
+    duration: row.duration ?? '—',
     topic: 'Review response',
     implementedSteps: row.implementedSteps,
     executedNodeIds: row.executedNodeIds,
     source: row.source,
+    rating: row.rating,
+    comment: row.comment,
   }
 }
 
