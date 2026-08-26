@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { BackArrowIcon } from '../assets/BackArrowIcon'
 import { ChevronDown, Plus, Sparkles } from 'lucide-react'
-import { InfoCard, Link, TopNav } from '../components'
+import { InfoCard, Link, TopNav, type LibraryCardGlyph, type LibraryCardTone } from '../components'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
 
 interface CreateFrontdeskAgentScreenProps {
@@ -9,26 +9,39 @@ interface CreateFrontdeskAgentScreenProps {
   onUseTemplate?: (templateTitle: string) => void
 }
 
-const TEMPLATES = [
+const TEMPLATES: {
+  title: string
+  description: string
+  glyph: LibraryCardGlyph
+  tone: LibraryCardTone
+}[] = [
   {
-    title: 'Routing and triage',
+    title: 'SMS and Webchat',
     description:
-      'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat',
+    tone: 'info',
   },
   {
     title: 'New patient intake',
     description:
       'Guides new patients through intake, verifies their insurance, and books the right appointment',
+    glyph: 'intake',
+    tone: 'success',
   },
   {
     title: 'Established patient scheduling',
     description:
       'Validates existing records, checks coverage, and books or reschedules follow-up visits with preferred providers',
+    glyph: 'scheduling',
+    tone: 'ai',
   },
   {
     title: 'Urgent escalations',
     description:
       'Detects high-risk symptoms, follows escalation policy, and hands off immediately to clinical staff or emergency guidance',
+    glyph: 'routing',
+    tone: 'danger',
   },
 ]
 
@@ -144,6 +157,8 @@ export function CreateFrontdeskAgentScreen({
               key={template.title}
               title={template.title}
               description={template.description}
+              glyph={template.glyph}
+              tone={template.tone}
               onAction={() => onUseTemplate?.(template.title)}
             />
           ))}

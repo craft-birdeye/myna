@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-  <!-- Material Symbols Outlined — open_in_full -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 -960 960 960" fill="none">
+  <!-- Material Symbols Outlined — open_in_full (24px) -->
   <path
     fill="currentColor"
-    d="M21 11V3h-8v2h4.59L3 19.59 4.41 21 17 8.41V13h2zM3 13v8h8v-2H5v-6H3z"
+    d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"
   />
 </svg>

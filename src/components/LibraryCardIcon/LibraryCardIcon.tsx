@@ -12,6 +12,7 @@ import iconPrep from '../../assets/library-cards/icon-prep.svg'
 import iconReminder from '../../assets/library-cards/icon-reminder.svg'
 import iconRouting from '../../assets/library-cards/icon-routing.svg'
 import iconScheduling from '../../assets/library-cards/icon-scheduling.svg'
+import iconSmsWebchat from '../../assets/library-cards/icon-sms-webchat.svg'
 import iconTagging from '../../assets/library-cards/icon-tagging.svg'
 import iconTaggingRisk from '../../assets/library-cards/icon-tagging-risk.svg'
 import iconTemplates from '../../assets/library-cards/icon-templates.svg'
@@ -28,6 +29,7 @@ export type LibraryCardGlyph =
   | 'tagging'
   | 'tagging-risk'
   | 'routing'
+  | 'sms-webchat'
   | 'intake'
   | 'scheduling'
   | 'reminder'
@@ -45,6 +47,7 @@ const ICONS: Record<LibraryCardGlyph, string> = {
   tagging: iconTagging,
   'tagging-risk': iconTaggingRisk,
   routing: iconRouting,
+  'sms-webchat': iconSmsWebchat,
   intake: iconIntake,
   scheduling: iconScheduling,
   reminder: iconReminder,

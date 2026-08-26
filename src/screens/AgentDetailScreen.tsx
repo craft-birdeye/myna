@@ -367,24 +367,33 @@ const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l })
 // ── Library template cards for the create-agent empty state ───────────────
 const LIBRARY_TEMPLATES = [
   {
-    id: 'routing',
-    title: 'Routing and triage',
-    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+    id: 'sms-webchat',
+    title: 'SMS and Webchat',
+    description:
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat' as const,
+    tone: 'info' as const,
   },
   {
     id: 'new-patient',
     title: 'New patient intake',
     description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
+    glyph: 'intake' as const,
+    tone: 'success' as const,
   },
   {
     id: 'established',
     title: 'Established patient scheduling',
     description: 'Validates existing records, checks coverage, and books or reschedules follow-up visits with preferred providers',
+    glyph: 'scheduling' as const,
+    tone: 'ai' as const,
   },
   {
     id: 'urgent',
     title: 'Urgent escalations',
     description: 'Detects high-risk symptoms, follows escalation policy, and hands off immediately to clinical staff or emergency guidance',
+    glyph: 'routing' as const,
+    tone: 'danger' as const,
   },
 ]
 
@@ -446,10 +455,11 @@ function toLibraryPreviewData(
 
 const HEALTHCARE_FRONTDESK_CREATE_CARDS: CreateLibraryCard[] = [
   {
-    id: 'routing',
-    title: 'Routing and triage',
-    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
-    glyph: 'routing',
+    id: 'sms-webchat',
+    title: 'SMS and Webchat',
+    description:
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat',
     tone: 'info',
   },
   {
@@ -759,9 +769,10 @@ const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
     {
-      id: 'routing',
-      title: 'Routing and triage',
-      description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+      id: 'sms-webchat',
+      title: 'SMS and Webchat',
+      description:
+        'Handles customer conversations using your configured skills, procedures, and tools.',
     },
     {
       id: 'new-patient',
@@ -6194,9 +6205,9 @@ function HealthcareFrontdeskCreateAgentLive({
     ]
     const frontdeskQuickStarts = [
       {
-        label: 'Routing and triage',
+        label: 'SMS and Webchat',
         prompt:
-          'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
+          'Create a Front desk agent that handles customer conversations over SMS and webchat using configured skills, procedures, and tools.',
       },
       {
         label: 'New patient intake',
