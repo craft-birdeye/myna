@@ -9,7 +9,7 @@ import {
 
 type SortMode = 'runs' | 'persona' | 'custom'
 
-const STATUS_OPTIONS = ['All agents', 'Running', 'Paused', 'Needs attention']
+const STATUS_OPTIONS = ['All agents', 'Active', 'Inactive', 'Needs attention']
 const DATE_OPTIONS = ['Today', 'Last week', 'Last month', 'Last quarter']
 
 // Co-worker brand names for the three persona groups — Jay (marketing), Myna
@@ -456,11 +456,11 @@ function AgentCard({
           )}
           {agent.running > 0 ? (
             <span className="rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
-              {agent.running} running
+              {agent.running} active
             </span>
           ) : (
             <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">
-              Paused
+              Inactive
             </span>
           )}
         </div>
@@ -493,7 +493,7 @@ export function AgentDirectoryScreen({
   onCreateAgent?: () => void
 } = {}) {
   const AGENT_DIRECTORY = getAgentDirectory(product)
-  const [statusFilter, setStatusFilter] = useState('Running')
+  const [statusFilter, setStatusFilter] = useState('Active')
   const [dateRange, setDateRange] = useState('Last week')
   const [sortMode, setSortMode] = useState<SortMode>('runs')
   const [personaFilter, setPersonaFilter] = useState<AgentPersonaId | null>(null)
@@ -506,8 +506,8 @@ export function AgentDirectoryScreen({
   const showCoworkers = product === 'healthcare'
 
   const statusFiltered = AGENT_DIRECTORY.filter((a) => {
-    if (statusFilter === 'Running') return a.running > 0
-    if (statusFilter === 'Paused') return a.running === 0
+    if (statusFilter === 'Active') return a.running > 0
+    if (statusFilter === 'Inactive') return a.running === 0
     if (statusFilter === 'Needs attention') return !!a.alert
     return true
   })
@@ -559,7 +559,7 @@ export function AgentDirectoryScreen({
 
   const SUMMARY_METRICS: Metric[] = [
     { id: 'coworkers', value: String(PERSONA_GROUPS.length), label: 'Co-workers' },
-    { id: 'running', value: String(runningCount), label: 'Running agents' },
+    { id: 'running', value: String(runningCount), label: 'Active agents' },
     { id: 'time-saved', value: `${totalTimeSavedHrs}h`, label: 'Time saved', delta: '16%', trend: 'up' },
     { id: 'cost-saved', value: `$${totalCostSavedK.toFixed(1)}K`, label: 'Cost saved', delta: '14%', trend: 'up' },
     {

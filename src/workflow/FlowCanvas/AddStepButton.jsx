@@ -4,7 +4,7 @@ import './AddStepMenu.css';
 
 /**
  * Shared canvas "+" control: click opens AddStepMenu, or (when a node is copied)
- * hover reveals inline Paste / Add step pills flanking the "+".
+ * hover reveals inline Add / Paste pills flanking the "+".
  */
 export default function AddStepButton({
   className = '',
@@ -177,11 +177,11 @@ export default function AddStepButton({
           <button
             type="button"
             className="add-step-shortcuts-menu__item"
-            aria-label="Add step"
+            aria-label="Add"
             onClick={handleAddStepClick}
           >
             <span className="material-symbols-outlined" aria-hidden>add</span>
-            <span className="add-step-shortcuts-menu__label">Add step</span>
+            <span className="add-step-shortcuts-menu__label">Add</span>
           </button>
           <button
             type="button"

@@ -335,8 +335,8 @@ const DEFAULT_COLUMNS: Column<LocationRow>[] = [
 ]
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
-  Running: 'success',
-  Paused: 'warning',
+  Active: 'success',
+  Inactive: 'warning',
   Draft: 'neutral',
 }
 
@@ -418,7 +418,7 @@ const REVIEW_RESPONSE_COLUMNS: Column<LocationRow>[] = [
 export function AgentInstanceScreen({
   instanceName,
   displayName,
-  status = 'Running',
+  status = 'Active',
   onBack,
   onEditAgent,
   onNavigateToInbox,
@@ -734,11 +734,11 @@ export function AgentInstanceScreen({
                         type="button"
                         className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
                         onClick={() => {
-                          setInstanceStatus('Paused')
+                          setInstanceStatus('Inactive')
                           setActionsOpen(false)
                         }}
                       >
-                        Pause
+                        Deactivate
                       </button>
                       <button
                         type="button"
