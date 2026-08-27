@@ -916,6 +916,42 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
   'Review tagging agents': REVIEW_TAGGING_CREATE_CARDS,
 }
 
+/**
+ * Create-flow library grid:
+ * - ≤4 cards → one centered row (container shrinks to N cards)
+ * - >4 cards → max 4 per row, left-aligned wrap (same as Review response Library)
+ */
+function createLibraryGridClasses(cardCount: number): { shell: string; grid: string } {
+  if (cardCount > 4) {
+    return {
+      shell: 'max-w-[1280px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-2 min-[900px]:grid-cols-4',
+    }
+  }
+  if (cardCount === 4) {
+    return {
+      shell: 'max-w-[1280px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-4',
+    }
+  }
+  if (cardCount === 3) {
+    return {
+      shell: 'max-w-[1000px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-3',
+    }
+  }
+  if (cardCount === 2) {
+    return {
+      shell: 'max-w-[720px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-2',
+    }
+  }
+  return {
+    shell: 'max-w-[360px]',
+    grid: 'max-w-[325px] grid-cols-1',
+  }
+}
+
 // ── Illustration for the create-agent empty state (library-only landing) ───
 function CreateAgentEmptyState({
   cards,
@@ -937,18 +973,11 @@ function CreateAgentEmptyState({
 }) {
   const [libraryOpen, setLibraryOpen] = useState(libraryDefaultOpen)
   const cardCount = cards.length
+  const { shell: libraryShellClass, grid: libraryGridClass } = createLibraryGridClasses(cardCount)
   const showLibrary = layout === 'compact' || libraryOpen
   return (
     <div
-      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${
-        cardCount === 4
-          ? 'max-w-[1280px]'
-          : cardCount === 2
-            ? 'max-w-[720px]'
-            : cardCount === 1
-              ? 'max-w-[360px]'
-              : 'max-w-[1000px]'
-      }`}
+      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${libraryShellClass}`}
     >
       <img
         src={agentEmptyState}
@@ -1009,17 +1038,7 @@ function CreateAgentEmptyState({
 
       {showLibrary && (
         <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
-          <div
-            className={`grid w-full gap-md ${
-              cardCount === 4
-                ? 'grid-cols-1 min-[500px]:grid-cols-4'
-                : cardCount === 2
-                  ? 'grid-cols-1 min-[500px]:grid-cols-2'
-                  : cardCount === 1
-                    ? 'max-w-[325px] grid-cols-1'
-                    : 'grid-cols-3'
-            }`}
-          >
+          <div className={`grid w-full gap-md ${libraryGridClass}`}>
             {cards.map((tpl) => (
               <InfoCard
                 key={tpl.id}
@@ -2999,10 +3018,11 @@ function ReviewResponseThread({
       {locationsDrawerOpen && (
         <LocationsDrawer
           onBack={() => setLocationsDrawerOpen(false)}
-          onSave={(selected: { id: string; name: string }[]) => {
+          onSave={(selected: { id: string; name: string }[] | { locations?: { id: string; name: string }[] }) => {
             setLocationsDrawerOpen(false)
-            if (!selected.length) return
-            const names = selected.map((loc) => loc.name)
+            const list = Array.isArray(selected) ? selected : (selected?.locations || [])
+            if (!list.length) return
+            const names = list.map((loc) => loc.name)
             const answer =
               names.length <= 2
                 ? names.join(', ')
@@ -6366,14 +6386,11 @@ function HealthcareFrontdeskCreateAgentLive({
     )
   }
 
+  const landingCards = libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS
+  const { shell: landingShellClass, grid: landingGridClass } = createLibraryGridClasses(landingCards.length)
+
   return (
-    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
-      (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
-        ? 'max-w-[1280px]'
-        : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
-          ? 'max-w-[720px]'
-          : 'max-w-[1000px]'
-    }`}>
+    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${landingShellClass}`}>
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
           {!hideHeaderBack && (
@@ -6517,15 +6534,9 @@ function HealthcareFrontdeskCreateAgentLive({
         </button>
       </p>
 
-      <div className="@container w-full">
-        <div className={`grid w-full gap-md ${
-          (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
-            ? 'grid-cols-1 min-[500px]:grid-cols-4'
-            : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
-              ? 'grid-cols-1 min-[500px]:grid-cols-2'
-              : 'grid-cols-3'
-        }`}>
-          {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
+      <div className={`@container w-full ${landingCards.length === 1 ? 'flex justify-center' : ''}`}>
+        <div className={`grid w-full gap-md ${landingGridClass}`}>
+          {landingCards.map((tpl) => (
             <div key={tpl.id} className={INFO_CARD_LAYOUT.root}>
               {tpl.glyph && tpl.tone ? (
                 <div className="flex min-w-0 items-center gap-md">

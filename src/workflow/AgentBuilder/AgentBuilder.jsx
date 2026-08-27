@@ -17,6 +17,7 @@ import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomToo
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
+import { formatSelectByCanvasSubtitle } from '../RHSDrawer/LocationsDrawer.jsx';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
 import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
@@ -2219,17 +2220,20 @@ export default function AgentBuilder({
 
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
+  const locationsSelectBy = nodeDetails[START_NODE_ID]?.locationsSelectBy || null;
   const locationCount = startLocations.length;
-  const startSubtitle = locationCount === 0
-    ? 'Add locations'
-    : locationCount === 1
-      ? '1 location'
-      : `${locationCount} locations`;
+  const startSubtitle = (() => {
+    const byGroup = formatSelectByCanvasSubtitle(locationsSelectBy);
+    if (byGroup) return byGroup;
+    if (locationCount === 0) return 'Add locations';
+    if (locationCount === 1) return '1 location';
+    return `${locationCount} locations`;
+  })();
   const startData = {
     title: startAgentName,
     subtitle: startSubtitle,
-    subtitleIsLink: locationCount === 0,
-    onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
+    subtitleIsLink: locationCount === 0 && !locationsSelectBy,
+    onSubtitleClick: locationCount === 0 && !locationsSelectBy ? handleAddLocationsFromCanvas : undefined,
   };
   // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
   const isScratchCreate = explorationChrome && !existingAgent;
@@ -3046,7 +3050,7 @@ export default function AgentBuilder({
           variant="controlBranch"
           title="Branch"
           viewOnly={rhsViewOnly}
-          inlineFooter={false}
+          inlineFooter
           product={product}
           bodyProps={{
             initialValues: {

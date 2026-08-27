@@ -108,19 +108,17 @@ const CUSTOM_FIELD_OPTIONS = [
 
 const CUSTOM_FIELD_VALUES = new Set(CUSTOM_FIELD_OPTIONS.map((opt) => opt.value));
 
-const PLAIN_SELECT_BY_VALUES = new Set(BASE_SELECT_BY_OPTIONS.map((opt) => opt.value));
-
-/** Left-nav rows in the picker: plain Location…Zip stay visible; custom fields open the right panel. */
+/** Left-nav rows in the picker: plain Location…Zip close the menu; custom fields open the entity list in the drawer. */
 const PICKER_NAV_ITEMS = [
   ...BASE_SELECT_BY_OPTIONS.map((opt) => ({
     id: opt.value,
     label: opt.label,
-    hasPanel: false,
+    hasEntities: false,
   })),
   ...CUSTOM_FIELD_OPTIONS.map((opt) => ({
     id: opt.value,
     label: opt.label,
-    hasPanel: true,
+    hasEntities: true,
     items:
       opt.value === 'review-managers' ? REVIEW_MANAGERS
         : opt.value === 'content-managers' ? CONTENT_MANAGERS
@@ -133,7 +131,6 @@ const PICKER_NAV_ITEMS = [
 ];
 
 const DEFAULT_SELECTED = ['1001', '1002', '1004', '1011', '1014', '1017'];
-const APPLY_LOAD_MS = 520;
 
 function resolveLocationIds(categoryId, entityIds) {
   const map = LOCATIONS_BY_ENTITY[categoryId] || {};
@@ -144,30 +141,99 @@ function resolveLocationIds(categoryId, entityIds) {
   return [...locationIds];
 }
 
+/** Resolve location objects for a custom-field selection (used when removing entity chips). */
+export function resolveLocationsForSelectBy(categoryId, entityIds) {
+  const locationIds = resolveLocationIds(categoryId, entityIds);
+  return ALL_LOCATIONS.filter((loc) => locationIds.includes(loc.id));
+}
+
+const ENTITIES_BY_CATEGORY = {
+  'review-managers': REVIEW_MANAGERS,
+  'content-managers': CONTENT_MANAGERS,
+  departments: DEPARTMENTS,
+};
+
+/** Resolve { id, name } for selected entities — never show raw ids like rm-1 in the UI. */
+export function resolveEntitiesForSelectBy(categoryId, entityIds = []) {
+  const catalog = ENTITIES_BY_CATEGORY[categoryId] || [];
+  return (entityIds || [])
+    .map((id) => catalog.find((item) => item.id === id) || null)
+    .filter(Boolean)
+    .map((item) => ({ id: item.id, name: item.name }));
+}
+
+/** Compact canvas subtitle: Locations assigned to Sarah Chen or Locations assigned to 2 review managers. */
+export function formatSelectByCanvasSubtitle(selectBy) {
+  if (!selectBy) return null;
+  const ids = selectBy.entityIds || (selectBy.entities || []).map((e) => e.id);
+  const entities = resolveEntitiesForSelectBy(selectBy.value, ids);
+  const groupLabel = formatSelectByGroupLabel(selectBy.label, entities.length);
+  if (entities.length <= 1) {
+    const name = entities[0]?.name;
+    return name
+      ? `Locations assigned to ${name}`
+      : `Locations assigned to ${groupLabel}`;
+  }
+  return `Locations assigned to ${entities.length} ${groupLabel}`;
+}
+
+/** Lowercased category label; singular when only one entity is selected. */
+export function formatSelectByGroupLabel(label, count = 0) {
+  let text = String(label || 'group').replace(/^./, (c) => c.toLowerCase());
+  if (count === 1 && /s$/i.test(text)) {
+    text = text.replace(/s$/i, '');
+  }
+  return text;
+}
+
 export default function LocationsDrawer({
   selectedIds: initialSelectedIds = DEFAULT_SELECTED,
   onBack,
   onSave,
   includeCustomFields = false,
+  /** Restored when re-editing a “Locations based on Review managers” (etc.) choice. */
+  initialSelectBy = 'location',
+  initialEntityIds = null,
 }) {
   const [selectedIds, setSelectedIds] = useState(initialSelectedIds);
-  /** When set, the drawer only shows these location ids (post-Apply from a custom field). */
-  const [scopedLocationIds, setScopedLocationIds] = useState(null);
-  const [locationsLoading, setLocationsLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectBy, setSelectBy] = useState('location');
+  const [selectBy, setSelectBy] = useState(
+    includeCustomFields && CUSTOM_FIELD_VALUES.has(initialSelectBy) ? initialSelectBy : 'location',
+  );
   /** Unified flyout: closed | menu | picker — same anchor, no position jump. */
   const [flyoutMode, setFlyoutMode] = useState('closed');
-  const [popoverCategory, setPopoverCategory] = useState('content-managers');
-  const [popoverDraftByCategory, setPopoverDraftByCategory] = useState({});
+  /** When set, drawer body shows that custom-field entity list (not locations). */
+  const [entityPickCategory, setEntityPickCategory] = useState(
+    includeCustomFields && CUSTOM_FIELD_VALUES.has(initialSelectBy) ? initialSelectBy : null,
+  );
+  const [popoverDraftByCategory, setPopoverDraftByCategory] = useState(() => {
+    if (
+      includeCustomFields
+      && CUSTOM_FIELD_VALUES.has(initialSelectBy)
+      && Array.isArray(initialEntityIds)
+      && initialEntityIds.length
+    ) {
+      return { [initialSelectBy]: [...initialEntityIds] };
+    }
+    return {};
+  });
   /** Last applied entity ids per category — used to restore selection on reopen / cancel. */
-  const [appliedByCategory, setAppliedByCategory] = useState({});
-  const [popoverSearch, setPopoverSearch] = useState('');
+  const [appliedByCategory] = useState(() => {
+    if (
+      includeCustomFields
+      && CUSTOM_FIELD_VALUES.has(initialSelectBy)
+      && Array.isArray(initialEntityIds)
+      && initialEntityIds.length
+    ) {
+      return { [initialSelectBy]: [...initialEntityIds] };
+    }
+    return {};
+  });
+  const [entitySearch, setEntitySearch] = useState('');
   const [flyoutPos, setFlyoutPos] = useState({ top: 0, left: 0, width: 168 });
   const selectByRef = useRef(null);
   const innerRef = useRef(null);
   const flyoutRef = useRef(null);
-  const loadTimerRef = useRef(null);
 
   const selectByOptions = useMemo(
     () => (includeCustomFields ? [...BASE_SELECT_BY_OPTIONS, ...CUSTOM_FIELD_OPTIONS] : BASE_SELECT_BY_OPTIONS),
@@ -178,14 +244,10 @@ export default function LocationsDrawer({
     () => (includeCustomFields ? PICKER_NAV_ITEMS : BASE_SELECT_BY_OPTIONS.map((opt) => ({
       id: opt.value,
       label: opt.label,
-      hasPanel: false,
+      hasEntities: false,
     }))),
     [includeCustomFields],
   );
-
-  useEffect(() => () => {
-    if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
-  }, []);
 
   useEffect(() => {
     if (flyoutMode === 'closed') return;
@@ -196,12 +258,10 @@ export default function LocationsDrawer({
       const inFlyout = flyoutRef.current?.contains(e.target);
       if (inTrigger || inFlyout) return;
       setFlyoutMode('closed');
-      setPopoverSearch('');
     };
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         setFlyoutMode('closed');
-        setPopoverSearch('');
       }
     };
     // Defer attach so the opening click does not count as an outside click.
@@ -216,45 +276,27 @@ export default function LocationsDrawer({
     };
   }, [flyoutMode]);
 
-  const measureFlyoutPos = useCallback((mode, categoryId) => {
+  const measureFlyoutPos = useCallback((mode) => {
     if (!innerRef.current || !selectByRef.current) return null;
     const inner = innerRef.current.getBoundingClientRect();
     const trigger = selectByRef.current.getBoundingClientRect();
     const top = trigger.bottom - inner.top + 4;
-    const wantsPanel = mode === 'picker' && CUSTOM_FIELD_VALUES.has(categoryId);
-    if (mode === 'picker' && wantsPanel) {
-      const width = Math.min(520, inner.width);
-      const preferredLeft = trigger.left - inner.left;
-      const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
-      return { top, left, width };
-    }
-    if (mode === 'picker') {
-      const width = Math.min(220, inner.width);
-      const preferredLeft = trigger.left - inner.left;
-      const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
-      return { top, left, width };
-    }
-    const width = 168;
+    // Picker is nav-only (custom-field lists live in the drawer body).
+    const width = mode === 'picker' ? Math.min(220, inner.width) : 168;
     const preferredLeft = trigger.left - inner.left;
     const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
     return { top, left, width };
   }, []);
 
-  const locationUniverse = useMemo(() => {
-    if (!scopedLocationIds) return ALL_LOCATIONS;
-    const allowed = new Set(scopedLocationIds);
-    return ALL_LOCATIONS.filter((loc) => allowed.has(loc.id));
-  }, [scopedLocationIds]);
-
   const filteredLocations = useMemo(() => {
-    if (!search.trim()) return locationUniverse;
+    if (!search.trim()) return ALL_LOCATIONS;
     const q = search.toLowerCase();
-    return locationUniverse.filter(
+    return ALL_LOCATIONS.filter(
       (loc) => loc.id.includes(q) || loc.name.toLowerCase().includes(q),
     );
-  }, [locationUniverse, search]);
+  }, [search]);
 
-  const selectedCount = selectedIds.filter((id) => locationUniverse.some((loc) => loc.id === id)).length;
+  const selectedCount = selectedIds.filter((id) => ALL_LOCATIONS.some((loc) => loc.id === id)).length;
   const allSelected = filteredLocations.length > 0 && filteredLocations.every((loc) => selectedIds.includes(loc.id));
   const someSelected = filteredLocations.some((loc) => selectedIds.includes(loc.id)) && !allSelected;
 
@@ -271,11 +313,11 @@ export default function LocationsDrawer({
     }
   };
 
-  const openPicker = (categoryId) => {
-    const pos = measureFlyoutPos('picker', categoryId);
-    if (pos) setFlyoutPos(pos);
-    setPopoverCategory(categoryId);
-    setPopoverSearch('');
+  const openEntityPick = (categoryId) => {
+    setSelectBy(categoryId);
+    setEntityPickCategory(categoryId);
+    setEntitySearch('');
+    setFlyoutMode('closed');
     setPopoverDraftByCategory((prev) => {
       if (prev[categoryId]?.length) return prev;
       const applied = appliedByCategory[categoryId];
@@ -284,48 +326,44 @@ export default function LocationsDrawer({
         [categoryId]: applied?.length ? [...applied] : (prev[categoryId] ?? []),
       };
     });
-    if (CUSTOM_FIELD_VALUES.has(categoryId)) {
-      setSelectBy(categoryId);
-    }
-    // Stay in the same flyout shell — only swap content (menu → picker).
-    setFlyoutMode('picker');
   };
 
   const handleSelectByChange = (value) => {
     const next = value[0];
     if (CUSTOM_FIELD_VALUES.has(next)) {
-      openPicker(next);
+      openEntityPick(next);
       return;
     }
     setSelectBy(next);
-    setScopedLocationIds(null);
+    setEntityPickCategory(null);
     setFlyoutMode('closed');
     setSearch('');
   };
 
-  const activeCategory = pickerNavItems.find((c) => c.id === popoverCategory) || pickerNavItems[0];
-  const showPickerPanel = CUSTOM_FIELD_VALUES.has(popoverCategory);
-  const popoverDraftIds = popoverDraftByCategory[popoverCategory] || [];
+  const entityCategory = pickerNavItems.find((c) => c.id === entityPickCategory);
+  const pickingEntities = !!entityPickCategory && CUSTOM_FIELD_VALUES.has(entityPickCategory);
+  const popoverDraftIds = (entityPickCategory && popoverDraftByCategory[entityPickCategory]) || [];
 
-  const filteredPopoverItems = useMemo(() => {
-    const items = activeCategory?.items || [];
-    if (!popoverSearch.trim()) return items;
-    const q = popoverSearch.toLowerCase();
+  const filteredEntityItems = useMemo(() => {
+    const items = entityCategory?.items || [];
+    if (!entitySearch.trim()) return items;
+    const q = entitySearch.toLowerCase();
     return items.filter(
       (item) => item.id.toLowerCase().includes(q) || item.name.toLowerCase().includes(q),
     );
-  }, [activeCategory, popoverSearch]);
+  }, [entityCategory, entitySearch]);
 
-  const popoverAllSelected =
-    filteredPopoverItems.length > 0 && filteredPopoverItems.every((item) => popoverDraftIds.includes(item.id));
-  const popoverSomeSelected =
-    filteredPopoverItems.some((item) => popoverDraftIds.includes(item.id)) && !popoverAllSelected;
+  const entityAllSelected =
+    filteredEntityItems.length > 0 && filteredEntityItems.every((item) => popoverDraftIds.includes(item.id));
+  const entitySomeSelected =
+    filteredEntityItems.some((item) => popoverDraftIds.includes(item.id)) && !entityAllSelected;
 
   const setPopoverDraftIds = (updater) => {
+    if (!entityPickCategory) return;
     setPopoverDraftByCategory((prev) => {
-      const current = prev[popoverCategory] || [];
+      const current = prev[entityPickCategory] || [];
       const next = typeof updater === 'function' ? updater(current) : updater;
-      return { ...prev, [popoverCategory]: next };
+      return { ...prev, [entityPickCategory]: next };
     });
   };
 
@@ -334,54 +372,43 @@ export default function LocationsDrawer({
   };
 
   const toggleAllPopoverItems = () => {
-    const ids = filteredPopoverItems.map((item) => item.id);
-    if (popoverAllSelected) {
+    const ids = filteredEntityItems.map((item) => item.id);
+    if (entityAllSelected) {
       setPopoverDraftIds((prev) => prev.filter((id) => !ids.includes(id)));
     } else {
       setPopoverDraftIds((prev) => [...new Set([...prev, ...ids])]);
     }
   };
 
-  const handlePopoverCancel = () => {
-    // Restore last applied selection for this category (discard in-progress edits).
-    setPopoverDraftByCategory((prev) => ({
-      ...prev,
-      [popoverCategory]: appliedByCategory[popoverCategory]
-        ? [...appliedByCategory[popoverCategory]]
-        : (prev[popoverCategory] ?? []),
-    }));
-    setPopoverSearch('');
-    // Stay on the combined list so Location…Zip remain visible.
-    setFlyoutMode('picker');
-  };
-
-  const handlePopoverApply = () => {
+  const handleEntityApply = () => {
+    if (!entityPickCategory) return;
     const draftIds = [...popoverDraftIds];
-    const locationIds = resolveLocationIds(popoverCategory, draftIds);
-    setAppliedByCategory((prev) => ({ ...prev, [popoverCategory]: draftIds }));
-    setPopoverDraftByCategory((prev) => ({ ...prev, [popoverCategory]: draftIds }));
-    setFlyoutMode('closed');
-    setPopoverSearch('');
-    setSearch('');
-    // Keep Select by showing the applied custom field.
-    if (CUSTOM_FIELD_VALUES.has(popoverCategory)) {
-      setSelectBy(popoverCategory);
-    }
-    setLocationsLoading(true);
-    setScopedLocationIds(null);
-    setSelectedIds([]);
-
-    if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
-    loadTimerRef.current = setTimeout(() => {
-      setScopedLocationIds(locationIds);
-      setSelectedIds(locationIds);
-      setLocationsLoading(false);
-      loadTimerRef.current = null;
-    }, APPLY_LOAD_MS);
+    const label =
+      selectByOptions.find((opt) => opt.value === entityPickCategory)?.label
+      ?? entityCategory?.label
+      ?? 'Custom field';
+    const entities = resolveEntitiesForSelectBy(entityPickCategory, draftIds);
+    const locations = resolveLocationsForSelectBy(entityPickCategory, draftIds);
+    // Persist immediately — do not show the resolved locations list in this drawer.
+    onSave?.(locations, {
+      value: entityPickCategory,
+      label,
+      entityIds: draftIds,
+      entities,
+    });
   };
 
   const handleSave = () => {
-    onSave?.(ALL_LOCATIONS.filter((loc) => selectedIds.includes(loc.id)));
+    // Plain location pick — clear any prior “Locations based on …” grouping.
+    onSave?.(ALL_LOCATIONS.filter((loc) => selectedIds.includes(loc.id)), null);
+  };
+
+  const handleAdd = () => {
+    if (pickingEntities) {
+      handleEntityApply();
+      return;
+    }
+    handleSave();
   };
 
   const selectByLabel = selectByOptions.find((opt) => opt.value === selectBy)?.label ?? 'Location';
@@ -390,15 +417,15 @@ export default function LocationsDrawer({
   // Keep the flyout fully inside the drawer — no horizontal page scroll.
   useLayoutEffect(() => {
     if (!flyoutOpen) return;
-    const pos = measureFlyoutPos(flyoutMode, popoverCategory);
+    const pos = measureFlyoutPos(flyoutMode);
     if (pos) setFlyoutPos(pos);
     const onResize = () => {
-      const next = measureFlyoutPos(flyoutMode, popoverCategory);
+      const next = measureFlyoutPos(flyoutMode);
       if (next) setFlyoutPos(next);
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [flyoutOpen, flyoutMode, popoverCategory, measureFlyoutPos]);
+  }, [flyoutOpen, flyoutMode, measureFlyoutPos]);
 
   return createPortal(
     <div className="loc-overlay" onClick={onBack}>
@@ -416,8 +443,8 @@ export default function LocationsDrawer({
           <button
             type="button"
             className="loc-add-btn"
-            onClick={handleSave}
-            disabled={locationsLoading}
+            onClick={handleAdd}
+            disabled={pickingEntities && popoverDraftIds.length === 0}
           >
             Add
           </button>
@@ -438,25 +465,18 @@ export default function LocationsDrawer({
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setPopoverSearch('');
                     if (flyoutMode !== 'closed') {
                       setFlyoutMode('closed');
                       return;
                     }
                     if (includeCustomFields) {
-                      // Combined list: Location…Zip stay visible; custom fields open the right panel.
-                      const initial = CUSTOM_FIELD_VALUES.has(selectBy) ? selectBy : selectBy;
-                      const pos = measureFlyoutPos('picker', initial);
+                      // Nav-only list; custom fields open the entity list in the drawer.
+                      const pos = measureFlyoutPos('picker');
                       if (pos) setFlyoutPos(pos);
-                      setPopoverCategory(initial);
-                      if (CUSTOM_FIELD_VALUES.has(initial)) {
-                        openPicker(initial);
-                      } else {
-                        setFlyoutMode('picker');
-                      }
+                      setFlyoutMode('picker');
                       return;
                     }
-                    const pos = measureFlyoutPos('menu', selectBy);
+                    const pos = measureFlyoutPos('menu');
                     if (pos) setFlyoutPos(pos);
                     setFlyoutMode('menu');
                   }}
@@ -489,145 +509,102 @@ export default function LocationsDrawer({
                     onChange={handleSelectByChange}
                   />
                 ) : (
-                  <>
-                    <div className={`loc-picker-popover__body${showPickerPanel ? '' : ' loc-picker-popover__body--nav-only'}`}>
-                      <div className="loc-picker-popover__nav">
-                        {pickerNavItems.map((category) => (
-                          <button
-                            key={category.id}
-                            type="button"
-                            className={`loc-picker-popover__nav-item${
-                              (showPickerPanel ? popoverCategory === category.id : selectBy === category.id)
-                                ? ' loc-picker-popover__nav-item--active'
-                                : ''
-                            }`}
-                            onClick={() => {
-                              if (!category.hasPanel) {
-                                // Plain Location / Region / … — keep list, no right panel, close flyout.
-                                setSelectBy(category.id);
-                                setScopedLocationIds(null);
-                                setPopoverCategory(category.id);
-                                setFlyoutMode('closed');
-                                setPopoverSearch('');
-                                setSearch('');
-                                return;
-                              }
-                              setPopoverCategory(category.id);
-                              setPopoverSearch('');
-                              setSelectBy(category.id);
-                              const pos = measureFlyoutPos('picker', category.id);
-                              if (pos) setFlyoutPos(pos);
-                              setPopoverDraftByCategory((prev) => {
-                                if (prev[category.id]?.length) return prev;
-                                const applied = appliedByCategory[category.id];
-                                return {
-                                  ...prev,
-                                  [category.id]: applied?.length ? [...applied] : (prev[category.id] ?? []),
-                                };
-                              });
-                            }}
-                          >
-                            <span className="loc-picker-popover__nav-label">{category.label}</span>
-                            {category.hasPanel ? (
-                              <span className="loc-picker-popover__nav-meta">
-                                {category.badge != null && (
-                                  <span className="loc-picker-popover__badge">{category.badge}</span>
-                                )}
-                                <span className="material-symbols-outlined loc-picker-popover__chevron" aria-hidden>
-                                  chevron_right
-                                </span>
-                              </span>
-                            ) : (
-                              selectBy === category.id && (
-                                <span className="material-symbols-outlined loc-picker-popover__check" aria-hidden>
-                                  check
-                                </span>
-                              )
-                            )}
-                          </button>
-                        ))}
-                      </div>
-
-                      {showPickerPanel && (
-                        <div className="loc-picker-popover__panel">
-                          <div className="loc-picker-popover__search">
-                            <span className="material-symbols-outlined" aria-hidden>search</span>
-                            <input
-                              type="text"
-                              placeholder="Search"
-                              value={popoverSearch}
-                              onChange={(e) => setPopoverSearch(e.target.value)}
-                            />
-                          </div>
-
-                          <div className="loc-picker-popover__list">
-                            <button
-                              type="button"
-                              className="loc-picker-popover__row"
-                              onClick={toggleAllPopoverItems}
-                            >
-                              <Checkbox checked={popoverAllSelected} indeterminate={popoverSomeSelected} />
-                              <span>Select all</span>
-                            </button>
-                            {filteredPopoverItems.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                className="loc-picker-popover__row"
-                                onClick={() => togglePopoverItem(item.id)}
-                              >
-                                <Checkbox checked={popoverDraftIds.includes(item.id)} />
-                                <span>{item.name}</span>
-                              </button>
-                            ))}
-                            {filteredPopoverItems.length === 0 && (
-                              <p className="loc-picker-popover__empty">No results.</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {showPickerPanel && (
-                      <div className="loc-picker-popover__footer">
-                        <button type="button" className="loc-picker-popover__cancel" onClick={handlePopoverCancel}>
-                          Cancel
-                        </button>
+                  <div className="loc-picker-popover__body loc-picker-popover__body--nav-only">
+                    <div className="loc-picker-popover__nav">
+                      {pickerNavItems.map((category) => (
                         <button
+                          key={category.id}
                           type="button"
-                          className="loc-picker-popover__apply"
-                          onClick={handlePopoverApply}
-                          disabled={popoverDraftIds.length === 0}
+                          className={`loc-picker-popover__nav-item${
+                            (pickingEntities ? entityPickCategory === category.id : selectBy === category.id)
+                              ? ' loc-picker-popover__nav-item--active'
+                              : ''
+                          }`}
+                          onClick={() => {
+                            if (category.hasEntities) {
+                              openEntityPick(category.id);
+                              return;
+                            }
+                            // Plain Location / Region / … — close flyout, show locations.
+                            setSelectBy(category.id);
+                            setEntityPickCategory(null);
+                            setFlyoutMode('closed');
+                            setSearch('');
+                          }}
                         >
-                          Apply
+                          <span className="loc-picker-popover__nav-label">{category.label}</span>
+                          {category.hasEntities ? (
+                            <span className="loc-picker-popover__nav-meta">
+                              {category.badge != null && (
+                                <span className="loc-picker-popover__badge">{category.badge}</span>
+                              )}
+                              <span className="material-symbols-outlined loc-picker-popover__chevron" aria-hidden>
+                                chevron_right
+                              </span>
+                            </span>
+                          ) : (
+                            selectBy === category.id && !pickingEntities && (
+                              <span className="material-symbols-outlined loc-picker-popover__check" aria-hidden>
+                                check
+                              </span>
+                            )
+                          )}
                         </button>
-                      </div>
-                    )}
-                  </>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
 
-            <div className="loc-search">
-              <span className="material-symbols-outlined loc-search-icon">search</span>
-              <input
-                className="loc-search-input"
-                type="text"
-                placeholder="Search location"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                disabled={locationsLoading}
-              />
-            </div>
-
-            <div className="loc-list">
-              {locationsLoading ? (
-                <div className="loc-list-loading" aria-live="polite" aria-busy="true">
-                  <div className="loc-list-loading__spinner" />
-                  <span>Loading locations…</span>
+            {pickingEntities ? (
+              <>
+                <div className="loc-search">
+                  <span className="material-symbols-outlined loc-search-icon">search</span>
+                  <input
+                    className="loc-search-input"
+                    type="text"
+                    placeholder="Search"
+                    value={entitySearch}
+                    onChange={(e) => setEntitySearch(e.target.value)}
+                  />
                 </div>
-              ) : (
-                <>
+
+                <div className="loc-list">
+                  <div className="loc-row" onClick={toggleAllPopoverItems}>
+                    <Checkbox checked={entityAllSelected} indeterminate={entitySomeSelected} />
+                    <span className="loc-row__label">Select all</span>
+                    <span className="loc-row__count">
+                      {popoverDraftIds.length} selected
+                    </span>
+                  </div>
+
+                  {filteredEntityItems.map((item) => (
+                    <div key={item.id} className="loc-row" onClick={() => togglePopoverItem(item.id)}>
+                      <Checkbox checked={popoverDraftIds.includes(item.id)} />
+                      <span className="loc-row__label">{item.name}</span>
+                    </div>
+                  ))}
+
+                  {filteredEntityItems.length === 0 && (
+                    <p className="loc-list-empty">No results.</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="loc-search">
+                  <span className="material-symbols-outlined loc-search-icon">search</span>
+                  <input
+                    className="loc-search-input"
+                    type="text"
+                    placeholder="Search location"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+
+                <div className="loc-list">
                   <div className="loc-row" onClick={toggleAllLocations}>
                     <Checkbox checked={allSelected} indeterminate={someSelected} />
                     <span className="loc-row__label">Select all</span>
@@ -644,9 +621,9 @@ export default function LocationsDrawer({
                   {filteredLocations.length === 0 && (
                     <p className="loc-list-empty">No locations for this selection.</p>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
 
           </div>
         </div>

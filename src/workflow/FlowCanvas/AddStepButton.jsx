@@ -177,11 +177,11 @@ export default function AddStepButton({
           <button
             type="button"
             className="add-step-shortcuts-menu__item"
-            aria-label="Add step"
+            aria-label="Add"
             onClick={handleAddStepClick}
           >
             <span className="material-symbols-outlined" aria-hidden>add</span>
-            <span className="add-step-shortcuts-menu__label">Add step</span>
+            <span className="add-step-shortcuts-menu__label">Add</span>
           </button>
           <button
             type="button"

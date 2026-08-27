@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import '../prompt-chip.css';
 import { serializeFrom, deserializeInto, insertChipAt } from '../promptChipHelpers.js';
 import { VariableIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
+import ToolbarButton from '../ToolbarButton.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { Icon } from '../../../../components/Icon/Icon';
@@ -142,27 +143,20 @@ export default function SystemPromptInput({
         data-placeholder="Enter prompt"
       />
       <div className={styles.toolbar}>
-        <button
-          ref={fieldsRef}
-          type="button"
-          className={`${styles.toolbarBtn} ${fieldModalOpen ? styles.toolbarBtnActive : ''}`}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleOpenFieldModal}
-          title="Insert variable"
-        >
-          <VariableIcon />
-        </button>
+        <div ref={fieldsRef}>
+          <ToolbarButton
+            icon={<VariableIcon />}
+            tooltip="Fields"
+            active={fieldModalOpen}
+            onClick={handleOpenFieldModal}
+          />
+        </div>
         {!expanded && (
-          <button
-            type="button"
-            className={styles.toolbarBtn}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setExpanded(true)}
-            title="Expand"
-            aria-label="Expand system prompt"
-          >
-            <ExpandIcon />
-          </button>
+          <ToolbarButton
+            icon={<ExpandIcon />}
+            tooltip="Rephrase"
+            disabled={!value}
+          />
         )}
       </div>
     </div>
