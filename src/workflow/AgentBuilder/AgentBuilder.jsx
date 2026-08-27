@@ -17,6 +17,7 @@ import { saveAgent, deleteAgent, getAgentBySlug, getCachedAgent, saveCustomTool,
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
+import { formatSelectByCanvasSubtitle } from '../RHSDrawer/LocationsDrawer.jsx';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
 import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
@@ -1065,6 +1066,8 @@ export default function AgentBuilder({
   createAiPanelOpen = false,
   /** Opens the full-page Create with AI experience (parent-owned navigation). */
   onOpenAiFullscreen = null,
+  /** Opens Settings > Account > Product research (Help center "Learn more"). */
+  onOpenProductResearchSettings = null,
   /** Parent-controlled AI Builder dock (reopened after fullscreen expand). */
   aiBuilderPanelOpen: aiBuilderPanelOpenProp = false,
   onAiBuilderPanelOpenChange = null,
@@ -2284,17 +2287,20 @@ export default function AgentBuilder({
 
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
+  const locationsSelectBy = nodeDetails[START_NODE_ID]?.locationsSelectBy || null;
   const locationCount = startLocations.length;
-  const startSubtitle = locationCount === 0
-    ? 'Add locations'
-    : locationCount === 1
-      ? '1 location'
-      : `${locationCount} locations`;
+  const startSubtitle = (() => {
+    const byGroup = formatSelectByCanvasSubtitle(locationsSelectBy);
+    if (byGroup) return byGroup;
+    if (locationCount === 0) return 'Add locations';
+    if (locationCount === 1) return '1 location';
+    return `${locationCount} locations`;
+  })();
   const startData = {
     title: startAgentName,
     subtitle: startSubtitle,
-    subtitleIsLink: locationCount === 0,
-    onSubtitleClick: locationCount === 0 ? handleAddLocationsFromCanvas : undefined,
+    subtitleIsLink: locationCount === 0 && !locationsSelectBy,
+    onSubtitleClick: locationCount === 0 && !locationsSelectBy ? handleAddLocationsFromCanvas : undefined,
   };
   // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
   const isScratchCreate = explorationChrome && !existingAgent;
@@ -3123,7 +3129,7 @@ export default function AgentBuilder({
           variant="controlBranch"
           title="Branch"
           viewOnly={rhsViewOnly}
-          inlineFooter={false}
+          inlineFooter
           product={product}
           bodyProps={{
             initialValues: {
@@ -4029,6 +4035,7 @@ export default function AgentBuilder({
                     open={helpCenterOpen}
                     onClose={() => setHelpCenterOpen(false)}
                     onOpenGlossary={openGlossary}
+                    onOpenProductResearchSettings={onOpenProductResearchSettings}
                     onStartTour={() => {
                       setHelpCenterOpen(false);
                       if (!viewOnly) setCoachTourOpen(true);
@@ -4041,6 +4048,7 @@ export default function AgentBuilder({
                 <div className={`agent-builder__lhs-ai${rrAiPanelClosing ? ' agent-builder__lhs-ai--closing' : ' agent-builder__lhs-ai--opening'}`}>
                   <AiBuilderPanel
                     agentName={(typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName}
+                    draftAgentName={agentName}
                     onClose={closeAiBuilderPanel}
                     onExpand={
                       onOpenAiFullscreen
@@ -4053,6 +4061,13 @@ export default function AgentBuilder({
                     className="rr-chrome-ai-panel"
                     fillShell
                     side="left"
+                    openProcedureName={lhsPreviewProcedureId}
+                    onOpenProcedure={(procedureId) => {
+                      setLhsPreviewProcedureId(procedureId);
+                      setSelectedNodeId(null);
+                      setActiveProcedureId(null);
+                      setDrawerOpen(true);
+                    }}
                   />
                 </div>
               )}
@@ -4142,6 +4157,7 @@ export default function AgentBuilder({
                 open={helpCenterOpen}
                 onClose={() => setHelpCenterOpen(false)}
                 onOpenGlossary={openGlossary}
+                onOpenProductResearchSettings={onOpenProductResearchSettings}
                 onStartTour={() => {
                   setHelpCenterOpen(false);
                   if (!viewOnly) setCoachTourOpen(true);

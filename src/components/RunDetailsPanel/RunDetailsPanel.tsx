@@ -5,6 +5,7 @@ import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversati
 // @ts-expect-error JS module — same canvas node-header glyphs as AgentBuilder
 import { BranchIcon, ProcedureIcon, TaskIcon, TriggerIcon } from '../../workflow/Molecules/Canvas/CanvasNodeIcons'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
+import { CallAiSummary } from '../CallAiSummary/CallAiSummary'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import type { MessageFeedbackValue } from '../ChatBubble/ChatBubble.types'
 import { Icon } from '../Icon/Icon'
@@ -58,7 +59,7 @@ export function resolveStepDurationMs(step: RunLogStep): number {
 /** Node-type icon + colour. Trigger/task/branch/procedures use the canvas header SVGs. Shared with `TestRunPanel`. */
 export const TYPE_META: Record<RunLogStep['type'], { icon: string; colorClass: string; label: string }> = {
   trigger: { icon: 'bolt', colorClass: 'text-[#C2410C]', label: 'Trigger' },
-  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Task' },
+  task: { icon: 'list_alt', colorClass: 'text-[#37A248]', label: 'Action' },
   delay: { icon: 'schedule', colorClass: 'text-text-icon', label: 'Delay' },
   branch: { icon: 'account_tree', colorClass: 'text-[#5071CE]', label: 'Branch' },
   procedures: { icon: 'menu_book', colorClass: 'text-[#37A248]', label: 'Procedures' },
@@ -245,42 +246,42 @@ function RunLogStepRow({
         ? 'Procedure output'
         : step.type === 'branch'
           ? 'Branch output'
-          : 'Task output')
+          : 'Action output')
 
   const focusable = Boolean(onStepFocus)
 
   return (
-    <div className="relative flex gap-md">
+    <div className={`relative flex gap-md ${focusable ? 'group/step' : ''}`}>
       <div className="absolute bottom-0 left-[9px] top-[24px] w-px bg-border" aria-hidden />
       <Icon name="check_circle" size={20} fill className="relative z-10 mt-[2px] shrink-0 text-accent-positive" />
       <div className="min-w-0 flex-1 pb-2xl">
-        <button
-          type="button"
-          disabled={!focusable}
-          onClick={() => onStepFocus?.(step)}
-          className={`group/step w-full text-left ${
-            focusable
-              ? 'cursor-pointer outline-none'
-              : 'cursor-default'
-          }`}
-        >
-          <div className="flex items-center justify-between gap-sm text-small text-text-tertiary">
-            <div className="flex min-w-0 items-center gap-xs">
-              <StepTypeIcon type={step.type} />
-              {meta.label}
-            </div>
-            <span className="shrink-0 tabular-nums">{formatStepDuration(resolveStepDurationMs(step))}</span>
+        <div className="flex items-center justify-between gap-sm text-small text-text-tertiary">
+          <div className="flex min-w-0 items-center gap-xs">
+            <StepTypeIcon type={step.type} />
+            {meta.label}
           </div>
-          <p
-            className={`mt-xs text-body ${
-              focusable
-                ? 'text-text-primary transition-colors group-hover/step:text-text-action'
-                : 'text-text-primary'
-            }`}
-          >
-            {step.stepNumber}. {step.title}
-          </p>
-        </button>
+          <div className="relative flex h-5 shrink-0 items-center justify-end">
+            <span
+              className={`tabular-nums transition-opacity ${
+                focusable ? 'group-hover/step:opacity-0' : ''
+              }`}
+            >
+              {formatStepDuration(resolveStepDurationMs(step))}
+            </span>
+            {focusable && (
+              <button
+                type="button"
+                onClick={() => onStepFocus?.(step)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-body text-text-action opacity-0 outline-none transition-opacity group-hover/step:opacity-100 focus-visible:opacity-100"
+              >
+                View
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="mt-xs text-body text-text-primary">
+          {step.stepNumber}. {step.title}
+        </p>
 
         {step.note ? (
           <p className="mt-sm text-small text-text-tertiary">{step.note}</p>
@@ -532,6 +533,10 @@ export interface RunConversationThreadProps {
   onCoachAgent?: (messageId: string) => void
   /** 'diagnostics'-mode only — navigates to the recommendation this message's feedback landed on. */
   onTrackFeedback?: (recId: string) => void
+  /** Collapsible call-details body — when set, renders below the voice-call system label
+   *  (`insertCallRecordingAfter`) instead of at the top of the thread. */
+  callDetailsContent?: ReactNode
+  callDetailsUserRating?: string
 }
 
 /** Diagnostics-mode meta line — "LLM : X • TTS : Y", each label wrapped in an explanatory
@@ -620,6 +625,8 @@ export function RunConversationThread({
   recIdByMessage,
   onCoachAgent,
   onTrackFeedback,
+  callDetailsContent,
+  callDetailsUserRating,
 }: RunConversationThreadProps) {
   const transcriptStartIdx = callTranscriptSplitIndex(entries, showCallRecording)
   const useCallTranscriptSection = transcriptStartIdx >= 0
@@ -633,6 +640,11 @@ export function RunConversationThread({
           <div className={padTopWhenFirst && index === 0 ? 'pt-lg' : undefined}>
             <ChatSystemLabel text={entry.text} />
           </div>
+          {showCallRecording && entry.insertCallRecordingAfter && callDetailsContent && (
+            <CollapsibleCallDetails userRating={callDetailsUserRating}>
+              {callDetailsContent}
+            </CollapsibleCallDetails>
+          )}
           {showCallRecording && entry.insertCallRecordingAfter && (
             <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
               <div className="border border-transparent px-lg">
@@ -737,9 +749,15 @@ export function RunDetailsPanel({
   agentName,
   onTrackFeedback,
   onStepFocus,
+  userRating,
+  conversationAiSummary,
 }: RunDetailsPanelProps) {
   const [tab, setTab] = useState<'logs' | 'conversation'>('conversation')
   const hasCallDetails = Boolean(callDetails || callDetailsContent)
+  const inlineCallDetails = hasCallDetails && showCallRecording
+  const topCallDetails = hasCallDetails && !showCallRecording
+  const resolvedCallDetailsContent =
+    callDetailsContent ?? (callDetails ? <CallDetailsTab {...callDetails} /> : null)
   // The sticky waveform anchors to `top: 0` of this scroll container's padding edge — any
   // padding-top here would leave a permanent gap once it's stuck, so that spacing moves onto the
   // conversation thread's first entry instead (see `RunConversationThread`).
@@ -828,9 +846,14 @@ export function RunDetailsPanel({
               conversationContent
             ) : (
               <div className="h-full overflow-y-auto">
-                {hasCallDetails && (
-                  <CollapsibleCallDetails title={showCallRecording ? 'Call details' : 'Details'}>
-                    {callDetailsContent ?? (callDetails && <CallDetailsTab {...callDetails} />)}
+                {conversationAiSummary && conversationAiSummary.length > 0 && (
+                  <div className="pt-lg">
+                    <CallAiSummary bullets={conversationAiSummary} className="mt-0" />
+                  </div>
+                )}
+                {topCallDetails && (
+                  <CollapsibleCallDetails title="Details" userRating={userRating}>
+                    {resolvedCallDetailsContent}
                   </CollapsibleCallDetails>
                 )}
                 <RunConversationThread
@@ -841,6 +864,8 @@ export function RunDetailsPanel({
                   recIdByMessage={recIdByMessage}
                   onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
                   onTrackFeedback={onTrackFeedback}
+                  callDetailsContent={inlineCallDetails ? resolvedCallDetailsContent : undefined}
+                  callDetailsUserRating={inlineCallDetails ? userRating : undefined}
                 />
               </div>
             )}

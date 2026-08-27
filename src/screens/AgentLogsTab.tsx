@@ -392,6 +392,7 @@ export function AgentLogsTab({
         <DataTable
           columns={columns}
           data={f(REVIEW_RESPONSE_LOGS_ROWS)}
+          onRowClick={(row) => onViewRun?.(toHealthcareLogRow(row as ReviewResponseLogRow))}
           rowAction={{
             icon: 'visibility',
             label: 'View log',
@@ -408,6 +409,7 @@ export function AgentLogsTab({
         <DataTable
           columns={REVIEW_GENERATION_LOG_COLUMNS}
           data={f(REVIEW_GENERATION_LOGS_ROWS)}
+          onRowClick={(row) => onViewRun?.(toReviewGenerationLogRow(row as ReviewResponseLogRow))}
           rowAction={{
             icon: 'visibility',
             label: 'View log',

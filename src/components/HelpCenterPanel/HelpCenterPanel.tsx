@@ -6,6 +6,7 @@ import iconConstruction from '../../assets/help-center/construction.svg'
 import iconFeedback from '../../assets/help-center/feedback.svg'
 import { Icon } from '../Icon/Icon'
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
+import { Toast } from '../Toast/Toast'
 import { HelpVideoModal } from './HelpVideoModal'
 import {
   HELP_ARTICLES,
@@ -47,10 +48,17 @@ function SearchField({
  * nested Video tutorials / Support articles lists; Glossary opens the
  * `15988:11969` popup.
  */
-export function HelpCenterPanel({ open, onClose, onStartTour, onOpenGlossary }: HelpCenterPanelProps) {
+export function HelpCenterPanel({
+  open,
+  onClose,
+  onStartTour,
+  onOpenGlossary,
+  onOpenProductResearchSettings,
+}: HelpCenterPanelProps) {
   const [view, setView] = useState<HelpCenterView>('home')
   const [query, setQuery] = useState('')
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [feedbackToastVisible, setFeedbackToastVisible] = useState(false)
   const [activeVideo, setActiveVideo] = useState<HelpVideoItem | null>(null)
 
   useEffect(() => {
@@ -194,9 +202,7 @@ export function HelpCenterPanel({ open, onClose, onStartTour, onOpenGlossary }: 
                             i > 0 ? 'border-t border-border' : ''
                           }`}
                         >
-                          <span className="inline-flex size-9 shrink-0 aspect-square items-center justify-center self-start overflow-hidden rounded-[8px] bg-[#eef2f6]">
-                            <TokenIcon src={iconPlay} size={20} />
-                          </span>
+                          <VideoThumbnail src={video.thumbnail} />
                           <span className="min-w-0 flex-1">
                             <span className="block text-body text-text-primary transition-colors group-hover:text-primary">
                               {video.title}
@@ -261,7 +267,17 @@ export function HelpCenterPanel({ open, onClose, onStartTour, onOpenGlossary }: 
         open={feedbackOpen}
         variant="help"
         onClose={() => setFeedbackOpen(false)}
-        onSubmit={() => setFeedbackOpen(false)}
+        onSubmit={() => {
+          setFeedbackOpen(false)
+          setFeedbackToastVisible(true)
+        }}
+        onOpenProductResearchSettings={onOpenProductResearchSettings}
+      />
+
+      <Toast
+        message="Appreciate it! Thanks for the feedback!"
+        visible={feedbackToastVisible}
+        onClose={() => setFeedbackToastVisible(false)}
       />
 
       <HelpVideoModal
@@ -291,6 +307,23 @@ function TokenIcon({ src, size = 20 }: { src: string; size?: number }) {
         maskPosition: 'center',
       }}
     />
+  )
+}
+
+function VideoThumbnail({ src }: { src: string }) {
+  return (
+    <span className="relative block h-[45px] w-20 shrink-0 self-start overflow-hidden rounded-[8px] bg-[#eef2f6]">
+      <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
+      <span className="absolute inset-0 bg-black/15" aria-hidden="true" />
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/90">
+          <TokenIcon src={iconPlay} size={12} />
+        </span>
+      </span>
+    </span>
   )
 }
 

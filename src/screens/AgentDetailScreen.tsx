@@ -65,8 +65,10 @@ import {
   rememberCreateAgentChat,
   getLastSavedCreateChat,
   setCreateAiDraftTrail,
+  registerBuiltinCreateAiDraft,
 } from '../data/createAgentChatStore'
 import type { CreateChatTurn } from '../data/createAgentChatStore'
+import { FrontDeskDraftReviewContent, FRONT_DESK_DRAFT_REFILL_PROCEDURE } from '../components/AgentDraftReview/FrontDeskDraftReviewContent'
 import { useAiBuilderTrail } from '../components/AiBuilderPanel/useAiBuilderTrail'
 // Reuse the workflow drawer chrome so Copilot procedure previews align with canvas panels.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -365,24 +367,33 @@ const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l })
 // ── Library template cards for the create-agent empty state ───────────────
 const LIBRARY_TEMPLATES = [
   {
-    id: 'routing',
-    title: 'Routing and triage',
-    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+    id: 'sms-webchat',
+    title: 'SMS and Webchat',
+    description:
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat' as const,
+    tone: 'info' as const,
   },
   {
     id: 'new-patient',
     title: 'New patient intake',
     description: 'Guides new patients through intake, verifies their insurance, and books the right appointment',
+    glyph: 'intake' as const,
+    tone: 'success' as const,
   },
   {
     id: 'established',
     title: 'Established patient scheduling',
     description: 'Validates existing records, checks coverage, and books or reschedules follow-up visits with preferred providers',
+    glyph: 'scheduling' as const,
+    tone: 'ai' as const,
   },
   {
     id: 'urgent',
     title: 'Urgent escalations',
     description: 'Detects high-risk symptoms, follows escalation policy, and hands off immediately to clinical staff or emergency guidance',
+    glyph: 'routing' as const,
+    tone: 'danger' as const,
   },
 ]
 
@@ -444,10 +455,11 @@ function toLibraryPreviewData(
 
 const HEALTHCARE_FRONTDESK_CREATE_CARDS: CreateLibraryCard[] = [
   {
-    id: 'routing',
-    title: 'Routing and triage',
-    description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
-    glyph: 'routing',
+    id: 'sms-webchat',
+    title: 'SMS and Webchat',
+    description:
+      'Handles customer conversations using your configured skills, procedures, and tools.',
+    glyph: 'sms-webchat',
     tone: 'info',
   },
   {
@@ -757,9 +769,10 @@ const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
 const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; description: string }[]> = {
   'Front desk agent': [
     {
-      id: 'routing',
-      title: 'Routing and triage',
-      description: 'Handles inbound calls, identifies intent, routes urgent symptoms, and transfers to the right team with context',
+      id: 'sms-webchat',
+      title: 'SMS and Webchat',
+      description:
+        'Handles customer conversations using your configured skills, procedures, and tools.',
     },
     {
       id: 'new-patient',
@@ -903,6 +916,42 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
   'Review tagging agents': REVIEW_TAGGING_CREATE_CARDS,
 }
 
+/**
+ * Create-flow library grid:
+ * - ≤4 cards → one centered row (container shrinks to N cards)
+ * - >4 cards → max 4 per row, left-aligned wrap (same as Review response Library)
+ */
+function createLibraryGridClasses(cardCount: number): { shell: string; grid: string } {
+  if (cardCount > 4) {
+    return {
+      shell: 'max-w-[1280px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-2 min-[900px]:grid-cols-4',
+    }
+  }
+  if (cardCount === 4) {
+    return {
+      shell: 'max-w-[1280px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-4',
+    }
+  }
+  if (cardCount === 3) {
+    return {
+      shell: 'max-w-[1000px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-3',
+    }
+  }
+  if (cardCount === 2) {
+    return {
+      shell: 'max-w-[720px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-2',
+    }
+  }
+  return {
+    shell: 'max-w-[360px]',
+    grid: 'max-w-[325px] grid-cols-1',
+  }
+}
+
 // ── Illustration for the create-agent empty state (library-only landing) ───
 function CreateAgentEmptyState({
   cards,
@@ -924,18 +973,11 @@ function CreateAgentEmptyState({
 }) {
   const [libraryOpen, setLibraryOpen] = useState(libraryDefaultOpen)
   const cardCount = cards.length
+  const { shell: libraryShellClass, grid: libraryGridClass } = createLibraryGridClasses(cardCount)
   const showLibrary = layout === 'compact' || libraryOpen
   return (
     <div
-      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${
-        cardCount === 4
-          ? 'max-w-[1280px]'
-          : cardCount === 2
-            ? 'max-w-[720px]'
-            : cardCount === 1
-              ? 'max-w-[360px]'
-              : 'max-w-[1000px]'
-      }`}
+      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${libraryShellClass}`}
     >
       <img
         src={agentEmptyState}
@@ -996,17 +1038,7 @@ function CreateAgentEmptyState({
 
       {showLibrary && (
         <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
-          <div
-            className={`grid w-full gap-md ${
-              cardCount === 4
-                ? 'grid-cols-1 min-[500px]:grid-cols-4'
-                : cardCount === 2
-                  ? 'grid-cols-1 min-[500px]:grid-cols-2'
-                  : cardCount === 1
-                    ? 'max-w-[325px] grid-cols-1'
-                    : 'grid-cols-3'
-            }`}
-          >
+          <div className={`grid w-full gap-md ${libraryGridClass}`}>
             {cards.map((tpl) => (
               <InfoCard
                 key={tpl.id}
@@ -2258,7 +2290,6 @@ function ReviewBuildingCard({
       </p>
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -2591,6 +2622,7 @@ function ReviewResponseThread({
         kind: 'draft',
         title: REVIEW_RESPONSE_BUILD_CARD.title,
         description: REVIEW_RESPONSE_BUILD_CARD.description,
+        variant: 'review-response',
       })
     }
     if (postDraftDone) {
@@ -2986,10 +3018,11 @@ function ReviewResponseThread({
       {locationsDrawerOpen && (
         <LocationsDrawer
           onBack={() => setLocationsDrawerOpen(false)}
-          onSave={(selected: { id: string; name: string }[]) => {
+          onSave={(selected: { id: string; name: string }[] | { locations?: { id: string; name: string }[] }) => {
             setLocationsDrawerOpen(false)
-            if (!selected.length) return
-            const names = selected.map((loc) => loc.name)
+            const list = Array.isArray(selected) ? selected : (selected?.locations || [])
+            if (!list.length) return
+            const names = list.map((loc) => loc.name)
             const answer =
               names.length <= 2
                 ? names.join(', ')
@@ -3217,7 +3250,6 @@ function ReminderBuildingCard({
           When the workflow canvas is open, collapse to title + one-liner only. */}
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -3243,7 +3275,7 @@ function ReminderBuildingCard({
         </div>
 
         {!done ? (
-          <div className="mt-md flex flex-col gap-sm pl-lg">
+          <div className="mt-md flex flex-col gap-sm">
             {REMINDER_DESIGN_STEPS.map((s, i) => {
               const isDone = i < displayStep
               const isActive = i === displayStep
@@ -3262,7 +3294,7 @@ function ReminderBuildingCard({
             })}
           </div>
         ) : !collapsed ? (
-          <div className="agent-build-fade mt-lg flex flex-col gap-lg pl-lg">
+          <div className="agent-build-fade mt-lg">
             <ReminderDraftReviewContent
               openProcedureName={openProcedureName}
               onOpenProcedure={onOpenProcedure}
@@ -3695,13 +3727,23 @@ function GhostwriterDraftReadyReply({ onComplete }: { onComplete?: () => void })
 
 // Built live when John opts to add a refill procedure. Must match a procedure
 // name in HC_PROCEDURES so the card can open it in the preview panel.
-const REFILL_PROCEDURE_NAME = 'Handle prescription refill request'
+const REFILL_PROCEDURE_NAME = FRONT_DESK_DRAFT_REFILL_PROCEDURE
 
 const CREATE_AGENT_REFILL_THOUGHTS_TEXT = `Refills are 7% of calls — worth building. A typical refill call: a patient says "I need a refill on my lisinopril." The agent has to identify the patient, pull the prescription from the EHR, confirm the medication and pharmacy, then route the refill to the prescriber for approval — it can't approve refills itself.
 
 The blocker: this needs a pharmacy / e-prescribe integration, which isn't connected yet. So I'll build the procedure with the right steps and tool references, but flag the pharmacy tool as "needs connection" so it's clear this can't go live until someone wires it up. Guardrails stay intact — never give dosage or clinical advice, and controlled substances always go to a human.`
 
 const CREATE_AGENT_REVIEW_THOUGHTS_TEXT = `The review cleanly separates "you told me" vs "I defaulted" so nothing mandatory is hidden. Publishing isn't blocked. I'll let John test before he commits — testing must run every tool in mock mode so no real appointment gets booked.`
+
+const FRONTDESK_POST_DRAFT_REPLY =
+  'I have created a Front desk agent for you to answer inbound calls, book and reschedule appointments, answer basic insurance questions, and hand off anything about billing disputes to a human.'
+
+const FRONTDESK_POST_DRAFT_PILLS = [
+  "Yes, that's right",
+  'Make changes',
+  'Test agent',
+  'View in agent builder',
+] as const
 
 const CREATE_AGENT_REFILL_REPLY_PARAGRAPHS = [
   "On it — building the refill procedure now. Here's how it'll work:",
@@ -3776,164 +3818,12 @@ function GhostwriterTestReply({ onComplete }: { onComplete?: () => void }) {
   )
 }
 
-// ── Draft review card ("Your draft is ready — here's everything I built") ──
-const DRAFT_TOOLS = ['Appointment scheduler', 'Patient records (EHR)', 'Insurance verification', 'Human handoff']
-
-const DRAFT_SETTINGS: { setting: string; value: string; confirmed: boolean; source: string }[] = [
-  { setting: 'Channels', value: 'Voice + Text', confirmed: true, source: 'From your response' },
-  { setting: 'Greeting', value: '"Thanks for calling [Clinic] — how can I help you today?"', confirmed: false, source: 'default' },
-  { setting: 'Consent', value: 'Standard call-recording consent notice', confirmed: false, source: 'default' },
-  { setting: 'Voice', value: 'Warm, female (US) · standard speed', confirmed: false, source: 'default' },
-  { setting: 'Language', value: 'English (primary)', confirmed: false, source: 'default' },
-  { setting: 'Locations', value: 'All 3 clinic locations', confirmed: false, source: 'default' },
-]
-
 function DraftReviewSection({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-xs">
       <p className="text-small text-text-tertiary">{label}</p>
       {children}
     </div>
-  )
-}
-
-function DraftReviewCard({
-  refillAdded,
-  openProcedureName,
-  onOpenProcedure,
-}: {
-  refillAdded: boolean
-  openProcedureName: string | null
-  onOpenProcedure: (name: string) => void
-}) {
-  const procedures: { label: string; note: ReactNode; open: string }[] = [
-    {
-      label: 'Book an appointment',
-      note: 'from your transcripts + SOP · verifies insurance eligibility before confirming a new-patient visit (per your SOP)',
-      open: 'Book, cancel, reschedule appointment',
-    },
-    { label: 'Reschedule an appointment', note: 'from your transcripts', open: 'Reschedule appointment' },
-    {
-      label: 'Answer insurance questions',
-      note: (
-        <>
-          answers from{' '}
-          <span className="inline-flex items-center gap-xs text-text-primary">
-            <Icon name="attach_file" size={14} className="text-text-icon" />
-            insurance-faq.pdf
-          </span>
-        </>
-      ),
-      open: 'Verify insurance',
-    },
-    {
-      label: 'Escalate billing disputes',
-      note: 'from your SOP · also escalates any caller who explicitly asks for a human',
-      open: 'Talk to human',
-    },
-  ]
-  if (refillAdded) {
-    procedures.push({
-      label: 'Handle prescription refills',
-      note: 'flagged — needs a pharmacy integration before it can go live',
-      open: REFILL_PROCEDURE_NAME,
-    })
-  }
-
-  return (
-    <>
-      <DraftReviewSection label="What it does">
-        <p className="text-body leading-6 text-text-primary">
-          Answers inbound conversations on voice and text, books and reschedules appointments, answers insurance
-          questions from your FAQ, and hands off billing disputes to a human.
-        </p>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="When it runs">
-        <p className="text-body leading-6 text-text-primary">Whenever a conversation starts on voice or text.</p>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Procedures — tap to open and read the steps">
-        <div className="flex flex-col gap-xs">
-          {procedures.map((p) => {
-            const pressed = openProcedureName === p.open
-            return (
-              <button
-                key={p.label}
-                type="button"
-                aria-pressed={pressed}
-                onClick={() => onOpenProcedure(p.open)}
-                className={`flex items-start gap-sm rounded-md px-sm py-sm text-left hover:bg-surface-hover ${
-                  pressed ? 'bg-surface-hover' : ''
-                }`}
-              >
-                <span className="flex h-6 shrink-0 items-center">
-                  <Icon name="menu_book" size={16} className="text-text-icon" />
-                </span>
-                <span className="min-w-0 flex-1 text-body leading-6">
-                  <span className="text-text-primary">{p.label}</span>
-                  <span className="text-text-secondary"> — {p.note}</span>
-                </span>
-                <span className="flex h-6 shrink-0 items-center">
-                  <Icon name="chevron_right" size={18} className="text-text-icon" />
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Tools it can use">
-        <div className="flex flex-col gap-xs">
-          {DRAFT_TOOLS.map((tool) => (
-            <div key={tool} className="flex w-full items-center gap-sm rounded-md px-sm py-sm">
-              <Icon name="build" size={18} className="shrink-0 text-text-icon" />
-              <span className="inline-flex min-w-0 items-center gap-xs text-body text-text-primary">
-                {tool}
-                <Icon name="check_circle" size={16} className="shrink-0 text-accent-positive" />
-              </span>
-            </div>
-          ))}
-        </div>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Settings">
-        <div className="flex flex-col gap-sm">
-          {DRAFT_SETTINGS.map((row) => (
-            <div key={row.setting} className="flex flex-col">
-              <span className="text-small leading-tight text-text-tertiary">{row.setting}</span>
-              <div className="flex flex-wrap items-center gap-sm">
-                <span className="text-body leading-6 text-text-primary">{row.value}</span>
-                <span
-                  className={`inline-flex shrink-0 items-center gap-xs text-small ${
-                    row.confirmed
-                      ? 'rounded-full bg-chip-success-bg px-sm py-xs text-chip-success-text'
-                      : 'h-5 rounded-sm bg-surface-l2 px-sm text-text-tertiary'
-                  }`}
-                >
-                  {row.confirmed && <Icon name="check_circle" size={14} className="shrink-0" />}
-                  {row.source}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="Still needed before publish">
-        <p className="text-body leading-6 text-text-primary">
-          Nothing — every required setting is filled (some by default).
-        </p>
-      </DraftReviewSection>
-
-      <DraftReviewSection label="What I left out">
-        <p className="text-body leading-6 text-text-primary">
-          {refillAdded
-            ? 'Nothing — I also built the prescription refill procedure, flagged until you connect a pharmacy integration.'
-            : "Prescription refills (needs a pharmacy integration you haven't connected)."}
-        </p>
-      </DraftReviewSection>
-    </>
   )
 }
 
@@ -4100,7 +3990,6 @@ function FrontdeskBuildingCard({
 
       <div className="rounded-md border border-border bg-surface p-lg">
         <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-sm">
               <div className="flex min-w-0 items-center gap-sm">
@@ -4126,7 +4015,7 @@ function FrontdeskBuildingCard({
         </div>
 
         {!done ? (
-          <div className="mt-md flex flex-col gap-sm pl-lg">
+          <div className="mt-md flex flex-col gap-sm">
             {steps.map((s, i) => {
               const isDone = i < displayStep
               const isActive = i === displayStep
@@ -4145,8 +4034,8 @@ function FrontdeskBuildingCard({
             })}
           </div>
         ) : (
-          <div className="agent-build-fade mt-lg flex flex-col gap-lg pl-lg">
-            <DraftReviewCard
+          <div className="agent-build-fade mt-lg">
+            <FrontDeskDraftReviewContent
               refillAdded={refillAdded}
               openProcedureName={openProcedureName}
               onOpenProcedure={onOpenProcedure}
@@ -5762,40 +5651,29 @@ function HealthcareFrontdeskCreateAgentLive({
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
                               <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
-                                I have created a Front desk agent for you to answer inbound calls, book and
-                                reschedule appointments, answer basic insurance questions, and hand off anything
-                                about billing disputes to a human.
+                                {FRONTDESK_POST_DRAFT_REPLY}
                               </p>
                             </div>
                             <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Yes, that&apos;s right
-                              </button>
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Make changes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleStartTestAgent()}
-                                className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-                              >
-                                Test agent
-                              </button>
-                              {!workflowVisible && (
+                              {FRONTDESK_POST_DRAFT_PILLS.filter(
+                                (label) => !(workflowVisible && label === 'View in agent builder'),
+                              ).map((label) => (
                                 <button
+                                  key={label}
                                   type="button"
-                                  onClick={onViewWorkflow}
+                                  onClick={() => {
+                                    if (label === 'View in agent builder') onViewWorkflow?.()
+                                    else if (label === 'Test agent') handleStartTestAgent()
+                                  }}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
-                                  View in agent builder
+                                  {label === "Yes, that's right" ? (
+                                    <>Yes, that&apos;s right</>
+                                  ) : (
+                                    label
+                                  )}
                                 </button>
-                              )}
+                              ))}
                             </div>
                             {reviewFollowUpAnswer && (
                               <>
@@ -6347,9 +6225,9 @@ function HealthcareFrontdeskCreateAgentLive({
     ]
     const frontdeskQuickStarts = [
       {
-        label: 'Routing and triage',
+        label: 'SMS and Webchat',
         prompt:
-          'Create a Front desk agent that identifies why a patient is calling and routes urgent or complex requests to the right team.',
+          'Create a Front desk agent that handles customer conversations over SMS and webchat using configured skills, procedures, and tools.',
       },
       {
         label: 'New patient intake',
@@ -6508,14 +6386,11 @@ function HealthcareFrontdeskCreateAgentLive({
     )
   }
 
+  const landingCards = libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS
+  const { shell: landingShellClass, grid: landingGridClass } = createLibraryGridClasses(landingCards.length)
+
   return (
-    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
-      (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
-        ? 'max-w-[1280px]'
-        : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
-          ? 'max-w-[720px]'
-          : 'max-w-[1000px]'
-    }`}>
+    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${landingShellClass}`}>
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
           {!hideHeaderBack && (
@@ -6659,15 +6534,9 @@ function HealthcareFrontdeskCreateAgentLive({
         </button>
       </p>
 
-      <div className="@container w-full">
-        <div className={`grid w-full gap-md ${
-          (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
-            ? 'grid-cols-1 min-[500px]:grid-cols-4'
-            : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
-              ? 'grid-cols-1 min-[500px]:grid-cols-2'
-              : 'grid-cols-3'
-        }`}>
-          {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
+      <div className={`@container w-full ${landingCards.length === 1 ? 'flex justify-center' : ''}`}>
+        <div className={`grid w-full gap-md ${landingGridClass}`}>
+          {landingCards.map((tpl) => (
             <div key={tpl.id} className={INFO_CARD_LAYOUT.root}>
               {tpl.glyph && tpl.tone ? (
                 <div className="flex min-w-0 items-center gap-md">
@@ -6797,6 +6666,7 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
             kind: 'draft',
             title: snap.draftTitle,
             description: snap.draftDescription,
+            variant: 'reminder',
           })
         }
       }
@@ -6861,8 +6731,15 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
       kind: 'draft',
       title: snap.draftTitle,
       description: snap.draftDescription,
+      variant: snap.variant === 'reminder' ? 'reminder' : 'frontdesk',
+      refillAdded: Boolean(snap.refillAnswer?.startsWith('Add procedure')),
     })
     trail.push({ kind: 'thoughts', text: CREATE_AGENT_REVIEW_THOUGHTS_TEXT })
+    trail.push({
+      kind: 'agent',
+      paragraphs: [FRONTDESK_POST_DRAFT_REPLY],
+      choices: snap.reviewFollowUpAnswer ? undefined : [...FRONTDESK_POST_DRAFT_PILLS],
+    })
   }
 
   if (snap.reviewFollowUpAnswer) {
@@ -6887,11 +6764,32 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
       kind: 'draft',
       title: snap.draftTitle,
       description: snap.draftDescription,
+      variant: snap.variant === 'reminder' ? 'reminder' : 'frontdesk',
+      refillAdded: Boolean(snap.refillAnswer?.startsWith('Add procedure')),
     })
   }
 
   return trail
 }
+
+/** Demo: East region Front desk already has the full Create with AI transcript. */
+registerBuiltinCreateAiDraft(
+  'Front desk agent - East region',
+  buildCreateChatTrail({
+    variant: 'frontdesk',
+    prompt: JOHN_CREATE_PROMPT,
+    draftTitle: 'Front desk agent - East region',
+    draftDescription: FRONTDESK_BUILD_CARD.description,
+    docsFileLabels: DEMO_DOCS_ATTACHMENTS.map((f) => f.label),
+    docsProvided: true,
+    docsBuildComplete: true,
+    docsDraftReadyDone: true,
+    refillAnswer: 'Add procedure "Handling refills"',
+    refillProcedureCreated: true,
+    createAgentAnswer: 'Yes, create the agent',
+    draftBuildReady: true,
+  }),
+)
 
 /** Builds a recent-chat entry from a finished full-page co-pilot session. */
 function buildSavedCreateChat(snap: SavedCreateChatSnapshot): ChatHistoryTranscript {
@@ -7145,7 +7043,6 @@ function HistoryChatReplay({
                       </p>
                       <div className="rounded-md border border-border bg-surface p-lg">
                         <div className="flex items-start gap-sm">
-                          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
                           <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-sm">
                               <span className="text-body text-text-primary">{turn.title}</span>
@@ -7190,7 +7087,6 @@ function HistoryChatReplay({
                   </p>
                   <div className="rounded-md border border-border bg-surface p-lg">
                     <div className="flex items-start gap-sm">
-                      <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-sm">
                           <span className="text-body text-text-primary">{chat.draftTitle}</span>

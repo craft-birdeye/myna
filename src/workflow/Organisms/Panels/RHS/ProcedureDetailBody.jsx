@@ -834,8 +834,8 @@ export default function ProcedureDetailBody({
   onAddContext,
   hideContext = false,
   isNewProcedure = false,
-  /** Expand-steps overlay — canvas RHS only; off for full-page create/edit. */
-  allowStepsExpand = false,
+  /** Expand-steps overlay — default on so long steps stay a fixed height with expand. */
+  allowStepsExpand = true,
 }) {
   const [title, setTitle] = useState(initialValues.name ?? '');
   const [whenToUse, setWhenToUse] = useState(initialValues.whenToUse ?? '');
@@ -1061,7 +1061,7 @@ export default function ProcedureDetailBody({
               <span className={etStyles.sectionLabelText}>
                 Steps<span className={styles.required}> *</span>
               </span>
-              <SectionInfoIcon tooltip="Information your agent can refer to during a conversation, like your location details, knowledge base, and connected files" />
+              <SectionInfoIcon tooltip="Ordered instructions the agent follows for this procedure. Expand to edit the full list." />
             </div>
             <button
               type="button"
@@ -1078,7 +1078,7 @@ export default function ProcedureDetailBody({
             <span className={etStyles.sectionLabelText}>
               Steps<span className={styles.required}> *</span>
             </span>
-            <SectionInfoIcon tooltip="Information your agent can refer to during a conversation, like your location details, knowledge base, and connected files" />
+            <SectionInfoIcon tooltip="Ordered instructions the agent follows for this procedure. Expand to edit the full list." />
           </div>
         )}
         {allowStepsExpand && stepsExpanded ? (

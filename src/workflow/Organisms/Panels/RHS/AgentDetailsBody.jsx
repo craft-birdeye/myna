@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
-import LocationsDrawer from '../../../RHSDrawer/LocationsDrawer.jsx';
+import LocationsDrawer, {
+  resolveEntitiesForSelectBy,
+  resolveLocationsForSelectBy,
+  formatSelectByGroupLabel,
+} from '../../../RHSDrawer/LocationsDrawer.jsx';
 import styles from './AgentDetailsBody.module.css';
 
 const DEFAULT_LOCATIONS = [
@@ -32,6 +36,7 @@ export default function AgentDetailsBody({
     goals: '',
     outcomes: '',
     locations: [],
+    locationsSelectBy: null,
   });
   const [showLocations, setShowLocations] = useState(false);
   const [showAllChips, setShowAllChips] = useState(false);
@@ -53,9 +58,37 @@ export default function AgentDetailsBody({
   const locations = normaliseLocations(
     Array.isArray(values.locations) ? values.locations : DEFAULT_LOCATIONS,
   );
+  const locationsSelectBy = values.locationsSelectBy || null;
+  const selectByEntities = locationsSelectBy
+    ? resolveEntitiesForSelectBy(
+      locationsSelectBy.value,
+      locationsSelectBy.entityIds
+        || (locationsSelectBy.entities || []).map((e) => e.id),
+    )
+    : [];
+  const hasLocationSelection = locations.length > 0 || !!locationsSelectBy;
 
-  const handleRemoveChip = (id) => {
-    updateLocations(locations.filter((l) => l.id !== id));
+  const handleRemoveLocationChip = (id) => {
+    updateLocations(locations.filter((l) => l.id !== id), null);
+  };
+
+  const handleRemoveEntityChip = (entityId) => {
+    if (!locationsSelectBy) return;
+    const nextIds = (locationsSelectBy.entityIds
+      || selectByEntities.map((e) => e.id)
+    ).filter((id) => id !== entityId);
+    if (nextIds.length === 0) {
+      updateLocations([], null);
+      setShowAllChips(false);
+      return;
+    }
+    const nextEntities = resolveEntitiesForSelectBy(locationsSelectBy.value, nextIds);
+    const nextLocations = resolveLocationsForSelectBy(locationsSelectBy.value, nextIds);
+    updateLocations(nextLocations, {
+      ...locationsSelectBy,
+      entityIds: nextIds,
+      entities: nextEntities,
+    });
   };
 
   /* Generic text-field setter */
@@ -63,16 +96,27 @@ export default function AgentDetailsBody({
     ? (field) => (e) => onChange(field, e.target.value)
     : (field) => (e) => setInternalValues((v) => ({ ...v, [field]: e.target.value }));
 
-  const updateLocations = (updated) => {
+  const updateLocations = (updated, selectByMeta) => {
     if (onChange) {
       onChange('locations', updated);
+      onChange('locationsSelectBy', selectByMeta ?? null);
     } else {
-      setInternalValues((v) => ({ ...v, locations: updated }));
+      setInternalValues((v) => ({
+        ...v,
+        locations: updated,
+        locationsSelectBy: selectByMeta ?? null,
+      }));
     }
   };
 
-  const handleLocationsSave = (selected) => {
-    updateLocations(selected);
+  const handleLocationsSave = (selected, selectByMeta) => {
+    // Support legacy callers that pass only a location array.
+    const list = Array.isArray(selected) ? selected : (selected?.locations || []);
+    const meta = selectByMeta === undefined
+      ? (selected && !Array.isArray(selected) ? selected.selectBy : null)
+      : selectByMeta;
+    updateLocations(list, meta || null);
+    setShowAllChips(false);
     setShowLocations(false);
   };
 
@@ -84,14 +128,17 @@ export default function AgentDetailsBody({
         onBack={() => setShowLocations(false)}
         onSave={handleLocationsSave}
         includeCustomFields={includeCustomFields}
+        initialSelectBy={locationsSelectBy?.value || 'location'}
+        initialEntityIds={locationsSelectBy?.entityIds || null}
       />
     );
   }
 
-  const visibleLocations = showAllChips
-    ? locations
-    : locations.slice(0, VISIBLE_COUNT);
-  const overflowCount = locations.length - VISIBLE_COUNT;
+  const chipSource = locationsSelectBy ? selectByEntities : locations;
+  const visibleChips = showAllChips
+    ? chipSource
+    : chipSource.slice(0, VISIBLE_COUNT);
+  const overflowCount = chipSource.length - VISIBLE_COUNT;
 
   return (
     <div className={styles.body}>
@@ -113,6 +160,7 @@ export default function AgentDetailsBody({
         noFloatingLabel
         rows={6}
         readOnly={viewOnly}
+        placeholder="Example: Respond to every new customer review within 24 hours with a reply"
       />
       <TextArea
         name="outcomes"
@@ -122,6 +170,7 @@ export default function AgentDetailsBody({
         noFloatingLabel
         rows={viewOnly ? 12 : 6}
         readOnly={viewOnly}
+        placeholder="Example: Increase response rate across all review platforms, so no customer feedback goes unanswered"
       />
 
       {/* ─── Locations ─── */}
@@ -129,7 +178,7 @@ export default function AgentDetailsBody({
         <div className={styles.locationsLabel}>
           <span className={styles.locationsLabelText}>Locations</span>
           <span className={styles.locationsRequired}>*</span>
-          {!viewOnly && locations.length > 0 && (
+          {!viewOnly && hasLocationSelection && (
             <button
               className={styles.locationsEditBtn}
               type="button"
@@ -143,7 +192,7 @@ export default function AgentDetailsBody({
           )}
         </div>
 
-        {locations.length === 0 ? (
+        {!hasLocationSelection ? (
           !viewOnly && (
             <button
               className={styles.addLink}
@@ -155,15 +204,26 @@ export default function AgentDetailsBody({
           )
         ) : (
           <>
+            {locationsSelectBy && (
+              <p className={styles.selectBySummary}>
+                {selectByEntities.length === 1 ? 'Location' : 'Locations'} assigned to{' '}
+                {formatSelectByGroupLabel(locationsSelectBy.label, selectByEntities.length)}
+              </p>
+            )}
+
             <div className={styles.chipsRow}>
-              {visibleLocations.map((loc) => (
-                <span key={loc.id} className={styles.locationChip}>
-                  <span className={styles.locationChipName}>{loc.name}</span>
+              {visibleChips.map((chip) => (
+                <span key={chip.id} className={styles.locationChip}>
+                  <span className={styles.locationChipName}>{chip.name}</span>
                   {!viewOnly && (
                     <button
                       type="button"
                       className={styles.locationChipClose}
-                      onClick={() => handleRemoveChip(loc.id)}
+                      onClick={() => (
+                        locationsSelectBy
+                          ? handleRemoveEntityChip(chip.id)
+                          : handleRemoveLocationChip(chip.id)
+                      )}
                       title="Remove"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>

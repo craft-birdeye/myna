@@ -20,7 +20,7 @@ const DRAWER_GAP = 0;
 const BASE_CATEGORY_IDS = new Set(BASE_CATEGORIES.map((c) => c.id));
 
 const FIELDS_SUBTITLE =
-  'Data available to use in your prompts.';
+  'Insert data fields to pull in real business or workflow details.';
 
 /** Placeholder help article — swap for the real Fields docs URL when available. */
 const FIELDS_LEARN_MORE_HREF =
@@ -102,6 +102,7 @@ function FieldLeaf({ field, onSelect }) {
       type="button"
       className={styles.fieldRow}
       onClick={() => onSelect?.(field.value, field.name)}
+      aria-label={`Insert ${field.name}`}
     >
       <FieldChip name={field.name} />
       <span
@@ -115,13 +116,15 @@ function FieldLeaf({ field, onSelect }) {
   );
 }
 
-function TreeBranch({ node, onSelect, depth = 0 }) {
+function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true }) {
   const [open, setOpen] = useState(true);
   const isGroup = node.type === 'group';
   const isObject = node.type === 'object';
   const kids = node.children || [];
   const propertyCount = node.propertyCount ?? kids.length;
   const showCount = isObject || (isGroup && node.showPropertyCount);
+  /** Only leaf fields under this node — no nested groups/objects. */
+  const isSingleLevel = kids.length > 0 && kids.every((child) => child.type === 'field');
 
   if (node.type === 'field') {
     return <FieldLeaf field={node} onSelect={onSelect} />;
@@ -129,6 +132,39 @@ function TreeBranch({ node, onSelect, depth = 0 }) {
 
   const label = isGroup ? node.label : node.name;
 
+  // No accordion when: flat catalogs, or a lone root section with only leaf fields.
+  const skipAccordion = isSingleLevel && (node.flat || (depth === 0 && !allowCollapse));
+
+  if (skipAccordion) {
+    const showStaticTitle = !node.flat && depth === 0;
+    return (
+      <div className={styles.treeBranch}>
+        {showStaticTitle && (
+          <div className={styles.treeHeader}>
+            {isObject ? (
+              <FieldChip name={label} />
+            ) : (
+              <span className={styles.treeGroupLabel}>{label}</span>
+            )}
+            {showCount && (
+              <span className={styles.treePropCount}>{`{ ${propertyCount} properties }`}</span>
+            )}
+          </div>
+        )}
+        <div className={node.flat ? styles.treeFlatList : styles.treeChildrenSingle}>
+          {kids.map((child) => (
+            <FieldLeaf
+              key={child.id || child.value || child.name}
+              field={child}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Multiple root sections (e.g. Action outputs + Tool) or nested trees — collapsible.
   return (
     <div className={styles.treeBranch}>
       <button
@@ -138,8 +174,8 @@ function TreeBranch({ node, onSelect, depth = 0 }) {
         aria-expanded={open}
       >
         <span
-          className="material-symbols-outlined"
-          style={{ fontSize: 18, color: '#8f8f8f', flexShrink: 0, fontVariationSettings: "'FILL' 0, 'wght' 300" }}
+          className={`material-symbols-outlined ${styles.treeChevron}`}
+          aria-hidden
         >
           {open ? 'expand_more' : 'chevron_right'}
         </span>
@@ -153,13 +189,14 @@ function TreeBranch({ node, onSelect, depth = 0 }) {
         )}
       </button>
       {open && kids.length > 0 && (
-        <div className={styles.treeChildren}>
+        <div className={depth > 0 ? styles.treeChildrenNested : styles.treeChildren}>
           {kids.map((child) => (
             <TreeBranch
               key={child.id || child.value || child.name}
               node={child}
               onSelect={onSelect}
               depth={depth + 1}
+              allowCollapse
             />
           ))}
         </div>
@@ -299,6 +336,20 @@ export default function FieldPickerModal({
       })
       .filter((cat) => cat.count > 0);
   }, [categories, isSearching, query]);
+
+  const activeContentCategory = useMemo(() => {
+    if (isSearching) {
+      if (!searchSelectedId) return null;
+      return matchingCategories.find((c) => c.id === searchSelectedId) ?? null;
+    }
+    return selectedCategory;
+  }, [isSearching, searchSelectedId, matchingCategories, selectedCategory]);
+
+  const contentHeading = (
+    activeContentCategory
+    && BASE_CATEGORY_IDS.has(activeContentCategory.id)
+    && activeContentCategory.contentHeading
+  ) || null;
 
   const visibleTrees = useMemo(() => {
     if (!isSearching) return selectedCategory?.trees ?? [];
@@ -558,15 +609,27 @@ export default function FieldPickerModal({
             {visibleTrees.length === 0 ? (
               <span className={styles.empty}>{`No fields match "${query}"`}</span>
             ) : (
-              <div className={styles.treeList}>
-                {visibleTrees.map((node) => (
-                  <TreeBranch
-                    key={node.id || node.value || node.name || node.label}
-                    node={node}
-                    onSelect={handleSelect}
-                  />
-                ))}
-              </div>
+              <>
+                {contentHeading && (
+                  <h3 className={styles.contentHeading}>{contentHeading}</h3>
+                )}
+                <div className={styles.treeList}>
+                  {visibleTrees.map((node) => {
+                    const kids = node.children || [];
+                    const isSingleLevel = kids.length > 0 && kids.every((child) => child.type === 'field');
+                    // Accordion only when more than one root section exists (or the node nests further).
+                    const allowCollapse = visibleTrees.length > 1 || !isSingleLevel;
+                    return (
+                      <TreeBranch
+                        key={node.id || node.value || node.name || node.label}
+                        node={node}
+                        onSelect={handleSelect}
+                        allowCollapse={allowCollapse}
+                      />
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>

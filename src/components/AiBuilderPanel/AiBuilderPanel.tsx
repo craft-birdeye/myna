@@ -3,6 +3,7 @@ import { Icon } from '../Icon/Icon'
 import { SendIcon } from '../../assets/SendIcon'
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
 import type { CreateChatTurn } from '../../data/createAgentChatStore'
+import { FrontDeskDraftReviewContent } from '../AgentDraftReview/FrontDeskDraftReviewContent'
 import { AiBuilderPanelProps } from './AiBuilderPanel.types'
 import { useAiBuilderTrail } from './useAiBuilderTrail'
 
@@ -93,13 +94,13 @@ function TrailThoughts({
         aria-expanded={open}
         className="group flex items-center gap-sm text-left"
       >
-        <Icon name="bolt" size={18} className="shrink-0 text-text-icon" />
-        <span className="text-body text-text-secondary transition-colors group-hover:text-text-primary">
+        <Icon name="bolt" size={16} className="shrink-0 text-text-icon" />
+        <span className="text-[13px] leading-5 text-text-secondary transition-colors group-hover:text-text-primary">
           {label}
         </span>
         <Icon
           name={open ? 'expand_less' : 'expand_more'}
-          size={18}
+          size={16}
           className="shrink-0 text-text-icon transition-colors group-hover:text-text-primary"
         />
       </button>
@@ -109,13 +110,13 @@ function TrailThoughts({
         }`}
         aria-hidden={!open}
       >
-        <div className="ml-[9px] border-l border-border pl-lg text-body leading-6 text-text-tertiary">
+        <div className="ml-[9px] border-l border-border pl-lg text-[13px] leading-5 text-text-tertiary">
           {lines.map((line, i) => {
             if (line.startsWith('•')) {
               const bullet = line.slice(1).trimStart()
               return (
                 <div key={i} className="flex items-start gap-sm">
-                  <span className="shrink-0 text-[18px] leading-6" aria-hidden>
+                  <span className="shrink-0 text-[16px] leading-[18px]" aria-hidden>
                     •
                   </span>
                   <span className="min-w-0 flex-1">{bullet}</span>
@@ -147,59 +148,152 @@ function TrailUserBubble({ children, first = false }: { children: ReactNode; fir
   )
 }
 
-function TrailAgentReply({ paragraphs }: { paragraphs: string[] }) {
-  return (
-    <div className="mt-3xl flex gap-sm">
-      <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
-        <TrailSparkle size={14} />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-md text-[12px] leading-6 text-text-primary">
-        {paragraphs.map((paragraph, i) => (
-          <p key={i} className="m-0 whitespace-pre-wrap">
-            {paragraph}
-          </p>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function TrailDraftCard({ title, description }: { title: string; description: string }) {
-  const readyLabel = /review response/i.test(title)
-    ? 'Review response agent draft is ready'
-    : /review generation/i.test(title)
-      ? 'Review generation agent draft is ready'
-      : /front desk/i.test(title)
-        ? 'Front desk agent draft is ready'
-        : /reminder/i.test(title)
-          ? 'Reminder agent draft is ready'
-          : `${title.replace(/^New\s+/i, '')} draft is ready`
+function TrailAgentReply({
+  paragraphs,
+  choices,
+  onChoice,
+  dockedBanner,
+}: {
+  paragraphs: string[]
+  choices?: string[]
+  onChoice?: (label: string) => void
+  dockedBanner?: ReactNode
+}) {
+  const visibleChoices = (choices ?? []).filter((label) => label !== 'View in agent builder')
 
   return (
-    <div className="mt-3xl flex flex-col gap-md">
-      <p className="m-0 text-body leading-6 text-text-primary">{readyLabel}</p>
-      <div className="rounded-md border border-border bg-surface p-lg">
-        <div className="flex items-start gap-sm">
-          <Icon name="account_tree" size={20} className="mt-px shrink-0 text-text-icon" />
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-sm">
-              <span className="text-body text-text-primary">{title}</span>
-              <span className="inline-flex h-6 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-small text-text-secondary">
-                Draft
-              </span>
+    <div className="mt-3xl flex flex-col gap-sm">
+      <div className="flex gap-sm">
+        <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+          <TrailSparkle size={12} />
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-sm text-[12px] leading-5 text-text-primary">
+          {paragraphs.map((paragraph, i) => (
+            <p key={i} className="m-0 whitespace-pre-wrap">
+              {paragraph}
+            </p>
+          ))}
+          {visibleChoices.length > 0 && (
+            <div className="flex flex-wrap items-center gap-sm">
+              {visibleChoices.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => onChoice?.(label)}
+                  className="flex h-7 items-center rounded-sm border border-border-selected bg-surface px-[10px] text-left text-[13px] leading-5 text-text-primary hover:bg-surface-l2"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            {description ? (
-              <p className="mt-xs text-body text-text-secondary">{description}</p>
-            ) : null}
-          </div>
+          )}
+          {dockedBanner}
         </div>
       </div>
     </div>
   )
 }
 
-function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
+function KnowledgeBanner({ onGoToKnowledge }: { onGoToKnowledge?: () => void }) {
+  return (
+    <div className="flex items-start gap-sm rounded-md bg-chip-info-bg px-md py-sm">
+      <Icon name="info" size={18} className="mt-px shrink-0 text-chip-info-text" />
+      <p className="m-0 min-w-0 flex-1 text-[13px] leading-5 text-text-primary">
+        Upload FAQs and documents to your knowledge base so your agent can answer customer questions
+        accurately.{' '}
+        <button type="button" onClick={onGoToKnowledge} className="text-text-action hover:underline">
+          Go to Knowledge
+        </button>
+      </p>
+    </div>
+  )
+}
+
+function TrailDraftCard({
+  title,
+  description,
+  variant,
+  refillAdded,
+  onOpenProcedure,
+  openProcedureName,
+  draftAgentName,
+}: {
+  title: string
+  description: string
+  variant?: 'frontdesk' | 'reminder' | 'review-response'
+  refillAdded?: boolean
+  onOpenProcedure?: (name: string) => void
+  openProcedureName?: string | null
+  draftAgentName?: string
+}) {
+  const displayTitle = draftAgentName?.trim() || title
+  const readyLabel = /review response/i.test(displayTitle)
+    ? 'Review response agent draft is ready'
+    : /review generation/i.test(displayTitle)
+      ? 'Review generation agent draft is ready'
+      : /front desk/i.test(displayTitle)
+        ? 'Front desk agent draft is ready'
+        : /reminder/i.test(displayTitle)
+          ? 'Reminder agent draft is ready'
+          : `${displayTitle.replace(/^New\s+/i, '')} draft is ready`
+
+  const isFrontDesk =
+    variant === 'frontdesk' || (!variant && /front desk/i.test(displayTitle))
+
+  return (
+    <div className="mt-3xl flex flex-col gap-md">
+      <p className="m-0 text-[13px] leading-5 text-text-primary">{readyLabel}</p>
+      <div className="rounded-md border border-border bg-surface p-lg">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-sm">
+            <span className="min-w-0 truncate text-[14px] leading-5 tracking-[-0.28px] text-[#0d0d12]">
+              {displayTitle}
+            </span>
+            <span className="inline-flex h-5 shrink-0 items-center rounded-sm bg-surface-selected px-sm text-[12px] leading-[18px] text-text-secondary">
+              Draft
+            </span>
+          </div>
+          {description ? (
+            <p className="mt-xs text-[12px] leading-[18px] text-text-secondary">{description}</p>
+          ) : null}
+        </div>
+        {isFrontDesk && (
+          <div className="ai-builder-draft-compact mt-lg">
+            <FrontDeskDraftReviewContent
+              refillAdded={Boolean(refillAdded)}
+              interactive={Boolean(onOpenProcedure)}
+              onOpenProcedure={onOpenProcedure}
+              openProcedureName={openProcedureName}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TrailMessages({
+  trail,
+  onOpenProcedure,
+  openProcedureName,
+  draftAgentName,
+  onChoice,
+  showKnowledgeBanner = false,
+  onGoToKnowledge,
+}: {
+  trail: CreateChatTurn[]
+  onOpenProcedure?: (name: string) => void
+  openProcedureName?: string | null
+  draftAgentName?: string
+  onChoice?: (label: string) => void
+  showKnowledgeBanner?: boolean
+  onGoToKnowledge?: () => void
+}) {
   let seenUser = false
+  /** Dock the knowledge tip under the post-draft agent reply (the one with answer pills). */
+  const postDraftAgentIndex = showKnowledgeBanner
+    ? trail.findIndex((t) => t.kind === 'agent' && (t.choices?.length ?? 0) > 0)
+    : -1
 
   return (
     <div className="flex w-full flex-col pb-md">
@@ -233,7 +327,19 @@ function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
           )
         }
         if (turn.kind === 'agent') {
-          return <TrailAgentReply key={i} paragraphs={turn.paragraphs || []} />
+          return (
+            <TrailAgentReply
+              key={i}
+              paragraphs={turn.paragraphs || []}
+              choices={turn.choices}
+              onChoice={onChoice}
+              dockedBanner={
+                i === postDraftAgentIndex ? (
+                  <KnowledgeBanner onGoToKnowledge={onGoToKnowledge} />
+                ) : undefined
+              }
+            />
+          )
         }
         if (turn.kind === 'draft') {
           return (
@@ -241,12 +347,17 @@ function TrailMessages({ trail }: { trail: CreateChatTurn[] }) {
               key={i}
               title={turn.title}
               description={turn.description}
+              variant={turn.variant}
+              refillAdded={turn.refillAdded}
+              onOpenProcedure={onOpenProcedure}
+              openProcedureName={openProcedureName}
+              draftAgentName={draftAgentName}
             />
           )
         }
         if (turn.kind === 'status') {
           return (
-            <p key={i} className="mt-3xl m-0 text-center text-small text-text-tertiary">
+            <p key={i} className="mt-3xl m-0 text-center text-[12px] leading-[18px] text-text-tertiary">
               {turn.text}
             </p>
           )
@@ -261,19 +372,26 @@ export function AiBuilderPanel({
   onClose,
   onExpand,
   agentName = 'agent',
+  draftAgentName,
   suggestions,
   onSend,
   className = '',
   fillShell = false,
   side = 'right',
+  onOpenProcedure,
+  openProcedureName = null,
+  onGoToKnowledge,
 }: AiBuilderPanelProps) {
   const [draft, setDraft] = useState('')
+  const [composerFocused, setComposerFocused] = useState(false)
   const { trail, send, hasMessages } = useAiBuilderTrail(agentName)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [composerFocused, setComposerFocused] = useState(false)
   const canSend = draft.trim().length > 0
   const composerExpanded = composerFocused || canSend || hasMessages
   const resolvedSuggestions = suggestions ?? suggestionsForAgent(agentName)
+  const identityName = `${draftAgentName ?? ''} ${agentName}`.toLowerCase()
+  const showKnowledgeBanner =
+    identityName.includes('front desk') && identityName.includes('east region')
 
   useEffect(() => {
     const el = scrollRef.current
@@ -287,6 +405,10 @@ export function AiBuilderPanel({
     send(value)
     onSend?.(value)
     setDraft('')
+  }
+
+  const handleChoice = (label: string) => {
+    handleSend(label)
   }
 
   return (
@@ -313,7 +435,7 @@ export function AiBuilderPanel({
           />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="m-0 text-body text-white">Create with AI</p>
+          <p className="m-0 text-[13px] leading-5 text-white">Create with AI</p>
         </div>
         {onExpand && (
           <button
@@ -356,7 +478,17 @@ export function AiBuilderPanel({
             </div>
           )}
 
-          {hasMessages && <TrailMessages trail={trail} />}
+          {hasMessages && (
+            <TrailMessages
+              trail={trail}
+              onOpenProcedure={onOpenProcedure}
+              openProcedureName={openProcedureName}
+              draftAgentName={draftAgentName}
+              onChoice={handleChoice}
+              showKnowledgeBanner={showKnowledgeBanner}
+              onGoToKnowledge={onGoToKnowledge}
+            />
+          )}
 
           {!hasMessages && resolvedSuggestions.length > 0 && (
             <div className="flex w-full flex-col items-start gap-sm">

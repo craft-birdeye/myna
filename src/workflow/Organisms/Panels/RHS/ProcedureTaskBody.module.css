@@ -1,6 +1,58 @@
 .body {
   display: flex;
   flex-direction: column;
+  gap: 24px;
+}
+
+.systemPrompt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.systemPromptLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+}
+
+.systemPromptLabel {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182;
+  font-family: 'Roboto', sans-serif;
+}
+
+.systemPromptRequired {
+  font-size: 12px;
+  line-height: 18px;
+  color: #de1b0c;
+  font-family: 'Roboto', sans-serif;
+}
+
+.systemPromptReadOnly {
+  width: 100%;
+  min-height: 200px;
+  max-height: 360px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  outline: none;
+  background: #fafafa;
+  box-sizing: border-box;
+  resize: none;
+  overflow-y: auto;
+  cursor: default;
+  user-select: text;
 }
 
 /* ─── Procedure list — stacked cards ─── */

@@ -102,10 +102,10 @@ export const BASE_CATEGORIES = [
 export const WORKFLOW_CATEGORIES = [
   {
     id: 'trigger',
-    label: '1. Trigger',
+    label: '1. Review is created or updated',
     description: 'Outputs available from the trigger that started this workflow.',
     trees: [
-      group('trigger-output', '1. Trigger output', [
+      group('trigger-output', '1. Review is created or updated', [
         leaf('id', 'Trigger.id', '545043398', 'number'),
         leaf('source', 'Trigger.source', 'Google'),
         leaf('rating', 'Trigger.rating', '5', 'number'),
@@ -115,10 +115,10 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-identify',
-    label: '2. Action: Identify relevant mentions',
+    label: '2. Identify relevant mentions',
     description: 'Outputs from the identify-relevant-mentions action.',
     trees: [
-      group('identify-output', '2. Action output', [
+      group('identify-output', '2. Identify relevant mentions', [
         leaf('mentionCount', 'Identify.mentionCount', '4', 'number'),
         leaf('matched', 'Identify.matched', 'true', 'boolean'),
         leaf('keywords', 'Identify.keywords', 'wait, billing'),
@@ -128,10 +128,10 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-tokens',
-    label: '3. Action: custom tokens',
+    label: '3. Custom tokens',
     description: 'Custom token values produced by this action.',
     trees: [
-      group('tokens-output', '3. Action output', [
+      group('tokens-output', '3. Custom tokens', [
         leaf('greeting', 'Tokens.greeting', 'Hi there'),
         leaf('signOff', 'Tokens.signOff', 'Best regards'),
         leaf('promo', 'Tokens.promo', 'Book online'),
@@ -142,12 +142,12 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-generate-response',
-    label: '4. Action: Generate review response',
+    label: '4. Generate review response',
     description: 'Action and tool outputs from generating the review response.',
     // Sidebar count matches top-level sections (Action output + Tool), not leaf fields.
     count: 2,
     trees: [
-      group('gen-task-output', '4. Action output', [
+      group('gen-task-output', '4. Generate review response', [
         leaf('id', 'GenerateResponse.id', '545043398', 'number'),
         leaf('overallRating', 'GenerateResponse.overallRating', '5', 'number'),
         leaf('comments', 'GenerateResponse.comments', REVIEW_COMMENT),
@@ -174,10 +174,10 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-send-response',
-    label: '5. Action: Send a review response',
+    label: '5. Send a review response',
     description: 'Outputs from posting the review response.',
     trees: [
-      group('send-output', '5. Action output', [
+      group('send-output', '5. Send a review response', [
         leaf('posted', 'SendResponse.posted', 'true', 'boolean'),
         leaf('channel', 'SendResponse.channel', 'Google'),
         leaf('responseId', 'SendResponse.responseId', 'resp_8821'),
@@ -188,10 +188,10 @@ export const WORKFLOW_CATEGORIES = [
   },
   {
     id: 'task-send-response-followup',
-    label: '6. Action: Send a review response',
+    label: '6. Send a review response',
     description: 'Outputs from a follow-up send of the review response.',
     trees: [
-      group('send-followup-output', '6. Action output', [
+      group('send-followup-output', '6. Send a review response', [
         leaf('posted', 'SendFollowup.posted', 'true', 'boolean'),
         leaf('channel', 'SendFollowup.channel', 'Google'),
         leaf('responseId', 'SendFollowup.responseId', 'resp_9902'),
@@ -211,19 +211,22 @@ export function countLeaves(nodes = []) {
 
 /** Normalize flat `fields` categories into a single tree group. */
 export function normalizeCategory(cat) {
+  const contentHeading = cat.contentHeading || cat.sectionLabel || cat.label;
   if (Array.isArray(cat.trees) && cat.trees.length > 0) {
     return {
       ...cat,
+      contentHeading,
       trees: cat.trees,
       count: cat.count ?? countLeaves(cat.trees),
     };
   }
   const fields = cat.fields || [];
   const trees = [
-    group(`${cat.id}-fields`, cat.sectionLabel || cat.label, fields),
+    group(`${cat.id}-fields`, contentHeading, fields, { flat: true }),
   ];
   return {
     ...cat,
+    contentHeading,
     trees,
     count: fields.length,
   };
