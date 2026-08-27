@@ -4,7 +4,7 @@ import './AddStepMenu.css';
 
 /**
  * Shared canvas "+" control: click opens AddStepMenu, or (when a node is copied)
- * hover reveals inline Paste / Add step pills flanking the "+".
+ * hover reveals inline Add / Paste pills flanking the "+".
  */
 export default function AddStepButton({
   className = '',

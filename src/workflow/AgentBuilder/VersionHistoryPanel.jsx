@@ -7,6 +7,23 @@ import './VersionHistoryPanel.css';
  * canvas identity header. `avatarTint`/`avatarInk` are the tonal pair used by the
  * canvas variant.
  */
+/**
+ * The unpublished working copy, shown as the first card only when version history is
+ * opened from a Draft agent's "View active version" link — see `draftVersionHistory`
+ * in AgentBuilder. Never part of `DEFAULT_VERSIONS`.
+ */
+export const DRAFT_VERSION = {
+  id: 'draft',
+  title: 'Aug 18, 2026 02:14 PM',
+  stamp: 'Aug 18, 2026, 02:14 PM',
+  author: 'Raynil kumar',
+  initials: 'R',
+  avatarColor: '#7e57c2',
+  avatarTint: '#ede7f6',
+  avatarInk: '#5e35b1',
+  status: 'Draft',
+};
+
 export const DEFAULT_VERSIONS = [
   {
     id: 'current',
@@ -17,7 +34,7 @@ export const DEFAULT_VERSIONS = [
     avatarColor: '#7e57c2',
     avatarTint: '#ede7f6',
     avatarInk: '#5e35b1',
-    status: 'Running',
+    status: 'Active',
   },
   {
     id: 'v3',
@@ -72,7 +89,7 @@ export default function VersionHistoryPanel({
 
   const renderItem = (version) => {
     const selected = version.id === activeId;
-    const running = version.status === 'Running';
+    const isLive = version.status === 'Active';
     return (
       <li key={version.id}>
         <button
@@ -90,10 +107,14 @@ export default function VersionHistoryPanel({
                 <span className="rr-version-history__item-name">
                   {version.title}
                 </span>
-                {running && (
-                  <span className="ab-header-status ab-header-status--running ab-header-status--dot">
-                    Running
+                {isLive && (
+                  <span className="ab-header-status ab-header-status--active ab-header-status--dot">
+                    Active
                   </span>
+                )}
+                {/* Draft chip carries no dot, matching the canvas header's Draft badge. */}
+                {version.status === 'Draft' && (
+                  <span className="ab-header-status ab-header-status--draft">Draft</span>
                 )}
               </div>
               <div className="rr-version-history__author">

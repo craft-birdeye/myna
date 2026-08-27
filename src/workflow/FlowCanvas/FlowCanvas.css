@@ -37,6 +37,8 @@
 }
 
 /* Review response chrome — bottom floaters (zoom left, edit center) */
+/* z-index above the canvas floaters (55/56/60): this anchor is a stacking context, so the
+   zoom dropdown's own z-index can't lift it past those panels on its own. */
 .flow-canvas__toolbar-anchor--rr-chrome {
   top: auto;
   bottom: 16px;
@@ -45,6 +47,7 @@
   transform: none;
   display: flex;
   pointer-events: none;
+  z-index: 70;
 }
 
 /* ─── Node centering wrapper ─── */

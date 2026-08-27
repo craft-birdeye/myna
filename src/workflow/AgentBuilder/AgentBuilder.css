@@ -526,16 +526,17 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
+/* Same Aero DS dropdown spec as .ab-header-menu — the two menus sit in one header. */
 .ab-publish-split__menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 148px;
+  min-width: 168px;
   padding: 4px 0;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 320;
 }
 
@@ -543,19 +544,22 @@
   display: block;
   width: 100%;
   margin: 0;
-  padding: 10px 14px;
+  padding: 8px 16px;
   border: none;
   background: none;
   cursor: pointer;
   text-align: left;
   font-family: 'Roboto', arial, sans-serif;
   font-size: 14px;
+  font-weight: 400;
   line-height: 20px;
-  color: #212121;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  transition: background 0.12s ease;
 }
 
 .ab-publish-split__menu-item:hover {
-  background: #f4f6f7;
+  background: #f2f4f7;
 }
 
 .ab-header-cloud-btn {
@@ -607,73 +611,112 @@
   position: relative;
 }
 
+/* Run test / Preview — same bordered shell as .ab-header-more-btn, widened for its label. */
+.ab-header-runtest-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  /* Uniform 8px inset on all four sides. The 18px line-height makes the content row match
+     the 18px icon, so 8 + 18 + 8 + 2px border lands on exactly 36px — level with the
+     Activate split button and the three-dots without needing asymmetric padding. */
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #212121;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: nowrap;
+  transition: background 0.12s ease;
+}
+
+.ab-header-runtest-btn:hover:not(:disabled) {
+  background: #f2f4f7;
+}
+
+.ab-header-runtest-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ab-header-runtest-btn__icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Sized to match .ab-publish-split (36px / 4px radius) so the two sit level. */
 .ab-header-more-btn {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
   cursor: pointer;
-  color: #555;
+  color: #212121;
   padding: 0;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.12s ease;
 }
 
 .ab-header-more-btn:hover {
   background: #f2f4f7;
-  border-color: #b0b8c4;
 }
 
 .ab-header-more-btn .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
+/*
+ * Aero DS dropdown (CLAUDE.md §6.7) — same spec as the AgentInstanceScreen Actions menu:
+ * 168px min-width, 4px radius, 1px borders/primary/1, 4px block padding, shadow-dropdown,
+ * 16px/8px text-body items, surface/hover on hover, chip/danger/text for destructive.
+ * No dividers — the DS list separates items by spacing alone.
+ */
 .ab-header-menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
+  min-width: 168px;
+  padding: 4px 0;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  min-width: 160px;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 300;
-  overflow: hidden;
 }
 
 .ab-header-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
   width: 100%;
-  padding: 10px 14px;
+  margin: 0;
+  padding: 8px 16px;
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  color: #212121;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
   text-align: left;
-  transition: background 0.12s;
+  transition: background 0.12s ease;
 }
 
 .ab-header-menu-item:hover {
-  background: #f4f6f7;
+  background: #f2f4f7;
 }
 
-.ab-header-menu-item .material-symbols-outlined {
-  font-size: 16px;
-  color: #666;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
-}
-
-.ab-header-menu-divider {
-  height: 1px;
-  background: #e5e9f0;
+.ab-header-menu-item--danger {
+  color: #de1b0c;
 }
 
 .ab-hidden-input {
@@ -681,7 +724,8 @@
 }
 
 /* ─── Publish blocked alert (viewport-fixed — covers L1 + top nav) ─── */
-.ab-publish-blocked-overlay {
+.ab-publish-blocked-overlay,
+.ab-confirm-overlay {
   position: fixed;
   inset: 0;
   z-index: 10000;
@@ -696,16 +740,19 @@
 }
 
 /* Shift horizontal center left when the RHS panel is open (450px + 8px inset + 12px gap). */
-.ab-publish-blocked-overlay--rhs-open {
+.ab-publish-blocked-overlay--rhs-open,
+.ab-confirm-overlay--rhs-open {
   padding-right: 470px;
 }
 
 /* Procedure detail RHS is 500px wide. */
-.ab-publish-blocked-overlay--rhs-wide {
+.ab-publish-blocked-overlay--rhs-wide,
+.ab-confirm-overlay--rhs-wide {
   padding-right: 520px;
 }
 
-.ab-publish-blocked-dialog {
+.ab-publish-blocked-dialog,
+.ab-confirm-dialog {
   width: 420px;
   max-width: calc(100% - 32px);
   flex-shrink: 0;
@@ -716,14 +763,16 @@
   box-sizing: border-box;
 }
 
-.ab-publish-blocked-dialog__header {
+.ab-publish-blocked-dialog__header,
+.ab-confirm-dialog__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
-.ab-publish-blocked-dialog__title {
+.ab-publish-blocked-dialog__title,
+.ab-confirm-dialog__title {
   margin: 0;
   font-size: 18px;
   line-height: 26px;
@@ -731,7 +780,8 @@
   color: #0d0d12;
 }
 
-.ab-publish-blocked-dialog__close {
+.ab-publish-blocked-dialog__close,
+.ab-confirm-dialog__close {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -747,16 +797,19 @@
   cursor: pointer;
 }
 
-.ab-publish-blocked-dialog__close:hover {
+.ab-publish-blocked-dialog__close:hover,
+.ab-confirm-dialog__close:hover {
   background: #f2f4f7;
 }
 
-.ab-publish-blocked-dialog__close .material-symbols-outlined {
+.ab-publish-blocked-dialog__close .material-symbols-outlined,
+.ab-confirm-dialog__close .material-symbols-outlined {
   font-size: 20px;
   line-height: 1;
 }
 
-.ab-publish-blocked-dialog__body {
+.ab-publish-blocked-dialog__body,
+.ab-confirm-dialog__body {
   margin: 12px 0 0;
   font-size: 14px;
   line-height: 20px;
@@ -764,7 +817,8 @@
   color: #717182;
 }
 
-.ab-publish-blocked-dialog__footer {
+.ab-publish-blocked-dialog__footer,
+.ab-confirm-dialog__footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -772,7 +826,8 @@
   margin-top: 24px;
 }
 
-.ab-publish-blocked-dialog__cancel {
+.ab-publish-blocked-dialog__cancel,
+.ab-confirm-dialog__cancel {
   margin: 0;
   padding: 4px 12px;
   border: none;
@@ -784,11 +839,13 @@
   cursor: pointer;
 }
 
-.ab-publish-blocked-dialog__cancel:hover {
+.ab-publish-blocked-dialog__cancel:hover,
+.ab-confirm-dialog__cancel:hover {
   background: #f2f4f7;
 }
 
-.ab-publish-blocked-dialog__primary {
+.ab-publish-blocked-dialog__primary,
+.ab-confirm-dialog__primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -805,8 +862,19 @@
   transition: background 0.12s ease;
 }
 
-.ab-publish-blocked-dialog__primary:hover {
+.ab-publish-blocked-dialog__primary:hover,
+.ab-confirm-dialog__primary:hover {
   background: #1565c0;
+}
+
+/* Destructive confirm (Delete agent) — chip/danger/text. Placement/offsets are inherited
+   from the shared overlay rules above, so it sits at the top like the resolve-errors alert. */
+.ab-confirm-dialog__primary--danger {
+  background: #de1b0c;
+}
+
+.ab-confirm-dialog__primary--danger:hover {
+  background: #b81609;
 }
 
 /* ─── Publish agent modal form ─── */
@@ -945,12 +1013,12 @@
   letter-spacing: -0.24px;
 }
 
-.ab-header-status--running {
+.ab-header-status--active {
   background: #f1faf0; /* chip/success/bg */
   color: #377e2c; /* chip/success/text */
 }
 
-.ab-header-status--paused {
+.ab-header-status--inactive {
   background: #fef3d6; /* chip/warning/bg */
   color: #c69204; /* chip/warning/text */
 }
@@ -1695,6 +1763,10 @@
   right: 16px;
   transform: none;
   transition: right 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  /* This variant carries only the action buttons — no agent title needing the base 16px
+     left gutter. The 48px shell already leaves a 6px optical inset above/below the 36px
+     buttons (5px + 1px border), so match that on the sides for an even surround. */
+  padding: 0 5px;
 }
 
 /* 450px panel + its 8px inset from the canvas edge + a 12px gap.
@@ -1973,6 +2045,35 @@
 
 .agent-builder--version-history-canvas .graph-controls__rr-edit {
   left: calc(50% + (var(--rr-chrome-lhs-panel-width, 360px) + 12px) / 2);
+}
+
+/*
+ * Sep 1 combined controls (zoom + undo/redo + help as one bottom-left flex row).
+ * The per-pill rules above offset only `__rr-zoom` via `position: relative`, which slides
+ * the zoom pill out from under the panel but strands undo/redo and help behind it. Here the
+ * whole row shifts instead, so all three clear the panel together.
+ */
+.agent-builder--lhs-ai-open,
+.agent-builder--version-history-open:not(.agent-builder--version-history-canvas) {
+  --rr-controls-shift: calc(
+    var(--rr-chrome-lhs-panel-left, 76px) + var(--rr-chrome-lhs-panel-width, 360px) + 12px - 16px
+  );
+}
+
+.agent-builder--version-history-canvas {
+  --rr-controls-shift: calc(var(--rr-chrome-lhs-panel-width, 360px) + 12px);
+}
+
+/* Three classes deep so it beats the two-class per-pill rules above regardless of which
+   stylesheet loads first (those live here, the combined layout lives in GraphControls.css). */
+.agent-builder--rr-chrome .graph-controls--rr-chrome-combined {
+  padding-left: var(--rr-controls-shift, 0px);
+  transition: padding-left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.agent-builder--rr-chrome .graph-controls--rr-chrome-combined .graph-controls__rr-zoom {
+  position: static;
+  left: auto;
 }
 
 .rr-chrome-palette .lhs-drawer {

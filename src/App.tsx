@@ -961,6 +961,20 @@ export function App() {
                             setWorkflowAiBuilderPanelOpen(false)
                             setWorkflowLhsPreferAiTab(false)
                           }}
+                          // Deleted: same teardown as onClose, but the stored return view is
+                          // dropped rather than replayed — that view is the deleted agent's
+                          // own instance screen, so we land on the agent list instead.
+                          onDeleted={() => {
+                            setEditingAgentName(null)
+                            setEditingAgentStatus(null)
+                            setEditorReturnView(null)
+                            setPendingAgentInstanceView(null)
+                            setWizardAgentDraft(null)
+                            setWorkflowAiAssistOpen(false)
+                            setWorkflowAiCreateFullscreen(false)
+                            setWorkflowAiBuilderPanelOpen(false)
+                            setWorkflowLhsPreferAiTab(false)
+                          }}
                           product={activeProduct}
                           wizardDraft={wizardAgentDraft}
                           agentStatus={

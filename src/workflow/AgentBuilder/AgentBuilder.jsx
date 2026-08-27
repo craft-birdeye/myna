@@ -13,7 +13,7 @@ import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased'
 import ShareModal from '../Organisms/Modals/ShareModal/ShareModal';
 import EmptyStates from '../Patterns/EmptyStates/EmptyStates';
 import { Button } from '../elemental-stubs';
-import { saveAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools } from '../services/agentService';
+import { saveAgent, deleteAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools } from '../services/agentService';
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
@@ -55,7 +55,6 @@ import iconRrTrigger from '../../assets/rr-chrome/icon-trigger.svg';
 import iconRrTasks from '../../assets/rr-chrome/icon-tasks.svg';
 import iconRrProcedures from '../../assets/rr-chrome/icon-procedures.svg';
 import iconRrControls from '../../assets/rr-chrome/icon-controls.svg';
-import iconRrHistory from '../../assets/rr-chrome/icon-history.svg';
 import iconRrPreview from '../../assets/rr-chrome/icon-preview.svg';
 import iconAgentsPurple from '../../assets/icon-agents-purple.svg';
 import { Tooltip } from '../../components/Tooltip/Tooltip';
@@ -66,7 +65,7 @@ import { Toast } from '../../components/Toast/Toast';
 import { buildTestRunSteps } from '../../data/testRunSteps';
 import { useTestRun } from '../../hooks/useTestRun';
 import { getAgentIssues } from '../../data/agentIssues';
-import VersionHistoryPanel, { DEFAULT_VERSIONS as VERSION_HISTORY_VERSIONS } from './VersionHistoryPanel';
+import VersionHistoryPanel, { DEFAULT_VERSIONS as VERSION_HISTORY_VERSIONS, DRAFT_VERSION } from './VersionHistoryPanel';
 import './AgentBuilder.css';
 
 const START_NODE_ID = '__start__';
@@ -1019,8 +1018,8 @@ function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
 function publishBlockedCopy(count) {
   const label = count === 1 ? 'error' : 'errors';
   return {
-    title: 'Resolve errors to publish',
-    body: `Fix ${count} ${label} in your workflow before publishing.`,
+    title: 'Resolve errors to activate',
+    body: `Fix ${count} ${label} in your workflow before activating.`,
   };
 }
 
@@ -1043,6 +1042,8 @@ export default function AgentBuilder({
   onSaveAgent,
   onSaveTemplate,
   onClose,
+  /** Confirmed delete — falls back to `onClose` when the parent doesn't handle it. */
+  onDeleted,
   onEdit,
   onView,
   viewOnly = false,
@@ -1192,6 +1193,12 @@ export default function AgentBuilder({
     defaultOpenSection === 'Trigger' ? 'Trigger' : null,
   );
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  /**
+   * True only when history was opened from a Draft agent's "View active version" link.
+   * That entry point prepends the unpublished draft as the first card; the three-dots
+   * menu leaves the list untouched.
+   */
+  const [draftVersionHistory, setDraftVersionHistory] = useState(false);
   /** Which version the history panel is previewing (first entry = the live one). */
   const [versionHistorySelectedId, setVersionHistorySelectedId] = useState(
     () => VERSION_HISTORY_VERSIONS[0]?.id ?? null,
@@ -1491,6 +1498,7 @@ export default function AgentBuilder({
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
   const [publishBlockedModalOpen, setPublishBlockedModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
   const publishMenuRef = useRef(null);
@@ -1543,6 +1551,8 @@ export default function AgentBuilder({
   const isReviewResponseAgent = /review response/i.test(entryAgentName) || /review response/i.test(agentName);
   const isReviewGenerationAgent = /review generation/i.test(entryAgentName) || /review generation/i.test(agentName);
   const isReviewsAiAgent = isReviewResponseAgent || isReviewGenerationAgent;
+  // Response agents (Sep1) only — Front-desk-Sep1 keeps the separate zoom/undo-redo/help layout.
+  const combineControlsLeft = sep1Chrome && isReviewsAiAgent;
   const hideProceduresFloater =
     isReviewsAiAgent || isWaitlistAgent || isPreVisitAgent || isReminderAgent;
   // Procedures floater: Front desk family only — not Reviews AI, Waitlist, Pre-visit, or Reminder.
@@ -1639,7 +1649,7 @@ export default function AgentBuilder({
 
   const [agentDesc] = useState(initialDescription || '');
   // isTemplateMode uses state so it correctly activates after applyAgent loads templateId from Firestore
-  const isTemplateMode = !!agentTemplateId && agentStatus !== 'Running';
+  const isTemplateMode = !!agentTemplateId && agentStatus !== 'Active';
 
   /* ─── Always-fresh ref so publish never reads stale closure values ─── */
   const latestRef = useRef({});
@@ -1686,7 +1696,7 @@ export default function AgentBuilder({
     };
   }, [initialDescription]);
 
-  const buildAgentPayload = useCallback((status = 'Running') => {
+  const buildAgentPayload = useCallback((status = 'Active') => {
     const { agentId: id, agentName: name, agentDesc: desc, moduleContext: mod, sectionContext: sec, nodeList: nodes, nodeDetails: details, moduleSlug: msSlug, agentSlug: asSlug, templateId: tmplId } = latestRef.current;
     const finalName = (name || details?.[START_NODE_ID]?.agentName || '').trim();
     if (!finalName) return null;
@@ -1719,7 +1729,7 @@ export default function AgentBuilder({
 
   const handlePublish = useCallback(async () => {
     clearTimeout(saveTimerRef.current);
-    const payload = buildAgentPayload('Running');
+    const payload = buildAgentPayload('Active');
     if (!payload) {
       // No agent name — reschedule auto-save so the pending changes are not lost
       saveTimerRef.current = setTimeout(() => {
@@ -1730,7 +1740,7 @@ export default function AgentBuilder({
     }
     try {
       await saveAgent(payload.id, payload);
-      setAgentStatus('Running');
+      setAgentStatus('Active');
       onSaveAgent?.(true, payload);
     } catch (e) {
       console.error('Publish failed', e);
@@ -1772,47 +1782,104 @@ export default function AgentBuilder({
 
   const handlePause = useCallback(async () => {
     clearTimeout(saveTimerRef.current);
-    const payload = buildAgentPayload('Paused');
+    const payload = buildAgentPayload('Inactive');
     if (!payload) {
-      setAgentStatus('Paused');
+      setAgentStatus('Inactive');
       return;
     }
     try {
       await saveAgent(payload.id, payload);
-      setAgentStatus('Paused');
+      setAgentStatus('Inactive');
       onSaveAgent?.(false, payload);
     } catch (e) {
       console.error('Pause failed', e);
-      setAgentStatus('Paused');
+      setAgentStatus('Inactive');
     }
   }, [buildAgentPayload, onSaveAgent]);
 
   const handleResume = useCallback(async () => {
     clearTimeout(saveTimerRef.current);
-    const payload = buildAgentPayload('Running');
+    const payload = buildAgentPayload('Active');
     if (!payload) {
-      setAgentStatus('Running');
+      setAgentStatus('Active');
       return;
     }
     try {
       await saveAgent(payload.id, payload);
-      setAgentStatus('Running');
+      setAgentStatus('Active');
       onSaveAgent?.(true, payload);
     } catch (e) {
       console.error('Resume failed', e);
-      setAgentStatus('Running');
+      setAgentStatus('Active');
     }
   }, [buildAgentPayload, onSaveAgent]);
+
+  const handleActivateMain = useCallback(() => {
+    if (agentStatus === 'Inactive') {
+      handleResume();
+      return;
+    }
+    handlePublishAttempt();
+  }, [agentStatus, handleResume, handlePublishAttempt]);
+
+  const handleOpenVersionHistory = useCallback(() => {
+    setHeaderMenuOpen(false);
+    setPaletteSection(null);
+    if (!versionHistoryOpen) closeAiBuilderPanel();
+    setDraftVersionHistory(false);
+    setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
+    setVersionHistoryOpen((open) => !open);
+    setHelpCenterOpen(false);
+  }, [versionHistoryOpen, closeAiBuilderPanel]);
+
+  /**
+   * Draft agent's "View active version": opens history with the unpublished draft as the
+   * first card and the live version selected, so the canvas shows what's actually running.
+   * The agent stays in Draft — this only browses.
+   */
+  const handleViewActiveVersion = useCallback(() => {
+    setHeaderMenuOpen(false);
+    setPaletteSection(null);
+    closeAiBuilderPanel();
+    setDraftVersionHistory(true);
+    const liveVersion = VERSION_HISTORY_VERSIONS.find((v) => v.status === 'Active');
+    setVersionHistorySelectedId(liveVersion?.id ?? VERSION_HISTORY_VERSIONS[0]?.id ?? null);
+    setVersionHistoryOpen(true);
+    setHelpCenterOpen(false);
+  }, [closeAiBuilderPanel]);
+
+  /** Delete is destructive and irreversible — always confirm before acting. */
+  const handleDeleteAgent = useCallback(() => {
+    setHeaderMenuOpen(false);
+    setDeleteConfirmOpen(true);
+  }, []);
+
+  /**
+   * Confirmed delete. `onClose` is what returns the user to the agent list, so it runs
+   * whether or not the service call succeeds — the agent is gone from their view either
+   * way, and stranding them on a deleted agent's canvas would be worse.
+   */
+  const handleConfirmDeleteAgent = useCallback(async () => {
+    setDeleteConfirmOpen(false);
+    try {
+      await deleteAgent(agentId);
+    } catch (e) {
+      console.error('Delete agent failed', e);
+    }
+    // `onDeleted` lands on the agent list; `onClose` would restore the deleted agent's
+    // own instance screen, so it's only the fallback when the parent opts out.
+    (onDeleted ?? onClose)?.();
+  }, [agentId, onDeleted, onClose]);
 
   const handleSaveAndPublish = useCallback(async () => {
     clearTimeout(saveTimerRef.current);
     const templatePayload = buildTemplatePayload();
-    const agentPayload = buildAgentPayload('Running');
+    const agentPayload = buildAgentPayload('Active');
     if (!templatePayload || !agentPayload) return;
     try {
       await onSaveTemplate?.(templatePayload);
       await saveAgent(agentPayload.id, agentPayload);
-      setAgentStatus('Running');
+      setAgentStatus('Active');
     } catch (e) {
       console.error('Save and publish failed', e);
       return;
@@ -2243,14 +2310,26 @@ export default function AgentBuilder({
    * actions, and Publish is swapped for a Restore CTA.
    */
   const versionHistoryMode = versionHistoryOpen && explorationChrome;
+  /** Draft entry point prepends the working copy; every other entry point uses the plain list. */
+  const versionHistoryList = draftVersionHistory
+    ? [DRAFT_VERSION, ...VERSION_HISTORY_VERSIONS]
+    : VERSION_HISTORY_VERSIONS;
   const selectedVersion =
-    VERSION_HISTORY_VERSIONS.find((v) => v.id === versionHistorySelectedId)
-    || VERSION_HISTORY_VERSIONS[0];
-  /** The live version can't be restored onto itself, so Restore stays disabled there. */
-  const viewingLiveVersion = selectedVersion?.status === 'Running';
+    versionHistoryList.find((v) => v.id === versionHistorySelectedId)
+    || versionHistoryList[0];
+  /**
+   * Cancel/Restore is hidden only where restoring would be a no-op:
+   *  - the draft — it already *is* the working copy;
+   *  - the live version, except in the draft flow, where restoring it is meaningful:
+   *    it discards the draft and puts the canvas back on what's running.
+   */
+  const hideVersionActions =
+    selectedVersion?.status === 'Draft'
+    || (selectedVersion?.status === 'Active' && !draftVersionHistory);
   const rhsViewOnly = viewOnly || versionHistoryMode;
   const closeVersionHistory = () => {
     setVersionHistoryOpen(false);
+    setDraftVersionHistory(false);
     setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
   };
   /**
@@ -3479,9 +3558,9 @@ export default function AgentBuilder({
       </div>
     )
   ) : versionHistoryMode ? (
-    // Nothing to cancel or restore while the live version is selected — the whole
-    // pill is hidden rather than shown empty; Back exits history in that state.
-    viewingLiveVersion ? null : (
+    // Nothing to cancel or restore on the draft (or on the live version outside the draft
+    // flow) — the whole pill is hidden rather than shown empty; Back exits history instead.
+    hideVersionActions ? null : (
       <div className="ab-header-actions">
         <button
           type="button"
@@ -3504,47 +3583,18 @@ export default function AgentBuilder({
   ) : (
     <div className="ab-header-actions">
       {issueCount > 0 && !explorationChrome && resolveIssues}
-      {/* Cloud save / version history — matches Figma 15324:121197 */}
-      {!isScratchCreate && (
-        <Tooltip
-          content="Version history"
-          variant="brief"
-          side="bottom"
-        >
-          <button
-            type="button"
-            className="ab-header-cloud-btn"
-            onClick={() => {
-              setPaletteSection(null);
-              if (!versionHistoryOpen) closeAiBuilderPanel();
-              // Always reopen on the live version rather than the last one browsed.
-              setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
-              setVersionHistoryOpen((open) => !open);
-              setHelpCenterOpen(false);
-            }}
-            aria-label="Version history"
-            aria-pressed={versionHistoryOpen}
-          >
-            <img src={iconRrHistory} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
-          </button>
-        </Tooltip>
-      )}
-      <Tooltip
-        content={isFrontDeskAgentName ? 'Preview' : 'Run test'}
-        variant="brief"
-        side="bottom"
+      {/* Labelled button — no Tooltip, it would just repeat the visible text. */}
+      <button
+        type="button"
+        className="ab-header-runtest-btn"
+        onClick={handleRunTest}
+        aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
+        data-tour-id="test-run"
+        disabled={isScratchCreate}
       >
-        <button
-          type="button"
-          className="ab-header-cloud-btn"
-          onClick={handleRunTest}
-          aria-label={isFrontDeskAgentName ? 'Preview' : 'Run test'}
-          data-tour-id="test-run"
-          disabled={isScratchCreate}
-        >
-          <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-cloud-btn__icon" />
-        </button>
-      </Tooltip>
+        <img src={iconRrPreview} alt="" width={18} height={18} className="ab-header-runtest-btn__icon" />
+        <span>{isFrontDeskAgentName ? 'Preview' : 'Run test'}</span>
+      </button>
       {issueCount > 0 && explorationChrome && resolveIssues}
       {isTemplateMode ? (
         <Button
@@ -3554,42 +3604,23 @@ export default function AgentBuilder({
         />
       ) : (
         <>
-          {/* Exploration only: Pause / Resume beside Publish for live agents */}
-          {explorationChrome && agentStatus === 'Running' && (
-            <button
-              type="button"
-              className="ab-header-pause-btn"
-              aria-label="Pause"
-              onClick={handlePause}
-            >
-              Pause
-            </button>
-          )}
-          {explorationChrome && agentStatus === 'Paused' && (
-            <button
-              type="button"
-              className="ab-header-pause-btn"
-              aria-label="Resume"
-              onClick={handleResume}
-            >
-              Resume
-            </button>
-          )}
           <div className="ab-publish-split" ref={publishMenuRef}>
+            {/* Inactive agents re-activate through the same CTA (handleActivateMain routes
+                to resume vs publish), so there is no separate Resume button. */}
             <button
               type="button"
               className="ab-publish-split__main"
-              aria-label="Publish"
+              aria-label="Activate"
               data-tour-id="publish"
               disabled={publishDisabled}
-              onClick={handlePublishAttempt}
+              onClick={handleActivateMain}
             >
-              Publish
+              Activate
             </button>
             <button
               type="button"
               className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
-              aria-label="More publish options"
+              aria-label="More activate options"
               aria-haspopup="menu"
               aria-expanded={publishMenuOpen}
               disabled={publishDisabled}
@@ -3607,6 +3638,58 @@ export default function AgentBuilder({
                 >
                   Save as draft
                 </button>
+                {/* Only a live agent can be deactivated. */}
+                {agentStatus === 'Active' && (
+                  <button
+                    type="button"
+                    className="ab-publish-split__menu-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setPublishMenuOpen(false);
+                      handlePause();
+                    }}
+                  >
+                    Deactivate
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {/* Version history + Delete live behind the three-dots menu. */}
+          <div className="ab-header-more" ref={headerMenuRef}>
+            <button
+              type="button"
+              className="ab-header-more-btn"
+              aria-label="More options"
+              aria-haspopup="menu"
+              aria-expanded={headerMenuOpen}
+              onClick={() => {
+                setPublishMenuOpen(false);
+                setHeaderMenuOpen((open) => !open);
+              }}
+            >
+              <span className="material-symbols-outlined" aria-hidden>more_vert</span>
+            </button>
+            {headerMenuOpen && (
+              <div className="ab-header-menu" role="menu">
+                {!isScratchCreate && (
+                  <button
+                    type="button"
+                    className="ab-header-menu-item"
+                    role="menuitem"
+                    onClick={handleOpenVersionHistory}
+                  >
+                    Version history
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="ab-header-menu-item ab-header-menu-item--danger"
+                  role="menuitem"
+                  onClick={handleDeleteAgent}
+                >
+                  Delete
+                </button>
               </div>
             )}
           </div>
@@ -3616,8 +3699,8 @@ export default function AgentBuilder({
   );
 
   const STATUS_BADGE_CLASS = {
-    Running: 'ab-header-status--running',
-    Paused: 'ab-header-status--paused',
+    Active: 'ab-header-status--active',
+    Inactive: 'ab-header-status--inactive',
     Draft: 'ab-header-status--draft',
   };
   const statusBadgeClass = STATUS_BADGE_CLASS[agentStatus] || 'ab-header-status--draft';
@@ -3675,10 +3758,15 @@ export default function AgentBuilder({
                         <span className="rr-chrome-identity__version-stamp">
                           {selectedVersion?.stamp || selectedVersion?.title}
                         </span>
-                        {viewingLiveVersion && (
-                          <span className="ab-header-status ab-header-status--running ab-header-status--dot">
-                            Running
+                        {/* Keyed off the version's own status, not `hideVersionActions` —
+                            that also covers the draft, which must not read "Active". */}
+                        {selectedVersion?.status === 'Active' && (
+                          <span className="ab-header-status ab-header-status--active ab-header-status--dot">
+                            Active
                           </span>
+                        )}
+                        {selectedVersion?.status === 'Draft' && (
+                          <span className="ab-header-status ab-header-status--draft">Draft</span>
                         )}
                       </div>
                     </div>
@@ -3719,9 +3807,9 @@ export default function AgentBuilder({
                             <button
                               type="button"
                               className="ab-header-status__view-live"
-                              onClick={() => setAgentStatus('Running')}
+                              onClick={handleViewActiveVersion}
                             >
-                              View live
+                              View active version
                             </button>
                           </span>
                         ) : (
@@ -3735,8 +3823,8 @@ export default function AgentBuilder({
                 </div>
               )}
 
-              {/* Exploration renders this trigger in the bottom editor row instead (GraphControls). */}
-              {!viewOnly && !explorationChrome && (
+              {/* Exploration and combined-controls (Response agents Sep1) render this trigger in the bottom editor row instead (GraphControls). */}
+              {!viewOnly && !explorationChrome && !combineControlsLeft && (
                 <div className="rr-chrome-help-wrap">
                   <Tooltip content="Help center" variant="brief" side="bottom">
                     <button
@@ -3923,6 +4011,7 @@ export default function AgentBuilder({
               {versionHistoryOpen && !viewOnly && (
                 <VersionHistoryPanel
                   variant={versionHistoryMode ? 'canvas' : 'default'}
+                  versions={versionHistoryList}
                   selectedId={versionHistorySelectedId}
                   onSelect={setVersionHistorySelectedId}
                   onClose={closeVersionHistory}
@@ -4011,8 +4100,9 @@ export default function AgentBuilder({
               canUndo={historyPast.length > 0}
               canRedo={historyFuture.length > 0}
               hideUndoRedo={versionHistoryOpen}
-              onHelpToggle={explorationChrome ? toggleHelpCenter : null}
+              onHelpToggle={(explorationChrome || combineControlsLeft) ? toggleHelpCenter : null}
               helpOpen={helpCenterOpen}
+              combineControlsLeft={combineControlsLeft}
               singleAddStepSearch={sep1Chrome}
               onRun={() => {
                 if (isReviewResponseAgent) return;
@@ -4143,6 +4233,64 @@ export default function AgentBuilder({
                     onClick={handleViewPublishErrors}
                   >
                     View errors
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+
+          {/* ─── Delete agent confirm (viewport overlay) ─── */}
+          {deleteConfirmOpen && createPortal(
+            <div
+              className={`ab-confirm-overlay${
+                rightPanelOpen
+                  ? rightPanelWide
+                    ? ' ab-confirm-overlay--rhs-wide'
+                    : ' ab-confirm-overlay--rhs-open'
+                  : ''
+              }`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setDeleteConfirmOpen(false);
+              }}
+            >
+              <div
+                className="ab-confirm-dialog"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ab-delete-confirm-title"
+              >
+                <div className="ab-confirm-dialog__header">
+                  <h2 id="ab-delete-confirm-title" className="ab-confirm-dialog__title">
+                    Delete agent?
+                  </h2>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                    className="ab-confirm-dialog__close"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <p className="ab-confirm-dialog__body">
+                  Are you sure you want to delete this agent? This action cannot be undone.
+                </p>
+                <div className="ab-confirm-dialog__footer">
+                  <button
+                    type="button"
+                    className="ab-confirm-dialog__cancel"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="ab-confirm-dialog__primary ab-confirm-dialog__primary--danger"
+                    onClick={handleConfirmDeleteAgent}
+                  >
+                    Delete
                   </button>
                 </div>
               </div>
