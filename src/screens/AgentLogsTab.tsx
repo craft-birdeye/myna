@@ -1,4 +1,4 @@
-import { Chip, DataTable, Tooltip, type ChipVariant, type Column } from '../components'
+import { Chip, DataTable, Icon, Tooltip, type ChipVariant, type Column } from '../components'
 import { REVIEW_SOURCE_LOGOS } from '../data/reviewSourceLogos'
 import {
   HEALTHCARE_LOGS_ROWS,
@@ -161,7 +161,15 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
 ]
 
-const RATING_CELL = (v: unknown) => <span>{typeof v === 'number' ? `${v} star` : 'No rating'}</span>
+const RATING_CELL = (v: unknown) =>
+  typeof v === 'number' ? (
+    <span className="inline-flex items-center gap-xs">
+      {v}
+      <Icon name="star" size={14} fill className="text-rating-star" />
+    </span>
+  ) : (
+    <span>No rating</span>
+  )
 const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
 const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
 
@@ -208,7 +216,7 @@ const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   { key: 'contact', label: 'Reviewer name', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
   { key: 'rating', label: 'Review rating', width: 140, truncate: false, render: RATING_CELL },
   { key: 'source', label: 'Review source', width: 160, sortable: true, truncate: false, render: SOURCE_CELL },
-  { key: 'comment', label: 'Comment', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'comment', label: 'Review summary', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
 ]
 
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {

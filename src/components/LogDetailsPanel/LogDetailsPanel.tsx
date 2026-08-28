@@ -25,6 +25,7 @@ import { REMINDER_CONVERSATION_AI_SUMMARY } from '../../data/reminderInboxConver
 import { ShareFeedbackModal } from '../ShareFeedbackModal/ShareFeedbackModal'
 import { Toast } from '../Toast/Toast'
 import { Tooltip } from '../Tooltip/Tooltip'
+import '../../workflow/Molecules/Inputs/prompt-chip.css'
 import type {
   LogDetailsPanelProps,
   LogToolCall,
@@ -655,7 +656,7 @@ function CallDetailsTab({
   sidNumber: string
   startTime: string
   callEndReason: string
-  routedVia: string
+  routedVia?: string
   callEndResultBadge?: string
   userRating?: string
 }) {
@@ -666,8 +667,7 @@ function CallDetailsTab({
       <MetaField label="Duration" value={formatDurationLabel(durationSecs)} />
       <MetaField label="Call SID" value={sidNumber} />
       <MetaField label="Start time" value={startTime} />
-      <CallEndReasonField reason={callEndReason} resultBadge={callEndResultBadge} />
-      <MetaField label="Routed via" value={routedVia} />
+      {routedVia ? <MetaField label="Routed via" value={routedVia} /> : null}
       {userRating ? (
         <div>
           <p className="m-0 text-small text-text-tertiary">User rating</p>
@@ -676,6 +676,9 @@ function CallDetailsTab({
           </div>
         </div>
       ) : null}
+      <div className="col-span-2">
+        <CallEndReasonField reason={callEndReason} resultBadge={callEndResultBadge} />
+      </div>
     </div>
   )
 }
@@ -809,9 +812,19 @@ function NestedObjectBlock({
 
 /** "Show info" dropdown under an agent bubble — reveals LLM response time / TTS / knowledge base
  *  / tool response time meta. Tool calls themselves render separately via `ToolCallLine`. */
-/** A tool call this turn made, rendered as its own centered line (matching the style of system
- *  events like "Routed to appointment booking agent") instead of an inline pill — click to
- *  expand its structured output below it. */
+const TRANSCRIPT_TOOL_CHIP_CLASS =
+  'prompt-chip prompt-chip--tool m-0 h-8 w-fit max-w-[85%] overflow-hidden p-0 pr-xs'
+
+function TranscriptToolChipSwatch() {
+  return (
+    <span className="prompt-chip-swatch prompt-chip-swatch--tool !h-full self-stretch">
+      <span className="material-symbols-outlined prompt-chip-mat-icon">build</span>
+    </span>
+  )
+}
+
+/** A tool call this turn made — tool chip (same as procedure prompt chips), right-aligned
+ *  and sized to its label. Expand matches the agent bubble max width. */
 function ToolCallLine({ tool }: { tool: LogToolCall }) {
   const [open, setOpen] = useState(false)
   const [inputsOpen, setInputsOpen] = useState(false)
@@ -830,21 +843,29 @@ function ToolCallLine({ tool }: { tool: LogToolCall }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-sm py-sm">
+    <div className="flex flex-col items-end gap-sm py-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-xs text-small text-text-tertiary hover:text-text-secondary"
+        className={`${TRANSCRIPT_TOOL_CHIP_CLASS} cursor-pointer appearance-none outline-none`}
       >
-        <Icon name="build" size={16} className="shrink-0" />
-        {tool.name}
-        <Icon name="check_circle" size={16} fill className="shrink-0 text-accent-positive" />
-        {tool.durationLabel && <span className="shrink-0 whitespace-nowrap">• {tool.durationLabel}</span>}
-        <Icon name={open ? 'expand_less' : 'expand_more'} size={16} className="shrink-0" />
+        <TranscriptToolChipSwatch />
+        <span className="prompt-chip-label">{tool.name}</span>
+        <Icon name="check_circle" size={14} fill className="shrink-0 text-accent-positive" />
+        {tool.durationLabel && (
+          <span className="shrink-0 whitespace-nowrap text-small text-text-tertiary">
+            • {tool.durationLabel}
+          </span>
+        )}
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          size={16}
+          className="shrink-0 text-text-tertiary"
+        />
       </button>
 
       {open && (
-        <div className="relative w-[380px] max-w-full rounded-lg bg-surface-l2 px-md py-md">
+        <div className="relative w-[85%] rounded-lg border border-border-strong bg-surface-muted px-md py-md">
           <div className="absolute right-md top-md z-[1]">
             <Tooltip content="Copy" variant="brief">
               <button
@@ -973,8 +994,11 @@ function TranscriptEntry({
 }) {
   if (entry.role === 'system') {
     return (
-      <div className="py-sm">
-        <ChatSystemLabel text={entry.text} />
+      <div className="flex justify-end py-sm">
+        <span className={TRANSCRIPT_TOOL_CHIP_CLASS}>
+          <TranscriptToolChipSwatch />
+          <span className="prompt-chip-label">{entry.text}</span>
+        </span>
       </div>
     )
   }
@@ -1060,6 +1084,8 @@ export function LogDetailsPanel({
   showTranscriptTranslation = false,
 }: LogDetailsPanelProps) {
   const isReminder = agentName.startsWith('Reminder agent')
+  const isFrontDesk = agentName.startsWith('Front desk agent')
+  const transcriptRoutedVia = isFrontDesk ? undefined : routedVia
   const steps = stepsProp ?? (isReminder ? REMINDER_CALL_LOG_STEPS : CALL_LOG_STEPS)
   // A purely text/web-chat conversation never recorded a call — no waveform to show.
   const hasVoiceCall = row.channel.toLowerCase().includes('voice')
@@ -1202,7 +1228,7 @@ export function LogDetailsPanel({
                             sidNumber={sidNumber}
                             startTime={startTimeLabel(row.timestamp)}
                             callEndReason={callEndReason}
-                            routedVia={routedVia}
+                            routedVia={transcriptRoutedVia}
                             callEndResultBadge={callEndResultBadge}
                             userRating={displayUserRating}
                           />
@@ -1250,7 +1276,7 @@ export function LogDetailsPanel({
                         sidNumber={sidNumber}
                         startTime={startTimeLabel(row.timestamp)}
                         callEndReason={callEndReason}
-                        routedVia={routedVia}
+                        routedVia={transcriptRoutedVia}
                         callEndResultBadge={callEndResultBadge}
                         userRating={displayUserRating}
                       />

@@ -96,21 +96,22 @@ export function ReviewCardBody({ review, className = '', stacked = false }: Revi
 
       {review.reply && (
         <div className="mt-lg rounded-md bg-surface-l2 p-xl">
-          <div className="flex flex-wrap items-center gap-xs text-body text-text-secondary">
-            <span>Posted on</span>
-            {REVIEW_SOURCE_LOGOS[review.reply.channel] ? (
-              <Tooltip variant="brief" content={review.reply.channel}>
-                <img
-                  src={REVIEW_SOURCE_LOGOS[review.reply.channel]}
-                  alt={review.reply.channel}
-                  className="size-[16px]"
-                />
-              </Tooltip>
-            ) : (
-              <span className="text-text-action">{review.reply.channel}</span>
-            )}
-            <span>by {review.reply.agentName}</span>
-            <span className="text-text-tertiary">•</span>
+          <div className="flex flex-col gap-xs text-body text-text-secondary">
+            <div className="flex flex-wrap items-center gap-xs">
+              <span>Posted on</span>
+              {REVIEW_SOURCE_LOGOS[review.reply.channel] ? (
+                <Tooltip variant="brief" content={review.reply.channel}>
+                  <img
+                    src={REVIEW_SOURCE_LOGOS[review.reply.channel]}
+                    alt={review.reply.channel}
+                    className="size-[16px]"
+                  />
+                </Tooltip>
+              ) : (
+                <span className="text-text-action">{review.reply.channel}</span>
+              )}
+              <span>by {review.reply.agentName}</span>
+            </div>
             <span>{review.reply.postedAt}</span>
           </div>
           <p className="mt-sm text-body text-text-primary">{review.reply.text}</p>
