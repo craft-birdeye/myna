@@ -117,10 +117,11 @@ export default {
         '4xl': '40px', // Spacing/4xl — page section gaps
       },
       borderRadius: {
-        sm: '4px', // Corner Radius/sm (Default-Web)
-        md: '8px', // Corner Radius/md (Default-Mobile)
-        lg: '12px', // Corner Radius/lg
-        xl: '16px', // Corner Radius/xl
+        xs: '8px',
+        sm: '8px', // Corner Radius — buttons, inputs, dropdowns, menus (canonical web chrome)
+        md: '8px',
+        lg: '8px',
+        xl: '8px',
         full: '9999px',
       },
       boxShadow: {

@@ -15,3 +15,6 @@ vite.config.d.ts
 vite.config.js.timestamp-*.mjs
 dummy/
 .vercel
+
+# Local graphify knowledge graph (regenerated via `graphify update`/`cluster-only` — see CLAUDE.md §18)
+graphify-out/

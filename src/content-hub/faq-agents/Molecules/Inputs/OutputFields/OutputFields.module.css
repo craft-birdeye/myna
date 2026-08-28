@@ -35,7 +35,7 @@
 
 .chipContainer {
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 16px 10px;
   display: flex;
   flex-direction: column;
@@ -88,7 +88,7 @@
 .typePicker {
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   min-width: 172px;
   overflow: hidden;
@@ -113,7 +113,7 @@
 .typePickerSwatch {
   width: 28px;
   height: 28px;
-  border-radius: 4px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;

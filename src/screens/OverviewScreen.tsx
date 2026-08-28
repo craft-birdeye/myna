@@ -469,7 +469,7 @@ function AgentCard({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onClick={clickable ? onOpen : undefined}
-      className={`group relative flex flex-col rounded-md border border-border bg-surface p-xl transition-colors ${
+      className={`group relative flex flex-col rounded-md border border-[#E9E9E9] bg-white p-xl transition-colors ${
         draggable ? 'cursor-grab active:cursor-grabbing' : clickable ? 'cursor-pointer hover:border-border-selected hover:bg-surface-hover' : ''
       }`}
     >

@@ -57,7 +57,7 @@
   z-index: 200;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(33, 33, 33, 0.15);
   overflow: hidden;
 }
@@ -165,7 +165,7 @@
   flex-shrink: 0;
   padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #e8f0fd;
   cursor: pointer;
   color: #1976d2;
@@ -203,7 +203,7 @@
   flex-shrink: 0;
   padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background: none;
   cursor: pointer;
   color: #8f8f8f;
