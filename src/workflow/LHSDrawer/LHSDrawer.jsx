@@ -369,13 +369,13 @@ export const REVIEWS_TASK_SUB_ITEMS = {
         description: 'Manage review tags and their descriptions',
       },
       {
-        label: 'Response generation',
-        description: 'Assemble the final message from the drafted strategy',
+        label: 'Generate response',
+        description: 'Assembles the response using the drafted strategy, extracted details, and brand voice',
       },
       {
         label: 'Review analysis',
         description:
-          'Detects what the reviewer is talking about, maps it to the business\' vocabulary, score severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+          'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
       },
       {
         label: 'Triage review',
@@ -383,9 +383,9 @@ export const REVIEWS_TASK_SUB_ITEMS = {
           'The system evaluates each review to determine if a response is needed, filtering out spam, irrelevant content, or policy violations.',
       },
       {
-        label: 'Handle response',
+        label: 'Route response for approval or publish',
         description:
-          'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
+          'Sends the response automatically or flags it for human approval, based on your review settings',
       },
       {
         label: 'Select template',

@@ -270,9 +270,13 @@ const TASK_DROP_DEFAULTS = {
   'Fetch data from external app': { description: 'Retrieve data from a connected external application' },
   'Trigger external webhook': { description: 'Fire a webhook to an external system' },
   // Legacy leaf names still used by older workflows / add-step shortcuts
+  'Extract review details': {
+    description:
+      'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
+  },
   'Review details extraction': {
     description:
-      'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+      'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
   },
   'Review responder': { description: 'Reply to the review using the generated response' },
   'Message assembly': {
@@ -291,9 +295,18 @@ const TASK_DROP_DEFAULTS = {
     description: 'Add tags to a review',
     selectedTools: ['assign-tags'],
   },
+  'Generate response': {
+    description:
+      'Assembles the response using the drafted strategy, extracted details, and brand voice',
+  },
+  'Route response for approval or publish': {
+    description:
+      'Sends the response automatically or flags it for human approval, based on your review settings',
+    selectedTools: ['handle-response'],
+  },
   'Handle response': {
     description:
-      'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
+      'Sends the response automatically or flags it for human approval, based on your review settings',
     selectedTools: ['handle-response'],
   },
 };

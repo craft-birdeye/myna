@@ -1221,50 +1221,50 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         id: 'rr-4',
         flowType: 'task' as const,
         data: {
-          title: 'Review details extraction',
+          title: 'Extract review details',
           subtype: 'Custom',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+            'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
         },
       },
       {
         id: 'rr-5',
         flowType: 'task' as const,
         data: {
-          title: 'Response generation',
+          title: 'Generate response',
           subtype: 'Custom',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+            'Assembles the response using the drafted strategy, extracted details, and brand voice',
         },
       },
       {
         id: 'rr-6',
         flowType: 'task' as const,
         data: {
-          title: 'Handle response',
+          title: 'Route response for approval or publish',
           subtype: 'Integration',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
+            'Sends the response automatically or flags it for human approval, based on your review settings',
         },
       },
     ],
   },
   'rr-4': {
-    taskName: 'Review details extraction',
+    taskName: 'Extract review details',
     description:
-      'Detects what the reviewer is talking about, maps it to the business’s vocabulary, scores severity, identifies staff mentioned and competitors, and flags relevant business context details.',
+      'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
     llmModel: 'Thinking',
     contextFields: [
       { value: 'Location.name', type: 'variable' },
@@ -1304,9 +1304,9 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'rr-5': {
-    taskName: 'Response generation',
+    taskName: 'Generate response',
     description:
-      'Assemble the final message using the drafted strategy, the extracted details, and the brand voice.',
+      'Assembles the response using the drafted strategy, extracted details, and brand voice',
     llmModel: 'Balanced',
     contextFields: [
       { value: 'Location.brand', type: 'variable' },
@@ -1351,9 +1351,9 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'rr-6': {
-    taskName: 'Handle response',
+    taskName: 'Route response for approval or publish',
     description:
-      'Decide what the agent will do with the response composed for a review — have a human in the loop or reply automatically.',
+      'Sends the response automatically or flags it for human approval, based on your review settings',
     selectedTools: ['handle-response'],
   },
   'rr-3-path-fallback': {
@@ -1368,22 +1368,22 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         id: 'rr-7',
         flowType: 'task' as const,
         data: {
-          title: 'Send an email alert',
+          title: 'Send email alert',
           subtype: 'Integration',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Alerts specific users when a review has been marked as SPAM and user has to take an action to flag it on the review site.',
+            'Notifies your team when a review is marked as spam and needs manual action on the review site',
         },
       },
     ],
   },
   'rr-7': {
-    taskName: 'Send an email alert',
+    taskName: 'Send email alert',
     description:
-      'Alerts specific users when a review has been marked as SPAM and user has to take an action to flag it on the review site.',
+      'Notifies your team when a review is marked as spam and needs manual action on the review site',
     selectedTools: ['send-email'],
   },
 }

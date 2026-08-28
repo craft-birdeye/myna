@@ -33,8 +33,8 @@ export const AGENT_INSTANCE_ISSUES: Record<string, AgentIssue[]> = {
     },
     {
       id: 'rr-north-handle-response',
-      title: 'Handle response is not configured',
-      description: 'Set the response text and posting delay on the Handle response task.',
+      title: 'Route response for approval or publish is not configured',
+      description: 'Set the response text and posting delay on the Route response for approval or publish task.',
       nodeId: 'rr-6',
     },
   ],
