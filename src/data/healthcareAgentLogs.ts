@@ -17,6 +17,8 @@ export interface HealthcareLogRow {
   executedNodeIds?: string[]
   /** Review-response rows only: star rating and reviewer comment on the underlying review. */
   rating?: number
+  /** Front desk (sep 1 / exploration) logs: post-call user rating, 1–5. Absent when the caller did not rate. */
+  userRating?: number
   comment?: string
   /** Review-response rows only: the platform's review id and the business location reviewed. */
   reviewId?: string
