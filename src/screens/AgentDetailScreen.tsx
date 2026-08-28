@@ -189,6 +189,12 @@ const TABS: Tab[] = [
   { id: 'library', label: 'Library' },
 ]
 
+const EXPLORATION_DETAIL_TABS: Tab[] = [
+  { id: 'agents', label: 'Agents' },
+  { id: 'library', label: 'Library' },
+  { id: 'outcomes', label: 'Outcomes' },
+]
+
 const STATUS_VARIANT: Record<string, ChipVariant> = {
   Active: 'success',
   Inactive: 'warning',
@@ -7109,16 +7115,17 @@ function HistoryChatReplay({
 }
 
 export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed }: AgentDetailScreenProps) {
+  const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
+  const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
+  const isExplorationAgents = isAgentExplorationChrome(navId)
+  const isSep1Agents = Boolean(navId?.includes('sep-1'))
+  const useExplorationOutcomesTab = isExplorationAgents && !isSep1Agents
   const [activeTab, setActiveTab] = useState('agents')
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('list')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
-  const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
-  const isExplorationAgents = isAgentExplorationChrome(navId)
-  const isSep1Agents = Boolean(navId?.includes('sep-1'))
   const showExplorationAgentsToggle =
     isExplorationAgents && !isSep1Agents && activeTab === 'agents'
   const useExplorationGrid =
@@ -7128,6 +7135,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   )
   const [selectedInstanceDisplayName, setSelectedInstanceDisplayName] = useState<string | null>(null)
   const [instanceInitialTab, setInstanceInitialTab] = useState(pendingInstanceView?.tab ?? 'outcomes')
+
+  useEffect(() => {
+    setActiveTab('agents')
+  }, [navId])
 
   useEffect(() => {
     if (!pendingInstanceView) return
@@ -8236,13 +8247,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               {/* Tabs */}
               <div className="px-2xl">
                 <Tabs
-                  tabs={TABS}
+                  tabs={useExplorationOutcomesTab ? EXPLORATION_DETAIL_TABS : TABS}
                   activeTab={activeTab}
+                  showBaseline={false}
                   onChange={setActiveTab}
                 />
               </div>
 
-              {activeTab === 'agents' ? (
+              {activeTab === 'outcomes' && useExplorationOutcomesTab ? (
                 <>
                   <div className="px-2xl pt-lg">
                     <MetricTiles
@@ -8274,6 +8286,43 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setSavingsModalOpen(false)
                     }}
                   />
+                </>
+              ) : activeTab === 'agents' ? (
+                <>
+                  {!useExplorationOutcomesTab && (
+                    <>
+                      <div className="px-2xl pt-lg">
+                        <MetricTiles
+                          metrics={displayMetrics}
+                          renderTileAction={
+                            isFrontdesk || isReviewResponse
+                              ? (metric) =>
+                                  metric.id === 'timeSaved' ? (
+                                    <button
+                                      type="button"
+                                      aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
+                                      onClick={() => setSavingsModalOpen(true)}
+                                      className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                    >
+                                      <Icon name="tune" size={18} />
+                                    </button>
+                                  ) : null
+                              : undefined
+                          }
+                        />
+                      </div>
+                      <EstimateSavingsModal
+                        open={savingsModalOpen}
+                        onClose={() => setSavingsModalOpen(false)}
+                        initialValues={savingsSettings}
+                        copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
+                        onSave={(values) => {
+                          setSavingsSettings(values)
+                          setSavingsModalOpen(false)
+                        }}
+                      />
+                    </>
+                  )}
                   {useExplorationGrid ? (
                     <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {

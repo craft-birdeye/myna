@@ -1055,6 +1055,52 @@ function FlowCanvasInner({
     setZoom(Math.round(z * 100));
   }, []);
 
+  // View-only canvases (log run view, workflow tab) — Ctrl/Cmd + +/- and numpad zoom.
+  useEffect(() => {
+    if (!viewOnly) return undefined;
+
+    const ZOOM_STEP = 0.25;
+
+    const onKeyDown = (e) => {
+      if (e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+
+      const mod = e.ctrlKey || e.metaKey;
+      const numpad = e.key === 'Add' || e.key === 'Subtract';
+      const canvasFocused = Boolean(canvasRef.current?.contains(document.activeElement));
+      const zoomInKey = e.key === '=' || e.key === '+' || e.key === 'Add';
+      const zoomOutKey = e.key === '-' || e.key === '_' || e.key === 'Subtract';
+
+      const applyZoom = (next) => {
+        const clamped = Math.min(2, Math.max(0.1, +next.toFixed(2)));
+        zoomTo(clamped, { duration: 200 });
+      };
+
+      if (mod && zoomInKey) {
+        e.preventDefault();
+        applyZoom(getViewport().zoom + ZOOM_STEP);
+        return;
+      }
+      if (mod && zoomOutKey) {
+        e.preventDefault();
+        applyZoom(getViewport().zoom - ZOOM_STEP);
+        return;
+      }
+      if (mod && e.key === '0') {
+        e.preventDefault();
+        applyZoom(initialZoom);
+        return;
+      }
+      if (numpad && canvasFocused) {
+        e.preventDefault();
+        if (e.key === 'Add') applyZoom(getViewport().zoom + ZOOM_STEP);
+        if (e.key === 'Subtract') applyZoom(getViewport().zoom - ZOOM_STEP);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewOnly, zoomTo, getViewport, initialZoom]);
+
   return (
     <div
       ref={canvasRef}
@@ -1062,6 +1108,8 @@ function FlowCanvasInner({
       style={{
         '--flow-connector-gap': `${FLOW_CONNECTOR_GAP}px`,
       }}
+      tabIndex={viewOnly ? -1 : undefined}
+      onMouseDown={viewOnly ? () => canvasRef.current?.focus() : undefined}
       onDragOver={viewOnly ? undefined : handleDragOver}
       onDrop={viewOnly ? undefined : handleDrop}
     >

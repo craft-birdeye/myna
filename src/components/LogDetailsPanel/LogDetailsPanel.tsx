@@ -14,8 +14,6 @@ import { InfoTooltip } from '../InfoTooltip/InfoTooltip'
 import { LanguageFlag } from '../LanguageSelectMenu/LanguageSelectMenu'
 import { RefChip } from '../RefChip/RefChip'
 import {
-  CallTranscriptSection,
-  CollapsibleCallDetails,
   getUserRatingForLogStatus,
   RunDetailsPanel,
   UserRatingDisplay,
@@ -47,6 +45,7 @@ function normalizeChannel(channel: string): Channel {
 export const CALL_LOG_STEPS: RunLogStep[] = [
   {
     id: 'step-1',
+    nodeId: 'trigger',
     type: 'trigger',
     stepNumber: 1,
     title: 'Channel',
@@ -64,6 +63,7 @@ export const CALL_LOG_STEPS: RunLogStep[] = [
   },
   {
     id: 'step-2',
+    nodeId: 'procedures',
     type: 'procedures',
     stepNumber: 2,
     title: 'Follow procedures',
@@ -451,9 +451,9 @@ function formatDurationLabel(secs: number): string {
   return `${mins}m ${String(rem).padStart(2, '0')}s`
 }
 
-const ORIGINAL_TRANSCRIPT = {
-  id: 'original',
-  label: 'Original transcript',
+const DEFAULT_TRANSCRIPT_LANGUAGE = {
+  id: 'en',
+  label: 'English',
   countryCode: 'us',
 } as const
 
@@ -472,16 +472,16 @@ const TRANSLATE_LANGUAGES = [
 
 function TranscriptTranslationControl() {
   const [open, setOpen] = useState(false)
-  const [selectedId, setSelectedId] = useState<string>(ORIGINAL_TRANSCRIPT.id)
+  const [selectedId, setSelectedId] = useState<string>(DEFAULT_TRANSCRIPT_LANGUAGE.id)
   const rootRef = useRef<HTMLDivElement>(null)
 
   const selected =
-    selectedId === ORIGINAL_TRANSCRIPT.id
-      ? ORIGINAL_TRANSCRIPT
-      : TRANSLATE_LANGUAGES.find((l) => l.id === selectedId) ?? ORIGINAL_TRANSCRIPT
+    selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id
+      ? DEFAULT_TRANSCRIPT_LANGUAGE
+      : TRANSLATE_LANGUAGES.find((l) => l.id === selectedId) ?? DEFAULT_TRANSCRIPT_LANGUAGE
 
   const triggerLabel =
-    selected.id === ORIGINAL_TRANSCRIPT.id ? ORIGINAL_TRANSCRIPT.label : selected.label
+    selected.id === DEFAULT_TRANSCRIPT_LANGUAGE.id ? DEFAULT_TRANSCRIPT_LANGUAGE.label : selected.label
 
   useEffect(() => {
     if (!open) return
@@ -501,7 +501,7 @@ function TranscriptTranslationControl() {
   }, [open])
 
   return (
-    <div ref={rootRef} className="relative mt-md">
+    <div ref={rootRef} className="relative">
       <button
         type="button"
         aria-expanded={open}
@@ -524,26 +524,26 @@ function TranscriptTranslationControl() {
           <button
             type="button"
             role="option"
-            aria-selected={selectedId === ORIGINAL_TRANSCRIPT.id}
+            aria-selected={selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id}
             onClick={() => {
-              setSelectedId(ORIGINAL_TRANSCRIPT.id)
+              setSelectedId(DEFAULT_TRANSCRIPT_LANGUAGE.id)
               setOpen(false)
             }}
             className={`mx-sm flex items-center gap-sm rounded-sm px-sm py-sm text-left ${
-              selectedId === ORIGINAL_TRANSCRIPT.id
+              selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id
                 ? 'bg-surface-selected'
                 : 'hover:bg-surface-hover'
             }`}
           >
             <LanguageFlag
-              countryCode={ORIGINAL_TRANSCRIPT.countryCode}
-              label={ORIGINAL_TRANSCRIPT.label}
+              countryCode={DEFAULT_TRANSCRIPT_LANGUAGE.countryCode}
+              label={DEFAULT_TRANSCRIPT_LANGUAGE.label}
               size="sm"
             />
             <span className="min-w-0 flex-1 truncate text-body text-text-primary">
-              {ORIGINAL_TRANSCRIPT.label}
+              {DEFAULT_TRANSCRIPT_LANGUAGE.label}
             </span>
-            {selectedId === ORIGINAL_TRANSCRIPT.id && (
+            {selectedId === DEFAULT_TRANSCRIPT_LANGUAGE.id && (
               <Icon name="check" size={18} className="shrink-0 text-text-primary" />
             )}
           </button>
@@ -1058,6 +1058,7 @@ export function LogDetailsPanel({
   callEndResultBadge,
   userRating,
   showTranscriptTranslation = false,
+  onStepFocus,
 }: LogDetailsPanelProps) {
   const isReminder = agentName.startsWith('Reminder agent')
   const steps = stepsProp ?? (isReminder ? REMINDER_CALL_LOG_STEPS : CALL_LOG_STEPS)
@@ -1152,6 +1153,20 @@ export function LogDetailsPanel({
     />
   ))
 
+  const callDetailsTabContent = showCallDetails && hasVoiceCall ? (
+    <CallDetailsTab
+      callerNumber={displayCaller}
+      languageDetected={languageDetected}
+      durationSecs={totalSecs}
+      sidNumber={sidNumber}
+      startTime={startTimeLabel(row.timestamp)}
+      callEndReason={callEndReason}
+      routedVia={routedVia}
+      callEndResultBadge={callEndResultBadge}
+      userRating={displayUserRating}
+    />
+  ) : undefined
+
   const resumeAutoScrollButton = !autoScroll && (
     <button
       type="button"
@@ -1170,6 +1185,8 @@ export function LogDetailsPanel({
         showHeader={false}
         showCallRecording={hasVoiceCall}
         conversationTabLabel={hasVoiceCall ? 'Call transcript' : 'Conversation'}
+        callDetailsContent={callDetailsTabContent}
+        onStepFocus={onStepFocus}
         conversationContent={
           isReminder ? (
             <div className="relative flex h-full flex-col">
@@ -1193,37 +1210,17 @@ export function LogDetailsPanel({
                   {hasVoiceCall && (
                     <>
                       <ChatSystemLabel text="Voice call started" />
-                      {showCallDetails && (
-                        <CollapsibleCallDetails userRating={displayUserRating}>
-                          <CallDetailsTab
-                            callerNumber={displayCaller}
-                            languageDetected={languageDetected}
-                            durationSecs={totalSecs}
-                            sidNumber={sidNumber}
-                            startTime={startTimeLabel(row.timestamp)}
-                            callEndReason={callEndReason}
-                            routedVia={routedVia}
-                            callEndResultBadge={callEndResultBadge}
-                            userRating={displayUserRating}
-                          />
-                        </CollapsibleCallDetails>
-                      )}
-                      <div className="sticky top-0 z-10 bg-surface pb-md pt-sm">
-                        <div className="border border-transparent px-lg">
-                          <p className="m-0 mb-sm text-[13px] tracking-[-0.26px] text-[#555]">
-                            Call recording
-                          </p>
-                          <CallRecordingPlayer
-                            audioUrl={audioUrl}
-                            durationSecs={totalSecs}
-                            padded={false}
-                            onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
-                          />
-                        </div>
+                      <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
+                        <CallRecordingPlayer
+                          audioUrl={audioUrl}
+                          durationSecs={totalSecs}
+                          padded={false}
+                          onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                        />
                       </div>
-                      <CallTranscriptSection>
+                      <div className="flex flex-col gap-lg">
                         {transcriptNodes}
-                      </CallTranscriptSection>
+                      </div>
                     </>
                   )}
                   {!hasVoiceCall && transcriptNodes}
@@ -1238,50 +1235,23 @@ export function LogDetailsPanel({
                 onScroll={handleChatScroll}
                 className="min-h-0 flex-1 overflow-y-auto pb-sm [scrollbar-gutter:stable_both-edges]"
               >
-                {/* Top spacing on scrollable content (not the container) so sticky recording
-                 *  can dock flush under the tabs at `top: 0` with no permanent gap. */}
-                {showCallDetails ? (
-                  <div className="pt-lg">
-                    <CollapsibleCallDetails userRating={displayUserRating}>
-                      <CallDetailsTab
-                        callerNumber={displayCaller}
-                        languageDetected={languageDetected}
-                        durationSecs={totalSecs}
-                        sidNumber={sidNumber}
-                        startTime={startTimeLabel(row.timestamp)}
-                        callEndReason={callEndReason}
-                        routedVia={routedVia}
-                        callEndResultBadge={callEndResultBadge}
-                        userRating={displayUserRating}
-                      />
-                    </CollapsibleCallDetails>
-                  </div>
-                ) : hasVoiceCall ? (
-                  <div className="pt-lg" aria-hidden />
-                ) : null}
                 {hasVoiceCall && (
                   <div className="sticky top-0 z-10 bg-surface pb-md pt-sm">
-                    {/* Same inset as Call details label (1px border + px-lg) for title + player. */}
-                    <div className="border border-transparent px-lg">
-                      <p className="m-0 mb-sm text-[13px] tracking-[-0.26px] text-[#555]">
-                        Call recording
-                      </p>
-                      <CallRecordingPlayer
-                        audioUrl={audioUrl}
-                        durationSecs={totalSecs}
-                        padded={false}
-                        onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
-                      />
-                    </div>
+                    <CallRecordingPlayer
+                      audioUrl={audioUrl}
+                      durationSecs={totalSecs}
+                      padded={false}
+                      onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
+                    />
                   </div>
                 )}
-                <div className={`flex flex-col gap-3xl ${hasVoiceCall ? 'mt-lg' : showCallDetails ? '' : 'pt-lg'}`}>
-                  {hasVoiceCall && <CallAiSummary />}
+                <div className={`flex flex-col gap-3xl${hasVoiceCall ? '' : ' pt-lg'}`}>
+                  {hasVoiceCall && <CallAiSummary className="mt-0" />}
                   {hasVoiceCall ? (
-                    <CallTranscriptSection>
+                    <div className="flex flex-col gap-lg">
                       {showTranscriptTranslation && <TranscriptTranslationControl />}
                       {transcriptNodes}
-                    </CallTranscriptSection>
+                    </div>
                   ) : (
                     transcriptNodes
                   )}
