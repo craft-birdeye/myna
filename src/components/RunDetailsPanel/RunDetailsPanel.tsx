@@ -809,6 +809,7 @@ export function RunDetailsPanel({
               { id: 'logs', label: 'Call logs' },
             ]}
             activeTab={tab}
+            showBaseline={false}
             onChange={(id) => setTab(id as PanelTab)}
           />
         </div>

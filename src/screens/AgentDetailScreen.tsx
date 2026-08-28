@@ -8200,7 +8200,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 hideTopIdentity={isExplorationAgents}
                 hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
                 explorationChrome={isExplorationAgents}
-                sep1Chrome={isSep1Agents}
+                sep1Chrome={isExplorationAgents}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}
