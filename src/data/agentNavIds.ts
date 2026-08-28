@@ -31,13 +31,9 @@ export function isAgentExplorationChrome(navId?: string | null) {
   )
 }
 
-/** Labelled LHS stack, single add-step search, outlined icons — Sep 1 variants only. */
+/** Labelled LHS stack, single add-step search, SVG floater icons — all exploration-family canvases (exploration + Sep 1). */
 export function isSep1Chrome(navId?: string | null) {
-  return (
-    navId === RESPONSE_AGENTS_SEP1_NAV_ID ||
-    navId === FRONTDESK_SEP1_NAV_ID ||
-    navId === REMINDER_SEP1_NAV_ID
-  )
+  return isAgentExplorationChrome(navId)
 }
 
 /** LLM task Setup/Configure layout (body tabs, Continue footer) — exploration nav ids only, not Sep 1. Chip two-line collapse applies to all exploration chrome incl. Sep 1. */
