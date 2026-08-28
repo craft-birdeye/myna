@@ -721,10 +721,10 @@ function AgentPerformanceCard({
           )}
           {agent.running > 0 ? (
             <span className="rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
-              {agent.running} running
+              {agent.running} active
             </span>
           ) : (
-            <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Paused</span>
+            <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Inactive</span>
           )}
         </div>
       </div>

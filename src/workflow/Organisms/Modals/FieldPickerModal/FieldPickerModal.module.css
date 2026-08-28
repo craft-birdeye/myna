@@ -233,6 +233,18 @@
   padding: 12px 12px 12px 8px;
   box-sizing: border-box;
   min-height: 100%;
+  --tree-pad: 4px;
+}
+
+.contentHeading {
+  margin: 0 0 10px;
+  padding: 0 var(--tree-pad);
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #0d0d12; /* text/primary — same as prior group title */
 }
 
 /* Card-style category rows — title + count + chevron */
@@ -353,7 +365,7 @@
   align-items: center;
   gap: 4px;
   width: 100%;
-  padding: 2px 4px;
+  padding: 2px var(--tree-pad);
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -364,6 +376,26 @@
 
 .treeToggle:hover {
   background: rgba(0, 0, 0, 0.03);
+}
+
+.treeChevron {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  color: #8f8f8f;
+  flex-shrink: 0;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+}
+
+/* Static header — same left edge as contentHeading / field chips. */
+.treeHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px var(--tree-pad);
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .treeGroupLabel {
@@ -384,12 +416,24 @@
   white-space: nowrap;
 }
 
-.treeChildren {
+/* Field lists — no extra indent; fieldRow pad matches titles. */
+.treeChildren,
+.treeChildrenSingle,
+.treeFlatList {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-left: 10px;
-  padding-left: 12px;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+/* Nested object/group children (e.g. reviewer → properties). */
+.treeChildrenNested {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 0;
+  padding-left: 22px; /* align under parent label after chevron */
 }
 
 .fieldRow {
@@ -397,18 +441,33 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 2px 4px;
+  padding: 2px var(--tree-pad);
   border: none;
-  border-radius: 4px;
-  background: none;
+  border-radius: 4px; /* Corner Radius/sm */
+  background: transparent;
   cursor: pointer;
   text-align: left;
   box-sizing: border-box;
   min-width: 0;
+  transition: background-color 0.12s ease;
 }
 
 .fieldRow:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: #f2f4f7; /* surface/hover */
+}
+
+.fieldRow:active {
+  background: #e5e9f0; /* surface/selected */
+}
+
+.fieldRow:focus {
+  outline: none;
+}
+
+.fieldRow:focus-visible {
+  background: #e8f1fc; /* chip/info/bg */
+  outline: 2px solid #1976d2; /* primary */
+  outline-offset: -2px;
 }
 
 .chip {
@@ -417,11 +476,27 @@
   gap: 4px;
   height: 26px;
   padding: 1px 6px 1px 0;
-  background: #fff;
+  background: #ffffff;
   border: 1px solid #d1e5f9;
   border-radius: 4px;
   flex-shrink: 0;
   box-sizing: border-box;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.fieldRow:hover .chip,
+.fieldRow:focus-visible .chip {
+  border-color: #1976d2; /* primary — interactive chip */
+  background: #ecf5fd;
+  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.16);
+}
+
+.fieldRow:active .chip {
+  border-color: #1565c0; /* primary/hover */
+  background: #e8f1fc;
 }
 
 .chipSwatch {
@@ -433,6 +508,15 @@
   flex-shrink: 0;
   background: #ecf5fd;
   border-right: 1px solid #d1e5f9;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.fieldRow:hover .chipSwatch,
+.fieldRow:focus-visible .chipSwatch {
+  background: #d6ebfa;
+  border-right-color: #90caf9;
 }
 
 .chipSwatch svg {
@@ -447,6 +531,12 @@
   line-height: 16px;
   color: #555555;
   white-space: nowrap;
+  transition: color 0.12s ease;
+}
+
+.fieldRow:hover .chipLabel,
+.fieldRow:focus-visible .chipLabel {
+  color: #0d0d12; /* text/primary */
 }
 
 .sample {

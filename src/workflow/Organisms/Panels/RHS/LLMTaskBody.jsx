@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
 import { FormInput, TextArea, SingleSelect } from '../../../elemental-stubs';
 import SystemPromptInput from '../../../Molecules/Inputs/SystemPromptInput/SystemPromptInput';
 import UserPromptInput from '../../../Molecules/Inputs/UserPromptInput/UserPromptInput';
@@ -282,7 +282,38 @@ function ChipContainer({
   );
 }
 
-export default function LLMTaskBody({
+/** R1/R2/R3: collapsible section with a chevron toggle, matching the `advancedToggle` header style.
+ *  R2 (`bare`) drops the card border/background — label + chevron only, no boxes or divider lines.
+ *  R3 (`bare` + `lined`) is the same bare style but adds a subtle hairline between sections. */
+function AccordionSection({ id, label, open, onToggle, children, bare = false, lined = false }) {
+  return (
+    <div
+      className={`${styles.accordionSection}${bare ? ` ${styles.accordionSectionBare}` : ''}${open && !bare ? ` ${styles.accordionSectionOpen}` : ''}${lined ? ` ${styles.accordionSectionLined}` : ''}`}
+    >
+      <button
+        type="button"
+        className={`${styles.accordionHeader}${bare ? ` ${styles.accordionHeaderBare}` : ''}`}
+        onClick={() => onToggle(id)}
+        aria-expanded={open}
+      >
+        <span className={styles.accordionHeaderLabel}>{label}</span>
+        <span
+          className={`material-symbols-outlined ${styles.accordionChevron}${open ? ` ${styles.accordionChevronOpen}` : ''}`}
+          aria-hidden
+        >
+          expand_more
+        </span>
+      </button>
+      {open && (
+        <div className={`${styles.accordionBody}${bare ? ` ${styles.accordionBodyBare}` : ''}`}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LLMTaskBody = forwardRef(function LLMTaskBody({
   initialValues = {},
   onFieldChange,
   onOpenToolDrawer,
@@ -294,10 +325,23 @@ export default function LLMTaskBody({
   collapseChipsToTwoLines = false,
   /** Option 2: Setup / Configure in the header — legacy prop (body tabs removed). */
   setupConfigureInHeader = false,
+  /** R1/R2/R3: accordion layout — Basic config / Prompts / Fields / Context / Models. */
+  accordionLayout = false,
+  /** R2/R3: same accordion structure as R1, but sections render as plain
+   *  text + chevron rows instead of bordered cards. */
+  accordionBare = false,
+  /** R3 only: adds a subtle hairline between accordion sections (bare style only). */
+  accordionLined = false,
+  /** R4: segmented pill tab bar instead of an accordion — Basic/Prompts/Fields/Context/Models
+   *  each swap the same content pane rather than stacking as collapsible sections. */
+  segmentedLayout = false,
   /** Controlled Setup / Configure tab — legacy prop (body tabs removed). */
   activeTab: activeTabProp,
   onTabChange,
-}) {
+  /** R1/R2/R3/R4: notified whenever the missing-required-field state changes, so the RHS
+   *  footer's Save button can disable itself and show the warning. */
+  onValidationChange,
+}, ref) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
   const [llmModel, setLlmModel] = useState(initialValues.llmModel ?? 'Fast');
@@ -317,7 +361,55 @@ export default function LLMTaskBody({
     return raw.map((item) => typeof item === 'string' ? { value: item, type: 'variable' } : item);
   });
   const [advancedOpen, setAdvancedOpen] = useState(true);
+  const [openAccordionSections, setOpenAccordionSections] = useState({
+    basic: true,
+    prompts: true,
+    fields: false,
+    context: false,
+    models: false,
+  });
+  const toggleAccordionSection = (id) =>
+    setOpenAccordionSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  /** R4: which segment's content pane is currently shown. */
+  const [activeSegment, setActiveSegment] = useState('basic');
   const emit = (field, val) => onFieldChange?.(field, val);
+
+  /** R1 only: which required field (if any) failed the last Save attempt. */
+  const [invalidField, setInvalidField] = useState(null);
+
+  useEffect(() => {
+    onValidationChange?.(invalidField !== null);
+  }, [invalidField]);
+
+  const clearInvalid = (key, val) => {
+    if (invalidField === key && (val ?? '').trim()) setInvalidField(null);
+  };
+
+  useImperativeHandle(ref, () => ({
+    /** Returns true if valid. Otherwise opens the offending accordion, flags the
+     *  first empty required field in order, and returns false. */
+    validate: () => {
+      if (!accordionLayout && !segmentedLayout) return true;
+      const requiredFields = [
+        { key: 'taskName', value: taskName, section: 'basic' },
+        { key: 'description', value: description, section: 'basic' },
+        { key: 'systemPrompt', value: systemPrompt, section: 'prompts' },
+        { key: 'userPrompt', value: userPrompt, section: 'prompts' },
+      ];
+      const firstInvalid = requiredFields.find((f) => !(f.value ?? '').trim());
+      if (!firstInvalid) {
+        setInvalidField(null);
+        return true;
+      }
+      if (accordionLayout) {
+        setOpenAccordionSections((prev) => ({ ...prev, [firstInvalid.section]: true }));
+      } else {
+        setActiveSegment(firstInvalid.section);
+      }
+      setInvalidField(firstInvalid.key);
+      return false;
+    },
+  }));
 
   const updateContextFields = (next) => { setContextFields(next); emit('contextFields', next); };
   const updateInputFields = (next) => { setInputFields(next); emit('inputFields', next); };
@@ -474,19 +566,22 @@ export default function LLMTaskBody({
   const systemPromptSection = (
     <SystemPromptInput
       value={systemPrompt}
-      onChange={(val) => { setSystemPrompt(val); emit('systemPrompt', val); }}
+      onChange={(val) => { setSystemPrompt(val); emit('systemPrompt', val); clearInvalid('systemPrompt', val); }}
       required
+      error={invalidField === 'systemPrompt'}
+      showExpandButton={!accordionLayout && !segmentedLayout}
     />
   );
 
   const userPromptSection = (
     <UserPromptInput
       value={userPrompt}
-      onChange={(val) => { setUserPrompt(val); emit('userPrompt', val); }}
+      onChange={(val) => { setUserPrompt(val); emit('userPrompt', val); clearInvalid('userPrompt', val); }}
       required
       onOpenToolDrawer={onOpenToolDrawer}
       onOpenTool={onOpenTool}
       showTriggerFields
+      error={invalidField === 'userPrompt'}
     />
   );
 
@@ -551,50 +646,171 @@ export default function LLMTaskBody({
     </div>
   );
 
+  const taskNameField = (
+    <FormInput
+      name="taskName"
+      type="text"
+      label={accordionLayout || segmentedLayout ? 'Task name' : 'Action name'}
+      placeholder="Enter name"
+      value={taskName}
+      onChange={(e) => {
+        setTaskName(e.target.value);
+        emit('taskName', e.target.value);
+        clearInvalid('taskName', e.target.value);
+      }}
+      required
+      error={invalidField === 'taskName'}
+    />
+  );
+
+  const descriptionField = (
+    <TextArea
+      name="description"
+      label="Description"
+      placeholder="Enter description"
+      value={description}
+      onChange={(e) => {
+        setDescription(e.target.value);
+        emit('description', e.target.value);
+        clearInvalid('description', e.target.value);
+      }}
+      required
+      noFloatingLabel
+      error={invalidField === 'description'}
+    />
+  );
+
+  if (segmentedLayout) {
+    const SEGMENTS = [
+      { id: 'basic', label: 'Basic' },
+      { id: 'prompts', label: 'Prompts' },
+      { id: 'fields', label: 'Fields' },
+      { id: 'context', label: 'Context' },
+      { id: 'models', label: 'Models' },
+    ];
+    const segmentContent = {
+      basic: <>{taskNameField}{descriptionField}</>,
+      prompts: <>{systemPromptSection}{userPromptSection}</>,
+      fields: <>{inputFieldsSection}{outputFieldsSection}</>,
+      context: contextSection,
+      models: llmModelSection,
+    };
+    return (
+      <div className={styles.segmentedContainer}>
+        <div className={styles.segmentedTrack}>
+          {SEGMENTS.map((segment) => (
+            <button
+              key={segment.id}
+              type="button"
+              className={`${styles.segmentedTab}${activeSegment === segment.id ? ` ${styles.segmentedTabActive}` : ''}`}
+              onClick={() => setActiveSegment(segment.id)}
+              aria-pressed={activeSegment === segment.id}
+            >
+              {segment.label}
+            </button>
+          ))}
+        </div>
+        <div className={styles.segmentedContent}>
+          {segmentContent[activeSegment]}
+        </div>
+      </div>
+    );
+  }
+
+  if (accordionLayout) {
+    return (
+      <div className={`${styles.accordionContainer}${accordionLined ? ` ${styles.accordionContainerLined}` : ''}`}>
+        <AccordionSection
+          id="basic"
+          label="Basic config"
+          open={openAccordionSections.basic}
+          onToggle={toggleAccordionSection}
+          bare={accordionBare}
+          lined={accordionLined}
+        >
+          {taskNameField}
+          {descriptionField}
+        </AccordionSection>
+
+        <AccordionSection
+          id="prompts"
+          label="Prompts"
+          open={openAccordionSections.prompts}
+          onToggle={toggleAccordionSection}
+          bare={accordionBare}
+          lined={accordionLined}
+        >
+          {systemPromptSection}
+          {userPromptSection}
+        </AccordionSection>
+
+        <AccordionSection
+          id="fields"
+          label="Fields"
+          open={openAccordionSections.fields}
+          onToggle={toggleAccordionSection}
+          bare={accordionBare}
+          lined={accordionLined}
+        >
+          {inputFieldsSection}
+          {outputFieldsSection}
+        </AccordionSection>
+
+        <AccordionSection
+          id="context"
+          label="Context"
+          open={openAccordionSections.context}
+          onToggle={toggleAccordionSection}
+          bare={accordionBare}
+          lined={accordionLined}
+        >
+          {contextSection}
+        </AccordionSection>
+
+        <AccordionSection
+          id="models"
+          label="Models"
+          open={openAccordionSections.models}
+          onToggle={toggleAccordionSection}
+          bare={accordionBare}
+          lined={accordionLined}
+        >
+          {llmModelSection}
+        </AccordionSection>
+
+        {collapseChipsToTwoLines && contextModalOpen && (
+          <ContextModal
+            open
+            onClose={() => setContextModalOpen(false)}
+            onSave={handleContextSave}
+            overlayZIndex={2100}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
+          />
+        )}
+
+        {collapseChipsToTwoLines && inputModalOpen && (
+          <AddInputFieldModal
+            onClose={() => setInputModalOpen(false)}
+            onAdd={handleInputAdd}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={`${styles.container}${collapseChipsToOneLine ? ` ${styles.containerExploration}` : ''}`}>
       <div className={styles.essentialsGroup}>
         {collapseChipsToOneLine ? (
           <div className={styles.nameDescriptionGroup}>
-            <FormInput
-              name="taskName"
-              type="text"
-              label="Action name"
-              placeholder="Enter name"
-              value={taskName}
-              onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
-              required
-            />
-            <TextArea
-              name="description"
-              label="Description"
-              placeholder="Enter description"
-              value={description}
-              onChange={(e) => { setDescription(e.target.value); emit('description', e.target.value); }}
-              required
-              noFloatingLabel
-            />
+            {taskNameField}
+            {descriptionField}
           </div>
         ) : (
           <>
-            <FormInput
-              name="taskName"
-              type="text"
-              label="Action name"
-              placeholder="Enter name"
-              value={taskName}
-              onChange={(e) => { setTaskName(e.target.value); emit('taskName', e.target.value); }}
-              required
-            />
-            <TextArea
-              name="description"
-              label="Description"
-              placeholder="Enter description"
-              value={description}
-              onChange={(e) => { setDescription(e.target.value); emit('description', e.target.value); }}
-              required
-              noFloatingLabel
-            />
+            {taskNameField}
+            {descriptionField}
           </>
         )}
 
@@ -646,4 +862,6 @@ export default function LLMTaskBody({
       )}
     </div>
   );
-}
+});
+
+export default LLMTaskBody;

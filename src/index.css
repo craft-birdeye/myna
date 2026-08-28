@@ -99,7 +99,7 @@
 
 @layer components {
   .ai-summary-panel {
-    @apply rounded-sm border px-lg py-md;
+    @apply rounded-sm border px-lg pt-lg pb-md;
     background-color: theme('colors.ai.summary');
     border-color: theme('colors.ai.summary-border');
   }

@@ -1807,14 +1807,14 @@ export default function LHSDrawer({
         tone: 'trigger',
         title: 'Trigger',
         content: triggerContent,
-        searchPlaceholder: 'Search triggers',
+        searchPlaceholder: 'Search trigger',
       },
       Tasks: {
         iconSrc: iconRrTasks,
         tone: 'tasks',
         title: 'Actions',
         content: tasksContent,
-        searchPlaceholder: 'Search actions...',
+        searchPlaceholder: 'Search action',
       },
       Procedures: {
         iconSrc: iconRrProcedures,
@@ -1828,7 +1828,7 @@ export default function LHSDrawer({
         tone: 'controls',
         title: 'Controls',
         content: controlsContent,
-        searchPlaceholder: 'Search controls...',
+        searchPlaceholder: 'Search control',
       },
     };
     const sectionMeta = SECTION_META[forceOpenSection] || SECTION_META.Trigger;

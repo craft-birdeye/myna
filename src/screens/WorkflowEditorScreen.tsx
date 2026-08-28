@@ -73,6 +73,11 @@ interface WorkflowEditorScreenProps {
   /** Shown in the builder header and start node; workflow lookup still uses `agentName`. */
   displayName?: string
   onClose: () => void
+  /**
+   * Agent was deleted from the editor. Distinct from `onClose` because the deleted agent's
+   * instance screen must not be restored — the caller should land on the agent list.
+   */
+  onDeleted?: () => void
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
@@ -112,8 +117,9 @@ export function WorkflowEditorScreen({
   agentName,
   displayName,
   onClose,
+  onDeleted,
   product = 'automotive',
-  agentStatus = 'Running',
+  agentStatus = 'Active',
   wizardDraft = null,
   aiAssistOpen,
   onAiAssistOpenChange,
@@ -247,7 +253,7 @@ export function WorkflowEditorScreen({
           nodeDetails: patchNodeDetails(baseWorkflow.nodeDetails as unknown as Record<string, unknown>) as typeof baseWorkflow.nodeDetails,
         }
 
-  // Create-from-scratch opens an empty canvas — never show "Running".
+  // Create-from-scratch opens an empty canvas — never show "Active".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0
 
@@ -272,6 +278,7 @@ export function WorkflowEditorScreen({
             pageTitle={shownName}
             appTitle={shownName}
             onClose={onClose}
+            onDeleted={onDeleted}
             product={product}
             activeNavId={activeNavId}
             moduleSlug="myna"

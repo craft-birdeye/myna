@@ -22,9 +22,12 @@ export default function RHSDrawer({
         selectedIds={locations.map((loc) => loc.id)}
         onBack={() => setShowLocations(false)}
         onSave={(selectedLocations) => {
+          const list = Array.isArray(selectedLocations)
+            ? selectedLocations
+            : (selectedLocations?.locations || []);
           // Show first 3 as chips, rest as "+ N more"
-          const chips = selectedLocations.slice(0, 3);
-          const moreCount = Math.max(0, selectedLocations.length - 3);
+          const chips = list.slice(0, 3);
+          const moreCount = Math.max(0, list.length - 3);
           onChange?.('locations', chips);
           onChange?.('moreLocationsCount', moreCount);
           setShowLocations(false);

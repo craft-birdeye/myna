@@ -64,6 +64,18 @@
   border-color: #1976d2;
 }
 
+.inputBoxError,
+.inputBoxError:focus-within {
+  border-color: #de1b0c;
+}
+
+.errorText {
+  font-size: 12px;
+  line-height: 16px;
+  color: #de1b0c;
+  font-family: 'Roboto', sans-serif;
+}
+
 .editor {
   position: relative;
   z-index: 1;

@@ -1,7 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export default function GraphControlTooltip({ text, children, above = false }) {
+/**
+ * `disabled` suppresses the tooltip entirely — used when the trigger has an open menu the
+ * tooltip would otherwise overlap.
+ */
+export default function GraphControlTooltip({ text, children, above = false, disabled = false }) {
+  if (disabled) return <span className="graph-control-tooltip">{children}</span>;
+
   // Default (below): a simple inline tooltip — unchanged behavior for non-Reviews toolbars.
   if (!above) {
     return (

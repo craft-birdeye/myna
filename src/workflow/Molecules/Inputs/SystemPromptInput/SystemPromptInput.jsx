@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import '../prompt-chip.css';
 import { serializeFrom, deserializeInto, insertChipAt } from '../promptChipHelpers.js';
 import { VariableIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
+import ToolbarButton from '../ToolbarButton.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { Icon } from '../../../../components/Icon/Icon';
@@ -19,6 +20,10 @@ export default function SystemPromptInput({
   tall = false,
   /** Show info popover + expand on the label row (Steps / Procedures pattern). */
   showLabelActions = true,
+  /** Independent of showLabelActions: hides just the expand-to-overlay button (R1). */
+  showExpandButton = true,
+  error,
+  errorMessage = 'This field is required',
 }) {
   const editorRef = useRef(null);
   const overlayEditorRef = useRef(null);
@@ -131,7 +136,7 @@ export default function SystemPromptInput({
   }, []);
 
   const editorBlock = (ref, editorClassName, fieldsRef) => (
-    <div className={styles.inputBox}>
+    <div className={`${styles.inputBox}${error ? ` ${styles.inputBoxError}` : ''}`}>
       <div
         ref={ref}
         className={editorClassName}
@@ -142,27 +147,20 @@ export default function SystemPromptInput({
         data-placeholder="Enter prompt"
       />
       <div className={styles.toolbar}>
-        <button
-          ref={fieldsRef}
-          type="button"
-          className={`${styles.toolbarBtn} ${fieldModalOpen ? styles.toolbarBtnActive : ''}`}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleOpenFieldModal}
-          title="Insert variable"
-        >
-          <VariableIcon />
-        </button>
+        <div ref={fieldsRef}>
+          <ToolbarButton
+            icon={<VariableIcon />}
+            tooltip="Fields"
+            active={fieldModalOpen}
+            onClick={handleOpenFieldModal}
+          />
+        </div>
         {!expanded && (
-          <button
-            type="button"
-            className={styles.toolbarBtn}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setExpanded(true)}
-            title="Expand"
-            aria-label="Expand system prompt"
-          >
-            <ExpandIcon />
-          </button>
+          <ToolbarButton
+            icon={<ExpandIcon />}
+            tooltip="Rephrase"
+            disabled={!value}
+          />
         )}
       </div>
     </div>
@@ -179,7 +177,7 @@ export default function SystemPromptInput({
               <InfoTooltip text={SYSTEM_PROMPT_INFO} variant="detail" />
             )}
           </div>
-          {showLabelActions && (
+          {showLabelActions && showExpandButton && (
             <button
               type="button"
               className={styles.expandBtn}
@@ -205,6 +203,9 @@ export default function SystemPromptInput({
             `${styles.editor}${tall ? ` ${styles.editorTall}` : ''}`,
             fieldsBtnRef,
           )
+        )}
+        {error && errorMessage && !expanded && (
+          <span className={styles.errorText}>{errorMessage}</span>
         )}
       </div>
       {expanded && createPortal(

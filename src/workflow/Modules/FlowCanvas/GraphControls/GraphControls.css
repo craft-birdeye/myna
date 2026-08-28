@@ -25,7 +25,7 @@
   gap: 4px;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 4px;
   height: 36px;
 }
@@ -38,7 +38,7 @@
   gap: 4px;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 4px;
   height: 36px;
 }
@@ -51,7 +51,7 @@
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   padding: 0;
   color: #555;
@@ -90,7 +90,7 @@
   padding: 8px 8px 8px 12px;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 400;
@@ -110,6 +110,12 @@
   text-align: left;
 }
 
+/*
+ * Aero DS dropdown (CLAUDE.md §6.7) — same spec as the AgentBuilder header menus:
+ * 168px min-width, 4px radius, 1px borders/primary/1, 4px block padding, shadow-dropdown,
+ * 16px/8px text-body rows, surface/hover on hover, surface/selected for the current value.
+ * No dividers and no inner scroll — the five presets plus Fit fit in one list.
+ */
 .graph-controls__zoom-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -118,17 +124,11 @@
   flex-direction: column;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 100;
-  min-width: 120px;
-  padding: 4px;
-}
-
-.graph-controls__zoom-list {
-  max-height: 160px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  min-width: 168px;
+  padding: 4px 0;
 }
 
 .graph-controls__zoom-sticky {
@@ -142,15 +142,17 @@
   gap: 12px;
   width: 100%;
   text-align: left;
-  padding: 6px 12px;
+  padding: 8px 16px;
   background: transparent;
   border: none;
-  border-radius: 8px;
   cursor: pointer;
-  font-size: 13px;
-  color: #333;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
   font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  transition: background 0.12s ease;
 }
 
 .graph-controls__zoom-option:hover {
@@ -158,7 +160,7 @@
 }
 
 .graph-controls__zoom-option--active {
-  background: #e8f1fc;
+  background: #e5e9f0;
 }
 
 .graph-controls__zoom-check {
@@ -167,9 +169,11 @@
   height: 16px;
   font-size: 16px !important;
   line-height: 1;
-  color: #212121;
+  color: #303030;
 }
 
+/* Group rule between the zoom presets and the Fit/Fill view actions. Full-bleed — the
+   dropdown has no horizontal padding, so the line meets both borders. */
 .graph-controls__zoom-divider {
   height: 1px;
   background: #e5e9f0;
@@ -184,7 +188,7 @@
   justify-content: center;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   color: #555;
   padding: 0;
@@ -227,7 +231,7 @@
   padding: 8px 16px;
   background: #fff;
   border: 1px solid #f0f2f5;
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow: 0 2px 12px 1px rgba(33, 33, 33, 0.06);
 }
 
@@ -236,6 +240,20 @@
   left: 50%;
   transform: translateX(-50%);
   bottom: 0;
+}
+
+/* Response agents (Sep1) only: zoom/undo-redo/help sit adjacent at bottom-left instead of
+   spread across left/center/top-right — pull the editor pill (and, below, the help pill)
+   out of absolute centering/anchoring so the container's flex gap lays them out in a row. */
+.graph-controls--rr-chrome-combined {
+  justify-content: flex-start;
+}
+
+.graph-controls--rr-chrome-combined .graph-controls__rr-edit {
+  position: static;
+  left: auto;
+  transform: none;
+  bottom: auto;
 }
 
 /*
@@ -252,6 +270,14 @@
   padding: 8px;
   width: 40px;
   justify-content: center;
+}
+
+/* Combined mode: Help is a normal flex sibling of the zoom/editor pills, not anchored off
+   the editor pill's right edge — the container's gap spaces it instead. */
+.graph-controls--rr-chrome-combined .graph-controls__rr-help {
+  position: static;
+  left: auto;
+  top: auto;
 }
 
 .graph-controls__rr-divider {
@@ -284,7 +310,7 @@
   height: 24px;
   min-width: 0;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 4px;
   gap: 0;
 }
 
@@ -378,7 +404,7 @@
   font-weight: 400;
   line-height: 16px;
   letter-spacing: -0.24px;
-  border-radius: 8px;
+  border-radius: 4px;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;

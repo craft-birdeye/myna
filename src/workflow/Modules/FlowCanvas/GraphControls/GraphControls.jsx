@@ -7,7 +7,7 @@ import iconZoomOut from '../../../../assets/rr-chrome/icon-zoom-out.svg';
 import iconFit from '../../../../assets/rr-chrome/icon-fit.svg';
 import './GraphControls.css';
 
-const ZOOM_PRESETS = [200, 175, 150, 125, 100, 50, 25, 10];
+const ZOOM_PRESETS = [50, 75, 100, 125, 150];
 const ZOOM_STEP = 0.25;
 
 function RrIcon({ src, alt = '' }) {
@@ -38,6 +38,9 @@ export default function GraphControls({
    * Exploration-only (`response-agents-exploration`); other agents keep it top-right. */
   onHelpToggle = null,
   helpOpen = false,
+  /** Response agents (Sep1) only — zoom collapses to a "100% ▾" dropdown and the zoom/undo-redo/
+   * help pills sit adjacent at bottom-left instead of spread left/center/top-right. */
+  combineControlsLeft = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   /** Sticky footer selection: 'fill' | 'fit' | null (percentage active). */
@@ -78,113 +81,144 @@ export default function GraphControls({
     onZoomSelect?.(Math.max(0.1, +(zoomFraction - ZOOM_STEP).toFixed(2)));
   };
 
-  const zoomDropdown = (
-    <div className="graph-controls__zoom" ref={dropdownRef}>
-      <GraphControlTooltip text="Zoom" above>
-        <button
-          className="graph-controls__zoom-btn"
-          onClick={() => setDropdownOpen((v) => !v)}
-          type="button"
-        >
-          <span className="graph-controls__zoom-label">{Math.round(zoom)}%</span>
-          <span className="material-symbols-outlined">expand_more</span>
-        </button>
-      </GraphControlTooltip>
-      {dropdownOpen && (
-        <div className="graph-controls__zoom-dropdown">
-          <div className="graph-controls__zoom-list">
-            {ZOOM_PRESETS.map((preset) => {
-              const active = zoomMode === null && Math.round(zoom) === preset;
-              return (
+  function renderZoomDropdown({ hideFill = false, openUp = false } = {}) {
+    return (
+      <div className="graph-controls__zoom" ref={dropdownRef}>
+        {/* Tooltip off while open — it renders just above the trigger, where an upward
+            dropdown's last row sits. */}
+        <GraphControlTooltip text="Zoom" above disabled={dropdownOpen}>
+          <button
+            className="graph-controls__zoom-btn"
+            onClick={() => setDropdownOpen((v) => !v)}
+            type="button"
+          >
+            <span className="graph-controls__zoom-label">{Math.round(zoom)}%</span>
+            <span className="material-symbols-outlined">expand_more</span>
+          </button>
+        </GraphControlTooltip>
+        {dropdownOpen && (
+          <div className={`graph-controls__zoom-dropdown${openUp ? ' graph-controls__zoom-dropdown--up' : ''}`}>
+            <div className="graph-controls__zoom-list">
+              {ZOOM_PRESETS.map((preset) => {
+                const active = zoomMode === null && Math.round(zoom) === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`graph-controls__zoom-option${active ? ' graph-controls__zoom-option--active' : ''}`}
+                    onClick={() => {
+                      setZoomMode(null);
+                      onZoomSelect?.(preset / 100);
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    <span>{preset}%</span>
+                    {renderCheck(active)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="graph-controls__zoom-sticky">
+              {/* Fit/Fill are view actions, not zoom values — a rule separates the groups. */}
+              <div className="graph-controls__zoom-divider" aria-hidden />
+              {!hideFill && (
                 <button
-                  key={preset}
                   type="button"
-                  className={`graph-controls__zoom-option${active ? ' graph-controls__zoom-option--active' : ''}`}
+                  className={`graph-controls__zoom-option${zoomMode === 'fill' ? ' graph-controls__zoom-option--active' : ''}`}
                   onClick={() => {
-                    setZoomMode(null);
-                    onZoomSelect?.(preset / 100);
+                    setZoomMode('fill');
+                    (onFillView ?? onFitView)?.();
                     setDropdownOpen(false);
                   }}
                 >
-                  <span>{preset}%</span>
-                  {renderCheck(active)}
+                  <span>Fill</span>
+                  {renderCheck(zoomMode === 'fill')}
                 </button>
-              );
-            })}
+              )}
+              <button
+                type="button"
+                className={`graph-controls__zoom-option${zoomMode === 'fit' ? ' graph-controls__zoom-option--active' : ''}`}
+                onClick={() => {
+                  setZoomMode('fit');
+                  onFitView?.();
+                  setDropdownOpen(false);
+                }}
+              >
+                <span>Fit</span>
+                {renderCheck(zoomMode === 'fit')}
+              </button>
+            </div>
           </div>
-          <div className="graph-controls__zoom-sticky">
-            <div className="graph-controls__zoom-divider" />
-            <button
-              type="button"
-              className={`graph-controls__zoom-option${zoomMode === 'fill' ? ' graph-controls__zoom-option--active' : ''}`}
-              onClick={() => {
-                setZoomMode('fill');
-                (onFillView ?? onFitView)?.();
-                setDropdownOpen(false);
-              }}
-            >
-              <span>Fill</span>
-              {renderCheck(zoomMode === 'fill')}
-            </button>
-            <button
-              type="button"
-              className={`graph-controls__zoom-option${zoomMode === 'fit' ? ' graph-controls__zoom-option--active' : ''}`}
-              onClick={() => {
-                setZoomMode('fit');
-                onFitView?.();
-                setDropdownOpen(false);
-              }}
-            >
-              <span>Fit</span>
-              {renderCheck(zoomMode === 'fit')}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  }
+
+  const zoomDropdown = renderZoomDropdown();
 
   if (isReviewResponseChrome) {
+    const helpPill = onHelpToggle && (
+      <div className="graph-controls__rr-help">
+        <GraphControlTooltip text="Help center" above>
+          <button
+            type="button"
+            className={`graph-controls__toggle-btn${helpOpen ? ' graph-controls__toggle-btn--active' : ''}`}
+            onClick={onHelpToggle}
+            aria-label="Help center"
+            aria-pressed={helpOpen}
+          >
+            <span className="material-symbols-outlined">help</span>
+          </button>
+        </GraphControlTooltip>
+      </div>
+    );
+
     return (
-      <div className="graph-controls graph-controls--rr-chrome">
+      <div className={`graph-controls graph-controls--rr-chrome${combineControlsLeft ? ' graph-controls--rr-chrome-combined' : ''}`}>
         <div className="graph-controls__rr-zoom">
-          <GraphControlTooltip text="Zoom in" above>
-            <button
-              type="button"
-              className="graph-controls__toggle-btn"
-              onClick={zoomIn}
-              aria-label="Zoom in"
-            >
-              <RrIcon src={iconZoomIn} />
-            </button>
-          </GraphControlTooltip>
-          <span className="graph-controls__rr-zoom-label" aria-live="polite">
-            {Math.round(zoom)}%
-          </span>
-          <GraphControlTooltip text="Zoom out" above>
-            <button
-              type="button"
-              className="graph-controls__toggle-btn"
-              onClick={zoomOut}
-              aria-label="Zoom out"
-            >
-              <RrIcon src={iconZoomOut} />
-            </button>
-          </GraphControlTooltip>
-          <div className="graph-controls__rr-divider" aria-hidden />
-          <GraphControlTooltip text="Fit to screen" above>
-            <button
-              type="button"
-              className="graph-controls__toggle-btn"
-              onClick={() => {
-                setZoomMode('fit');
-                onFitView?.();
-              }}
-              aria-label="Fit to screen"
-            >
-              <RrIcon src={iconFit} />
-            </button>
-          </GraphControlTooltip>
+          {combineControlsLeft ? (
+            renderZoomDropdown({ hideFill: true, openUp: true })
+          ) : (
+            <>
+              <GraphControlTooltip text="Zoom in" above>
+                <button
+                  type="button"
+                  className="graph-controls__toggle-btn"
+                  onClick={zoomIn}
+                  aria-label="Zoom in"
+                >
+                  <RrIcon src={iconZoomIn} />
+                </button>
+              </GraphControlTooltip>
+              <span className="graph-controls__rr-zoom-label" aria-live="polite">
+                {Math.round(zoom)}%
+              </span>
+              <GraphControlTooltip text="Zoom out" above>
+                <button
+                  type="button"
+                  className="graph-controls__toggle-btn"
+                  onClick={zoomOut}
+                  aria-label="Zoom out"
+                >
+                  <RrIcon src={iconZoomOut} />
+                </button>
+              </GraphControlTooltip>
+              <div className="graph-controls__rr-divider" aria-hidden />
+              <GraphControlTooltip text="Fit to screen" above>
+                <button
+                  type="button"
+                  className="graph-controls__toggle-btn"
+                  onClick={() => {
+                    setZoomMode('fit');
+                    onFitView?.();
+                  }}
+                  aria-label="Fit to screen"
+                >
+                  <RrIcon src={iconFit} />
+                </button>
+              </GraphControlTooltip>
+            </>
+          )}
         </div>
 
         {!viewOnly && (
@@ -239,25 +273,15 @@ export default function GraphControls({
               </button>
             </GraphControlTooltip>
 
-            {/* Own pill — a DOM child only so it can anchor 12px off this pill's right edge
-                without hardcoding that pill's width. */}
-            {onHelpToggle && (
-              <div className="graph-controls__rr-help">
-                <GraphControlTooltip text="Help center" above>
-                  <button
-                    type="button"
-                    className={`graph-controls__toggle-btn${helpOpen ? ' graph-controls__toggle-btn--active' : ''}`}
-                    onClick={onHelpToggle}
-                    aria-label="Help center"
-                    aria-pressed={helpOpen}
-                  >
-                    <span className="material-symbols-outlined">help</span>
-                  </button>
-                </GraphControlTooltip>
-              </div>
-            )}
+            {/* Off combined mode, Help stays nested here — a DOM child only so it can anchor
+                12px off this pill's right edge without hardcoding that pill's width. */}
+            {!combineControlsLeft && helpPill}
           </div>
         )}
+
+        {/* Combined mode (Response agents Sep1): Help is its own sibling pill, in normal
+            flow beside zoom/edit instead of anchored off the editor pill's right edge. */}
+        {combineControlsLeft && helpPill}
       </div>
     );
   }

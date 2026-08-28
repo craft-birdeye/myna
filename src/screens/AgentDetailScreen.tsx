@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
   AgentLibraryPreviewModal,
   AttachMenuPopover,
@@ -35,6 +36,7 @@ import {
   type LibraryCardGlyph,
   type LibraryCardTone,
   type Metric,
+  type RowMenuItem,
   type Tab,
 } from '../components'
 import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
@@ -130,6 +132,12 @@ function isReviewResponseAgentName(name: string) {
   return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
 }
 
+/** Review response agent (exploration) grid only — visual card variations, added one at a time. */
+const CARD_LAYOUT_OPTIONS: Array<{ value: 'default' | 'r1'; label: string }> = [
+  { value: 'default', label: 'Default' },
+  { value: 'r1', label: 'R1' },
+]
+
 const FRONTDESK_AGENT_NAME = 'Front desk agent'
 const FRONTDESK_EXPLORATION_AGENT_NAME = 'Front desk agent (exploration)'
 
@@ -184,21 +192,89 @@ interface AgentInstance {
   [key: string]: string | number | undefined
 }
 
+function AgentInstanceMoreMenu({
+  row,
+  items,
+}: {
+  row: AgentInstance
+  items: RowMenuItem<AgentInstance>[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const visibleItems = items.filter((item) => (item.visible ? item.visible(row) : true))
+  if (visibleItems.length === 0) return null
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label="More actions"
+        onClick={(e) => {
+          e.stopPropagation()
+          const rect = btnRef.current?.getBoundingClientRect()
+          if (!rect) return
+          setMenuPos({ top: rect.bottom + 4, left: rect.right - 216 })
+          setOpen((current) => !current)
+        }}
+        className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+      >
+        <Icon name="more_vert" size={20} />
+      </button>
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0 z-[105]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-[110] min-w-[216px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
+            style={{ top: menuPos.top, left: menuPos.left }}
+          >
+            {visibleItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  item.onClick(row)
+                  setOpen(false)
+                }}
+                className={`block w-full px-md py-sm text-left text-body hover:bg-surface-hover ${
+                  item.variant === 'danger' ? 'text-chip-danger-text' : 'text-text-primary'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body,
+      )}
+    </>
+  )
+}
+
 const TABS: Tab[] = [
   { id: 'agents', label: 'Agents' },
   { id: 'library', label: 'Library' },
 ]
 
+const EXPLORATION_DETAIL_TABS: Tab[] = [
+  { id: 'agents', label: 'Agents' },
+  { id: 'library', label: 'Library' },
+  { id: 'outcomes', label: 'Outcomes' },
+]
+
 const STATUS_VARIANT: Record<string, ChipVariant> = {
-  Running: 'success',
-  Paused:  'warning',
+  Active: 'success',
+  Inactive: 'warning',
   Draft:   'neutral',
 }
 
 // Default row order for the instance table — active agents first, drafts last.
 const STATUS_ORDER: Record<string, number> = {
-  Running: 0,
-  Paused: 1,
+  Active: 0,
+  Inactive: 1,
   Draft: 2,
 }
 
@@ -261,81 +337,81 @@ const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as cons
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
   [FRONTDESK_AGENT_NAME]: [
-    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
-    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
-    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
+    { region: 'North region', status: 'Active', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
+    { region: 'East region',  status: 'Active', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
+    { region: 'South region', status: 'Inactive',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
   ],
   [FRONTDESK_EXPLORATION_AGENT_NAME]: [
-    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
-    { region: 'East region',  status: 'Running', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
-    { region: 'South region', status: 'Paused',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
+    { region: 'North region', status: 'Active', channels: 'Voice call',        interactions: '8,200', fcr: '7,380', aht: '90%', escalation: '18h', locations: '358', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - North region'], instanceName: 'Front desk agent - North region' },
+    { region: 'East region',  status: 'Active', channels: 'Web chat, Text',    interactions: '5,600', fcr: '4,928', aht: '88%', escalation: '12h', locations: '212', instanceName: 'Front desk agent - East region' },
+    { region: 'South region', status: 'Inactive',  channels: 'Text, Facebook',    interactions: '2,900', fcr: '2,494', aht: '86%', escalation: '6h',  locations: '180', issues: AGENT_INSTANCE_ISSUE_COUNTS['Front desk agent - South region'], instanceName: 'Front desk agent - South region' },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',        interactions: '1,720', fcr: '1,428', aht: '83%', escalation: '4h',  locations: '140', instanceName: 'Front desk agent - West region' },
   ],
   'Reminder agent': [
-    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min', issues: AGENT_INSTANCE_ISSUE_COUNTS['Reminder agent - North region'], instanceName: 'Reminder agent - North region' },
-    { region: 'East region',  status: 'Running', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min', instanceName: 'Reminder agent - East region' },
-    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min', instanceName: 'Reminder agent - South region' },
+    { region: 'North region', status: 'Active', channels: 'Text, Email',       interactions: '1,680', fcr: '78%', aht: '1m 12s', escalation: '10%', locations: '358', bookings: '180', confirmed: '42', confirmRate: '23.3%', timeSaved: '8 min', issues: AGENT_INSTANCE_ISSUE_COUNTS['Reminder agent - North region'], instanceName: 'Reminder agent - North region' },
+    { region: 'East region',  status: 'Active', channels: 'Text',              interactions: '1,120', fcr: '75%', aht: '1m 25s', escalation: '12%', locations: '212', bookings: '120', confirmed: '28', confirmRate: '23.3%', timeSaved: '8 min', instanceName: 'Reminder agent - East region' },
+    { region: 'South region', status: 'Inactive',  channels: 'Email',             interactions: '640',  fcr: '73%', aht: '1m 38s', escalation: '14%', locations: '180', bookings: '90',  confirmed: '20', confirmRate: '22.2%', timeSaved: '7 min', instanceName: 'Reminder agent - South region' },
     { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       interactions: '407',  fcr: '68%', aht: '1m 55s', escalation: '15%', locations: '140', bookings: '60',  confirmed: '10', confirmRate: '16.7%', timeSaved: '6 min', instanceName: 'Reminder agent - West region' },
   ],
   'Outreach agent': [
-    { region: 'North region', status: 'Running', channels: 'Voice call',        interactions: '920', fcr: '42%', aht: '2m 45s', escalation: '9%',  locations: '358' },
-    { region: 'East region',  status: 'Running', channels: 'Text, Email',       interactions: '610', fcr: '37%', aht: '3m 10s', escalation: '12%', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Email',             interactions: '360', fcr: '35%', aht: '3m 30s', escalation: '14%', locations: '180' },
+    { region: 'North region', status: 'Active', channels: 'Voice call',        interactions: '920', fcr: '42%', aht: '2m 45s', escalation: '9%',  locations: '358' },
+    { region: 'East region',  status: 'Active', channels: 'Text, Email',       interactions: '610', fcr: '37%', aht: '3m 10s', escalation: '12%', locations: '212' },
+    { region: 'South region', status: 'Inactive',  channels: 'Email',             interactions: '360', fcr: '35%', aht: '3m 30s', escalation: '14%', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call, Text',  interactions: '213', fcr: '30%', aht: '3m 55s', escalation: '17%', locations: '140' },
   ],
   'Waitlist agent': [
-    { region: 'North region', status: 'Running', channels: 'Text, Email',       outreachSent: '800',  slotsFilled: '780',  fillRate: '34%', timeSaved: '1.8 hrs', locations: '500' },
-    { region: 'East region',  status: 'Running', channels: 'Voice call',        outreachSent: '500',  slotsFilled: '400',  fillRate: '29%', timeSaved: '2.2 hrs', locations: '250' },
-    { region: 'South region', status: 'Paused',  channels: 'Text',              outreachSent: '500',  slotsFilled: '490',  fillRate: '26%', timeSaved: '2.8 hrs', locations: '200' },
+    { region: 'North region', status: 'Active', channels: 'Text, Email',       outreachSent: '800',  slotsFilled: '780',  fillRate: '34%', timeSaved: '1.8 hrs', locations: '500' },
+    { region: 'East region',  status: 'Active', channels: 'Voice call',        outreachSent: '500',  slotsFilled: '400',  fillRate: '29%', timeSaved: '2.2 hrs', locations: '250' },
+    { region: 'South region', status: 'Inactive',  channels: 'Text',              outreachSent: '500',  slotsFilled: '490',  fillRate: '26%', timeSaved: '2.8 hrs', locations: '200' },
     { region: 'West region',  status: 'Draft',   channels: 'Email',             outreachSent: '1050', slotsFilled: '1000', fillRate: '22%', timeSaved: '3.4 hrs', locations: '100' },
   ],
   'Pre-visit agent': [
-    { region: 'North region', status: 'Running', channels: 'Text, Email',       interactions: '1,040', fcr: '962',   aht: '93%', escalation: '37h', locations: '358' },
-    { region: 'East region',  status: 'Running', channels: 'Voice call',        interactions: '880',   fcr: '810',   aht: '92%', escalation: '31h', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Web chat',          interactions: '760',   fcr: '694',   aht: '91%', escalation: '27h', locations: '180' },
+    { region: 'North region', status: 'Active', channels: 'Text, Email',       interactions: '1,040', fcr: '962',   aht: '93%', escalation: '37h', locations: '358' },
+    { region: 'East region',  status: 'Active', channels: 'Voice call',        interactions: '880',   fcr: '810',   aht: '92%', escalation: '31h', locations: '212' },
+    { region: 'South region', status: 'Inactive',  channels: 'Web chat',          interactions: '760',   fcr: '694',   aht: '91%', escalation: '27h', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Text',              interactions: '620',   fcr: '556',   aht: '90%', escalation: '22h', locations: '140' },
   ],
   'Recall agent': [
-    { region: 'North region', status: 'Running', channels: 'Voice call, Text',  patientsContacted: '1,120', recallConversionRate: '71%', avgTouchesToBook: '2.2', staffHoursSaved: '94h', revenueRecovered: '$44K', locations: '358' },
-    { region: 'East region',  status: 'Running', channels: 'Text, Email',       patientsContacted: '890',   recallConversionRate: '69%', avgTouchesToBook: '2.4', staffHoursSaved: '74h', revenueRecovered: '$32K', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Email',             patientsContacted: '820',   recallConversionRate: '66%', avgTouchesToBook: '2.6', staffHoursSaved: '62h', revenueRecovered: '$28K', locations: '180' },
+    { region: 'North region', status: 'Active', channels: 'Voice call, Text',  patientsContacted: '1,120', recallConversionRate: '71%', avgTouchesToBook: '2.2', staffHoursSaved: '94h', revenueRecovered: '$44K', locations: '358' },
+    { region: 'East region',  status: 'Active', channels: 'Text, Email',       patientsContacted: '890',   recallConversionRate: '69%', avgTouchesToBook: '2.4', staffHoursSaved: '74h', revenueRecovered: '$32K', locations: '212' },
+    { region: 'South region', status: 'Inactive',  channels: 'Email',             patientsContacted: '820',   recallConversionRate: '66%', avgTouchesToBook: '2.6', staffHoursSaved: '62h', revenueRecovered: '$28K', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Voice call',        patientsContacted: '580',   recallConversionRate: '62%', avgTouchesToBook: '2.8', staffHoursSaved: '44h', revenueRecovered: '$20K', locations: '140' },
   ],
   'Revenue agent': [
-    { region: 'North region', status: 'Running', channels: 'Text, Email',       balancesContacted: '590', amountCollected: '$48K', arDaysReduced: '-31%', clickToPayRate: '76%', staffHoursSaved: '62h', locations: '358' },
-    { region: 'East region',  status: 'Running', channels: 'Email',             balancesContacted: '440', amountCollected: '$38K', arDaysReduced: '-28%', clickToPayRate: '74%', staffHoursSaved: '46h', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Text',              balancesContacted: '490', amountCollected: '$34K', arDaysReduced: '-26%', clickToPayRate: '72%', staffHoursSaved: '40h', locations: '180' },
+    { region: 'North region', status: 'Active', channels: 'Text, Email',       balancesContacted: '590', amountCollected: '$48K', arDaysReduced: '-31%', clickToPayRate: '76%', staffHoursSaved: '62h', locations: '358' },
+    { region: 'East region',  status: 'Active', channels: 'Email',             balancesContacted: '440', amountCollected: '$38K', arDaysReduced: '-28%', clickToPayRate: '74%', staffHoursSaved: '46h', locations: '212' },
+    { region: 'South region', status: 'Inactive',  channels: 'Text',              balancesContacted: '490', amountCollected: '$34K', arDaysReduced: '-26%', clickToPayRate: '72%', staffHoursSaved: '40h', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Text, Email',       balancesContacted: '300', amountCollected: '$22K', arDaysReduced: '-23%', clickToPayRate: '70%', staffHoursSaved: '28h', locations: '140' },
   ],
   'Treatment plan agent': [
-    { region: 'North region', status: 'Running', channels: 'Voice call',        plansFollowedUp: '680', acceptanceRate: '63%', revenueUnlocked: '$288K', callToBookingConversion: '48%', warmTransferRate: '9%', avgTouchesToAccept: '2.0', staffHoursSaved: '88h', locations: '358' },
-    { region: 'East region',  status: 'Running', channels: 'Voice call, Text',  plansFollowedUp: '530', acceptanceRate: '61%', revenueUnlocked: '$224K', callToBookingConversion: '44%', warmTransferRate: '11%', avgTouchesToAccept: '2.1', staffHoursSaved: '68h', locations: '212' },
-    { region: 'South region', status: 'Paused',  channels: 'Text, Email',       plansFollowedUp: '490', acceptanceRate: '59%', revenueUnlocked: '$204K', callToBookingConversion: '41%', warmTransferRate: '12%', avgTouchesToAccept: '2.2', staffHoursSaved: '58h', locations: '180' },
+    { region: 'North region', status: 'Active', channels: 'Voice call',        plansFollowedUp: '680', acceptanceRate: '63%', revenueUnlocked: '$288K', callToBookingConversion: '48%', warmTransferRate: '9%', avgTouchesToAccept: '2.0', staffHoursSaved: '88h', locations: '358' },
+    { region: 'East region',  status: 'Active', channels: 'Voice call, Text',  plansFollowedUp: '530', acceptanceRate: '61%', revenueUnlocked: '$224K', callToBookingConversion: '44%', warmTransferRate: '11%', avgTouchesToAccept: '2.1', staffHoursSaved: '68h', locations: '212' },
+    { region: 'South region', status: 'Inactive',  channels: 'Text, Email',       plansFollowedUp: '490', acceptanceRate: '59%', revenueUnlocked: '$204K', callToBookingConversion: '41%', warmTransferRate: '12%', avgTouchesToAccept: '2.2', staffHoursSaved: '58h', locations: '180' },
     { region: 'West region',  status: 'Draft',   channels: 'Email',             plansFollowedUp: '440', acceptanceRate: '57%', revenueUnlocked: '$176K', callToBookingConversion: '38%', warmTransferRate: '14%', avgTouchesToAccept: '2.4', staffHoursSaved: '48h', locations: '140' },
   ],
   'Tagging & routing agent': [
-    { region: 'North region', status: 'Running', channels: 'Voice call, Text, Chat', statusUpdated: '1000', conversationsAssigned: '900', conversationsManaged: '950', timeSaved: '20m', locations: '500' },
-    { region: 'East Region',  status: 'Running', channels: 'Text, Chat',             statusUpdated: '1000', conversationsAssigned: '800', conversationsManaged: '900', timeSaved: '15m', locations: '250' },
-    { region: 'South Region', status: 'Paused',  channels: 'Voice call, Text',       statusUpdated: '450',  conversationsAssigned: '400', conversationsManaged: '400', timeSaved: '3m',  locations: '200' },
+    { region: 'North region', status: 'Active', channels: 'Voice call, Text, Chat', statusUpdated: '1000', conversationsAssigned: '900', conversationsManaged: '950', timeSaved: '20m', locations: '500' },
+    { region: 'East Region',  status: 'Active', channels: 'Text, Chat',             statusUpdated: '1000', conversationsAssigned: '800', conversationsManaged: '900', timeSaved: '15m', locations: '250' },
+    { region: 'South Region', status: 'Inactive',  channels: 'Voice call, Text',       statusUpdated: '450',  conversationsAssigned: '400', conversationsManaged: '400', timeSaved: '3m',  locations: '200' },
     { region: 'West Region',  status: 'Draft',   channels: 'Chat',                   statusUpdated: '400',  conversationsAssigned: '350', conversationsManaged: '380', timeSaved: '2m',  locations: '100' },
   ],
   [REVIEW_RESPONSE_AGENT_NAME]: [
-    { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
-    { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
-    { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
+    { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
+    { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
+    { region: 'South Region', status: 'Inactive',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
     { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
   [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
-    { region: 'North Region', status: 'Running', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
-    { region: 'East Region',  status: 'Running', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
-    { region: 'South Region', status: 'Paused',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
+    { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
+    { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
+    { region: 'South Region', status: 'Inactive',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
     { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
   'Review generation agents': [
     {
       region: 'North Region',
-      status: 'Running',
+      status: 'Active',
       channels: 'Email, Text',
       reviewsReceived: '112',
       contactsReached: '115',
@@ -346,7 +422,7 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     },
     {
       region: 'A/B testing',
-      status: 'Running',
+      status: 'Active',
       channels: 'Email, Text',
       reviewsReceived: '137',
       contactsReached: '150',
@@ -916,6 +992,42 @@ const DENTAL_AGENT_LIBRARY: Record<string, { id: string; title: string; descript
   'Review tagging agents': REVIEW_TAGGING_CREATE_CARDS,
 }
 
+/**
+ * Create-flow library grid:
+ * - ≤4 cards → one centered row (container shrinks to N cards)
+ * - >4 cards → max 4 per row, left-aligned wrap (same as Review response Library)
+ */
+function createLibraryGridClasses(cardCount: number): { shell: string; grid: string } {
+  if (cardCount > 4) {
+    return {
+      shell: 'max-w-[1280px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-2 min-[900px]:grid-cols-4',
+    }
+  }
+  if (cardCount === 4) {
+    return {
+      shell: 'max-w-[1280px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-4',
+    }
+  }
+  if (cardCount === 3) {
+    return {
+      shell: 'max-w-[1000px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-3',
+    }
+  }
+  if (cardCount === 2) {
+    return {
+      shell: 'max-w-[720px]',
+      grid: 'grid-cols-1 min-[500px]:grid-cols-2',
+    }
+  }
+  return {
+    shell: 'max-w-[360px]',
+    grid: 'max-w-[325px] grid-cols-1',
+  }
+}
+
 // ── Illustration for the create-agent empty state (library-only landing) ───
 function CreateAgentEmptyState({
   cards,
@@ -937,18 +1049,11 @@ function CreateAgentEmptyState({
 }) {
   const [libraryOpen, setLibraryOpen] = useState(libraryDefaultOpen)
   const cardCount = cards.length
+  const { shell: libraryShellClass, grid: libraryGridClass } = createLibraryGridClasses(cardCount)
   const showLibrary = layout === 'compact' || libraryOpen
   return (
     <div
-      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${
-        cardCount === 4
-          ? 'max-w-[1280px]'
-          : cardCount === 2
-            ? 'max-w-[720px]'
-            : cardCount === 1
-              ? 'max-w-[360px]'
-              : 'max-w-[1000px]'
-      }`}
+      className={`flex w-full flex-col items-center gap-2xl self-center py-lg ${libraryShellClass}`}
     >
       <img
         src={agentEmptyState}
@@ -1009,17 +1114,7 @@ function CreateAgentEmptyState({
 
       {showLibrary && (
         <div className={`@container w-full ${cardCount === 1 ? 'flex justify-center' : ''}`}>
-          <div
-            className={`grid w-full gap-md ${
-              cardCount === 4
-                ? 'grid-cols-1 min-[500px]:grid-cols-4'
-                : cardCount === 2
-                  ? 'grid-cols-1 min-[500px]:grid-cols-2'
-                  : cardCount === 1
-                    ? 'max-w-[325px] grid-cols-1'
-                    : 'grid-cols-3'
-            }`}
-          >
+          <div className={`grid w-full gap-md ${libraryGridClass}`}>
             {cards.map((tpl) => (
               <InfoCard
                 key={tpl.id}
@@ -2999,10 +3094,11 @@ function ReviewResponseThread({
       {locationsDrawerOpen && (
         <LocationsDrawer
           onBack={() => setLocationsDrawerOpen(false)}
-          onSave={(selected: { id: string; name: string }[]) => {
+          onSave={(selected: { id: string; name: string }[] | { locations?: { id: string; name: string }[] }) => {
             setLocationsDrawerOpen(false)
-            if (!selected.length) return
-            const names = selected.map((loc) => loc.name)
+            const list = Array.isArray(selected) ? selected : (selected?.locations || [])
+            if (!list.length) return
+            const names = list.map((loc) => loc.name)
             const answer =
               names.length <= 2
                 ? names.join(', ')
@@ -6366,14 +6462,11 @@ function HealthcareFrontdeskCreateAgentLive({
     )
   }
 
+  const landingCards = libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS
+  const { shell: landingShellClass, grid: landingGridClass } = createLibraryGridClasses(landingCards.length)
+
   return (
-    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${
-      (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
-        ? 'max-w-[1280px]'
-        : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
-          ? 'max-w-[720px]'
-          : 'max-w-[1000px]'
-    }`}>
+    <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${landingShellClass}`}>
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
           {!hideHeaderBack && (
@@ -6517,15 +6610,9 @@ function HealthcareFrontdeskCreateAgentLive({
         </button>
       </p>
 
-      <div className="@container w-full">
-        <div className={`grid w-full gap-md ${
-          (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 4
-            ? 'grid-cols-1 min-[500px]:grid-cols-4'
-            : (libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).length === 2
-              ? 'grid-cols-1 min-[500px]:grid-cols-2'
-              : 'grid-cols-3'
-        }`}>
-          {(libraryCards ?? HEALTHCARE_FRONTDESK_CREATE_CARDS).map((tpl) => (
+      <div className={`@container w-full ${landingCards.length === 1 ? 'flex justify-center' : ''}`}>
+        <div className={`grid w-full gap-md ${landingGridClass}`}>
+          {landingCards.map((tpl) => (
             <div key={tpl.id} className={INFO_CARD_LAYOUT.root}>
               {tpl.glyph && tpl.tone ? (
                 <div className="flex min-w-0 items-center gap-md">
@@ -7098,16 +7185,34 @@ function HistoryChatReplay({
 }
 
 export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed }: AgentDetailScreenProps) {
-  const [activeTab, setActiveTab] = useState('agents')
-  const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('list')
-  const [customizeOpen, setCustomizeOpen] = useState(false)
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
   const isSep1Agents = Boolean(navId?.includes('sep-1'))
+  const useExplorationOutcomesTab = isExplorationAgents && !isSep1Agents
+  const [activeTab, setActiveTab] = useState('agents')
+  const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
+  const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  /** Review response agent (exploration) grid only: switches between visual variations of the
+   *  agent card, built out one at a time — 'default' is the current design, 'r1' etc. are added
+   *  as each variation is designed. */
+  const [cardLayoutOption, setCardLayoutOption] = useState<'default' | 'r1'>('default')
+  const [cardLayoutMenuOpen, setCardLayoutMenuOpen] = useState(false)
+  const cardLayoutMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!cardLayoutMenuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (cardLayoutMenuRef.current && !cardLayoutMenuRef.current.contains(e.target as Node)) {
+        setCardLayoutMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [cardLayoutMenuOpen])
   const showExplorationAgentsToggle =
     isExplorationAgents && !isSep1Agents && activeTab === 'agents'
   const useExplorationGrid =
@@ -7117,6 +7222,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   )
   const [selectedInstanceDisplayName, setSelectedInstanceDisplayName] = useState<string | null>(null)
   const [instanceInitialTab, setInstanceInitialTab] = useState(pendingInstanceView?.tab ?? 'outcomes')
+
+  useEffect(() => {
+    setActiveTab('agents')
+  }, [navId])
 
   useEffect(() => {
     if (!pendingInstanceView) return
@@ -7634,8 +7743,46 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setToastVisible(true)
   }
 
+  const openAgentInstanceDetails = (row: AgentInstance) => {
+    setInstanceInitialTab('outcomes')
+    setSelectedInstanceDisplayName(null)
+    setSelectedInstance(row.name)
+  }
+
+  const openAgentInstanceEditor = (row: AgentInstance) => {
+    onEditAgent?.(
+      row.name,
+      undefined,
+      undefined,
+      isExplorationAgents ? row.status : undefined,
+    )
+  }
+
+  const agentInstanceRowMenuItems = useMemo<RowMenuItem<AgentInstance>[]>(() => [
+    { label: 'Edit', onClick: openAgentInstanceEditor },
+    {
+      label: 'Deactivate',
+      onClick: () => {},
+      visible: (row) => row.status === 'Active',
+    },
+    { label: 'Duplicate', onClick: () => {} },
+    { label: 'View details', onClick: openAgentInstanceDetails },
+    { label: 'Reports', onClick: () => {} },
+    ...(isExplorationAgents
+      ? [{ label: 'Download agent', onClick: handleDownloadAgent }]
+      : []),
+    { label: 'Delete', onClick: () => {}, variant: 'danger' },
+  ], [isExplorationAgents, onEditAgent])
+
+  const agentInstanceCardOverflowMenuItems = useMemo(
+    () => agentInstanceRowMenuItems.filter(
+      (item) => item.label !== 'Edit' && item.label !== 'View details',
+    ),
+    [agentInstanceRowMenuItems],
+  )
+
   const FILTER_FIELDS: FilterField[] = [
-    { id: 'status', label: 'Status', options: opts('Running', 'Paused', 'Draft') },
+    { id: 'status', label: 'Status', options: opts('Active', 'Inactive', 'Draft') },
     { id: 'channels', label: 'Channels', options: opts('Voice call', 'Web chat', 'Text', 'Email', 'Facebook'), multi: true },
     { id: 'region', label: 'Region', options: opts('North region', 'East region', 'South region', 'West region') },
     { id: 'location', label: 'Location', options: opts('Mountain View', 'Palo Alto', 'San Jose', 'Sunnyvale') },
@@ -8076,7 +8223,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 hideTopIdentity={isExplorationAgents}
                 hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
                 explorationChrome={isExplorationAgents}
-                sep1Chrome={isSep1Agents}
+                sep1Chrome={isExplorationAgents}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}
@@ -8180,6 +8327,44 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         </button>
                       </div>
                     )}
+                    {isReviewResponse && useExplorationGrid && (
+                      <div className="relative" ref={cardLayoutMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => setCardLayoutMenuOpen((o) => !o)}
+                          aria-haspopup="listbox"
+                          aria-expanded={cardLayoutMenuOpen}
+                          className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                        >
+                          {CARD_LAYOUT_OPTIONS.find((opt) => opt.value === cardLayoutOption)?.label}
+                          <Icon name="expand_more" size={18} />
+                        </button>
+                        {cardLayoutMenuOpen && (
+                          <ul
+                            role="listbox"
+                            className="absolute right-0 top-full z-20 mt-xs min-w-[140px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
+                          >
+                            {CARD_LAYOUT_OPTIONS.map((opt) => (
+                              <li key={opt.value}>
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={cardLayoutOption === opt.value}
+                                  onClick={() => {
+                                    setCardLayoutOption(opt.value)
+                                    setCardLayoutMenuOpen(false)
+                                  }}
+                                  className="flex w-full items-center justify-between px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                                >
+                                  {opt.label}
+                                  {cardLayoutOption === opt.value && <Icon name="check" size={16} />}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
@@ -8225,13 +8410,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               {/* Tabs */}
               <div className="px-2xl">
                 <Tabs
-                  tabs={TABS}
+                  tabs={useExplorationOutcomesTab ? EXPLORATION_DETAIL_TABS : TABS}
                   activeTab={activeTab}
+                  showBaseline={false}
                   onChange={setActiveTab}
                 />
               </div>
 
-              {activeTab === 'agents' ? (
+              {activeTab === 'outcomes' && useExplorationOutcomesTab ? (
                 <>
                   <div className="px-2xl pt-lg">
                     <MetricTiles
@@ -8263,7 +8449,46 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setSavingsModalOpen(false)
                     }}
                   />
+                </>
+              ) : activeTab === 'agents' ? (
+                <>
+                  {!useExplorationOutcomesTab && (
+                    <>
+                      <div className="px-2xl pt-lg">
+                        <MetricTiles
+                          metrics={displayMetrics}
+                          renderTileAction={
+                            isFrontdesk || isReviewResponse
+                              ? (metric) =>
+                                  metric.id === 'timeSaved' ? (
+                                    <button
+                                      type="button"
+                                      aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
+                                      onClick={() => setSavingsModalOpen(true)}
+                                      className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                    >
+                                      <Icon name="tune" size={18} />
+                                    </button>
+                                  ) : null
+                              : undefined
+                          }
+                        />
+                      </div>
+                      <EstimateSavingsModal
+                        open={savingsModalOpen}
+                        onClose={() => setSavingsModalOpen(false)}
+                        initialValues={savingsSettings}
+                        copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
+                        onSave={(values) => {
+                          setSavingsSettings(values)
+                          setSavingsModalOpen(false)
+                        }}
+                      />
+                    </>
+                  )}
                   {useExplorationGrid ? (
+                    // `cardLayoutOption` ('default' | 'r1', switched via the dropdown above) is where
+                    // each new visual variation branches once it's designed.
                     <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
                         const cardMetrics = isExplorationFrontDeskAgents
@@ -8279,32 +8504,58 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               { value: row.avgResponseTime ?? '—', label: 'Average response time' },
                               { value: row.timeSaved ?? '—', label: 'Time saved' },
                             ]
+                        const isR1Card = cardLayoutOption === 'r1'
                         return (
-                          <button
-                            type="button"
+                          <div
                             key={row.name}
-                            onClick={() => {
-                              setInstanceInitialTab('outcomes')
-                              setSelectedInstanceDisplayName(null)
-                              setSelectedInstance(row.name)
-                            }}
-                            className="group flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg text-left transition-colors hover:bg-surface-hover"
+                            className="group relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                           >
-                            <div className="flex min-w-0 items-start justify-between gap-sm">
-                              <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
-                                {row.name}
-                              </h3>
+                            <div className={`flex min-w-0 justify-between gap-sm ${isR1Card ? 'items-center' : 'items-start'}`}>
+                              <div
+                                className={`flex min-w-0 flex-1 items-center gap-sm ${isR1Card ? 'min-h-[44px]' : ''}`}
+                              >
+                                {isR1Card && <LibraryCardIcon glyph="autonomous" />}
+                                <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
+                                  {row.name}
+                                </h3>
+                              </div>
                               <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
                             </div>
-                            <div className="mt-md grid grid-cols-3 content-start gap-md">
+                            <div
+                              className={
+                                isR1Card
+                                  ? 'mt-sm grid grid-cols-3 content-start gap-sm'
+                                  : 'mt-md grid grid-cols-3 content-start gap-md'
+                              }
+                            >
                               {cardMetrics.map((metric) => (
                                 <div key={metric.label} className="min-w-0">
-                                  <div className="truncate text-h3 text-text-primary">{metric.value}</div>
+                                  <div className={isR1Card ? 'truncate text-body text-text-primary' : 'truncate text-h3 text-text-primary'}>
+                                    {metric.value}
+                                  </div>
                                   <div className="truncate text-small text-text-tertiary">{metric.label}</div>
                                 </div>
                               ))}
                             </div>
-                          </button>
+                            {/* Overlay (not in-flow) so revealing it on hover never changes the card's height. */}
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-gradient-to-t from-surface from-60% to-transparent px-lg pb-lg pt-2xl opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                              <button
+                                type="button"
+                                onClick={() => openAgentInstanceDetails(row)}
+                                className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                              >
+                                View details
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openAgentInstanceEditor(row)}
+                                className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                              >
+                                Edit
+                              </button>
+                              <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                            </div>
+                          </div>
                         )
                       })}
                     </div>
@@ -8319,33 +8570,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                           setSelectedInstanceDisplayName(null)
                           setSelectedInstance(row.name)
                         }}
-                        rowMenuItems={[
-                          { label: 'Edit', onClick: (row) => onEditAgent?.(
-                            row.name,
-                            undefined,
-                            undefined,
-                            isExplorationAgents ? row.status : undefined,
-                          ) },
-                          {
-                            label: 'Pause',
-                            onClick: () => {},
-                            visible: (row) => row.status === 'Running',
-                          },
-                          { label: 'Duplicate', onClick: () => {} },
-                          { label: 'View details', onClick: (row) => {
-                            setInstanceInitialTab('outcomes')
-                            setSelectedInstanceDisplayName(null)
-                            setSelectedInstance(row.name)
-                          } },
-                          { label: 'Reports', onClick: () => {} },
-                          ...(isExplorationAgents
-                            ? [{
-                                label: 'Download agent',
-                                onClick: (row: AgentInstance) => handleDownloadAgent(row),
-                              }]
-                            : []),
-                          { label: 'Delete', onClick: () => {}, variant: 'danger' },
-                        ]}
+                        rowMenuItems={agentInstanceRowMenuItems}
                       />
                     </div>
                   )}

@@ -533,10 +533,6 @@ export interface RunConversationThreadProps {
   onCoachAgent?: (messageId: string) => void
   /** 'diagnostics'-mode only — navigates to the recommendation this message's feedback landed on. */
   onTrackFeedback?: (recId: string) => void
-  /** Collapsible call-details body — when set, renders below the voice-call system label
-   *  (`insertCallRecordingAfter`) instead of at the top of the thread. */
-  callDetailsContent?: ReactNode
-  callDetailsUserRating?: string
 }
 
 /** Diagnostics-mode meta line — "LLM : X • TTS : Y", each label wrapped in an explanatory
@@ -625,8 +621,6 @@ export function RunConversationThread({
   recIdByMessage,
   onCoachAgent,
   onTrackFeedback,
-  callDetailsContent,
-  callDetailsUserRating,
 }: RunConversationThreadProps) {
   const transcriptStartIdx = callTranscriptSplitIndex(entries, showCallRecording)
   const useCallTranscriptSection = transcriptStartIdx >= 0
@@ -640,11 +634,6 @@ export function RunConversationThread({
           <div className={padTopWhenFirst && index === 0 ? 'pt-lg' : undefined}>
             <ChatSystemLabel text={entry.text} />
           </div>
-          {showCallRecording && entry.insertCallRecordingAfter && callDetailsContent && (
-            <CollapsibleCallDetails userRating={callDetailsUserRating}>
-              {callDetailsContent}
-            </CollapsibleCallDetails>
-          )}
           {showCallRecording && entry.insertCallRecordingAfter && (
             <div className="sticky top-0 z-10 bg-surface pb-sm pt-sm">
               <div className="border border-transparent px-lg">
@@ -724,9 +713,9 @@ export function RunConversationThread({
     <div className="flex flex-col gap-lg">
       {leadEntries.map((entry, index) => renderEntry(entry, index, showCallRecording))}
       {useCallTranscriptSection && (
-        <CallTranscriptSection>
+        <div className="flex flex-col gap-lg">
           {transcriptEntries.map((entry, index) => renderEntry(entry, index, false))}
-        </CallTranscriptSection>
+        </div>
       )}
     </div>
   )
@@ -739,7 +728,6 @@ export function RunDetailsPanel({
   conversationContent,
   showTabs = true,
   conversationTabLabel = 'Conversation',
-  logsTabLabel = 'Log',
   title = 'Run details',
   showHeader = true,
   showCallRecording = false,
@@ -753,15 +741,12 @@ export function RunDetailsPanel({
   userRating,
   conversationAiSummary,
 }: RunDetailsPanelProps) {
-  const [tab, setTab] = useState<'logs' | 'conversation'>('conversation')
+  type PanelTab = 'conversation' | 'call-details' | 'logs'
+  const [tab, setTab] = useState<PanelTab>('conversation')
   const hasCallDetails = Boolean(callDetails || callDetailsContent)
-  const inlineCallDetails = hasCallDetails && showCallRecording
-  const topCallDetails = hasCallDetails && !showCallRecording
+  const showCallDetailsTab = hasCallDetails && showCallRecording
   const resolvedCallDetailsContent =
     callDetailsContent ?? (callDetails ? <CallDetailsTab {...callDetails} /> : null)
-  // The sticky waveform anchors to `top: 0` of this scroll container's padding edge — any
-  // padding-top here would leave a permanent gap once it's stuck, so that spacing moves onto the
-  // conversation thread's first entry instead (see `RunConversationThread`).
   const skipContainerTopPadding = showCallRecording && tab === 'conversation'
 
   // Same "Coach agent" → "Track your feedback" flow as `LogDetailsPanel`'s call transcript —
@@ -820,15 +805,17 @@ export function RunDetailsPanel({
           <Tabs
             tabs={[
               { id: 'conversation', label: conversationTabLabel },
-              { id: 'logs', label: logsTabLabel },
+              ...(showCallDetailsTab ? [{ id: 'call-details', label: 'Call details' }] : []),
+              { id: 'logs', label: 'Call logs' },
             ]}
             activeTab={tab}
-            onChange={(id) => setTab(id as 'logs' | 'conversation')}
+            showBaseline={false}
+            onChange={(id) => setTab(id as PanelTab)}
           />
         </div>
       )}
 
-      {(!showTabs || tab === 'logs') ? (
+      {(!showTabs || tab === 'logs') && (
         <div
           className={`min-h-0 flex-1 overflow-y-auto px-2xl pb-2xl ${
             skipContainerTopPadding ? '' : 'pt-lg'
@@ -836,7 +823,15 @@ export function RunDetailsPanel({
         >
           <LogsTab steps={steps} onStepFocus={onStepFocus} />
         </div>
-      ) : (
+      )}
+
+      {showTabs && tab === 'call-details' && showCallDetailsTab && (
+        <div className="min-h-0 flex-1 overflow-y-auto px-2xl pb-2xl pt-lg">
+          {resolvedCallDetailsContent}
+        </div>
+      )}
+
+      {showTabs && tab === 'conversation' && (
         <div
           className={`flex min-h-0 flex-1 flex-col overflow-hidden px-2xl pb-2xl ${
             skipContainerTopPadding ? '' : 'pt-lg'
@@ -852,7 +847,7 @@ export function RunDetailsPanel({
                     <CallAiSummary bullets={conversationAiSummary} className="mt-0" />
                   </div>
                 )}
-                {topCallDetails && (
+                {hasCallDetails && !showCallRecording && (
                   <CollapsibleCallDetails title="Details" userRating={userRating}>
                     {resolvedCallDetailsContent}
                   </CollapsibleCallDetails>
@@ -865,8 +860,6 @@ export function RunDetailsPanel({
                   recIdByMessage={recIdByMessage}
                   onCoachAgent={agentName ? (messageId) => setShareFeedbackMessageId(messageId) : undefined}
                   onTrackFeedback={onTrackFeedback}
-                  callDetailsContent={inlineCallDetails ? resolvedCallDetailsContent : undefined}
-                  callDetailsUserRating={inlineCallDetails ? userRating : undefined}
                 />
               </div>
             )}

@@ -6,24 +6,27 @@ import {
   getUserRatingForLogStatus,
   Icon,
   LogDetailsPanel,
-  ReviewCardBody,
   RunDetailsPanel,
-  type ReviewCardData,
+  type ChipVariant,
   type RunLogStep,
 } from '../components'
-import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
+import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
 import {
-  buildLogRunSteps,
-  getExecutedNodeIds,
-  resolveAgentWorkflowForLog,
-  type WorkflowNodeSeed,
-} from '../data/logRunSteps'
+  HEALTHCARE_AGENT_WORKFLOWS,
+  HEALTHCARE_REMINDER_NORTH_WORKFLOW,
+} from '../data/agentWorkflows'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { REMINDER_CONVERSATION_AI_SUMMARY } from '../data/reminderInboxConversation'
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
 
 const AgentBuilder = AgentBuilderRaw as unknown as React.ComponentType<Record<string, unknown>>
+import StartNode from '../workflow/Molecules/Canvas/StartNode/StartNode'
+import CanvasNode from '../workflow/Molecules/Canvas/CanvasNode/CanvasNode'
+import ProceduresNode from '../workflow/Molecules/Canvas/ProceduresNode/ProceduresNode'
+import EndNode from '../workflow/Molecules/Canvas/EndNode/EndNode'
+import GraphControls from '../workflow/Modules/FlowCanvas/GraphControls/GraphControls'
+import '../workflow/FlowCanvas/FlowCanvas.css'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import '../workflow/AgentBuilder/AgentBuilder.css'
 
@@ -51,6 +54,57 @@ function sameLogRow(a: HealthcareLogRow, b: HealthcareLogRow) {
   )
 }
 
+const PROCEDURE_CHIPS = [
+  'Greet and open conversation',
+  'Talk to human',
+  'Handle general inquiry',
+  'Handle unclear message',
+  'Handle emergency or urgent concern',
+]
+
+/* ── workflow canvas connector (matches FlowCanvas edge styling, no add button in run view) ── */
+const LOG_VIEW_START_GAP = 100
+const LOG_VIEW_CONNECTOR_GAP = 48
+const LOG_VIEW_DEFAULT_ZOOM = 95
+const LOG_VIEW_ZOOM_MIN = 10
+const LOG_VIEW_ZOOM_MAX = 200
+const LOG_VIEW_ZOOM_STEP = 25
+
+function isEditableZoomTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'))
+}
+
+function clampLogViewZoom(value: number) {
+  return Math.min(LOG_VIEW_ZOOM_MAX, Math.max(LOG_VIEW_ZOOM_MIN, Math.round(value)))
+}
+
+function isLogViewZoomInKey(key: string) {
+  return key === '=' || key === '+' || key === 'Add'
+}
+
+function isLogViewZoomOutKey(key: string) {
+  return key === '-' || key === '_' || key === 'Subtract'
+}
+
+function RunFlowConnector({ height }: { height: number }) {
+  return (
+    <div className="relative flex items-center justify-center" style={{ height, width: 24 }}>
+      <div
+        className="pointer-events-none absolute bottom-0 top-0 left-1/2 w-px -translate-x-1/2"
+        style={{ background: '#ccd5e4' }}
+      />
+    </div>
+  )
+}
+
+const RUN_PROCEDURE_ITEMS = PROCEDURE_CHIPS.map((name) => ({ id: name, name }))
+
+function getImplementedSteps(row: HealthcareLogRow): LogStepId[] {
+  if (row.implementedSteps?.length) return row.implementedSteps
+  if (row.status === 'Complete' || row.status === 'Resolved') return ['trigger', 'procedures']
+  return ['trigger']
+}
+
 function parseDurationSecs(duration: string): number {
   const mmss = duration.match(/^(\d+):(\d+)$/)
   if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2])
@@ -73,6 +127,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
   const source = String(row.source ?? row.channel ?? 'Google')
   const trigger: RunLogStep = {
     id: 'rr-log-1',
+    nodeId: 'rr-1',
     type: 'trigger',
     stepNumber: 1,
     title: 'When a new review is received or updated',
@@ -92,6 +147,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rr-log-2',
+        nodeId: 'rr-2',
         type: 'task',
         stepNumber: 2,
         title: 'Triage review',
@@ -105,6 +161,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rr-log-2',
+        nodeId: 'rr-2',
         type: 'task',
         stepNumber: 2,
         title: 'Triage review',
@@ -118,6 +175,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rr-log-2',
+        nodeId: 'rr-2',
         type: 'task',
         stepNumber: 2,
         title: 'Triage review',
@@ -133,6 +191,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       },
       {
         id: 'rr-log-3',
+        nodeId: 'rr-3',
         type: 'branch',
         stepNumber: 3,
         title: 'Fallback',
@@ -142,6 +201,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
       },
       {
         id: 'rr-log-4',
+        nodeId: 'rr-7',
         type: 'task',
         stepNumber: 4,
         title: 'Send email alert',
@@ -166,6 +226,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     trigger,
     {
       id: 'rr-log-2',
+      nodeId: 'rr-2',
       type: 'task',
       stepNumber: 2,
       title: 'Triage review',
@@ -181,6 +242,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-3',
+      nodeId: 'rr-3',
       type: 'branch',
       stepNumber: 3,
       title: 'Respond',
@@ -190,6 +252,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-4',
+      nodeId: 'rr-4',
       type: 'task',
       stepNumber: 4,
       title: 'Extract review details',
@@ -206,6 +269,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-5',
+      nodeId: 'rr-5',
       type: 'task',
       stepNumber: 5,
       title: 'Generate response',
@@ -223,6 +287,7 @@ function buildReviewResponseRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rr-log-6',
+      nodeId: 'rr-6',
       type: 'task',
       stepNumber: 6,
       title: 'Send response',
@@ -250,6 +315,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
   const firstName = row.contact.split(' ')[0] || row.contact
   const trigger: RunLogStep = {
     id: 'rg-log-1',
+    nodeId: 'rg-1',
     type: 'trigger',
     stepNumber: 1,
     title: 'When a transaction is completed',
@@ -269,6 +335,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rg-log-2',
+        nodeId: 'rg-2',
         type: 'task',
         stepNumber: 2,
         title: 'Send review request email',
@@ -282,6 +349,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
       trigger,
       {
         id: 'rg-log-2',
+        nodeId: 'rg-2',
         type: 'task',
         stepNumber: 2,
         title: 'Send review request email',
@@ -300,6 +368,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
       },
       {
         id: 'rg-log-3',
+        nodeId: 'rg-3',
         type: 'task',
         stepNumber: 3,
         title: 'Send review request text',
@@ -323,6 +392,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
     trigger,
     {
       id: 'rg-log-2',
+      nodeId: 'rg-2',
       type: 'task',
       stepNumber: 2,
       title: 'Send review request email',
@@ -345,6 +415,7 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
     },
     {
       id: 'rg-log-3',
+      nodeId: 'rg-3',
       type: 'task',
       stepNumber: 3,
       title: 'Send review request text',
@@ -368,66 +439,103 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
   ]
 }
 
-function findStepOutputValue(
-  steps: RunLogStep[] | undefined,
-  stepTitle: string,
-  fieldKey: string,
-): string | undefined {
-  const step = steps?.find((s) => s.title === stepTitle)
-  return step?.output?.find((f) => f.key === fieldKey)?.value
+/* ── generic workflow node shape (from agentWorkflows seeds) ── */
+interface WorkflowNodeSeed {
+  id: string
+  flowType: string
+  data: {
+    title: string
+    subtype?: string
+    descriptionPlaceholder?: string
+  }
 }
 
-/** "Review details" tab content — the review/request record itself, shown in place of a
- *  conversation thread (which review-response/generation runs don't have). Response runs render
- *  the same reviewer/rating/text/reply card used on the Reviews list; generation runs (which
- *  don't have an underlying review yet) show a short request-sent summary instead. */
-function ReviewDetailsContent({
-  row,
-  steps,
-  agentName,
-  kind,
-}: {
-  row: HealthcareLogRow
-  steps?: RunLogStep[]
-  agentName: string
-  kind: 'response' | 'generation'
-}) {
-  const source = String(row.source ?? row.channel ?? '')
+/** Node ids this run executed — follows only the taken branch path, not every branch. */
+function getExecutedNodeIds(
+  row: HealthcareLogRow,
+  nodes: WorkflowNodeSeed[],
+  nodeDetails: Record<string, unknown>,
+): string[] {
+  // Explicit list from the log row wins when present.
+  const explicit = row.executedNodeIds
+  if (Array.isArray(explicit) && explicit.length > 0) {
+    return explicit.filter((id): id is string => typeof id === 'string')
+  }
 
-  if (kind === 'generation') {
-    return (
-      <div className="flex h-full flex-col gap-md overflow-y-auto">
-        <div className="flex items-center gap-sm text-body">
-          <span className="text-text-primary">{row.contact}</span>
-          {row.location && <span className="text-text-tertiary">• {row.location}</span>}
-        </div>
-        <p className="text-body text-text-secondary">Review request sent via {source || 'email'}.</p>
-      </div>
+  if (row.status === 'In progress') {
+    return nodes.slice(0, Math.min(2, nodes.length)).map((node) => node.id)
+  }
+
+  const ids: string[] = []
+  const visit = (items: WorkflowNodeSeed[]) => {
+    items.forEach((node) => {
+      ids.push(node.id)
+      const detail = nodeDetails[node.id] as {
+        branches?: Array<{ id: string; isFallback?: boolean }>
+      } | undefined
+      if (!detail?.branches?.length) return
+
+      // Complete → primary (non-fallback) path; Failed → fallback / last path.
+      const chosen =
+        row.status === 'Failed' || row.status === 'Not resolved'
+          ? detail.branches.find((b) => b.isFallback) ?? detail.branches[detail.branches.length - 1]
+          : detail.branches.find((b) => !b.isFallback) ?? detail.branches[0]
+
+      const path = chosen
+        ? (nodeDetails[chosen.id] as { nodes?: WorkflowNodeSeed[] } | undefined)
+        : undefined
+      if (path?.nodes) visit(path.nodes)
+    })
+  }
+  visit(nodes)
+  return ids
+}
+
+/** Flatten top-level + branch-path nodes for title → id lookup. */
+function flattenWorkflowNodes(
+  nodes: WorkflowNodeSeed[],
+  nodeDetails: Record<string, unknown>,
+): WorkflowNodeSeed[] {
+  const out: WorkflowNodeSeed[] = []
+  const visit = (items: WorkflowNodeSeed[]) => {
+    items.forEach((node) => {
+      out.push(node)
+      const detail = nodeDetails[node.id] as {
+        branches?: Array<{ id: string; name?: string }>
+      } | undefined
+      detail?.branches?.forEach((branch) => {
+        const path = nodeDetails[branch.id] as { nodes?: WorkflowNodeSeed[] } | undefined
+        if (path?.nodes) visit(path.nodes)
+      })
+    })
+  }
+  visit(nodes)
+  return out
+}
+
+/** Resolve which canvas node a log step should focus. */
+function resolveLogStepNodeId(
+  step: RunLogStep,
+  nodes: WorkflowNodeSeed[],
+  nodeDetails: Record<string, unknown>,
+): string | null {
+  if (step.nodeId) return step.nodeId
+  const all = flattenWorkflowNodes(nodes, nodeDetails)
+  const byTitle = all.find((n) => n.data.title === step.title)
+  if (byTitle) return byTitle.id
+  // Branch log rows often use the path label ("Respond" / "Fallback") rather than the branch card title.
+  for (const node of all) {
+    const detail = nodeDetails[node.id] as {
+      branches?: Array<{ id: string; name?: string }>
+    } | undefined
+    const match = detail?.branches?.find(
+      (b) =>
+        b.name === step.title ||
+        (b.name != null && b.name.toLowerCase().startsWith(step.title.toLowerCase())),
     )
+    if (match) return node.id
   }
-
-  const firstName = row.contact && row.contact !== '—' ? row.contact.split(' ')[0] : 'there'
-  const replyText =
-    findStepOutputValue(steps, 'Generate response', 'Draft reply')
-    ?? (typeof row.rating === 'number' && row.rating <= 3
-      ? `We appreciate your feedback, ${firstName}. If you would like to discuss your experience further, please reach out to us directly — we would love the opportunity to resolve any issues.`
-      : `Thank you so much for your feedback, ${firstName}! We're thrilled to hear about your experience and look forward to seeing you again soon.`)
-
-  const review: ReviewCardData = {
-    reviewerName: row.contact,
-    rating: typeof row.rating === 'number' ? row.rating : 0,
-    date: row.timestamp,
-    reviewId: row.reviewId ?? '—',
-    location: row.location ?? '—',
-    text: typeof row.comment === 'string' ? row.comment : '',
-    reply: { channel: source || 'Birdeye', agentName, postedAt: row.timestamp, text: replyText },
-  }
-
-  return (
-    <div className="h-full overflow-y-auto">
-      <ReviewCardBody review={review} stacked />
-    </div>
-  )
+  return null
 }
 
 /* ── run canvas — same AgentBuilder viewer as the Workflow tab, executed nodes in green ── */
@@ -436,11 +544,15 @@ function AgentWorkflowRunCanvas({
   workflow,
   row,
   product,
+  focusNodeId = null,
+  focusNonce = 0,
 }: {
   instanceName: string
   workflow: { nodes: WorkflowNodeSeed[]; nodeDetails: Record<string, unknown> }
   row: HealthcareLogRow
   product?: string
+  focusNodeId?: string | null
+  focusNonce?: number
 }) {
   const { procedures } = useProcedureStore()
   const filteredProcedures = procedures.filter((p) => p.category === 'Healthcare Frontdesk')
@@ -454,6 +566,11 @@ function AgentWorkflowRunCanvas({
     )
     .join('\n')
 
+  const focusCss = focusNodeId
+    ? `.run-wf-viewer .react-flow__node[data-id="${focusNodeId}"] .canvas-node { border: 1px solid #1976d2 !important; animation: ab-test-run-pulse 2.6s ease-in-out infinite; }`
+    : ''
+
+  // Remount focus signal when the same node is clicked again (nonce bumps).
   return (
     <div className="run-wf-bg absolute inset-0 overflow-hidden">
       <style>{`
@@ -483,6 +600,7 @@ function AgentWorkflowRunCanvas({
         .run-wf-viewer .rr-chrome-top { display: none !important; }
         .run-wf-viewer .rr-chrome-run-test { display: none !important; }
         ${executedCss}
+        ${focusCss}
       `}</style>
       <div className="run-wf-viewer">
         <AgentBuilder
@@ -499,9 +617,144 @@ function AgentWorkflowRunCanvas({
           initialNodeDetails={workflow.nodeDetails}
           procedures={filteredProcedures}
           defaultOpenSection="Tasks"
-          initialZoom={0.85}
+          initialZoom={LOG_VIEW_DEFAULT_ZOOM / 100}
           nodesInteractive={false}
           logDoneNodeIds={executedIds}
+          externalFocusNodeId={focusNodeId}
+          externalFocusNonce={focusNonce}
+        />
+      </div>
+    </div>
+  )
+}
+
+/* ── workflow canvas ── */
+function WorkflowCanvas({
+  instanceName,
+  implementedSteps,
+}: {
+  instanceName: string
+  implementedSteps: LogStepId[]
+}) {
+  const triggerImplemented = implementedSteps.includes('trigger')
+  const proceduresImplemented = implementedSteps.includes('procedures')
+  const [zoom, setZoom] = React.useState(LOG_VIEW_DEFAULT_ZOOM)
+  const canvasRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isEditableZoomTarget(e.target)) return
+
+      const mod = e.ctrlKey || e.metaKey
+      const numpad = e.key === 'Add' || e.key === 'Subtract'
+      const canvasFocused = Boolean(canvasRef.current?.contains(document.activeElement))
+
+      if (mod && isLogViewZoomInKey(e.key)) {
+        e.preventDefault()
+        setZoom((z) => clampLogViewZoom(z + LOG_VIEW_ZOOM_STEP))
+        return
+      }
+      if (mod && isLogViewZoomOutKey(e.key)) {
+        e.preventDefault()
+        setZoom((z) => clampLogViewZoom(z - LOG_VIEW_ZOOM_STEP))
+        return
+      }
+      if (mod && e.key === '0') {
+        e.preventDefault()
+        setZoom(LOG_VIEW_DEFAULT_ZOOM)
+        return
+      }
+      if (numpad && canvasFocused) {
+        e.preventDefault()
+        if (e.key === 'Add') setZoom((z) => clampLogViewZoom(z + LOG_VIEW_ZOOM_STEP))
+        if (e.key === 'Subtract') setZoom((z) => clampLogViewZoom(z - LOG_VIEW_ZOOM_STEP))
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -10 : 10
+    setZoom((z) => clampLogViewZoom(z + delta))
+  }
+
+  return (
+    <div
+      ref={canvasRef}
+      tabIndex={-1}
+      className="flow-canvas absolute inset-0 flex flex-col overflow-hidden outline-none"
+      onMouseDown={() => canvasRef.current?.focus()}
+    >
+      <div className="min-h-0 flex-1 overflow-auto" onWheel={handleWheel}>
+        {/* Right padding keeps the flow clear of the overlaid details panel */}
+        <div
+          className="log-view-canvas-scale flex flex-col items-center pb-2xl pr-[620px] pt-2xl"
+          style={{ zoom: zoom / 100 }}
+        >
+          <StartNode title={instanceName} subtitle="All locations" />
+
+          <RunFlowConnector height={LOG_VIEW_START_GAP} />
+
+          <div className="flow-canvas__node-center" data-log-canvas-step="trigger">
+            <CanvasNode
+              nodeType="trigger"
+              label="Trigger"
+              stepNumber={1}
+              title="Conversation trigger"
+              description="Agent triggers when a voice, chat, or text conversations starts"
+              titlePlaceholder=""
+              descriptionPlaceholder=""
+              viewOnly
+              onToggleChange={() => {}}
+              onAddClick={() => {}}
+              onDelete={() => {}}
+              onCopy={() => {}}
+              onReplace={() => {}}
+              state={triggerImplemented ? 'implemented' : 'default'}
+              runStatus={triggerImplemented ? 'done' : undefined}
+            />
+          </div>
+
+          <RunFlowConnector height={LOG_VIEW_CONNECTOR_GAP} />
+
+          <div className="flow-canvas__node-center" data-log-canvas-step="procedures">
+            <ProceduresNode
+              stepNumber={3}
+              procedureItems={RUN_PROCEDURE_ITEMS as never[]}
+              hasToggle
+              toggleEnabled
+              toggleDisabled
+              viewOnly
+              onToggleChange={() => {}}
+              onDelete={() => {}}
+              onCopy={() => {}}
+              onReplace={() => {}}
+              onMoveUp={() => {}}
+              onMoveDown={() => {}}
+              onDropProcedure={() => {}}
+              onRemoveProcedure={() => {}}
+              onSelectProcedure={() => {}}
+              state={proceduresImplemented ? 'implemented' : 'default'}
+              runStatus={proceduresImplemented ? 'done' : undefined}
+            />
+          </div>
+
+          <EndNode viewOnly hideAdd onDropBeforeEnd={() => {}} />
+        </div>
+      </div>
+
+      <div className="log-view-zoom-anchor">
+        <GraphControls
+          rrChrome
+          viewOnly
+          zoom={zoom}
+          onZoomSelect={(fraction: number) => setZoom(clampLogViewZoom(fraction * 100))}
+          onFitView={() => setZoom(LOG_VIEW_DEFAULT_ZOOM)}
+          onFillView={() => setZoom(100)}
         />
       </div>
     </div>
@@ -519,6 +772,7 @@ export function RunDetailView({
   onSelectRun,
   explorationFrontDeskStatus = false,
 }: RunDetailViewProps) {
+  const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
   const isReviewResponse = /review response agent/i.test(agentName)
   const isReviewGeneration = /review generation agent/i.test(agentName)
@@ -528,22 +782,47 @@ export function RunDetailView({
   const totalSecs = parseDurationSecs(row.duration)
   const displayCaller =
     row.contact.startsWith('+') || row.contact.startsWith('(') ? row.contact : '(032) 902 9023'
-  const agentWorkflow = resolveAgentWorkflowForLog(instanceName, agentName)
-  const legacyLogSteps = isReviewResponse
-    ? buildReviewResponseRunSteps(row)
-    : isReviewGeneration
-      ? buildReviewGenerationRunSteps(row)
-      : undefined
-  const logSteps = agentWorkflow
-    ? buildLogRunSteps(row, agentWorkflow, { agentName, legacySteps: legacyLogSteps })
-    : legacyLogSteps
-  const statusVariant =
-    row.status === 'Complete' || row.status === 'Resolved'
-      ? 'success'
-      : row.status === 'Failed' || row.status === 'Not resolved'
-        ? 'danger'
-        : 'warning'
+  const agentWorkflow =
+    instanceName === 'Reminder agent - North region'
+      ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
+      : agentName !== 'Front desk agent'
+        ? HEALTHCARE_AGENT_WORKFLOWS[agentName]
+        : undefined
+  const LOG_STATUS_VARIANT: Record<string, ChipVariant> = {
+    Complete: 'success',
+    Completed: 'success',
+    Failed: 'danger',
+    'In progress': 'warning',
+    Resolved: 'success',
+    'Not resolved': 'danger',
+    Aborted: 'neutral',
+  }
+  const statusVariant = LOG_STATUS_VARIANT[row.status] ?? 'warning'
   const useRunDetailsPanel = isReminder || isReviewAgent
+
+  const [focusNodeId, setFocusNodeId] = React.useState<string | null>(null)
+  const [focusNonce, setFocusNonce] = React.useState(0)
+
+  const handleStepFocus = React.useCallback(
+    (step: RunLogStep) => {
+      if (agentWorkflow) {
+        const id = resolveLogStepNodeId(
+          step,
+          agentWorkflow.nodes as WorkflowNodeSeed[],
+          agentWorkflow.nodeDetails as Record<string, unknown>,
+        )
+        if (!id) return
+        setFocusNodeId(id)
+        setFocusNonce((n) => n + 1)
+        return
+      }
+      // Front-desk fallback canvas — scroll the matching static card into view.
+      const key = step.nodeId ?? (step.type === 'procedures' ? 'procedures' : step.type === 'trigger' ? 'trigger' : step.id)
+      const el = document.querySelector<HTMLElement>(`[data-log-canvas-step="${key}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    },
+    [agentWorkflow],
+  )
 
   const runIndex = runs.findIndex((r) => sameLogRow(r, row))
   const hasRunNav = runs.length > 1 && runIndex >= 0 && !!onSelectRun
@@ -552,7 +831,9 @@ export function RunDetailView({
 
   return (
     <div className="log-detail-view relative flex h-full flex-col bg-surface">
-      {/* Visual chrome for the AgentBuilder run canvas so every agent's log view looks identical. */}
+      {/* Visual chrome shared by both canvas paths (AgentBuilder run canvas and the plain
+          WorkflowCanvas) so every agent's log view looks identical, whatever data it shows.
+          Scoped to .log-detail-view — .flow-canvas is shared with the workflow editor. */}
       <style>{`
         .log-detail-view .flow-canvas,
         .log-detail-view .run-wf-bg,
@@ -560,20 +841,19 @@ export function RunDetailView({
           background-color: #f2f4f7 !important;
           background-image: none !important;
         }
-        /* Bottom-left zoom floater (AgentBuilder canvas path). */
+        /* Bottom-left zoom floater (fallback WorkflowCanvas path). */
+        .log-detail-view .flow-canvas {
+          display: flex;
+          flex-direction: column;
+        }
         .log-detail-view .log-view-zoom-anchor {
           position: absolute;
           bottom: 16px;
           left: 16px;
           z-index: 50;
-          pointer-events: none;
         }
         .log-detail-view .log-view-zoom-anchor .graph-controls--rr-chrome {
           width: auto;
-          pointer-events: none;
-        }
-        .log-detail-view .log-view-zoom-anchor .graph-controls__rr-zoom {
-          pointer-events: auto;
         }
 
         /* Node cards are a read-only record here — fully inert: no pointer, no hover
@@ -582,29 +862,34 @@ export function RunDetailView({
         .log-detail-view .canvas-node,
         .log-detail-view .react-flow__node { cursor: default !important; }
         .log-detail-view .canvas-node__hover-actions { display: none !important; }
+        .log-detail-view .cnh__more-wrapper { display: none !important; }
         .log-detail-view .canvas-node--hover,
         .log-detail-view .canvas-node--selected { border-color: transparent !important; }
       `}</style>
 
-      {/* Header — title + status chip with agent name subtitle; prev/next on the right */}
-      <div className="flex shrink-0 items-start gap-sm border-b border-border px-2xl py-sm">
-        <button
-          type="button"
-          aria-label="Back to logs"
-          onClick={onBack}
-          className="mt-xs flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-        >
-          <BackArrowIcon />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-sm">
-            <h1 className="min-w-0 truncate text-h3 text-text-primary">Log - {row.timestamp}</h1>
-            <Chip label={row.status} variant={statusVariant} />
+      {/* Header — title + status on line 1, instance name on line 2 */}
+      <div className="flex shrink-0 items-center justify-between gap-md bg-surface px-2xl py-md">
+        <div className="flex min-w-0 items-center gap-sm">
+          <button
+            type="button"
+            aria-label="Back to logs"
+            onClick={onBack}
+            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          >
+            <BackArrowIcon />
+          </button>
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-sm">
+              <h1 className="min-w-0 truncate text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+                Log - {row.timestamp}
+              </h1>
+              <Chip label={row.status} variant={statusVariant} />
+            </div>
+            <p className="truncate text-small text-text-secondary">{instanceName}</p>
           </div>
-          <p className="mt-xs text-small text-text-secondary">{instanceName}</p>
         </div>
         {hasRunNav && (
-          <div className="mt-xs flex shrink-0 items-center gap-xs">
+          <div className="flex shrink-0 items-center gap-xs">
             <button
               type="button"
               aria-label="Previous log"
@@ -640,26 +925,29 @@ export function RunDetailView({
             instanceName={instanceName}
             workflow={agentWorkflow as { nodes: WorkflowNodeSeed[]; nodeDetails: Record<string, unknown> }}
             row={row}
+            focusNodeId={focusNodeId}
+            focusNonce={focusNonce}
           />
-        ) : null}
+        ) : (
+          <WorkflowCanvas
+            instanceName={canvasInstanceName}
+            implementedSteps={getImplementedSteps(row)}
+          />
+        )}
 
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
           {useRunDetailsPanel ? (
             <RunDetailsPanel
-              steps={logSteps}
-              showTabs
-              showHeader={false}
-              conversationTabLabel={isReviewAgent ? 'Review details' : undefined}
-              conversationContent={
-                isReviewAgent ? (
-                  <ReviewDetailsContent
-                    row={row}
-                    steps={logSteps}
-                    agentName={agentName}
-                    kind={isReviewResponse ? 'response' : 'generation'}
-                  />
-                ) : undefined
+              steps={
+                isReviewResponse
+                  ? buildReviewResponseRunSteps(row)
+                  : isReviewGeneration
+                    ? buildReviewGenerationRunSteps(row)
+                    : undefined
               }
+              showTabs={!isReviewAgent}
+              title={isReviewAgent ? 'Log details' : undefined}
+              showHeader={isReviewAgent}
               showCallRecording={isReminder && hasVoiceCall}
               audioUrl={isReminder ? voicemailSample : undefined}
               durationSecs={isReminder ? totalSecs : undefined}
@@ -680,18 +968,20 @@ export function RunDetailView({
               }
               userRating={isReminder && hasVoiceCall ? getUserRatingForLogStatus(row.status) : undefined}
               conversationAiSummary={isReminder ? REMINDER_CONVERSATION_AI_SUMMARY : undefined}
+              onStepFocus={handleStepFocus}
             />
           ) : (
             <LogDetailsPanel
+              key={row.timestamp}
               row={row}
               agentName={instanceName}
-              steps={logSteps}
               onTrackFeedback={onTrackFeedback}
               callEndResultBadge={explorationFrontDeskStatus ? String(row.status) : undefined}
               userRating={
                 explorationFrontDeskStatus ? getUserRatingForLogStatus(row.status) : undefined
               }
               showTranscriptTranslation={explorationFrontDeskStatus}
+              onStepFocus={handleStepFocus}
             />
           )}
         </div>

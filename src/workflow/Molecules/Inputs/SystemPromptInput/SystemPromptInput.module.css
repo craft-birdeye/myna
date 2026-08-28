@@ -153,6 +153,18 @@
   border-color: #1976d2; /* text/action */
 }
 
+.inputBoxError,
+.inputBoxError:focus-within {
+  border-color: #de1b0c;
+}
+
+.errorText {
+  font-size: 12px;
+  line-height: 16px;
+  color: #de1b0c;
+  font-family: 'Roboto', sans-serif;
+}
+
 .editor {
   min-height: 76px; /* matches Description textarea (3 rows × 20px + 16px padding) */
   max-height: 168px;
