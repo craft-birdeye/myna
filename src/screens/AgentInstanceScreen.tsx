@@ -804,6 +804,7 @@ export function AgentInstanceScreen({
                 <Tabs
                   tabs={tabs}
                   activeTab={activeTab}
+                  showBaseline={false}
                   onChange={(tabId) => {
                     setActiveTab(tabId)
                   }}
@@ -831,6 +832,7 @@ export function AgentInstanceScreen({
               <Tabs
                 tabs={tabs}
                 activeTab={activeTab}
+                showBaseline={false}
                 onChange={(tabId) => {
                   setActiveTab(tabId)
                 }}

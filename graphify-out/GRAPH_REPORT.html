@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Graph report — myna-1</title>
+  <style>
+    :root {
+      --bg: #f2f4f7;
+      --surface: #ffffff;
+      --text: #0d0d12;
+      --muted: #717182;
+      --border: #e5e9f0;
+      --primary: #1976d2;
+      --code-bg: #f7f7f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .shell { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 40px;
+      box-shadow: 0 2px 12px rgba(13, 13, 18, 0.06);
+    }
+    h1 { font-size: 24px; line-height: 1.3; margin: 0 0 24px; letter-spacing: -0.02em; }
+    h2 {
+      font-size: 18px; margin: 32px 0 12px; padding-top: 8px;
+      border-top: 1px solid var(--border); letter-spacing: -0.02em;
+    }
+    h2:first-of-type { border-top: 0; padding-top: 0; }
+    h3 { font-size: 15px; margin: 20px 0 8px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 0 0 16px; padding-left: 24px; }
+    li { margin-bottom: 4px; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px; background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 1px 6px;
+    }
+    em { color: var(--muted); }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .nav a {
+      display: inline-block; padding: 6px 10px; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--bg); font-size: 12px;
+    }
+    .footer { margin-top: 24px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="card">
+      <nav class="nav" aria-label="Sections">
+        <a href="#graph-report---myna-1--2026-08-28">Top</a>
+        <a href="#summary">Summary</a>
+        <a href="#community-hubs-navigation">Hubs</a>
+        <a href="#god-nodes-most-connected---your-core-abstractions">God nodes</a>
+        <a href="#communities-343-total-67-thin-omitted">Communities</a>
+        <a href="#knowledge-gaps">Gaps</a>
+        <a href="#suggested-questions">Questions</a>
+        <a href="graph.html">Interactive graph →</a>
+      </nav>
+      <h1 id="graph-report---myna-1-2026-08-28">Graph Report - myna-1  (2026-08-28)</h1>
+      <h2 id="corpus-check">Corpus Check</h2>
+      <ul>
+      <li>cluster-only mode — file stats not available</li>
+      </ul>
+      <h2 id="summary">Summary</h2>
+      <ul>
+      <li>7869 nodes · 14396 edges · 343 communities (276 shown, 67 thin omitted)</li>
+      <li>Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 378 edges (avg confidence: 0.85)</li>
+      <li>Token cost: 0 input · 0 output</li>
+      </ul>
+      <h2 id="graph-freshness">Graph Freshness</h2>
+      <ul>
+      <li>Built from commit: <code>3bc46018</code></li>
+      <li>Run <code>git rev-parse HEAD</code> and compare to check if the graph is stale.</li>
+      <li>Run <code>graphify update .</code> after code changes (no API cost).</li>
+      </ul>
+      <h2 id="community-hubs-navigation">Community Hubs (Navigation)</h2>
+      <ul>
+      <li>cn</li>
+      <li>ContentFlowControls.tsx</li>
+      <li>BlockCanvas.tsx</li>
+      <li>ContentEditorShell.tsx</li>
+      <li>button.tsx</li>
+      <li>AgentDetailScreen.tsx</li>
+      <li>index.ts</li>
+      <li>workflow/Organisms/Panels/RHS/RHS.jsx</li>
+      <li>NewFrontdeskAgentSetupScreen.tsx</li>
+      <li>faq-agents/Organisms/Panels/RHS/RHS.jsx</li>
+      <li>OverviewV2_1Screen.tsx</li>
+      <li>AgentSettingsTab.tsx</li>
+      <li>AddToolDrawer.jsx</li>
+      <li>App.tsx</li>
+      <li>Icon</li>
+      <li>workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx</li>
+      <li>HCWaitlistFilledScreen.tsx</li>
+      <li>workflow/LHSDrawer/LHSDrawer.jsx</li>
+      <li>ProvidersScreen.tsx</li>
+      <li>recommendationsData.ts</li>
+      <li>workflow/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.jsx</li>
+      <li>RunDetailsPanel.tsx</li>
+      <li>PostCard.tsx</li>
+      <li>faq-agents/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx</li>
+      <li>ClassicOverviewScreen.tsx</li>
+      <li>workflow/AgentBuilder/AgentBuilder.jsx</li>
+      <li>sheet.v1.tsx</li>
+      <li>Column</li>
+      <li>InboxScreen.tsx</li>
+      <li>faqStore.ts</li>
+      <li>faq-agents/Organisms/Panels/RHS/LLMTaskBody.jsx</li>
+      <li>FAQAgentsDashboardView.tsx</li>
+      <li>workflow/Molecules/Inputs/VariableChip/VariableChip.jsx</li>
+      <li>contenthub-ui/utils.ts</li>
+      <li>Tooltip.tsx</li>
+      <li>workflow/Molecules/Conditions/Conditions.jsx</li>
+      <li>CreatePostView.tsx</li>
+      <li>VoiceCallToolDrawer.jsx</li>
+      <li>ContentCreationWizardModal.tsx</li>
+      <li>SocialEditor.tsx</li>
+      <li>ManageAppointmentsScreen.tsx</li>
+      <li>SearchAIView.tsx</li>
+      <li>ConversationsScreen.tsx</li>
+      <li>Button</li>
+      <li>RecommendationDetailScreen.tsx</li>
+      <li>scoreColors.ts</li>
+      <li>FAQSectionCanvas.tsx</li>
+      <li>workflow/FlowCanvas/FlowCanvas.jsx</li>
+      <li>LogDetailsPanel.tsx</li>
+      <li>agentWorkflows.ts</li>
+      <li>CreateView.tsx</li>
+      <li>AgentLogsTab.tsx</li>
+      <li>RecDetailView.tsx</li>
+      <li>InlineCreationFlow.tsx</li>
+      <li>ContentScorePanel.tsx</li>
+      <li>faq-agents/elemental-stubs.jsx</li>
+      <li>workflow/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.jsx</li>
+      <li>DataTable</li>
+      <li>workflow/services/agentService.js</li>
+      <li>BackArrowIcon.tsx</li>
+      <li>HelpCenterPanel.tsx</li>
+      <li>Link</li>
+      <li>EscalationNotifier.jsx</li>
+      <li>BlockSettingsPanel.tsx</li>
+      <li>AvailabilityScreen.tsx</li>
+      <li>workflow/elemental-stubs.jsx</li>
+      <li>ServiceScreen.tsx</li>
+      <li>AgentInstanceScreen.tsx</li>
+      <li>faq-agents/Modules/ModuleView.jsx</li>
+      <li>faq-agents/Molecules/Canvas/CanvasNode/CanvasNode.jsx</li>
+      <li>AppDataTable.tsx</li>
+      <li>workflow/Modules/ModuleView.jsx</li>
+      <li>faq-agents/FlowCanvas/FlowCanvas.jsx</li>
+      <li>HealthcareReminderCanvas.tsx</li>
+      <li>BlogSectionCanvas.tsx</li>
+      <li>faq-agents/Organisms/Drawers/CustomToolBuilder/CustomToolBuilder.jsx</li>
+      <li>message.v1.tsx</li>
+      <li>content-hub/ContentCard.tsx</li>
+      <li>faq-agents/AgentBuilder/AgentBuilder.jsx</li>
+      <li>workflow/Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx</li>
+      <li>ProjectsView.tsx</li>
+      <li>workflow/services/procedureService.js</li>
+      <li>RunDetailView.tsx</li>
+      <li>L2NavLayout.v1.tsx</li>
+      <li>AutoAvailabilityScreen.tsx</li>
+      <li>faq-agents/LHSDrawer/LHSDrawer.jsx</li>
+      <li>faq-agents/Organisms/Panels/RHS/RHS.stories.jsx</li>
+      <li>workflow/FAQAgentsDashboard.jsx</li>
+      <li>workflow/Organisms/Panels/RHS/RHS.stories.jsx</li>
+      <li>EmailWizard.tsx</li>
+      <li>UnifiedReviewCanvas.tsx</li>
+      <li>TemplateGallery.tsx</li>
+      <li>AiCopilot.tsx</li>
+      <li>PromptComposer.tsx</li>
+      <li>createAgentChatStore.ts</li>
+      <li>faq-agents/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.jsx</li>
+      <li>workflow/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.jsx</li>
+      <li>copilot-prompt-box.v1.tsx</li>
+      <li>SocialWizard.tsx</li>
+      <li>HCFrontdeskOverviewScreen.tsx</li>
+      <li>dependencies</li>
+      <li>compilerOptions</li>
+      <li>AppointmentOverviewScreen.tsx</li>
+      <li>OverviewScreen.tsx</li>
+      <li>PreviewPanel.jsx</li>
+      <li>AttachmentPickerModal.tsx</li>
+      <li>ColumnSettingsSheet.tsx</li>
+      <li>workflow/AgentBuilder/AgentBuilder.stories.jsx</li>
+      <li>ContentHubL2NavPanel.tsx</li>
+      <li>QuickCreateModal.tsx</li>
+      <li>PhoneNumberScreen.tsx</li>
+      <li>AutoAppointmentTypeScreen.tsx</li>
+      <li>AgentDetailScreen</li>
+      <li>BookTestAppointmentModal.tsx</li>
+      <li>procedureData.ts</li>
+      <li>recTypes.ts</li>
+      <li>workflow/Organisms/Modals/ContextFieldModal/ContextFieldModal.jsx</li>
+      <li>workflow/RHSDrawer/LocationsDrawer.jsx</li>
+      <li>devDependencies</li>
+      <li>faq-agents/Modules/ExpandedRHSModal/ExpandedRHSTest/ExpandedRHSTest.jsx</li>
+      <li>TemplatePickerModal.tsx</li>
+      <li>EditorChromeToolbar.tsx</li>
+      <li>agentDirectoryData.ts</li>
+      <li>workflow/Organisms/TemplateLibrary/TemplateLibrary.jsx</li>
+      <li>TopNav</li>
+      <li>WorkflowEditorScreen.tsx</li>
+      <li>PostDetailsDrawerContent.tsx</li>
+      <li>workflow/Organisms/Drawers/CustomToolViewer/CustomToolViewer.jsx</li>
+      <li>BookAppointmentDrawer.tsx</li>
+      <li>ContextModal.tsx</li>
+      <li>faq-agents/Organisms/Panels/RHS/BranchBody.jsx</li>
+      <li>faq-agents/Organisms/Modals/ContextFieldModal/ContextFieldModal.jsx</li>
+      <li>AgentDirectoryScreen.tsx</li>
+      <li>RecFilterPanel.tsx</li>
+      <li>approvalData.ts</li>
+      <li>Canvas/LoopNode/LoopNode.jsx</li>
+      <li>workflow/Organisms/Panels/RHS/ControlBranchBody.jsx</li>
+      <li>AiBuilderPanel.tsx</li>
+      <li>CreateFrontdeskAgentScreen.tsx</li>
+      <li>GroupTable</li>
+      <li>RecommendationsView.tsx</li>
+      <li>social/CalendarView.tsx</li>
+      <li>GroupTable</li>
+      <li>IconRail.tsx</li>
+      <li>faq-agents/Modules/FlowCanvas/WorkspaceEmptyState/WorkspaceEmptyState.jsx</li>
+      <li>FrontDeskSettings</li>
+      <li>workflow/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx</li>
+      <li>faq-agents/Molecules/DataType/DataType.stories.jsx</li>
+      <li>ManageTreatmentPlansScreen.tsx</li>
+      <li>AddStepMenu.jsx</li>
+      <li>workflow/Organisms/Modals/AddOutputFieldModal/AddOutputFieldModal.jsx</li>
+      <li>ProcedurePickerDetailView.tsx</li>
+      <li>MediaLibraryModal.tsx</li>
+      <li>faq-agents/Modules/Nodes/TriggerNode/EntityTriggerNode/EntityTriggerNode.stories.jsx</li>
+      <li>chain-of-thought.v1.tsx</li>
+      <li>ProceduresScreen.tsx</li>
+      <li>AllReviewsScreen.tsx</li>
+      <li>ApprovalsSetupView.tsx</li>
+      <li>procedurePickerDetailData.ts</li>
+      <li>faq-agents/Molecules/ExpandedRHS/ExpandedRHSFooter/ExpandedRHSFooter.jsx</li>
+      <li>faq-agents/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx</li>
+      <li>FAQEditor.tsx</li>
+      <li>GenericSkeletonCard.tsx</li>
+      <li>HCNoShowsScreen.tsx</li>
+      <li>postData.ts</li>
+      <li>workflow/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx</li>
+      <li>ScheduleDemoPanel.tsx</li>
+      <li>faq-agents/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx</li>
+      <li>faq-agents/Organisms/GroupMetrics/GroupMetrics.jsx</li>
+      <li>carousel.v1.tsx</li>
+      <li>getAgentDirectory</li>
+      <li>ProcedureDetailScreen.tsx</li>
+      <li>workflow/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx</li>
+      <li>workflow/Organisms/GroupMetrics/GroupMetrics.jsx</li>
+      <li>faq-agents/Organisms/Modals/AdvancedFiltersModal/AdvancedFiltersModal.stories.jsx</li>
+      <li>AgentL2Nav</li>
+      <li>QuickCreateModal</li>
+      <li>ExpiredPostsView.tsx</li>
+      <li>workflow/Organisms/Modals/AdvancedFiltersModal/AdvancedFiltersModal.stories.jsx</li>
+      <li>AgentL2Nav</li>
+      <li>ComposerAttachPopover.tsx</li>
+      <li>WorkflowCoachTour.tsx</li>
+      <li>BlogGenerationProgress.tsx</li>
+      <li>DatePickerModal.tsx</li>
+      <li>FilesModal.tsx</li>
+      <li>faq-agents/Modules/Nodes/ControlNode/BranchNode/BranchDetails.stories.jsx</li>
+      <li>chart.v1.tsx</li>
+      <li>HealthcareFrontdeskCreateAgentLive</li>
+      <li>Recommendation</li>
+      <li>RejectedPostsView.tsx</li>
+      <li>workflow/Modules/Nodes/ControlNode/BranchNode/BranchDetails.stories.jsx</li>
+      <li>faq-agents/Organisms/Panels/RHS/ConversationTriggerBody.jsx</li>
+      <li>FAQGenerationAgentsView.tsx</li>
+      <li>ProjectGenerationProgress.tsx</li>
+      <li>ProjectWizardStep3.tsx</li>
+      <li>workflow/Organisms/Panels/RHS/ConversationTriggerBody.jsx</li>
+      <li>compilerOptions</li>
+      <li>CallRecordingPlayer.tsx</li>
+      <li>RangeVariant</li>
+      <li>ReminderToolDrawer.tsx</li>
+      <li>faq-agents/Molecules/Header/Header.stories.jsx</li>
+      <li>savedBlocksStore.ts</li>
+      <li>SocialView.tsx</li>
+      <li>socialTableFixtures.ts</li>
+      <li>workflow/Molecules/Header/Header.stories.jsx</li>
+      <li>package.json</li>
+      <li>InitiateVoiceCallDrawer.tsx</li>
+      <li>Tooltip</li>
+      <li>EditorCopilot</li>
+      <li>BlogSectionCanvas</li>
+      <li>CreateBlogPage</li>
+      <li>faq-agents/AgentBuilder/AgentBuilder.stories.jsx</li>
+      <li>FAQRichToolbar.tsx</li>
+      <li>QueryConfigDrawer.jsx</li>
+      <li>BookAppointmentDrawer</li>
+      <li>faq-agents/Molecules/AppHeader/AppHeader.jsx</li>
+      <li>faq-agents/Molecules/LHS/LHSNode/LHSNode.stories.jsx</li>
+      <li>faq-agents/RHSDrawer/LocationsDrawer.jsx</li>
+      <li>draftStore.ts</li>
+      <li>setup-content-hub.py</li>
+      <li>TestCallModal.tsx</li>
+      <li>TtsFailoverSettings</li>
+      <li>faq-agents/Molecules/MetricCard/MetricCard.stories.jsx</li>
+      <li>faq-agents/Organisms/DataViews/PerformanceTable/PerformanceTable.jsx</li>
+      <li>faq-agents/Organisms/Nav/PrimaryRailNav/PrimaryRailNav.jsx</li>
+      <li>faq-agents/Organisms/Nav/SecondaryRailNav/SecondaryRailNav.jsx</li>
+      <li>faq-agents/services/templateService.js</li>
+      <li>faq-agents/Templates/AgentPerformanceTemplate/AgentPerformanceTemplate.jsx</li>
+      <li>ContentActivityDrawer.tsx</li>
+      <li>SlidingSidePanel.tsx</li>
+      <li>VoiceChannelSettings</li>
+      <li>workflow/Molecules/MetricCard/MetricCard.stories.jsx</li>
+      <li>workflow/Organisms/DataViews/PerformanceTable/PerformanceTable.jsx</li>
+      <li>workflow/Organisms/Nav/PrimaryRailNav/PrimaryRailNav.jsx</li>
+      <li>workflow/Organisms/Nav/SecondaryRailNav/SecondaryRailNav.jsx</li>
+      <li>workflow/services/templateService.js</li>
+      <li>workflow/Templates/AgentPerformanceTemplate/AgentPerformanceTemplate.jsx</li>
+      <li>HealthcareReminderWorkflow.tsx</li>
+      <li>faq-agents/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.stories.jsx</li>
+      <li>faq-agents/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.stories.jsx</li>
+      <li>MetricCard</li>
+      <li>GroupMetrics</li>
+      <li>Step2Source</li>
+      <li>ContentShareModal</li>
+      <li>workflow/Molecules/AIChatBubble/AIChatBubble.jsx</li>
+      <li>MetricCard</li>
+      <li>AssignConversationDrawer.jsx</li>
+      <li>GroupMetrics</li>
+      <li>DatetimeVariant</li>
+      <li>ProjectWizardStep3</li>
+      <li>RHSErrorBoundary</li>
+      <li>PageTransition.tsx</li>
+      <li>faq-agents/Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx</li>
+      <li>faq-agents/Patterns/ErrorStates/ErrorStates.stories.jsx</li>
+      <li>faq-agents/Patterns/LoadingStates/LoadingStates.stories.jsx</li>
+      <li>faq-agents/Patterns/NodeDraggingStates/NodeDraggingStates.stories.jsx</li>
+      <li>faq-agents/Patterns/NodeSelectionStates/NodeSelectionStates.stories.jsx</li>
+      <li>faq-agents/Patterns/PermissionStates/PermissionStates.stories.jsx</li>
+      <li>FAQPublishModal</li>
+      <li>workflow/Molecules/AIPromptBox/AIPromptBox.stories.jsx</li>
+      <li>workflow/Patterns/ErrorStates/ErrorStates.stories.jsx</li>
+      <li>workflow/Patterns/LoadingStates/LoadingStates.stories.jsx</li>
+      <li>workflow/Patterns/NodeDraggingStates/NodeDraggingStates.stories.jsx</li>
+      <li>workflow/Patterns/NodeSelectionStates/NodeSelectionStates.stories.jsx</li>
+      <li>workflow/Patterns/PermissionStates/PermissionStates.stories.jsx</li>
+      <li>vercel.json</li>
+      <li>fix_imports</li>
+      <li>useFAQPrerequisiteCheck.ts</li>
+      <li>AdditionalContextSection</li>
+      <li>clsx</li>
+      <li>cmdk</li>
+      <li>@dnd-kit/core</li>
+      <li>highcharts</li>
+      <li>highcharts-react-official</li>
+      <li>input-otp</li>
+      <li>marked</li>
+      <li>motion</li>
+      <li>@phosphor-icons/react</li>
+      <li>@radix-ui/react-alert-dialog</li>
+      <li>@radix-ui/react-aspect-ratio</li>
+      <li>@radix-ui/react-avatar</li>
+      <li>@radix-ui/react-collapsible</li>
+      <li>@radix-ui/react-context-menu</li>
+      <li>@radix-ui/react-dropdown-menu</li>
+      <li>@radix-ui/react-hover-card</li>
+      <li>@radix-ui/react-label</li>
+      <li>@radix-ui/react-menubar</li>
+      <li>@radix-ui/react-navigation-menu</li>
+      <li>@radix-ui/react-popover</li>
+      <li>@radix-ui/react-progress</li>
+      <li>@radix-ui/react-scroll-area</li>
+      <li>@radix-ui/react-select</li>
+      <li>@radix-ui/react-separator</li>
+      <li>@radix-ui/react-slider</li>
+      <li>@radix-ui/react-slot</li>
+      <li>@radix-ui/react-switch</li>
+      <li>@radix-ui/react-toggle</li>
+      <li>@radix-ui/react-tooltip</li>
+      <li>react</li>
+      <li>react-day-picker</li>
+      <li>react-hook-form</li>
+      <li>react-resizable-panels</li>
+      <li>react-router-dom</li>
+      <li>recharts</li>
+      <li>remark-breaks</li>
+      <li>remark-gfm</li>
+      <li>shiki</li>
+      <li>sonner</li>
+      <li>tailwind-merge</li>
+      <li>vaul</li>
+      <li>wavesurfer.js</li>
+      <li>@xyflow/react</li>
+      <li>faq-agents/firebase.js</li>
+      <li>workflow/firebase.js</li>
+      <li>UserPromptInput.d.ts</li>
+      <li>FieldPickerModal.d.ts</li>
+      </ul>
+      <h2 id="god-nodes-most-connected---your-core-abstractions">God Nodes (most connected - your core abstractions)</h2>
+      <ol>
+      <li><code>cn()</code> - 508 edges</li>
+      <li><code>Icon()</code> - 73 edges</li>
+      <li><code>Button()</code> - 53 edges</li>
+      <li><code>TopNav()</code> - 44 edges</li>
+      <li><code>Column</code> - 39 edges</li>
+      <li><code>DataTable()</code> - 36 edges</li>
+      <li><code>Tooltip()</code> - 35 edges</li>
+      <li><code>AgentBuilder()</code> - 34 edges</li>
+      <li><code>FormInput()</code> - 24 edges</li>
+      <li><code>TextArea()</code> - 24 edges</li>
+      </ol>
+      <h2 id="surprising-connections-you-probably-didnt-know-these">Surprising Connections (you probably didn&#x27;t know these)</h2>
+      <ul>
+      <li><code>AdditionalVoiceConfig</code> --references--&gt; <code>AgentLanguageId</code>  [EXTRACTED]</li>
+      </ul>
+      <p>src/screens/ReviewSummaryStep.tsx → src/data/agentLanguages.ts</p>
+      <ul>
+      <li><code>RecListCardProps</code> --references--&gt; <code>Recommendation</code>  [EXTRACTED]</li>
+      </ul>
+      <p>src/search-ai/recommendations/RecListCard.tsx → src/search-ai/recommendations/recTypes.ts</p>
+      <ul>
+      <li><code>ColumnDef</code> --inherits--&gt; <code>Column</code>  [EXTRACTED]</li>
+      </ul>
+      <p>src/screens/ReviewWaitlistScreen.tsx → src/components/DataTable/DataTable.types.ts</p>
+      <ul>
+      <li><code>ColumnDef</code> --inherits--&gt; <code>Column</code>  [EXTRACTED]</li>
+      </ul>
+      <p>src/screens/ManageAppointmentsScreen.tsx → src/components/DataTable/DataTable.types.ts</p>
+      <ul>
+      <li><code>Chip()</code> --calls--&gt; <code>cn()</code>  [EXTRACTED]</li>
+      </ul>
+      <p>src/content-hub/AiCopilot.tsx → src/contenthub-ui/utils.ts</p>
+      <h2 id="import-cycles">Import Cycles</h2>
+      <ul>
+      <li>3-file cycle: <code>src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx -&gt; src/workflow/LHSDrawer/LHSDrawer.jsx -&gt; src/components/index.ts -&gt; src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx</code></li>
+      <li>4-file cycle: <code>src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx -&gt; src/workflow/AgentBuilder/AgentBuilder.jsx -&gt; src/workflow/LHSDrawer/LHSDrawer.jsx -&gt; src/components/index.ts -&gt; src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx</code></li>
+      </ul>
+      <h2 id="communities-343-total-67-thin-omitted">Communities (343 total, 67 thin omitted)</h2>
+      <h3 id="community-0---cn">Community 0 - &quot;cn&quot;</h3>
+      <p>Cohesion: 0.02</p>
+      <p>Nodes (130): AccordionContent(), AccordionItem(), AccordionTrigger(), AlertDialogAction(), AlertDialogCancel(), AlertDialogContent(), AlertDialogDescription(), AlertDialogFooter() (+122 more)</p>
+      <h3 id="community-1---contentflowcontrolstsx">Community 1 - &quot;ContentFlowControls.tsx&quot;</h3>
+      <p>Cohesion: 0.02</p>
+      <p>Nodes (126): AttachedFile, BLOG<em>AGENTS, BLOG</em>DESCRIPTIONS, BlogFlowData, BlogInlineCreationFlow(), BlogInlineCreationFlowProps, BRAND<em>BLOG</em>AGENTS, BRAND_KITS (+118 more)</p>
+      <h3 id="community-2---blockcanvastsx">Community 2 - &quot;BlockCanvas.tsx&quot;</h3>
+      <p>Cohesion: 0.02</p>
+      <p>Nodes (94): BlogManualContent(), BLOCK_COMPONENTS, BlockCanvas(), BlockCanvasProps, CanvasBlockInfo, GenericMarketingBlock(), getBlockDisplayLabel(), getBlogBlockTopClass() (+86 more)</p>
+      <h3 id="community-3---contenteditorshelltsx">Community 3 - &quot;ContentEditorShell.tsx&quot;</h3>
+      <p>Cohesion: 0.02</p>
+      <p>Nodes (97): BlogMetaPanel(), BlogPublishModal(), handleUpdate(), resetAndClose(), Avatar(), Comment, CommentCard(), CommentPanel() (+89 more)</p>
+      <h3 id="community-4---buttontsx">Community 4 - &quot;button.tsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (87): BlogPublishModalProps, CONNECTED_SITES, ConnectedSite, ManageState(), ModalView, PublishedInfo, PublishedState(), relativeTime() (+79 more)</p>
+      <h3 id="community-5---agentdetailscreentsx">Community 5 - &quot;AgentDetailScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.02</p>
+      <p>Nodes (86): useSubtleScrollbar(), AGENT<em>BUILD</em>LOADER<em>STEPS, AgentInstance, ANALYSIS</em>INSIGHTS, BUILD<em>ACTIVITY</em>MESSAGES, BUILD<em>STEPS, CALLER</em>JOB_BREAKDOWN, ChatHistoryTranscript (+78 more)</p>
+      <h3 id="community-6---indexts">Community 6 - &quot;index.ts&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (65): AgentBuilder, EMPTY<em>WORKFLOW, AgentLibraryPreviewData, AgentLibraryPreviewModalProps, AgentLibraryPreviewStep, AgentsIntroVideoModal(), AgentsIntroVideoModalProps, BAR</em>VARIANT (+57 more)</p>
+      <h3 id="community-7---workfloworganismspanelsrhsrhsjsx">Community 7 - &quot;workflow/Organisms/Panels/RHS/RHS.jsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (66): FormInput(), TextArea(), AgentDetails, Branch, conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, ControlBranch (+58 more)</p>
+      <h3 id="community-8---newfrontdeskagentsetupscreentsx">Community 8 - &quot;NewFrontdeskAgentSetupScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (56): SttSettingsValue, TtsFailoverSettingsValue, TtsModelSettingsValue, getAgentLanguage(), DEFAULT<em>ACCOUNT</em>CONNECTED<em>INTEGRATION</em>IDS, DEFAULT<em>AGENT</em>SELECTED<em>INTEGRATION</em>ID, DEFAULT<em>WIZARD</em>CONNECTED<em>INTEGRATION</em>IDS, HEALTHCARE<em>INTEGRATION</em>CATALOG (+48 more)</p>
+      <h3 id="community-9---faq-agentsorganismspanelsrhsrhsjsx">Community 9 - &quot;faq-agents/Organisms/Panels/RHS/RHS.jsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (60): FormInput(), SingleSelect(), AgentDetails, Branch, conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, ControlBranch (+52 more)</p>
+      <h3 id="community-10---overviewv2_1screentsx">Community 10 - &quot;OverviewV2_1Screen.tsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (62): OVERVIEW<em>V2</em>FRONTDESK<em>SUBAREAS, OVERVIEW</em>V2<em>SECTIONS, V2Agent, V2FrontDeskSubArea, V2Section, V2Stat, AGENT</em>ISSUE<em>OVERRIDES, AGENT</em>PERFORMANCE<em>SORT</em>OPTIONS (+54 more)</p>
+      <h3 id="community-11---agentsettingstabtsx">Community 11 - &quot;AgentSettingsTab.tsx&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (53): LanguageFlag(), LanguageSelectMenu(), LanguageOption, LanguageSelectMenuProps, DEFAULT<em>STT</em>SETTINGS, DEFAULT<em>TTS</em>FAILOVER<em>SETTINGS, DEFAULT</em>TTS<em>MODEL</em>SETTINGS, FAILOVER_POLICIES (+45 more)</p>
+      <h3 id="community-12---addtooldrawerjsx">Community 12 - &quot;AddToolDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (41): DrawerHeader(), TabHeader(), Tooltip(), BRAND<em>TOOL</em>CONFIGS, BRAND<em>TOOLS, EHR</em>TOOLS, ENTITY<em>OPTIONS, EXTERNAL</em>INTEGRATIONS (+33 more)</p>
+      <h3 id="community-13---apptsx">Community 13 - &quot;App.tsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (50): AGENT<em>NAMES, AGENT</em>NAV<em>ID</em>BY<em>NAME, App(), handleEditAgent(), openAgentByNavId(), openAgentFromOverview(), AUTOMOTIVE</em>NAV<em>SECTIONS, DEFAULT</em>NAV<em>BY</em>PRODUCT (+42 more)</p>
+      <h3 id="community-14---icon">Community 14 - &quot;Icon&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (61): Chip(), ChipProps, VARIANTS, Icon(), ApptCard, CHANNEL_LABEL, Message, MessageDrawer() (+53 more)</p>
+      <h3 id="community-15---workfloworganismspanelsrhsproceduredetailbodyjsx">Community 15 - &quot;workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (52): EmptyHintField(), EmptyHintFieldProps, Default, appendPlainText(), appendRichNodes(), buildViewChipContents(), CHIP<em>TYPE</em>MAP, createViewChip() (+44 more)</p>
+      <h3 id="community-16---hcwaitlistfilledscreentsx">Community 16 - &quot;HCWaitlistFilledScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.03</p>
+      <p>Nodes (55): BreakdownTooltipProps, colorAt(), makeLink(), makeNode(), SankeyChart(), SankeyChartProps, SankeyLink, SankeyNode (+47 more)</p>
+      <h3 id="community-17---workflowlhsdrawerlhsdrawerjsx">Community 17 - &quot;workflow/LHSDrawer/LHSDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (63): PromptComposer(), WorkflowViewerTab(), AUTOMOTIVE<em>SECTION</em>TRIGGER<em>CATEGORIES, AUTOMOTIVE</em>TASK<em>CARDS, AUTOMOTIVE</em>TASK<em>SUB</em>ITEMS, AUTOMOTIVE<em>TRIGGER</em>CARDS, BRANCH<em>VARIANT</em>CARDS, BRANCH<em>VARIANT</em>ITEMS (+55 more)</p>
+      <h3 id="community-18---providersscreentsx">Community 18 - &quot;ProvidersScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (46): FilterField, FilterPanelProps, SelectMenu(), SelectOption, AppointmentTypeScreen(), APPT_TYPES, ApptTypeDrawer(), ApptTypeRow (+38 more)</p>
+      <h3 id="community-19---recommendationsdatats">Community 19 - &quot;recommendationsData.ts&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (58): RunDetailsPanel(), buildCoachingFeedbackRecommendation(), FeedbackRecommendationsStore, FeedbackRecommendationsStoreContext, FeedbackRecommendationsStoreProvider(), loadInitial(), priorityForCount(), SubmitFeedbackInput (+50 more)</p>
+      <h3 id="community-20---workflowmodulesexpandedrhsmodalexpandedrhsmodalexpandedrhsmodaljsx">Community 20 - &quot;workflow/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.jsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (51): CardRow(), ExpandedRHSModal(), CanvasPreview, ExpandedRHS, LHSPreview, RHSPreview, CanvasPreview, ExpandedRHS (+43 more)</p>
+      <h3 id="community-21---rundetailspaneltsx">Community 21 - &quot;RunDetailsPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (44): AiCoachSparkleIcon(), SIZE<em>CLASS, MessageFeedbackValue, CallTranscriptSection(), callTranscriptSplitIndex(), CANVAS</em>TYPE<em>ICON, ConversationCard(), DEFAULT</em>STEP<em>DURATION</em>MS (+36 more)</p>
+      <h3 id="community-22---postcardtsx">Community 22 - &quot;PostCard.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (49): ContentType, mockProjects, mockScheduledItems, mockScheduledPosts, Project, PROJECT<em>COLOR</em>MAP, ProjectColor, ScheduledItem (+41 more)</p>
+      <h3 id="community-23---faq-agentstemplatesagentsdashboardtemplateagentsdashboardtemplatejsx">Community 23 - &quot;faq-agents/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (36): DEFAULT<em>TEMPLATES, INITIAL</em>AGENTS, METRICS, TABS, AgentsTable(), focusInput(), startCellEdit(), startHeaderEdit() (+28 more)</p>
+      <h3 id="community-24---classicoverviewscreentsx">Community 24 - &quot;ClassicOverviewScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (48): AiAgentIcon(), SIZE<em>CLASS, OVERVIEW</em>APPOINTMENTS<em>STATS, OVERVIEW</em>BIRDEYE<em>SCORE, OVERVIEW</em>INBOX<em>ACTIVITY</em>STATS, OVERVIEW<em>INBOX</em>ALERT<em>STATS, OVERVIEW</em>LISTINGS<em>GOOGLE</em>REPORT, OVERVIEW<em>LISTINGS</em>QA (+40 more)</p>
+      <h3 id="community-25---workflowagentbuilderagentbuilderjsx">Community 25 - &quot;workflow/AgentBuilder/AgentBuilder.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (51): AiAssistPanel(), TEST<em>RUN</em>STEP_MS, TestRunStatus, useTestRun(), UseTestRunResult, AgentBuilder(), buildFlow(), cloneSubtreeForPaste() (+43 more)</p>
+      <h3 id="community-26---sheetv1tsx">Community 26 - &quot;sheet.v1.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (37): BrandKit, BrandKitSetup(), BrandKitSetupProps, BrandVoiceOption, DEFAULT<em>KIT, DEFAULT</em>LOCATIONS, VOICE_OPTIONS, compareTexts() (+29 more)</p>
+      <h3 id="community-27---column">Community 27 - &quot;Column&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (51): CustomizeColumnsDrawer(), Column, FilterPanel(), STColumnDef, COLUMN<em>DEFS, ColumnDef, DEF</em>BY<em>KEY, DEFAULT</em>ORDER (+43 more)</p>
+      <h3 id="community-28---inboxscreentsx">Community 28 - &quot;InboxScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (44): VoiceChatMessage, fmtMmSs(), VoicemailMessageProps, VoicemailMessage(), WAVE<em>BARS, COACHING</em>C1<em>CONVERSATION</em>ID, COACHING<em>C2</em>CONVERSATION<em>ID, COACHING</em>C3<em>CONVERSATION</em>ID (+36 more)</p>
+      <h3 id="community-29---faqstorets">Community 29 - &quot;faqStore.ts&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (54): CreateView(), ActionId, AI<em>QUICK</em>ACTIONS, EditFAQPanel(), EditFAQPanelProps, FAQCanvas(), FAQCanvasProps, simulateAI() (+46 more)</p>
+      <h3 id="community-30---faq-agentsorganismspanelsrhsllmtaskbodyjsx">Community 30 - &quot;faq-agents/Organisms/Panels/RHS/LLMTaskBody.jsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (41): cap(), ExpandedRHSTestInput(), Default, MixedTypes, MultipleFields, WithEmptyValues, cap(), MOCK<em>GENERATED</em>FIELDS (+33 more)</p>
+      <h3 id="community-31---faqagentsdashboardviewtsx">Community 31 - &quot;FAQAgentsDashboardView.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (42): CalendarHeader(), CalendarHeaderProps, MONTH<em>NAMES, CALENDAR</em>FILTERS, CalendarViewProps, CalendarViewType, DEFAULT<em>CONTENT</em>HUB<em>CALENDAR</em>DATE, AGENT<em>FILTERS</em>DEFAULT (+34 more)</p>
+      <h3 id="community-32---workflowmoleculesinputsvariablechipvariablechipjsx">Community 32 - &quot;workflow/Molecules/Inputs/VariableChip/VariableChip.jsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (38): ExpandedRHSTest(), fieldsKey(), normalizeFields(), Empty, Filled, WithInputOnly, WithOutputOnly, ExpandedRHSTestFeedback() (+30 more)</p>
+      <h3 id="community-33---contenthub-uiutilsts">Community 33 - &quot;contenthub-ui/utils.ts&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (29): BlogMetaPanelContent(), BlogMetaPanelProps, INITIAL_KEYWORDS, ChatContainerContent(), ChatContainerContentProps, ChatContainerRoot(), ChatContainerRootProps, ChatContainerScrollAnchor() (+21 more)</p>
+      <h3 id="community-34---tooltiptsx">Community 34 - &quot;Tooltip.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (34): LUCIDE<em>ICON</em>MAP, DataTableProps, RowAction, RowMenuItem, SortDir, CalendarEvent, COLOR<em>MAP, COLUMN</em>FIELD_MAP (+26 more)</p>
+      <h3 id="community-35---workflowmoleculesconditionsconditionsjsx">Community 35 - &quot;workflow/Molecules/Conditions/Conditions.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (33): CONDITION<em>OPERATORS, operatorNeedsValue(), VALUELESS</em>OPERATORS, buildFixedMenuStyle(), Conditions(), Dropdown(), AndOrSelector, Default (+25 more)</p>
+      <h3 id="community-36---createpostviewtsx">Community 36 - &quot;CreatePostView.tsx&quot;</h3>
+      <p>Cohesion: 0.04</p>
+      <p>Nodes (26): APPLE<em>BUTTON</em>TYPES, APPLE<em>PHONE</em>TYPES, APPLE<em>URL</em>TYPES, AppleButtonType, CreatePostView(), CreatePostViewProps, DAY<em>ABBR, DAY</em>NAMES (+18 more)</p>
+      <h3 id="community-37---voicecalltooldrawerjsx">Community 37 - &quot;VoiceCallToolDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (37): DEFAULT<em>REMINDERS, DURATION</em>OPTIONS, EMAIL<em>TEMPLATE</em>OPTIONS, reminderLabel(), ReminderRow(), ReminderToolDrawer(), SCHEDULE<em>RELATIVE</em>OPTIONS, SEND<em>AT</em>OPTIONS (+29 more)</p>
+      <h3 id="community-38---contentcreationwizardmodaltsx">Community 38 - &quot;ContentCreationWizardModal.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (34): handleBlogFlowComplete(), handleFAQFlowComplete(), AGENT<em>OPTIONS, BLOG</em>GOALS, BlogWizardStep1(), BlogWizardStep1Props, GoalOption, LANDING_GOALS (+26 more)</p>
+      <h3 id="community-39---socialeditortsx">Community 39 - &quot;SocialEditor.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (33): AIIcon(), BLOG<em>DIMS, BLOG</em>QUICK<em>WINS, BlogEditor(), BlogEditorProps, Mode, SEO</em>CHECKLIST, SEOItem (+25 more)</p>
+      <h3 id="community-40---manageappointmentsscreentsx">Community 40 - &quot;ManageAppointmentsScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (34): DateChange(), formatDate(), formatWeekRange(), DateChangeProps, PageHeader(), AppointmentTimescale, AppointmentView, PageHeaderProps (+26 more)</p>
+      <h3 id="community-41---searchaiviewtsx">Community 41 - &quot;SearchAIView.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (31): findSectionIdForItem(), initialExpanded(), SideNav(), NavLeaf, NavSection, SideNavProps, SEARCH<em>AI</em>L2<em>DEFAULT</em>ACTIVE, SEARCH<em>AI</em>L2<em>KEY</em>RECOMMENDATIONS (+23 more)</p>
+      <h3 id="community-42---conversationsscreentsx">Community 42 - &quot;ConversationsScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (35): chartColors, axisTick, BarSeries, StackedBarChart(), StackedBarChartProps, kFormat(), SummaryStat, SummaryStats() (+27 more)</p>
+      <h3 id="community-43---button">Community 43 - &quot;Button&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (29): Button(), Chip(), AppHeader(), Default, NoUser, ExpandedRHSFooter(), Default, PromptMedium (+21 more)</p>
+      <h3 id="community-44---recommendationdetailscreentsx">Community 44 - &quot;RecommendationDetailScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (20): AiAvatarChatIcon(), SIZE<em>CLASS, ANNETTE</em>BLACK<em>CHAT</em>EVENTS, ANNETTE<em>BLACK</em>CONVERSATION<em>ID, ANNETTE</em>BLACK<em>IMPROVED</em>HOURS_REPLY, AnnetteChatEvent, channelIcon(), ChatTurn (+12 more)</p>
+      <h3 id="community-45---scorecolorsts">Community 45 - &quot;scoreColors.ts&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (38): EditorContentCard(), ScorePanel(), EmailDraft, EmailReviewCard(), EmailReviewCardProps, ComplianceInfo, Dimension, EditorialScorePanelProps (+30 more)</p>
+      <h3 id="community-46---faqsectioncanvastsx">Community 46 - &quot;FAQSectionCanvas.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (35): FAQGenerationProgressProps, FAQSection, buildDocItemsFromQuestions(), buildFAQScoreDimensions(), clampScore(), createNewFAQQuestion(), deriveFAQPageTitle(), EditableFAQField() (+27 more)</p>
+      <h3 id="community-47---workflowflowcanvasflowcanvasjsx">Community 47 - &quot;workflow/FlowCanvas/FlowCanvas.jsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (19): AddStepButton(), AddButtonEdge(), BranchFanEdge(), EDGE<em>TYPES, FlowCanvasInner(), LEGACY</em>FALLBACK<em>CHIP</em>LABELS, NODE_TYPES, snapVerticalPair() (+11 more)</p>
+      <h3 id="community-48---logdetailspaneltsx">Community 48 - &quot;LogDetailsPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (31): agentMetaParts(), CALL<em>END</em>RESULT<em>VARIANT, CALL</em>LOG<em>STEPS, CallDetailsTab(), DEFAULT</em>TOOL<em>INPUTS, DEFAULT</em>TOOL<em>OUTPUT, DEFAULT</em>TRANSCRIPT, DEFAULT<em>TRANSCRIPT</em>LANGUAGE (+23 more)</p>
+      <h3 id="community-49---agentworkflowsts">Community 49 - &quot;agentWorkflows.ts&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (44): AGENT<em>WORKFLOWS, AUTOMOTIVE</em>AGENT<em>WORKFLOWS, CONV</em>TRIGGER, DENTAL<em>AGENT</em>WORKFLOWS, FRONTDESK<em>HC</em>NODE<em>DETAILS, FRONTDESK</em>NODE<em>DETAILS, FRONTDESK</em>NODES, HEALTHCARE<em>AGENT</em>WORKFLOWS (+36 more)</p>
+      <h3 id="community-50---createviewtsx">Community 50 - &quot;CreateView.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (33): buildProjectMessages(), CONTENT<em>OVERALL</em>SCORE, CONTENT<em>TYPES, DEFAULT</em>PROJECT<em>DRAFT, DEFAULT</em>SCORE<em>DIMS, draftUserText(), FAQ</em>SHIMMER_STEPS, FAQBulkCopilotPanel() (+25 more)</p>
+      <h3 id="community-51---agentlogstabtsx">Community 51 - &quot;AgentLogsTab.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (37): HEALTHCARE<em>LOGS</em>METRICS, HEALTHCARE<em>LOGS</em>ROWS, LogStatus, LogStepId, PREVISIT<em>LOGS</em>METRICS, PREVISIT<em>LOGS</em>ROWS, PrevisitLogRow, PrevisitLogStatus (+29 more)</p>
+      <h3 id="community-52---recdetailviewtsx">Community 52 - &quot;RecDetailView.tsx&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (28): AeoLeftPanelProps, CitationShareSection(), COMP<em>AEO</em>SCORES, COMP<em>SUBSCORE</em>VALS, DEFAULT<em>BLOG</em>SUBSCORES, DEFAULT<em>FAQ</em>SUBSCORES, DynSection, EVIDENCE<em>AVATAR</em>COLORS (+20 more)</p>
+      <h3 id="community-53---inlinecreationflowtsx">Community 53 - &quot;InlineCreationFlow.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (34): FlowNavControls, FlowNavState, ALL<em>PROJECT</em>LOCATION<em>IDS, BLOG</em>GOALS, BLOG<em>LENGTHS, buildIdeas(), buildProjectContentBrief(), CONTENT</em>MIX_TYPES (+26 more)</p>
+      <h3 id="community-54---contentscorepaneltsx">Community 54 - &quot;ContentScorePanel.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (31): ReadOnlyContentCard(), BLOG_IMPROVEMENTS, ContentScorePanel(), commitMultiFix(), commitSingleFix(), handleFixDimension(), handleFixItem(), ContentScorePanelProps (+23 more)</p>
+      <h3 id="community-55---faq-agentselemental-stubsjsx">Community 55 - &quot;faq-agents/elemental-stubs.jsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (23): Button(), Chip(), CHIP<em>COLOR</em>MAP, TextArea(), Toggle(), ICON_CONFIG, RHSPanelFooter(), Default (+15 more)</p>
+      <h3 id="community-56---workflowmoleculescanvascanvasnodeheadercanvasnodeheaderjsx">Community 56 - &quot;workflow/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (17): AiSparkleGlyphIcon(), CanvasNodeBody(), reposition(), showTooltip(), isDescriptionTruncated(), placeTooltip(), AllBodies, BranchBody (+9 more)</p>
+      <h3 id="community-57---datatable">Community 57 - &quot;DataTable&quot;</h3>
+      <p>Cohesion: 0.05</p>
+      <p>Nodes (28): DataTable(), HeaderSearchField(), HeaderSearchFieldProps, IntakePreviewPatient, AppointmentWidgetsScreen(), AppointmentWidgetsScreenProps, ApptWidgetRow, COLUMNS (+20 more)</p>
+      <h3 id="community-58---workflowservicesagentservicejs">Community 58 - &quot;workflow/services/agentService.js&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (23): AddFieldPanel(), CustomToolBuilder(), emptyField(), FIELD<em>TYPES, FieldCard(), LivePreview(), makeId(), OPTION</em>FIELD_TYPES (+15 more)</p>
+      <h3 id="community-59---backarrowicontsx">Community 59 - &quot;BackArrowIcon.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (24): BackArrowIcon(), DraftItem, ColumnOption, CustomizeColumnsDrawerProps, FormDrawer(), FormDrawerProps, FormField, FormFieldType (+16 more)</p>
+      <h3 id="community-60---helpcenterpaneltsx">Community 60 - &quot;HelpCenterPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (24): GlossaryModal(), GlossaryModalProps, HelpCenterPanel(), HELP<em>ARTICLES, HELP</em>DICTIONARY, HELP<em>GLOSSARY, HELP</em>VIDEOS, HelpArticleItem (+16 more)</p>
+      <h3 id="community-61---link">Community 61 - &quot;Link&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (23): IntegrationSelectCard(), IntegrationSelectCardProps, Link(), LinkAsAnchorProps, LinkAsButtonProps, LinkBaseProps, LinkProps, ProcedureListCard() (+15 more)</p>
+      <h3 id="community-62---escalationnotifierjsx">Community 62 - &quot;EscalationNotifier.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (20): ChatPreview(), buildTabState(), CHANNEL<em>LABELS, CHAT</em>TAB, COLORS, EMAIL<em>TAB, EMPTY</em>TAB, EscalationNotifier() (+12 more)</p>
+      <h3 id="community-63---blocksettingspaneltsx">Community 63 - &quot;BlockSettingsPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (26): advancedGroup, alignOptions, basicLayoutGroup, buttonVariantOptions, colorOptions, getBlockDefinition(), InspectorControl, InspectorField (+18 more)</p>
+      <h3 id="community-64---availabilityscreentsx">Community 64 - &quot;AvailabilityScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (27): AddTimeOffDrawer(), AddTimeOffDrawerProps, AddWindowDrawer(), AddWindowDrawerProps, APPT<em>TYPE</em>OPTIONS, AvailabilityScreen(), handleConfirmDelete(), handleSourceChange() (+19 more)</p>
+      <h3 id="community-65---workflowelemental-stubsjsx">Community 65 - &quot;workflow/elemental-stubs.jsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (31): blue100, blue20, blue50, CHIP<em>COLOR</em>MAP, gray2000, gray30, gray300, gray60 (+23 more)</p>
+      <h3 id="community-66---servicescreentsx">Community 66 - &quot;ServiceScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (33): ChartStat, ChartStatRow(), ChartStatRowProps, formatValue(), DonutChart(), DonutChartProps, DonutDatum, DATE<em>RANGE</em>OPTIONS (+25 more)</p>
+      <h3 id="community-67---agentinstancescreentsx">Community 67 - &quot;AgentInstanceScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (34): ChipVariant, parseTimeSavedHours(), DENTAL<em>OUTBOUND</em>LOGS, OutboundLogRow, RECALL<em>LOGS, REVENUE</em>LOGS, TREATMENT<em>PLAN</em>LOGS, AgentInstanceScreen() (+26 more)</p>
+      <h3 id="community-68---faq-agentsmodulesmoduleviewjsx">Community 68 - &quot;faq-agents/Modules/ModuleView.jsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (16): applyAgent(), getAllTemplates(), getModuleTemplates(), MODULE<em>DEFINITIONS, MODULE</em>ORDER, agentChildren(), expandedSections(), firstAgentItemId() (+8 more)</p>
+      <h3 id="community-69---faq-agentsmoleculescanvascanvasnodecanvasnodejsx">Community 69 - &quot;faq-agents/Molecules/Canvas/CanvasNode/CanvasNode.jsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (28): CardRow(), CanvasPreview, ExpandedRHS, LHSPreview, RHSPreview, CanvasPreview, ExpandedRHS, LHSPreview (+20 more)</p>
+      <h3 id="community-70---appdatatabletsx">Community 70 - &quot;AppDataTable.tsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (30): AppDataTable(), AppDataTableProps, applyTableUpdater(), buildDefaultSlice(), isSameColumnSizing(), mergeColumnOrder(), sumColumnWidthsBefore(), AppDataTableColumnMeta (+22 more)</p>
+      <h3 id="community-71---workflowmodulesmoduleviewjsx">Community 71 - &quot;workflow/Modules/ModuleView.jsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (16): applyAgent(), getAllTemplates(), getModuleTemplates(), MODULE<em>DEFINITIONS, MODULE</em>ORDER, agentChildren(), expandedSections(), firstAgentItemId() (+8 more)</p>
+      <h3 id="community-72---faq-agentsflowcanvasflowcanvasjsx">Community 72 - &quot;faq-agents/FlowCanvas/FlowCanvas.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (15): EDGE<em>TYPES, FlowCanvas(), NODE</em>TYPES, Default, Empty, Filled, FILLED<em>EDGES, FILLED</em>NODES (+7 more)</p>
+      <h3 id="community-73---healthcareremindercanvastsx">Community 73 - &quot;HealthcareReminderCanvas.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (8): card, CardNodeProps, cardSelected, HealthcareReminderCanvasProps, NodeHeaderProps, REMINDER_CHIPS, ReminderChip, RHSPanelProps</p>
+      <h3 id="community-74---blogsectioncanvastsx">Community 74 - &quot;BlogSectionCanvas.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (26): BLOCK<em>PALETTE, BlockRow(), BlockRowProps, BlockType, BLOG</em>PREBUILT_TEMPLATES, BlogBlock, BlogManualContentProps, BlogManualTab (+18 more)</p>
+      <h3 id="community-75---faq-agentsorganismsdrawerscustomtoolbuildercustomtoolbuilderjsx">Community 75 - &quot;faq-agents/Organisms/Drawers/CustomToolBuilder/CustomToolBuilder.jsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (12): AddFieldPanel(), CustomToolBuilder(), emptyField(), FIELD<em>TYPES, FieldCard(), LivePreview(), makeId(), OPTION</em>FIELD_TYPES (+4 more)</p>
+      <h3 id="community-76---messagev1tsx">Community 76 - &quot;message.v1.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (24): Avatar(), AvatarFallback(), AvatarImage(), CodeBlock(), CodeBlockCode(), CodeBlockCodeProps, CodeBlockGroup(), CodeBlockGroupProps (+16 more)</p>
+      <h3 id="community-77---content-hubcontentcardtsx">Community 77 - &quot;content-hub/ContentCard.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (13): ContentCard(), ContentCardProps, ContentItem, derivedScore(), getScoreRingColor(), CONTENT<em>TYPE</em>OPTIONS, DEFAULT_CONTENT, InfiniteCanvas() (+5 more)</p>
+      <h3 id="community-78---faq-agentsagentbuilderagentbuilderjsx">Community 78 - &quot;faq-agents/AgentBuilder/AgentBuilder.jsx&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (25): AgentBuilder(), buildFlow(), makeNodeConfig(), makeNodeDetails(), nextId(), RHSErrorBoundary, handleDeleteTool(), ProcedureTaskBody() (+17 more)</p>
+      <h3 id="community-79---workfloworganismsmodalsfieldpickermodalfieldpickermodaljsx">Community 79 - &quot;workflow/Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (25): MultiSelect(), HandleResponseDrawer(), insertAtCursor(), isHandleResponseConfigComplete(), normalizeTemplateIds(), POST<em>AFTER</em>OPTIONS, RESPONSE<em>HANDLING</em>OPTIONS, RESPONSE<em>TEMPLATE</em>OPTIONS (+17 more)</p>
+      <h3 id="community-80---projectsviewtsx">Community 80 - &quot;ProjectsView.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (23): CalendarView(), BLOG<em>THUMBS, CHANNEL</em>LABEL, ChannelCell(), ChannelId, ProjectRow, ProjectStatus, ProjectThumbnail() (+15 more)</p>
+      <h3 id="community-81---workflowservicesprocedureservicejs">Community 81 - &quot;workflow/services/procedureService.js&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (30): AgentSystemPromptStore, AgentSystemPromptStoreContext, AgentSystemPromptStoreProvider(), DEFAULT<em>AGENT</em>SYSTEM_PROMPT, useAgentSystemPromptStore(), useOptionalAgentSystemPromptStore(), mapProcedureItems(), ProcedureTaskBody() (+22 more)</p>
+      <h3 id="community-82---rundetailviewtsx">Community 82 - &quot;RunDetailView.tsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (23): getUserRatingForLogStatus(), AgentBuilder, AgentWorkflowRunCanvas(), buildReviewGenerationRunSteps(), buildReviewResponseRunSteps(), flattenWorkflowNodes(), formatDurationLabel(), getExecutedNodeIds() (+15 more)</p>
+      <h3 id="community-83---l2navlayoutv1tsx">Community 83 - &quot;L2NavLayout.v1.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (28): L1<em>STRIP</em>ICON<em>SIZE, L1</em>STRIP<em>ICON</em>STROKE<em>PX, CHILD</em>ACTIVE, CHILD<em>FLAT</em>ACCENT<em>ACTIVE, CHILD</em>INACTIVE, HOVER, L2<em>CONTENT</em>MUTED<em>BAND, L2</em>FLAT<em>NAV</em>KEY_PREFIX (+20 more)</p>
+      <h3 id="community-84---autoavailabilityscreentsx">Community 84 - &quot;AutoAvailabilityScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (22): AddTimeOffDrawer(), AddWindowDrawer(), AutoAvailabilityScreen(), handleCopyApply(), showToast(), BAY<em>OPTIONS, DAY</em>LABELS, DayKey (+14 more)</p>
+      <h3 id="community-85---faq-agentslhsdrawerlhsdrawerjsx">Community 85 - &quot;faq-agents/LHSDrawer/LHSDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (21): AI<em>OPTIONS, CONTROL</em>CARDS, getProcedureCards(), INITIAL<em>SUB</em>ITEMS, LHSDrawer(), CreateManually, CreateWithAI, TABS (+13 more)</p>
+      <h3 id="community-86---faq-agentsorganismspanelsrhsrhsstoriesjsx">Community 86 - &quot;faq-agents/Organisms/Panels/RHS/RHS.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (27): conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, DAY<em>OPTIONS, FREQUENCY</em>OPTIONS, RHSBranchDetails, rhsBranchDetailsProps, RHSControlBranch (+19 more)</p>
+      <h3 id="community-87---workflowfaqagentsdashboardjsx">Community 87 - &quot;workflow/FAQAgentsDashboard.jsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (16): DEFAULT<em>TEMPLATES, INITIAL</em>AGENTS, METRICS, TABS, AgentsTable(), focusInput(), startCellEdit(), startHeaderEdit() (+8 more)</p>
+      <h3 id="community-88---workfloworganismspanelsrhsrhsstoriesjsx">Community 88 - &quot;workflow/Organisms/Panels/RHS/RHS.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.06</p>
+      <p>Nodes (27): conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, DAY<em>OPTIONS, FREQUENCY</em>OPTIONS, RHSBranchDetails, rhsBranchDetailsProps, RHSControlBranch (+19 more)</p>
+      <h3 id="community-89---emailwizardtsx">Community 89 - &quot;EmailWizard.tsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (23): DEFAULT<em>LOCATIONS, DEFAULT</em>TOKENS, EmailWizard(), EmailWizardProps, EmailWizardState, STEPS, EMAIL_TEMPLATES, EmailWizardStep1() (+15 more)</p>
+      <h3 id="community-90---unifiedreviewcanvastsx">Community 90 - &quot;UnifiedReviewCanvas.tsx&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (28): MOCK<em>FAQS, ProjectBrief, buildLayout(), CardDef, CardState, CardStatus, COUNT</em>PER_TYPE, getMockContent() (+20 more)</p>
+      <h3 id="community-91---templategallerytsx">Community 91 - &quot;TemplateGallery.tsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (18): ADS<em>DATA, BLOG</em>THUMB<em>IMG, EMAIL</em>DATA, idHash(), mockBrand(), mockDate(), mockScore(), PreviewModal() (+10 more)</p>
+      <h3 id="community-92---aicopilottsx">Community 92 - &quot;AiCopilot.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (23): AvatarIcon(), AiCopilot(), AiCopilotProps, ChatMessage, Chip(), ChipProps, CHOOSE_MESSAGE, ConvPath (+15 more)</p>
+      <h3 id="community-93---promptcomposertsx">Community 93 - &quot;PromptComposer.tsx&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (16): SendIcon(), AiAssistPanelProps, AttachMenuPopover(), OPTIONS, AttachMenuOption, AttachMenuPopoverProps, ProcedureSidePanel(), renderBulletText() (+8 more)</p>
+      <h3 id="community-94---createagentchatstorets">Community 94 - &quot;createAgentChatStore.ts&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (27): normalizeKey(), useAiBuilderTrail(), appendCreateAiDraftTurn(), builtinDraftTrails, clearCreateAiDraftSession(), CreateAiDraftSession, CreateChatTurn, CreateChatVariant (+19 more)</p>
+      <h3 id="community-95---faq-agentsmodulesexpandedrhsmodalexpandedrhsmodalexpandedrhsmodaljsx">Community 95 - &quot;faq-agents/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.jsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (20): ExpandedRHSModal(), CanvasPreview, ExpandedRHS, LHSPreview, RHSPreview, CanvasPreview, ExpandedRHS, LHSPreview (+12 more)</p>
+      <h3 id="community-96---workflowmoleculeslhslhsentitygrouplhsentitygroupjsx">Community 96 - &quot;workflow/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.jsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (21): setFlowDragData(), getItemDescription(), getItemHasAi(), getItemIcon(), getItemLabel(), isTextTruncated(), LHSEntityGroup(), placeTooltip() (+13 more)</p>
+      <h3 id="community-97---copilot-prompt-boxv1tsx">Community 97 - &quot;copilot-prompt-box.v1.tsx&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (21): AttachFileIcon(), EditNoteIcon(), PaperPlaneRightIcon(), ContextChipBadge(), CopilotPromptBox(), handleEnhance(), CopilotPromptBoxContextChip, CopilotPromptBoxProps (+13 more)</p>
+      <h3 id="community-98---socialwizardtsx">Community 98 - &quot;SocialWizard.tsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (21): PLATFORM<em>LABELS, SocialPhonePreviewPanel(), SocialPhonePreviewPanelProps, TONE</em>EMOJIS, DEFAULT_LOCATIONS, SocialWizard(), SocialWizardProps, SocialWizardState (+13 more)</p>
+      <h3 id="community-99---hcfrontdeskoverviewscreentsx">Community 99 - &quot;HCFrontdeskOverviewScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (23): CHANNEL<em>DONUT, CHAT</em>BY<em>CONVO, ChatMsg, CONV</em>OVERTIME<em>DATA, CONV</em>OVERTIME<em>SERIES, CONVERSATIONS</em>BY<em>NODE, DATE</em>RANGE<em>OPTIONS, DEFAULT</em>CHAT (+15 more)</p>
+      <h3 id="community-100---dependencies">Community 100 - &quot;dependencies&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (27): class-variance-authority, embla-carousel-react, lucide-react, dependencies, class-variance-authority, embla-carousel-react, lucide-react, @radix-ui/react-accordion (+19 more)</p>
+      <h3 id="community-101---compileroptions">Community 101 - &quot;compilerOptions&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (26): DOM, DOM.Iterable, ES2020, src, compilerOptions, allowImportingTsExtensions, allowJs, baseUrl (+18 more)</p>
+      <h3 id="community-102---appointmentoverviewscreentsx">Community 102 - &quot;AppointmentOverviewScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (22): ChartCard(), ChartCardProps, MoreMenu(), ChartCardButton(), ChartCardButtonProps, AppointmentOverviewScreen(), DATE<em>RANGE</em>OPTIONS, FUNNEL_LINKS (+14 more)</p>
+      <h3 id="community-103---overviewscreentsx">Community 103 - &quot;OverviewScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (18): MetricTiles(), Metric, MetricTilesProps, ClassicOverviewScreen(), AGENT<em>PRIMARY</em>METRIC<em>TOOLTIP, AgentCard(), COWORKER</em>ACCENT, COWORKER_LOGO (+10 more)</p>
+      <h3 id="community-104---previewpaneljsx">Community 104 - &quot;PreviewPanel.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (17): VoiceChatDrawer(), OutboundPreviewPanel(), next(), PreviewPanel(), next(), speakText(), uid(), buildEndLogStep() (+9 more)</p>
+      <h3 id="community-105---attachmentpickermodaltsx">Community 105 - &quot;AttachmentPickerModal.tsx&quot;</h3>
+      <p>Cohesion: 0.07</p>
+      <p>Nodes (19): AeroCheckbox(), ALL<em>ITEMS, AssetRow(), AttachmentPickerModal(), AttachmentPickerModalProps, DOC</em>FILES, DocFile, EXT_COLORS (+11 more)</p>
+      <h3 id="community-106---columnsettingssheettsx">Community 106 - &quot;ColumnSettingsSheet.tsx&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (16): reorderColumnIds(), ColumnSettingsSheet(), ColumnSettingsSheetProps, insertSlotAnnouncement(), FormControl(), FormDescription(), FormFieldContext, FormFieldContextValue (+8 more)</p>
+      <h3 id="community-107---workflowagentbuilderagentbuilderstoriesjsx">Community 107 - &quot;workflow/AgentBuilder/AgentBuilder.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (20): Default, Filled, FILLED<em>EDGES, FILLED</em>NODE<em>DATA, FILLED</em>NODES, FilledPreview(), getFilledVariant(), nextStoryId() (+12 more)</p>
+      <h3 id="community-108---contenthubl2navpaneltsx">Community 108 - &quot;ContentHubL2NavPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (17): ContentHome(), ContentHomeInitialMode, ContentHomeProps, CREATE_OPTIONS, SUGGESTIONS, ContentHubL2NavPanel(), ContentHubL2NavPanelProps, ContentHubSubView (+9 more)</p>
+      <h3 id="community-109---quickcreatemodaltsx">Community 109 - &quot;QuickCreateModal.tsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (21): BLOG<em>CT</em>OPTIONS, BRAND<em>KIT, CountPills(), DEFAULT</em>BLOG<em>IDEAS, FAQ</em>Q<em>OPTIONS, PROJECT</em>TYPES, ProjectTypeConfig, ProjectTypeEntry (+13 more)</p>
+      <h3 id="community-110---phonenumberscreentsx">Community 110 - &quot;PhoneNumberScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (21): AddPhoneNumberButton(), AGENT<em>OPTIONS, applyPhoneFormat(), applySipFormat(), CallForwardingSetupState, CF</em>ALL<em>DATA, COLUMNS2, DEFAULT</em>ROWS (+13 more)</p>
+      <h3 id="community-111---autoappointmenttypescreentsx">Community 111 - &quot;AutoAppointmentTypeScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.08</p>
+      <p>Nodes (20): AutoAppointmentTypeScreen(), Department, FILTER<em>FIELDS, HINT</em>EXTRAS, SERVICE<em>TYPES, ServiceTypeDrawer(), ServiceTypeRow, ST</em>ADVISOR_OPTIONS (+12 more)</p>
+      <h3 id="community-112---agentdetailscreen">Community 112 - &quot;AgentDetailScreen&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (22): AgentLibraryPreviewModal(), EXPLORATION<em>HIDE</em>TOP<em>IDENTITY</em>NAV<em>IDS, explorationHidesCanvasStartNode(), FRONTDESK</em>EXPLORATION<em>NAV</em>ID, FRONTDESK<em>SEP1</em>NAV_ID, isAgentExplorationChrome(), isExplorationHideCanvasStartNode(), isFrontdeskExplorationChrome() (+14 more)</p>
+      <h3 id="community-113---booktestappointmentmodaltsx">Community 113 - &quot;BookTestAppointmentModal.tsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (13): APPOINTMENT<em>TYPE</em>OPTIONS, BookTestAppointmentModal(), DATE<em>TIME</em>OPTIONS, EMPTY<em>VALUES, SelectField(), BookTestAppointmentModalProps, BookTestAppointmentValues, LOCATION</em>OPTIONS (+5 more)</p>
+      <h3 id="community-114---proceduredatats">Community 114 - &quot;procedureData.ts&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (21): ALL<em>CATEGORIES, Bullet, DENTAL</em>RECALL<em>CONTEXT, DENTAL</em>REVENUE<em>CONTEXT, DENTAL</em>TP<em>CONTEXT, EMERGENCY, HC</em>ALL<em>CATEGORIES, HC</em>APPT<em>CONFIRMATION</em>CONTEXT (+13 more)</p>
+      <h3 id="community-115---rectypests">Community 115 - &quot;recTypes.ts&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (18): LOCATION_NAMES, seedBusiness, seedMetrics, seedRecommendations, StepInput, AeoScore, AssignChoice, ChecklistStep (+10 more)</p>
+      <h3 id="community-116---workfloworganismsmodalscontextfieldmodalcontextfieldmodaljsx">Community 116 - &quot;workflow/Organisms/Modals/ContextFieldModal/ContextFieldModal.jsx&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (14): Modal(), Toggle(), ContextFieldModal(), DEFAULT<em>BRAND</em>ITEMS, DEFAULT<em>FIELDS, DEFAULT</em>KNOWLEDGE, KB_FILES, BrandTab (+6 more)</p>
+      <h3 id="community-117---workflowrhsdrawerlocationsdrawerjsx">Community 117 - &quot;workflow/RHSDrawer/LocationsDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (20): AgentDetailsBody(), DEFAULT<em>LOCATIONS, ALL</em>LOCATIONS, BASE<em>SELECT</em>BY<em>OPTIONS, CONTENT</em>MANAGERS, CUSTOM<em>FIELD</em>OPTIONS, CUSTOM<em>FIELD</em>VALUES, DEFAULT_SELECTED (+12 more)</p>
+      <h3 id="community-118---devdependencies">Community 118 - &quot;devDependencies&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (23): autoprefixer, devDependencies, autoprefixer, playwright, postcss, tailwindcss, @types/node, @types/react (+15 more)</p>
+      <h3 id="community-119---faq-agentsmodulesexpandedrhsmodalexpandedrhstestexpandedrhstestjsx">Community 119 - &quot;faq-agents/Modules/ExpandedRHSModal/ExpandedRHSTest/ExpandedRHSTest.jsx&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (16): ExpandedRHSTest(), fieldsKey(), normalizeFields(), Empty, Filled, WithInputOnly, WithOutputOnly, ExpandedRHSTestFeedback() (+8 more)</p>
+      <h3 id="community-120---templatepickermodaltsx">Community 120 - &quot;TemplatePickerModal.tsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (19): FAQPair, FAQTemplatePreview(), FAQTemplatePreviewProps, PLACEHOLDER, PREVIEWS, TemplatePreviewData, DESTINATION_LABELS, FAQPreviewPanel() (+11 more)</p>
+      <h3 id="community-121---editorchrometoolbartsx">Community 121 - &quot;EditorChromeToolbar.tsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (21): activeTextInput(), AiActionControl(), AiActionId, applyAiAction(), applyInputStyle(), COLOR<em>SWATCH</em>ROWS, ColorControl(), EditorChromeToolbar() (+13 more)</p>
+      <h3 id="community-122---agentdirectorydatats">Community 122 - &quot;agentDirectoryData.ts&quot;</h3>
+      <p>Cohesion: 0.09</p>
+      <p>Nodes (22): COMMON<em>AGENTS, CX</em>AGENTS, FRONT<em>DESK, FRONT</em>DESK<em>AGENTS</em>BY<em>PRODUCT, OUTREACH, PersonaGroup, PRE</em>VISIT, RECALL (+14 more)</p>
+      <h3 id="community-123---workfloworganismstemplatelibrarytemplatelibraryjsx">Community 123 - &quot;workflow/Organisms/TemplateLibrary/TemplateLibrary.jsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (10): Default, LibraryOpen, WorkspaceEmptyState(), Default, DEFAULT<em>TEMPLATES, emptyDraft, Default, SAMPLE</em>TEMPLATES (+2 more)</p>
+      <h3 id="community-124---topnav">Community 124 - &quot;TopNav&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (14): TopNav(), getHealthcareIntegration(), IntegrationDetailScreen(), IntegrationDetailScreenProps, SECTIONS, SettingItem, SETTINGS_NAV, SettingsScreen() (+6 more)</p>
+      <h3 id="community-125---workfloweditorscreentsx">Community 125 - &quot;WorkflowEditorScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.14</p>
+      <p>Nodes (17): AGENT<em>INSTANCE</em>ISSUE<em>COUNTS, AGENT</em>INSTANCE<em>ISSUES, AgentIssue, getAgentIssues(), AgentWorkflow, buildWizardAgentWorkflow(), channelDescription(), WIZARD</em>NODES (+9 more)</p>
+      <h3 id="community-126---postdetailsdrawercontenttsx">Community 126 - &quot;PostDetailsDrawerContent.tsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (13): ActiveTab, aiSuggestionInsights, formatExpiry(), getPostPages(), Platform, platformMeta, postCreators, PostDetailsDrawerContent() (+5 more)</p>
+      <h3 id="community-127---workfloworganismsdrawerscustomtoolviewercustomtoolviewerjsx">Community 127 - &quot;workflow/Organisms/Drawers/CustomToolViewer/CustomToolViewer.jsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (8): buildInitialSnapshot(), CustomToolViewer(), <em>DATA</em>TYPE<em>OPTS, isFieldVisible(), TEMPLATE</em>CATEGORIES, TEMPLATE<em>LIST, ToolViewerContent(), </em>VALUE<em>TYPE</em>OPTS</p>
+      <h3 id="community-128---bookappointmentdrawertsx">Community 128 - &quot;BookAppointmentDrawer.tsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (16): Accordion, APPT<em>FIELDS, APPT</em>TYPE<em>OPTIONS, ApptEvent, ApptKey, BOOK</em>FOR<em>OPTIONS, buildApptEvent(), GENDER</em>OPTIONS (+8 more)</p>
+      <h3 id="community-129---contextmodaltsx">Community 129 - &quot;ContextModal.tsx&quot;</h3>
+      <p>Cohesion: 0.15</p>
+      <p>Nodes (11): KnowledgeTab(), TABS, ContextBrandItem, ContextField, ContextKnowledgeFile, ContextKnowledgeLink, ContextModalProps, ContextModalTab (+3 more)</p>
+      <h3 id="community-130---faq-agentsorganismspanelsrhsbranchbodyjsx">Community 130 - &quot;faq-agents/Organisms/Panels/RHS/BranchBody.jsx&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (11): Conditions(), AndOrSelector, Default, fieldOptions, MultipleConditions, operatorOptions, valueOptions, BranchBody() (+3 more)</p>
+      <h3 id="community-131---faq-agentsorganismsmodalscontextfieldmodalcontextfieldmodaljsx">Community 131 - &quot;faq-agents/Organisms/Modals/ContextFieldModal/ContextFieldModal.jsx&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (12): ContextFieldModal(), DEFAULT<em>BRAND</em>ITEMS, DEFAULT<em>FIELDS, DEFAULT</em>KNOWLEDGE, KB_FILES, BrandTab, FieldsTab, IndustryTabDisabled (+4 more)</p>
+      <h3 id="community-132---agentdirectoryscreentsx">Community 132 - &quot;AgentDirectoryScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (15): AgentDirectoryEntry, AgentPersonaId, PERSONA<em>GROUPS, AGENT</em>PRIMARY<em>METRIC</em>TOOLTIP, AgentCard(), COWORKER<em>NAME, DATE</em>OPTIONS, DateRangeDropdown() (+7 more)</p>
+      <h3 id="community-133---recfilterpaneltsx">Community 133 - &quot;RecFilterPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.11</p>
+      <p>Nodes (12): cn(), FAQPreviewModal(), LLMResponsesCard(), Stepper(), ALL<em>CATEGORIES, CATEGORY</em>DISPLAY<em>LABEL, EFFORT</em>OPTIONS, RecFilterPanel() (+4 more)</p>
+      <h3 id="community-134---approvaldatats">Community 134 - &quot;approvalData.ts&quot;</h3>
+      <p>Cohesion: 0.10</p>
+      <p>Nodes (17): ApprovePostsView(), ApprovePostsViewProps, PostCardProps, statusConfig, APPROVAL_DATA, ApprovalData, ApprovalLocation, ATL (+9 more)</p>
+      <h3 id="community-135---canvasloopnodeloopnodejsx">Community 135 - &quot;Canvas/LoopNode/LoopNode.jsx&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (11): FlowDndStateContext, useFlowDndState(), computeArmWidth(), CONTAINER<em>W, InlineFlowNode(), LOOP</em>CHILD<em>X, LOOP</em>LAYOUT, LOOP<em>NODE</em>CANVAS_HEIGHT (+3 more)</p>
+      <h3 id="community-136---workfloworganismspanelsrhscontrolbranchbodyjsx">Community 136 - &quot;workflow/Organisms/Panels/RHS/ControlBranchBody.jsx&quot;</h3>
+      <p>Cohesion: 0.15</p>
+      <p>Nodes (15): BranchAccordionItem(), handleAddCondition(), handleAddConditionGroup(), updateConditions(), ControlBranchBody(), addBranch(), clearDragState(), handleItemDrop() (+7 more)</p>
+      <h3 id="community-137---aibuilderpaneltsx">Community 137 - &quot;AiBuilderPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (9): DRAFT<em>SETTINGS, DRAFT</em>TOOLS, FRONT<em>DESK</em>DRAFT<em>REFILL</em>PROCEDURE, FrontDeskDraftReviewContent(), FrontDeskDraftReviewContentProps, AiBuilderPanel(), DEFAULT_SUGGESTIONS, suggestionsForAgent() (+1 more)</p>
+      <h3 id="community-138---createfrontdeskagentscreentsx">Community 138 - &quot;CreateFrontdeskAgentScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.16</p>
+      <p>Nodes (13): InfoCard(), INFO<em>CARD</em>LAYOUT, INFO<em>CARD</em>LIST<em>ITEM</em>LAYOUT, InfoCardListItemProps, InfoCardProps, InfoCardListItem(), ICONS, LibraryCardGlyph (+5 more)</p>
+      <h3 id="community-139---grouptable">Community 139 - &quot;GroupTable&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (19): DEFAULT<em>EDITABLE</em>COLS, GroupTable(), addRow(), commitCell(), commitHeader(), cycleStatus(), deleteCol(), deleteRow() (+11 more)</p>
+      <h3 id="community-140---recommendationsviewtsx">Community 140 - &quot;RecommendationsView.tsx&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (16): APP<em>MAIN</em>CONTENT<em>SHELL</em>CLASS, APP<em>SHELL</em>BELOW<em>TOPBAR</em>CARD<em>CLASS, APP</em>SHELL<em>GUTTER</em>SURFACE<em>CLASS, APP</em>SHELL<em>RAIL</em>SURFACE<em>CLASS, RecDetailView(), RejectConfirmDialog(), CATEGORY</em>METRIC, EFFORT_ORDER (+8 more)</p>
+      <h3 id="community-141---socialcalendarviewtsx">Community 141 - &quot;social/CalendarView.tsx&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (13): ActionType, CalendarViewProps, PostCardProps, SimpleActionIcons(), statusChipClasses, statusLabels, StatusType, WorkflowActionIcons() (+5 more)</p>
+      <h3 id="community-142---grouptable">Community 142 - &quot;GroupTable&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (19): DEFAULT<em>EDITABLE</em>COLS, GroupTable(), addRow(), commitCell(), commitHeader(), cycleStatus(), deleteCol(), deleteRow() (+11 more)</p>
+      <h3 id="community-143---iconrailtsx">Community 143 - &quot;IconRail.tsx&quot;</h3>
+      <p>Cohesion: 0.15</p>
+      <p>Nodes (12): computeLayout(), _computeRaw(), IconRail(), handleClick(), OverflowEntry, OverflowFlyout(), ProfileDropdown(), IconRailProps (+4 more)</p>
+      <h3 id="community-144---faq-agentsmodulesflowcanvasworkspaceemptystateworkspaceemptystatejsx">Community 144 - &quot;faq-agents/Modules/FlowCanvas/WorkspaceEmptyState/WorkspaceEmptyState.jsx&quot;</h3>
+      <p>Cohesion: 0.14</p>
+      <p>Nodes (8): AppShell(), DEFAULT<em>NAV</em>ITEMS, Default, LibraryOpen, WorkspaceEmptyState(), Default, EmptyWorkspaceTemplate(), Empty</p>
+      <h3 id="community-145---frontdesksettings">Community 145 - &quot;FrontDeskSettings&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (7): FrontDeskSettings(), closeAdditionalDrawer(), handleRemoveAdditionalVoice(), handleSaveAdditionalVoice(), openEditAdditionalVoice(), ReminderSettings(), handleSaveAdditionalVoice()</p>
+      <h3 id="community-146---workflowtemplatesagentsdashboardtemplateagentsdashboardtemplatejsx">Community 146 - &quot;workflow/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx&quot;</h3>
+      <p>Cohesion: 0.14</p>
+      <p>Nodes (13): ShareModal(), getAgentsByModuleSlug(), AgentsDashboardTemplate(), handleExportAgentGroup(), collectToolIds(), DEFAULT<em>EMPTY, DEFAULT</em>GROUP<em>TABLE</em>COLUMNS, DEFAULT_METRICS (+5 more)</p>
+      <h3 id="community-147---faq-agentsmoleculesdatatypedatatypestoriesjsx">Community 147 - &quot;faq-agents/Molecules/DataType/DataType.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (13): DataType(), AllVariants, Document, Link, Tool, Variable, VARIANT<em>CONFIG, DEFAULT</em>NODES (+5 more)</p>
+      <h3 id="community-148---managetreatmentplansscreentsx">Community 148 - &quot;ManageTreatmentPlansScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.14</p>
+      <p>Nodes (14): ALL<em>COLUMN</em>OPTIONS, DEFAULT<em>COL</em>WIDTHS, FILTER_FIELDS, formatDate(), formatFee(), groupByPatient(), ManageTreatmentPlansScreen(), PatientGroup (+6 more)</p>
+      <h3 id="community-149---addstepmenujsx">Community 149 - &quot;AddStepMenu.jsx&quot;</h3>
+      <p>Cohesion: 0.16</p>
+      <p>Nodes (11): AddStepMenu(), handleNavClick(), pickLeaf(), AI<em>ITEMS, DetailRow(), ITEM</em>DESCRIPTIONS, itemDescription(), itemLabel() (+3 more)</p>
+      <h3 id="community-150---workfloworganismsmodalsaddoutputfieldmodaladdoutputfieldmodaljsx">Community 150 - &quot;workflow/Organisms/Modals/AddOutputFieldModal/AddOutputFieldModal.jsx&quot;</h3>
+      <p>Cohesion: 0.15</p>
+      <p>Nodes (7): AeroFormModal(), AeroFormModalProps, Default, AddOutputFieldModal(), FIELD<em>TYPE</em>OPTIONS, FieldTypeDropdown(), Default</p>
+      <h3 id="community-151---procedurepickerdetailviewtsx">Community 151 - &quot;ProcedurePickerDetailView.tsx&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (13): ContextModal(), ContextModalResult, createNewProcedureDraft(), NEW<em>PROCEDURE</em>ID, ProcedureDetailDraft, contextModalResultToChips(), ProcedurePickerDetailView(), ProcedurePickerDetailViewProps (+5 more)</p>
+      <h3 id="community-152---medialibrarymodaltsx">Community 152 - &quot;MediaLibraryModal.tsx&quot;</h3>
+      <p>Cohesion: 0.14</p>
+      <p>Nodes (7): ALL<em>PHOTOS, DEFAULT</em>FILES, DEFAULT_FOLDERS, MediaLibraryModal(), MediaLibraryFile, MediaLibraryFolder, MediaLibraryModalProps</p>
+      <h3 id="community-153---faq-agentsmodulesnodestriggernodeentitytriggernodeentitytriggernodestoriesjsx">Community 153 - &quot;faq-agents/Modules/Nodes/TriggerNode/EntityTriggerNode/EntityTriggerNode.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (13): CanvasPreview, ExpandedRHS, LHSPreview, RHSPreview, CanvasPreview, ExpandedRHS, LHSPreview, RHSPreview (+5 more)</p>
+      <h3 id="community-154---chain-of-thoughtv1tsx">Community 154 - &quot;chain-of-thought.v1.tsx&quot;</h3>
+      <p>Cohesion: 0.14</p>
+      <p>Nodes (13): ChainOfThought(), ChainOfThoughtContent(), ChainOfThoughtContentProps, ChainOfThoughtItem(), ChainOfThoughtItemProps, ChainOfThoughtProps, ChainOfThoughtStep(), ChainOfThoughtStepProps (+5 more)</p>
+      <h3 id="community-155---proceduresscreentsx">Community 155 - &quot;ProceduresScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (11): Procedure, ProcedureStore, ProcedureDetailScreenProps, CardProps, HC<em>PROCEDURE</em>IDS, PROC_COLUMNS, ProceduresScreen(), ProcRow (+3 more)</p>
+      <h3 id="community-156---allreviewsscreentsx">Community 156 - &quot;AllReviewsScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.16</p>
+      <p>Nodes (12): ALL<em>REVIEWS, Review, ReviewReply, AllReviewsScreen(), FILTER</em>FIELDS, parseReviewDate(), REVIEW<em>SORT</em>OPTIONS, ReviewsMoreMenu() (+4 more)</p>
+      <h3 id="community-157---approvalssetupviewtsx">Community 157 - &quot;ApprovalsSetupView.tsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (10): ALL<em>APPROVERS, ApprovalsSetupView(), Approver, DEFAULT</em>STEPS, hasAllLocationsApprover(), Step, StepCard(), Workflow (+2 more)</p>
+      <h3 id="community-158---procedurepickerdetaildatats">Community 158 - &quot;procedurePickerDetailData.ts&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (15): BOOK<em>APPOINTMENT</em>STEPS, buildProcedureDetailDraft(), CATALOG<em>DETAIL</em>KEY, CATALOG<em>OVERRIDES, CATALOG</em>PROCEDURE<em>NAME, contextToChips(), FALLBACK</em>STEPS, findHcProcedure() (+7 more)</p>
+      <h3 id="community-159---faq-agentsmoleculesexpandedrhsexpandedrhsfooterexpandedrhsfooterjsx">Community 159 - &quot;faq-agents/Molecules/ExpandedRHS/ExpandedRHSFooter/ExpandedRHSFooter.jsx&quot;</h3>
+      <p>Cohesion: 0.15</p>
+      <p>Nodes (11): ExpandedRHSFooter(), Default, PromptMedium, PromptStrong, PromptWeak, PromptStrength(), Medium, Strong (+3 more)</p>
+      <h3 id="community-160---faq-agentsorganismsdrawerstoolselectiondrawertoolselectiondrawerjsx">Community 160 - &quot;faq-agents/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (6): EXTERNAL<em>TOOLS, INTERNAL</em>TOOLS, ExternalTools, InternalTools, TABS, ToolSelectionDrawer()</p>
+      <h3 id="community-161---faqeditortsx">Community 161 - &quot;FAQEditor.tsx&quot;</h3>
+      <p>Cohesion: 0.16</p>
+      <p>Nodes (12): EditorialScorePanel(), DEFAULT<em>DIMENSIONS, FAQEditorProps, FAQEditorCopilot(), FAQEditorCopilotProps, QUICK</em>ACTIONS, FAQEditorLeft(), FAQEditorLeftProps (+4 more)</p>
+      <h3 id="community-162---genericskeletoncardtsx">Community 162 - &quot;GenericSkeletonCard.tsx&quot;</h3>
+      <p>Cohesion: 0.19</p>
+      <p>Nodes (11): FAQCanvasProgress(), FAQCanvasProgressProps, getPosition(), FAQ<em>STEPS, FAQSkeletonCard(), FAQSkeletonCardProps, GenericSkeletonCardProps, TYPE</em>META (+3 more)</p>
+      <h3 id="community-163---hcnoshowsscreentsx">Community 163 - &quot;HCNoShowsScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.12</p>
+      <p>Nodes (13): CHANNEL<em>DONUT, DATE</em>RANGE<em>OPTIONS, FILTER</em>FIELDS, FUNNEL<em>LINKS, FUNNEL</em>NODE<em>COLORS, FUNNEL</em>NODES, HCNoShowsScreen(), LOCATION_COLUMNS (+5 more)</p>
+      <h3 id="community-164---postdatats">Community 164 - &quot;postData.ts&quot;</h3>
+      <p>Cohesion: 0.16</p>
+      <p>Nodes (13): ActivityDrawerContent(), ActivityDrawerContentProps, ActivityFeed(), getIconConfig(), mockActivities, RV, Activity, ActivityType (+5 more)</p>
+      <h3 id="community-165---workfloworganismsdrawerstoolselectiondrawertoolselectiondrawerjsx">Community 165 - &quot;workflow/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (6): EXTERNAL<em>TOOLS, INTERNAL</em>TOOLS, ExternalTools, InternalTools, TABS, ToolSelectionDrawer()</p>
+      <h3 id="community-166---scheduledemopaneltsx">Community 166 - &quot;ScheduleDemoPanel.tsx&quot;</h3>
+      <p>Cohesion: 0.16</p>
+      <p>Nodes (9): buildCalendarCells(), DAY<em>NAMES, formatDateHeader(), MONTHS, ScheduleDemoPanel(), TIME</em>SLOTS, TODAY, ScheduleDemoPanelProps (+1 more)</p>
+      <h3 id="community-167---faq-agentsmoleculescanvascanvasnodecanvasnodestoriesjsx">Community 167 - &quot;faq-agents/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (14): AllStates, AllTypes, Branch, Delay, Disabled, Hover, Loop, Parallel (+6 more)</p>
+      <h3 id="community-168---faq-agentsorganismsgroupmetricsgroupmetricsjsx">Community 168 - &quot;faq-agents/Organisms/GroupMetrics/GroupMetrics.jsx&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (9): CARD<em>TYPES, PRIMARY</em>LABELS, uid(), MetricsGroup(), PRIMARY_OPTIONS, Default, MetricCustomiserModal(), CostSaved (+1 more)</p>
+      <h3 id="community-169---carouselv1tsx">Community 169 - &quot;carousel.v1.tsx&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (13): Carousel(), CarouselApi, CarouselContent(), CarouselContext, CarouselContextProps, CarouselItem(), CarouselNext(), CarouselOptions (+5 more)</p>
+      <h3 id="community-170---getagentdirectory">Community 170 - &quot;getAgentDirectory&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (13): getAgentDirectory(), AgentDirectoryScreen(), AgentPerformanceCard(), AiCoworkerSummaryCard(), CoworkerPerformanceSection(), CoworkerTabBar(), formatK(), formatTimeSaved() (+5 more)</p>
+      <h3 id="community-171---proceduredetailscreentsx">Community 171 - &quot;ProcedureDetailScreen.tsx&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (13): ProcedureQueue, Token, useProcedureStore(), chipsToContext(), contextModalResultToChips(), contextToChips(), parseStepsText(), ProcedureDetailScreen() (+5 more)</p>
+      <h3 id="community-172---workflowmoleculescanvascanvasnodecanvasnodestoriesjsx">Community 172 - &quot;workflow/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.13</p>
+      <p>Nodes (14): AllStates, AllTypes, Branch, Delay, Disabled, Hover, Loop, Parallel (+6 more)</p>
+      <h3 id="community-173---workfloworganismsgroupmetricsgroupmetricsjsx">Community 173 - &quot;workflow/Organisms/GroupMetrics/GroupMetrics.jsx&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (9): CARD<em>TYPES, PRIMARY</em>LABELS, uid(), MetricsGroup(), PRIMARY_OPTIONS, Default, MetricCustomiserModal(), CostSaved (+1 more)</p>
+      <h3 id="community-174---faq-agentsorganismsmodalsadvancedfiltersmodaladvancedfiltersmodalstoriesjsx">Community 174 - &quot;faq-agents/Organisms/Modals/AdvancedFiltersModal/AdvancedFiltersModal.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.21</p>
+      <p>Nodes (11): AdvancedFiltersModal(), LOGIC_OPTIONS, fieldOptions, makeCondition(), makeGroup(), ModalDemo(), MultipleGroups, operatorOptions (+3 more)</p>
+      <h3 id="community-175---agentl2nav">Community 175 - &quot;AgentL2Nav&quot;</h3>
+      <p>Cohesion: 0.19</p>
+      <p>Nodes (5): AgentL2Nav(), cancelCreate(), commitCreate(), handleInputBlur(), handleInputKeyDown()</p>
+      <h3 id="community-176---quickcreatemodal">Community 176 - &quot;QuickCreateModal&quot;</h3>
+      <p>Cohesion: 0.25</p>
+      <p>Nodes (13): defaultIdeas(), makeDefaultProjectTypes(), QuickCreateModal(), renderBlogStep1(), renderBlogStep2(), renderFaqStep1(), renderFaqStep2(), renderProjectStep1() (+5 more)</p>
+      <h3 id="community-177---expiredpostsviewtsx">Community 177 - &quot;ExpiredPostsView.tsx&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (7): ExpiredPostsView(), ExpiredPostsViewProps, RV, FacebookIcon(), InstagramIcon(), LinkedInIcon(), PlatformIcons()</p>
+      <h3 id="community-178---workfloworganismsmodalsadvancedfiltersmodaladvancedfiltersmodalstoriesjsx">Community 178 - &quot;workflow/Organisms/Modals/AdvancedFiltersModal/AdvancedFiltersModal.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.21</p>
+      <p>Nodes (11): AdvancedFiltersModal(), LOGIC_OPTIONS, fieldOptions, makeCondition(), makeGroup(), ModalDemo(), MultipleGroups, operatorOptions (+3 more)</p>
+      <h3 id="community-179---agentl2nav">Community 179 - &quot;AgentL2Nav&quot;</h3>
+      <p>Cohesion: 0.19</p>
+      <p>Nodes (5): AgentL2Nav(), cancelCreate(), commitCreate(), handleInputBlur(), handleInputKeyDown()</p>
+      <h3 id="community-180---composerattachpopovertsx">Community 180 - &quot;ComposerAttachPopover.tsx&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (9): ADD<em>FILE</em>ITEM, ComposerAttachPopover(), DEFAULT<em>PROCEDURES, DEFAULT</em>TOOLS, TabId, TABS, AttachItem, AttachItemKind (+1 more)</p>
+      <h3 id="community-181---workflowcoachtourtsx">Community 181 - &quot;WorkflowCoachTour.tsx&quot;</h3>
+      <p>Cohesion: 0.23</p>
+      <p>Nodes (9): clamp(), measureAnchors(), positionCard(), WORKFLOW<em>COACH</em>STEPS, WorkflowCoachPlacement, WorkflowCoachStep, WorkflowCoachTourProps, WorkflowCoachTour() (+1 more)</p>
+      <h3 id="community-182---bloggenerationprogresstsx">Community 182 - &quot;BlogGenerationProgress.tsx&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (10): BlogGenerationProgress(), BlogGenerationProgressProps, GEN<em>STEPS, GenStep, PREVIEW</em>BLOCKS, REGEN_STEPS, StepRow(), StepStatus (+2 more)</p>
+      <h3 id="community-183---datepickermodaltsx">Community 183 - &quot;DatePickerModal.tsx&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (10): CalendarPanelProps, DatePickerModal(), DAY<em>NAMES, MONTHS, PRESETS, SLOT</em>AVAILABILITY, TIME_SLOTS, TODAY (+2 more)</p>
+      <h3 id="community-184---filesmodaltsx">Community 184 - &quot;FilesModal.tsx&quot;</h3>
+      <p>Cohesion: 0.21</p>
+      <p>Nodes (6): DEFAULT<em>FILES, FILE</em>TYPE_STYLE, FilesModal(), FilesModalFile, FilesModalFileType, FilesModalProps</p>
+      <h3 id="community-185---faq-agentsmodulesnodescontrolnodebranchnodebranchdetailsstoriesjsx">Community 185 - &quot;faq-agents/Modules/Nodes/ControlNode/BranchNode/BranchDetails.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (8): CANVAS<em>EDGES, CANVAS</em>NODES, CanvasPreview, DASHED<em>EDGE</em>STYLE, EDGE<em>STYLE, ExpandedRHSPreview, NODE</em>TYPES, RHSPreview</p>
+      <h3 id="community-186---chartv1tsx">Community 186 - &quot;chart.v1.tsx&quot;</h3>
+      <p>Cohesion: 0.23</p>
+      <p>Nodes (9): ChartConfig, ChartContainer(), ChartContext, ChartContextProps, ChartLegendContent(), ChartTooltipContent(), getPayloadConfigFromPayload(), THEMES (+1 more)</p>
+      <h3 id="community-187---healthcarefrontdeskcreateagentlive">Community 187 - &quot;HealthcareFrontdeskCreateAgentLive&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (12): agentParagraphs(), buildCreateChatTrail(), buildSavedCreateChat(), cleanTrailParagraph(), CreateAgentEmptyState(), CreateAgentThinkingPanel(), createLibraryGridClasses(), GhostwriterStreamFailTurn() (+4 more)</p>
+      <h3 id="community-188---recommendation">Community 188 - &quot;Recommendation&quot;</h3>
+      <p>Cohesion: 0.26</p>
+      <p>Nodes (12): BlogPreviewBoxProps, BlogPreviewModalProps, ContentDetailProps, FAQDetailProps, FAQPreviewBoxProps, FAQPreviewModalProps, GenericDetailProps, RecDetailViewProps (+4 more)</p>
+      <h3 id="community-189---rejectedpostsviewtsx">Community 189 - &quot;RejectedPostsView.tsx&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (7): CardStatus, EXPIRED<em>POST</em>IDS, FilterTab, RejectedPostCardProps, RejectedPostsView(), RejectedPostsViewProps, statusConfig</p>
+      <h3 id="community-190---workflowmodulesnodescontrolnodebranchnodebranchdetailsstoriesjsx">Community 190 - &quot;workflow/Modules/Nodes/ControlNode/BranchNode/BranchDetails.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.17</p>
+      <p>Nodes (8): CANVAS<em>EDGES, CANVAS</em>NODES, CanvasPreview, DASHED<em>EDGE</em>STYLE, EDGE<em>STYLE, ExpandedRHSPreview, NODE</em>TYPES, RHSPreview</p>
+      <h3 id="community-191---faq-agentsorganismspanelsrhsconversationtriggerbodyjsx">Community 191 - &quot;faq-agents/Organisms/Panels/RHS/ConversationTriggerBody.jsx&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (6): ConversationTriggerBody(), addRow(), makeRow(), TIME<em>OPTIONS, VOICE</em>OPTIONS, WEBCHAT_OPTIONS</p>
+      <h3 id="community-192---faqgenerationagentsviewtsx">Community 192 - &quot;FAQGenerationAgentsView.tsx&quot;</h3>
+      <p>Cohesion: 0.20</p>
+      <p>Nodes (10): AgentRow, FAQAgentsDashboardView(), FAQGenerationAgentsView(), FAQGenerationAgentsViewProps, isOnDemandAgent(), MOCK<em>NODE</em>DETAILS, MOCK<em>NODE</em>LIST, ON<em>DEMAND</em>NODE_DETAILS (+2 more)</p>
+      <h3 id="community-193---projectgenerationprogresstsx">Community 193 - &quot;ProjectGenerationProgress.tsx&quot;</h3>
+      <p>Cohesion: 0.20</p>
+      <p>Nodes (8): InlineFlowData, GEN<em>STEPS, GenStep, PREVIEW</em>BLOCKS, ProjectGenerationProgress(), ProjectGenerationProgressProps, StepRow(), StepStatus</p>
+      <h3 id="community-194---projectwizardstep3tsx">Community 194 - &quot;ProjectWizardStep3.tsx&quot;</h3>
+      <p>Cohesion: 0.18</p>
+      <p>Nodes (10): SOCIAL<em>PLATFORM</em>BY<em>LABEL, SOCIAL</em>PLATFORMS, ALL<em>CONTENT</em>TYPES, APPROVAL<em>OPTIONS, ContentMixItem, OBJECTIVES, ProjectWizardStep3Props, SOCIAL</em>TYPE_LABELS (+2 more)</p>
+      <h3 id="community-195---workfloworganismspanelsrhsconversationtriggerbodyjsx">Community 195 - &quot;workflow/Organisms/Panels/RHS/ConversationTriggerBody.jsx&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (6): ConversationTriggerBody(), addRow(), makeRow(), TIME<em>OPTIONS, VOICE</em>OPTIONS, WEBCHAT_OPTIONS</p>
+      <h3 id="community-196---compileroptions">Community 196 - &quot;compilerOptions&quot;</h3>
+      <p>Cohesion: 0.20</p>
+      <p>Nodes (9): vite.config.ts, compilerOptions, allowSyntheticDefaultImports, composite, module, moduleResolution, skipLibCheck, strict (+1 more)</p>
+      <h3 id="community-197---callrecordingplayertsx">Community 197 - &quot;CallRecordingPlayer.tsx&quot;</h3>
+      <p>Cohesion: 0.31</p>
+      <p>Nodes (8): CallRecordingPlayer, fmtSeek(), fmtTime(), Speed, speedLabel(), SPEEDS, CallRecordingPlayerHandle, CallRecordingPlayerProps</p>
+      <h3 id="community-198---rangevariant">Community 198 - &quot;RangeVariant&quot;</h3>
+      <p>Cohesion: 0.20</p>
+      <p>Nodes (4): buildCalendarCells(), CalendarPanel(), formatDate(), RangeVariant()</p>
+      <h3 id="community-199---remindertooldrawertsx">Community 199 - &quot;ReminderToolDrawer.tsx&quot;</h3>
+      <p>Cohesion: 0.20</p>
+      <p>Nodes (3): DEFAULT_REMINDERS, Props, ReminderEntry</p>
+      <h3 id="community-200---faq-agentsmoleculesheaderheaderstoriesjsx">Community 200 - &quot;faq-agents/Molecules/Header/Header.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (6): Header(), Default, SearchAndFilterOnly, TitleOnly, WithoutFilter, WithoutSearch</p>
+      <h3 id="community-201---savedblocksstorets">Community 201 - &quot;savedBlocksStore.ts&quot;</h3>
+      <p>Cohesion: 0.24</p>
+      <p>Nodes (8): addSavedBlock(), <em>blocks, Listener, </em>listeners, <em>notify(), </em>persist(), SavedBlockSource, SEED<em>SAVED</em>BLOCKS</p>
+      <h3 id="community-202---socialviewtsx">Community 202 - &quot;SocialView.tsx&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (7): ActivityDrawer(), CalendarView(), PostDetailsDrawer(), PostDetailsDrawerProps, CALENDAR<em>POST</em>IDS, SocialView(), SocialViewProps</p>
+      <h3 id="community-203---socialtablefixturests">Community 203 - &quot;socialTableFixtures.ts&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (9): buildApprovalWorkflowRows(), buildReportRows(), CHANNELS, pick(), REVIEWERS, seeded(), SocialApprovalWorkflowRow, SocialReportRow (+1 more)</p>
+      <h3 id="community-204---workflowmoleculesheaderheaderstoriesjsx">Community 204 - &quot;workflow/Molecules/Header/Header.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (6): Header(), Default, SearchAndFilterOnly, TitleOnly, WithoutFilter, WithoutSearch</p>
+      <h3 id="community-205---packagejson">Community 205 - &quot;package.json&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (8): name, private, scripts, build, dev, preview, type, version</p>
+      <h3 id="community-207---tooltip">Community 207 - &quot;Tooltip&quot;</h3>
+      <p>Cohesion: 0.44</p>
+      <p>Nodes (8): Tooltip(), clearHideTimer(), clearRaf(), hide(), onPointerDown(), onScroll(), scheduleHide(), show()</p>
+      <h3 id="community-208---editorcopilot">Community 208 - &quot;EditorCopilot&quot;</h3>
+      <p>Cohesion: 0.50</p>
+      <p>Nodes (9): blockTypeIcon(), EditorCopilot(), buildConfirmation(), clearAndAddUser(), handleChip(), handleSend(), pushAi(), showPartialLoading() (+1 more)</p>
+      <h3 id="community-209---blogsectioncanvas">Community 209 - &quot;BlogSectionCanvas&quot;</h3>
+      <p>Cohesion: 0.39</p>
+      <p>Nodes (9): BlogSectionCanvas(), handleFocusIn(), handleFocusOut(), handleScrollOrResize(), handleSelectionChange(), isTextEditor(), buildBlogBlocksFromSections(), generateBlogBlocks() (+1 more)</p>
+      <h3 id="community-210---createblogpage">Community 210 - &quot;CreateBlogPage&quot;</h3>
+      <p>Cohesion: 0.28</p>
+      <p>Nodes (7): CreateBlogPage(), handleAddUrl(), handleFiles(), handleNext(), renderStep1(), renderStep2(), validateYoutubeUrl()</p>
+      <h3 id="community-211---faq-agentsagentbuilderagentbuilderstoriesjsx">Community 211 - &quot;faq-agents/AgentBuilder/AgentBuilder.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.28</p>
+      <p>Nodes (8): Default, Filled, FILLED<em>EDGES, FILLED</em>NODE<em>DATA, FILLED</em>NODES, FilledPreview(), getFilledVariant(), nextStoryId()</p>
+      <h3 id="community-212---faqrichtoolbartsx">Community 212 - &quot;FAQRichToolbar.tsx&quot;</h3>
+      <p>Cohesion: 0.25</p>
+      <p>Nodes (6): execCmd(), FAQRichToolbar(), FAQRichToolbarProps, SelectPillProps, ToolBtn(), ToolBtnProps</p>
+      <h3 id="community-213---queryconfigdrawerjsx">Community 213 - &quot;QueryConfigDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.22</p>
+      <p>Nodes (5): DCODE<em>OPTIONS, OFFICE</em>OPTIONS, QueryConfigDrawer(), SCHED<em>OPTIONS, STATUS</em>CHIPS</p>
+      <h3 id="community-214---bookappointmentdrawer">Community 214 - &quot;BookAppointmentDrawer&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (5): BookAppointmentDrawer(), downloadICSFile(), openGoogleCalendar(), openOutlookCalendar(), toUTCStamp()</p>
+      <h3 id="community-215---faq-agentsmoleculesappheaderappheaderjsx">Community 215 - &quot;faq-agents/Molecules/AppHeader/AppHeader.jsx&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (3): AppHeader(), Default, NoUser</p>
+      <h3 id="community-216---faq-agentsmoleculeslhslhsnodelhsnodestoriesjsx">Community 216 - &quot;faq-agents/Molecules/LHS/LHSNode/LHSNode.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (5): LHSNode(), ActiveState, AllNodes, ChevronAction, DragAction</p>
+      <h3 id="community-217---faq-agentsrhsdrawerlocationsdrawerjsx">Community 217 - &quot;faq-agents/RHSDrawer/LocationsDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (5): ALL<em>LOCATIONS, DEFAULT</em>SELECTED, LocationsDrawer(), SELECT<em>BY</em>OPTIONS, Default</p>
+      <h3 id="community-218---draftstorets">Community 218 - &quot;draftStore.ts&quot;</h3>
+      <p>Cohesion: 0.39</p>
+      <p>Nodes (6): deleteDraft(), DraftReport, getDrafts(), listeners, notify(), saveDraft()</p>
+      <h3 id="community-219---setup-content-hubpy">Community 219 - &quot;setup-content-hub.py&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (4): fix<em>contenthub</em>ui<em>internal(), fix</em>imports<em>in</em>dir(), Walk all .ts/.tsx files in directory and fix import paths., Inside contenthub-ui, @/contenthub-ui/X refs become ./X (relative).</p>
+      <h3 id="community-220---testcallmodaltsx">Community 220 - &quot;TestCallModal.tsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (5): AGENTS, COUNTRY_CODES, Phase, TestCallModal(), TestCallModalProps</p>
+      <h3 id="community-221---ttsfailoversettings">Community 221 - &quot;TtsFailoverSettings&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (3): TtsFailoverSettings(), closeFailoverAdditionalDrawer(), handleSaveFailoverAdditionalVoice()</p>
+      <h3 id="community-222---faq-agentsmoleculesmetriccardmetriccardstoriesjsx">Community 222 - &quot;faq-agents/Molecules/MetricCard/MetricCard.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (6): Default, Full, WithConfig, WithDollarValue, WithNegativeTrend, WithTrend</p>
+      <h3 id="community-223---faq-agentsorganismsdataviewsperformancetableperformancetablejsx">Community 223 - &quot;faq-agents/Organisms/DataViews/PerformanceTable/PerformanceTable.jsx&quot;</h3>
+      <p>Cohesion: 0.38</p>
+      <p>Nodes (5): buildTableData(), COLUMNS, DEFAULT_ROWS, PerformanceTable(), Placeholder</p>
+      <h3 id="community-224---faq-agentsorganismsnavprimaryrailnavprimaryrailnavjsx">Community 224 - &quot;faq-agents/Organisms/Nav/PrimaryRailNav/PrimaryRailNav.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (4): DEFAULT<em>NAV</em>ITEMS, ICON_STYLE, PrimaryRailNav(), Default</p>
+      <h3 id="community-225---faq-agentsorganismsnavsecondaryrailnavsecondaryrailnavjsx">Community 225 - &quot;faq-agents/Organisms/Nav/SecondaryRailNav/SecondaryRailNav.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (4): CHEVRON<em>STYLE, DEFAULT</em>MENU_ITEMS, SecondaryRailNav(), Default</p>
+      <h3 id="community-226---faq-agentsservicestemplateservicejs">Community 226 - &quot;faq-agents/services/templateService.js&quot;</h3>
+      <p>Cohesion: 0.38</p>
+      <p>Nodes (5): deleteTemplate(), <em>listeners, </em>notify(), saveTemplate(), _templates</p>
+      <h3 id="community-227---faq-agentstemplatesagentperformancetemplateagentperformancetemplatejsx">Community 227 - &quot;faq-agents/Templates/AgentPerformanceTemplate/AgentPerformanceTemplate.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (5): AgentPerformanceTemplate(), DEFAULT<em>METRICS, STATUS</em>COLOR, Default, Paused</p>
+      <h3 id="community-228---contentactivitydrawertsx">Community 228 - &quot;ContentActivityDrawer.tsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (6): ActivityEntry, activityIcon(), ActivityPanelContent(), CONTENT_ACTIVITY, ContentActivityDrawer(), ContentActivityDrawerProps</p>
+      <h3 id="community-229---slidingsidepaneltsx">Community 229 - &quot;SlidingSidePanel.tsx&quot;</h3>
+      <p>Cohesion: 0.48</p>
+      <p>Nodes (5): closedTransform(), SLIDE<em>EASING, SLIDE</em>MS, SlidingSidePanel(), SlidingSidePanelProps</p>
+      <h3 id="community-230---voicechannelsettings">Community 230 - &quot;VoiceChannelSettings&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (3): VoiceChannelSettings(), closeAdditionalDrawer(), handleSaveAdditionalVoice()</p>
+      <h3 id="community-231---workflowmoleculesmetriccardmetriccardstoriesjsx">Community 231 - &quot;workflow/Molecules/MetricCard/MetricCard.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.29</p>
+      <p>Nodes (6): Default, Full, WithConfig, WithDollarValue, WithNegativeTrend, WithTrend</p>
+      <h3 id="community-232---workfloworganismsdataviewsperformancetableperformancetablejsx">Community 232 - &quot;workflow/Organisms/DataViews/PerformanceTable/PerformanceTable.jsx&quot;</h3>
+      <p>Cohesion: 0.38</p>
+      <p>Nodes (5): buildTableData(), COLUMNS, DEFAULT_ROWS, PerformanceTable(), Placeholder</p>
+      <h3 id="community-233---workfloworganismsnavprimaryrailnavprimaryrailnavjsx">Community 233 - &quot;workflow/Organisms/Nav/PrimaryRailNav/PrimaryRailNav.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (4): DEFAULT<em>NAV</em>ITEMS, ICON_STYLE, PrimaryRailNav(), Default</p>
+      <h3 id="community-234---workfloworganismsnavsecondaryrailnavsecondaryrailnavjsx">Community 234 - &quot;workflow/Organisms/Nav/SecondaryRailNav/SecondaryRailNav.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (4): CHEVRON<em>STYLE, DEFAULT</em>MENU_ITEMS, SecondaryRailNav(), Default</p>
+      <h3 id="community-235---workflowservicestemplateservicejs">Community 235 - &quot;workflow/services/templateService.js&quot;</h3>
+      <p>Cohesion: 0.38</p>
+      <p>Nodes (5): deleteTemplate(), <em>listeners, </em>notify(), saveTemplate(), _templates</p>
+      <h3 id="community-236---workflowtemplatesagentperformancetemplateagentperformancetemplatejsx">Community 236 - &quot;workflow/Templates/AgentPerformanceTemplate/AgentPerformanceTemplate.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (5): AgentPerformanceTemplate(), DEFAULT<em>METRICS, STATUS</em>COLOR, Default, Paused</p>
+      <h3 id="community-237---healthcarereminderworkflowtsx">Community 237 - &quot;HealthcareReminderWorkflow.tsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (4): InitiateVoiceCallDrawer(), ReminderToolDrawer(), HealthcareReminderCanvas(), Props</p>
+      <h3 id="community-238---faq-agentsmoleculescanvascanvasnodeheadercanvasnodeheaderstoriesjsx">Community 238 - &quot;faq-agents/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (4): AllTypes, BranchHeader, TaskHeader, TriggerHeader</p>
+      <h3 id="community-239---faq-agentsmoleculeslhslhsentitygrouplhsentitygroupstoriesjsx">Community 239 - &quot;faq-agents/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.stories.jsx&quot;</h3>
+      <p>Cohesion: 0.40</p>
+      <p>Nodes (4): LHSEntityGroup(), InboxEvent, ReviewEvent, TaskEvent</p>
+      <h3 id="community-240---metriccard">Community 240 - &quot;MetricCard&quot;</h3>
+      <p>Cohesion: 0.53</p>
+      <p>Nodes (5): MetricCard(), cancelEdit(), commitEdit(), handleContainerBlur(), handleKeyDown()</p>
+      <h3 id="community-241---groupmetrics">Community 241 - &quot;GroupMetrics&quot;</h3>
+      <p>Cohesion: 0.53</p>
+      <p>Nodes (5): GroupMetrics(), addCard(), deleteCard(), push(), updateCard()</p>
+      <h3 id="community-243---contentsharemodal">Community 243 - &quot;ContentShareModal&quot;</h3>
+      <p>Cohesion: 0.40</p>
+      <p>Nodes (3): ContentShareModal(), addChip(), handleKeyDown()</p>
+      <h3 id="community-244---workflowmoleculesaichatbubbleaichatbubblejsx">Community 244 - &quot;workflow/Molecules/AIChatBubble/AIChatBubble.jsx&quot;</h3>
+      <p>Cohesion: 0.40</p>
+      <p>Nodes (3): AIChatBubble(), Default, MessageOnly</p>
+      <h3 id="community-245---metriccard">Community 245 - &quot;MetricCard&quot;</h3>
+      <p>Cohesion: 0.53</p>
+      <p>Nodes (5): MetricCard(), cancelEdit(), commitEdit(), handleContainerBlur(), handleKeyDown()</p>
+      <h3 id="community-246---assignconversationdrawerjsx">Community 246 - &quot;AssignConversationDrawer.jsx&quot;</h3>
+      <p>Cohesion: 0.33</p>
+      <p>Nodes (3): AssignConversationDrawer(), TEAMS, USERS</p>
+      <h3 id="community-247---groupmetrics">Community 247 - &quot;GroupMetrics&quot;</h3>
+      <p>Cohesion: 0.53</p>
+      <p>Nodes (5): GroupMetrics(), addCard(), deleteCard(), push(), updateCard()</p>
+      <h3 id="community-249---projectwizardstep3">Community 249 - &quot;ProjectWizardStep3&quot;</h3>
+      <p>Cohesion: 0.70</p>
+      <p>Nodes (5): ProjectWizardStep3(), addType(), adjustCount(), removeType(), setMix()</p>
+      <h3 id="community-258---faqpublishmodal">Community 258 - &quot;FAQPublishModal&quot;</h3>
+      <p>Cohesion: 0.67</p>
+      <p>Nodes (4): FAQPublishModal(), handlePublish(), resetAndClose(), formatScheduleDate()</p>
+      <h3 id="community-265---verceljson">Community 265 - &quot;vercel.json&quot;</h3>
+      <p>Cohesion: 0.50</p>
+      <p>Nodes (3): buildCommand, outputDirectory, rewrites</p>
+      <h2 id="knowledge-gaps">Knowledge Gaps</h2>
+      <ul>
+      <li><strong>2739 isolated node(s):</strong> <code>InlineSelectFieldProps</code>, <code>InlineSelectFieldSize</code>, <code>PaginationLinkProps</code>, <code>PromptSuggestionProps</code>, <code>ScrollButtonProps</code> (+2734 more)</li>
+      </ul>
+      <p>These have ≤1 connection - possible missing edges or undocumented components.</p>
+      <ul>
+      <li><strong>67 thin communities (&lt;3 nodes) omitted from report</strong> — run <code>graphify query</code> to explore isolated nodes.</li>
+      </ul>
+      <h2 id="suggested-questions">Suggested Questions</h2>
+      <p><em>Questions this graph is uniquely positioned to answer:</em></p>
+      <ul>
+      <li><strong>Why does <code>cn()</code> connect <code>cn</code> to <code>ContentFlowControls.tsx</code>, <code>BlockCanvas.tsx</code>, <code>ContentEditorShell.tsx</code>, <code>button.tsx</code>, <code>FAQPublishModal</code>, <code>AdditionalContextSection</code>, <code>PostCard.tsx</code>, <code>sheet.v1.tsx</code>, <code>chain-of-thought.v1.tsx</code>, <code>faqStore.ts</code>, <code>FAQAgentsDashboardView.tsx</code>, <code>contenthub-ui/utils.ts</code>, <code>ContentCreationWizardModal.tsx</code>, <code>carousel.v1.tsx</code>, <code>scoreColors.ts</code>, <code>FAQSectionCanvas.tsx</code>, <code>QuickCreateModal</code>, <code>CreateView.tsx</code>, <code>InlineCreationFlow.tsx</code>, <code>BlogGenerationProgress.tsx</code>, <code>ContentScorePanel.tsx</code>, <code>chart.v1.tsx</code>, <code>BlockSettingsPanel.tsx</code>, <code>ProjectGenerationProgress.tsx</code>, <code>ProjectWizardStep3.tsx</code>, <code>AppDataTable.tsx</code>, <code>BlogSectionCanvas.tsx</code>, <code>message.v1.tsx</code>, <code>ProjectsView.tsx</code>, <code>CreateBlogPage</code>, <code>L2NavLayout.v1.tsx</code>, <code>FAQRichToolbar.tsx</code>, <code>EmailWizard.tsx</code>, <code>UnifiedReviewCanvas.tsx</code>, <code>TemplateGallery.tsx</code>, <code>AiCopilot.tsx</code>, <code>copilot-prompt-box.v1.tsx</code>, <code>ContentActivityDrawer.tsx</code>, <code>ProjectWizardStep3</code>, <code>AttachmentPickerModal.tsx</code>, <code>ColumnSettingsSheet.tsx</code>, <code>ContentHubL2NavPanel.tsx</code>, <code>QuickCreateModal.tsx</code>, <code>ContentShareModal</code>, <code>TemplatePickerModal.tsx</code>, <code>EditorChromeToolbar.tsx</code>?</strong></li>
+      </ul>
+      <p><em>High betweenness centrality (0.169) - this node is a cross-community bridge.</em></p>
+      <ul>
+      <li><strong>Why does <code>Icon()</code> connect <code>Icon</code> to <code>ContextModal.tsx</code>, <code>AgentDirectoryScreen.tsx</code>, <code>AgentDetailScreen.tsx</code>, <code>index.ts</code>, <code>NewFrontdeskAgentSetupScreen.tsx</code>, <code>AiBuilderPanel.tsx</code>, <code>OverviewV2_1Screen.tsx</code>, <code>AgentSettingsTab.tsx</code>, <code>AddToolDrawer.jsx</code>, <code>App.tsx</code>, <code>IconRail.tsx</code>, <code>workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx</code>, <code>ProvidersScreen.tsx</code>, <code>recommendationsData.ts</code>, <code>RunDetailsPanel.tsx</code>, <code>workflow/Organisms/Modals/AddOutputFieldModal/AddOutputFieldModal.jsx</code>, <code>MediaLibraryModal.tsx</code>, <code>ClassicOverviewScreen.tsx</code>, <code>workflow/AgentBuilder/AgentBuilder.jsx</code>, <code>Column</code>, <code>AllReviewsScreen.tsx</code>, <code>InboxScreen.tsx</code>, <code>workflow/Molecules/Conditions/Conditions.jsx</code>, <code>ProcedureDetailScreen.tsx</code>, <code>RecommendationDetailScreen.tsx</code>, <code>LogDetailsPanel.tsx</code>, <code>ComposerAttachPopover.tsx</code>, <code>WorkflowCoachTour.tsx</code>, <code>FilesModal.tsx</code>, <code>DataTable</code>, <code>HelpCenterPanel.tsx</code>, <code>AvailabilityScreen.tsx</code>, <code>AgentInstanceScreen.tsx</code>, <code>RunDetailView.tsx</code>, <code>PromptComposer.tsx</code>, <code>HCFrontdeskOverviewScreen.tsx</code>, <code>OverviewScreen.tsx</code>, <code>AutoAppointmentTypeScreen.tsx</code>, <code>TopNav</code>?</strong></li>
+      </ul>
+      <p><em>High betweenness centrality (0.055) - this node is a cross-community bridge.</em></p>
+      <ul>
+      <li><strong>Why does <code>TemplateLibrary()</code> connect <code>faq-agents/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx</code> to <code>faq-agents/Modules/FlowCanvas/WorkspaceEmptyState/WorkspaceEmptyState.jsx</code>, <code>FAQAgentsDashboardView.tsx</code>?</strong></li>
+      </ul>
+      <p><em>High betweenness centrality (0.039) - this node is a cross-community bridge.</em></p>
+      <ul>
+      <li><strong>What connects <code>InlineSelectFieldProps</code>, <code>InlineSelectFieldSize</code>, <code>PaginationLinkProps</code> to the rest of the system?</strong></li>
+      </ul>
+      <p><em>2739 weakly-connected nodes found - possible documentation gaps or missing edges.</em></p>
+      <ul>
+      <li><strong>Should <code>cn</code> be split into smaller, more focused modules?</strong></li>
+      </ul>
+      <p><em>Cohesion score 0.01743321540275855 - nodes in this community are weakly interconnected.</em></p>
+      <ul>
+      <li><strong>Should <code>ContentFlowControls.tsx</code> be split into smaller, more focused modules?</strong></li>
+      </ul>
+      <p><em>Cohesion score 0.018031430934656742 - nodes in this community are weakly interconnected.</em></p>
+      <ul>
+      <li><strong>Should <code>BlockCanvas.tsx</code> be split into smaller, more focused modules?</strong></li>
+      </ul>
+      <p><em>Cohesion score 0.024085309799595514 - nodes in this community are weakly interconnected.</em></p>
+      <p class="footer">Generated from graphify-out/GRAPH_REPORT.md · <a href="graph.html">Open interactive graph</a></p>
+    </div>
+  </div>
+</body>
+</html>

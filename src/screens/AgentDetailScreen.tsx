@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
   AgentLibraryPreviewModal,
   AttachMenuPopover,
@@ -35,6 +36,7 @@ import {
   type LibraryCardGlyph,
   type LibraryCardTone,
   type Metric,
+  type RowMenuItem,
   type Tab,
 } from '../components'
 import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
@@ -184,9 +186,77 @@ interface AgentInstance {
   [key: string]: string | number | undefined
 }
 
+function AgentInstanceMoreMenu({
+  row,
+  items,
+}: {
+  row: AgentInstance
+  items: RowMenuItem<AgentInstance>[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const visibleItems = items.filter((item) => (item.visible ? item.visible(row) : true))
+  if (visibleItems.length === 0) return null
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label="More actions"
+        onClick={(e) => {
+          e.stopPropagation()
+          const rect = btnRef.current?.getBoundingClientRect()
+          if (!rect) return
+          setMenuPos({ top: rect.bottom + 4, left: rect.right - 216 })
+          setOpen((current) => !current)
+        }}
+        className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+      >
+        <Icon name="more_vert" size={20} />
+      </button>
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0 z-[105]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-[110] min-w-[216px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
+            style={{ top: menuPos.top, left: menuPos.left }}
+          >
+            {visibleItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  item.onClick(row)
+                  setOpen(false)
+                }}
+                className={`block w-full px-md py-sm text-left text-body hover:bg-surface-hover ${
+                  item.variant === 'danger' ? 'text-chip-danger-text' : 'text-text-primary'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body,
+      )}
+    </>
+  )
+}
+
 const TABS: Tab[] = [
   { id: 'agents', label: 'Agents' },
   { id: 'library', label: 'Library' },
+]
+
+const EXPLORATION_DETAIL_TABS: Tab[] = [
+  { id: 'agents', label: 'Agents' },
+  { id: 'library', label: 'Library' },
+  { id: 'outcomes', label: 'Outcomes' },
 ]
 
 const STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -7109,16 +7179,17 @@ function HistoryChatReplay({
 }
 
 export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed }: AgentDetailScreenProps) {
-  const [activeTab, setActiveTab] = useState('agents')
-  const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('list')
-  const [customizeOpen, setCustomizeOpen] = useState(false)
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
   const isSep1Agents = Boolean(navId?.includes('sep-1'))
+  const useExplorationOutcomesTab = isExplorationAgents && !isSep1Agents
+  const [activeTab, setActiveTab] = useState('agents')
+  const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
+  const [customizeOpen, setCustomizeOpen] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const showExplorationAgentsToggle =
     isExplorationAgents && !isSep1Agents && activeTab === 'agents'
   const useExplorationGrid =
@@ -7128,6 +7199,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   )
   const [selectedInstanceDisplayName, setSelectedInstanceDisplayName] = useState<string | null>(null)
   const [instanceInitialTab, setInstanceInitialTab] = useState(pendingInstanceView?.tab ?? 'outcomes')
+
+  useEffect(() => {
+    setActiveTab('agents')
+  }, [navId])
 
   useEffect(() => {
     if (!pendingInstanceView) return
@@ -7644,6 +7719,44 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setToastMessage(`${fileName} has been downloaded`)
     setToastVisible(true)
   }
+
+  const openAgentInstanceDetails = (row: AgentInstance) => {
+    setInstanceInitialTab('outcomes')
+    setSelectedInstanceDisplayName(null)
+    setSelectedInstance(row.name)
+  }
+
+  const openAgentInstanceEditor = (row: AgentInstance) => {
+    onEditAgent?.(
+      row.name,
+      undefined,
+      undefined,
+      isExplorationAgents ? row.status : undefined,
+    )
+  }
+
+  const agentInstanceRowMenuItems = useMemo<RowMenuItem<AgentInstance>[]>(() => [
+    { label: 'Edit', onClick: openAgentInstanceEditor },
+    {
+      label: 'Deactivate',
+      onClick: () => {},
+      visible: (row) => row.status === 'Active',
+    },
+    { label: 'Duplicate', onClick: () => {} },
+    { label: 'View details', onClick: openAgentInstanceDetails },
+    { label: 'Reports', onClick: () => {} },
+    ...(isExplorationAgents
+      ? [{ label: 'Download agent', onClick: handleDownloadAgent }]
+      : []),
+    { label: 'Delete', onClick: () => {}, variant: 'danger' },
+  ], [isExplorationAgents, onEditAgent])
+
+  const agentInstanceCardOverflowMenuItems = useMemo(
+    () => agentInstanceRowMenuItems.filter(
+      (item) => item.label !== 'Edit' && item.label !== 'View details',
+    ),
+    [agentInstanceRowMenuItems],
+  )
 
   const FILTER_FIELDS: FilterField[] = [
     { id: 'status', label: 'Status', options: opts('Active', 'Inactive', 'Draft') },
@@ -8236,13 +8349,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               {/* Tabs */}
               <div className="px-2xl">
                 <Tabs
-                  tabs={TABS}
+                  tabs={useExplorationOutcomesTab ? EXPLORATION_DETAIL_TABS : TABS}
                   activeTab={activeTab}
+                  showBaseline={false}
                   onChange={setActiveTab}
                 />
               </div>
 
-              {activeTab === 'agents' ? (
+              {activeTab === 'outcomes' && useExplorationOutcomesTab ? (
                 <>
                   <div className="px-2xl pt-lg">
                     <MetricTiles
@@ -8274,6 +8388,43 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setSavingsModalOpen(false)
                     }}
                   />
+                </>
+              ) : activeTab === 'agents' ? (
+                <>
+                  {!useExplorationOutcomesTab && (
+                    <>
+                      <div className="px-2xl pt-lg">
+                        <MetricTiles
+                          metrics={displayMetrics}
+                          renderTileAction={
+                            isFrontdesk || isReviewResponse
+                              ? (metric) =>
+                                  metric.id === 'timeSaved' ? (
+                                    <button
+                                      type="button"
+                                      aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
+                                      onClick={() => setSavingsModalOpen(true)}
+                                      className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+                                    >
+                                      <Icon name="tune" size={18} />
+                                    </button>
+                                  ) : null
+                              : undefined
+                          }
+                        />
+                      </div>
+                      <EstimateSavingsModal
+                        open={savingsModalOpen}
+                        onClose={() => setSavingsModalOpen(false)}
+                        initialValues={savingsSettings}
+                        copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
+                        onSave={(values) => {
+                          setSavingsSettings(values)
+                          setSavingsModalOpen(false)
+                        }}
+                      />
+                    </>
+                  )}
                   {useExplorationGrid ? (
                     <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
@@ -8291,15 +8442,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               { value: row.timeSaved ?? '—', label: 'Time saved' },
                             ]
                         return (
-                          <button
-                            type="button"
+                          <div
                             key={row.name}
-                            onClick={() => {
-                              setInstanceInitialTab('outcomes')
-                              setSelectedInstanceDisplayName(null)
-                              setSelectedInstance(row.name)
-                            }}
-                            className="group flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg text-left transition-colors hover:bg-surface-hover"
+                            className="group relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                           >
                             <div className="flex min-w-0 items-start justify-between gap-sm">
                               <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
@@ -8315,7 +8460,24 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                 </div>
                               ))}
                             </div>
-                          </button>
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-gradient-to-t from-surface from-60% to-transparent px-lg pb-lg pt-2xl opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                              <button
+                                type="button"
+                                onClick={() => openAgentInstanceDetails(row)}
+                                className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                              >
+                                View details
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openAgentInstanceEditor(row)}
+                                className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                              >
+                                Edit
+                              </button>
+                              <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                            </div>
+                          </div>
                         )
                       })}
                     </div>
@@ -8330,33 +8492,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                           setSelectedInstanceDisplayName(null)
                           setSelectedInstance(row.name)
                         }}
-                        rowMenuItems={[
-                          { label: 'Edit', onClick: (row) => onEditAgent?.(
-                            row.name,
-                            undefined,
-                            undefined,
-                            isExplorationAgents ? row.status : undefined,
-                          ) },
-                          {
-                            label: 'Deactivate',
-                            onClick: () => {},
-                            visible: (row) => row.status === 'Active',
-                          },
-                          { label: 'Duplicate', onClick: () => {} },
-                          { label: 'View details', onClick: (row) => {
-                            setInstanceInitialTab('outcomes')
-                            setSelectedInstanceDisplayName(null)
-                            setSelectedInstance(row.name)
-                          } },
-                          { label: 'Reports', onClick: () => {} },
-                          ...(isExplorationAgents
-                            ? [{
-                                label: 'Download agent',
-                                onClick: (row: AgentInstance) => handleDownloadAgent(row),
-                              }]
-                            : []),
-                          { label: 'Delete', onClick: () => {}, variant: 'danger' },
-                        ]}
+                        rowMenuItems={agentInstanceRowMenuItems}
                       />
                     </div>
                   )}

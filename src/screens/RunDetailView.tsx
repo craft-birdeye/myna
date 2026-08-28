@@ -26,10 +26,6 @@ import CanvasNode from '../workflow/Molecules/Canvas/CanvasNode/CanvasNode'
 import ProceduresNode from '../workflow/Molecules/Canvas/ProceduresNode/ProceduresNode'
 import EndNode from '../workflow/Molecules/Canvas/EndNode/EndNode'
 import GraphControls from '../workflow/Modules/FlowCanvas/GraphControls/GraphControls'
-import {
-  FLOW_CONNECTOR_GAP,
-  FLOW_START_GAP,
-} from '../workflow/flowLayoutConstants'
 import '../workflow/FlowCanvas/FlowCanvas.css'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import '../workflow/AgentBuilder/AgentBuilder.css'
@@ -67,6 +63,29 @@ const PROCEDURE_CHIPS = [
 ]
 
 /* ── workflow canvas connector (matches FlowCanvas edge styling, no add button in run view) ── */
+const LOG_VIEW_START_GAP = 100
+const LOG_VIEW_CONNECTOR_GAP = 48
+const LOG_VIEW_DEFAULT_ZOOM = 95
+const LOG_VIEW_ZOOM_MIN = 10
+const LOG_VIEW_ZOOM_MAX = 200
+const LOG_VIEW_ZOOM_STEP = 25
+
+function isEditableZoomTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'))
+}
+
+function clampLogViewZoom(value: number) {
+  return Math.min(LOG_VIEW_ZOOM_MAX, Math.max(LOG_VIEW_ZOOM_MIN, Math.round(value)))
+}
+
+function isLogViewZoomInKey(key: string) {
+  return key === '=' || key === '+' || key === 'Add'
+}
+
+function isLogViewZoomOutKey(key: string) {
+  return key === '-' || key === '_' || key === 'Subtract'
+}
+
 function RunFlowConnector({ height }: { height: number }) {
   return (
     <div className="relative flex items-center justify-center" style={{ height, width: 24 }}>
@@ -598,7 +617,7 @@ function AgentWorkflowRunCanvas({
           initialNodeDetails={workflow.nodeDetails}
           procedures={filteredProcedures}
           defaultOpenSection="Tasks"
-          initialZoom={0.85}
+          initialZoom={LOG_VIEW_DEFAULT_ZOOM / 100}
           nodesInteractive={false}
           logDoneNodeIds={executedIds}
           externalFocusNodeId={focusNodeId}
@@ -619,75 +638,124 @@ function WorkflowCanvas({
 }) {
   const triggerImplemented = implementedSteps.includes('trigger')
   const proceduresImplemented = implementedSteps.includes('procedures')
-  const [zoom, setZoom] = React.useState(85)
+  const [zoom, setZoom] = React.useState(LOG_VIEW_DEFAULT_ZOOM)
+  const canvasRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isEditableZoomTarget(e.target)) return
+
+      const mod = e.ctrlKey || e.metaKey
+      const numpad = e.key === 'Add' || e.key === 'Subtract'
+      const canvasFocused = Boolean(canvasRef.current?.contains(document.activeElement))
+
+      if (mod && isLogViewZoomInKey(e.key)) {
+        e.preventDefault()
+        setZoom((z) => clampLogViewZoom(z + LOG_VIEW_ZOOM_STEP))
+        return
+      }
+      if (mod && isLogViewZoomOutKey(e.key)) {
+        e.preventDefault()
+        setZoom((z) => clampLogViewZoom(z - LOG_VIEW_ZOOM_STEP))
+        return
+      }
+      if (mod && e.key === '0') {
+        e.preventDefault()
+        setZoom(LOG_VIEW_DEFAULT_ZOOM)
+        return
+      }
+      if (numpad && canvasFocused) {
+        e.preventDefault()
+        if (e.key === 'Add') setZoom((z) => clampLogViewZoom(z + LOG_VIEW_ZOOM_STEP))
+        if (e.key === 'Subtract') setZoom((z) => clampLogViewZoom(z - LOG_VIEW_ZOOM_STEP))
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -10 : 10
+    setZoom((z) => clampLogViewZoom(z + delta))
+  }
 
   return (
-    <div className="flow-canvas absolute inset-0 flex flex-col overflow-auto">
+    <div
+      ref={canvasRef}
+      tabIndex={-1}
+      className="flow-canvas absolute inset-0 flex flex-col overflow-hidden outline-none"
+      onMouseDown={() => canvasRef.current?.focus()}
+    >
+      <div className="min-h-0 flex-1 overflow-auto" onWheel={handleWheel}>
+        {/* Right padding keeps the flow clear of the overlaid details panel */}
+        <div
+          className="log-view-canvas-scale flex flex-col items-center pb-2xl pr-[620px] pt-2xl"
+          style={{ zoom: zoom / 100 }}
+        >
+          <StartNode title={instanceName} subtitle="All locations" />
+
+          <RunFlowConnector height={LOG_VIEW_START_GAP} />
+
+          <div className="flow-canvas__node-center" data-log-canvas-step="trigger">
+            <CanvasNode
+              nodeType="trigger"
+              label="Trigger"
+              stepNumber={1}
+              title="Conversation trigger"
+              description="Agent triggers when a voice, chat, or text conversations starts"
+              titlePlaceholder=""
+              descriptionPlaceholder=""
+              viewOnly
+              onToggleChange={() => {}}
+              onAddClick={() => {}}
+              onDelete={() => {}}
+              onCopy={() => {}}
+              onReplace={() => {}}
+              state={triggerImplemented ? 'implemented' : 'default'}
+              runStatus={triggerImplemented ? 'done' : undefined}
+            />
+          </div>
+
+          <RunFlowConnector height={LOG_VIEW_CONNECTOR_GAP} />
+
+          <div className="flow-canvas__node-center" data-log-canvas-step="procedures">
+            <ProceduresNode
+              stepNumber={3}
+              procedureItems={RUN_PROCEDURE_ITEMS as never[]}
+              hasToggle
+              toggleEnabled
+              toggleDisabled
+              viewOnly
+              onToggleChange={() => {}}
+              onDelete={() => {}}
+              onCopy={() => {}}
+              onReplace={() => {}}
+              onMoveUp={() => {}}
+              onMoveDown={() => {}}
+              onDropProcedure={() => {}}
+              onRemoveProcedure={() => {}}
+              onSelectProcedure={() => {}}
+              state={proceduresImplemented ? 'implemented' : 'default'}
+              runStatus={proceduresImplemented ? 'done' : undefined}
+            />
+          </div>
+
+          <EndNode viewOnly hideAdd onDropBeforeEnd={() => {}} />
+        </div>
+      </div>
+
       <div className="log-view-zoom-anchor">
         <GraphControls
           rrChrome
           viewOnly
           zoom={zoom}
-          onZoomSelect={(fraction: number) => setZoom(Math.round(fraction * 100))}
-          onFitView={() => setZoom(85)}
+          onZoomSelect={(fraction: number) => setZoom(clampLogViewZoom(fraction * 100))}
+          onFitView={() => setZoom(LOG_VIEW_DEFAULT_ZOOM)}
           onFillView={() => setZoom(100)}
         />
-      </div>
-
-      {/* Right padding keeps the flow clear of the overlaid details panel */}
-      <div
-        className="flex flex-col items-center pb-2xl pr-[620px] pt-2xl"
-        style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-      >
-        <StartNode title={instanceName} subtitle="All locations" />
-
-        <RunFlowConnector height={FLOW_START_GAP} />
-
-        <div className="flow-canvas__node-center" data-log-canvas-step="trigger">
-          <CanvasNode
-            nodeType="trigger"
-            label="Trigger"
-            stepNumber={1}
-            title="Conversation trigger"
-            description="Agent triggers when a voice, chat, or text conversations starts"
-            titlePlaceholder=""
-            descriptionPlaceholder=""
-            viewOnly
-            onToggleChange={() => {}}
-            onAddClick={() => {}}
-            onDelete={() => {}}
-            onCopy={() => {}}
-            onReplace={() => {}}
-            state={triggerImplemented ? 'implemented' : 'default'}
-            runStatus={triggerImplemented ? 'done' : undefined}
-          />
-        </div>
-
-        <RunFlowConnector height={FLOW_CONNECTOR_GAP} />
-
-        <div className="flow-canvas__node-center" data-log-canvas-step="procedures">
-          <ProceduresNode
-            stepNumber={3}
-            procedureItems={RUN_PROCEDURE_ITEMS as never[]}
-            hasToggle
-            toggleEnabled
-            toggleDisabled
-            viewOnly
-            onToggleChange={() => {}}
-            onDelete={() => {}}
-            onCopy={() => {}}
-            onReplace={() => {}}
-            onMoveUp={() => {}}
-            onMoveDown={() => {}}
-            onDropProcedure={() => {}}
-            onRemoveProcedure={() => {}}
-            onSelectProcedure={() => {}}
-            state={proceduresImplemented ? 'implemented' : 'default'}
-            runStatus={proceduresImplemented ? 'done' : undefined}
-          />
-        </div>
-
-        <EndNode viewOnly hideAdd onDropBeforeEnd={() => {}} />
       </div>
     </div>
   )
@@ -774,19 +842,18 @@ export function RunDetailView({
           background-image: none !important;
         }
         /* Bottom-left zoom floater (fallback WorkflowCanvas path). */
+        .log-detail-view .flow-canvas {
+          display: flex;
+          flex-direction: column;
+        }
         .log-detail-view .log-view-zoom-anchor {
           position: absolute;
           bottom: 16px;
           left: 16px;
           z-index: 50;
-          pointer-events: none;
         }
         .log-detail-view .log-view-zoom-anchor .graph-controls--rr-chrome {
           width: auto;
-          pointer-events: none;
-        }
-        .log-detail-view .log-view-zoom-anchor .graph-controls__rr-zoom {
-          pointer-events: auto;
         }
 
         /* Node cards are a read-only record here — fully inert: no pointer, no hover
@@ -795,6 +862,7 @@ export function RunDetailView({
         .log-detail-view .canvas-node,
         .log-detail-view .react-flow__node { cursor: default !important; }
         .log-detail-view .canvas-node__hover-actions { display: none !important; }
+        .log-detail-view .cnh__more-wrapper { display: none !important; }
         .log-detail-view .canvas-node--hover,
         .log-detail-view .canvas-node--selected { border-color: transparent !important; }
       `}</style>
