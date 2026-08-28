@@ -20,6 +20,10 @@ export default function SystemPromptInput({
   tall = false,
   /** Show info popover + expand on the label row (Steps / Procedures pattern). */
   showLabelActions = true,
+  /** Independent of showLabelActions: hides just the expand-to-overlay button (R1). */
+  showExpandButton = true,
+  error,
+  errorMessage = 'This field is required',
 }) {
   const editorRef = useRef(null);
   const overlayEditorRef = useRef(null);
@@ -132,7 +136,7 @@ export default function SystemPromptInput({
   }, []);
 
   const editorBlock = (ref, editorClassName, fieldsRef) => (
-    <div className={styles.inputBox}>
+    <div className={`${styles.inputBox}${error ? ` ${styles.inputBoxError}` : ''}`}>
       <div
         ref={ref}
         className={editorClassName}
@@ -173,7 +177,7 @@ export default function SystemPromptInput({
               <InfoTooltip text={SYSTEM_PROMPT_INFO} variant="detail" />
             )}
           </div>
-          {showLabelActions && (
+          {showLabelActions && showExpandButton && (
             <button
               type="button"
               className={styles.expandBtn}
@@ -199,6 +203,9 @@ export default function SystemPromptInput({
             `${styles.editor}${tall ? ` ${styles.editorTall}` : ''}`,
             fieldsBtnRef,
           )
+        )}
+        {error && errorMessage && !expanded && (
+          <span className={styles.errorText}>{errorMessage}</span>
         )}
       </div>
       {expanded && createPortal(

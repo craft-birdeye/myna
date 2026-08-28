@@ -40,6 +40,8 @@ export default function UserPromptInput({
   /** How the Fields picker opens relative to the toolbar icon. */
   fieldPickerPlacement = 'dock',
   fieldPickerZIndex,
+  error,
+  errorMessage = 'This field is required',
 }) {
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -197,7 +199,9 @@ export default function UserPromptInput({
             {required && <span className={styles.required}>*</span>}
           </div>
         )}
-        <div className={`${styles.inputBox}${!readOnly && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}`}>
+        <div
+          className={`${styles.inputBox}${!readOnly && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${error ? ` ${styles.inputBoxError}` : ''}`}
+        >
           {!readOnly && isEmpty && (
             <div className={styles.placeholderOverlay} aria-hidden>
               {placeholder}
@@ -262,6 +266,9 @@ export default function UserPromptInput({
           </div>
           )}
         </div>
+        {error && errorMessage && (
+          <span className={styles.errorText}>{errorMessage}</span>
+        )}
       </div>
       {fieldModalOpen && (
         <FieldPickerModal
