@@ -199,12 +199,6 @@ const METRICS_BY_AGENT: Record<string, Metric[]> = {
     { id: 'newMentions', value: '54', label: 'New mentions surfaced', delta: '4.7%', trend: 'up', info: true, tooltip: 'Brand or competitor mentions found via fanout queries that exact-match tracking missed.' },
     { id: 'timeSaved', value: '2.5h', label: 'Time saved', delta: '3.2%', trend: 'up', info: true, tooltip: 'Estimated analyst time saved by automating query fanout instead of manual keyword expansion.' },
   ],
-  'AEO validator agent': [
-    { id: 'pagesValidated', value: '162', label: 'Pages validated', delta: '5.5%', trend: 'up', info: true, tooltip: 'Published or updated pages checked for AEO signals at this location in the selected period.' },
-    { id: 'signalsPassed', value: '91%', label: 'AEO signals passed', delta: '2.4%', trend: 'up', info: true, tooltip: 'Percentage of validated pages that passed all AEO signal checks on first run.' },
-    { id: 'citationIssues', value: '9', label: 'Citation issues found', delta: '1.1%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages where an AI-cited source no longer matched the published content.' },
-    { id: 'flaggedForReview', value: '5', label: 'Flagged for review', delta: '0.8%', trend: 'down', positiveDown: true, info: true, tooltip: 'Pages routed to the content team after failing AEO validation.' },
-  ],
   'Domain health agent': [
     { id: 'domainsMonitored', value: '83', label: 'Domains monitored', delta: '4.2%', trend: 'up', info: true, tooltip: 'Eligible domains checked for crawl completion and health analysis at this location in the selected period.' },
     { id: 'pagesCrawled', value: '5.4K', label: 'Pages crawled', delta: '7.8%', trend: 'up', info: true, tooltip: 'Total pages crawled across monitored domains at this location in the selected period.' },
@@ -298,12 +292,6 @@ const LOCATIONS_BY_AGENT: Record<string, LocationRow[]> = {
     { location: 'Chicago, IL',      count: '98',  themesExpanded: '12', subQueriesRun: '220', newMentions: '16', timeSaved: '45m' },
     { location: 'Boston, MA',       count: '76',  themesExpanded: '10', subQueriesRun: '180', newMentions: '11', timeSaved: '30m' },
     { location: 'Philadelphia, PA', count: '60',  themesExpanded: '8',  subQueriesRun: '130', newMentions: '7',  timeSaved: '15m' },
-  ],
-  'AEO validator agent': [
-    { location: 'Atlanta, GA',      count: '124', pagesValidated: '62', signalsPassed: '92%', citationIssues: '3', flaggedForReview: '2' },
-    { location: 'Chicago, IL',      count: '98',  pagesValidated: '46', signalsPassed: '91%', citationIssues: '2', flaggedForReview: '1' },
-    { location: 'Boston, MA',       count: '76',  pagesValidated: '34', signalsPassed: '90%', citationIssues: '2', flaggedForReview: '1' },
-    { location: 'Philadelphia, PA', count: '60',  pagesValidated: '20', signalsPassed: '89%', citationIssues: '2', flaggedForReview: '1' },
   ],
   'Domain health agent': [
     { location: 'Atlanta, GA',      count: '124', domainsMonitored: '32', pagesCrawled: '2.1K', issuesDetected: '14', timeSaved: '2.3h' },
@@ -442,14 +430,6 @@ const QUERY_FANOUT_COLUMNS: Column<LocationRow>[] = [
   { key: 'timeSaved', label: 'Time saved', width: 140, sortable: true },
 ]
 
-const AEO_VALIDATOR_COLUMNS: Column<LocationRow>[] = [
-  { key: 'location', label: 'Location', width: 220, sortable: true },
-  { key: 'pagesValidated', label: 'Pages validated', width: 160, sortable: true },
-  { key: 'signalsPassed', label: 'AEO signals passed', width: 170, sortable: true },
-  { key: 'citationIssues', label: 'Citation issues found', width: 190, sortable: true },
-  { key: 'flaggedForReview', label: 'Flagged for review', width: 170, sortable: true },
-]
-
 const DOMAIN_HEALTH_COLUMNS: Column<LocationRow>[] = [
   { key: 'location', label: 'Location', width: 220, sortable: true },
   { key: 'domainsMonitored', label: 'Domains monitored', width: 170, sortable: true },
@@ -555,7 +535,6 @@ export function AgentInstanceScreen({
     : agentName === 'Treatment plan agent'? TREATMENT_PLAN_COLUMNS
     : agentName === 'Tagging & routing agent' ? TAGGING_ROUTING_COLUMNS
     : agentName === 'Query fanout agent'  ? QUERY_FANOUT_COLUMNS
-    : agentName === 'AEO validator agent' ? AEO_VALIDATOR_COLUMNS
     : agentName === 'Domain health agent' ? DOMAIN_HEALTH_COLUMNS
     : isReviewGeneration                  ? REVIEW_GENERATION_COLUMNS
     : isReviewResponse                    ? REVIEW_RESPONSE_COLUMNS
@@ -600,11 +579,10 @@ export function AgentInstanceScreen({
 
   const isTaggingRouting = agentName === 'Tagging & routing agent'
   const isQueryFanout = agentName === 'Query fanout agent'
-  const isAeoValidator = agentName === 'AEO validator agent'
   const isDomainHealth = agentName === 'Domain health agent'
   const tabs = isTaggingRouting
     ? TAGGING_ROUTING_TABS
-    : isReviewResponse || isReviewGeneration || isQueryFanout || isAeoValidator || isDomainHealth
+    : isReviewResponse || isReviewGeneration || isQueryFanout || isDomainHealth
       ? REVIEW_RESPONSE_TABS
       : TABS
 
@@ -624,6 +602,7 @@ export function AgentInstanceScreen({
   const dentalOutboundLogRows = DENTAL_OUTBOUND_LOGS[agentName]
   const showDentalOutboundLogs =
     activeTab === 'logs' && !isDraftInstance && product === 'dental' && Boolean(dentalOutboundLogRows)
+  const showSearchAiLogs = activeTab === 'logs' && !isDraftInstance && (isQueryFanout || isDomainHealth)
   const showEmptyDraftLogs = activeTab === 'logs' && isDraftInstance
 
   if (selectedRun) {
@@ -869,6 +848,8 @@ export function AgentInstanceScreen({
                 />
               ) : showDentalOutboundLogs ? (
                 <OutboundAgentLogsTab rows={dentalOutboundLogRows!} />
+              ) : showSearchAiLogs ? (
+                <AgentLogsTab agentName={agentName} onViewRun={setSelectedRun} />
               ) : activeTab === 'settings' ? (
                 <AgentSettingsTab
                   product={product}

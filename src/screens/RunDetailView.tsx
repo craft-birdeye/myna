@@ -356,6 +356,162 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
   ]
 }
 
+/** Query fanout agent runs are on-demand prompt → fanout-query jobs, not conversations — steps
+ *  mirror the qf-1..qf-5 workflow nodes in `agentWorkflows.ts` using this run's own prompt/result. */
+function buildFanoutRunSteps(row: HealthcareLogRow): RunLogStep[] {
+  const prompt = String(row.contact)
+  const fanoutQueries = Array.isArray(row.fanoutQueries) ? (row.fanoutQueries as string[]) : []
+
+  const trigger: RunLogStep = {
+    id: 'qf-log-1',
+    type: 'trigger',
+    stepNumber: 1,
+    title: 'On demand fanout query generation',
+    output: [{ key: 'Triggered at', value: row.timestamp }],
+  }
+  const collect: RunLogStep = {
+    id: 'qf-log-2',
+    type: 'task',
+    stepNumber: 2,
+    title: 'Collect user prompt',
+    output: [{ key: 'User prompt', value: prompt }],
+  }
+
+  if (row.status === 'In progress') {
+    return [
+      trigger,
+      collect,
+      { id: 'qf-log-3', type: 'task', stepNumber: 3, title: 'Query fanout estimator', note: 'In progress — estimating fanout sub-queries.' },
+    ]
+  }
+
+  const estimate: RunLogStep = {
+    id: 'qf-log-3',
+    type: 'task',
+    stepNumber: 3,
+    title: 'Query fanout estimator',
+    output: [{ key: 'Estimated sub-queries', value: String(fanoutQueries.length || '—') }],
+    inputs: [{ key: 'Prompt.userPrompt', value: prompt }],
+  }
+
+  if (row.status === 'Failed') {
+    return [
+      trigger,
+      collect,
+      estimate,
+      {
+        id: 'qf-log-4',
+        type: 'task',
+        stepNumber: 4,
+        title: 'Generate fanout queries and output prompt',
+        output: [{ key: 'Status', value: 'Failed to generate fanout queries' }],
+        inputs: [{ key: 'Prompt.userPrompt', value: prompt }],
+      },
+    ]
+  }
+
+  return [
+    trigger,
+    collect,
+    estimate,
+    {
+      id: 'qf-log-4',
+      type: 'task',
+      stepNumber: 4,
+      title: 'Generate fanout queries and output prompt',
+      output: [
+        { key: 'Prompt.fanoutQueries', value: fanoutQueries.join('\n') },
+        { key: 'Prompt.outputPrompt', value: `Coverage opportunity across ${fanoutQueries.length} fanout sub-queries.` },
+      ],
+      inputs: [{ key: 'Prompt.userPrompt', value: prompt }],
+    },
+    {
+      id: 'qf-log-5',
+      type: 'task',
+      stepNumber: 5,
+      title: 'Send alert',
+      output: [{ key: 'Status', value: 'Sent' }],
+      tool: { name: 'Send alert', properties: [{ key: 'Recipients', value: 'Search AI alert channel' }] },
+    },
+  ]
+}
+
+/** Domain health agent runs one loop iteration per monitored domain — steps mirror the
+ *  dh-1..dh-8 workflow nodes in `agentWorkflows.ts` using this run's own domain/result. */
+function buildDomainHealthRunSteps(row: HealthcareLogRow): RunLogStep[] {
+  const domain = String(row.contact)
+
+  const trigger: RunLogStep = {
+    id: 'dh-log-1',
+    type: 'trigger',
+    stepNumber: 1,
+    title: 'Schedule — domain health check',
+    output: [{ key: 'Triggered at', value: row.timestamp }],
+  }
+  const getDomains: RunLogStep = {
+    id: 'dh-log-2',
+    type: 'task',
+    stepNumber: 2,
+    title: 'Get all eligible domains',
+    output: [{ key: 'Domain', value: domain }],
+  }
+  const checkCrawl: RunLogStep = {
+    id: 'dh-log-3',
+    type: 'task',
+    stepNumber: 3,
+    title: 'Check crawl status',
+    output: [{ key: 'Crawl status', value: row.status === 'In progress' ? 'In progress' : row.status === 'Failed' ? 'Not completed' : 'Completed' }],
+    inputs: [{ key: 'Domain', value: domain }],
+  }
+
+  if (row.status === 'In progress') {
+    return [trigger, getDomains, checkCrawl]
+  }
+
+  const branch: RunLogStep = {
+    id: 'dh-log-4',
+    type: 'branch',
+    stepNumber: 4,
+    title: 'Crawl completed?',
+    outputLabel: 'Branch output',
+    output: [{ key: 'Path', value: row.status === 'Failed' ? 'Crawl not completed' : 'Crawl completed' }],
+  }
+
+  if (row.status === 'Failed') {
+    return [trigger, getDomains, checkCrawl, branch]
+  }
+
+  return [
+    trigger,
+    getDomains,
+    checkCrawl,
+    branch,
+    {
+      id: 'dh-log-5',
+      type: 'task',
+      stepNumber: 5,
+      title: 'Website Health Analysis',
+      output: [{ key: 'Issues detected', value: String(row.issuesDetected ?? '0') }],
+      inputs: [{ key: 'Domain', value: domain }],
+    },
+    {
+      id: 'dh-log-6',
+      type: 'task',
+      stepNumber: 6,
+      title: 'LLM Report Generation',
+      output: [{ key: 'DomainHealth.report', value: `Health report generated for ${domain}.` }],
+    },
+    {
+      id: 'dh-log-7',
+      type: 'task',
+      stepNumber: 7,
+      title: 'Send to domain health',
+      output: [{ key: 'Status', value: 'Sent' }],
+      tool: { name: 'Send to domain health', properties: [{ key: 'Domain', value: domain }] },
+    },
+  ]
+}
+
 /* ── generic workflow node shape (from agentWorkflows seeds) ── */
 interface WorkflowNodeSeed {
   id: string
@@ -612,6 +768,11 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
   const isReviewGeneration = /review generation agent/i.test(agentName)
   const isReviewAgent = isReviewResponse || isReviewGeneration
   const isReminder = agentName === 'Reminder agent'
+  const isQueryFanout = agentName === 'Query fanout agent'
+  const isDomainHealth = agentName === 'Domain health agent'
+  // Query fanout / Domain health are task runs, not conversations — they share the review
+  // agents' single-tab "Log details" panel (no Conversation tab) instead of the call/chat one.
+  const isSingleTabRun = isReviewAgent || isQueryFanout || isDomainHealth
   const hasVoiceCall = row.channel.toLowerCase().includes('voice')
   const totalSecs = parseDurationSecs(row.duration)
   const agentWorkflow =
@@ -622,7 +783,7 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
         : undefined
   const statusVariant =
     row.status === 'Complete' ? 'success' : row.status === 'Failed' ? 'danger' : 'warning'
-  const useRunDetailsPanel = isReminder || isReviewAgent
+  const useRunDetailsPanel = isReminder || isSingleTabRun
 
   return (
     <div className="log-detail-view relative flex h-full flex-col bg-surface">
@@ -723,11 +884,15 @@ export function RunDetailView({ row, instanceName, onBack, onEditAgent, onTrackF
                   ? buildReviewResponseRunSteps(row)
                   : isReviewGeneration
                     ? buildReviewGenerationRunSteps(row)
-                    : undefined
+                    : isQueryFanout
+                      ? buildFanoutRunSteps(row)
+                      : isDomainHealth
+                        ? buildDomainHealthRunSteps(row)
+                        : undefined
               }
-              showTabs={!isReviewAgent}
-              title={isReviewAgent ? 'Log details' : undefined}
-              showHeader={isReviewAgent}
+              showTabs={!isSingleTabRun}
+              title={isSingleTabRun ? 'Log details' : undefined}
+              showHeader={isSingleTabRun}
               showCallRecording={isReminder && hasVoiceCall}
               audioUrl={isReminder ? voicemailSample : undefined}
               durationSecs={isReminder ? totalSecs : undefined}

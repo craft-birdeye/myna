@@ -909,7 +909,7 @@ function SearchAIVisibilityDashboard() {
 }
 
 /* ═══════════════════════════════════════════
-   Search AI — Agents (Query fanout / AEO validator)
+   Search AI — Agents (Query fanout / Domain health)
    Same format as Operations/Front desk agents — AgentDetailScreen reads its
    nodes/metrics from `agentWorkflows.ts` keyed by agentName.
    ═══════════════════════════════════════════ */
@@ -934,26 +934,6 @@ function QueryFanoutAgentsView({
     <AgentDetailScreen
       agentName="Query fanout agent"
       navId="searchai-query-fanout"
-      onEditAgent={onEditAgent}
-      pendingInstanceView={pendingInstanceView}
-      onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
-    />
-  );
-}
-
-function AEOValidatorAgentsView({
-  onEditAgent,
-  pendingInstanceView,
-  onPendingInstanceViewConsumed,
-}: {
-  onEditAgent?: OnEditAgent;
-  pendingInstanceView?: PendingInstanceView | null;
-  onPendingInstanceViewConsumed?: () => void;
-}) {
-  return (
-    <AgentDetailScreen
-      agentName="AEO validator agent"
-      navId="searchai-aeo-validator"
       onEditAgent={onEditAgent}
       pendingInstanceView={pendingInstanceView}
       onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
@@ -1008,15 +988,6 @@ export function SearchAIView({
   if (l2ActiveItem === "searchai-query-fanout") {
     return (
       <QueryFanoutAgentsView
-        onEditAgent={onEditAgent}
-        pendingInstanceView={pendingInstanceView}
-        onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}
-      />
-    );
-  }
-  if (l2ActiveItem === "searchai-aeo-validator") {
-    return (
-      <AEOValidatorAgentsView
         onEditAgent={onEditAgent}
         pendingInstanceView={pendingInstanceView}
         onPendingInstanceViewConsumed={onPendingInstanceViewConsumed}

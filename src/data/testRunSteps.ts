@@ -2,9 +2,11 @@
  * Test-run step data for the "Run test" RHS panel.
  *
  * Steps mirror the canvas node cards one-for-one so the panel and the canvas can be driven from
- * a single index. Payloads (tool / output / inputs) are placeholder for now — every card gets the
- * same canned block until real test execution data exists.
+ * a single index. Tool / output / inputs are derived from each node's own `nodeDetails` entry
+ * (task name, selected tool ids, LLM prompt fields, etc.) so a step's payload actually matches
+ * the workflow it belongs to, with a generic fallback for nodes with no such detail yet.
  */
+import { getSeedTools } from '../workflow/services/agentService'
 import type {
   RunLogField,
   RunLogStep,
@@ -25,43 +27,45 @@ const FLOW_TYPE_TO_STEP_TYPE: Record<string, RunLogStepType> = {
   branch: 'branch',
 }
 
-/* ── Placeholder payloads ──────────────────────────────────────────────────── */
+/* ── Generic payloads (agent-neutral — used only when a node has no detail to derive from) ─── */
 
-const PLACEHOLDER_TOOL_PROPERTIES: RunLogField[] = [
-  { key: 'Source', value: 'Google' },
-  { key: 'Rating', value: '2 Star' },
-  {
-    key: 'Comments',
-    value:
-      'Terrible experience at Aspen Dental on Oak street. I waited over 45 minutes past my scheduled appointment',
-  },
-  {
-    key: 'Reviewer',
-    properties: [
-      { key: 'Name', value: 'Sarah Jones' },
-      {
-        key: 'Contact',
-        properties: [
-          { key: 'Email', value: 'Sarah Jones@birdeye.com' },
-          { key: 'ID', value: 'Bird_82391' },
-        ],
-      },
-    ],
-  },
-  { key: 'Source type', value: 'Google' },
-  { key: 'Has comment', value: 'True' },
-  { key: 'Has edit', value: 'True' },
-]
-
-const PLACEHOLDER_OUTPUT: RunLogField[] = [
+const GENERIC_OUTPUT: RunLogField[] = [
   { key: 'Status', value: 'Success' },
   { key: 'Duration', value: '1.2s' },
 ]
 
-const PLACEHOLDER_INPUTS: RunLogField[] = [
-  { key: 'Location', value: 'Aspen Dental — Oak Street' },
-  { key: 'Channel', value: 'Google' },
-]
+function toolNameForId(id?: string): string | undefined {
+  if (!id) return undefined
+  return getSeedTools().find((t) => t.id === id)?.name
+}
+
+/** Builds the "Tool" block from a node's own detail rather than a fixed placeholder. */
+function buildTool(
+  detail: Record<string, any> | undefined,
+  node: WorkflowNode,
+): { name: string; properties: RunLogField[] } {
+  const toolId: string | undefined = detail?.selectedTools?.[0]
+  const name =
+    toolNameForId(toolId) ?? detail?.taskName ?? detail?.triggerName ?? node.data?.title ?? 'Task'
+
+  const properties: RunLogField[] = []
+  if (detail?.selectedTools?.length) {
+    properties.push({ key: 'Tools', value: detail.selectedTools.map((id: string) => toolNameForId(id) ?? id).join(', ') })
+  }
+  if (detail?.procedureIds?.length) properties.push({ key: 'Procedures', value: detail.procedureIds.join(', ') })
+  if (detail?.systemPrompt) properties.push({ key: 'System prompt', value: detail.systemPrompt })
+  if (detail?.userPrompt) properties.push({ key: 'User prompt', value: detail.userPrompt })
+  if (!properties.length) properties.push({ key: 'Status', value: 'Success' })
+
+  return { name, properties }
+}
+
+/** Builds the "Inputs" block from a node's own `inputFields`/`contextFields`, when present. */
+function buildInputs(detail: Record<string, any> | undefined): RunLogField[] {
+  const fields = detail?.inputFields ?? detail?.contextFields
+  if (!Array.isArray(fields) || !fields.length) return []
+  return fields.map((f, i) => ({ key: `Input ${i + 1}`, value: String(f?.value ?? f) }))
+}
 
 /* ── Builder ───────────────────────────────────────────────────────────────── */
 
@@ -90,6 +94,7 @@ export function buildTestRunSteps(
   const visit = (list: WorkflowNode[]) => {
     list.forEach((node) => {
       const type = FLOW_TYPE_TO_STEP_TYPE[node.flowType ?? ''] ?? 'task'
+      const detail = nodeDetails[node.id] as Record<string, any> | undefined
       const isCollectPromptStep = collectedPrompt && node.id === 'qf-2'
       const isGenerateFanoutStep = collectedPrompt && node.id === 'qf-4'
       steps.push({
@@ -100,21 +105,19 @@ export function buildTestRunSteps(
         title: node.data?.title || 'Untitled step',
         output: isCollectPromptStep
           ? [{ key: 'User prompt', value: collectedPrompt }]
-          : PLACEHOLDER_OUTPUT,
+          : GENERIC_OUTPUT,
         inputs: isGenerateFanoutStep
           ? [{ key: 'Prompt.userPrompt', value: collectedPrompt }]
           : isCollectPromptStep
             ? []
-            : PLACEHOLDER_INPUTS,
-        tool: { name: 'Review responder', properties: PLACEHOLDER_TOOL_PROPERTIES },
+            : buildInputs(detail),
+        tool: buildTool(detail, node),
       })
 
       if (type !== 'branch') return
 
-      const detail = nodeDetails[node.id] as
-        | { branches?: { id: string; isFallback?: boolean }[] }
-        | undefined
-      const taken = detail?.branches?.find((b) => !b.isFallback) ?? detail?.branches?.[0]
+      const branchDetail = detail as { branches?: { id: string; isFallback?: boolean }[] } | undefined
+      const taken = branchDetail?.branches?.find((b) => !b.isFallback) ?? branchDetail?.branches?.[0]
       if (!taken) return
 
       const path = nodeDetails[taken.id] as { nodes?: WorkflowNode[] } | undefined

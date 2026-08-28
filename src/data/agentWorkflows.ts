@@ -643,63 +643,6 @@ const QUERY_FANOUT_NODE_DETAILS: Record<string, any> = {
   },
 }
 
-// ─── AEO Validator Agent (Search AI) ──────────────────────────────────────────
-// Workflow: Entity trigger → Check AEO signals → Validate citations → Flag content for review
-
-const AEO_VALIDATOR_NODES = [
-  { id: 'av-1', flowType: 'trigger' as const, data: { title: 'When content is published or updated', subtype: 'Entity trigger', headerLabel: 'Trigger', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter trigger name', descriptionPlaceholder: 'Enter description' } },
-  { id: 'av-2', flowType: 'task'    as const, data: { title: 'Check AEO signals', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Scan for structured data, FAQ schema, and answer-friendly formatting.' } },
-  { id: 'av-3', flowType: 'task'    as const, data: { title: 'Validate citations', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Cross-check sources AI platforms cite against the published page.' } },
-  { id: 'av-4', flowType: 'task'    as const, data: { title: 'Flag content for review', subtype: 'Integration', hasToggle: true, toggleEnabled: true, hasAiIcon: false, titlePlaceholder: 'Enter task name', descriptionPlaceholder: 'Route content that fails AEO validation to the content team.' } },
-]
-
-const AEO_VALIDATOR_NODE_DETAILS: Record<string, any> = {
-  '__start__': {
-    agentName: 'AEO validator agent',
-    goals: 'Validates that published content carries the answer engine optimization signals — structured data, FAQ schema, accurate citations — needed to stay eligible for AI-generated answers.',
-    outcomes: [
-      '1. Every new or updated page is checked for AEO signals before it is considered citation-ready',
-      '2. Citations AI platforms attribute to a page are verified against its actual published content',
-      '3. Content that fails validation is flagged for review instead of silently losing AI visibility',
-      '4. Passing content is marked AEO-compliant in the content calendar',
-    ].join('\n'),
-    locations: ['1001 - Mountain View, CA', '1002 - Seattle, WA', '1004 - Chicago, IL', '1006 - Las Vegas, NV'],
-  },
-  'av-1': {
-    triggerName: 'When content is published or updated',
-    description: 'Agent triggers whenever a page is published or its content changes.',
-    conditions: [],
-    conditionOptions: {
-      field: [
-        { value: 'content_event', label: 'Content event' },
-        { value: 'content_type',  label: 'Content type' },
-      ],
-      operator: [
-        { value: 'equals',     label: 'Equals' },
-        { value: 'not_equals', label: 'Does not equal' },
-      ],
-      value: [
-        { value: 'published_or_updated', label: 'Published or updated' },
-      ],
-    },
-  },
-  'av-2': {
-    taskName: 'Check AEO signals',
-    description: 'Scan for structured data, FAQ schema, and answer-friendly formatting.',
-    selectedTools: ['aeo-signal-checker'],
-  },
-  'av-3': {
-    taskName: 'Validate citations',
-    description: 'Cross-check sources AI platforms cite against the published page.',
-    selectedTools: ['citation-validator'],
-  },
-  'av-4': {
-    taskName: 'Flag content for review',
-    description: 'Route content that fails AEO validation to the content team.',
-    selectedTools: ['trigger-escalation'],
-  },
-}
-
 // ─── Domain Health Agent (Search AI) ──────────────────────────────────────────
 // Workflow: Schedule trigger → Get all eligible domains → [Loop: Check crawl status → Crawl completed?
 //   No → end iteration, loop repeats | Yes → Website Health Analysis → LLM Report Generation → Send to domain health]
@@ -850,7 +793,6 @@ export const AUTOMOTIVE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   'Reminder agent':  HEALTHCARE_REMINDER_DEFAULT_WORKFLOW,
   'Outreach agent':  { nodes: OUTREACH_NODES,             nodeDetails: OUTREACH_NODE_DETAILS            },
   'Query fanout agent':  { nodes: QUERY_FANOUT_NODES,     nodeDetails: QUERY_FANOUT_NODE_DETAILS        },
-  'AEO validator agent': { nodes: AEO_VALIDATOR_NODES,    nodeDetails: AEO_VALIDATOR_NODE_DETAILS       },
   'Domain health agent': { nodes: DOMAIN_HEALTH_NODES,    nodeDetails: DOMAIN_HEALTH_NODE_DETAILS       },
 }
 
@@ -1837,7 +1779,6 @@ export const HEALTHCARE_AGENT_WORKFLOWS: Record<string, AgentWorkflow> = {
   // (dental inherits via spread) so the workflow editor resolves them regardless of
   // whichever product context (`activeProduct`) happens to be active elsewhere in the app.
   'Query fanout agent':  { nodes: QUERY_FANOUT_NODES,     nodeDetails: QUERY_FANOUT_NODE_DETAILS        },
-  'AEO validator agent': { nodes: AEO_VALIDATOR_NODES,    nodeDetails: AEO_VALIDATOR_NODE_DETAILS       },
   'Domain health agent': { nodes: DOMAIN_HEALTH_NODES,    nodeDetails: DOMAIN_HEALTH_NODE_DETAILS       },
 }
 

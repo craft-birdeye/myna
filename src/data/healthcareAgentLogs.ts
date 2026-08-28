@@ -303,3 +303,145 @@ export function toReviewGenerationLogRow(row: ReviewResponseLogRow): HealthcareL
     source: row.source,
   }
 }
+
+// ─── Query fanout agent (Search AI) — a run per submitted prompt, no conversation/contact. ────
+
+export interface FanoutLogRow {
+  timestamp: string
+  status: LogStatus
+  prompt: string
+  fanoutQueries: string[]
+  executedNodeIds?: string[]
+  [key: string]: string | string[] | undefined
+}
+
+export const FANOUT_LOGS_ROWS: FanoutLogRow[] = [
+  {
+    timestamp: 'Aug 12, 2026, 9:14 am',
+    status: 'Complete',
+    prompt: 'How much do dental implants cost in Austin?',
+    fanoutQueries: [
+      'dental implant financing Austin TX',
+      'average cost of single tooth implant',
+      'dental implants near me price comparison',
+      'does insurance cover dental implants',
+      'full mouth dental implants cost',
+      'cheapest dental implants Austin',
+      'dental implant payment plans',
+      'same day dental implants cost',
+    ],
+    executedNodeIds: ['qf-1', 'qf-2', 'qf-3', 'qf-4', 'qf-5'],
+  },
+  {
+    timestamp: 'Aug 10, 2026, 2:05 pm',
+    status: 'Complete',
+    prompt: 'What are my orthodontic treatment options?',
+    fanoutQueries: [
+      'Invisalign vs traditional braces cost',
+      'clear aligners vs metal braces',
+      'how long does Invisalign take',
+      'best orthodontist for adults',
+      'ceramic braces pros and cons',
+      'orthodontic treatment for overbite',
+    ],
+    executedNodeIds: ['qf-1', 'qf-2', 'qf-3', 'qf-4', 'qf-5'],
+  },
+  {
+    timestamp: 'Aug 8, 2026, 11:40 am',
+    status: 'In progress',
+    prompt: 'Is teeth whitening safe for sensitive teeth?',
+    fanoutQueries: [],
+    executedNodeIds: ['qf-1', 'qf-2'],
+  },
+  {
+    timestamp: 'Aug 5, 2026, 4:22 pm',
+    status: 'Failed',
+    prompt: 'What should I expect during a root canal procedure?',
+    fanoutQueries: [],
+    executedNodeIds: ['qf-1', 'qf-2', 'qf-3'],
+  },
+  {
+    timestamp: 'Aug 1, 2026, 8:03 am',
+    status: 'Complete',
+    prompt: 'How do I choose the best dentist for my family?',
+    fanoutQueries: Array.from({ length: 32 }, (_, i) => `family dentist evaluation criteria #${i + 1}`),
+    executedNodeIds: ['qf-1', 'qf-2', 'qf-3', 'qf-4', 'qf-5'],
+  },
+]
+
+/** Maps a Query fanout run into the shared HealthcareLogRow shape used by RunDetailView. */
+export function toFanoutLogRow(row: FanoutLogRow): HealthcareLogRow {
+  return {
+    timestamp: row.timestamp,
+    status: row.status,
+    contact: row.prompt,
+    channel: 'On-demand',
+    duration: '—',
+    topic: 'Query fanout run',
+    executedNodeIds: row.executedNodeIds,
+    fanoutQueries: row.fanoutQueries,
+  }
+}
+
+// ─── Domain health agent (Search AI) — a run per monitored domain, no conversation/contact. ───
+
+export interface DomainHealthLogRow {
+  timestamp: string
+  status: LogStatus
+  domain: string
+  issuesDetected: string
+  executedNodeIds?: string[]
+  [key: string]: string | string[] | undefined
+}
+
+export const DOMAIN_HEALTH_LOGS_ROWS: DomainHealthLogRow[] = [
+  {
+    timestamp: 'Aug 27, 2026, 2:00 am',
+    status: 'Complete',
+    domain: 'astondental.com',
+    issuesDetected: '4',
+    executedNodeIds: ['dh-1', 'dh-2', 'dh-3', 'dh-4', 'dh-5', 'dh-5-path-1', 'dh-6', 'dh-7', 'dh-8'],
+  },
+  {
+    timestamp: 'Aug 26, 2026, 2:00 am',
+    status: 'Complete',
+    domain: 'westsidefamilydental.com',
+    issuesDetected: '2',
+    executedNodeIds: ['dh-1', 'dh-2', 'dh-3', 'dh-4', 'dh-5', 'dh-5-path-1', 'dh-6', 'dh-7', 'dh-8'],
+  },
+  {
+    timestamp: 'Aug 25, 2026, 2:00 am',
+    status: 'In progress',
+    domain: 'brightsmilesclinic.com',
+    issuesDetected: '—',
+    executedNodeIds: ['dh-1', 'dh-2', 'dh-3', 'dh-4'],
+  },
+  {
+    timestamp: 'Aug 24, 2026, 2:00 am',
+    status: 'Failed',
+    domain: 'oakstreetdental.com',
+    issuesDetected: '—',
+    executedNodeIds: ['dh-1', 'dh-2', 'dh-3', 'dh-4', 'dh-5', 'dh-5-path-2'],
+  },
+  {
+    timestamp: 'Aug 23, 2026, 2:00 am',
+    status: 'Complete',
+    domain: 'lakeviewortho.com',
+    issuesDetected: '7',
+    executedNodeIds: ['dh-1', 'dh-2', 'dh-3', 'dh-4', 'dh-5', 'dh-5-path-1', 'dh-6', 'dh-7', 'dh-8'],
+  },
+]
+
+/** Maps a Domain health run into the shared HealthcareLogRow shape used by RunDetailView. */
+export function toDomainHealthLogRow(row: DomainHealthLogRow): HealthcareLogRow {
+  return {
+    timestamp: row.timestamp,
+    status: row.status,
+    contact: row.domain,
+    channel: 'Scheduled',
+    duration: '—',
+    topic: 'Domain health check',
+    executedNodeIds: row.executedNodeIds,
+    issuesDetected: row.issuesDetected,
+  }
+}
