@@ -179,7 +179,11 @@ const SOURCE_CELL = (v: unknown) => {
   if (!logo) return TEXT_CELL(v)
   return (
     <Tooltip variant="brief" content={label}>
-      <img src={logo} alt={label} className="size-[18px]" />
+      <img
+        src={logo}
+        alt={label}
+        className={label === 'Direct Feedback' ? 'size-5' : 'size-[18px]'}
+      />
     </Tooltip>
   )
 }

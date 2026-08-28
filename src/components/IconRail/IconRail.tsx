@@ -84,14 +84,16 @@ function NavTab({
       aria-label={item.label}
       onClick={() => onSelect?.(item.id)}
       style={{ paddingLeft: grouped ? 12 : RAIL_ICON_PX, paddingRight: grouped ? 12 : RAIL_ICON_PX }}
-      className={`relative flex h-9 w-full items-center rounded-sm transition-colors ${
-        active ? '' : 'hover:bg-black/[0.04]'
-      }`}
+      className="group/navtab relative flex h-9 w-full items-center rounded-sm"
     >
-      {/* Expanded-state row highlight — inset 8px each side, fades in on group hover */}
-      {active && (
-        <span className="pointer-events-none absolute inset-y-0 left-2 right-2 rounded-sm bg-surface-selected-l1 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
-      )}
+      {/* Row highlight — inset 8px each side so hover and selected share the same gutter. */}
+      <span
+        className={`pointer-events-none absolute inset-y-0 left-2 right-2 rounded-sm transition-colors ${
+          active
+            ? 'bg-surface-selected-l1 opacity-0 group-hover:opacity-100'
+            : 'group-hover/navtab:bg-black/[0.04]'
+        }`}
+      />
       {/* Icon — 28px pill in collapsed state */}
       <span className={`relative flex size-7 shrink-0 items-center justify-center rounded-sm transition-colors text-text-icon ${
         active ? 'bg-surface-selected-l1 group-hover:bg-transparent' : ''
