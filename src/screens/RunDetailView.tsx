@@ -6,8 +6,10 @@ import {
   getUserRatingForLogStatus,
   Icon,
   LogDetailsPanel,
+  ReviewCardBody,
   RunDetailsPanel,
   type ChipVariant,
+  type ReviewCardData,
   type RunLogStep,
 } from '../components'
 import type { HealthcareLogRow, LogStepId } from '../data/healthcareAgentLogs'
@@ -439,6 +441,65 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
   ]
 }
 
+function findStepOutputValue(
+  steps: RunLogStep[] | undefined,
+  stepTitle: string,
+  fieldKey: string,
+): string | undefined {
+  const step = steps?.find((s) => s.title === stepTitle)
+  return step?.output?.find((f) => f.key === fieldKey)?.value
+}
+
+/** Review-response/generation log side panel — Review details tab instead of a conversation. */
+function ReviewDetailsContent({
+  row,
+  steps,
+  agentName,
+  kind,
+}: {
+  row: HealthcareLogRow
+  steps?: RunLogStep[]
+  agentName: string
+  kind: 'response' | 'generation'
+}) {
+  const source = String(row.source ?? row.channel ?? '')
+
+  if (kind === 'generation') {
+    return (
+      <div className="flex h-full flex-col gap-md overflow-y-auto">
+        <div className="flex items-center gap-sm text-body">
+          <span className="text-text-primary">{row.contact}</span>
+          {row.location && <span className="text-text-tertiary">• {row.location}</span>}
+        </div>
+        <p className="text-body text-text-secondary">Review request sent via {source || 'email'}.</p>
+      </div>
+    )
+  }
+
+  const firstName = row.contact && row.contact !== '—' ? row.contact.split(' ')[0] : 'there'
+  const replyText =
+    findStepOutputValue(steps, 'Generate response', 'Draft reply')
+    ?? (typeof row.rating === 'number' && row.rating <= 3
+      ? `We appreciate your feedback, ${firstName}. If you would like to discuss your experience further, please reach out to us directly — we would love the opportunity to resolve any issues.`
+      : `Thank you so much for your feedback, ${firstName}! We're thrilled to hear about your experience and look forward to seeing you again soon.`)
+
+  const review: ReviewCardData = {
+    reviewerName: row.contact,
+    rating: typeof row.rating === 'number' ? row.rating : 0,
+    date: row.timestamp,
+    reviewId: row.reviewId ?? '—',
+    location: row.location ?? '—',
+    text: typeof row.comment === 'string' ? row.comment : '',
+    reply: { channel: source || 'Birdeye', agentName, postedAt: row.timestamp, text: replyText },
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <ReviewCardBody review={review} stacked />
+    </div>
+  )
+}
+
 /* ── generic workflow node shape (from agentWorkflows seeds) ── */
 interface WorkflowNodeSeed {
   id: string
@@ -799,6 +860,11 @@ export function RunDetailView({
   }
   const statusVariant = LOG_STATUS_VARIANT[row.status] ?? 'warning'
   const useRunDetailsPanel = isReminder || isReviewAgent
+  const reviewLogSteps = isReviewResponse
+    ? buildReviewResponseRunSteps(row)
+    : isReviewGeneration
+      ? buildReviewGenerationRunSteps(row)
+      : undefined
 
   const [focusNodeId, setFocusNodeId] = React.useState<string | null>(null)
   const [focusNonce, setFocusNonce] = React.useState(0)
@@ -938,16 +1004,21 @@ export function RunDetailView({
         <div className="preview-panel-float-wrap preview-panel-float-wrap--log-details">
           {useRunDetailsPanel ? (
             <RunDetailsPanel
-              steps={
-                isReviewResponse
-                  ? buildReviewResponseRunSteps(row)
-                  : isReviewGeneration
-                    ? buildReviewGenerationRunSteps(row)
-                    : undefined
+              steps={reviewLogSteps}
+              showTabs
+              showHeader={false}
+              conversationTabLabel={isReviewAgent ? 'Review details' : undefined}
+              logsTabLabel={isReviewAgent ? 'Logs' : undefined}
+              conversationContent={
+                isReviewAgent ? (
+                  <ReviewDetailsContent
+                    row={row}
+                    steps={reviewLogSteps}
+                    agentName={agentName}
+                    kind={isReviewResponse ? 'response' : 'generation'}
+                  />
+                ) : undefined
               }
-              showTabs={!isReviewAgent}
-              title={isReviewAgent ? 'Log details' : undefined}
-              showHeader={isReviewAgent}
               showCallRecording={isReminder && hasVoiceCall}
               audioUrl={isReminder ? voicemailSample : undefined}
               durationSecs={isReminder ? totalSecs : undefined}
