@@ -728,6 +728,7 @@ export function RunDetailsPanel({
   conversationContent,
   showTabs = true,
   conversationTabLabel = 'Conversation',
+  logsTabLabel = 'Call logs',
   title = 'Run details',
   showHeader = true,
   showCallRecording = false,
@@ -806,7 +807,7 @@ export function RunDetailsPanel({
             tabs={[
               { id: 'conversation', label: conversationTabLabel },
               ...(showCallDetailsTab ? [{ id: 'call-details', label: 'Call details' }] : []),
-              { id: 'logs', label: 'Call logs' },
+              { id: 'logs', label: logsTabLabel },
             ]}
             activeTab={tab}
             showBaseline={false}
