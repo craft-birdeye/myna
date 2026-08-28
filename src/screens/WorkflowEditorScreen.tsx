@@ -268,13 +268,15 @@ export function WorkflowEditorScreen({
     'Review generation agent': 'reviews',
   }
   const activeNavId = AGENT_NAV_MAP[agentBaseName] ?? 'frontdesk'
+  const publishNode = workflow.nodeDetails?.['rr-6'] as { taskName?: string; description?: string } | undefined
+  const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${publishNode?.taskName ?? ''}::${publishNode?.description ?? ''}`
 
   return (
     <div className="flex h-full w-full overflow-hidden">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>}>
           <AgentBuilder
-            key={`${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}`}
+            key={editorSeedKey}
             pageTitle={shownName}
             appTitle={shownName}
             onClose={onClose}

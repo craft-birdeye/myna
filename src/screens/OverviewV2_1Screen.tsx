@@ -837,7 +837,7 @@ function BirdsFlatInlineIcon({ className }: { className?: string }) {
 // Shown in all three states — Empty/FTU keep the estimate framing ("~" values, muted, tooltip)
 // since nothing's running yet; Filled assumes the co-workers are live, so the same card shows the
 // real totals in full-strength black instead of grey. Empty/FTU also lead with a promo banner
-// bled to the card's top edge; Empty additionally gets a "Schedule demo" CTA that FTU omits.
+// bled to the card's top edge; Empty additionally gets a "See in action" CTA that FTU omits.
 function AiWorkforceSummaryCard({
   dataState,
   dateRange,
@@ -930,7 +930,7 @@ function AiWorkforceSummaryCard({
               onClick={onScheduleDemo}
               className={`flex h-9 shrink-0 items-center rounded-md bg-white px-lg ${EMPTY_BANNER_TEXT_CLASS} text-ai-brand transition-colors hover:opacity-90`}
             >
-              Schedule demo
+              See in action
             </button>
           )}
         </div>

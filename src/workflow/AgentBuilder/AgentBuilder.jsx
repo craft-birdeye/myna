@@ -256,16 +256,23 @@ function reviewsTaskDropDefaults() {
 
 const TASK_DROP_DEFAULTS = {
   'Initiate voice call': { description: 'Call the customer' },
-  'In-call SMS': { description: 'Send a text message to the caller during the active call', selectedTools: ['in-call-sms'] },
-  'Send response': { selectedTools: ['send-response'] },
-  'Schedule appointment': { description: 'Book a new appointment for the customer' },
-  'Reschedule appointment': { description: 'Change an existing appointment date or time' },
-  'Cancel appointment': { description: 'Cancel a scheduled appointment' },
-  'Confirm appointment': { description: 'Confirm appointment details with the customer' },
+  'Send text during call': { description: 'Sends a text message to the caller during an active call', selectedTools: ['in-call-sms'] },
+  'In-call SMS': { description: 'Sends a text message to the caller during an active call', selectedTools: ['in-call-sms'] },
+  'Send response': { description: 'Sends the drafted response to the contact', selectedTools: ['send-response'] },
+  'Schedule appointment': { description: 'Books a new appointment for the patient' },
+  'Book new appointment': { description: 'Books a new appointment for the patient' },
+  'Reschedule appointment': { description: 'Changes an existing appointment date or time' },
+  'Cancel appointment': { description: 'Cancels a scheduled appointment' },
+  'Confirm appointment': { description: 'Confirms appointment details with the patient' },
   'Appointment reminder': { description: '3 weeks, 3 days and 24 hours before · Email & text', selectedTools: ['reminder-tool'] },
-  'Update contact property': { description: 'Update a field on the contact record' },
-  'Add contact to list': { description: 'Add the contact to a marketing or CRM list' },
-  'Remove contact from list': { description: 'Remove the contact from a list' },
+  'Update contact property': { description: 'Updates a field on the contact record' },
+  'Add contact to list': { description: 'Adds the contact to a marketing or CRM list' },
+  'Remove contact from list': { description: 'Removes the contact from a list' },
+  'Create Zendesk ticket': { description: 'Creates a ticket in Zendesk' },
+  Zendesk: { description: 'Creates a ticket in Zendesk' },
+  FreshDesk: { description: 'FreshDesk CRM tool' },
+  'QuickBooks Online': { description: 'QuickBooks tool' },
+  ServiceTitan: { description: 'ServiceTitan CRM tool' },
   'Send data to external app': { description: 'Push data to a connected external application' },
   'Fetch data from external app': { description: 'Retrieve data from a connected external application' },
   'Trigger external webhook': { description: 'Fire a webhook to an external system' },
@@ -299,14 +306,19 @@ const TASK_DROP_DEFAULTS = {
     description:
       'Assembles the response using the drafted strategy, extracted details, and brand voice',
   },
+  'Publish response': {
+    description:
+      'Sends the response automatically or holds it for approval',
+    selectedTools: ['handle-response'],
+  },
   'Route response for approval or publish': {
     description:
-      'Sends the response automatically or flags it for human approval, based on your review settings',
+      'Sends the response automatically or holds it for approval',
     selectedTools: ['handle-response'],
   },
   'Handle response': {
     description:
-      'Sends the response automatically or flags it for human approval, based on your review settings',
+      'Sends the response automatically or holds it for approval',
     selectedTools: ['handle-response'],
   },
 };

@@ -3,11 +3,11 @@ import { setFlowDragData } from '../../../flowDragData';
 import './LHSExternalAppsGroup.css';
 
 export const EXTERNAL_APPS_TASK_ITEMS = [
-  { id: 'freshdesk', name: 'FreshDesk', description: 'Freshdesk CRM tools' },
-  { id: 'quickbooks', name: 'QuickBooks Online', description: 'QuickBooks CRM tools' },
-  { id: 'servicetitan', name: 'ServiceTitan', description: 'Service titan CRM tools' },
+  { id: 'freshdesk', name: 'FreshDesk', description: 'FreshDesk CRM tool' },
+  { id: 'quickbooks', name: 'QuickBooks Online', description: 'QuickBooks tool' },
+  { id: 'servicetitan', name: 'ServiceTitan', description: 'ServiceTitan CRM tool' },
   { id: 'salesforce', name: 'Salesforce', description: 'Salesforce CRM tools' },
-  { id: 'zendesk', name: 'Zendesk', description: 'Creates a ticket in Zendesk' },
+  { id: 'zendesk', name: 'Create Zendesk ticket', description: 'Creates a ticket in Zendesk' },
 ];
 
 function AppIcon({ id }) {

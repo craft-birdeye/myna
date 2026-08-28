@@ -1249,14 +1249,14 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
         id: 'rr-6',
         flowType: 'task' as const,
         data: {
-          title: 'Route response for approval or publish',
+          title: 'Publish response',
           subtype: 'Integration',
           hasToggle: true,
           toggleEnabled: true,
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Sends the response automatically or flags it for human approval, based on your review settings',
+            'Sends the response automatically or holds it for approval',
         },
       },
     ],
@@ -1351,9 +1351,9 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     ],
   },
   'rr-6': {
-    taskName: 'Route response for approval or publish',
+    taskName: 'Publish response',
     description:
-      'Sends the response automatically or flags it for human approval, based on your review settings',
+      'Sends the response automatically or holds it for approval',
     selectedTools: ['handle-response'],
   },
   'rr-3-path-fallback': {

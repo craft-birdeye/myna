@@ -323,7 +323,7 @@ export const HEALTHCARE_TASK_SUB_ITEMS = {
     title: 'Conversation tasks',
     items: [
       'Initiate voice call',
-      'In-call SMS',
+      'Send text during call',
       'Send response',
     ],
   },
@@ -383,9 +383,9 @@ export const REVIEWS_TASK_SUB_ITEMS = {
           'The system evaluates each review to determine if a response is needed, filtering out spam, irrelevant content, or policy violations.',
       },
       {
-        label: 'Route response for approval or publish',
+        label: 'Publish response',
         description:
-          'Sends the response automatically or flags it for human approval, based on your review settings',
+          'Sends the response automatically or holds it for approval',
       },
       {
         label: 'Select template',
@@ -437,22 +437,22 @@ export const REVIEWS_TASK_SUB_ITEMS = {
     items: [
       {
         label: 'FreshDesk',
-        description: 'Freshdesk CRM tools',
+        description: 'FreshDesk CRM tool',
       },
       {
         label: 'QuickBooks Online',
-        description: 'QuickBooks CRM tools',
+        description: 'QuickBooks tool',
       },
       {
         label: 'ServiceTitan',
-        description: 'Service titan CRM tools',
+        description: 'ServiceTitan CRM tool',
       },
       {
         label: 'Salesforce',
         description: 'Salesforce CRM tools',
       },
       {
-        label: 'Zendesk',
+        label: 'Create Zendesk ticket',
         description: 'Creates a ticket in Zendesk',
       },
     ],

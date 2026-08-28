@@ -356,7 +356,7 @@ const _SEED_TOOLS = [
   },
   {
     id: 'handle-response',
-    name: 'Handle response',
+    name: 'Publish response',
     icon: 'reply',
     isBirdeye: true,
     description:
