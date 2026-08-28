@@ -739,6 +739,7 @@ export function RunDetailsPanel({
   conversationContent,
   showTabs = true,
   conversationTabLabel = 'Conversation',
+  logsTabLabel = 'Log',
   title = 'Run details',
   showHeader = true,
   showCallRecording = false,
@@ -819,7 +820,7 @@ export function RunDetailsPanel({
           <Tabs
             tabs={[
               { id: 'conversation', label: conversationTabLabel },
-              { id: 'logs', label: 'Log' },
+              { id: 'logs', label: logsTabLabel },
             ]}
             activeTab={tab}
             onChange={(id) => setTab(id as 'logs' | 'conversation')}

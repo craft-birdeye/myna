@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Icon } from '../Icon/Icon'
 import { SendIcon } from '../../assets/SendIcon'
-import iconAgentsPurple from '../../assets/icon-agents-purple.svg'
+import iconAgentsTwoStarSparkle from '../../assets/icon-agents-two-star-sparkle.svg'
 import type { CreateChatTurn } from '../../data/createAgentChatStore'
 import { FrontDeskDraftReviewContent } from '../AgentDraftReview/FrontDeskDraftReviewContent'
 import { AiBuilderPanelProps } from './AiBuilderPanel.types'
@@ -420,17 +420,11 @@ export function AiBuilderPanel({
       <div className="flex shrink-0 items-center gap-sm bg-gradient-to-r from-violet-600 to-blue-500 px-lg py-md">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white/15">
           <span
-            className="size-5 shrink-0 bg-white"
+            className="ai-flat-sparkle-icon size-5 text-white"
             aria-hidden="true"
             style={{
-              maskImage: `url("${iconAgentsPurple}")`,
-              WebkitMaskImage: `url("${iconAgentsPurple}")`,
-              maskSize: 'contain',
-              WebkitMaskSize: 'contain',
-              maskRepeat: 'no-repeat',
-              WebkitMaskRepeat: 'no-repeat',
-              maskPosition: 'center',
-              WebkitMaskPosition: 'center',
+              maskImage: `url("${iconAgentsTwoStarSparkle}")`,
+              WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
             }}
           />
         </span>
@@ -468,8 +462,8 @@ export function AiBuilderPanel({
                 className="ai-gradient-icon size-8"
                 aria-hidden="true"
                 style={{
-                  maskImage: `url("${iconAgentsPurple}")`,
-                  WebkitMaskImage: `url("${iconAgentsPurple}")`,
+                  maskImage: `url("${iconAgentsTwoStarSparkle}")`,
+                  WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
                 }}
               />
               <p className="m-0 text-[12px] leading-6 text-text-secondary">

@@ -15,8 +15,6 @@ export interface ChartCardProps {
   showActions?: boolean
   /** Override the left action icon (defaults to 'table_rows'). */
   leftActionIcon?: string
-  /** Card min-height in px — defaults to 400, the standard chart size. Lower it for compact widgets. */
-  minHeight?: number
   className?: string
   children: ReactNode
 }
@@ -63,12 +61,9 @@ function MoreMenu() {
   )
 }
 
-export function ChartCard({ title, tooltip, titleSuffix, toolbar, showActions = true, minHeight = 400, className = '', children }: ChartCardProps) {
+export function ChartCard({ title, tooltip, titleSuffix, toolbar, showActions = true, className = '', children }: ChartCardProps) {
   return (
-    <section
-      className={`flex flex-col rounded-md border border-border bg-surface p-2xl ${className}`}
-      style={{ minHeight }}
-    >
+    <section className={`flex min-h-[400px] flex-col rounded-md border border-border bg-surface p-2xl ${className}`}>
       <header className="mb-2xl flex shrink-0 items-center justify-between gap-md">
         <div className="flex items-center gap-xs">
           <ChartCardTitle title={title} tooltip={tooltip} />

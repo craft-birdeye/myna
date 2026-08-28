@@ -20,7 +20,7 @@
   height: 100%;
   background: #fff;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   font-family: 'Inter', sans-serif;
@@ -140,7 +140,7 @@
   height: 36px !important;
   min-height: 36px !important;
   border: 1px solid #ccc !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   background: #fff !important;
   padding: 0 !important;
 }
@@ -177,7 +177,7 @@
   font-family: 'Inter', sans-serif !important;
   color: #212121 !important;
   border: 1px solid #ccc !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   padding: 8px 12px !important;
   line-height: 20px !important;
   letter-spacing: -0.28px !important;
@@ -223,7 +223,7 @@
 
 .rhs-drawer__chip {
   background: #eaeaea;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 4px 8px;
   font-size: 12px;
   font-weight: 400;
@@ -311,7 +311,7 @@
   min-height: 40px !important;
   height: 40px !important;
   border: 1px solid #e0e0e0 !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   padding: 0 12px !important;
   font-size: 14px !important;
   font-family: 'Inter', sans-serif !important;
@@ -327,7 +327,7 @@
   max-height: 200px !important;
   overflow-y: auto !important;
   border: 1px solid #e5e9f0 !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   box-shadow: 0px 4px 12px rgba(33, 33, 33, 0.1) !important;
   background: #fff !important;
   z-index: 30 !important;
@@ -354,7 +354,7 @@
   display: flex;
   align-items: center;
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fff;
   min-height: 40px;
   padding: 4px 8px;
@@ -368,7 +368,7 @@
   align-items: center;
   gap: 4px;
   background: #eaeaea;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 2px 6px;
   font-size: 13px;
   color: #212121;
@@ -458,7 +458,7 @@
   max-height: 200px !important;
   overflow-y: auto !important;
   border: 1px solid #e5e9f0 !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   box-shadow: 0px 4px 12px rgba(33, 33, 33, 0.1) !important;
   background: #fff !important;
 }
@@ -486,7 +486,7 @@
   width: 100%;
   height: 40px;
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 0 12px;
   font-size: 14px;
   font-family: 'Inter', sans-serif;
@@ -615,7 +615,7 @@
 /* ─── Prompt box (system/user prompt) ─── */
 .rhs-drawer__prompt-box {
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -798,7 +798,7 @@
   left: 100px;
   z-index: 30;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0px 4px 8px rgba(33, 33, 33, 0.18);
   padding: 12px 0;
   min-width: 193px;
@@ -813,7 +813,7 @@
   font-size: 14px;
   color: #212121;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
   margin: 0 4px;
 }
 
@@ -838,7 +838,7 @@
   gap: 8px;
   height: 36px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 0 12px;
   background: #fff;
 }

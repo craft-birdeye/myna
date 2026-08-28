@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { AgentSystemPromptStoreProvider } from './data/AgentSystemPromptStoreContext'
@@ -481,6 +481,33 @@ function openDetailInNewTab(view: string, args: unknown) {
   window.open(url.toString(), '_blank', 'noopener,noreferrer')
 }
 
+// Every main-nav (L1 icon-rail) page gets a real, shareable/bookmarkable URL — hash-based,
+// since GitHub Pages has no SPA rewrite for path-based routes. Screens reached by drilling in
+// (agent detail, settings sub-screens, detail views, etc.) stay purely state-based, unaffected
+// by this — only the top-level rail destination itself is addressable.
+const RAIL_ID_TO_SLUG: Record<string, string> = {
+  'overview-v2-1': 'overview',
+  search: 'ai-search',
+  listings: 'listings',
+  reviews: 'reviews',
+  social: 'social',
+  'content-hub': 'content-hub',
+  referral: 'referral',
+  'marketing-automation': 'marketing-automation',
+  inbox: 'inbox',
+  frontdesk: 'front-desk',
+  surveys: 'surveys',
+  ticketing: 'ticketing',
+  insights: 'insights',
+  reports: 'reports',
+  patients: 'patients',
+  settings: 'settings',
+}
+const SLUG_TO_RAIL_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(RAIL_ID_TO_SLUG).map(([railId, slug]) => [slug, railId]),
+)
+const railIdFromHash = (hash: string): string | null => SLUG_TO_RAIL_ID[hash.replace(/^#\/?/, '')] ?? null
+
 // ─── App ────────────────────────────────────────────────────────────────────
 
 export function App() {
@@ -525,6 +552,32 @@ export function App() {
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
   const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
+
+  // Respond to a direct #/<page> link (or the back/forward buttons crossing one) by jumping to
+  // that rail destination. Mount-time check covers a fresh load; the listener covers navigation
+  // that happens without a remount.
+  useEffect(() => {
+    const applyHash = () => {
+      const railId = railIdFromHash(window.location.hash)
+      if (railId) setRailActive(railId)
+    }
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
+  }, [])
+
+  // Keep the address bar in sync the other way: landing on a rail page writes its #/slug (so
+  // it's always shareable/bookmarkable), leaving it for a non-rail-addressable screen (an agent
+  // detail view, a settings sub-screen, etc.) clears the hash again.
+  useEffect(() => {
+    const slug = RAIL_ID_TO_SLUG[railActive]
+    if (slug) {
+      const hash = `#/${slug}`
+      if (window.location.hash !== hash) window.location.hash = hash
+    } else if (railIdFromHash(window.location.hash)) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
+  }, [railActive])
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')

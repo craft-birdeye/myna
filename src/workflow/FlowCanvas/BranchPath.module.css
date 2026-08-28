@@ -27,7 +27,7 @@
   /* Fits ~24-char labels + optional collapse control; character truncation is the primary clamp. */
   max-width: 220px;
   height: 28px;
-  border-radius: 4px;
+  border-radius: 8px;
   border: 1px solid #c5d0e6;
   background: #ffffff;
   display: flex;
@@ -83,7 +83,7 @@
   height: 20px;
   padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background: transparent;
   color: #8f8f8f;
   cursor: pointer;

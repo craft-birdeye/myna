@@ -2,7 +2,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   LabelList,
   Legend,
   ResponsiveContainer,
@@ -32,12 +31,8 @@ export interface StackedBarChartProps {
   wrapXLabels?: boolean
   /** Show value labels above each bar and hide the Y-axis + horizontal grid lines. */
   showBarLabels?: boolean
-  /** Color each bar individually (single-series only) instead of one fill for the whole series — one color per data point, in order. */
-  barColors?: string[]
   /** Hide the bottom legend. */
   hideLegend?: boolean
-  /** Fix the Y-axis range instead of auto-scaling to the data (e.g. [0, 100] for percentages). */
-  yDomain?: [number, number]
 }
 
 const axisTick = { fontSize: 12, fill: '#0d0d12', fontFamily: 'Inter, sans-serif' }
@@ -106,7 +101,7 @@ function StackedBarTooltip({
   )
 }
 
-export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend, yDomain, barColors }: StackedBarChartProps) {
+export function StackedBarChart({ data, series, xKey, height = 300, grouped = false, xAxisAngle, wrapXLabels, showBarLabels, hideLegend }: StackedBarChartProps) {
   const xTick = xAxisAngle
     ? { ...axisTick, angle: xAxisAngle, textAnchor: 'end' as const, dy: 4 }
     : axisTick
@@ -124,7 +119,7 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
         <XAxis dataKey={xKey} tick={resolvedTick} tickLine={false} axisLine={{ stroke: chartColors.grid }} height={xAxisHeight} />
         {showBarLabels
           ? <YAxis hide width={0} />
-          : <YAxis tick={axisTick} tickLine={false} axisLine={false} width={40} domain={yDomain} />
+          : <YAxis tick={axisTick} tickLine={false} axisLine={false} width={40} />
         }
         <Tooltip
           cursor={{ fill: 'rgba(0,0,0,0.04)' }}
@@ -158,7 +153,6 @@ export function StackedBarChart({ data, series, xKey, height = 300, grouped = fa
             maxBarSize={24}
             isAnimationActive={false}
           >
-            {barColors && series.length === 1 && data.map((_, idx) => <Cell key={idx} fill={barColors[idx % barColors.length]} />)}
             {showBarLabels && i === series.length - 1 && (
               <LabelList
                 dataKey={s.key}

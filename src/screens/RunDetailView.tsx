@@ -6,7 +6,9 @@ import {
   getUserRatingForLogStatus,
   Icon,
   LogDetailsPanel,
+  ReviewCardBody,
   RunDetailsPanel,
+  type ReviewCardData,
   type RunLogStep,
 } from '../components'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
@@ -366,6 +368,68 @@ function buildReviewGenerationRunSteps(row: HealthcareLogRow): RunLogStep[] {
   ]
 }
 
+function findStepOutputValue(
+  steps: RunLogStep[] | undefined,
+  stepTitle: string,
+  fieldKey: string,
+): string | undefined {
+  const step = steps?.find((s) => s.title === stepTitle)
+  return step?.output?.find((f) => f.key === fieldKey)?.value
+}
+
+/** "Review details" tab content — the review/request record itself, shown in place of a
+ *  conversation thread (which review-response/generation runs don't have). Response runs render
+ *  the same reviewer/rating/text/reply card used on the Reviews list; generation runs (which
+ *  don't have an underlying review yet) show a short request-sent summary instead. */
+function ReviewDetailsContent({
+  row,
+  steps,
+  agentName,
+  kind,
+}: {
+  row: HealthcareLogRow
+  steps?: RunLogStep[]
+  agentName: string
+  kind: 'response' | 'generation'
+}) {
+  const source = String(row.source ?? row.channel ?? '')
+
+  if (kind === 'generation') {
+    return (
+      <div className="flex h-full flex-col gap-md overflow-y-auto">
+        <div className="flex items-center gap-sm text-body">
+          <span className="text-text-primary">{row.contact}</span>
+          {row.location && <span className="text-text-tertiary">• {row.location}</span>}
+        </div>
+        <p className="text-body text-text-secondary">Review request sent via {source || 'email'}.</p>
+      </div>
+    )
+  }
+
+  const firstName = row.contact && row.contact !== '—' ? row.contact.split(' ')[0] : 'there'
+  const replyText =
+    findStepOutputValue(steps, 'Generate response', 'Draft reply')
+    ?? (typeof row.rating === 'number' && row.rating <= 3
+      ? `We appreciate your feedback, ${firstName}. If you would like to discuss your experience further, please reach out to us directly — we would love the opportunity to resolve any issues.`
+      : `Thank you so much for your feedback, ${firstName}! We're thrilled to hear about your experience and look forward to seeing you again soon.`)
+
+  const review: ReviewCardData = {
+    reviewerName: row.contact,
+    rating: typeof row.rating === 'number' ? row.rating : 0,
+    date: row.timestamp,
+    reviewId: row.reviewId ?? '—',
+    location: row.location ?? '—',
+    text: typeof row.comment === 'string' ? row.comment : '',
+    reply: { channel: source || 'Birdeye', agentName, postedAt: row.timestamp, text: replyText },
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <ReviewCardBody review={review} stacked />
+    </div>
+  )
+}
+
 /* ── run canvas — same AgentBuilder viewer as the Workflow tab, executed nodes in green ── */
 function AgentWorkflowRunCanvas({
   instanceName,
@@ -583,9 +647,19 @@ export function RunDetailView({
           {useRunDetailsPanel ? (
             <RunDetailsPanel
               steps={logSteps}
-              showTabs={!isReviewAgent}
-              title={isReviewAgent ? 'Log details' : undefined}
-              showHeader={isReviewAgent}
+              showTabs
+              showHeader={false}
+              conversationTabLabel={isReviewAgent ? 'Review details' : undefined}
+              conversationContent={
+                isReviewAgent ? (
+                  <ReviewDetailsContent
+                    row={row}
+                    steps={logSteps}
+                    agentName={agentName}
+                    kind={isReviewResponse ? 'response' : 'generation'}
+                  />
+                ) : undefined
+              }
               showCallRecording={isReminder && hasVoiceCall}
               audioUrl={isReminder ? voicemailSample : undefined}
               durationSecs={isReminder ? totalSecs : undefined}

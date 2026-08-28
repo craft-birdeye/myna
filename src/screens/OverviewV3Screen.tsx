@@ -611,8 +611,8 @@ function AiWorkforceSummaryCard({
             <img src={mynaIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
             <img src={robinIcon} alt="" className="-ml-3 size-9 rounded-full border-2 border-surface" />
           </div>
-          <p className="m-0 min-w-0 flex-1 truncate text-body text-text-primary">
-            Introducing AI co-workers - Jay, Myna and Robin. Together they can save up to {formatTimeSaved(totalHours, dateRange)} and ${totalCostK.toFixed(1)}K. Set up your agents and start saving today.
+          <p className="m-0 min-w-0 flex-1 text-body text-text-primary">
+            Meet your new AI coworkers. Jay, Myna, and Robin cover reviews, conversations, and appointments so you can focus on your business.
           </p>
           {dataState === 'empty' && (
             <button

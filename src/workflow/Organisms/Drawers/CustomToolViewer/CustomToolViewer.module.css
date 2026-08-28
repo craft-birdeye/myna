@@ -38,7 +38,7 @@
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   color: #555;
   padding: 0;
@@ -71,7 +71,7 @@
   background: #1976d2;
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 400;
   font-family: 'Roboto', sans-serif;
@@ -99,7 +99,7 @@
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   color: #555;
   padding: 0;
@@ -119,7 +119,7 @@
   right: 0;
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   min-width: 148px;
   z-index: 200;
@@ -244,7 +244,7 @@
 .tagsInput {
   min-height: 40px;
   border: 1px solid #d0d5dd;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #fff;
   padding: 6px 10px;
   display: flex;
@@ -262,7 +262,7 @@
   gap: 4px;
   background: #f2f4f7;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 3px 8px;
   font-size: 13px;
   color: #212121;
@@ -321,7 +321,7 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid #c5cad3;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
@@ -347,7 +347,7 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fff;
   width: 100%;
   box-sizing: border-box;
@@ -398,7 +398,7 @@
   height: 36px;
   padding: 0 36px 0 12px;
   border: 1px solid #c5cad3;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
@@ -483,7 +483,7 @@
 
 .promptBox {
   border: 1px solid #c5cad3;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #fff;
   display: flex;
   flex-direction: column;
@@ -523,7 +523,7 @@
   padding: 2px 4px;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   color: #212121;
   font-family: 'Roboto', sans-serif;
@@ -626,7 +626,7 @@
   height: 36px;
   padding: 0 10px;
   border: 1px solid #c5cad3;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   color: #212121;
