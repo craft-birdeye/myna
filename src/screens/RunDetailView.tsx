@@ -494,7 +494,7 @@ function ReviewDetailsContent({
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto pt-md">
       <ReviewCardBody review={review} stacked />
     </div>
   )

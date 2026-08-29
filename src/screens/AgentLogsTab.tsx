@@ -100,7 +100,7 @@ const RATING_CELL = (v: unknown) =>
       <Icon name="star" size={14} fill className="text-rating-star" />
     </span>
   ) : (
-    <span>No rating</span>
+    <span>-</span>
   )
 
 const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
@@ -182,7 +182,7 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
 ]
 
-const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
+const TEXT_CELL = (v: unknown) => (v ? String(v) : '-')
 const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
 
 const SOURCE_CELL = (v: unknown) => {
@@ -191,11 +191,7 @@ const SOURCE_CELL = (v: unknown) => {
   if (!logo) return TEXT_CELL(v)
   return (
     <Tooltip variant="brief" content={label}>
-      <img
-        src={logo}
-        alt={label}
-        className={label === 'Direct Feedback' ? 'size-5' : 'size-[18px]'}
-      />
+      <img src={logo} alt={label} className="size-[18px]" />
     </Tooltip>
   )
 }
