@@ -53,6 +53,7 @@ import {
   isFrontdeskExplorationChrome,
   isResponseAgentsExplorationChrome,
 } from '../data/agentNavIds'
+import { instanceSlugFromName, type DeepRoute } from '../appRoutes'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
 import { HC_PROCEDURES } from '../data/procedureData'
@@ -117,6 +118,9 @@ interface AgentDetailScreenProps {
    *  the create-agent flow instead of the agent's default Agents-tab table. */
   autoOpenCreateFlow?: boolean
   onAutoOpenCreateFlowConsumed?: () => void
+  /** Address-bar deep link: instance, tab, log row, panel. */
+  routeDeep?: DeepRoute
+  onDeepRouteChange?: (deep: DeepRoute) => void
 }
 
 /** Nav ids that open Create agent as illustration + library cards only (no Ghostwriter chat). */
@@ -7184,7 +7188,7 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed, routeDeep, onDeepRouteChange }: AgentDetailScreenProps) {
   const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
@@ -7231,6 +7235,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     if (!pendingInstanceView) return
     setSelectedInstance(pendingInstanceView.instanceName)
     setInstanceInitialTab(pendingInstanceView.tab)
+    onDeepRouteChange?.({
+      instanceSlug: instanceSlugFromName(pendingInstanceView.instanceName),
+      tab: pendingInstanceView.tab,
+    })
     onPendingInstanceViewConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingInstanceView])
@@ -7327,6 +7335,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setSelectedInstanceDisplayName(
       createDraftAgentName ? `${createDraftAgentName} - North region` : null,
     )
+    onDeepRouteChange?.({ instanceSlug: instanceSlugFromName(`${agentName} - North region`), tab: 'workflow' })
     setToastMessage(
       options?.publish ? 'Agent created and published successfully' : 'Agent created successfully',
     )
@@ -7509,6 +7518,22 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     // retrigger this on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialRecommendationFocus])
+
+  useEffect(() => {
+    if (routeDeep?.listTab) setActiveTab(routeDeep.listTab)
+  }, [routeDeep?.listTab, navId])
+
+  useEffect(() => {
+    if (!routeDeep?.instanceSlug) {
+      if (!pendingInstanceView) setSelectedInstance(null)
+      return
+    }
+    const match = data.find((d) => instanceSlugFromName(d.name) === routeDeep.instanceSlug)
+    if (!match) return
+    setSelectedInstance(match.name)
+    if (routeDeep.tab) setInstanceInitialTab(routeDeep.tab)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeDeep?.instanceSlug, routeDeep?.tab, navId, agentName])
 
   const isReminder        = agentName === 'Reminder agent'
   const isFrontdesk       = isFrontdeskAgentName(agentName)
@@ -7747,6 +7772,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setInstanceInitialTab('outcomes')
     setSelectedInstanceDisplayName(null)
     setSelectedInstance(row.name)
+    onDeepRouteChange?.({ instanceSlug: instanceSlugFromName(row.name), tab: 'outcomes' })
   }
 
   const openAgentInstanceEditor = (row: AgentInstance) => {
@@ -8254,15 +8280,26 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     return (
       <>
         <AgentInstanceScreen
-          key={`${selectedInstance}-${selectedInstanceDisplayName ?? ''}-${instanceInitialTab}`}
+          key={`${selectedInstance}-${selectedInstanceDisplayName ?? ''}`}
           instanceName={selectedInstance}
           displayName={selectedInstanceDisplayName ?? undefined}
           status={instanceStatus}
-          initialTab={instanceInitialTab}
+          initialTab={routeDeep?.tab ?? instanceInitialTab}
+          initialLogSlug={routeDeep?.logSlug}
+          initialPanel={routeDeep?.panel}
+          initialRecommendationIdFromRoute={routeDeep?.recId}
+          onDeepRouteChange={(patch) =>
+            onDeepRouteChange?.({
+              instanceSlug: instanceSlugFromName(selectedInstance),
+              tab: 'outcomes',
+              ...patch,
+            })
+          }
           onBack={() => {
             setSelectedInstance(null)
             setSelectedInstanceDisplayName(null)
             setInstanceInitialTab('outcomes')
+            onDeepRouteChange?.({})
           }}
           onEditAgent={onEditAgent}
           onNavigateToInbox={onNavigateToInbox}
@@ -8413,7 +8450,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   tabs={useExplorationOutcomesTab ? EXPLORATION_DETAIL_TABS : TABS}
                   activeTab={activeTab}
                   showBaseline={false}
-                  onChange={setActiveTab}
+                  onChange={(tabId) => {
+                    setActiveTab(tabId)
+                    onDeepRouteChange?.({ listTab: tabId })
+                  }}
                 />
               </div>
 
@@ -8569,6 +8609,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                           setInstanceInitialTab('outcomes')
                           setSelectedInstanceDisplayName(null)
                           setSelectedInstance(row.name)
+                          onDeepRouteChange?.({ instanceSlug: instanceSlugFromName(row.name), tab: 'outcomes' })
                         }}
                         rowMenuItems={agentInstanceRowMenuItems}
                       />

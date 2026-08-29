@@ -83,4 +83,6 @@ export interface LogDetailsPanelProps {
   showTranscriptTranslation?: boolean
   /** Click a log step to focus the matching canvas node. */
   onStepFocus?: (step: RunLogStep) => void
+  initialTab?: string
+  onTabChange?: (tab: string) => void
 }
