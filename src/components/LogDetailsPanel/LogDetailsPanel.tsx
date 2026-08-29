@@ -1078,6 +1078,8 @@ export function LogDetailsPanel({
   userRating,
   showTranscriptTranslation = false,
   onStepFocus,
+  initialTab,
+  onTabChange,
 }: LogDetailsPanelProps) {
   const isReminder = agentName.startsWith('Reminder agent')
   const steps = stepsProp ?? (isReminder ? REMINDER_CALL_LOG_STEPS : CALL_LOG_STEPS)
@@ -1206,6 +1208,8 @@ export function LogDetailsPanel({
         conversationTabLabel={hasVoiceCall ? 'Call transcript' : 'Conversation'}
         callDetailsContent={callDetailsTabContent}
         onStepFocus={onStepFocus}
+        initialTab={initialTab}
+        onTabChange={onTabChange}
         conversationContent={
           isReminder ? (
             <div className="relative flex h-full flex-col">

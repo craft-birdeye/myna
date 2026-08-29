@@ -44,7 +44,7 @@ export interface RunDetailsPanelProps {
   showTabs?: boolean
   /** Conversation-tab label. Default "Conversation"; voice-call logs use "Call transcript". */
   conversationTabLabel?: string
-  /** Logs-tab label. Default "Call logs"; review agents use "Log". */
+  /** Logs-tab label. Default "Call logs"; review agents use "Review logs". */
   logsTabLabel?: string
   /** Panel header title. Default "Run details". */
   title?: string
@@ -85,4 +85,6 @@ export interface RunDetailsPanelProps {
   /** When set, renders a collapsible AI summary at the top of the Conversation tab (e.g. Reminder
    *  multi-channel thread summary above email/voice events). */
   conversationAiSummary?: string[]
+  initialTab?: string
+  onTabChange?: (tab: string) => void
 }

@@ -33,6 +33,7 @@ import { RunDetailView } from './RunDetailView'
 import type { HealthcareLogRow } from '../data/healthcareAgentLogs'
 import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 import { getAgentWorkflows } from '../data/agentWorkflows'
+import { logSlugFromTimestamp, type DeepRoute } from '../appRoutes'
 
 interface AgentInstanceScreenProps {
   instanceName: string
@@ -70,6 +71,10 @@ interface AgentInstanceScreenProps {
   workflowButtonOpensEditor?: boolean
   /** Sep 1 review response flow hides Recommendation. */
   hideRecommendationTab?: boolean
+  initialLogSlug?: string
+  initialPanel?: string
+  initialRecommendationIdFromRoute?: string
+  onDeepRouteChange?: (patch: DeepRoute) => void
 }
 
 interface LocationRow {
@@ -432,6 +437,10 @@ export function AgentInstanceScreen({
   initialFeedbackPrefill,
   workflowButtonOpensEditor = false,
   hideRecommendationTab = false,
+  initialLogSlug,
+  initialPanel,
+  initialRecommendationIdFromRoute,
+  onDeepRouteChange,
 }: AgentInstanceScreenProps) {
   const [activeTab, setActiveTab] = useState(initialTab)
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -527,6 +536,28 @@ export function AgentInstanceScreen({
   ) ?? DEFAULT_METRICS
   const isFrontdeskAgent = agentName === 'Front desk agent'
   const explorationFrontDeskStatus = workflowButtonOpensEditor && isFrontdeskAgent
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
+
+  useEffect(() => {
+    if (initialRecommendationIdFromRoute) {
+      setActiveTab('recommendation')
+      setSelectedRecommendationId(initialRecommendationIdFromRoute)
+    }
+  }, [initialRecommendationIdFromRoute])
+
+  useEffect(() => {
+    if (!initialLogSlug) {
+      setSelectedRun(null)
+      return
+    }
+    const rows = getNavigableLogRows(agentName, '', {}, { explorationFrontDeskStatus })
+    const match = rows.find((row) => logSlugFromTimestamp(row.timestamp) === initialLogSlug)
+    setSelectedRun(match ?? null)
+    if (match) setActiveTab('logs')
+  }, [initialLogSlug, agentName, explorationFrontDeskStatus])
   const hideMarketingLogDuration = isReviewResponse || isReviewGeneration
   const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponse
     ? metrics.map((m) => {
@@ -632,15 +663,34 @@ export function AgentInstanceScreen({
             row={selectedRun}
             instanceName={instanceName}
             runs={navigableRuns}
-            onSelectRun={setSelectedRun}
-            onBack={() => setSelectedRun(null)}
+            onSelectRun={(row) => {
+              setSelectedRun(row)
+              onDeepRouteChange?.({
+                tab: 'logs',
+                logSlug: logSlugFromTimestamp(row.timestamp),
+                panel: initialPanel,
+              })
+            }}
+            onBack={() => {
+              setSelectedRun(null)
+              onDeepRouteChange?.({ tab: 'logs' })
+            }}
             onEditAgent={() => onEditAgent?.(instanceName)}
             explorationFrontDeskStatus={explorationFrontDeskStatus}
             onTrackFeedback={(recommendationId) => {
               setSelectedRun(null)
               setActiveTab('recommendation')
               setSelectedRecommendationId(recommendationId)
+              onDeepRouteChange?.({ tab: 'recommendation', recId: recommendationId })
             }}
+            initialPanel={initialPanel}
+            onPanelChange={(panel) =>
+              onDeepRouteChange?.({
+                tab: 'logs',
+                logSlug: logSlugFromTimestamp(selectedRun.timestamp),
+                panel,
+              })
+            }
           />
         </div>
       </div>
@@ -654,7 +704,10 @@ export function AgentInstanceScreen({
         <div className="min-h-0 flex-1 overflow-hidden">
           <RecommendationDetailScreen
             recommendationId={selectedRecommendationId}
-            onBack={() => setSelectedRecommendationId(null)}
+            onBack={() => {
+              setSelectedRecommendationId(null)
+              onDeepRouteChange?.({ tab: 'recommendation' })
+            }}
             autoOpenFeedbackPrefill={pendingFeedbackPrefill}
             onAutoOpenFeedbackConsumed={() => setPendingFeedbackPrefill(null)}
           />
@@ -807,6 +860,7 @@ export function AgentInstanceScreen({
                   showBaseline={false}
                   onChange={(tabId) => {
                     setActiveTab(tabId)
+                    onDeepRouteChange?.({ tab: tabId })
                   }}
                 />
                 <span aria-hidden="true" className="mb-[10px] h-4 w-px shrink-0 self-end bg-border" />
@@ -818,6 +872,7 @@ export function AgentInstanceScreen({
                       return
                     }
                     setActiveTab('workflow')
+                    onDeepRouteChange?.({ tab: 'workflow' })
                   }}
                   className={`flex h-[34px] items-center rounded-md px-sm text-body transition-colors ${
                     isWorkflowTab
@@ -835,6 +890,7 @@ export function AgentInstanceScreen({
                 showBaseline={false}
                 onChange={(tabId) => {
                   setActiveTab(tabId)
+                  onDeepRouteChange?.({ tab: tabId })
                 }}
               />
             )}
@@ -859,7 +915,10 @@ export function AgentInstanceScreen({
             <div className="min-h-0 flex-1 overflow-y-auto">
               <RecommendationsTab
                 agentName={instanceName}
-                onSelect={setSelectedRecommendationId}
+                onSelect={(id) => {
+                  setSelectedRecommendationId(id)
+                  onDeepRouteChange?.({ tab: 'recommendation', recId: id })
+                }}
                 isDraft={isDraftInstance}
                 empty={hideRecommendations}
               />
@@ -919,7 +978,13 @@ export function AgentInstanceScreen({
                 <AgentLogsTab
                   agentName={agentName}
                   onNavigateToInbox={onNavigateToInbox}
-                  onViewRun={setSelectedRun}
+                  onViewRun={(row) => {
+                    setSelectedRun(row)
+                    onDeepRouteChange?.({
+                      tab: 'logs',
+                      logSlug: logSlugFromTimestamp(row.timestamp),
+                    })
+                  }}
                   searchQuery={supportsHeaderSearch ? logsQuery : ''}
                   filters={supportsHeaderSearch ? logsFilters : undefined}
                   explorationFrontDeskStatus={explorationFrontDeskStatus}
