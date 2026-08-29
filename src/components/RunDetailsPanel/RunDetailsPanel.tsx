@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { useFeedbackRecommendationsStore } from '../../data/FeedbackRecommendationsStoreContext'
 import { AiCoachSparkleIcon } from '../../assets/AiCoachSparkleIcon'
 import { REMINDER_CONVERSATION_EVENTS } from '../../data/reminderInboxConversation'
@@ -741,9 +741,21 @@ export function RunDetailsPanel({
   onStepFocus,
   userRating,
   conversationAiSummary,
+  initialTab,
+  onTabChange,
 }: RunDetailsPanelProps) {
   type PanelTab = 'conversation' | 'call-details' | 'logs'
-  const [tab, setTab] = useState<PanelTab>('conversation')
+  const [tab, setTab] = useState<PanelTab>(() =>
+    initialTab === 'logs' || initialTab === 'call-details' || initialTab === 'conversation'
+      ? initialTab
+      : 'conversation',
+  )
+
+  useEffect(() => {
+    if (initialTab === 'logs' || initialTab === 'call-details' || initialTab === 'conversation') {
+      setTab(initialTab)
+    }
+  }, [initialTab])
   const hasCallDetails = Boolean(callDetails || callDetailsContent)
   const showCallDetailsTab = hasCallDetails && showCallRecording
   const resolvedCallDetailsContent =
@@ -811,7 +823,11 @@ export function RunDetailsPanel({
             ]}
             activeTab={tab}
             showBaseline={false}
-            onChange={(id) => setTab(id as PanelTab)}
+            onChange={(id) => {
+              const next = id as PanelTab
+              setTab(next)
+              onTabChange?.(next)
+            }}
           />
         </div>
       )}

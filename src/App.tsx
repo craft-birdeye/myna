@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { AgentSystemPromptStoreProvider } from './data/AgentSystemPromptStoreContext'
@@ -11,6 +11,7 @@ import {
   isSep1Chrome,
   RESPONSE_AGENTS_SEP1_NAV_ID,
 } from './data/agentNavIds'
+import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
 import { AiCoachSparkleIcon } from './assets/AiCoachSparkleIcon'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
@@ -481,10 +482,9 @@ function openDetailInNewTab(view: string, args: unknown) {
   window.open(url.toString(), '_blank', 'noopener,noreferrer')
 }
 
-// Every main-nav (L1 icon-rail) page gets a real, shareable/bookmarkable URL — hash-based,
-// since GitHub Pages has no SPA rewrite for path-based routes. Screens reached by drilling in
-// (agent detail, settings sub-screens, detail views, etc.) stay purely state-based, unaffected
-// by this — only the top-level rail destination itself is addressable.
+// Shareable URLs for every L1 rail page and every L2 nav page.
+// Vercel/local use path routes (`/overview`, `/front-desk/frontdesk-agent-sep-1`).
+// GitHub Pages (`base: /myna/`) has no SPA rewrite, so the same slugs are stored in the hash.
 const RAIL_ID_TO_SLUG: Record<string, string> = {
   'overview-v2-1': 'overview',
   search: 'ai-search',
@@ -506,16 +506,103 @@ const RAIL_ID_TO_SLUG: Record<string, string> = {
 const SLUG_TO_RAIL_ID: Record<string, string> = Object.fromEntries(
   Object.entries(RAIL_ID_TO_SLUG).map(([railId, slug]) => [slug, railId]),
 )
-const railIdFromHash = (hash: string): string | null => SLUG_TO_RAIL_ID[hash.replace(/^#\/?/, '')] ?? null
+
+function navIdsFromSections(sections: NavSection[]): string[] {
+  return sections.flatMap((section) => (section.items ?? []).map((item) => item.id))
+}
+
+const NAV_IDS_BY_RAIL: Record<string, Set<string>> = {
+  frontdesk: new Set([
+    ...navIdsFromSections(AUTOMOTIVE_NAV_SECTIONS),
+    ...navIdsFromSections(HEALTHCARE_NAV_SECTIONS),
+    ...navIdsFromSections(DENTAL_NAV_SECTIONS),
+  ]),
+  reviews: new Set(navIdsFromSections(REVIEWS_NAV_SECTIONS)),
+}
+
+const L2_RAILS = new Set(Object.keys(NAV_IDS_BY_RAIL))
+
+function usesHashRoutes(): boolean {
+  return import.meta.env.BASE_URL !== '/'
+}
+
+function pathForRoute(railId: string, navId?: string, deep: DeepRoute = {}): string {
+  const slug = RAIL_ID_TO_SLUG[railId]
+  if (!slug) return '/overview'
+  if (L2_RAILS.has(railId) && navId && NAV_IDS_BY_RAIL[railId]?.has(navId)) {
+    return `/${slug}/${navId}${serializeDeep(deep)}`
+  }
+  return `/${slug}`
+}
+
+function parsePathSegments(raw: string): { railId: string; navId?: string; deep: DeepRoute } | null {
+  const parts = raw.replace(/^\/+/, '').replace(/\/+$/, '').split('/').filter(Boolean)
+  if (parts.length === 0) return null
+  const railId = SLUG_TO_RAIL_ID[parts[0]]
+  if (!railId) {
+    for (const [id, navIds] of Object.entries(NAV_IDS_BY_RAIL)) {
+      if (navIds.has(parts[0])) {
+        return { railId: id, navId: parts[0], deep: parseDeepSegments(parts.slice(1)) }
+      }
+    }
+    return null
+  }
+  const navId = parts[1]
+  if (navId && NAV_IDS_BY_RAIL[railId]?.has(navId)) {
+    return { railId, navId, deep: parseDeepSegments(parts.slice(2)) }
+  }
+  return { railId, deep: {} }
+}
+
+function locationPathname(): string {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '')
+  let path = window.location.pathname
+  if (base && path.startsWith(base)) path = path.slice(base.length) || '/'
+  if (path === '/' || path === '') {
+    const hash = window.location.hash.replace(/^#/, '')
+    if (!hash) return '/'
+    return hash.startsWith('/') ? hash : `/${hash}`
+  }
+  return path.startsWith('/') ? path : `/${path}`
+}
+
+function parseAppRoute(): { railId: string; navId?: string; deep: DeepRoute } | null {
+  return parsePathSegments(locationPathname())
+}
+
+function hrefForRoute(railId: string, navId?: string, deep: DeepRoute = {}): string {
+  const path = pathForRoute(railId, navId, deep)
+  const search = window.location.search
+  if (usesHashRoutes()) {
+    return `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}#${path}${search}`
+  }
+  return `${path}${search}`
+}
+
+function currentHref(): string {
+  if (usesHashRoutes()) {
+    return `${window.location.pathname}${window.location.hash}${window.location.search}`
+  }
+  return `${window.location.pathname}${window.location.search}`
+}
 
 // ─── App ────────────────────────────────────────────────────────────────────
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('overview-v2-1')
-  const [navActive, setNavActive] = useState(
-    () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
-  )
+  const [railActive, setRailActive] = useState(() => {
+    const detailNav = DETAIL_VIEW_NAV[parseInitialDetailView()?.view ?? '']
+    if (detailNav) return NAV_IDS_BY_RAIL.reviews.has(detailNav) ? 'reviews' : 'frontdesk'
+    return parseAppRoute()?.railId ?? 'overview-v2-1'
+  })
+  const [navActive, setNavActive] = useState(() => {
+    const fromDetail = DETAIL_VIEW_NAV[initialDetailView?.view ?? '']
+    if (fromDetail) return fromDetail
+    return parseAppRoute()?.navId ?? 'frontdesk-agent'
+  })
+  const [deepRoute, setDeepRoute] = useState<DeepRoute>(() => parseAppRoute()?.deep ?? {})
+  const applyingRoute = useRef(false)
+  const didCanonicalizeUrl = useRef(false)
   const [expandOnHover, setExpandOnHover] = useState(true)
   const [searchAIL2Active, setSearchAIL2Active] = useState(SEARCH_AI_L2_DEFAULT_ACTIVE)
   const [socialL2Active, setSocialL2Active] = useState('Publish/Calendar')
@@ -553,31 +640,39 @@ export function App() {
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
   const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
 
-  // Respond to a direct #/<page> link (or the back/forward buttons crossing one) by jumping to
-  // that rail destination. Mount-time check covers a fresh load; the listener covers navigation
-  // that happens without a remount.
+  // Restore rail + L2 from the address bar (path or leftover hash) on back/forward.
   useEffect(() => {
-    const applyHash = () => {
-      const railId = railIdFromHash(window.location.hash)
-      if (railId) setRailActive(railId)
+    const applyLocation = () => {
+      const route = parseAppRoute()
+      if (!route) return
+      applyingRoute.current = true
+      setRailActive(route.railId)
+      if (route.navId) setNavActive(route.navId)
+      setDeepRoute(route.deep)
+      queueMicrotask(() => {
+        applyingRoute.current = false
+      })
     }
-    applyHash()
-    window.addEventListener('hashchange', applyHash)
-    return () => window.removeEventListener('hashchange', applyHash)
+    window.addEventListener('popstate', applyLocation)
+    window.addEventListener('hashchange', applyLocation)
+    return () => {
+      window.removeEventListener('popstate', applyLocation)
+      window.removeEventListener('hashchange', applyLocation)
+    }
   }, [])
 
-  // Keep the address bar in sync the other way: landing on a rail page writes its #/slug (so
-  // it's always shareable/bookmarkable), leaving it for a non-rail-addressable screen (an agent
-  // detail view, a settings sub-screen, etc.) clears the hash again.
+  // Keep the address bar in sync: `/overview`, `/front-desk/<nav>`, `/reviews/<nav>`, etc.
   useEffect(() => {
-    const slug = RAIL_ID_TO_SLUG[railActive]
-    if (slug) {
-      const hash = `#/${slug}`
-      if (window.location.hash !== hash) window.location.hash = hash
-    } else if (railIdFromHash(window.location.hash)) {
-      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    if (applyingRoute.current) return
+    const href = hrefForRoute(railActive, navActive, deepRoute)
+    if (currentHref() === href) return
+    if (!didCanonicalizeUrl.current) {
+      didCanonicalizeUrl.current = true
+      window.history.replaceState(null, '', href)
+      return
     }
-  }, [railActive])
+    window.history.pushState(null, '', href)
+  }, [railActive, navActive, deepRoute])
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')
@@ -593,6 +688,7 @@ export function App() {
 
   function openAgentFromOverview(target: { railId: string; navId?: string }) {
     setRailActive(target.railId)
+    setDeepRoute({})
     if (target.navId) {
       setNavActive(target.navId)
       return
@@ -608,6 +704,7 @@ export function App() {
   function handleProductChange(id: string) {
     setActiveProduct(id)
     setNavActive(DEFAULT_NAV_BY_PRODUCT[id] ?? 'manage-appointments')
+    setDeepRoute({})
     setEditingAgentName(null)
     setWizardAgentDraft(null)
     setWorkflowAiCreateFullscreen(false)
@@ -723,6 +820,7 @@ export function App() {
           activeId={railActive}
           onSelect={(id) => {
             setRailActive(id)
+            setDeepRoute({})
             setIsAgentSetupActive(false)
             if (id === 'frontdesk') setNavActive('manage-appointments')
             if (id === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
@@ -802,8 +900,14 @@ export function App() {
                     sections={REVIEWS_NAV_SECTIONS}
                     activeId={navActive}
                     ctaLabel="Send review request"
-                    onCtaClick={() => setNavActive(REVIEWS_DEFAULT_NAV)}
-                    onSelect={setNavActive}
+                    onCtaClick={() => {
+                      setDeepRoute({})
+                      setNavActive(REVIEWS_DEFAULT_NAV)
+                    }}
+                    onSelect={(id) => {
+                      setDeepRoute({})
+                      setNavActive(id)
+                    }}
                   />
                 ) : (
                   <SideNav
@@ -815,10 +919,13 @@ export function App() {
                       if (id === 'knowledge-base') {
                         setRailActive('settings')
                         setSettingsTab('Knowledge')
+                        setDeepRoute({})
                       } else if (id === 'widgets') {
                         setRailActive('settings')
                         setSettingsTab('Widgets')
+                        setDeepRoute({})
                       } else {
+                        setDeepRoute({})
                         setNavActive(id)
                       }
                     }}
@@ -1088,6 +1195,8 @@ export function App() {
                       key={navActive}
                       agentName={AGENT_NAMES[navActive]}
                       navId={navActive}
+                      routeDeep={deepRoute}
+                      onDeepRouteChange={setDeepRoute}
                       onEditAgent={handleEditAgent}
                       onAgentSetupActiveChange={setIsAgentSetupActive}
                       onFullBleedDetailActiveChange={setIsViewingFullBleedDetail}
@@ -1215,6 +1324,8 @@ export function App() {
                     key={navActive}
                     agentName={AGENT_NAMES[navActive]}
                     navId={navActive}
+                    routeDeep={deepRoute}
+                    onDeepRouteChange={setDeepRoute}
                     onEditAgent={handleEditAgent}
                     onOpenIntegrationSettings={openIntegrationSettings}
                     onAgentSetupActiveChange={setIsAgentSetupActive}

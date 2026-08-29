@@ -45,6 +45,8 @@ interface RunDetailViewProps {
   onSelectRun?: (row: HealthcareLogRow) => void
   /** Front desk exploration: show result badge on Call end reason. */
   explorationFrontDeskStatus?: boolean
+  initialPanel?: string
+  onPanelChange?: (panel: string) => void
 }
 
 function sameLogRow(a: HealthcareLogRow, b: HealthcareLogRow) {
@@ -832,6 +834,8 @@ export function RunDetailView({
   runs = [],
   onSelectRun,
   explorationFrontDeskStatus = false,
+  initialPanel,
+  onPanelChange,
 }: RunDetailViewProps) {
   const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -1008,7 +1012,7 @@ export function RunDetailView({
               showTabs
               showHeader={false}
               conversationTabLabel={isReviewAgent ? 'Review details' : undefined}
-              logsTabLabel={isReviewAgent ? 'Log' : undefined}
+              logsTabLabel={isReviewAgent ? 'Review logs' : undefined}
               conversationContent={
                 isReviewAgent ? (
                   <ReviewDetailsContent
@@ -1040,6 +1044,8 @@ export function RunDetailView({
               userRating={isReminder && hasVoiceCall ? getUserRatingForLogStatus(row.status) : undefined}
               conversationAiSummary={isReminder ? REMINDER_CONVERSATION_AI_SUMMARY : undefined}
               onStepFocus={handleStepFocus}
+              initialTab={initialPanel}
+              onTabChange={onPanelChange}
             />
           ) : (
             <LogDetailsPanel
@@ -1053,6 +1059,8 @@ export function RunDetailView({
               }
               showTranscriptTranslation={explorationFrontDeskStatus}
               onStepFocus={handleStepFocus}
+              initialTab={initialPanel}
+              onTabChange={onPanelChange}
             />
           )}
         </div>
