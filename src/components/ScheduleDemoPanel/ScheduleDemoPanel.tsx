@@ -87,7 +87,7 @@ export function ScheduleDemoPanel({ open, onClose, onScheduled }: ScheduleDemoPa
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-2xl pb-2xl">
           <p className="m-0 mb-xl text-body text-text-secondary">
-            Select a date and time that works best for you. A specialist will walk you through setting up your AI co-workers and answer any related questions.
+            Pick a date and time that works for you. A specialist will help you set up your AI co-workers and answer your questions.
           </p>
 
           <div className="flex overflow-hidden rounded-md border border-border">

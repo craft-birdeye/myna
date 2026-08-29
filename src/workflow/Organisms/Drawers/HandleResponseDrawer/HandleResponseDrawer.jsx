@@ -164,7 +164,7 @@ export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSa
                 arrow_back
               </span>
             </button>
-            <span className="hrd__title">Handle response</span>
+            <span className="hrd__title">Publish response</span>
           </div>
           <button
             type="button"
