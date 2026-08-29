@@ -1179,9 +1179,9 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     systemPrompt:
       'You are the First-Line triaging agent. Analyze the incoming review if it is a genuine customer review or irrelevant spam.',
     userPrompt:
-      'If the review content violates any content terms of {{Review.source}} treat it as spam.\n' +
+      'If the review content violates any content terms of {{Review.source}}, treat it as spam.\n' +
       'If the review contains business-unrelated self-promotion or distracts from the business profile, treat it as spam.\n' +
-      'Otherwise mark it as a genuine customer review.\n' +
+      'Otherwise, mark it as a genuine customer review.\n\n' +
       'Set Review.isSpam and Review.spamReason accordingly.',
     outputFields: [
       { value: 'Review.isSpam', type: 'variable' },
@@ -1283,14 +1283,14 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     systemPrompt:
       'You are a Review Intelligence Extractor. Your job is to analyze a customer review and extract details. Be precise. Do not hallucinate. If something is not mentioned or cannot be confidently determined, leave the field empty.',
     userPrompt:
-      'Analyze the following review:\n' +
+      'Analyze the following review:\n\n' +
       'Review Text: {{Review.text}}\n' +
-      'Star Rating: {{Review.rating}}\n' +
+      'Star Rating: {{Review.rating}}\n\n' +
       'Perform all of the following:\n' +
       '1. Detect the review language\n' +
       '2. Score sentiment and severity, and explain the severity reason\n' +
       '3. Decide whether to escalate (legal threats, safety, CRITICAL)\n' +
-      '4. Extract topics, staff mentions, and competitor mentions\n' +
+      '4. Extract topics, staff mentions, and competitor mentions\n\n' +
       'Never invent staff or competitor names that are not in the review.',
     outputFields: [
       { value: 'Review.language', type: 'variable' },
@@ -1339,13 +1339,13 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     systemPrompt:
       'You are a marketing manager specialised in writing responses to customer reviews',
     userPrompt:
-      'Write a response to {{Review.text}} with Star rating: {{Review.rating}}\n' +
-      'Apply all relevant rules below (cumulative, not exclusive).\n' +
-      'Rule 0 — LANGUAGE: reply in the same language as the review ({{4.review.language}}).\n' +
-      'Rule 1 — LENGTH: keep the reply under 60 words.\n' +
-      'Rule 2 — POSITIVE: for positive sentiment, thank them and add one SEO keyword.\n' +
-      'Rule 3 — NEGATIVE: never name staff; acknowledge and invite them to call or email the business.\n' +
-      'Rule 4 — ESCALATE: if {{4.review.escalate}} is true, keep the reply short and recommend an immediate call.',
+      'Write a response to {{Review.text}} with star rating: {{Review.rating}}\n\n' +
+      'Apply all relevant rules below (cumulative, not exclusive).\n\n' +
+      'Rule 0 — Language: reply in the same language as the review ({{4.review.language}}).\n\n' +
+      'Rule 1 — Length: keep the reply under 60 words.\n\n' +
+      'Rule 2 — Positive: for positive sentiment, thank them and add one SEO keyword.\n\n' +
+      'Rule 3 — Negative: never name staff; acknowledge and invite them to call or email the business.\n\n' +
+      'Rule 4 — Escalate: if {{4.review.escalate}} is true, keep the reply short and recommend an immediate call.',
     outputFields: [
       { value: 'Review.response', type: 'variable' },
     ],
