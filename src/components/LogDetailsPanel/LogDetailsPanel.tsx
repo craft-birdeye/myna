@@ -811,7 +811,7 @@ function NestedObjectBlock({
 /** "Show info" dropdown under an agent bubble — reveals LLM response time / TTS / knowledge base
  *  / tool response time meta. Tool calls themselves render separately via `ToolCallLine`. */
 const TRANSCRIPT_TOOL_CHIP_CLASS =
-  'prompt-chip prompt-chip--tool m-0 h-8 w-fit max-w-[85%] overflow-hidden p-0 pr-xs'
+  'prompt-chip prompt-chip--tool m-0 h-8 w-fit max-w-[85%] overflow-hidden !bg-surface-muted p-0 pr-xs transition-colors hover:!bg-surface-l2'
 
 function TranscriptToolChipSwatch() {
   return (
@@ -863,7 +863,7 @@ function ToolCallLine({ tool }: { tool: LogToolCall }) {
       </button>
 
       {open && (
-        <div className="relative w-[85%] rounded-lg border border-border-strong bg-surface-muted px-md py-md">
+        <div className="relative w-[85%] rounded-lg bg-surface-muted px-md py-md shadow-card">
           <div className="absolute right-md top-md z-[1]">
             <Tooltip content="Copy" variant="brief">
               <button
@@ -992,11 +992,8 @@ function TranscriptEntry({
 }) {
   if (entry.role === 'system') {
     return (
-      <div className="flex justify-end py-sm">
-        <span className={TRANSCRIPT_TOOL_CHIP_CLASS}>
-          <TranscriptToolChipSwatch />
-          <span className="prompt-chip-label">{entry.text}</span>
-        </span>
+      <div className="py-sm">
+        <ChatSystemLabel text={entry.text} />
       </div>
     )
   }
