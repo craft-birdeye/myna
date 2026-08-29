@@ -1551,8 +1551,8 @@ export default function AgentBuilder({
   const isReviewResponseAgent = /review response/i.test(entryAgentName) || /review response/i.test(agentName);
   const isReviewGenerationAgent = /review generation/i.test(entryAgentName) || /review generation/i.test(agentName);
   const isReviewsAiAgent = isReviewResponseAgent || isReviewGenerationAgent;
-  // Response agents (Sep1) only — Front-desk-Sep1 keeps the separate zoom/undo-redo/help layout.
-  const combineControlsLeft = sep1Chrome && isReviewsAiAgent;
+  // All exploration-family canvases (Sep 1 + exploration) — grouped bottom-left controls.
+  const combineControlsLeft = sep1Chrome;
   const hideProceduresFloater =
     isReviewsAiAgent || isWaitlistAgent || isPreVisitAgent || isReminderAgent;
   // Procedures floater: Front desk family only — not Reviews AI, Waitlist, Pre-visit, or Reminder.

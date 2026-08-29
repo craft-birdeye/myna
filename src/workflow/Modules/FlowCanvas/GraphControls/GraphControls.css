@@ -243,8 +243,8 @@
 }
 
 /* Response agents (Sep1) only: zoom/undo-redo/help sit adjacent at bottom-left instead of
-   spread across left/center/top-right — pull the editor pill (and, below, the help pill)
-   out of absolute centering/anchoring so the container's flex gap lays them out in a row. */
+ * spread across left/center/top-right — pull the editor pill (and, below, the help pill)
+ * out of absolute centering/anchoring so the container's flex gap lays them out in a row. */
 .graph-controls--rr-chrome-combined {
   justify-content: flex-start;
 }

@@ -38,7 +38,7 @@ export default function GraphControls({
    * Exploration-only (`response-agents-exploration`); other agents keep it top-right. */
   onHelpToggle = null,
   helpOpen = false,
-  /** Response agents (Sep1) only — zoom collapses to a "100% ▾" dropdown and the zoom/undo-redo/
+  /** Exploration-family canvases — zoom collapses to a "100% ▾" dropdown and the zoom/undo-redo/
    * help pills sit adjacent at bottom-left instead of spread left/center/top-right. */
   combineControlsLeft = false,
 }) {

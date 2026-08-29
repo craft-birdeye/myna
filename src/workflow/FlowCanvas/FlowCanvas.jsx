@@ -660,7 +660,7 @@ function FlowCanvasInner({
    * instead of the top-right floater (exploration only). */
   onHelpToggle = null,
   helpOpen = false,
-  /** Response agents (Sep1) only — groups zoom/undo-redo/help into three adjacent pills at
+  /** Exploration-family canvases — groups zoom/undo-redo/help into three adjacent pills at
    * bottom-left instead of spread across left/center/top-right. */
   combineControlsLeft = false,
   /** Node id to pan into view — used by the test run to follow the executing card. */

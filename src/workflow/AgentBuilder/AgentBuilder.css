@@ -2048,7 +2048,7 @@
 }
 
 /*
- * Sep 1 combined controls (zoom + undo/redo + help as one bottom-left flex row).
+ * Exploration-family combined controls (zoom + undo/redo + help as one bottom-left flex row).
  * The per-pill rules above offset only `__rr-zoom` via `position: relative`, which slides
  * the zoom pill out from under the panel but strands undo/redo and help behind it. Here the
  * whole row shifts instead, so all three clear the panel together.
