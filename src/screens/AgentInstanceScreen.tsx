@@ -957,7 +957,10 @@ export function AgentInstanceScreen({
                       setSavingsModalOpen(false)
                     }}
                   />
-                  <div className="px-lg py-lg">
+                  <div className="px-2xl pb-lg pt-[calc(theme(spacing.lg)+theme(spacing.md))]">
+                    <h2 className="mb-md text-[16px] leading-6 tracking-[-0.32px] text-text-primary">
+                      Outcomes by location
+                    </h2>
                     <DataTable
                       columns={COLUMNS}
                       data={visibleLocations}

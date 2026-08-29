@@ -7598,7 +7598,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       locked: true,
       truncate: false,
       render: (v, row) => (
-        <div className={`flex flex-col ${row.hasDraft ? 'gap-sm' : ''}`}>
+        <div className={`flex flex-col ${row.hasDraft ? 'gap-xs' : ''}`}>
           <button
             type="button"
             onClick={(e) => {
@@ -7623,7 +7623,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   'Draft',
                 )
               }}
-              className="flex h-7 items-center gap-sm truncate pl-xs text-left text-body text-text-secondary hover:text-text-action"
+              className="flex h-7 items-center gap-sm truncate -ml-xs text-left text-body text-text-secondary hover:text-text-action"
             >
               <span className="text-text-tertiary" aria-hidden>
                 └
@@ -7641,7 +7641,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       sortable: true,
       truncate: false,
       render: (v, row) => (
-        <div className={`flex flex-col ${row.hasDraft ? 'gap-sm' : ''}`}>
+        <div className={`flex flex-col ${row.hasDraft ? 'gap-xs' : ''}`}>
           <div className={`flex items-center gap-sm ${row.hasDraft ? 'h-7' : 'min-h-5'}`}>
             <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />
             {row.issues ? (
@@ -8616,7 +8616,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                     onClick={() =>
                                       onEditAgent?.(row.name, undefined, undefined, 'Draft')
                                     }
-                                    className="flex min-w-0 items-center gap-sm pl-xs text-left text-body text-text-secondary hover:text-text-action"
+                                    className="flex min-w-0 items-center gap-sm -ml-xs text-left text-body text-text-secondary hover:text-text-action"
                                   >
                                     <span className="text-text-tertiary" aria-hidden>
                                       └
@@ -8686,7 +8686,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         rowClassName={(row) =>
                           // Equal inset + shared 24px live-line so metrics sit with Active name/chip.
                           row.hasDraft
-                            ? '[&>td]:!h-auto [&>td]:align-top [&>td]:py-md [&>td>span]:!flex [&>td>span]:h-7 [&>td>span]:items-center'
+                            ? '[&>td]:!h-auto [&>td]:align-top [&>td]:py-sm [&>td>span]:!flex [&>td>span]:h-7 [&>td>span]:items-center'
                             : ''
                         }
                       />
