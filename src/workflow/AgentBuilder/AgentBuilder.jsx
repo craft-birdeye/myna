@@ -1061,6 +1061,8 @@ export default function AgentBuilder({
   templateId,
   templateSource,
   initialStatus = 'Draft',
+  /** Live Active instance also has an unpublished draft — block Active RHS edits. */
+  hasUnpublishedDraft = false,
   initialDescription = '',
   initialNodes = null,
   initialNodeDetails = null,
@@ -1531,11 +1533,13 @@ export default function AgentBuilder({
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
   const [publishBlockedModalOpen, setPublishBlockedModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [draftRedirectModalOpen, setDraftRedirectModalOpen] = useState(false);
   const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
   const publishMenuRef = useRef(null);
   const resolveIssuesRef = useRef(null);
   const importInputRef = useRef(null);
+  const blockActiveEditsForDraftRef = useRef(false);
   useEffect(() => {
     if (!headerMenuOpen) return;
     const handler = (e) => {
@@ -1880,6 +1884,14 @@ export default function AgentBuilder({
     setHelpCenterOpen(false);
   }, [closeAiBuilderPanel]);
 
+  /** Leave Active and open the unpublished draft so the user can continue editing there. */
+  const handleGoToDraftVersion = useCallback(() => {
+    setDraftRedirectModalOpen(false);
+    setVersionHistoryOpen(false);
+    setDraftVersionHistory(false);
+    setAgentStatus('Draft');
+  }, []);
+
   /** Delete is destructive and irreversible — always confirm before acting. */
   const handleDeleteAgent = useCallback(() => {
     setHeaderMenuOpen(false);
@@ -1981,6 +1993,10 @@ export default function AgentBuilder({
 
   /* ─── Live node sync: RHS → canvas ─── */
   const handleNodeFieldChange = useCallback((nodeId, field, value) => {
+    if (blockActiveEditsForDraftRef.current) {
+      setDraftRedirectModalOpen(true);
+      return;
+    }
     setNodeDetails((prev) => {
       const nodeDet = prev[nodeId] || {};
       const updated = { ...prev, [nodeId]: { ...nodeDet, [field]: value } };
@@ -2342,6 +2358,9 @@ export default function AgentBuilder({
    * actions, and Publish is swapped for a Restore CTA.
    */
   const versionHistoryMode = versionHistoryOpen && explorationChrome;
+  /** Live Active + unpublished draft — RHS mutations redirect to the draft instead. */
+  blockActiveEditsForDraftRef.current =
+    Boolean(hasUnpublishedDraft) && agentStatus !== 'Draft' && !viewOnly && !versionHistoryMode;
   /** Draft entry point prepends the working copy; every other entry point uses the plain list. */
   const versionHistoryList = draftVersionHistory
     ? [DRAFT_VERSION, ...VERSION_HISTORY_VERSIONS]
@@ -3062,6 +3081,10 @@ export default function AgentBuilder({
           bodyProps={{
             values: startDetails,
             onChange: (field, value) => {
+              if (blockActiveEditsForDraftRef.current) {
+                setDraftRedirectModalOpen(true);
+                return;
+              }
               setNodeDetails((prev) => ({
                 ...prev,
                 [START_NODE_ID]: { ...(prev[START_NODE_ID] || startDetails), [field]: value },
@@ -3862,6 +3885,18 @@ export default function AgentBuilder({
                               View active version
                             </button>
                           </span>
+                        ) : hasUnpublishedDraft && agentStatus === 'Active' ? (
+                          <span className="ab-header-status ab-header-status--active ab-header-status--with-live">
+                            <span>Active</span>
+                            <span className="ab-header-status__divider" aria-hidden />
+                            <button
+                              type="button"
+                              className="ab-header-status__view-live"
+                              onClick={handleGoToDraftVersion}
+                            >
+                              Edit draft
+                            </button>
+                          </span>
                         ) : (
                           <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
                             {agentStatus}
@@ -4283,6 +4318,64 @@ export default function AgentBuilder({
                     onClick={handleViewPublishErrors}
                   >
                     View errors
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+
+          {/* ─── Draft redirect alert (edit Active while unpublished draft exists) ─── */}
+          {draftRedirectModalOpen && createPortal(
+            <div
+              className={`ab-confirm-overlay${
+                rightPanelOpen
+                  ? rightPanelWide
+                    ? ' ab-confirm-overlay--rhs-wide'
+                    : ' ab-confirm-overlay--rhs-open'
+                  : ''
+              }`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setDraftRedirectModalOpen(false);
+              }}
+            >
+              <div
+                className="ab-confirm-dialog"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ab-draft-redirect-title"
+              >
+                <div className="ab-confirm-dialog__header">
+                  <h2 id="ab-draft-redirect-title" className="ab-confirm-dialog__title">
+                    This agent has an unpublished draft
+                  </h2>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setDraftRedirectModalOpen(false)}
+                    className="ab-confirm-dialog__close"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <p className="ab-confirm-dialog__body">
+                  Continue editing the draft — changes to the active version won't carry over once it's published.
+                </p>
+                <div className="ab-confirm-dialog__footer">
+                  <button
+                    type="button"
+                    className="ab-confirm-dialog__cancel"
+                    onClick={() => setDraftRedirectModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="ab-confirm-dialog__primary"
+                    onClick={handleGoToDraftVersion}
+                  >
+                    Edit draft
                   </button>
                 </div>
               </div>

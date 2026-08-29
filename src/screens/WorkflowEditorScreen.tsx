@@ -8,6 +8,7 @@ import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { getLastSavedCreateChat, createChatVariantForAgent, getRetainedCreateAiChat } from '../data/createAgentChatStore'
 import { AGENT_INSTANCE_ISSUE_COUNTS, getAgentIssues } from '../data/agentIssues'
+import { instanceHasUnpublishedDraft } from '../data/agentUnpublishedDrafts'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -255,6 +256,8 @@ export function WorkflowEditorScreen({
 
   // Create-from-scratch opens an empty canvas — never show "Active".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
+  const hasUnpublishedDraft =
+    resolvedStatus === 'Active' && instanceHasUnpublishedDraft(agentName)
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0
 
   const AGENT_NAV_MAP: Record<string, string> = {
@@ -293,6 +296,7 @@ export function WorkflowEditorScreen({
             showProceduresPalette={isFrontDeskAgent}
             onAddProcedure={addProcedure}
             initialStatus={resolvedStatus}
+            hasUnpublishedDraft={hasUnpublishedDraft}
             publishDisabled={false}
             issueCount={issueCount}
             issues={getAgentIssues(agentName)}

@@ -58,18 +58,22 @@ const ICONS: Record<LibraryCardGlyph, string> = {
 
 export function LibraryCardIcon({
   glyph,
+  size = 'md',
 }: {
   glyph: LibraryCardGlyph
   /** Kept for call-site compatibility; color lives in the SVG. */
   tone?: LibraryCardTone
+  /** `md` = 44px (default), `sm` = 32px. */
+  size?: 'sm' | 'md'
 }) {
+  const px = size === 'sm' ? 32 : 44
   return (
     <img
       src={ICONS[glyph]}
       alt=""
-      width={44}
-      height={44}
-      className="size-11 shrink-0"
+      width={px}
+      height={px}
+      className={`shrink-0 ${size === 'sm' ? 'size-8' : 'size-11'}`}
       aria-hidden
     />
   )

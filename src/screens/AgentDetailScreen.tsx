@@ -21,6 +21,7 @@ import {
   MetricTiles,
   PromptComposer,
   RefChip,
+  ReviewResponseOutcomesCharts,
   Tabs,
   Toast,
   Tooltip,
@@ -136,10 +137,14 @@ function isReviewResponseAgentName(name: string) {
   return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
 }
 
-/** Review response agent (exploration) grid only — visual card variations. */
-const CARD_LAYOUT_OPTIONS: Array<{ value: 'default' | 'r1'; label: string }> = [
+/** Review response agent (exploration) grid only — visual card variations.
+ *  Default = 2-metric icon card + updated footer; R1 = 4-metric icon card;
+ *  R2 = compact footer card; R3 = metric-forward (no icon) + View draft. */
+const CARD_LAYOUT_OPTIONS: Array<{ value: 'default' | 'r1' | 'r2' | 'r3'; label: string }> = [
   { value: 'default', label: 'Default' },
   { value: 'r1', label: 'R1' },
+  { value: 'r2', label: 'R2' },
+  { value: 'r3', label: 'R3' },
 ]
 
 const FRONTDESK_AGENT_NAME = 'Front desk agent'
@@ -195,15 +200,22 @@ interface AgentInstance {
   updatedBy?: string
   /** When true, Agents table nests a Draft name under this live row (same row, no divider). */
   hasDraft?: boolean
+  /** Region label from the source RegionRow — used by Agents FilterPanel. */
+  region?: string
+  /** City mapped from region for Location filter. */
+  locationName?: string
   [key: string]: string | number | boolean | undefined
 }
 
 function AgentInstanceMoreMenu({
   row,
   items,
+  compact = false,
 }: {
   row: AgentInstance
   items: RowMenuItem<AgentInstance>[]
+  /** Ghost icon button (no border) for dense card headers. */
+  compact?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
@@ -225,9 +237,13 @@ function AgentInstanceMoreMenu({
           setMenuPos({ top: rect.bottom + 4, left: rect.right - 216 })
           setOpen((current) => !current)
         }}
-        className="flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
+        className={
+          compact
+            ? 'flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-l2 hover:text-text-primary'
+            : 'flex size-9 shrink-0 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2'
+        }
       >
-        <Icon name="more_vert" size={20} />
+        <Icon name="more_vert" size={compact ? 18 : 20} />
       </button>
       {open && createPortal(
         <>
@@ -336,10 +352,10 @@ interface RegionRow {
 
 /** Sample dates / editors for the Agents table trailing columns. */
 const LAST_UPDATED_SAMPLES = [
-  'Aug 06, 2026',
-  'Aug 05, 2026',
-  'Aug 03, 2026',
-  'Jul 29, 2026',
+  'August 6',
+  'August 5',
+  'August 3',
+  'July 29',
 ] as const
 const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as const
 
@@ -447,6 +463,40 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
 const DEFAULT_REGIONS: RegionRow[] = REGIONS_BY_AGENT['Front desk agent']
 
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l }))
+
+/** Map region labels → sample cities so Location filter matches real row fields. */
+const REGION_TO_LOCATION: Record<string, string> = {
+  'North region': 'Mountain View',
+  'North Region': 'Mountain View',
+  'East region': 'Palo Alto',
+  'East Region': 'Palo Alto',
+  'South region': 'San Jose',
+  'South Region': 'San Jose',
+  'West region': 'Sunnyvale',
+  'West Region': 'Sunnyvale',
+}
+
+function matchesChannelFilter(rowChannels: string, picked: string[]) {
+  if (!picked.length) return true
+  const parts = rowChannels.split(',').map((c) => c.trim().toLowerCase())
+  return picked.some((p) => parts.includes(p.toLowerCase()))
+}
+
+function matchesStatusFilter(row: AgentInstance, picked: string[]) {
+  if (!picked.length) return true
+  return picked.some((status) => {
+    if (status === 'Draft') return row.status === 'Draft' || !!row.hasDraft
+    return row.status === status
+  })
+}
+
+function parseAgentsUpdatedMs(value?: string) {
+  if (!value) return 0
+  // Display strings omit the year (e.g. "August 6") — pin a year so sort still works.
+  const forParse = /,\s*\d{4}\b/.test(value) || /\b\d{4}\b/.test(value) ? value : `${value}, 2026`
+  const t = Date.parse(forParse)
+  return Number.isFinite(t) ? t : 0
+}
 
 // ── Library template cards for the create-agent empty state ───────────────
 const LIBRARY_TEMPLATES = [
@@ -7202,10 +7252,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [agentFilters, setAgentFilters] = useState<Record<string, string[]>>({})
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   /** Review response agent (exploration) grid: 'default' = icon card; 'r1' = metric-forward card. */
-  const [cardLayoutOption, setCardLayoutOption] = useState<'default' | 'r1'>('default')
+  const [cardLayoutOption, setCardLayoutOption] = useState<'default' | 'r1' | 'r2' | 'r3'>('default')
   const [cardLayoutMenuOpen, setCardLayoutMenuOpen] = useState(false)
   const cardLayoutMenuRef = useRef<HTMLDivElement>(null)
 
@@ -7468,6 +7519,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     name: r.instanceName ?? `${agentName} - ${r.region}`,
     status: r.status,
     channels: r.channels,
+    region: r.region,
+    locationName: REGION_TO_LOCATION[r.region] ?? r.region,
     interactions: r.interactions,
     fcr: r.fcr,
     aht: r.aht,
@@ -7854,12 +7907,54 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     [agentInstanceRowMenuItems],
   )
 
-  const FILTER_FIELDS: FilterField[] = [
-    { id: 'status', label: 'Status', options: opts('Active', 'Inactive', 'Draft') },
-    { id: 'channels', label: 'Channels', options: opts('Voice call', 'Web chat', 'Text', 'Email', 'Facebook'), multi: true },
-    { id: 'region', label: 'Region', options: opts('North region', 'East region', 'South region', 'West region') },
-    { id: 'location', label: 'Location', options: opts('Mountain View', 'Palo Alto', 'San Jose', 'Sunnyvale') },
-  ]
+  const FILTER_FIELDS: FilterField[] = useMemo(() => {
+    const statusSet = new Set<string>()
+    const channelSet = new Set<string>()
+    const regionSet = new Set<string>()
+    const locationSet = new Set<string>()
+    const updatedBySet = new Set<string>()
+    for (const row of data) {
+      statusSet.add(row.status)
+      if (row.hasDraft) statusSet.add('Draft')
+      row.channels.split(',').forEach((c) => {
+        const t = c.trim()
+        if (t) channelSet.add(t)
+      })
+      if (row.region) regionSet.add(row.region)
+      if (row.locationName) locationSet.add(row.locationName)
+      if (row.updatedBy) updatedBySet.add(row.updatedBy)
+    }
+    const statusOpts = ['Active', 'Inactive', 'Draft'].filter((s) => statusSet.has(s))
+    const channelOpts = [...channelSet].sort()
+    const regionOpts = [...regionSet].sort()
+    const locationOpts = [...locationSet].sort()
+    const updatedByOpts = [...updatedBySet].sort()
+    return [
+      { id: 'status', label: 'Status', options: opts(...(statusOpts.length ? statusOpts : ['Active', 'Inactive', 'Draft'])) },
+      {
+        id: 'channels',
+        label: 'Channels',
+        options: opts(...(channelOpts.length ? channelOpts : ['Voice call', 'Web chat', 'Text', 'Email', 'Facebook'])),
+        multi: true,
+      },
+      {
+        id: 'region',
+        label: 'Region',
+        options: opts(...(regionOpts.length ? regionOpts : ['North region', 'East region', 'South region', 'West region'])),
+      },
+      {
+        id: 'location',
+        label: 'Location',
+        options: opts(...(locationOpts.length ? locationOpts : ['Mountain View', 'Palo Alto', 'San Jose', 'Sunnyvale'])),
+      },
+      {
+        id: 'updatedBy',
+        label: 'Updated by',
+        options: opts(...(updatedByOpts.length ? updatedByOpts : [...UPDATED_BY_SAMPLES])),
+        multi: true,
+      },
+    ]
+  }, [data])
 
   const librarySource: CreateLibraryCard[] =
     isReviewResponse
@@ -7888,7 +7983,42 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }))
 
   const searchQ = searchQuery.trim().toLowerCase()
-  const visibleData = searchQ ? data.filter((row) => row.name.toLowerCase().includes(searchQ)) : data
+  const visibleData = useMemo(() => {
+    const filtered = data.filter((row) => {
+      if (searchQ && !row.name.toLowerCase().includes(searchQ)) return false
+      if (!matchesStatusFilter(row, agentFilters.status ?? [])) return false
+      if (!matchesChannelFilter(row.channels, agentFilters.channels ?? [])) return false
+      const regionPicked = agentFilters.region ?? []
+      if (
+        regionPicked.length &&
+        !regionPicked.some((r) => r.toLowerCase() === (row.region ?? '').toLowerCase())
+      ) {
+        return false
+      }
+      const locationPicked = agentFilters.location ?? []
+      if (
+        locationPicked.length &&
+        !locationPicked.some((l) => l.toLowerCase() === (row.locationName ?? '').toLowerCase())
+      ) {
+        return false
+      }
+      const updatedByPicked = agentFilters.updatedBy ?? []
+      if (
+        updatedByPicked.length &&
+        !updatedByPicked.some((u) => u.toLowerCase() === (row.updatedBy ?? '').toLowerCase())
+      ) {
+        return false
+      }
+      return true
+    })
+
+    return [...filtered].sort(
+      (a, b) =>
+        parseAgentsUpdatedMs(b.lastUpdated) - parseAgentsUpdatedMs(a.lastUpdated) ||
+        a.name.localeCompare(b.name),
+    )
+  }, [data, searchQ, agentFilters])
+
   const visibleLibraryCards = searchQ
     ? libraryCards.filter(
         (card) => card.title.toLowerCase().includes(searchQ) || card.description.toLowerCase().includes(searchQ),
@@ -8526,6 +8656,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       }
                     />
                   </div>
+                  {isReviewResponse ? <ReviewResponseOutcomesCharts /> : null}
                   <EstimateSavingsModal
                     open={savingsModalOpen}
                     onClose={() => setSavingsModalOpen(false)}
@@ -8574,8 +8705,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     </>
                   )}
                   {useExplorationGrid ? (
-                    // Dropdown: Default = icon card; R1 = metric-forward card (no glyph).
-                    <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
+                    // Dropdown: Default = icon card; R1 = metric-forward; R2 = compact + footer meta.
+                    <div className="grid grid-cols-1 items-start gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
                         const cardMetrics = isExplorationFrontDeskAgents
                           ? [
@@ -8584,59 +8715,165 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               { value: row.aht ?? '—', label: 'Resolution rate' },
                               { value: row.escalation ?? '—', label: 'Time saved' },
                             ]
-                          : [
-                              { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
-                              { value: row.responseRate ?? '—', label: 'Response rate' },
-                              { value: row.avgResponseTime ?? '—', label: 'Average response time' },
-                              { value: row.timeSaved ?? '—', label: 'Time saved' },
-                            ]
-                        const isDefaultIconCard = cardLayoutOption === 'default'
+                          : cardLayoutOption === 'default'
+                            ? [
+                                { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
+                                { value: row.responseRate ?? '—', label: 'Response rate' },
+                              ]
+                            : [
+                                { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
+                                { value: row.responseRate ?? '—', label: 'Response rate' },
+                                { value: row.avgResponseTime ?? '—', label: 'Average response time' },
+                                { value: row.timeSaved ?? '—', label: 'Time saved' },
+                              ]
+                        // Default + R1: icon + draft under name. R3: View draft in header (no icon).
+                        const isDefaultIconCard =
+                          cardLayoutOption === 'default' || cardLayoutOption === 'r1'
+                        const isR2Card = cardLayoutOption === 'r2'
+                        // Default: 2 metrics + updated footer (former R3).
+                        const isTwoMetricFooterCard = cardLayoutOption === 'default'
+                        const updatedMeta = [
+                          row.lastUpdated ? `Updated ${row.lastUpdated}` : null,
+                          row.updatedBy ?? null,
+                        ].filter(Boolean).join(' · ')
+
+                        if (isR2Card) {
+                          return (
+                            <div
+                              key={`${row.name}-${row.status}`}
+                              className="group relative flex min-h-[188px] min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-md transition-colors hover:bg-surface-hover"
+                            >
+                              <div className="flex items-center justify-between gap-sm">
+                                <LibraryCardIcon glyph="autonomous" size="sm" />
+                                <div className="flex shrink-0 items-center gap-sm">
+                                  {row.hasDraft ? (
+                                    <>
+                                      <Tooltip content="Draft · Rupa, 2h ago" variant="brief">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            onEditAgent?.(row.name, undefined, undefined, 'Draft')
+                                          }
+                                          className="truncate text-body text-text-action hover:underline"
+                                        >
+                                          View draft
+                                        </button>
+                                      </Tooltip>
+                                      <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
+                                    </>
+                                  ) : null}
+                                  <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
+                                </div>
+                              </div>
+
+                              <h3 className="mt-sm mb-lg line-clamp-2 min-w-0 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
+                                {row.name}
+                              </h3>
+
+                              <div className="flex content-start gap-2xl">
+                                {(isExplorationFrontDeskAgents
+                                  ? [
+                                      { label: 'Conversations responded', value: row.interactions ?? '—' },
+                                      { label: 'Conversations resolved', value: row.fcr ?? '—' },
+                                    ]
+                                  : [
+                                      { label: 'Reviews responded', value: row.reviewsResponded ?? '—' },
+                                      { label: 'Response rate', value: row.responseRate ?? '—' },
+                                    ]
+                                ).map((metric) => (
+                                  <div key={metric.label} className="min-w-0 shrink-0">
+                                    <div className="text-body text-text-primary">{metric.value}</div>
+                                    <div className="text-small text-text-tertiary">{metric.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="relative mt-auto min-h-9 pt-md">
+                                <div className="flex min-w-0 items-center group-hover:invisible">
+                                  <span className="min-w-0 truncate text-small text-text-tertiary">
+                                    {updatedMeta || '—'}
+                                  </span>
+                                </div>
+                                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => openAgentInstanceDetails(row)}
+                                    className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                                  >
+                                    View details
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openAgentInstanceEditor(row)}
+                                    className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                                  >
+                                    Edit
+                                  </button>
+                                  <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        }
+
                         return (
                           <div
                             key={`${row.name}-${row.status}`}
                             className="group relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                           >
-                            <div className={`flex min-w-0 justify-between gap-sm ${isDefaultIconCard ? 'items-center' : 'items-start'}`}>
-                              <div
-                                className={`flex min-w-0 flex-1 flex-col gap-xs ${isDefaultIconCard ? 'min-h-[44px]' : ''}`}
-                              >
-                                <div className="flex min-w-0 items-center gap-sm">
+                            <div className="flex min-w-0 items-start justify-between gap-sm">
+                              <div className="flex min-w-0 flex-1 flex-col gap-xs">
+                                <div className="flex min-w-0 items-start gap-sm">
                                   {isDefaultIconCard && <LibraryCardIcon glyph="autonomous" />}
-                                  <button
-                                    type="button"
-                                    onClick={() => openAgentInstanceDetails(row)}
-                                    className="min-w-0 flex-1 truncate text-left text-body leading-[22px] tracking-[-0.28px] text-text-primary hover:text-text-action"
-                                  >
-                                    {row.name}
-                                  </button>
+                                  <div className="flex min-w-0 flex-1 flex-col gap-xs">
+                                    <button
+                                      type="button"
+                                      onClick={() => openAgentInstanceDetails(row)}
+                                      className="min-w-0 truncate text-left text-body leading-[22px] tracking-[-0.28px] text-text-primary hover:text-text-action"
+                                    >
+                                      {row.name}
+                                    </button>
+                                    {isDefaultIconCard && row.hasDraft ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onEditAgent?.(row.name, undefined, undefined, 'Draft')
+                                        }
+                                        className="truncate text-left text-small text-text-action hover:underline"
+                                      >
+                                        Draft · Rupa, 2h ago
+                                      </button>
+                                    ) : null}
+                                  </div>
                                 </div>
-                                {row.hasDraft ? (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      onEditAgent?.(row.name, undefined, undefined, 'Draft')
-                                    }
-                                    className="flex min-w-0 items-center gap-sm -ml-xs text-left text-body text-text-secondary hover:text-text-action"
-                                  >
-                                    <span className="text-text-tertiary" aria-hidden>
-                                      └
-                                    </span>
-                                    <span className="min-w-0 truncate">{row.name}</span>
-                                  </button>
-                                ) : null}
                               </div>
-                              <div className="flex shrink-0 flex-col items-end gap-xs">
-                                <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
-                                {row.hasDraft ? (
-                                  <Chip label="Draft" variant={STATUS_VARIANT.Draft} />
+                              <div className="flex shrink-0 items-center gap-sm">
+                                {!isDefaultIconCard && row.hasDraft ? (
+                                  <>
+                                    <Tooltip content="Draft · Rupa, 2h ago" variant="brief">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onEditAgent?.(row.name, undefined, undefined, 'Draft')
+                                        }
+                                        className="truncate text-body text-text-action hover:underline"
+                                      >
+                                        View draft
+                                      </button>
+                                    </Tooltip>
+                                    <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
+                                  </>
                                 ) : null}
+                                <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
                               </div>
                             </div>
                             <div
                               className={
-                                isDefaultIconCard
-                                  ? 'mt-sm grid grid-cols-3 content-start gap-sm'
-                                  : 'mt-md grid grid-cols-3 content-start gap-md'
+                                isTwoMetricFooterCard
+                                  ? 'mt-lg grid grid-cols-2 content-start gap-sm'
+                                  : isDefaultIconCard
+                                    ? 'mt-sm grid grid-cols-3 content-start gap-sm'
+                                    : 'mt-md grid grid-cols-3 content-start gap-md'
                               }
                             >
                               {cardMetrics.map((metric) => (
@@ -8648,24 +8885,50 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                 </div>
                               ))}
                             </div>
-                            {/* Overlay (not in-flow) so revealing it on hover never changes the card's height. */}
-                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-gradient-to-t from-surface from-60% to-transparent px-lg pb-lg pt-2xl opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                              <button
-                                type="button"
-                                onClick={() => openAgentInstanceDetails(row)}
-                                className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-                              >
-                                View details
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openAgentInstanceEditor(row)}
-                                className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
-                              >
-                                Edit
-                              </button>
-                              <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
-                            </div>
+                            {isTwoMetricFooterCard ? (
+                              <div className="relative mt-auto min-h-9 pt-md">
+                                <div className="flex min-w-0 items-center group-hover:invisible">
+                                  <span className="min-w-0 truncate text-small text-text-tertiary">
+                                    {updatedMeta || '—'}
+                                  </span>
+                                </div>
+                                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => openAgentInstanceDetails(row)}
+                                    className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                                  >
+                                    View details
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openAgentInstanceEditor(row)}
+                                    className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                                  >
+                                    Edit
+                                  </button>
+                                  <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-surface-hover px-lg pb-lg pt-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                <button
+                                  type="button"
+                                  onClick={() => openAgentInstanceDetails(row)}
+                                  className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                                >
+                                  View details
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openAgentInstanceEditor(row)}
+                                  className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                                >
+                                  Edit
+                                </button>
+                                <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                              </div>
+                            )}
                           </div>
                         )
                       })}
@@ -8704,7 +8967,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           )}
         </div>
 
-        <FilterPanel open={filterOpen} fields={FILTER_FIELDS} onClose={() => setFilterOpen(false)} />
+        <FilterPanel
+          open={filterOpen}
+          fields={FILTER_FIELDS}
+          selections={agentFilters}
+          onSelectionsChange={setAgentFilters}
+          onClose={() => setFilterOpen(false)}
+        />
       </div>
 
       <CustomizeColumnsDrawer
