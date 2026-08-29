@@ -664,20 +664,22 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   );
 
   const descriptionField = (
-    <TextArea
-      name="description"
-      label="Description"
-      placeholder="Enter description"
-      value={description}
-      onChange={(e) => {
-        setDescription(e.target.value);
-        emit('description', e.target.value);
-        clearInvalid('description', e.target.value);
-      }}
-      required
-      noFloatingLabel
-      error={invalidField === 'description'}
-    />
+    <div className={styles.descriptionField}>
+      <TextArea
+        name="description"
+        label="Description"
+        placeholder="Enter description"
+        value={description}
+        onChange={(e) => {
+          setDescription(e.target.value);
+          emit('description', e.target.value);
+          clearInvalid('description', e.target.value);
+        }}
+        required
+        noFloatingLabel
+        error={invalidField === 'description'}
+      />
+    </div>
   );
 
   if (segmentedLayout) {
@@ -802,20 +804,15 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   return (
     <div className={`${styles.container}${collapseChipsToOneLine ? ` ${styles.containerExploration}` : ''}`}>
       <div className={styles.essentialsGroup}>
-        {collapseChipsToOneLine ? (
-          <div className={styles.nameDescriptionGroup}>
-            {taskNameField}
-            {descriptionField}
-          </div>
-        ) : (
-          <>
-            {taskNameField}
-            {descriptionField}
-          </>
-        )}
+        <div className={styles.nameDescriptionGroup}>
+          {taskNameField}
+          {descriptionField}
+        </div>
 
-        {userPromptSection}
-        {outputFieldsSection}
+        <div className={styles.promptOutputGroup}>
+          {userPromptSection}
+          {outputFieldsSection}
+        </div>
       </div>
 
       <div className={styles.advancedSection}>
@@ -835,10 +832,10 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
         </button>
         {advancedOpen && (
           <div className={styles.advancedBody}>
-            {llmModelSection}
+            {inputFieldsSection}
             {systemPromptSection}
             {contextSection}
-            {inputFieldsSection}
+            {llmModelSection}
           </div>
         )}
       </div>

@@ -38,8 +38,21 @@ export default function SystemPromptInput({
   const overlayFieldsBtnRef = useRef(null);
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [needsExpand, setNeedsExpand] = useState(false);
   const fieldAnchorRef = expanded ? overlayFieldsBtnRef : fieldsBtnRef;
   const activeEditorRef = expanded ? overlayEditorRef : editorRef;
+
+  const checkNeedsExpand = useCallback(() => {
+    const el = editorRef.current;
+    if (!el || expanded) return;
+    const text = serializeFrom(el).trim();
+    if (!text) {
+      setNeedsExpand(false);
+      return;
+    }
+    // Show expand only when content doesn't fit the collapsed editor.
+    setNeedsExpand(el.scrollHeight > el.clientHeight + 1);
+  }, [expanded]);
 
   const emitChange = useCallback(() => {
     const el = activeEditorRef.current;
@@ -47,20 +60,42 @@ export default function SystemPromptInput({
     const s = serializeFrom(el);
     lastEmittedRef.current = s;
     onChangeRef.current?.(s);
-  }, [activeEditorRef]);
+    if (!expanded) {
+      // Defer until layout reflects the new content height.
+      requestAnimationFrame(() => {
+        const inline = editorRef.current;
+        if (!inline) return;
+        const text = serializeFrom(inline).trim();
+        setNeedsExpand(Boolean(text) && inline.scrollHeight > inline.clientHeight + 1);
+      });
+    }
+  }, [activeEditorRef, expanded]);
 
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
     const newVal = value ?? '';
-    if (newVal === lastEmittedRef.current) return;
+    if (newVal === lastEmittedRef.current) {
+      requestAnimationFrame(checkNeedsExpand);
+      return;
+    }
     lastEmittedRef.current = newVal;
     deserializeInto(el, newVal, () => {
       const s = serializeFrom(el);
       lastEmittedRef.current = s;
       onChangeRef.current?.(s);
+      requestAnimationFrame(checkNeedsExpand);
     });
-  }, [value]);
+  }, [value, checkNeedsExpand]);
+
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el || expanded) return undefined;
+    const ro = new ResizeObserver(() => checkNeedsExpand());
+    ro.observe(el);
+    requestAnimationFrame(checkNeedsExpand);
+    return () => ro.disconnect();
+  }, [checkNeedsExpand, expanded]);
 
   useEffect(() => {
     if (!expanded) return undefined;
@@ -177,7 +212,7 @@ export default function SystemPromptInput({
               <InfoTooltip text={SYSTEM_PROMPT_INFO} variant="detail" />
             )}
           </div>
-          {showLabelActions && showExpandButton && (
+          {showLabelActions && showExpandButton && needsExpand && (
             <button
               type="button"
               className={styles.expandBtn}

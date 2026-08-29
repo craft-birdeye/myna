@@ -27,7 +27,28 @@
 .nameDescriptionGroup {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
+}
+
+.containerExploration .nameDescriptionGroup {
+  gap: 14px;
+}
+
+/* User prompt → output fields: essentials gap + 12px. */
+.promptOutputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.containerExploration .promptOutputGroup {
+  gap: 26px;
+}
+
+/* Description textarea default ~76px (3 rows); trim 8px for a tighter action block. */
+.descriptionField :global(textarea) {
+  min-height: 0;
+  height: 68px;
 }
 
 .tabBar {
