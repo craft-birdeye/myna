@@ -423,14 +423,14 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
   [REVIEW_RESPONSE_AGENT_NAME]: [
     { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
     { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
-    { region: 'South Region', status: 'Inactive',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
-    { region: 'West Region',  status: 'Active', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region', hasDraft: true },
+    { region: 'South Region', status: 'Active', channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region', hasDraft: true },
+    { region: 'West Region',  status: 'Inactive', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
   [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
     { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
     { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
-    { region: 'South Region', status: 'Inactive',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
-    { region: 'West Region',  status: 'Active', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region', hasDraft: true },
+    { region: 'South Region', status: 'Active', channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region', hasDraft: true },
+    { region: 'West Region',  status: 'Inactive', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
   'Review generation agents': [
     {

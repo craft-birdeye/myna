@@ -3,7 +3,7 @@
  * Used by the workflow editor to block edits on Active and redirect to Draft.
  */
 export const INSTANCES_WITH_UNPUBLISHED_DRAFT = new Set([
-  'Review response agent - West Region',
+  'Review response agent - South Region',
 ])
 
 export function instanceHasUnpublishedDraft(instanceName: string | null | undefined): boolean {
