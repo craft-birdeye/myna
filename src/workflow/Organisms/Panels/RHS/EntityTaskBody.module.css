@@ -53,7 +53,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #fff;
+  background: #f2f4f7;
 }
 
 /*
@@ -216,4 +216,146 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ─── Exploration Option 2 vertical stepper ─── */
+.stepperContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stepper {
+  flex-shrink: 0;
+}
+
+.stepperList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 4px;
+}
+
+.stepperItem {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.stepperRail {
+  display: flex;
+  width: 20px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.stepMarker {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #c9cdd4;
+  border-radius: 999px;
+  background: #fff;
+  color: #9ca3af;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.24px;
+  box-sizing: border-box;
+}
+
+.stepMarkerActive {
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  background: #fff;
+}
+
+.stepConnector {
+  flex: 1 1 auto;
+  width: 1px;
+  min-height: 16px;
+  margin-top: 4px;
+  background: #e5e9f0;
+}
+
+.stepMain {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+
+.stepperItem:last-child .stepMain {
+  padding-bottom: 0;
+}
+
+.stepHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.stepLabel {
+  min-width: 0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182;
+}
+
+.stepLabelActive {
+  color: #0d0d12;
+}
+
+.stepChevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: #303030;
+  transition: transform 0.15s ease;
+}
+
+.stepChevronOpen {
+  transform: rotate(180deg);
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding-top: 8px;
+}
+
+.stepFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inlineToolConfig {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-top: 4px;
 }

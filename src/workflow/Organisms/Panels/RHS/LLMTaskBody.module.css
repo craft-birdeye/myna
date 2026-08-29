@@ -24,6 +24,17 @@
   gap: 14px;
 }
 
+/* Option 3: flat stack — same gap between every Setup field. */
+.essentialsGroupEqual {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.containerExploration .essentialsGroupEqual {
+  gap: 16px;
+}
+
 .nameDescriptionGroup {
   display: flex;
   flex-direction: column;
@@ -32,6 +43,14 @@
 
 .containerExploration .nameDescriptionGroup {
   gap: 14px;
+}
+
+.nameDescriptionGroupTight {
+  gap: 4px;
+}
+
+.containerExploration .nameDescriptionGroupTight {
+  gap: 4px;
 }
 
 /* User prompt → output fields: essentials gap + 12px. */
@@ -49,6 +68,14 @@
 .descriptionField :global(textarea) {
   min-height: 0;
   height: 68px;
+}
+
+/* Option 3: 3 lines, no vertical resize handle. */
+.descriptionFieldTwoLine :global(textarea) {
+  height: 76px;
+  min-height: 76px;
+  max-height: 76px;
+  resize: none;
 }
 
 .tabBar {
@@ -318,6 +345,190 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* ─── Option 3 vertical stepper accordion ─── */
+.option3Container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.option3Stepper {
+  flex-shrink: 0;
+}
+
+.option3StepperList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 4px;
+}
+
+.option3StepperItem {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.option3StepperRail {
+  display: flex;
+  width: 20px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.option3StepMarker {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #c9cdd4; /* border-selected */
+  border-radius: 999px;
+  background: #fff;
+  color: #9ca3af; /* text/tertiary */
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.24px;
+  box-sizing: border-box;
+}
+
+.option3StepMarkerActive {
+  border: 2px solid #1976d2; /* primary */
+  color: #1976d2;
+  background: #fff;
+}
+
+.option3StepConnector {
+  flex: 1 1 auto;
+  width: 1px;
+  min-height: 16px;
+  margin-top: 4px;
+  background: #e5e9f0; /* border */
+}
+
+.option3StepMain {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+
+.option3StepperItem:last-child .option3StepMain {
+  padding-bottom: 0;
+}
+
+.option3StepHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.option3StepLabel {
+  min-width: 0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182; /* text/secondary */
+}
+
+.option3StepLabelActive {
+  color: #0d0d12; /* text/primary */
+}
+
+.option3StepErrorIcon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: #d32f2f;
+  cursor: default;
+  line-height: 0;
+}
+
+.option3StepErrorIcon .material-symbols-outlined {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  color: inherit;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.option3StepMarkerError {
+  border-color: #d32f2f;
+  color: #d32f2f;
+}
+
+.option3StepChevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: #303030; /* text/icon */
+  transition: transform 0.15s ease;
+}
+
+.option3StepChevronOpen {
+  transform: rotate(180deg);
+}
+
+.option3StepBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding-top: 8px;
+  padding-bottom: 0;
+}
+
+.option3StepBody .essentialsGroupEqual {
+  gap: 12px;
+}
+
+/* Prompts & Fields: 12px more than the base equal gap. */
+.option3StepBody .option3PromptsFields {
+  gap: 24px;
+}
+
+/* Option 3: compact field controls; prompts match Option 1 editor typography. */
+.option3Container :global(input:not([type='checkbox']):not([type='radio'])),
+.option3Container :global(textarea),
+.option3Container :global(select),
+.option3Container :global(.tc-dropdown__value) {
+  font-size: 12px !important;
+  line-height: 16px !important;
+  letter-spacing: -0.24px !important;
+  font-family: 'Inter', 'Roboto', sans-serif !important;
+  color: #555 !important;
+}
+
+/* Exploration prompts: Option 1 text (14 / 20) with a bit more line spacing. */
+.option3Container :global([contenteditable='true']) {
+  font-size: 14px !important;
+  line-height: 22px !important;
+  letter-spacing: -0.28px !important;
+  font-family: 'Roboto', sans-serif !important;
+  color: #0d0d12 !important;
+  max-height: 240px !important;
 }
 
 .fieldGroup {

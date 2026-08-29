@@ -23,6 +23,9 @@ function Select({ value, onChange, children }) {
 }
 function SelectItem({ value, children }) { return <option value={value}>{children}</option>; }
 import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
+import ToolbarButton from '../../../Molecules/Inputs/ToolbarButton.jsx';
+import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
+import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal.jsx';
 import styles from './CustomToolViewer.module.css';
 
 // ─── Template picker data ─────────────────────────────────────────────────────
@@ -289,6 +292,11 @@ function InteractiveField({ field, onValueChange }) {
   const [abChecked, setAbChecked] = useState(true);
   const [variantValues, setVariantValues] = useState({});
   const [dateSelectVal, setDateSelectVal] = useState('');
+  const [fieldModalOpen, setFieldModalOpen] = useState(false);
+  const [bodySegments, setBodySegments] = useState(() => (
+    Array.isArray(field.segments) ? field.segments.map((s) => ({ ...s })) : null
+  ));
+  const fieldsBtnRef = useRef(null);
 
   useEffect(() => {
     if (['text', 'number', 'date', 'textarea', 'variable'].includes(field.type)) {
@@ -319,13 +327,29 @@ function InteractiveField({ field, onValueChange }) {
     if (field.type === 'dateSelect') {
       setDateSelectVal(field.defaultValue || (field.options?.[0] ?? ''));
     }
-  }, [field.id, field.defaultValue, field.type, field.options, field.defaultChecked]);
+    if (field.type === 'tags') {
+      setTags(Array.isArray(field.defaultValue) ? [...field.defaultValue] : []);
+    }
+    if (Array.isArray(field.segments)) {
+      setBodySegments(field.segments.map((s) => ({ ...s })));
+    }
+  }, [field.id, field.defaultValue, field.type, field.options, field.defaultChecked, field.segments]);
 
   useEffect(() => {
     if (field.type === 'checkbox') {
       onValueChange?.(field.id, checkValues);
     }
-  }, [checkValues, field.id, field.type, onValueChange]);
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkValues, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type === 'tags') {
+      onValueChange?.(field.id, tags);
+    }
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags, field.id, field.type]);
 
   const label = field.label || 'Untitled field';
   const required = field.required;
@@ -392,26 +416,81 @@ function InteractiveField({ field, onValueChange }) {
 
     case 'textarea':
       if (field.showVariableToolbar) {
+        const segments = bodySegments;
+        const handleFieldSelect = (fieldValue) => {
+          setFieldModalOpen(false);
+          if (segments) {
+            setBodySegments((prev) => {
+              const next = [...(prev || [])];
+              const last = next[next.length - 1];
+              if (last?.type === 'chip') {
+                next.push({ type: 'text', value: ' ' });
+              } else if (last?.type === 'text' && last.value && !/\s$/.test(last.value)) {
+                next[next.length - 1] = { ...last, value: `${last.value} ` };
+              }
+              next.push({ type: 'chip', value: fieldValue });
+              return next;
+            });
+            return;
+          }
+          setTextValue((prev) => {
+            const base = prev || '';
+            const sep = !base || /\s$/.test(base) ? '' : ' ';
+            const next = `${base}${sep}{{${fieldValue}}}`;
+            onValueChange?.(field.id, next);
+            return next;
+          });
+        };
         return (
           <div className={styles.fieldWrap}>
             <FieldLabel label={label} required={required} showInfoIcon={field.showInfoIcon} />
             <div className={styles.promptBox}>
-              <textarea
-                name={`view_${field.id}`}
-                className={styles.promptTextarea}
-                placeholder={field.placeholder || ''}
-                value={textValue}
-                onChange={(e) => setTextValue(e.target.value)}
-                rows={field.rows || 5}
-              />
+              {segments ? (
+                <div className={styles.promptRichBody}>
+                  {segments.map((seg, i) => (
+                    seg.type === 'chip' ? (
+                      <VariableChip
+                        key={`${seg.value}-${i}`}
+                        value={seg.value}
+                        type="variable"
+                        readOnly
+                      />
+                    ) : (
+                      <span key={`t-${i}`} className={styles.promptRichText}>
+                        {seg.value}
+                      </span>
+                    )
+                  ))}
+                </div>
+              ) : (
+                <textarea
+                  name={`view_${field.id}`}
+                  className={styles.promptTextarea}
+                  placeholder={field.placeholder || ''}
+                  value={textValue}
+                  onChange={(e) => setTextValue(e.target.value)}
+                  rows={field.rows || 5}
+                />
+              )}
               <div className={styles.promptToolbar}>
-                <button type="button" className={styles.variableBtn} title="Insert variable">
-                  <span className={styles.variableBtnBrace}>{'{'}</span>
-                  <span className={styles.variableBtnX}>x</span>
-                  <span className={styles.variableBtnBrace}>{'}'}</span>
-                </button>
+                <div ref={fieldsBtnRef}>
+                  <ToolbarButton
+                    icon={<VariableIcon />}
+                    tooltip="Fields"
+                    active={fieldModalOpen}
+                    onClick={() => setFieldModalOpen(true)}
+                  />
+                </div>
               </div>
             </div>
+            {fieldModalOpen && (
+              <FieldPickerModal
+                onClose={() => setFieldModalOpen(false)}
+                onSelectField={handleFieldSelect}
+                anchorEl={fieldsBtnRef.current}
+                showTriggerFields
+              />
+            )}
           </div>
         );
       }
@@ -441,9 +520,14 @@ function InteractiveField({ field, onValueChange }) {
               onChange={(e) => setSelectValue(e.target.value)}
             >
               <option value="">{field.placeholder || 'Select'}</option>
-              {(field.options || []).map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
+              {(field.options || []).map((rawOpt) => {
+                const optValue = typeof rawOpt === 'string' ? rawOpt : rawOpt?.value;
+                const optLabel = typeof rawOpt === 'string' ? rawOpt : (rawOpt?.label ?? rawOpt?.value);
+                if (optValue == null) return null;
+                return (
+                  <option key={String(optValue)} value={optValue}>{optLabel}</option>
+                );
+              })}
             </select>
             <span className={`material-symbols-outlined ${styles.selectChevron}`}>expand_more</span>
           </div>
@@ -494,9 +578,14 @@ function InteractiveField({ field, onValueChange }) {
             onChange={(e, v) => setSelectValue(v)}
             placeHolder="Select..."
           >
-            {field.options.map((opt) => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
+            {(field.options || []).map((rawOpt) => {
+              const optValue = typeof rawOpt === 'string' ? rawOpt : rawOpt?.value;
+              const optLabel = typeof rawOpt === 'string' ? rawOpt : (rawOpt?.label ?? rawOpt?.value);
+              if (optValue == null) return null;
+              return (
+                <SelectItem key={String(optValue)} value={optValue}>{optLabel}</SelectItem>
+              );
+            })}
           </Select>
         </div>
       );
@@ -682,7 +771,7 @@ function InteractiveField({ field, onValueChange }) {
                   setTagInput('');
                 }
               }}
-              placeholder={tags.length === 0 ? (field.placeholder || 'Type and press Enter...') : ''}
+              placeholder={field.placeholder || (tags.length === 0 ? 'Type and press Enter...' : '')}
             />
           </div>
         </div>
@@ -1014,7 +1103,17 @@ function ParamListField({ field }) {
 
 // ─── Shared content (used both in standalone drawer and embedded mode) ────────
 
-export function ToolViewerContent({ tool, onClose, onSave, initialValues, clearDefaults = false }) {
+export function ToolViewerContent({
+  tool,
+  onClose,
+  onSave,
+  initialValues,
+  clearDefaults = false,
+  /** When true, render fields only (no header/back/save) for inline RHS embedding. */
+  embedded = false,
+  /** Live field-value updates (used with embedded mode). */
+  onFieldValuesChange,
+}) {
   const [fieldSnapshot, setFieldSnapshot] = useState(() =>
     initialValues && Object.keys(initialValues).length > 0
       ? { ...initialValues }
@@ -1035,8 +1134,12 @@ export function ToolViewerContent({ tool, onClose, onSave, initialValues, clearD
   }, [fieldSnapshot, tool?.fields]);
 
   const handleValueChange = useCallback((id, val) => {
-    setFieldSnapshot((prev) => ({ ...prev, [id]: val }));
-  }, []);
+    setFieldSnapshot((prev) => {
+      const next = { ...prev, [id]: val };
+      onFieldValuesChange?.(next);
+      return next;
+    });
+  }, [onFieldValuesChange]);
 
   if (!tool) return null;
 
@@ -1044,6 +1147,24 @@ export function ToolViewerContent({ tool, onClose, onSave, initialValues, clearD
     if (onSave) onSave(tool, fieldSnapshot);
     else onClose?.();
   };
+
+  const fieldsBody = (
+    <div className={embedded ? styles.embeddedBody : styles.body}>
+      {tool.fields
+        ?.filter((f) => isFieldVisible(f, effectiveSnapshot))
+        .map((f) => (
+          <InteractiveField
+            key={f.id}
+            field={clearDefaults ? { ...f, defaultValue: undefined, defaultChecked: undefined } : f}
+            onValueChange={handleValueChange}
+          />
+        ))}
+    </div>
+  );
+
+  if (embedded) {
+    return <div className={styles.embeddedOuter}>{fieldsBody}</div>;
+  }
 
   return (
     <div className={styles.outer}>
@@ -1061,17 +1182,7 @@ export function ToolViewerContent({ tool, onClose, onSave, initialValues, clearD
         </button>
       </div>
 
-      <div className={styles.body}>
-        {tool.fields
-          ?.filter((f) => isFieldVisible(f, effectiveSnapshot))
-          .map((f) => (
-            <InteractiveField
-              key={f.id}
-              field={clearDefaults ? { ...f, defaultValue: undefined, defaultChecked: undefined } : f}
-              onValueChange={handleValueChange}
-            />
-          ))}
-      </div>
+      {fieldsBody}
     </div>
   );
 }

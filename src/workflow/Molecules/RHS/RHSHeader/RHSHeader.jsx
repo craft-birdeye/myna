@@ -106,9 +106,9 @@ export default function RHSPanelHeader({
   onBack = undefined,
   showActions = true,
   showMoreMenu = false,
-  /** Exploration LLM task: toggle Option 1 (body tabs) vs Option 2 (header Setup/Configure). */
+  /** Exploration LLM task: Option 1 / Option 2 / R1–R4 layout picker. */
   titleLayoutMenu = null,
-  /** Option 2 only: Setup / Configure menu beside the layout picker. */
+  /** @deprecated Option 2 now uses body tabs — unused. */
   titleTabMenu = null,
 }) {
   const svgStyle = { width: 24, height: 24, display: 'block' };
@@ -143,7 +143,7 @@ export default function RHSPanelHeader({
             value={titleTabMenu.value}
             options={titleTabMenu.options}
             onChange={titleTabMenu.onChange}
-            ariaLabel={titleTabMenu.value === 'setup' ? 'Action section: Setup' : 'Action section: Configure'}
+            ariaLabel={titleTabMenu.value === 'setup' ? 'Action section: Setup' : 'Action section: Advanced'}
           />
         )}
       </div>

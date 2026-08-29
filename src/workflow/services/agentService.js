@@ -357,8 +357,7 @@ const _SEED_TOOLS = [
   {
     id: 'handle-response',
     name: 'Publish response',
-    icon: 'reply',
-    isBirdeye: true,
+    icon: 'publish',
     description:
       'Decide what the agent does with the composed response — post it directly, hold it for human approval, or surface it as a suggestion.',
     category: 'Reviews',
@@ -587,6 +586,38 @@ const _SEED_TOOLS = [
     category: 'Communication',
     modules: ['Reviews'],
     products: ['healthcare', 'automotive', 'dental'],
+    fields: [
+      {
+        id: 'send-email-recipients',
+        label: 'Recipients',
+        type: 'tags',
+        required: true,
+        placeholder: 'Enter a name',
+        defaultValue: ['Michelle Wang'],
+      },
+      {
+        id: 'send-email-subject',
+        label: 'Subject',
+        type: 'text',
+        required: true,
+        defaultValue: 'Action needed: Report a review that is possibly spam',
+      },
+      {
+        id: 'send-email-body',
+        label: 'Body',
+        type: 'textarea',
+        showVariableToolbar: true,
+        rows: 6,
+        segments: [
+          { type: 'text', value: 'You just received a new review and it is possibly a spam review as it contains ' },
+          { type: 'chip', value: 'Review.spamReason' },
+          { type: 'text', value: '\n\nReview details:\nPlease use this ' },
+          { type: 'chip', value: 'Source.flaggingLink' },
+          { type: 'text', value: ' to report this issue on ' },
+          { type: 'chip', value: 'Review.source' },
+        ],
+      },
+    ],
     inputs: [
       { name: 'to', type: 'string', description: 'Recipient email address' },
       { name: 'subject', type: 'string', description: 'Email subject' },
@@ -791,6 +822,15 @@ function _toolToViewerFields(tool) {
   return { ...tool, fields };
 }
 
+/** Resolve a seed or custom tool into CustomToolViewer field format. */
+export function resolveToolForViewer(id) {
+  if (!id) return null;
+  const custom = _customTools.get(id);
+  if (custom) return _toolToViewerFields(custom);
+  const seed = _SEED_TOOLS.find((t) => t.id === id);
+  return seed ? _toolToViewerFields(seed) : null;
+}
+
 export async function getCustomToolsByIds(ids) {
-  return (ids || []).map((id) => _customTools.get(id)).filter(Boolean).map(_toolToViewerFields);
+  return (ids || []).map((id) => resolveToolForViewer(id)).filter(Boolean);
 }

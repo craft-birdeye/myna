@@ -54,6 +54,36 @@ function templateSummaryLabel(ids = []) {
   return `${ids.length} templates selected`;
 }
 
+function buildDraft({
+  responseType,
+  customText,
+  templateIds,
+  responseHandling,
+  postAfter,
+}) {
+  const templateLabel = templateSummaryLabel(templateIds);
+  return {
+    responseType,
+    customText,
+    templateIds,
+    templateId: templateIds[0] || '',
+    responseText: responseType === 'template' ? templateLabel : customText,
+    responseLabel: responseType === 'template' ? templateLabel : customText,
+    responseHandling,
+    postAfter,
+  };
+}
+
+function stateFromValue(value = {}) {
+  return {
+    responseType: value.responseType || 'custom',
+    customText: value.customText ?? value.responseText ?? '',
+    templateIds: normalizeTemplateIds(value),
+    responseHandling: value.responseHandling ?? 'post-directly',
+    postAfter: value.postAfter ?? '',
+  };
+}
+
 /** Mandatory fields — the Tool card in Task details shows an error until these are set. */
 export function isHandleResponseConfigComplete(config = {}) {
   const type = config.responseType || 'custom';
@@ -107,44 +137,199 @@ function insertAtCursor(textarea, text, fallbackPrev = '') {
 }
 
 /**
+ * Publish-response form body — used by the side drawer and Option 2 Tool details inline embed.
+ * Local state is initialized from `value`; remount (change `key`) to reseed from parent.
+ */
+export function HandleResponseForm({
+  value = {},
+  onChange,
+  /** When true, emit onChange on every edit (inline RHS / drawer draft). */
+  live = false,
+  embedded = false,
+  namePrefix = 'handle-response',
+  fieldPickerZIndex = 10050,
+  fieldPickerPlacement = 'dock',
+}) {
+  const initial = stateFromValue(value);
+  const [responseType, setResponseType] = useState(initial.responseType);
+  const [customText, setCustomText] = useState(initial.customText);
+  const [templateIds, setTemplateIds] = useState(initial.templateIds);
+  const [responseHandling, setResponseHandling] = useState(initial.responseHandling);
+  const [postAfter, setPostAfter] = useState(initial.postAfter);
+  const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
+  const textareaRef = useRef(null);
+  const fieldTriggerRef = useRef(null);
+  const onChangeRef = useRef(onChange);
+  const skipFirstLiveEmit = useRef(true);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!live) return;
+    if (skipFirstLiveEmit.current) {
+      skipFirstLiveEmit.current = false;
+      return;
+    }
+    onChangeRef.current?.(buildDraft({
+      responseType,
+      customText,
+      templateIds,
+      responseHandling,
+      postAfter,
+    }));
+  }, [live, responseType, customText, templateIds, responseHandling, postAfter]);
+
+  const draft = buildDraft({
+    responseType,
+    customText,
+    templateIds,
+    responseHandling,
+    postAfter,
+  });
+
+  return (
+    <div className={`hrd${embedded ? ' hrd--embedded' : ''}`}>
+      <div className="hrd__body">
+        <div className="hrd__field">
+          <span className="hrd__label">
+            How do you want to respond?<span className="hrd__required"> *</span>
+          </span>
+          <div className="hrd__radios">
+            <label className="hrd__radio hrd__radio--compact">
+              <input
+                type="radio"
+                name={`${namePrefix}-type`}
+                className="hrd__radio-input"
+                checked={responseType === 'custom'}
+                onChange={() => setResponseType('custom')}
+              />
+              <span className="hrd__radio-label">Respond manually</span>
+            </label>
+
+            {responseType === 'custom' && (
+              <div className="hrd__indent-wrap">
+                <div
+                  className={`hrd__textarea-box${fieldPickerOpen ? ' hrd__textarea-box--open' : ''}`}
+                >
+                  <textarea
+                    ref={textareaRef}
+                    className="hrd__textarea"
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value)}
+                    placeholder="Enter your response here..."
+                    rows={6}
+                    aria-label="Manual response text"
+                  />
+                  <button
+                    ref={fieldTriggerRef}
+                    type="button"
+                    className="hrd__insert-field"
+                    onClick={() => setFieldPickerOpen((open) => !open)}
+                    aria-label="Insert field"
+                    title="Insert field"
+                    aria-haspopup="dialog"
+                    aria-expanded={fieldPickerOpen}
+                  >
+                    <VariableIcon />
+                  </button>
+                </div>
+                {fieldPickerOpen && (
+                  <FieldPickerModal
+                    onClose={() => setFieldPickerOpen(false)}
+                    onSelectField={(fieldValue, name) => {
+                      const token = `{{${name || fieldValue}}}`;
+                      setCustomText((prev) => insertAtCursor(textareaRef.current, token, prev));
+                      setFieldPickerOpen(false);
+                    }}
+                    anchorEl={fieldTriggerRef.current?.closest('.hrd__textarea-box') || fieldTriggerRef.current}
+                    showTriggerFields
+                    placement={fieldPickerPlacement}
+                    overlayZIndex={fieldPickerZIndex}
+                  />
+                )}
+              </div>
+            )}
+
+            <label className="hrd__radio hrd__radio--compact">
+              <input
+                type="radio"
+                name={`${namePrefix}-type`}
+                className="hrd__radio-input"
+                checked={responseType === 'template'}
+                onChange={() => setResponseType('template')}
+              />
+              <span className="hrd__radio-label">Respond using templates</span>
+            </label>
+
+            {responseType === 'template' && (
+              <div className="hrd__indent-wrap">
+                <MultiSelect
+                  name={`${namePrefix}-templates`}
+                  selected={templateIds}
+                  options={RESPONSE_TEMPLATE_OPTIONS}
+                  placeholder="Select templates"
+                  onChange={setTemplateIds}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="hrd__field">
+          <span className="hrd__label">Response handling</span>
+          <div className="hrd__radios">
+            {RESPONSE_HANDLING_OPTIONS.map((opt) => (
+              <label key={opt.value} className="hrd__radio">
+                <input
+                  type="radio"
+                  name={`${namePrefix}-mode`}
+                  className="hrd__radio-input"
+                  checked={responseHandling === opt.value}
+                  onChange={() => setResponseHandling(opt.value)}
+                />
+                <span className="hrd__radio-copy">
+                  <span className="hrd__radio-label">{opt.label}</span>
+                  <span className="hrd__radio-hint">{opt.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="hrd__field">
+          <span className="hrd__label">
+            Post response after<span className="hrd__required"> *</span>
+          </span>
+          <SingleSelect
+            name={`${namePrefix}-postAfter`}
+            selected={postAfter}
+            options={POST_AFTER_OPTIONS}
+            placeholder="Select delay"
+            onChange={(opt) => setPostAfter(opt.value)}
+          />
+        </div>
+      </div>
+      {/* Keep draft reference available for callers that inspect completeness from latest emit */}
+      <span hidden aria-hidden data-complete={isHandleResponseConfigComplete(draft) ? '1' : '0'} />
+    </div>
+  );
+}
+
+/**
  * Config drawer for the `handle-response` Birdeye tool, opened from the Task details
  * Tool card's pencil. Saving a complete config clears that card's
  * "Missing mandatory fields" error.
  */
 export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSave }) {
-  const [responseType, setResponseType] = useState('custom');
-  const [customText, setCustomText] = useState('');
-  const [templateIds, setTemplateIds] = useState([]);
-  const [responseHandling, setResponseHandling] = useState('post-directly');
-  const [postAfter, setPostAfter] = useState('');
-  const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
-  const textareaRef = useRef(null);
-  const fieldTriggerRef = useRef(null);
+  const [draft, setDraft] = useState(() => buildDraft(stateFromValue(value)));
 
-  // Re-seed from the saved config each time the drawer opens.
   useEffect(() => {
     if (!isOpen) return;
-    setResponseType(value.responseType || 'custom');
-    setCustomText(value.customText ?? value.responseText ?? '');
-    setTemplateIds(normalizeTemplateIds(value));
-    setResponseHandling(value.responseHandling ?? 'post-directly');
-    setPostAfter(value.postAfter ?? '');
-    setFieldPickerOpen(false);
+    setDraft(buildDraft(stateFromValue(value)));
   }, [isOpen]);
 
-  const templateLabel = templateSummaryLabel(templateIds);
-  const draft = {
-    responseType,
-    customText,
-    templateIds,
-    // Keep singular templateId for older readers.
-    templateId: templateIds[0] || '',
-    // Keep responseText in sync for older readers / completeness checks.
-    responseText: responseType === 'template' ? templateLabel : customText,
-    responseLabel: responseType === 'template' ? templateLabel : customText,
-    responseHandling,
-    postAfter,
-  };
   const canSave = isHandleResponseConfigComplete(draft);
 
   return (
@@ -176,129 +361,16 @@ export default function HandleResponseDrawer({ isOpen, onClose, value = {}, onSa
           </button>
         </div>
 
-        <div className="hrd__body">
-          {/* How do you want to respond? */}
-          <div className="hrd__field">
-            <span className="hrd__label">
-              How do you want to respond?<span className="hrd__required"> *</span>
-            </span>
-            <div className="hrd__radios">
-              <label className="hrd__radio hrd__radio--compact">
-                <input
-                  type="radio"
-                  name="handle-response-type"
-                  className="hrd__radio-input"
-                  checked={responseType === 'custom'}
-                  onChange={() => setResponseType('custom')}
-                />
-                <span className="hrd__radio-label">Respond manually</span>
-              </label>
-
-              {responseType === 'custom' && (
-                <div className="hrd__indent-wrap">
-                  <div
-                    className={`hrd__textarea-box${fieldPickerOpen ? ' hrd__textarea-box--open' : ''}`}
-                  >
-                    <textarea
-                      ref={textareaRef}
-                      className="hrd__textarea"
-                      value={customText}
-                      onChange={(e) => setCustomText(e.target.value)}
-                      placeholder="Enter your response here..."
-                      rows={6}
-                      aria-label="Manual response text"
-                    />
-                    <button
-                      ref={fieldTriggerRef}
-                      type="button"
-                      className="hrd__insert-field"
-                      onClick={() => setFieldPickerOpen((open) => !open)}
-                      aria-label="Insert field"
-                      title="Insert field"
-                      aria-haspopup="dialog"
-                      aria-expanded={fieldPickerOpen}
-                    >
-                      <VariableIcon />
-                    </button>
-                  </div>
-                  {fieldPickerOpen && (
-                    <FieldPickerModal
-                      onClose={() => setFieldPickerOpen(false)}
-                      onSelectField={(fieldValue, name) => {
-                        const token = `{{${name || fieldValue}}}`;
-                        setCustomText((prev) => insertAtCursor(textareaRef.current, token, prev));
-                        setFieldPickerOpen(false);
-                      }}
-                      anchorEl={fieldTriggerRef.current?.closest('.hrd__textarea-box') || fieldTriggerRef.current}
-                      showTriggerFields
-                      placement="dropdown"
-                      overlayZIndex={10050}
-                    />
-                  )}
-                </div>
-              )}
-
-              <label className="hrd__radio hrd__radio--compact">
-                <input
-                  type="radio"
-                  name="handle-response-type"
-                  className="hrd__radio-input"
-                  checked={responseType === 'template'}
-                  onChange={() => setResponseType('template')}
-                />
-                <span className="hrd__radio-label">Respond using templates</span>
-              </label>
-
-              {responseType === 'template' && (
-                <div className="hrd__indent-wrap">
-                  <MultiSelect
-                    name="responseTemplates"
-                    selected={templateIds}
-                    options={RESPONSE_TEMPLATE_OPTIONS}
-                    placeholder="Select templates"
-                    onChange={setTemplateIds}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Response handling */}
-          <div className="hrd__field">
-            <span className="hrd__label">Response handling</span>
-            <div className="hrd__radios">
-              {RESPONSE_HANDLING_OPTIONS.map((opt) => (
-                <label key={opt.value} className="hrd__radio">
-                  <input
-                    type="radio"
-                    name="handle-response-mode"
-                    className="hrd__radio-input"
-                    checked={responseHandling === opt.value}
-                    onChange={() => setResponseHandling(opt.value)}
-                  />
-                  <span className="hrd__radio-copy">
-                    <span className="hrd__radio-label">{opt.label}</span>
-                    <span className="hrd__radio-hint">{opt.hint}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Post response after */}
-          <div className="hrd__field">
-            <span className="hrd__label">
-              Post response after<span className="hrd__required"> *</span>
-            </span>
-            <SingleSelect
-              name="postAfter"
-              selected={postAfter}
-              options={POST_AFTER_OPTIONS}
-              placeholder="Select delay"
-              onChange={(opt) => setPostAfter(opt.value)}
-            />
-          </div>
-        </div>
+        {isOpen && (
+          <HandleResponseForm
+            key={`hr-drawer-${isOpen}`}
+            value={value}
+            live
+            onChange={setDraft}
+            namePrefix="handle-response-drawer"
+            fieldPickerZIndex={10050}
+          />
+        )}
       </div>
     </NativeDrawer>
   );

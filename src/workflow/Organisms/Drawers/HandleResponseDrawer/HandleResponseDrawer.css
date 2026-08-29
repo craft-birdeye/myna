@@ -106,6 +106,29 @@
   flex: 1;
 }
 
+/* Compact body when embedded under Action RHS Tool details */
+.hrd--embedded .hrd__body {
+  padding: 0;
+  gap: 20px;
+}
+
+.hrd--embedded .hrd__label {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.26px;
+}
+
+.hrd--embedded .hrd__radio-label {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.hrd--embedded .hrd__textarea {
+  min-height: 120px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .hrd__field {
   display: flex;
   flex-direction: column;

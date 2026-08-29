@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
-import { subscribeToCustomTools } from '../../../services/agentService';
-import { isHandleResponseConfigComplete } from '../../Drawers/HandleResponseDrawer/HandleResponseDrawer';
+import { subscribeToCustomTools, resolveToolForViewer } from '../../../services/agentService';
+import {
+  HandleResponseForm,
+  isHandleResponseConfigComplete,
+} from '../../Drawers/HandleResponseDrawer/HandleResponseDrawer';
+import { ToolViewerContent } from '../../Drawers/CustomToolViewer/CustomToolViewer';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import birdeyeLogoUrl from '../../../../assets/birdeye-logo.svg';
 import styles from './EntityTaskBody.module.css';
@@ -18,11 +22,17 @@ export default function EntityTaskBody({
    */
   showToolErrors = false,
   viewOnly = false,
+  /** Exploration Option 2: Basic / Tool details stepper accordion. */
+  option2Stepper = false,
+  /** Persisted per-tool field values (CustomToolViewer snapshot keyed by tool id). */
+  toolFieldValues = {},
+  onToolFieldValuesChange,
 }) {
   const [taskName, setTaskName] = useState(initialValues.taskName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
   const [selectedTools, setSelectedTools] = useState(initialValues.selectedTools ?? []);
   const [allTools, setAllTools] = useState([]);
+  const [openSteps, setOpenSteps] = useState({ 1: false, 2: true });
 
   useEffect(() => {
     const unsub = subscribeToCustomTools((tools) => setAllTools(tools));
@@ -51,6 +61,14 @@ export default function EntityTaskBody({
   };
 
   const displayedTools = allTools.filter((t) => selectedTools.includes(t.id));
+  const viewerTools = useMemo(
+    () => selectedTools.map((id) => resolveToolForViewer(id)).filter(Boolean),
+    [selectedTools],
+  );
+
+  const handleInlineToolValues = useCallback((toolId, values) => {
+    onToolFieldValuesChange?.(toolId, values);
+  }, [onToolFieldValuesChange]);
 
   /**
    * Tools with their own mandatory config. Unconfigured → the row offers Configure instead
@@ -60,38 +78,49 @@ export default function EntityTaskBody({
   const toolNeedsConfig = (toolId) =>
     toolId === 'handle-response' && !isHandleResponseConfigComplete(initialValues.handleResponse);
 
-  return (
-    <div className={styles.formContainer}>
-      <FormInput
-        name="taskName"
-        type="text"
-        label="Action name"
-        placeholder="Enter name"
-        value={taskName}
-        onChange={handleTaskName}
-        required
-      />
-      <TextArea
-        name="description"
-        label="Description"
-        placeholder="Enter description"
-        value={description}
-        onChange={handleDescription}
-        required
-        noFloatingLabel
-      />
+  const toggleStep = (id) =>
+    setOpenSteps((prev) => ({ ...prev, [id]: !prev[id] }));
 
-      <div className={styles.toolsSection}>
-        <span className={styles.sectionLabelText}>Tool</span>
+  const taskNameField = (
+    <FormInput
+      name="taskName"
+      type="text"
+      label="Action name"
+      placeholder="Enter name"
+      value={taskName}
+      onChange={handleTaskName}
+      required
+    />
+  );
 
-        {displayedTools.length > 0 && (
+  const descriptionField = (
+    <TextArea
+      name="description"
+      label="Description"
+      placeholder="Enter description"
+      value={description}
+      onChange={handleDescription}
+      required
+      noFloatingLabel
+    />
+  );
+
+  const toolsSection = (
+    <div className={styles.toolsSection}>
+      <span className={styles.sectionLabelText}>Tool</span>
+
+      {displayedTools.length > 0 && (
+        <>
           <div className={styles.toolCard}>
             {displayedTools.map((tool) => (
               <div
                 key={tool.id}
                 className={styles.toolRow}
-                onClick={() => onOpenTool?.(tool.id)}
-                style={{ cursor: onOpenTool ? 'pointer' : 'default' }}
+                onClick={() => {
+                  if (option2Stepper) return;
+                  onOpenTool?.(tool.id);
+                }}
+                style={{ cursor: option2Stepper ? 'default' : (onOpenTool ? 'pointer' : 'default') }}
               >
                 <div className={styles.toolRowMain}>
                   <div
@@ -142,7 +171,7 @@ export default function EntityTaskBody({
                     >
                       View
                     </span>
-                  ) : toolNeedsConfig(tool.id) ? (
+                  ) : toolNeedsConfig(tool.id) && !option2Stepper ? (
                     <button
                       type="button"
                       className={styles.toolConfigureBtn}
@@ -152,16 +181,18 @@ export default function EntityTaskBody({
                     </button>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        className={styles.toolActionBtn}
-                        onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
-                        title="Edit tool configuration"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                          edit
-                        </span>
-                      </button>
+                      {!option2Stepper && (
+                        <button
+                          type="button"
+                          className={styles.toolActionBtn}
+                          onClick={(e) => { e.stopPropagation(); onOpenTool?.(tool.id); }}
+                          title="Edit tool configuration"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                            edit
+                          </span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={styles.toolActionBtn}
@@ -178,8 +209,109 @@ export default function EntityTaskBody({
               </div>
             ))}
           </div>
-        )}
+          {option2Stepper && selectedTools.includes('handle-response') && (
+            <div className={styles.inlineToolConfig}>
+              <HandleResponseForm
+                key="hr-inline"
+                value={initialValues.handleResponse || {}}
+                live
+                embedded
+                onChange={(config) => onFieldChange?.('handleResponse', config)}
+                namePrefix="handle-response-inline"
+                fieldPickerPlacement="dock"
+                fieldPickerZIndex={120}
+              />
+            </div>
+          )}
+          {option2Stepper && viewerTools
+            .filter((viewerTool) => viewerTool.id !== 'handle-response')
+            .map((viewerTool) => (
+            <div key={viewerTool.id} className={styles.inlineToolConfig}>
+              <ToolViewerContent
+                tool={viewerTool}
+                embedded
+                initialValues={toolFieldValues?.[viewerTool.id] || {}}
+                onFieldValuesChange={(values) => handleInlineToolValues(viewerTool.id, values)}
+              />
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+
+  if (option2Stepper) {
+    const STEPS = [
+      {
+        id: 1,
+        label: 'Basic',
+        content: (
+          <div className={styles.stepFields}>
+            {taskNameField}
+            {descriptionField}
+          </div>
+        ),
+      },
+      {
+        id: 2,
+        label: 'Tool details',
+        content: toolsSection,
+      },
+    ];
+    return (
+      <div className={styles.stepperContainer}>
+        <nav className={styles.stepper} aria-label="Action setup steps">
+          <ol className={styles.stepperList}>
+            {STEPS.map((step) => {
+              const isOpen = !!openSteps[step.id];
+              return (
+                <li key={step.id} className={styles.stepperItem}>
+                  <div className={styles.stepperRail}>
+                    <span
+                      className={`${styles.stepMarker}${isOpen ? ` ${styles.stepMarkerActive}` : ''}`}
+                      aria-hidden
+                    >
+                      {step.id}
+                    </span>
+                    <div className={styles.stepConnector} aria-hidden />
+                  </div>
+                  <div className={styles.stepMain}>
+                    <button
+                      type="button"
+                      className={styles.stepHeader}
+                      onClick={() => toggleStep(step.id)}
+                      aria-expanded={isOpen}
+                    >
+                      <span
+                        className={`${styles.stepLabel}${isOpen ? ` ${styles.stepLabelActive}` : ''}`}
+                      >
+                        {step.label}
+                      </span>
+                      <span
+                        className={`material-symbols-outlined ${styles.stepChevron}${
+                          isOpen ? ` ${styles.stepChevronOpen}` : ''
+                        }`}
+                        aria-hidden
+                      >
+                        expand_more
+                      </span>
+                    </button>
+                    {isOpen && <div className={styles.stepBody}>{step.content}</div>}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
       </div>
+    );
+  }
+
+  return (
+    <div className={styles.formContainer}>
+      {taskNameField}
+      {descriptionField}
+      {toolsSection}
     </div>
   );
 }

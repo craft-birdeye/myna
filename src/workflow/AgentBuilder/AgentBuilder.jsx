@@ -1117,6 +1117,12 @@ export default function AgentBuilder({
   inlineRhsFooter = false,
   /** Sep 1 chrome: inline RHS footer + other Sep-1-only treatments. */
   sep1Chrome = false,
+  /**
+   * Action RHS layout explorations (Option 1/2, R1–R4). True only for Response /
+   * Front desk exploration — not Sep 1. Prefer this over `explorationChrome && !sep1Chrome`
+   * because sep1Chrome is now true for the whole exploration family.
+   */
+  llmTaskExplorationLayout = false,
   /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. */
   hideCanvasStartNode = hideTopIdentity,
   /** Exploration editor UX — defaults to hideTopIdentity for backward compatibility. */
@@ -1164,6 +1170,8 @@ export default function AgentBuilder({
   const [llmTaskTab, setLlmTaskTab] = useState('setup');
   /** Exploration LLM task: Option 1 = body tabs, Option 2 = header Setup/Configure menu. */
   const [llmTaskLayoutOption, setLlmTaskLayoutOption] = useState('option1');
+  /** Exploration only: Option 1 / Option 2 layouts for tool-based Action RHS. */
+  const [entityTaskLayoutOption, setEntityTaskLayoutOption] = useState('option1');
   /** R1 only: true while a required field inside an accordion is empty — disables
    *  the RHS footer's Save and shows the "Mandatory fields missing" warning. */
   const [llmTaskSaveBlocked, setLlmTaskSaveBlocked] = useState(false);
@@ -3355,8 +3363,8 @@ export default function AgentBuilder({
     }
 
     if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).includes('handle-response'))) {
-      const llmTaskExplorationLayout = explorationChrome && !sep1Chrome;
       const llmTaskOption2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option2';
+      const llmTaskOption3 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option3';
       // R1/R2/R3/R4 layouts are scoped to the Review response agent's exploration chrome
       // only — Frontdesk exploration (and any other agent) never sees any of these options or their behavior.
       const llmTaskR1 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r1' && isReviewResponseAgent;
@@ -3377,6 +3385,7 @@ export default function AgentBuilder({
             options: [
               { value: 'option1', label: 'Option 1' },
               { value: 'option2', label: 'Option 2' },
+              { value: 'option3', label: 'Option 3' },
               ...(isReviewResponseAgent ? [
                 { value: 'r1', label: 'R1' },
                 { value: 'r2', label: 'R2' },
@@ -3384,16 +3393,12 @@ export default function AgentBuilder({
                 { value: 'r4', label: 'R4' },
               ] : []),
             ],
-            onChange: setLlmTaskLayoutOption,
+            onChange: (next) => {
+              setLlmTaskLayoutOption(next);
+              if (next === 'option2') setLlmTaskTab('setup');
+            },
           } : null}
-          titleTabMenu={llmTaskOption2 ? {
-            value: llmTaskTab,
-            options: [
-              { value: 'setup', label: 'Setup' },
-              { value: 'configure', label: 'Configure' },
-            ],
-            onChange: setLlmTaskTab,
-          } : null}
+          titleTabMenu={null}
           bodyProps={{
             initialValues: currentDetails,
             onFieldChange: activeFieldChange,
@@ -3401,7 +3406,10 @@ export default function AgentBuilder({
             onOpenTool: openToolByName,
             collapseChipsToOneLine: llmTaskExplorationLayout,
             collapseChipsToTwoLines: explorationChrome,
-            setupConfigureInHeader: llmTaskOption2,
+            setupConfigureTabs: llmTaskOption2,
+            option3Stepper: llmTaskOption3,
+            hideDescriptionLabel: llmTaskOption3,
+            tightNameDescription: llmTaskOption3,
             accordionLayout: llmTaskR1 || llmTaskR2 || llmTaskR3,
             accordionBare: llmTaskR2 || llmTaskR3,
             accordionLined: llmTaskR3,
@@ -3468,9 +3476,25 @@ export default function AgentBuilder({
         title="Action"
         viewOnly={rhsViewOnly}
         inlineFooter={inlineRhsFooter}
+        titleLayoutMenu={llmTaskExplorationLayout ? {
+          value: entityTaskLayoutOption,
+          options: [
+            { value: 'option1', label: 'Option 1' },
+            { value: 'option2', label: 'Option 2' },
+          ],
+          onChange: setEntityTaskLayoutOption,
+        } : null}
         bodyProps={{
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
+          option2Stepper: llmTaskExplorationLayout && entityTaskLayoutOption === 'option2',
+          toolFieldValues: currentDetails.toolFieldValues || {},
+          onToolFieldValuesChange: (toolId, values) => {
+            activeFieldChange('toolFieldValues', {
+              ...(currentDetails.toolFieldValues || {}),
+              [toolId]: values,
+            });
+          },
           // Only surface tool errors once this task has been saved in that state.
           showToolErrors: taskErrorNodeIds.has(selectedNodeId) || issuesByNodeId.has(selectedNodeId),
           onOpenTool: (toolId) => {

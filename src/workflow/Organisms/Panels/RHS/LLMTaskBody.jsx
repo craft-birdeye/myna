@@ -323,8 +323,16 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   collapseChipsToOneLine = false,
   /** Exploration chrome (incl. Sep 1): two chip lines + "View N more". */
   collapseChipsToTwoLines = false,
-  /** Option 2: Setup / Configure in the header — legacy prop (body tabs removed). */
+  /** Option 2: Setup / Configure as R4-style body tabs (not a second header dropdown). */
+  setupConfigureTabs = false,
+  /** @deprecated Prefer setupConfigureTabs — kept so older callers don't crash. */
   setupConfigureInHeader = false,
+  /** Option 3: description has no visible label (placeholder only). */
+  hideDescriptionLabel = false,
+  /** Option 3: tighter / equal gap between Setup fields. */
+  tightNameDescription = false,
+  /** Option 3: vertical stepper (Basic / Prompts & Fields / Context & Model) instead of tabs. */
+  option3Stepper = false,
   /** R1/R2/R3: accordion layout — Basic config / Prompts / Fields / Context / Models. */
   accordionLayout = false,
   /** R2/R3: same accordion structure as R1, but sections render as plain
@@ -335,7 +343,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   /** R4: segmented pill tab bar instead of an accordion — Basic/Prompts/Fields/Context/Models
    *  each swap the same content pane rather than stacking as collapsible sections. */
   segmentedLayout = false,
-  /** Controlled Setup / Configure tab — legacy prop (body tabs removed). */
+  /** Controlled Setup / Configure tab (Option 2) or legacy callers. */
   activeTab: activeTabProp,
   onTabChange,
   /** R1/R2/R3/R4: notified whenever the missing-required-field state changes, so the RHS
@@ -372,36 +380,107 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
     setOpenAccordionSections((prev) => ({ ...prev, [id]: !prev[id] }));
   /** R4: which segment's content pane is currently shown. */
   const [activeSegment, setActiveSegment] = useState('basic');
+  /** Option 3: which accordion steps are open (any combination). Also used by Option 2. */
+  const [openOption3Steps, setOpenOption3Steps] = useState({
+    1: false,
+    2: true,
+    3: false,
+  });
+  /** Option 3: steps flagged after a failed Save (persist until that step is fixed). */
+  const [option3ErrorSteps, setOption3ErrorSteps] = useState(() => new Set());
+  const toggleOption3Step = (id) =>
+    setOpenOption3Steps((prev) => ({ ...prev, [id]: !prev[id] }));
+  const useSetupConfigureTabs = setupConfigureTabs || setupConfigureInHeader;
+  const [localSetupTab, setLocalSetupTab] = useState('setup');
+  const activeSetupTab = activeTabProp === 'setup' || activeTabProp === 'advanced' || activeTabProp === 'configure'
+    ? (activeTabProp === 'configure' ? 'advanced' : activeTabProp)
+    : localSetupTab;
+  const setActiveSetupTab = (id) => {
+    if (onTabChange) onTabChange(id);
+    else setLocalSetupTab(id);
+  };
   const emit = (field, val) => onFieldChange?.(field, val);
 
   /** R1 only: which required field (if any) failed the last Save attempt. */
   const [invalidField, setInvalidField] = useState(null);
 
   useEffect(() => {
-    onValidationChange?.(invalidField !== null);
-  }, [invalidField]);
+    onValidationChange?.(invalidField !== null || option3ErrorSteps.size > 0);
+  }, [invalidField, option3ErrorSteps]);
 
   const clearInvalid = (key, val) => {
     if (invalidField === key && (val ?? '').trim()) setInvalidField(null);
+    if (!option3Stepper) return;
+    if (key === 'taskName') clearOption3StepErrorIfFixed(1, { taskName: val });
+    else if (key === 'description') clearOption3StepErrorIfFixed(1, { description: val });
+    else if (key === 'systemPrompt') clearOption3StepErrorIfFixed(2, { systemPrompt: val });
+    else if (key === 'userPrompt') clearOption3StepErrorIfFixed(2, { userPrompt: val });
+    else if (key === 'context') clearOption3StepErrorIfFixed(3, { contextOk: !!(val ?? '').trim() });
+  };
+
+  const option3RequiredFields = () => [
+    { key: 'taskName', value: taskName, section: 1 },
+    { key: 'description', value: description, section: 1 },
+    { key: 'systemPrompt', value: systemPrompt, section: 2 },
+    { key: 'userPrompt', value: userPrompt, section: 2 },
+    { key: 'context', value: contextFields.length > 0 ? 'ok' : '', section: 3 },
+  ];
+
+  const clearOption3StepErrorIfFixed = (sectionId, overrides = {}) => {
+    setOption3ErrorSteps((prev) => {
+      if (!prev.has(sectionId)) return prev;
+      const values = {
+        taskName,
+        description,
+        systemPrompt,
+        userPrompt,
+        contextOk: contextFields.length > 0,
+        ...overrides,
+      };
+      const stillBroken =
+        sectionId === 1
+          ? !(values.taskName ?? '').trim() || !(values.description ?? '').trim()
+          : sectionId === 2
+            ? !(values.systemPrompt ?? '').trim() || !(values.userPrompt ?? '').trim()
+            : sectionId === 3
+              ? !values.contextOk
+              : false;
+      if (stillBroken) return prev;
+      const next = new Set(prev);
+      next.delete(sectionId);
+      return next;
+    });
   };
 
   useImperativeHandle(ref, () => ({
-    /** Returns true if valid. Otherwise opens the offending accordion, flags the
+    /** Returns true if valid. Otherwise opens the offending accordion/step, flags the
      *  first empty required field in order, and returns false. */
     validate: () => {
-      if (!accordionLayout && !segmentedLayout) return true;
-      const requiredFields = [
-        { key: 'taskName', value: taskName, section: 'basic' },
-        { key: 'description', value: description, section: 'basic' },
-        { key: 'systemPrompt', value: systemPrompt, section: 'prompts' },
-        { key: 'userPrompt', value: userPrompt, section: 'prompts' },
-      ];
-      const firstInvalid = requiredFields.find((f) => !(f.value ?? '').trim());
-      if (!firstInvalid) {
+      if (!accordionLayout && !segmentedLayout && !option3Stepper) return true;
+      const requiredFields = option3Stepper
+        ? option3RequiredFields()
+        : [
+            { key: 'taskName', value: taskName, section: 'basic' },
+            { key: 'description', value: description, section: 'basic' },
+            { key: 'systemPrompt', value: systemPrompt, section: 'prompts' },
+            { key: 'userPrompt', value: userPrompt, section: 'prompts' },
+          ];
+      const incomplete = requiredFields.filter((f) => !(f.value ?? '').trim());
+      if (incomplete.length === 0) {
         setInvalidField(null);
+        if (option3Stepper) setOption3ErrorSteps(new Set());
         return true;
       }
-      if (accordionLayout) {
+      const firstInvalid = incomplete[0];
+      if (option3Stepper) {
+        const brokenSteps = new Set(incomplete.map((f) => f.section));
+        setOption3ErrorSteps(brokenSteps);
+        setOpenOption3Steps((prev) => {
+          const next = { ...prev };
+          brokenSteps.forEach((id) => { next[id] = true; });
+          return next;
+        });
+      } else if (accordionLayout) {
         setOpenAccordionSections((prev) => ({ ...prev, [firstInvalid.section]: true }));
       } else {
         setActiveSegment(firstInvalid.section);
@@ -411,7 +490,11 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
     },
   }));
 
-  const updateContextFields = (next) => { setContextFields(next); emit('contextFields', next); };
+  const updateContextFields = (next) => {
+    setContextFields(next);
+    emit('contextFields', next);
+    clearInvalid('context', next.length > 0 ? 'ok' : '');
+  };
   const updateInputFields = (next) => { setInputFields(next); emit('inputFields', next); };
   const updateOutputFields = (next) => { setOutputFields(next); emit('outputFields', next); };
 
@@ -664,10 +747,14 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   );
 
   const descriptionField = (
-    <div className={styles.descriptionField}>
+    <div
+      className={`${styles.descriptionField}${
+        hideDescriptionLabel ? ` ${styles.descriptionFieldTwoLine}` : ''
+      }`}
+    >
       <TextArea
         name="description"
-        label="Description"
+        label={hideDescriptionLabel ? undefined : 'Description'}
         placeholder="Enter description"
         value={description}
         onChange={(e) => {
@@ -675,12 +762,212 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
           emit('description', e.target.value);
           clearInvalid('description', e.target.value);
         }}
-        required
+        required={!hideDescriptionLabel}
         noFloatingLabel
+        rows={3}
+        resize={hideDescriptionLabel ? 'none' : undefined}
         error={invalidField === 'description'}
+        errorMessage={hideDescriptionLabel ? 'Description is required' : undefined}
       />
     </div>
   );
+
+  if (option3Stepper) {
+    // Option 3 exploration: always show the canvas-style error icon on Context & Model.
+    const stepHasError = (stepId) => stepId === 3 || option3ErrorSteps.has(stepId);
+    const OPTION3_STEPS = [
+      {
+        id: 1,
+        label: 'Basic',
+        content: (
+          <div className={styles.essentialsGroupEqual}>
+            {taskNameField}
+            {descriptionField}
+          </div>
+        ),
+      },
+      {
+        id: 2,
+        label: 'Prompts & Fields',
+        content: (
+          <div className={`${styles.essentialsGroupEqual} ${styles.option3PromptsFields}`}>
+            {systemPromptSection}
+            {userPromptSection}
+            {outputFieldsSection}
+            {inputFieldsSection}
+          </div>
+        ),
+      },
+      {
+        id: 3,
+        label: 'Context & Model',
+        content: (
+          <div className={styles.essentialsGroupEqual}>
+            {contextSection}
+            {llmModelSection}
+          </div>
+        ),
+      },
+    ];
+    return (
+      <div className={`${styles.option3Container}${collapseChipsToOneLine ? ` ${styles.containerExploration}` : ''}`}>
+        <nav className={styles.option3Stepper} aria-label="Action setup steps">
+          <ol className={styles.option3StepperList}>
+            {OPTION3_STEPS.map((step) => {
+              const isOpen = !!openOption3Steps[step.id];
+              const hasError = stepHasError(step.id);
+              return (
+                <li key={step.id} className={styles.option3StepperItem}>
+                  <div className={styles.option3StepperRail}>
+                    <span
+                      className={`${styles.option3StepMarker}${
+                        isOpen ? ` ${styles.option3StepMarkerActive}` : ''
+                      }${hasError ? ` ${styles.option3StepMarkerError}` : ''}`}
+                      aria-hidden
+                    >
+                      {step.id}
+                    </span>
+                    <div className={styles.option3StepConnector} aria-hidden />
+                  </div>
+                  <div className={styles.option3StepMain}>
+                    <button
+                      type="button"
+                      className={styles.option3StepHeader}
+                      onClick={() => toggleOption3Step(step.id)}
+                      aria-expanded={isOpen}
+                    >
+                      <span
+                        className={`${styles.option3StepLabel}${
+                          isOpen ? ` ${styles.option3StepLabelActive}` : ''
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                      {hasError && (
+                        <Tooltip content="Missing mandatory fields" variant="detail" side="top">
+                          <span
+                            className={styles.option3StepErrorIcon}
+                            role="img"
+                            aria-label="Missing mandatory fields"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <span className="material-symbols-outlined" aria-hidden>
+                              error
+                            </span>
+                          </span>
+                        </Tooltip>
+                      )}
+                      <span
+                        className={`material-symbols-outlined ${styles.option3StepChevron}${
+                          isOpen ? ` ${styles.option3StepChevronOpen}` : ''
+                        }`}
+                        aria-hidden
+                      >
+                        expand_more
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className={styles.option3StepBody}>
+                        {step.content}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+        {collapseChipsToTwoLines && contextModalOpen && (
+          <ContextModal
+            open
+            onClose={() => setContextModalOpen(false)}
+            onSave={handleContextSave}
+            overlayZIndex={2100}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
+          />
+        )}
+        {collapseChipsToTwoLines && inputModalOpen && (
+          <AddInputFieldModal
+            onClose={() => setInputModalOpen(false)}
+            onAdd={handleInputAdd}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (useSetupConfigureTabs) {
+    const SETUP_SEGMENTS = [
+      { id: 'setup', label: 'Setup' },
+      { id: 'advanced', label: 'Advanced' },
+    ];
+    const setupContent = tightNameDescription ? (
+      <div className={styles.essentialsGroupEqual}>
+        {taskNameField}
+        {descriptionField}
+        {userPromptSection}
+        {outputFieldsSection}
+      </div>
+    ) : (
+      <div className={styles.essentialsGroup}>
+        <div className={styles.nameDescriptionGroup}>
+          {taskNameField}
+          {descriptionField}
+        </div>
+        <div className={styles.promptOutputGroup}>
+          {userPromptSection}
+          {outputFieldsSection}
+        </div>
+      </div>
+    );
+    const advancedContent = (
+      <div className={styles.advancedBody}>
+        {inputFieldsSection}
+        {systemPromptSection}
+        {contextSection}
+        {llmModelSection}
+      </div>
+    );
+    return (
+      <div className={`${styles.segmentedContainer}${collapseChipsToOneLine ? ` ${styles.containerExploration}` : ''}`}>
+        <div className={styles.segmentedTrack} role="tablist" aria-label="Action sections">
+          {SETUP_SEGMENTS.map((segment) => (
+            <button
+              key={segment.id}
+              type="button"
+              role="tab"
+              className={`${styles.segmentedTab}${activeSetupTab === segment.id ? ` ${styles.segmentedTabActive}` : ''}`}
+              onClick={() => setActiveSetupTab(segment.id)}
+              aria-selected={activeSetupTab === segment.id}
+            >
+              {segment.label}
+            </button>
+          ))}
+        </div>
+        <div className={styles.segmentedContent} role="tabpanel">
+          {activeSetupTab === 'advanced' ? advancedContent : setupContent}
+        </div>
+        {collapseChipsToTwoLines && contextModalOpen && (
+          <ContextModal
+            open
+            onClose={() => setContextModalOpen(false)}
+            onSave={handleContextSave}
+            overlayZIndex={2100}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
+          />
+        )}
+        {collapseChipsToTwoLines && inputModalOpen && (
+          <AddInputFieldModal
+            onClose={() => setInputModalOpen(false)}
+            onAdd={handleInputAdd}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (segmentedLayout) {
     const SEGMENTS = [

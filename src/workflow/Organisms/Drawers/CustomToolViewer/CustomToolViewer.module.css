@@ -160,6 +160,47 @@
   gap: 20px;
 }
 
+/* Inline embed inside Action RHS (Option 2 Tool details) */
+.embeddedOuter {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Roboto', sans-serif;
+  min-width: 0;
+}
+
+.embeddedBody {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Compact 12px fields when embedded in Action RHS Tool details */
+.embeddedBody :global(input[type='text']),
+.embeddedBody :global(input:not([type])) {
+  font-size: 12px !important;
+  line-height: 18px !important;
+  letter-spacing: -0.24px !important;
+}
+
+.embeddedBody .promptRichBody {
+  font-size: 12px;
+  line-height: 18px;
+  padding: 10px 12px;
+  min-height: 132px;
+  letter-spacing: -0.24px;
+}
+
+.embeddedBody .promptRichText {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.embeddedBody .promptTextarea {
+  font-size: 12px;
+  line-height: 18px;
+}
+
 /* ─── Interactive field wrappers ─── */
 
 .fieldWrap {
@@ -242,11 +283,11 @@
 /* ─── Tags input ─── */
 
 .tagsInput {
-  min-height: 40px;
-  border: 1px solid #d0d5dd;
-  border-radius: 8px;
+  min-height: 36px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
   background: #fff;
-  padding: 6px 10px;
+  padding: 4px 12px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -254,6 +295,10 @@
   cursor: text;
   width: 100%;
   box-sizing: border-box;
+}
+
+.tagsInput:focus-within {
+  border-color: #1976d2;
 }
 
 .tagChip {
@@ -482,12 +527,16 @@
 /* ─── Prompt textarea with variable toolbar ─── */
 
 .promptBox {
-  border: 1px solid #c5cad3;
-  border-radius: 8px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
   background: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.promptBox:focus-within {
+  border-color: #1976d2;
 }
 
 .promptTextarea {
@@ -505,6 +554,30 @@
   background: transparent;
 }
 
+.promptRichBody {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+  color: #212121;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.promptRichText {
+  white-space: pre-wrap;
+  vertical-align: middle;
+}
+
+/* Keep variable chips aligned with surrounding body text */
+.promptRichBody :global([class*='chip']) {
+  vertical-align: middle;
+  margin: 2px 0;
+}
+
 .promptTextarea::placeholder {
   color: #9e9e9e;
 }
@@ -512,8 +585,12 @@
 .promptToolbar {
   display: flex;
   align-items: center;
-  padding: 6px 10px;
+  justify-content: flex-start;
+  padding: 0 8px;
+  height: 36px;
+  gap: 4px;
   background: #fff;
+  flex-shrink: 0;
 }
 
 .variableBtn {

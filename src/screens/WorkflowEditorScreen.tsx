@@ -108,6 +108,11 @@ interface WorkflowEditorScreenProps {
   explorationChrome?: boolean
   /** Sep 1 chrome — red "N Errors" chip after the run-test icon (both Sep 1 agents). */
   sep1Chrome?: boolean
+  /**
+   * Action RHS Option 1/2 + R1–R4 layout picker (Response / Front desk exploration only —
+   * not Sep 1). Independent of sep1Chrome, which is true for all exploration-family navs.
+   */
+  llmTaskExplorationLayout?: boolean
   /** RHS Save follows the content instead of pinning to the panel bottom (Response agents Sep 1 only). */
   inlineRhsFooter?: boolean
   /** Opens Settings > Account > Product research (Help center "Learn more"). */
@@ -139,6 +144,7 @@ export function WorkflowEditorScreen({
   hideCanvasStartNode = hideTopIdentity,
   explorationChrome = hideTopIdentity,
   sep1Chrome = false,
+  llmTaskExplorationLayout = false,
   inlineRhsFooter = false,
   onOpenProductResearchSettings,
 }: WorkflowEditorScreenProps) {
@@ -319,6 +325,7 @@ export function WorkflowEditorScreen({
             explorationChrome={explorationChrome}
             inlineRhsFooter={inlineRhsFooter}
             sep1Chrome={sep1Chrome}
+            llmTaskExplorationLayout={llmTaskExplorationLayout}
             onOpenProductResearchSettings={onOpenProductResearchSettings}
           />
         </Suspense>

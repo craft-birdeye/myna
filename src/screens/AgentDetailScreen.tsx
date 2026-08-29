@@ -52,6 +52,7 @@ import {
   isAgentExplorationChrome,
   isExplorationHideCanvasStartNode,
   isFrontdeskExplorationChrome,
+  isLlmTaskExplorationLayout,
   isResponseAgentsExplorationChrome,
 } from '../data/agentNavIds'
 import { instanceSlugFromName, type DeepRoute } from '../appRoutes'
@@ -8427,6 +8428,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
                 explorationChrome={isExplorationAgents}
                 sep1Chrome={isExplorationAgents}
+                llmTaskExplorationLayout={isLlmTaskExplorationLayout(navId)}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}

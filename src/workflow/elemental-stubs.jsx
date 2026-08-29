@@ -151,7 +151,9 @@ export function TextArea({
   readOnly,
   error,
   errorMessage = 'This field is required',
+  resize,
 }) {
+  const resizeValue = resize ?? (readOnly ? 'none' : 'vertical');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {label && (
@@ -188,7 +190,7 @@ export function TextArea({
           color: '#0d0d12',
           background: readOnly ? '#fafafa' : disabled ? '#f5f5f5' : '#fff',
           outline: 'none',
-          resize: readOnly ? 'none' : 'vertical',
+          resize: resizeValue,
           boxSizing: 'border-box',
           width: '100%',
           lineHeight: '20px',

@@ -8,6 +8,7 @@ import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
 import {
   isAgentExplorationChrome,
   isExplorationHideCanvasStartNode,
+  isLlmTaskExplorationLayout,
   isSep1Chrome,
   RESPONSE_AGENTS_SEP1_NAV_ID,
 } from './data/agentNavIds'
@@ -1174,6 +1175,7 @@ export function App() {
                           hideCanvasStartNode={isExplorationHideCanvasStartNode(navActive)}
                           explorationChrome={isAgentExplorationChrome(navActive)}
                           sep1Chrome={isSep1Chrome(navActive)}
+                          llmTaskExplorationLayout={isLlmTaskExplorationLayout(navActive)}
                           inlineRhsFooter={navActive === RESPONSE_AGENTS_SEP1_NAV_ID}
                           onOpenProductResearchSettings={openUxImprovementSettings}
                         />
