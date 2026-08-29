@@ -132,7 +132,7 @@ function isReviewResponseAgentName(name: string) {
   return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
 }
 
-/** Review response agent (exploration) grid only — visual card variations, added one at a time. */
+/** Review response agent (exploration) grid only — visual card variations. */
 const CARD_LAYOUT_OPTIONS: Array<{ value: 'default' | 'r1'; label: string }> = [
   { value: 'default', label: 'Default' },
   { value: 'r1', label: 'R1' },
@@ -189,7 +189,9 @@ interface AgentInstance {
   issues?: number
   lastUpdated?: string
   updatedBy?: string
-  [key: string]: string | number | undefined
+  /** When true, Agents table nests a Draft name under this live row (same row, no divider). */
+  hasDraft?: boolean
+  [key: string]: string | number | boolean | undefined
 }
 
 function AgentInstanceMoreMenu({
@@ -322,6 +324,8 @@ interface RegionRow {
   clickThroughRate?: string
   /** Overrides the default `${agentName} - ${region}` row label. */
   instanceName?: string
+  /** Live instance also has an unpublished draft — shown indented in the same Agents table row. */
+  hasDraft?: boolean
   lastUpdated?: string
   updatedBy?: string
 }
@@ -400,13 +404,13 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
     { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
     { region: 'South Region', status: 'Inactive',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
-    { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+    { region: 'West Region',  status: 'Active', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region', hasDraft: true },
   ],
   [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
     { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
     { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
     { region: 'South Region', status: 'Inactive',  channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region' },
-    { region: 'West Region',  status: 'Draft',   channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+    { region: 'West Region',  status: 'Active', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region', hasDraft: true },
   ],
   'Review generation agents': [
     {
@@ -7196,9 +7200,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  /** Review response agent (exploration) grid only: switches between visual variations of the
-   *  agent card, built out one at a time — 'default' is the current design, 'r1' etc. are added
-   *  as each variation is designed. */
+  /** Review response agent (exploration) grid: 'default' = icon card; 'r1' = metric-forward card. */
   const [cardLayoutOption, setCardLayoutOption] = useState<'default' | 'r1'>('default')
   const [cardLayoutMenuOpen, setCardLayoutMenuOpen] = useState(false)
   const cardLayoutMenuRef = useRef<HTMLDivElement>(null)
@@ -7496,6 +7498,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     issues: r.issues,
     lastUpdated: r.lastUpdated ?? LAST_UPDATED_SAMPLES[i % LAST_UPDATED_SAMPLES.length],
     updatedBy: r.updatedBy ?? UPDATED_BY_SAMPLES[i % UPDATED_BY_SAMPLES.length],
+    hasDraft: r.hasDraft,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
 
   useEffect(() => {
@@ -7568,21 +7571,65 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       width: 230,
       sortable: true,
       locked: true,
-      render: (v) => <span className="group-hover/row:text-text-action">{String(v)}</span>,
+      truncate: false,
+      render: (v, row) => (
+        <div className={`flex flex-col ${row.hasDraft ? 'gap-sm' : ''}`}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              openAgentInstanceDetails(row)
+            }}
+            className={`truncate text-left text-body text-text-primary hover:text-text-action ${
+              row.hasDraft ? 'flex h-7 items-center' : ''
+            }`}
+          >
+            {String(v)}
+          </button>
+          {row.hasDraft ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEditAgent?.(
+                  row.name,
+                  undefined,
+                  undefined,
+                  'Draft',
+                )
+              }}
+              className="flex h-7 items-center gap-sm truncate pl-xs text-left text-body text-text-secondary hover:text-text-action"
+            >
+              <span className="text-text-tertiary" aria-hidden>
+                └
+              </span>
+              <span className="truncate">{String(v)}</span>
+            </button>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: 'status',
       label: 'Status',
       width: 170,
       sortable: true,
+      truncate: false,
       render: (v, row) => (
-        <div className="flex items-center gap-sm">
-          <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />
-          {row.issues ? (
-            <span className="flex items-center gap-xs text-small text-text-secondary">
-              <Icon name="error" size={14} className="text-chip-danger-text" />
-              {row.issues} {row.issues === 1 ? 'issue' : 'issues'}
-            </span>
+        <div className={`flex flex-col ${row.hasDraft ? 'gap-sm' : ''}`}>
+          <div className={`flex items-center gap-sm ${row.hasDraft ? 'h-7' : 'min-h-5'}`}>
+            <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />
+            {row.issues ? (
+              <span className="flex items-center gap-xs text-small text-text-secondary">
+                <Icon name="error" size={14} className="text-chip-danger-text" />
+                {row.issues} {row.issues === 1 ? 'issue' : 'issues'}
+              </span>
+            ) : null}
+          </div>
+          {row.hasDraft ? (
+            <div className="flex h-7 items-center">
+              <Chip label="Draft" variant={STATUS_VARIANT.Draft} />
+            </div>
           ) : null}
         </div>
       ),
@@ -8487,8 +8534,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     </>
                   )}
                   {useExplorationGrid ? (
-                    // `cardLayoutOption` ('default' | 'r1', switched via the dropdown above) is where
-                    // each new visual variation branches once it's designed.
+                    // Dropdown: Default = icon card; R1 = metric-forward card (no glyph).
                     <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
                         const cardMetrics = isExplorationFrontDeskAgents
@@ -8504,33 +8550,58 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               { value: row.avgResponseTime ?? '—', label: 'Average response time' },
                               { value: row.timeSaved ?? '—', label: 'Time saved' },
                             ]
-                        const isR1Card = cardLayoutOption === 'r1'
+                        const isDefaultIconCard = cardLayoutOption === 'default'
                         return (
                           <div
-                            key={row.name}
+                            key={`${row.name}-${row.status}`}
                             className="group relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                           >
-                            <div className={`flex min-w-0 justify-between gap-sm ${isR1Card ? 'items-center' : 'items-start'}`}>
+                            <div className={`flex min-w-0 justify-between gap-sm ${isDefaultIconCard ? 'items-center' : 'items-start'}`}>
                               <div
-                                className={`flex min-w-0 flex-1 items-center gap-sm ${isR1Card ? 'min-h-[44px]' : ''}`}
+                                className={`flex min-w-0 flex-1 flex-col gap-xs ${isDefaultIconCard ? 'min-h-[44px]' : ''}`}
                               >
-                                {isR1Card && <LibraryCardIcon glyph="autonomous" />}
-                                <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
-                                  {row.name}
-                                </h3>
+                                <div className="flex min-w-0 items-center gap-sm">
+                                  {isDefaultIconCard && <LibraryCardIcon glyph="autonomous" />}
+                                  <button
+                                    type="button"
+                                    onClick={() => openAgentInstanceDetails(row)}
+                                    className="min-w-0 flex-1 truncate text-left text-body leading-[22px] tracking-[-0.28px] text-text-primary hover:text-text-action"
+                                  >
+                                    {row.name}
+                                  </button>
+                                </div>
+                                {row.hasDraft ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onEditAgent?.(row.name, undefined, undefined, 'Draft')
+                                    }
+                                    className="flex min-w-0 items-center gap-sm pl-xs text-left text-body text-text-secondary hover:text-text-action"
+                                  >
+                                    <span className="text-text-tertiary" aria-hidden>
+                                      └
+                                    </span>
+                                    <span className="min-w-0 truncate">{row.name}</span>
+                                  </button>
+                                ) : null}
                               </div>
-                              <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
+                              <div className="flex shrink-0 flex-col items-end gap-xs">
+                                <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
+                                {row.hasDraft ? (
+                                  <Chip label="Draft" variant={STATUS_VARIANT.Draft} />
+                                ) : null}
+                              </div>
                             </div>
                             <div
                               className={
-                                isR1Card
+                                isDefaultIconCard
                                   ? 'mt-sm grid grid-cols-3 content-start gap-sm'
                                   : 'mt-md grid grid-cols-3 content-start gap-md'
                               }
                             >
                               {cardMetrics.map((metric) => (
                                 <div key={metric.label} className="min-w-0">
-                                  <div className={isR1Card ? 'truncate text-body text-text-primary' : 'truncate text-h3 text-text-primary'}>
+                                  <div className={isDefaultIconCard ? 'truncate text-body text-text-primary' : 'truncate text-h3 text-text-primary'}>
                                     {metric.value}
                                   </div>
                                   <div className="truncate text-small text-text-tertiary">{metric.label}</div>
@@ -8560,7 +8631,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       })}
                     </div>
                   ) : (
-                    <div className="px-lg py-lg">
+                    <div className="px-lg pb-lg pt-2xl">
                       <DataTable
                         columns={columns}
                         data={visibleData}
@@ -8571,6 +8642,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                           setSelectedInstance(row.name)
                         }}
                         rowMenuItems={agentInstanceRowMenuItems}
+                        rowClassName={(row) =>
+                          // Equal inset + shared 24px live-line so metrics sit with Active name/chip.
+                          row.hasDraft
+                            ? '[&>td]:!h-auto [&>td]:align-top [&>td]:py-md [&>td>span]:!flex [&>td>span]:h-7 [&>td>span]:items-center'
+                            : ''
+                        }
                       />
                     </div>
                   )}
