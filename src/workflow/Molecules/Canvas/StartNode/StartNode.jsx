@@ -1,5 +1,5 @@
 import React from 'react';
-import iconAgentsPurple from '../../../../assets/icon-agents-purple.svg';
+import iconAgentsTwoStarSparkle from '../../../../assets/icon-agents-two-star-sparkle.svg';
 import './StartNode.css';
 
 export default function StartNode({
@@ -15,8 +15,8 @@ export default function StartNode({
         <span
           className="ai-gradient-icon start-node__icon-gradient"
           style={{
-            WebkitMaskImage: `url("${iconAgentsPurple}")`,
-            maskImage: `url("${iconAgentsPurple}")`,
+            WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
+            maskImage: `url("${iconAgentsTwoStarSparkle}")`,
           }}
           aria-hidden
         />

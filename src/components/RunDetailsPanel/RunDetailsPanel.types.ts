@@ -44,6 +44,8 @@ export interface RunDetailsPanelProps {
   showTabs?: boolean
   /** Conversation-tab label. Default "Conversation"; voice-call logs use "Call transcript". */
   conversationTabLabel?: string
+  /** Logs-tab label. Default "Call logs"; review agents use "Log". */
+  logsTabLabel?: string
   /** Panel header title. Default "Run details". */
   title?: string
   /** When false, hides the header row (title + optional "View conversation" button) entirely.

@@ -132,6 +132,12 @@ function isReviewResponseAgentName(name: string) {
   return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
 }
 
+/** Review response agent (exploration) grid only — visual card variations, added one at a time. */
+const CARD_LAYOUT_OPTIONS: Array<{ value: 'default' | 'r1'; label: string }> = [
+  { value: 'default', label: 'Default' },
+  { value: 'r1', label: 'R1' },
+]
+
 const FRONTDESK_AGENT_NAME = 'Front desk agent'
 const FRONTDESK_EXPLORATION_AGENT_NAME = 'Front desk agent (exploration)'
 
@@ -7190,6 +7196,23 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  /** Review response agent (exploration) grid only: switches between visual variations of the
+   *  agent card, built out one at a time — 'default' is the current design, 'r1' etc. are added
+   *  as each variation is designed. */
+  const [cardLayoutOption, setCardLayoutOption] = useState<'default' | 'r1'>('default')
+  const [cardLayoutMenuOpen, setCardLayoutMenuOpen] = useState(false)
+  const cardLayoutMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!cardLayoutMenuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (cardLayoutMenuRef.current && !cardLayoutMenuRef.current.contains(e.target as Node)) {
+        setCardLayoutMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [cardLayoutMenuOpen])
   const showExplorationAgentsToggle =
     isExplorationAgents && !isSep1Agents && activeTab === 'agents'
   const useExplorationGrid =
@@ -8304,6 +8327,44 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         </button>
                       </div>
                     )}
+                    {isReviewResponse && useExplorationGrid && (
+                      <div className="relative" ref={cardLayoutMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => setCardLayoutMenuOpen((o) => !o)}
+                          aria-haspopup="listbox"
+                          aria-expanded={cardLayoutMenuOpen}
+                          className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
+                        >
+                          {CARD_LAYOUT_OPTIONS.find((opt) => opt.value === cardLayoutOption)?.label}
+                          <Icon name="expand_more" size={18} />
+                        </button>
+                        {cardLayoutMenuOpen && (
+                          <ul
+                            role="listbox"
+                            className="absolute right-0 top-full z-20 mt-xs min-w-[140px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
+                          >
+                            {CARD_LAYOUT_OPTIONS.map((opt) => (
+                              <li key={opt.value}>
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={cardLayoutOption === opt.value}
+                                  onClick={() => {
+                                    setCardLayoutOption(opt.value)
+                                    setCardLayoutMenuOpen(false)
+                                  }}
+                                  className="flex w-full items-center justify-between px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                                >
+                                  {opt.label}
+                                  {cardLayoutOption === opt.value && <Icon name="check" size={16} />}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
@@ -8426,6 +8487,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     </>
                   )}
                   {useExplorationGrid ? (
+                    // `cardLayoutOption` ('default' | 'r1', switched via the dropdown above) is where
+                    // each new visual variation branches once it's designed.
                     <div className="grid grid-cols-1 gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
                         const cardMetrics = isExplorationFrontDeskAgents
@@ -8441,25 +8504,40 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               { value: row.avgResponseTime ?? '—', label: 'Average response time' },
                               { value: row.timeSaved ?? '—', label: 'Time saved' },
                             ]
+                        const isR1Card = cardLayoutOption === 'r1'
                         return (
                           <div
                             key={row.name}
                             className="group relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                           >
-                            <div className="flex min-w-0 items-start justify-between gap-sm">
-                              <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
-                                {row.name}
-                              </h3>
+                            <div className={`flex min-w-0 justify-between gap-sm ${isR1Card ? 'items-center' : 'items-start'}`}>
+                              <div
+                                className={`flex min-w-0 flex-1 items-center gap-sm ${isR1Card ? 'min-h-[44px]' : ''}`}
+                              >
+                                {isR1Card && <LibraryCardIcon glyph="autonomous" />}
+                                <h3 className="min-w-0 flex-1 line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary group-hover:text-text-action">
+                                  {row.name}
+                                </h3>
+                              </div>
                               <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
                             </div>
-                            <div className="mt-md grid grid-cols-3 content-start gap-md">
+                            <div
+                              className={
+                                isR1Card
+                                  ? 'mt-sm grid grid-cols-3 content-start gap-sm'
+                                  : 'mt-md grid grid-cols-3 content-start gap-md'
+                              }
+                            >
                               {cardMetrics.map((metric) => (
                                 <div key={metric.label} className="min-w-0">
-                                  <div className="truncate text-h3 text-text-primary">{metric.value}</div>
+                                  <div className={isR1Card ? 'truncate text-body text-text-primary' : 'truncate text-h3 text-text-primary'}>
+                                    {metric.value}
+                                  </div>
                                   <div className="truncate text-small text-text-tertiary">{metric.label}</div>
                                 </div>
                               ))}
                             </div>
+                            {/* Overlay (not in-flow) so revealing it on hover never changes the card's height. */}
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-gradient-to-t from-surface from-60% to-transparent px-lg pb-lg pt-2xl opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
                               <button
                                 type="button"

@@ -86,7 +86,7 @@
   width: 8px;
   margin-left: -4px;
   background: #1976d2;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .connectorAdd {
@@ -221,7 +221,7 @@
   width: 8px;
   margin-left: -4px;
   background: #1976d2;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .afterLoopConnector .connectorAdd {

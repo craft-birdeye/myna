@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLeaf, NavSection, SideNavProps } from './SideNav.types'
 import { ChevronDown, ChevronUp, ExternalLink, Plus } from 'lucide-react'
-// Filled glyph — stroke-only outline SVGs don't mask reliably in production.
 import iconAgentsTwoStarSparkle from '../../assets/icon-agents-two-star-sparkle.svg'
 
 function findSectionIdForItem(sections: NavSection[], itemId: string): string | null {
@@ -111,7 +110,7 @@ function Section({
           <span className="truncate text-body text-text-primary">{section.label}</span>
           {section.badge && (
             <span
-              className="ai-gradient-icon size-4"
+              className="ai-gradient-icon size-4 shrink-0"
               style={{
                 WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
                 maskImage: `url("${iconAgentsTwoStarSparkle}")`,

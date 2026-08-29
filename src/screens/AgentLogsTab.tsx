@@ -1,4 +1,5 @@
-import { Chip, DataTable, Tooltip, type ChipVariant, type Column } from '../components'
+import { Chip, DataTable, getUserRatingForLogStatus, Icon, Tooltip, type ChipVariant, type Column } from '../components'
+import { REVIEW_SOURCE_LOGOS } from '../data/reviewSourceLogos'
 import {
   HEALTHCARE_LOGS_ROWS,
   PREVISIT_LOGS_ROWS,
@@ -54,15 +55,24 @@ function mapExplorationFrontDeskStatus(status: string): string {
   return EXPLORATION_FRONTDESK_STATUS_LABEL[status] ?? status
 }
 
+/** Same mapping as call-details User rating; numeric so the logs column can reuse the star cell. */
+function userRatingFromLogStatus(status: string): number | undefined {
+  const label = getUserRatingForLogStatus(status)
+  if (!label) return undefined
+  const n = parseFloat(label)
+  return Number.isFinite(n) ? n : undefined
+}
+
 /** Maps statuses + Not resolved intents; adds a second Not resolved row when needed. */
 function withExplorationFrontDeskLogs(rows: HealthcareLogRow[]): HealthcareLogRow[] {
   let notResolvedIdx = 0
   const mapped = rows.map((row) => {
     const status = mapExplorationFrontDeskStatus(row.status)
-    if (status !== 'Not resolved') return { ...row, status }
+    const userRating = userRatingFromLogStatus(status)
+    if (status !== 'Not resolved') return { ...row, status, userRating }
     const topic = EXPLORATION_NOT_RESOLVED_INTENTS[notResolvedIdx % EXPLORATION_NOT_RESOLVED_INTENTS.length]
     notResolvedIdx += 1
-    return { ...row, status, topic }
+    return { ...row, status, topic, userRating }
   })
 
   if (notResolvedIdx === 1) {
@@ -74,6 +84,7 @@ function withExplorationFrontDeskLogs(rows: HealthcareLogRow[]): HealthcareLogRo
       duration: '2:18',
       topic: EXPLORATION_NOT_RESOLVED_INTENTS[1],
       implementedSteps: ['trigger'],
+      userRating: userRatingFromLogStatus('Not resolved'),
     })
   }
 
@@ -81,6 +92,16 @@ function withExplorationFrontDeskLogs(rows: HealthcareLogRow[]): HealthcareLogRo
 }
 
 const TIMESTAMP_CELL = (v: unknown) => <span className="group-hover/row:text-text-action">{String(v)}</span>
+
+const RATING_CELL = (v: unknown) =>
+  typeof v === 'number' ? (
+    <span className="inline-flex items-center gap-xs">
+      {v}
+      <Icon name="star" size={14} fill className="text-rating-star" />
+    </span>
+  ) : (
+    <span>No rating</span>
+  )
 
 const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
@@ -145,6 +166,7 @@ const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
     truncate: false,
     render: (v) => <ExplorationIntentCell intent={String(v ?? '')} />,
   },
+  { key: 'userRating', label: 'User rating', width: 140, sortable: true, truncate: false, render: RATING_CELL },
 ]
 
 const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
@@ -160,6 +182,24 @@ const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
   { key: 'channel', label: 'Channel', width: 180, sortable: true },
 ]
 
+const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
+const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
+
+const SOURCE_CELL = (v: unknown) => {
+  const label = v ? String(v) : ''
+  const logo = REVIEW_SOURCE_LOGOS[label]
+  if (!logo) return TEXT_CELL(v)
+  return (
+    <Tooltip variant="brief" content={label}>
+      <img
+        src={logo}
+        alt={label}
+        className={label === 'Direct Feedback' ? 'size-5' : 'size-[18px]'}
+      />
+    </Tooltip>
+  )
+}
+
 /** Shared by review generation's Logs tab, which doesn't carry duration/rating/comment. */
 const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
@@ -171,12 +211,8 @@ const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
     render: (v) => renderLogStatusCell(v),
   },
   { key: 'contact', label: 'Contact', width: 220, sortable: true },
-  { key: 'source', label: 'Source', width: 180, sortable: true },
+  { key: 'source', label: 'Source', width: 180, sortable: true, truncate: false, render: SOURCE_CELL },
 ]
-
-const RATING_CELL = (v: unknown) => <span>{typeof v === 'number' ? `${v} star` : 'No rating'}</span>
-const TEXT_CELL = (v: unknown) => (v ? String(v) : '—')
-const TEXT_TOOLTIP = (v: unknown) => (v ? String(v) : undefined)
 
 function withoutLogDuration<T>(columns: Column<T>[]): Column<T>[] {
   return columns.filter((col) => col.key !== 'duration')
@@ -195,8 +231,8 @@ const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
   },
   { key: 'contact', label: 'Reviewer name', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
   { key: 'rating', label: 'Review rating', width: 140, truncate: false, render: RATING_CELL },
-  { key: 'source', label: 'Review source', width: 160, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
-  { key: 'comment', label: 'Comment', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'source', label: 'Review source', width: 160, sortable: true, truncate: false, render: SOURCE_CELL },
+  { key: 'comment', label: 'Review summary', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
 ]
 
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {

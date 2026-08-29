@@ -1137,8 +1137,15 @@ export default function AgentBuilder({
   const [llmTaskTab, setLlmTaskTab] = useState('setup');
   /** Exploration LLM task: Option 1 = body tabs, Option 2 = header Setup/Configure menu. */
   const [llmTaskLayoutOption, setLlmTaskLayoutOption] = useState('option1');
+  /** R1 only: true while a required field inside an accordion is empty — disables
+   *  the RHS footer's Save and shows the "Mandatory fields missing" warning. */
+  const [llmTaskSaveBlocked, setLlmTaskSaveBlocked] = useState(false);
   const [lhsPreviewProcedureId, setLhsPreviewProcedureId] = useState(null);
   const externalPreviewRef = useRef(null);
+
+  useEffect(() => {
+    setLlmTaskSaveBlocked(false);
+  }, [selectedNodeId]);
 
   /* Sync external Create-with-AI procedure clicks into the canvas RHS. */
   useEffect(() => {
@@ -3302,6 +3309,12 @@ export default function AgentBuilder({
     if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).includes('handle-response'))) {
       const llmTaskExplorationLayout = explorationChrome && !sep1Chrome;
       const llmTaskOption2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option2';
+      // R1/R2/R3/R4 layouts are scoped to the Review response agent's exploration chrome
+      // only — Frontdesk exploration (and any other agent) never sees any of these options or their behavior.
+      const llmTaskR1 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r1' && isReviewResponseAgent;
+      const llmTaskR2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r2' && isReviewResponseAgent;
+      const llmTaskR3 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r3' && isReviewResponseAgent;
+      const llmTaskR4 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r4' && isReviewResponseAgent;
       return (
         <RHS
           variant="llmTask"
@@ -3316,6 +3329,12 @@ export default function AgentBuilder({
             options: [
               { value: 'option1', label: 'Option 1' },
               { value: 'option2', label: 'Option 2' },
+              ...(isReviewResponseAgent ? [
+                { value: 'r1', label: 'R1' },
+                { value: 'r2', label: 'R2' },
+                { value: 'r3', label: 'R3' },
+                { value: 'r4', label: 'R4' },
+              ] : []),
             ],
             onChange: setLlmTaskLayoutOption,
           } : null}
@@ -3335,9 +3354,15 @@ export default function AgentBuilder({
             collapseChipsToOneLine: llmTaskExplorationLayout,
             collapseChipsToTwoLines: explorationChrome,
             setupConfigureInHeader: llmTaskOption2,
+            accordionLayout: llmTaskR1 || llmTaskR2 || llmTaskR3,
+            accordionBare: llmTaskR2 || llmTaskR3,
+            accordionLined: llmTaskR3,
+            segmentedLayout: llmTaskR4,
             activeTab: llmTaskTab,
             onTabChange: llmTaskExplorationLayout ? setLlmTaskTab : undefined,
             onOpenGlossary: openGlossary,
+            onValidationChange: setLlmTaskSaveBlocked,
+            saveBlocked: llmTaskSaveBlocked,
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}

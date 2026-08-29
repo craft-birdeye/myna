@@ -607,7 +607,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
                   type="button"
                   disabled={!apptEvent}
                   onClick={() => apptEvent && openGoogleCalendar(apptEvent)}
-                  className="flex flex-col items-center gap-[5px] rounded-[6px] bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex flex-col items-center gap-[5px] rounded-sm bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <img src={iconGoogle} alt="Google Calendar" className="size-5" />
                   <span className="text-[12px] leading-[16px] text-text-primary">Google</span>
@@ -616,7 +616,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
                   type="button"
                   disabled={!apptEvent}
                   onClick={() => apptEvent && downloadICSFile(apptEvent)}
-                  className="flex flex-col items-center gap-[5px] rounded-[6px] bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex flex-col items-center gap-[5px] rounded-sm bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <img src={iconIcal} alt="iCal" className="size-5" />
                   <span className="text-[12px] leading-[16px] text-text-primary">iCal</span>
@@ -625,7 +625,7 @@ export function BookAppointmentDrawer({ open, onClose }: BookAppointmentDrawerPr
                   type="button"
                   disabled={!apptEvent}
                   onClick={() => apptEvent && openOutlookCalendar(apptEvent)}
-                  className="flex flex-col items-center gap-[5px] rounded-[6px] bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex flex-col items-center gap-[5px] rounded-sm bg-surface-l2 px-[26px] py-[12px] hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <img src={iconOutlook} alt="Outlook" className="size-5" />
                   <span className="text-[12px] leading-[16px] text-text-primary">Outlook</span>

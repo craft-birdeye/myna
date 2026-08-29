@@ -17,7 +17,12 @@ export interface HealthcareLogRow {
   executedNodeIds?: string[]
   /** Review-response rows only: star rating and reviewer comment on the underlying review. */
   rating?: number
+  /** Front desk (sep 1 / exploration) logs: post-call user rating, 1–5. Absent when the caller did not rate. */
+  userRating?: number
   comment?: string
+  /** Review-response rows only: the platform's review id and the business location reviewed. */
+  reviewId?: string
+  location?: string
   [key: string]: string | number | string[] | LogStepId[] | undefined
 }
 
@@ -195,6 +200,10 @@ export interface ReviewResponseLogRow {
   /** Star rating on the underlying review; absent for rows with no rating (e.g. direct feedback). */
   rating?: number
   comment?: string
+  /** Review platform's id for the underlying review; shown in the log's Review details tab. */
+  reviewId?: string
+  /** Business location the review was left for; shown in the log's Review details tab. */
+  location?: string
   implementedSteps?: LogStepId[]
   executedNodeIds?: string[]
   [key: string]: string | number | string[] | LogStepId[] | undefined
@@ -210,6 +219,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     rating: 2,
     comment:
       'Very disappointed with the service. The wait time was longer than expected and staff seemed rushed when I asked about my appointment.',
+    reviewId: '1730501',
+    location: 'Sunrise Family Medicine',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -221,6 +232,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     rating: 5,
     comment:
       'Dr. Patel explained everything clearly and the front desk got me checked in quickly. Best visit I have had in years.',
+    reviewId: '1730488',
+    location: 'Bright Smile Dental Studio',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -232,6 +245,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     rating: 5,
     comment:
       'Dr. Patel explained everything clearly and the front desk got me checked in quickly. Best visit I have had in years.',
+    reviewId: '1730471',
+    location: 'Bright Smile Dental Studio',
     implementedSteps: ['trigger'],
   },
   {
@@ -242,6 +257,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     duration: '0:15',
     comment:
       'Thanks for following up on my billing question — the explanation was clear and I got it sorted the same day.',
+    reviewId: '1730449',
+    location: 'Sunrise Family Medicine',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -253,6 +270,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     rating: 5,
     comment:
       'Dr. Patel explained everything clearly and the front desk got me checked in quickly. Best visit I have had in years.',
+    reviewId: '1730432',
+    location: 'Bright Smile Dental Studio',
     implementedSteps: ['trigger'],
   },
   {
@@ -264,6 +283,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     rating: 5,
     comment:
       'Scheduling was easy online and the hygienist was gentle and thorough. Will definitely recommend to friends.',
+    reviewId: '1730417',
+    location: 'Bright Smile Dental Studio',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -273,6 +294,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     source: '—',
     duration: '0:12',
     comment: 'Appreciated the callback about my test results — saved me a trip to the office.',
+    reviewId: '1730395',
+    location: 'Sunrise Family Medicine',
     implementedSteps: ['trigger', 'procedures'],
   },
   {
@@ -284,6 +307,8 @@ export const REVIEW_RESPONSE_LOGS_ROWS: ReviewResponseLogRow[] = [
     rating: 5,
     comment:
       'Smooth check-in, on-time appointment, and the team answered all my insurance questions without making me wait.',
+    reviewId: '1730368',
+    location: 'Sunrise Family Medicine',
     implementedSteps: ['trigger', 'procedures'],
   },
 ]
@@ -302,6 +327,8 @@ export function toHealthcareLogRow(row: ReviewResponseLogRow): HealthcareLogRow 
     source: row.source,
     rating: row.rating,
     comment: row.comment,
+    reviewId: row.reviewId,
+    location: row.location,
   }
 }
 

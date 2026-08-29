@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import RHSSidePanelHeader from '../../../Molecules/RHS/RHSHeader/RHSHeader';
 import RHSPanelFooter from '../../../Molecules/RHS/RHSFooter/RHSFooter';
 import AgentDetailsBody from './AgentDetailsBody';
@@ -133,6 +133,14 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
   const showPromptStrength = showPromptStrengthProp ?? config.showPromptStrength;
   const resolvedSaveLabel = saveLabel ?? 'Save';
 
+  /** R1: LLMTaskBody exposes validate() via ref — Save runs it first and bails
+   *  (leaving the body to open/highlight the offending accordion) when invalid. */
+  const bodyRef = useRef(null);
+  const handleSaveClick = () => {
+    if (bodyRef.current?.validate && !bodyRef.current.validate()) return;
+    onSave?.();
+  };
+
   return (
       <div className={styles['rhs-panel']} style={{ width: panelWidth }}>
         <RHSSidePanelHeader
@@ -166,6 +174,7 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           >
             <Body
               {...(bodyProps || {})}
+              ref={variant === 'llmTask' ? bodyRef : undefined}
               viewOnly={viewOnly}
               product={product}
               allowStepsExpand={
@@ -178,8 +187,10 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
 
         {!viewOnly && (
           <RHSPanelFooter
-            onSave={onSave}
+            onSave={handleSaveClick}
             saveLabel={resolvedSaveLabel}
+            disabled={variant === 'llmTask' ? bodyProps?.saveBlocked : false}
+            missingFieldsWarning={variant === 'llmTask' ? bodyProps?.saveBlocked : false}
             showPromptStrength={showPromptStrength}
           />
         )}

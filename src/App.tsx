@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { AgentSystemPromptStoreProvider } from './data/AgentSystemPromptStoreContext'
@@ -60,7 +60,10 @@ import { UserExperienceImprovementScreen } from './screens/UserExperienceImprove
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
 import { AgentDirectoryScreen } from './screens/AgentDirectoryScreen'
+import { OverviewScreen } from './screens/OverviewScreen'
+import { OverviewV2Screen } from './screens/OverviewV2Screen'
 import { OverviewV2_1Screen } from './screens/OverviewV2_1Screen'
+import { OverviewV3Screen } from './screens/OverviewV3Screen'
 import logoSrc from './assets/birdeye-logo.svg'
 import jayIcon from './assets/icon-jay.svg'
 import mynaIcon from './assets/icon-myna.svg'
@@ -99,7 +102,7 @@ const RAIL_GROUPS: RailGroup[] = [
   {
     id: 'main',
     items: [
-      { id: 'overview', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
+      { id: 'overview-v2-1', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
     ],
   },
   {
@@ -423,6 +426,9 @@ const RAIL_TITLE: Record<string, string> = {
   inbox:                 'Inbox',
   settings:              'Settings',
   overview:              'Overview',
+  'overview-v2':         'Overview v2',
+  'overview-v2-1':       'Overview',
+  'overview-v3':         'Overview v3',
   agents:                'Co-workers',
   search:                'AI Search',
   listings:              'Listings AI',
@@ -475,11 +481,38 @@ function openDetailInNewTab(view: string, args: unknown) {
   window.open(url.toString(), '_blank', 'noopener,noreferrer')
 }
 
+// Every main-nav (L1 icon-rail) page gets a real, shareable/bookmarkable URL — hash-based,
+// since GitHub Pages has no SPA rewrite for path-based routes. Screens reached by drilling in
+// (agent detail, settings sub-screens, detail views, etc.) stay purely state-based, unaffected
+// by this — only the top-level rail destination itself is addressable.
+const RAIL_ID_TO_SLUG: Record<string, string> = {
+  'overview-v2-1': 'overview',
+  search: 'ai-search',
+  listings: 'listings',
+  reviews: 'reviews',
+  social: 'social',
+  'content-hub': 'content-hub',
+  referral: 'referral',
+  'marketing-automation': 'marketing-automation',
+  inbox: 'inbox',
+  frontdesk: 'front-desk',
+  surveys: 'surveys',
+  ticketing: 'ticketing',
+  insights: 'insights',
+  reports: 'reports',
+  patients: 'patients',
+  settings: 'settings',
+}
+const SLUG_TO_RAIL_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(RAIL_ID_TO_SLUG).map(([railId, slug]) => [slug, railId]),
+)
+const railIdFromHash = (hash: string): string | null => SLUG_TO_RAIL_ID[hash.replace(/^#\/?/, '')] ?? null
+
 // ─── App ────────────────────────────────────────────────────────────────────
 
 export function App() {
   const [initialDetailView] = useState(() => parseInitialDetailView())
-  const [railActive, setRailActive] = useState('overview')
+  const [railActive, setRailActive] = useState('overview-v2-1')
   const [navActive, setNavActive] = useState(
     () => DETAIL_VIEW_NAV[initialDetailView?.view ?? ''] ?? 'frontdesk-agent',
   )
@@ -519,6 +552,32 @@ export function App() {
   const [agentToastVisible, setAgentToastVisible] = useState(false)
   const [inboxFocusId, setInboxFocusId] = useState<string | null>(null)
   const [recommendationFocus, setRecommendationFocus] = useState<{ instanceName: string; recommendationId: string; feedbackPrefill?: string } | null>(null)
+
+  // Respond to a direct #/<page> link (or the back/forward buttons crossing one) by jumping to
+  // that rail destination. Mount-time check covers a fresh load; the listener covers navigation
+  // that happens without a remount.
+  useEffect(() => {
+    const applyHash = () => {
+      const railId = railIdFromHash(window.location.hash)
+      if (railId) setRailActive(railId)
+    }
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
+  }, [])
+
+  // Keep the address bar in sync the other way: landing on a rail page writes its #/slug (so
+  // it's always shareable/bookmarkable), leaving it for a non-rail-addressable screen (an agent
+  // detail view, a settings sub-screen, etc.) clears the hash again.
+  useEffect(() => {
+    const slug = RAIL_ID_TO_SLUG[railActive]
+    if (slug) {
+      const hash = `#/${slug}`
+      if (window.location.hash !== hash) window.location.hash = hash
+    } else if (railIdFromHash(window.location.hash)) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
+  }, [railActive])
 
   function openIntegrationSettings(integrationId: string) {
     setRailActive('settings')
@@ -623,6 +682,9 @@ export function App() {
     railActive !== 'inbox' &&
     railActive !== 'agents' &&
     railActive !== 'overview' &&
+    railActive !== 'overview-v2' &&
+    railActive !== 'overview-v2-1' &&
+    railActive !== 'overview-v3' &&
     railActive !== 'content-hub' &&
     railActive !== 'search' &&
     railActive !== 'social'
@@ -884,7 +946,17 @@ export function App() {
                     }}
                   />
                 ) : railActive === 'overview' ? (
+                  <OverviewScreen
+                    key={activeProduct}
+                    product={activeProduct}
+                    onOpenAgent={openAgentByNavId}
+                  />
+                ) : railActive === 'overview-v2' ? (
+                  <OverviewV2Screen />
+                ) : railActive === 'overview-v2-1' ? (
                   <OverviewV2_1Screen onOpenAgent={openAgentFromOverview} />
+                ) : railActive === 'overview-v3' ? (
+                  <OverviewV3Screen />
                 ) : railActive === 'agents' ? (
                   <AgentDirectoryScreen
                     key={activeProduct}

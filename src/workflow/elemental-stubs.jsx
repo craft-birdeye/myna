@@ -46,6 +46,8 @@ export function FormInput({
   checked,
   labelInside,
   styleConfig,
+  error,
+  errorMessage = 'This field is required',
 }) {
   /* Radio button layout */
   if (type === 'radio') {
@@ -88,7 +90,7 @@ export function FormInput({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#717182',
+            color: error ? '#de1b0c' : '#717182',
             fontFamily: font,
           }}
         >
@@ -110,7 +112,7 @@ export function FormInput({
         style={{
           height: 36,
           padding: '0 12px',
-          border: noBorder ? 'none' : '1px solid #e5e9f0',
+          border: noBorder ? 'none' : `1px solid ${error ? '#de1b0c' : '#e5e9f0'}`,
           borderRadius: noBorder ? 0 : 4,
           fontSize: 14,
           lineHeight: '20px',
@@ -123,9 +125,14 @@ export function FormInput({
           width: '100%',
           cursor: readOnly ? 'default' : undefined,
         }}
-        onFocus={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = '#e5e9f0'; }}
+        onFocus={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#1976d2'; }}
+        onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#e5e9f0'; }}
       />
+      {error && errorMessage && (
+        <span style={{ fontSize: 12, lineHeight: '16px', color: '#de1b0c', fontFamily: font }}>
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }
@@ -142,10 +149,12 @@ export function TextArea({
   rows = 3,
   disabled,
   readOnly,
+  error,
+  errorMessage = 'This field is required',
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {label && !noFloatingLabel && (
+      {label && (
         <label
           htmlFor={name}
           style={{
@@ -153,23 +162,7 @@ export function TextArea({
             fontWeight: 400,
             lineHeight: '18px',
             letterSpacing: '-0.24px',
-            color: '#717182',
-            fontFamily: font,
-          }}
-        >
-          {label}
-          {required && <span style={{ color: '#de1b0c', marginLeft: 2 }}>*</span>}
-        </label>
-      )}
-      {label && noFloatingLabel && (
-        <label
-          htmlFor={name}
-          style={{
-            fontSize: 12,
-            fontWeight: 400,
-            lineHeight: '18px',
-            letterSpacing: '-0.24px',
-            color: '#717182',
+            color: error ? '#de1b0c' : '#717182',
             fontFamily: font,
           }}
         >
@@ -188,7 +181,7 @@ export function TextArea({
         readOnly={readOnly}
         style={{
           padding: '8px 12px',
-          border: '1px solid #e5e9f0',
+          border: `1px solid ${error ? '#de1b0c' : '#e5e9f0'}`,
           borderRadius: 4,
           fontSize: 14,
           fontFamily: font,
@@ -202,9 +195,14 @@ export function TextArea({
           letterSpacing: '-0.28px',
           cursor: readOnly ? 'default' : undefined,
         }}
-        onFocus={(e) => { if (!readOnly) e.target.style.borderColor = '#1976d2'; }}
-        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = '#e5e9f0'; }}
+        onFocus={(e) => { if (!readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#1976d2'; }}
+        onBlur={(e) => { if (!readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#e5e9f0'; }}
       />
+      {error && errorMessage && (
+        <span style={{ fontSize: 12, lineHeight: '16px', color: '#de1b0c', fontFamily: font }}>
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }

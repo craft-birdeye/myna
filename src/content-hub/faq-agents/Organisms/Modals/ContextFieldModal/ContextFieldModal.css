@@ -93,7 +93,7 @@
   line-height: 20px;
   letter-spacing: -0.28px;
   color: #757575;
-  border-radius: 4px;
+  border-radius: 8px;
   white-space: nowrap;
   transition: color 0.15s;
 }
@@ -375,7 +375,7 @@
   display: flex;
   align-items: center;
   border: 1px solid #eaeaea;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
   background: #fff;
   height: 34px;
@@ -507,7 +507,7 @@
   z-index: 100;
   background: #fff;
   border: 1px solid #eaeaea;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   min-width: 220px;
   overflow: hidden;
@@ -548,7 +548,7 @@
   z-index: 101;
   background: #fff;
   border: 1px solid #eaeaea;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   width: 280px;
   display: flex;

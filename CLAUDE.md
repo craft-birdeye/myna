@@ -141,6 +141,7 @@ If a component exists here, import it — do not recreate it.
 | RunDetailsPanel | components/RunDetailsPanel/RunDetailsPanel.tsx | onViewConversation?, steps?, conversation? — 530px overlay panel (reuses `.log-details-panel` float-wrap sizing) with Logs/Conversation tabs; Logs = stepper of workflow run steps (Trigger/Task/Delay/Branch, green checkmark timeline, collapsible Task/Branch output + Tool + View inputs using `RefChip`-keyed fields) ending in a "Completed" marker; Conversation = `ChatSystemLabel`/`ChatBubble` transcript plus wide/compact structured cards (booking confirmations, reminder emails). Used in place of `LogDetailsPanel` on RunDetailView **only for the Reminder agent** — Front desk and other agents keep `LogDetailsPanel` unchanged |
 | Chip        | components/Chip/Chip.tsx               | label, variant?='warning'                                          |
 | Block       | components/Block/Block.tsx             | heading?, meta?, variant?='neutral'\|'danger'\|'warning'\|'success'\|'info', collapsible?, defaultExpanded?, children — left-bar-quoted container for one "block" of a recommendation chat (Issue/Impact/Action needed, a testing result, etc.); bar color signals the block's kind, heading can optionally be a collapsible toggle |
+| ReviewCardBody / StarRating | components/ReviewCard/ReviewCard.tsx | `ReviewCardBody`: review (`ReviewCardData`: reviewerName, rating, date, reviewId, location, text, reply?), className? — read-only review record (Birdeye avatar + `StarRating` + reviewer/date, reviewId/location tags, review text, and — when `reply` is set — the "Posted on {source logo} by {agent} • {date}" reply block). `StarRating`: rating, size?=18 — 5-star row (partial fill supported). Extracted from `AllReviewsScreen`'s `ReviewCard` (which wraps `ReviewCardBody` plus its own Reply/Edit-reply action buttons) so `RunDetailView`'s Review response "Review details" tab can render the same review layout for a log row |
 | ProcedureSidePanel | components/ProcedureSidePanel/ProcedureSidePanel.tsx | open, title, whenToUse?, steps (`{title, bullets, addedBullets?, removedBullets?}[]`), exitCriteria?, onClose — read-only slide-in panel showing a procedure's full when-to-use + numbered steps + when-to-exit; opened from a "Procedure updated/created" block's "View Procedure" button in the recommendation chat. Bullet text supports inline `{{token}}` markup, rendered as read-only `RefChip` (kind='tool') pills. For "Procedure updated" recs, pass `Recommendation.stepsWithDiff` instead of `steps` to show `addedBullets` in green with an "Added" chip and `removedBullets` with a red strikethrough |
 | TranscriptSidePanel | components/TranscriptSidePanel/TranscriptSidePanel.tsx | open, title?='Transcript', lines (`{speaker, text}[]`), onClose — read-only slide-in panel showing a conversation's full transcript; opened from a "Reported conversation" block's "View Transcript" button in the recommendation chat |
 | ChatBubble / ChatSystemLabel | components/ChatBubble/ChatBubble.tsx | `ChatBubble`: sender='business'\|'user', text, children?, className?, showFeedback?, feedback?, onFeedbackChange? — chat-thread message bubble (business right-aligned blue `bg-[#dbeafe]`, user left-aligned gray `bg-[#f0f0f0]`, `rounded-lg`, meta content passed as children below the bubble). When `showFeedback`, thumbs up/down sit beside the meta row (mutually exclusive; click again to clear). Inbox thumbs-down opens `ShareFeedbackModal` before committing. `ChatSystemLabel`: text — centered gray system/status line (e.g. "Conversation started"). Shared by `InboxScreen` and `LogDetailsPanel`'s call transcript — reuse this instead of hand-rolling bubble markup |
@@ -773,3 +774,31 @@ npm run dev     # open localhost:5173, navigate to your new agent
 ```
 
 Click a row → Workflow tab → verify nodes match the PRD. Click the edit pencil → verify the full workflow editor opens with all nodes and pre-populated tool chips.
+
+---
+
+## 18. Graphify Knowledge Graph (context lookup + upkeep)
+
+This repo has a local [graphify](https://github.com/Graphify-Labs/graphify) knowledge graph at `graphify-out/` (gitignored — regenerated locally, never committed). It indexes every symbol in `src/` (functions, components, types, constants) and their relationships, clustered into communities.
+
+### Look here first
+Before grepping/exploring the codebase cold for "where does X live" / "what touches Y" / "how do these pieces relate" questions, check `graphify-out/GRAPH_REPORT.md` first — it's a fast index of communities (feature areas) and their member symbols. Use it to jump straight to the relevant files instead of open-ended searching. Fall back to normal search (Explore agent, grep) for anything the report doesn't resolve (e.g. it was written before a very recent change).
+
+Useful lookups beyond the static report:
+```bash
+graphify god-nodes .                    # most-connected files (architectural hubs)
+graphify query "<question>" .           # BFS traversal of graph.json for a question
+graphify explain "<SymbolName>" .       # plain-language explanation of a node + neighbors
+graphify path "<A>" "<B>" .             # shortest relationship path between two symbols
+```
+
+### Keep it current
+After any change that adds/removes/renames symbols (new component, new screen, refactor), refresh the graph so the next lookup reflects reality:
+```bash
+graphify update .                       # re-extract changed code files into graph.json (local AST only, no LLM)
+graphify cluster-only . --no-label      # regenerate GRAPH_REPORT.md + graph.html from the updated graph
+```
+
+**Always use `--code-only` (on `extract`) and `--no-label` (on `cluster-only`).** Community naming and full semantic extraction call an external LLM backend — sending this repo's proprietary source code to an outside API is against org data-handling policy. The AST-only path (`--code-only` / `update` / `--no-label`) never leaves the machine; don't drop those flags to get nicer output.
+
+If `graphify` isn't on `PATH` in a given shell, it's installed via `uv tool install graphifyy` — invoke as `~/.local/bin/graphify` or `export PATH="$HOME/.local/bin:$PATH"` first.

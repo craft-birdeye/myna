@@ -12,6 +12,9 @@ export default function RHSPanelFooter({
   onSave,
   saveLabel = 'Save',
   disabled = false,
+  /** R1: shown above Save when a required field inside an accordion is empty.
+   *  Clicking it re-runs the same save attempt, which re-opens/re-highlights it. */
+  missingFieldsWarning = false,
   showPromptStrength = false,
   promptStrength = 'Weak',
   promptFillWidth = 52,
@@ -57,6 +60,18 @@ export default function RHSPanelFooter({
           onToggle={() => setExpanded((v) => !v)}
           toggleLabel={expanded ? 'Hide' : 'View suggestions'}
         />
+      )}
+      {missingFieldsWarning && (
+        <button
+          type="button"
+          className={styles.missingFieldsWarning}
+          onClick={onSave}
+        >
+          <span className={`material-symbols-outlined ${styles.missingFieldsWarningIcon}`} aria-hidden>
+            info
+          </span>
+          Mandatory fields missing
+        </button>
       )}
       <Button
         type="primary"

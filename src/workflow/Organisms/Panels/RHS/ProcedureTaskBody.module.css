@@ -68,7 +68,7 @@
   gap: 8px;
   padding: 8px;
   border: 1px solid #e5e9f0;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
   background: #fff;
@@ -117,7 +117,7 @@
   height: 24px;
   flex-shrink: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   background: none;
   cursor: pointer;
   color: #c5c9d0;

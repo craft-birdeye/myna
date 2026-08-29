@@ -142,6 +142,163 @@
   gap: 16px;
 }
 
+/* ─── R1 accordion layout ─── */
+.accordionContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accordionSection {
+  border: 1px solid #e5e9f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.accordionSectionOpen {
+  border-color: #d8dce6;
+}
+
+.accordionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  text-align: left;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.accordionHeader:hover {
+  background: #f2f4f7;
+}
+
+.accordionHeaderLabel {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12; /* text/primary */
+}
+
+.accordionChevron {
+  font-size: 20px;
+  color: #303030; /* text/icon */
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.accordionChevronOpen {
+  transform: rotate(180deg);
+}
+
+.accordionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 2px 16px 18px;
+}
+
+/* R2: same accordion, no card/border/hover box, no divider lines — text + chevron only. */
+.accordionSectionBare {
+  border: none;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+}
+
+.accordionHeaderBare {
+  padding: 12px 0;
+  border-radius: 0;
+}
+
+.accordionHeaderBare:hover {
+  background: none;
+}
+
+.accordionBodyBare {
+  padding: 2px 0 16px;
+}
+
+/* R3: bare style plus a subtle hairline between sections (not after the last one). */
+.accordionContainerLined {
+  gap: 0;
+}
+
+.accordionContainerLined > .accordionSectionLined:not(:last-child) {
+  border-bottom: 1px solid #eef0f4;
+}
+
+/* ─── R4 segmented tab layout ─── */
+.segmentedContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.segmentedTrack {
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.segmentedTrack::-webkit-scrollbar {
+  height: 4px;
+}
+
+.segmentedTrack::-webkit-scrollbar-thumb {
+  background: #d6d6d6;
+  border-radius: 999px;
+}
+
+.segmentedTab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  margin: 0;
+  padding: 0 0 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182; /* text/secondary */
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.segmentedTab:hover {
+  color: #0d0d12;
+}
+
+.segmentedTabActive {
+  color: #0d0d12; /* text/primary */
+  border-bottom-color: #1976d2; /* text/action */
+}
+
+.segmentedTabActive:hover {
+  color: #0d0d12;
+}
+
+.segmentedContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;

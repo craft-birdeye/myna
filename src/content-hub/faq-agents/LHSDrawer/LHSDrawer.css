@@ -18,7 +18,7 @@
 /* ─── Root panel ─── */
 .lhs-drawer {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   box-shadow: 0 2px 12px rgba(33, 33, 33, 0.12);
   border: none;
   width: 360px;
@@ -113,7 +113,7 @@
   height: 36px !important;
   min-height: 36px !important;
   border: 1px solid #e5e9f0 !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   background: #fff !important;
   padding: 0 !important;
 }
@@ -237,7 +237,7 @@
   max-height: 36px !important;
   padding: 4px 12px !important;
   border: 1px solid #e5e9f0 !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   background: #fff !important;
   cursor: pointer !important;
   transition: background 0.15s !important;
@@ -367,7 +367,7 @@
   min-height: 36px !important;
   padding: 4px 12px !important;
   border: 1px solid #e5e9f0 !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   background: #fff !important;
   cursor: grab !important;
   width: 100% !important;

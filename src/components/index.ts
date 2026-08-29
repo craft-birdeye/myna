@@ -22,6 +22,8 @@ export type {
 export { Chip } from './Chip/Chip'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'
+export { ReviewCardBody, StarRating } from './ReviewCard/ReviewCard'
+export type { ReviewCardBodyProps, ReviewCardData, ReviewCardReply, StarRatingProps } from './ReviewCard/ReviewCard.types'
 export { ProcedureSidePanel } from './ProcedureSidePanel/ProcedureSidePanel'
 export type { ProcedureSidePanelProps, ProcedureSidePanelStep } from './ProcedureSidePanel/ProcedureSidePanel.types'
 export { TranscriptSidePanel } from './TranscriptSidePanel/TranscriptSidePanel'
