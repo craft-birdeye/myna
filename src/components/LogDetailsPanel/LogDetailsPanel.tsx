@@ -471,7 +471,7 @@ const TRANSLATE_LANGUAGES = [
   ),
 ]
 
-function TranscriptTranslationControl() {
+function TranscriptLanguagePicker() {
   const [open, setOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string>(DEFAULT_TRANSCRIPT_LANGUAGE.id)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -507,19 +507,20 @@ function TranscriptTranslationControl() {
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-label={`Transcript language: ${triggerLabel}`}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 max-w-full items-center gap-sm rounded-sm border border-border-selected bg-surface px-sm py-xs text-left hover:bg-surface-hover"
+        className="inline-flex items-center gap-xs rounded-sm px-xs py-xs hover:bg-surface-hover"
       >
-        <LanguageFlag countryCode={selected.countryCode} label={triggerLabel} size="sm" />
-        <span className="min-w-0 truncate text-body text-text-primary">{triggerLabel}</span>
-        <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+        <LanguageFlag countryCode={selected.countryCode} label={triggerLabel} size="xs" />
+        <span className="text-small text-text-action">{triggerLabel}</span>
+        <Icon name="expand_more" size={16} className="shrink-0 text-text-action" />
       </button>
 
       {open && (
         <div
           role="listbox"
           aria-label="Available languages"
-          className="absolute left-0 top-full z-30 mt-xs flex w-[280px] max-h-[360px] flex-col overflow-hidden rounded-sm border border-border bg-surface py-sm shadow-dropdown"
+          className="absolute left-1/2 top-full z-30 mt-xs flex w-[280px] max-h-[360px] -translate-x-1/2 flex-col overflow-hidden rounded-sm border border-border bg-surface py-sm shadow-dropdown"
         >
           <p className="px-md pb-xs text-small text-text-tertiary">Available languages</p>
           <button
@@ -950,18 +951,29 @@ function MetaLabel({ label }: { label: string }) {
   )
 }
 
-/** Renders a set of "LABEL : value" segments (each label carrying its own explanatory tooltip),
- *  joined by "•" — optionally followed by a plain trailing segment (e.g. a timestamp) that has no
+/** Renders a set of "LABEL value" segments (each label carrying its own explanatory tooltip),
+ *  joined by " • " — optionally followed by a plain trailing segment (e.g. a timestamp) that has no
  *  tooltip of its own. */
+function formatMetaValue(label: string, value: string): string {
+  if (label === 'TTS' && value.endsWith('ms')) {
+    const ms = Number(value.replace(/ms$/i, ''))
+    if (Number.isFinite(ms)) {
+      const secs = ms / 1000
+      return `${Number.isInteger(secs) ? secs : secs.toFixed(1).replace(/\.0$/, '')}s`
+    }
+  }
+  return value
+}
+
 function MetaLine({ parts, trailing }: { parts: { label: string; value: string }[]; trailing?: string }) {
   if (parts.length === 0 && !trailing) return null
   return (
-    <span className="text-small text-text-tertiary">
+    <span className="text-[11px] text-text-tertiary">
       {parts.map((part, i) => (
         <span key={part.label}>
           {i > 0 && ' • '}
           <MetaLabel label={part.label} />
-          {` : ${part.value}`}
+          {` ${formatMetaValue(part.label, part.value)}`}
         </span>
       ))}
       {trailing && `${parts.length > 0 ? ' • ' : ''}${trailing}`}
@@ -982,6 +994,7 @@ function TranscriptEntry({
   recId,
   onCoachAgent,
   onTrackFeedback,
+  showLanguagePicker = false,
 }: {
   entry: LogTranscriptEntry
   /** Only meaningful for `role: 'agent'` entries — the other roles never show Coach agent. Set
@@ -989,8 +1002,19 @@ function TranscriptEntry({
   recId?: string
   onCoachAgent?: () => void
   onTrackFeedback?: () => void
+  /** Front desk exploration: inline language picker beside "Conversation started". */
+  showLanguagePicker?: boolean
 }) {
   if (entry.role === 'system') {
+    if (showLanguagePicker && entry.text === 'Conversation started') {
+      return (
+        <div className="flex items-center justify-center py-sm">
+          <span className="text-small text-text-tertiary">Conversation started</span>
+          <span className="px-xs text-small text-text-tertiary">•</span>
+          <TranscriptLanguagePicker />
+        </div>
+      )
+    }
     return (
       <div className="py-sm">
         <ChatSystemLabel text={entry.text} />
@@ -1004,7 +1028,7 @@ function TranscriptEntry({
       <ChatBubble
         sender="user"
         text={entry.text}
-        gap="gap-sm"
+        gap="gap-0.5"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
         <MetaLine parts={sttParts} trailing={entry.time} />
@@ -1019,10 +1043,10 @@ function TranscriptEntry({
       <ChatBubble
         sender="business"
         text={entry.text}
-        gap="gap-sm"
+        gap="gap-0.5"
         bubbleClassName="max-w-[85%] px-lg py-md"
       >
-        <div className="flex w-full max-w-[85%] items-center gap-sm">
+        <div className="flex w-full max-w-[85%] items-center gap-sm text-[11px]">
           <div className="min-w-0 flex-1">
             <MetaLine parts={metaParts} />
           </div>
@@ -1031,7 +1055,7 @@ function TranscriptEntry({
               <button
                 type="button"
                 onClick={onTrackFeedback}
-                className="group flex items-center gap-xs text-small text-text-action"
+                className="group flex items-center gap-xs text-text-action"
               >
                 <Icon name="track_changes" size={16} />
                 <span className="group-hover:underline">Track your feedback</span>
@@ -1040,7 +1064,7 @@ function TranscriptEntry({
               <button
                 type="button"
                 onClick={onCoachAgent}
-                className="group flex items-center gap-xs text-small text-text-action"
+                className="group flex items-center gap-xs text-text-action"
               >
                 <AiCoachSparkleIcon />
                 <span className="group-hover:underline">Coach agent</span>
@@ -1048,8 +1072,8 @@ function TranscriptEntry({
             )}
             {entry.time && (
               <>
-                <span className="shrink-0 text-small text-text-tertiary">•</span>
-                <span className="shrink-0 text-small text-text-tertiary">{entry.time}</span>
+                <span className="shrink-0 text-text-tertiary">•</span>
+                <span className="shrink-0 text-text-tertiary">{entry.time}</span>
               </>
             )}
           </div>
@@ -1081,6 +1105,8 @@ export function LogDetailsPanel({
   initialTab,
   onTabChange,
 }: LogDetailsPanelProps) {
+  const baseAgentName = agentName.replace(/ - .+$/, '')
+  const isFrontDesk = baseAgentName === 'Front desk agent'
   const isReminder = agentName.startsWith('Reminder agent')
   const steps = stepsProp ?? (isReminder ? REMINDER_CALL_LOG_STEPS : CALL_LOG_STEPS)
   // A purely text/web-chat conversation never recorded a call — no waveform to show.
@@ -1164,6 +1190,7 @@ export function LogDetailsPanel({
     <TranscriptEntry
       key={entry.id}
       entry={entry}
+      showLanguagePicker={showTranscriptTranslation}
       recId={entry.role === 'agent' ? recIdByMessage[entry.id] : undefined}
       onCoachAgent={entry.role === 'agent' ? () => setShareFeedbackMessageId(entry.id) : undefined}
       onTrackFeedback={
@@ -1205,7 +1232,10 @@ export function LogDetailsPanel({
         steps={steps}
         showHeader={false}
         showCallRecording={hasVoiceCall}
-        conversationTabLabel={hasVoiceCall ? 'Call transcript' : 'Conversation'}
+        conversationTabLabel={
+          isFrontDesk ? (hasVoiceCall ? 'Call transcript' : 'Conversation') : 'Outcome'
+        }
+        logsTabLabel="Log"
         callDetailsContent={callDetailsTabContent}
         onStepFocus={onStepFocus}
         initialTab={initialTab}
@@ -1241,7 +1271,7 @@ export function LogDetailsPanel({
                           onProgress={(elapsedSecs, playerTotalSecs) => setPlaybackProgress({ elapsed: elapsedSecs, total: playerTotalSecs })}
                         />
                       </div>
-                      <div className="flex flex-col gap-lg">
+                      <div className="flex flex-col gap-2xl">
                         {transcriptNodes}
                       </div>
                     </>
@@ -1271,8 +1301,7 @@ export function LogDetailsPanel({
                 <div className={`flex flex-col gap-3xl${hasVoiceCall ? '' : ' pt-lg'}`}>
                   {hasVoiceCall && <CallAiSummary className="mt-0" />}
                   {hasVoiceCall ? (
-                    <div className="flex flex-col gap-lg">
-                      {showTranscriptTranslation && <TranscriptTranslationControl />}
+                    <div className="flex flex-col gap-2xl">
                       {transcriptNodes}
                     </div>
                   ) : (

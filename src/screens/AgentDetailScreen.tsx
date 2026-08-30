@@ -139,14 +139,45 @@ function isReviewResponseAgentName(name: string) {
 }
 
 /** Review response agent (exploration) grid only — visual card variations.
- *  Default = 2-metric icon card + updated footer; R1 = 4-metric icon card;
- *  R2 = compact footer card; R3 = metric-forward (no icon) + View draft. */
+ *  Default = Figma icon card (author meta, goals, Edit / View details / ⋮);
+ *  R1 = 4-metric icon card; R2 = compact footer card; R3 = metric-forward (no icon) + View draft. */
 const CARD_LAYOUT_OPTIONS: Array<{ value: 'default' | 'r1' | 'r2' | 'r3'; label: string }> = [
   { value: 'default', label: 'Default' },
   { value: 'r1', label: 'R1' },
   { value: 'r2', label: 'R2' },
   { value: 'r3', label: 'R3' },
 ]
+
+const SHORT_MONTH: Record<string, string> = {
+  January: 'Jan',
+  February: 'Feb',
+  March: 'Mar',
+  April: 'Apr',
+  May: 'May',
+  June: 'Jun',
+  July: 'Jul',
+  August: 'Aug',
+  September: 'Sep',
+  October: 'Oct',
+  November: 'Nov',
+  December: 'Dec',
+}
+
+function formatShortUpdatedDate(raw?: string): string | null {
+  if (!raw) return null
+  const [month, day] = raw.trim().split(/\s+/)
+  if (month && day && SHORT_MONTH[month]) return `${SHORT_MONTH[month]} ${day}`
+  return raw
+}
+
+/** Default exploration card meta — "By Rupa · Aug 6". */
+function formatCardAuthorMeta(updatedBy?: string, lastUpdated?: string): string {
+  const author = updatedBy?.trim().split(/\s+/)[0]
+  const date = formatShortUpdatedDate(lastUpdated)
+  if (author && date) return `By ${author} · ${date}`
+  if (author) return `By ${author}`
+  return date ?? '—'
+}
 
 const FRONTDESK_AGENT_NAME = 'Front desk agent'
 const FRONTDESK_EXPLORATION_AGENT_NAME = 'Front desk agent (exploration)'
@@ -205,6 +236,8 @@ interface AgentInstance {
   region?: string
   /** City mapped from region for Location filter. */
   locationName?: string
+  /** Default exploration card body copy — falls back to workflow goals when omitted. */
+  cardDescription?: string
   [key: string]: string | number | boolean | undefined
 }
 
@@ -282,12 +315,6 @@ const TABS: Tab[] = [
   { id: 'library', label: 'Library' },
 ]
 
-const EXPLORATION_DETAIL_TABS: Tab[] = [
-  { id: 'agents', label: 'Agents' },
-  { id: 'library', label: 'Library' },
-  { id: 'outcomes', label: 'Outcomes' },
-]
-
 const STATUS_VARIANT: Record<string, ChipVariant> = {
   Active: 'success',
   Inactive: 'warning',
@@ -349,6 +376,8 @@ interface RegionRow {
   hasDraft?: boolean
   lastUpdated?: string
   updatedBy?: string
+  /** Default exploration card body copy — falls back to workflow goals when omitted. */
+  cardDescription?: string
 }
 
 /** Sample dates / editors for the Agents table trailing columns. */
@@ -428,10 +457,59 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
     { region: 'West Region',  status: 'Inactive', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
   [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
-    { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
-    { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
-    { region: 'South Region', status: 'Active', channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region', hasDraft: true },
-    { region: 'West Region',  status: 'Inactive', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
+    {
+      region: 'North Region',
+      status: 'Active',
+      channels: 'Email',
+      reviewsResponded: '102',
+      responseRate: '15%',
+      avgResponseTime: '20m',
+      timeSaved: '4h 20m',
+      locations: '500',
+      instanceName: 'Review response agent - North Region',
+      cardDescription:
+        'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review.',
+    },
+    {
+      region: 'East Region',
+      status: 'Active',
+      channels: 'Email',
+      reviewsResponded: '98',
+      responseRate: '9%',
+      avgResponseTime: '5m',
+      timeSaved: '1h 10m',
+      locations: '250',
+      instanceName: 'Review response agent - East Region',
+      cardDescription:
+        'Replies to eligible reviews using pre-approved templates after a quick quality check. Escalates edge cases to your team instead of posting automatically.',
+    },
+    {
+      region: 'South Region',
+      status: 'Active',
+      channels: 'Email',
+      reviewsResponded: '53',
+      responseRate: '9%',
+      avgResponseTime: '10m',
+      timeSaved: '45m',
+      locations: '200',
+      instanceName: 'Review response agent - South Region',
+      hasDraft: true,
+      cardDescription:
+        'Publishes templated responses across Google and Facebook for every new review. A pending draft updates the rotation rules for negative-star reviews.',
+    },
+    {
+      region: 'West Region',
+      status: 'Inactive',
+      channels: 'Email',
+      reviewsResponded: '35',
+      responseRate: '8%',
+      avgResponseTime: '2m',
+      timeSaved: '3h 20m',
+      locations: '100',
+      instanceName: 'Review response agent - West Region',
+      cardDescription:
+        'Paused instance that previously suggested reply drafts in the dashboard for staff approval before posting. Re-enable to resume coverage for this region.',
+    },
   ],
   'Review generation agents': [
     {
@@ -7248,7 +7326,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
   const isSep1Agents = Boolean(navId?.includes('sep-1'))
-  const useExplorationOutcomesTab = isExplorationAgents && !isSep1Agents
+  const useExplorationOutcomesTab = false
   const [activeTab, setActiveTab] = useState('agents')
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
   const [customizeOpen, setCustomizeOpen] = useState(false)
@@ -7272,9 +7350,15 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     return () => document.removeEventListener('mousedown', handler)
   }, [cardLayoutMenuOpen])
   const showExplorationAgentsToggle =
-    isExplorationAgents && !isSep1Agents && activeTab === 'agents'
+    isExplorationAgents && activeTab === 'agents'
   const useExplorationGrid =
     isExplorationAgents && !isSep1Agents && agentsViewMode === 'grid'
+  /** Sep 1 side-nav agents: same card/table toggle; card view locks to exploration Default layout. */
+  const useSep1AgentGrid = isSep1Agents && activeTab === 'agents' && agentsViewMode === 'grid'
+  const useAgentCardGrid = useExplorationGrid || useSep1AgentGrid
+  const useDefaultAgentCardGrid =
+    useSep1AgentGrid || (useExplorationGrid && cardLayoutOption === 'default')
+  const effectiveCardLayout = useSep1AgentGrid ? 'default' : cardLayoutOption
   const [selectedInstance, setSelectedInstance] = useState<string | null>(
     pendingInstanceView?.instanceName ?? null,
   )
@@ -7515,7 +7599,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       })
     : metrics
 
-  const regions = REGIONS_BY_AGENT[agentName] ?? DEFAULT_REGIONS
+  const regionSourceKey =
+    isSep1Agents && isReviewResponseAgentName(agentName)
+      ? REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
+      : agentName
+  const regions = REGIONS_BY_AGENT[regionSourceKey] ?? DEFAULT_REGIONS
   const data: AgentInstance[] = regions.map((r, i) => ({
     name: r.instanceName ?? `${agentName} - ${r.region}`,
     status: r.status,
@@ -7562,7 +7650,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     lastUpdated: r.lastUpdated ?? LAST_UPDATED_SAMPLES[i % LAST_UPDATED_SAMPLES.length],
     updatedBy: r.updatedBy ?? UPDATED_BY_SAMPLES[i % UPDATED_BY_SAMPLES.length],
     hasDraft: r.hasDraft,
+    cardDescription: r.cardDescription,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
+
+  const agentGoals = useMemo(() => {
+    const workflows = getAgentWorkflows(product)
+    const workflow =
+      workflows[agentName]
+      ?? workflows['Review response agent']
+      ?? workflows['Review response agents (exploration)']
+    return (workflow?.nodeDetails?.['__start__']?.goals as string | undefined) ?? ''
+  }, [product, agentName])
 
   useEffect(() => {
     if (!initialRecommendationFocus) return
@@ -7577,8 +7675,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }, [initialRecommendationFocus])
 
   useEffect(() => {
-    if (routeDeep?.listTab) setActiveTab(routeDeep.listTab)
-  }, [routeDeep?.listTab, navId])
+    if (!routeDeep?.listTab) return
+    const tab =
+      routeDeep.listTab === 'outcomes' && isExplorationAgents && !isSep1Agents
+        ? 'agents'
+        : routeDeep.listTab
+    setActiveTab(tab)
+  }, [routeDeep?.listTab, navId, isExplorationAgents, isSep1Agents])
 
   useEffect(() => {
     if (!routeDeep?.instanceSlug) {
@@ -8592,7 +8695,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     >
                       Create agent
                     </button>
-                    {(!isExplorationAgents || !useExplorationGrid) && (
+                    {(!isExplorationAgents || !useAgentCardGrid) && (
                       <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                         <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
                       </button>
@@ -8626,7 +8729,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               {/* Tabs */}
               <div className="px-2xl">
                 <Tabs
-                  tabs={useExplorationOutcomesTab ? EXPLORATION_DETAIL_TABS : TABS}
+                  tabs={TABS}
                   activeTab={activeTab}
                   showBaseline={false}
                   onChange={(tabId) => {
@@ -8672,7 +8775,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 </>
               ) : activeTab === 'agents' ? (
                 <>
-                  {!useExplorationOutcomesTab && (
+                  {!useExplorationOutcomesTab && !isReviewResponse && !useDefaultAgentCardGrid && (
                     <>
                       <div className="px-2xl pt-lg">
                         <MetricTiles
@@ -8706,7 +8809,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       />
                     </>
                   )}
-                  {useExplorationGrid ? (
+                  {useAgentCardGrid ? (
                     // Dropdown: Default = icon card; R1 = metric-forward; R2 = compact + footer meta.
                     <div className="grid grid-cols-1 items-start gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
@@ -8717,7 +8820,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               { value: row.aht ?? '—', label: 'Resolution rate' },
                               { value: row.escalation ?? '—', label: 'Time saved' },
                             ]
-                          : cardLayoutOption === 'default'
+                          : effectiveCardLayout === 'default'
                             ? [
                                 { value: row.reviewsResponded ?? '—', label: 'Reviews responded' },
                                 { value: row.responseRate ?? '—', label: 'Response rate' },
@@ -8730,14 +8833,85 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               ]
                         // Default + R1: icon + draft under name. R3: View draft in header (no icon).
                         const isDefaultIconCard =
-                          cardLayoutOption === 'default' || cardLayoutOption === 'r1'
-                        const isR2Card = cardLayoutOption === 'r2'
+                          effectiveCardLayout === 'default' || effectiveCardLayout === 'r1'
+                        const isR2Card = effectiveCardLayout === 'r2'
                         // Default: 2 metrics + updated footer (former R3).
-                        const isTwoMetricFooterCard = cardLayoutOption === 'default'
+                        const isTwoMetricFooterCard = effectiveCardLayout === 'default'
                         const updatedMeta = [
                           row.lastUpdated ? `Updated ${row.lastUpdated}` : null,
                           row.updatedBy ?? null,
                         ].filter(Boolean).join(' · ')
+
+                        if (isTwoMetricFooterCard) {
+                          const authorMeta = formatCardAuthorMeta(row.updatedBy, row.lastUpdated)
+                          const cardDescription = row.cardDescription ?? agentGoals
+                          return (
+                            <div
+                              key={`${row.name}-${row.status}`}
+                              role="presentation"
+                              onClick={() => openAgentInstanceDetails(row)}
+                              className="group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
+                            >
+                              <div className="flex min-w-0 items-start gap-sm">
+                                <LibraryCardIcon glyph="autonomous" />
+                                <div className="flex min-w-0 flex-1 items-start justify-between gap-sm">
+                                  <div className="min-w-0 flex-1">
+                                    <h3 className="line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary">
+                                      {row.name}
+                                    </h3>
+                                    <div className="mt-xs flex min-w-0 items-center gap-sm truncate text-small">
+                                      <span className="truncate text-text-secondary">{authorMeta}</span>
+                                      {row.status === 'Active' && row.hasDraft ? (
+                                        <>
+                                          <span aria-hidden className="h-3 w-px shrink-0 bg-border" />
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              onEditAgent?.(row.name, undefined, undefined, 'Draft')
+                                            }}
+                                            className="shrink-0 text-text-action hover:underline"
+                                          >
+                                            Draft · John, 2h ago
+                                          </button>
+                                        </>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  <Chip
+                                    label={row.status}
+                                    variant={STATUS_VARIANT[row.status] ?? 'neutral'}
+                                    showDot={row.status !== 'Draft'}
+                                  />
+                                </div>
+                              </div>
+
+                              {cardDescription ? (
+                                <p className="mt-xl mb-lg line-clamp-2 text-[13px] leading-[20px] text-text-secondary">
+                                  {cardDescription}
+                                </p>
+                              ) : null}
+
+                              <div className="mt-md flex items-center gap-sm" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => openAgentInstanceEditor(row)}
+                                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openAgentInstanceDetails(row)}
+                                  className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                                >
+                                  View details
+                                </button>
+                                <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                              </div>
+                            </div>
+                          )
+                        }
 
                         if (isR2Card) {
                           return (
@@ -8871,9 +9045,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                             </div>
                             <div
                               className={
-                                isTwoMetricFooterCard
-                                  ? 'mt-lg grid grid-cols-2 content-start gap-sm'
-                                  : isDefaultIconCard
+                                isDefaultIconCard
                                     ? 'mt-sm grid grid-cols-3 content-start gap-sm'
                                     : 'mt-md grid grid-cols-3 content-start gap-md'
                               }
@@ -8887,33 +9059,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                 </div>
                               ))}
                             </div>
-                            {isTwoMetricFooterCard ? (
-                              <div className="relative mt-auto min-h-9 pt-md">
-                                <div className="flex min-w-0 items-center group-hover:invisible">
-                                  <span className="min-w-0 truncate text-small text-text-tertiary">
-                                    {updatedMeta || '—'}
-                                  </span>
-                                </div>
-                                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                                  <button
-                                    type="button"
-                                    onClick={() => openAgentInstanceDetails(row)}
-                                    className="flex h-9 flex-1 items-center justify-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-                                  >
-                                    View details
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => openAgentInstanceEditor(row)}
-                                    className="flex h-9 flex-1 items-center justify-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
-                                  >
-                                    Edit
-                                  </button>
-                                  <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-surface-hover px-lg pb-lg pt-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-sm bg-surface-hover px-lg pb-lg pt-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
                                 <button
                                   type="button"
                                   onClick={() => openAgentInstanceDetails(row)}
@@ -8930,7 +9076,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                 </button>
                                 <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
                               </div>
-                            )}
                           </div>
                         )
                       })}

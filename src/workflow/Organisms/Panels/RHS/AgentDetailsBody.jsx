@@ -162,16 +162,6 @@ export default function AgentDetailsBody({
         readOnly={viewOnly}
         placeholder="Example: Respond to every new customer review within 24 hours with a reply"
       />
-      <TextArea
-        name="outcomes"
-        label="Outcomes"
-        value={values.outcomes}
-        onChange={set('outcomes')}
-        noFloatingLabel
-        rows={viewOnly ? 12 : 6}
-        readOnly={viewOnly}
-        placeholder="Example: Increase response rate across all review platforms, so no customer feedback goes unanswered"
-      />
 
       {/* ─── Locations ─── */}
       <div className={styles.locationsField}>

@@ -172,7 +172,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 /* Compact 12px fields when embedded in Action RHS Tool details */
@@ -199,6 +199,20 @@
 .embeddedBody .promptTextarea {
   font-size: 12px;
   line-height: 18px;
+}
+
+/* Match FormInput / Select tool labels inside the Action RHS embed */
+.embeddedBody .fieldLabel,
+.embeddedBody .fieldLabelRow .fieldLabel {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #717182; /* text/secondary */
+}
+
+.embeddedBody .fieldWrap {
+  gap: 4px;
 }
 
 /* ─── Interactive field wrappers ─── */

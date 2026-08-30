@@ -3371,6 +3371,10 @@ export default function AgentBuilder({
       const llmTaskR2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r2' && isReviewResponseAgent;
       const llmTaskR3 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r3' && isReviewResponseAgent;
       const llmTaskR4 = llmTaskExplorationLayout && llmTaskLayoutOption === 'r4' && isReviewResponseAgent;
+      // Sep 1 agents always get the segmented Action RHS (Basic/Prompts/Fields/Context).
+      // Use sep1Chrome props — activeNavId is often still the default 'search' here.
+      const llmTaskSep1Segmented = sep1Chrome && !llmTaskExplorationLayout;
+      const llmTaskSegmented = llmTaskR4 || llmTaskSep1Segmented;
       return (
         <RHS
           variant="llmTask"
@@ -3413,7 +3417,7 @@ export default function AgentBuilder({
             accordionLayout: llmTaskR1 || llmTaskR2 || llmTaskR3,
             accordionBare: llmTaskR2 || llmTaskR3,
             accordionLined: llmTaskR3,
-            segmentedLayout: llmTaskR4,
+            segmentedLayout: llmTaskSegmented,
             activeTab: llmTaskTab,
             onTabChange: llmTaskExplorationLayout ? setLlmTaskTab : undefined,
             onOpenGlossary: openGlossary,
@@ -3481,6 +3485,7 @@ export default function AgentBuilder({
           options: [
             { value: 'option1', label: 'Option 1' },
             { value: 'option2', label: 'Option 2' },
+            { value: 'option3', label: 'Option 3' },
           ],
           onChange: setEntityTaskLayoutOption,
         } : null}
@@ -3488,6 +3493,10 @@ export default function AgentBuilder({
           initialValues: currentDetails,
           onFieldChange: activeFieldChange,
           option2Stepper: llmTaskExplorationLayout && entityTaskLayoutOption === 'option2',
+          // Sep 1: always use Basic / Tool details tabs (same as exploration Option 3).
+          option3Tabs:
+            (sep1Chrome && !llmTaskExplorationLayout)
+            || (llmTaskExplorationLayout && entityTaskLayoutOption === 'option3'),
           toolFieldValues: currentDetails.toolFieldValues || {},
           onToolFieldValuesChange: (toolId, values) => {
             activeFieldChange('toolFieldValues', {
@@ -3863,7 +3872,9 @@ export default function AgentBuilder({
                           </span>
                         )}
                         {selectedVersion?.status === 'Draft' && (
-                          <span className="ab-header-status ab-header-status--draft">Draft</span>
+                          <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
+                            Draft
+                          </span>
                         )}
                       </div>
                     </div>
@@ -3898,9 +3909,10 @@ export default function AgentBuilder({
                           </Tooltip>
                         )}
                         {agentStatus === 'Draft' && existingAgent ? (
-                          <span className="ab-header-status ab-header-status--draft ab-header-status--with-live">
-                            <span>Draft</span>
-                            <span className="ab-header-status__divider" aria-hidden />
+                          <>
+                            <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
+                              Draft
+                            </span>
                             <button
                               type="button"
                               className="ab-header-status__view-live"
@@ -3908,21 +3920,22 @@ export default function AgentBuilder({
                             >
                               View active version
                             </button>
-                          </span>
+                          </>
                         ) : hasUnpublishedDraft && agentStatus === 'Active' ? (
-                          <span className="ab-header-status ab-header-status--active ab-header-status--with-live">
-                            <span>Active</span>
-                            <span className="ab-header-status__divider" aria-hidden />
+                          <>
+                            <span className="ab-header-status ab-header-status--active ab-header-status--dot">
+                              Active
+                            </span>
                             <button
                               type="button"
                               className="ab-header-status__view-live"
                               onClick={handleGoToDraftVersion}
                             >
-                              Edit draft
+                              View draft
                             </button>
-                          </span>
+                          </>
                         ) : (
-                          <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                          <span className={`ab-header-status ${statusBadgeClass} ab-header-status--dot`}>
                             {agentStatus}
                           </span>
                         )}
@@ -3965,7 +3978,7 @@ export default function AgentBuilder({
                       text={agentName || 'Untitled agent'}
                       onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
                     />
-                    <span className={`ab-header-status ${statusBadgeClass}${agentStatus !== 'Draft' ? ' ab-header-status--dot' : ''}`}>
+                    <span className={`ab-header-status ${statusBadgeClass} ab-header-status--dot`}>
                       {agentStatus}
                     </span>
                     <div className="rr-chrome-top__spacer" aria-hidden />

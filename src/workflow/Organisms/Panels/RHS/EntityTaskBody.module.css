@@ -4,29 +4,37 @@
   gap: 20px;
 }
 
-.toolsSection {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .sectionLabelWrapper {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 16px;
-  line-height: 16px;
+  min-height: 18px;
+  line-height: 18px;
 }
 
 .sectionLabelText {
   font-size: 12px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 18px;
   letter-spacing: -0.24px;
-  color: #757575;
+  color: #717182; /* text/secondary — matches FormInput labels */
   font-family: 'Roboto', arial, sans-serif;
   display: inline-flex;
   align-items: center;
+}
+
+.toolsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Label + tool card — same 4px as FormInput / Recipients fieldWrap */
+.toolSelectField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .sectionLabelIcon {
@@ -45,15 +53,17 @@
 }
 
 .toolCard {
-  border: 1px solid #e5e9f0;
-  border-radius: 8px;
-  padding: 10px 12px;
+  border: 1px solid #e5e9f0; /* border/input — matches FormInput */
+  border-radius: 4px; /* Corner Radius/sm */
+  padding: 0 12px;
   width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background: #f2f4f7;
+  gap: 0;
+  background: #ffffff;
+  min-height: 36px;
+  justify-content: center;
 }
 
 /*
@@ -81,7 +91,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border-radius: 6px;
+  border-radius: 4px;
+  min-height: 36px;
 }
 
 .toolRowActions {
@@ -167,8 +178,8 @@
 }
 
 .toolIconWrap {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -357,5 +368,68 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  margin-top: 4px;
+  margin-top: 0;
+}
+
+/* ─── Exploration Option 3 body tabs ─── */
+.tabbedContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tabTrack {
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.tabTrack::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabTrack::-webkit-scrollbar-thumb {
+  background: #d6d6d6;
+  border-radius: 999px;
+}
+
+.tabButton {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  margin: 0;
+  padding: 0 0 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tabButton:hover {
+  color: #0d0d12;
+}
+
+.tabButtonActive {
+  color: #0d0d12;
+  border-bottom-color: #1976d2;
+}
+
+.tabButtonActive:hover {
+  color: #0d0d12;
+}
+
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }

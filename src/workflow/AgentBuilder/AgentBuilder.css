@@ -730,24 +730,31 @@
   inset: 0;
   z-index: 10000;
   display: flex;
-  align-items: flex-start;
   justify-content: center;
-  padding-top: 72px;
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
 
+.ab-publish-blocked-overlay {
+  align-items: flex-start;
+  padding-top: 72px;
+}
+
+/* Draft / delete confirms — true viewport center */
+.ab-confirm-overlay {
+  align-items: center;
+  padding: 24px;
+}
+
 /* Shift horizontal center left when the RHS panel is open (450px + 8px inset + 12px gap). */
-.ab-publish-blocked-overlay--rhs-open,
-.ab-confirm-overlay--rhs-open {
+.ab-publish-blocked-overlay--rhs-open {
   padding-right: 470px;
 }
 
 /* Procedure detail RHS is 500px wide. */
-.ab-publish-blocked-overlay--rhs-wide,
-.ab-confirm-overlay--rhs-wide {
+.ab-publish-blocked-overlay--rhs-wide {
   padding-right: 520px;
 }
 

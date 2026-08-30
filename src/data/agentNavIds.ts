@@ -41,6 +41,11 @@ export function isLlmTaskExplorationLayout(navId?: string | null) {
   return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || navId === FRONTDESK_EXPLORATION_NAV_ID
 }
 
+/** Sep 1 side-nav ids (response / front desk / reminder). */
+export function isSep1Nav(navId?: string | null) {
+  return Boolean(navId?.includes('sep-1'))
+}
+
 function explorationHidesCanvasStartNode(navId?: string | null) {
   return Boolean(navId && EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS.has(navId))
 }

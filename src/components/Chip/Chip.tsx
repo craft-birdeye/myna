@@ -8,11 +8,14 @@ const VARIANTS: Record<NonNullable<ChipProps['variant']>, string> = {
   info: 'bg-chip-info-bg text-chip-info-text',
 }
 
-export function Chip({ label, variant = 'warning' }: ChipProps) {
+export function Chip({ label, variant = 'warning', showDot = false }: ChipProps) {
   return (
     <span
       className={`inline-flex shrink-0 items-center gap-xs whitespace-nowrap rounded-sm px-sm py-xs text-small text-center ${VARIANTS[variant]}`}
     >
+      {showDot ? (
+        <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
+      ) : null}
       {label}
     </span>
   )

@@ -230,7 +230,7 @@ export default function LocationsDrawer({
     return {};
   });
   const [entitySearch, setEntitySearch] = useState('');
-  const [flyoutPos, setFlyoutPos] = useState({ top: 0, left: 0, width: 168 });
+  const [flyoutPos, setFlyoutPos] = useState({ top: 0, left: 0, width: 200 });
   const selectByRef = useRef(null);
   const innerRef = useRef(null);
   const flyoutRef = useRef(null);
@@ -281,10 +281,8 @@ export default function LocationsDrawer({
     const inner = innerRef.current.getBoundingClientRect();
     const trigger = selectByRef.current.getBoundingClientRect();
     const top = trigger.bottom - inner.top + 4;
-    // Picker is nav-only (custom-field lists live in the drawer body).
-    const width = mode === 'picker' ? Math.min(220, inner.width) : 168;
-    const preferredLeft = trigger.left - inner.left;
-    const left = Math.min(Math.max(0, preferredLeft), Math.max(0, inner.width - width));
+    const width = trigger.width;
+    const left = trigger.left - inner.left;
     return { top, left, width };
   }, []);
 
@@ -412,6 +410,17 @@ export default function LocationsDrawer({
   };
 
   const selectByLabel = selectByOptions.find((opt) => opt.value === selectBy)?.label ?? 'Location';
+  const scopeDisplayLabel = useMemo(() => {
+    if (pickingEntities && entityCategory) {
+      return entityCategory.label;
+    }
+    if (selectBy === 'location') {
+      if (selectedCount === ALL_LOCATIONS.length) return 'All locations';
+      if (selectedCount > 0) return `${selectedCount} locations`;
+      return 'All locations';
+    }
+    return selectByLabel;
+  }, [pickingEntities, entityCategory, selectBy, selectedCount, selectByLabel]);
   const flyoutOpen = flyoutMode !== 'closed';
 
   // Keep the flyout fully inside the drawer — no horizontal page scroll.
@@ -454,11 +463,13 @@ export default function LocationsDrawer({
           <div className="loc-inner" ref={innerRef}>
 
             <div className="loc-description">
-              <span>Choose the locations this agent will work for. Select by</span>
-              <div className="loc-select-wrapper" ref={selectByRef}>
+              <span className="loc-description-label">Select locations this agent will run on</span>
+              <div className={`loc-select-wrapper${flyoutOpen ? ' loc-select-wrapper--open' : ''}`} ref={selectByRef}>
                 <button
                   type="button"
-                  className="loc-select-by"
+                  className={`loc-select-by${flyoutOpen ? ' loc-select-by--open' : ''}`}
+                  aria-expanded={flyoutOpen}
+                  aria-haspopup="listbox"
                   onMouseDown={(e) => {
                     // Keep document outside-click from treating this as a dismiss.
                     e.stopPropagation();
@@ -481,11 +492,10 @@ export default function LocationsDrawer({
                     setFlyoutMode('menu');
                   }}
                 >
-                  {selectByLabel}
+                  <span className="loc-select-by-label">{scopeDisplayLabel}</span>
                   <span className="material-symbols-outlined loc-select-chevron">expand_more</span>
                 </button>
               </div>
-              <span className="material-symbols-outlined loc-info-icon">info</span>
             </div>
 
             {flyoutOpen && (

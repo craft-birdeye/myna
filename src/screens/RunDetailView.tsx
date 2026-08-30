@@ -1011,8 +1011,8 @@ export function RunDetailView({
               steps={reviewLogSteps}
               showTabs
               showHeader={false}
-              conversationTabLabel={isReviewAgent ? 'Review details' : undefined}
-              logsTabLabel={isReviewAgent ? 'Review logs' : undefined}
+              conversationTabLabel="Outcome"
+              logsTabLabel="Log"
               conversationContent={
                 isReviewAgent ? (
                   <ReviewDetailsContent

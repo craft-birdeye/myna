@@ -127,51 +127,74 @@
 .loc-description {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
+  gap: 8px;
+  width: 100%;
+}
+
+.loc-description-label {
+  flex-shrink: 0;
   font-family: 'Roboto', sans-serif;
-  font-size: 12px; /* Small Body */
+  font-size: 14px;
   font-weight: 400;
-  line-height: 18px;
-  letter-spacing: -0.24px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   color: #717182; /* text/secondary */
 }
 
-.loc-info-icon {
-  font-size: 16px !important;
-  width: 16px;
-  height: 16px;
-  color: #303030; /* text/icon */
-  margin-left: 4px;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
-}
-
-/* Inline select-by dropdown */
+/* Scope select — bordered field matching Apply these rules for row */
 .loc-select-wrapper {
-  display: inline-flex;
+  flex: 0 0 auto;
+  width: 200px;
+  display: flex;
   align-items: center;
   position: relative;
 }
 
 .loc-select-by {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 12px;
-  line-height: 18px;
-  letter-spacing: -0.24px;
-  color: #1976d2; /* text/action */
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e5e9f0; /* border/input */
+  border-radius: 4px; /* Corner Radius/sm */
+  background: #ffffff;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182; /* text/secondary */
   font-family: 'Roboto', sans-serif;
   font-weight: 400;
-  border: none;
-  background: transparent;
-  padding: 0;
   cursor: pointer;
   outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.12s ease;
 }
 
 .loc-select-by:hover {
-  color: #1565c0;
+  border-color: #cccccc; /* border/strong — matches input hover */
+}
+
+.loc-select-by:focus,
+.loc-select-by:focus-visible,
+.loc-select-by--open,
+.loc-select-wrapper--open .loc-select-by {
+  border-color: #1976d2; /* text/action — matches FormInput focus */
+}
+
+.loc-select-by--open .loc-select-chevron {
+  transform: rotate(180deg);
+}
+
+.loc-select-by-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
 }
 
 .loc-select-menu {
@@ -459,11 +482,13 @@
 }
 
 .loc-select-chevron {
-  font-size: 16px !important;
-  width: 16px;
-  height: 16px;
-  color: #1976d2;
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
+  color: #303030; /* text/icon */
   pointer-events: none;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 

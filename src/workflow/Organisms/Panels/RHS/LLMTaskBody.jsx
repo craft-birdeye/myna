@@ -340,8 +340,8 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   accordionBare = false,
   /** R3 only: adds a subtle hairline between accordion sections (bare style only). */
   accordionLined = false,
-  /** R4: segmented pill tab bar instead of an accordion — Basic/Prompts/Fields/Context/Models
-   *  each swap the same content pane rather than stacking as collapsible sections. */
+  /** R4 / Sep 1: segmented tab bar — Basic/Prompts/Fields/Context each swap the same
+   *  content pane (model picker lives under Context, not its own tab). */
   segmentedLayout = false,
   /** Controlled Setup / Configure tab (Option 2) or legacy callers. */
   activeTab: activeTabProp,
@@ -404,9 +404,34 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   /** R1 only: which required field (if any) failed the last Save attempt. */
   const [invalidField, setInvalidField] = useState(null);
 
+  const segmentedRequiredFields = () => [
+    { key: 'taskName', value: taskName, section: 'basic' },
+    { key: 'description', value: description, section: 'basic' },
+    { key: 'systemPrompt', value: systemPrompt, section: 'prompts' },
+    { key: 'userPrompt', value: userPrompt, section: 'prompts' },
+  ];
+
+  const segmentHasMissingFields = (sectionId) =>
+    segmentedRequiredFields().some(
+      (f) => f.section === sectionId && !(f.value ?? '').trim(),
+    );
+
   useEffect(() => {
-    onValidationChange?.(invalidField !== null || option3ErrorSteps.size > 0);
-  }, [invalidField, option3ErrorSteps]);
+    const segmentedMissing =
+      segmentedLayout && segmentedRequiredFields().some((f) => !(f.value ?? '').trim());
+    onValidationChange?.(
+      invalidField !== null || option3ErrorSteps.size > 0 || segmentedMissing,
+    );
+  }, [
+    invalidField,
+    option3ErrorSteps,
+    segmentedLayout,
+    taskName,
+    description,
+    systemPrompt,
+    userPrompt,
+    onValidationChange,
+  ]);
 
   const clearInvalid = (key, val) => {
     if (invalidField === key && (val ?? '').trim()) setInvalidField(null);
@@ -459,12 +484,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
       if (!accordionLayout && !segmentedLayout && !option3Stepper) return true;
       const requiredFields = option3Stepper
         ? option3RequiredFields()
-        : [
-            { key: 'taskName', value: taskName, section: 'basic' },
-            { key: 'description', value: description, section: 'basic' },
-            { key: 'systemPrompt', value: systemPrompt, section: 'prompts' },
-            { key: 'userPrompt', value: userPrompt, section: 'prompts' },
-          ];
+        : segmentedRequiredFields();
       const incomplete = requiredFields.filter((f) => !(f.value ?? '').trim());
       if (incomplete.length === 0) {
         setInvalidField(null);
@@ -749,6 +769,8 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   const descriptionField = (
     <div
       className={`${styles.descriptionField}${
+        segmentedLayout ? ` ${styles.descriptionFieldSegmented}` : ''
+      }${
         hideDescriptionLabel ? ` ${styles.descriptionFieldTwoLine}` : ''
       }`}
     >
@@ -975,33 +997,67 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
       { id: 'prompts', label: 'Prompts' },
       { id: 'fields', label: 'Fields' },
       { id: 'context', label: 'Context' },
-      { id: 'models', label: 'Models' },
     ];
     const segmentContent = {
       basic: <>{taskNameField}{descriptionField}</>,
       prompts: <>{systemPromptSection}{userPromptSection}</>,
       fields: <>{inputFieldsSection}{outputFieldsSection}</>,
-      context: contextSection,
-      models: llmModelSection,
+      context: <>{contextSection}{llmModelSection}</>,
     };
     return (
       <div className={styles.segmentedContainer}>
         <div className={styles.segmentedTrack}>
-          {SEGMENTS.map((segment) => (
-            <button
-              key={segment.id}
-              type="button"
-              className={`${styles.segmentedTab}${activeSegment === segment.id ? ` ${styles.segmentedTabActive}` : ''}`}
-              onClick={() => setActiveSegment(segment.id)}
-              aria-pressed={activeSegment === segment.id}
-            >
-              {segment.label}
-            </button>
-          ))}
+          {SEGMENTS.map((segment) => {
+            const hasError = segmentHasMissingFields(segment.id);
+            return (
+              <button
+                key={segment.id}
+                type="button"
+                className={`${styles.segmentedTab}${activeSegment === segment.id ? ` ${styles.segmentedTabActive}` : ''}`}
+                onClick={() => setActiveSegment(segment.id)}
+                aria-pressed={activeSegment === segment.id}
+              >
+                <span className={styles.segmentedTabInner}>
+                  {segment.label}
+                  {hasError && (
+                    <Tooltip content="Missing mandatory fields" variant="detail" side="top">
+                      <span
+                        className={styles.segmentedTabErrorIcon}
+                        role="img"
+                        aria-label="Missing mandatory fields"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <span className="material-symbols-outlined" aria-hidden>
+                          error
+                        </span>
+                      </span>
+                    </Tooltip>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <div className={styles.segmentedContent}>
           {segmentContent[activeSegment]}
         </div>
+        {collapseChipsToTwoLines && contextModalOpen && (
+          <ContextModal
+            open
+            onClose={() => setContextModalOpen(false)}
+            onSave={handleContextSave}
+            overlayZIndex={2100}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
+          />
+        )}
+        {collapseChipsToTwoLines && inputModalOpen && (
+          <AddInputFieldModal
+            onClose={() => setInputModalOpen(false)}
+            onAdd={handleInputAdd}
+            onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
+          />
+        )}
       </div>
     );
   }

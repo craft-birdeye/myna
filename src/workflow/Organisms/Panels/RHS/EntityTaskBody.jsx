@@ -24,6 +24,8 @@ export default function EntityTaskBody({
   viewOnly = false,
   /** Exploration Option 2: Basic / Tool details stepper accordion. */
   option2Stepper = false,
+  /** Exploration Option 3: Basic / Tool details as body tabs. */
+  option3Tabs = false,
   /** Persisted per-tool field values (CustomToolViewer snapshot keyed by tool id). */
   toolFieldValues = {},
   onToolFieldValuesChange,
@@ -33,6 +35,9 @@ export default function EntityTaskBody({
   const [selectedTools, setSelectedTools] = useState(initialValues.selectedTools ?? []);
   const [allTools, setAllTools] = useState([]);
   const [openSteps, setOpenSteps] = useState({ 1: false, 2: true });
+  const [activeBodyTab, setActiveBodyTab] = useState('basic');
+
+  const inlineToolLayout = option2Stepper || option3Tabs;
 
   useEffect(() => {
     const unsub = subscribeToCustomTools((tools) => setAllTools(tools));
@@ -107,20 +112,20 @@ export default function EntityTaskBody({
 
   const toolsSection = (
     <div className={styles.toolsSection}>
-      <span className={styles.sectionLabelText}>Tool</span>
+      <div className={styles.toolSelectField}>
+        <span className={styles.sectionLabelText}>Select tool</span>
 
-      {displayedTools.length > 0 && (
-        <>
+        {displayedTools.length > 0 && (
           <div className={styles.toolCard}>
             {displayedTools.map((tool) => (
               <div
                 key={tool.id}
                 className={styles.toolRow}
                 onClick={() => {
-                  if (option2Stepper) return;
+                  if (inlineToolLayout) return;
                   onOpenTool?.(tool.id);
                 }}
-                style={{ cursor: option2Stepper ? 'default' : (onOpenTool ? 'pointer' : 'default') }}
+                style={{ cursor: inlineToolLayout ? 'default' : (onOpenTool ? 'pointer' : 'default') }}
               >
                 <div className={styles.toolRowMain}>
                   <div
@@ -171,7 +176,7 @@ export default function EntityTaskBody({
                     >
                       View
                     </span>
-                  ) : toolNeedsConfig(tool.id) && !option2Stepper ? (
+                  ) : toolNeedsConfig(tool.id) && !inlineToolLayout ? (
                     <button
                       type="button"
                       className={styles.toolConfigureBtn}
@@ -181,7 +186,7 @@ export default function EntityTaskBody({
                     </button>
                   ) : (
                     <>
-                      {!option2Stepper && (
+                      {!inlineToolLayout && (
                         <button
                           type="button"
                           className={styles.toolActionBtn}
@@ -193,64 +198,97 @@ export default function EntityTaskBody({
                           </span>
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className={styles.toolActionBtn}
-                        onClick={(e) => { e.stopPropagation(); onSwapTool?.(); }}
-                        title="Replace tool"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                          swap_horiz
-                        </span>
-                      </button>
+                      <Tooltip content="Replace tool" variant="brief" side="top">
+                        <button
+                          type="button"
+                          className={styles.toolActionBtn}
+                          onClick={(e) => { e.stopPropagation(); onSwapTool?.(); }}
+                          aria-label="Replace tool"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                            swap_horiz
+                          </span>
+                        </button>
+                      </Tooltip>
                     </>
                   )}
                 </div>
               </div>
             ))}
           </div>
-          {option2Stepper && selectedTools.includes('handle-response') && (
-            <div className={styles.inlineToolConfig}>
-              <HandleResponseForm
-                key="hr-inline"
-                value={initialValues.handleResponse || {}}
-                live
-                embedded
-                onChange={(config) => onFieldChange?.('handleResponse', config)}
-                namePrefix="handle-response-inline"
-                fieldPickerPlacement="dock"
-                fieldPickerZIndex={120}
-              />
-            </div>
-          )}
-          {option2Stepper && viewerTools
-            .filter((viewerTool) => viewerTool.id !== 'handle-response')
-            .map((viewerTool) => (
-            <div key={viewerTool.id} className={styles.inlineToolConfig}>
-              <ToolViewerContent
-                tool={viewerTool}
-                embedded
-                initialValues={toolFieldValues?.[viewerTool.id] || {}}
-                onFieldValuesChange={(values) => handleInlineToolValues(viewerTool.id, values)}
-              />
-            </div>
-          ))}
-        </>
+        )}
+      </div>
+
+      {displayedTools.length > 0 && inlineToolLayout && selectedTools.includes('handle-response') && (
+        <div className={styles.inlineToolConfig}>
+          <HandleResponseForm
+            key="hr-inline"
+            value={initialValues.handleResponse || {}}
+            live
+            embedded
+            onChange={(config) => onFieldChange?.('handleResponse', config)}
+            namePrefix="handle-response-inline"
+            fieldPickerPlacement="dock"
+            fieldPickerZIndex={120}
+          />
+        </div>
       )}
+      {displayedTools.length > 0 && inlineToolLayout && viewerTools
+        .filter((viewerTool) => viewerTool.id !== 'handle-response')
+        .map((viewerTool) => (
+        <div key={viewerTool.id} className={styles.inlineToolConfig}>
+          <ToolViewerContent
+            tool={viewerTool}
+            embedded
+            initialValues={toolFieldValues?.[viewerTool.id] || {}}
+            onFieldValuesChange={(values) => handleInlineToolValues(viewerTool.id, values)}
+          />
+        </div>
+      ))}
     </div>
   );
+
+  const basicFields = (
+    <div className={styles.stepFields}>
+      {taskNameField}
+      {descriptionField}
+    </div>
+  );
+
+  if (option3Tabs) {
+    const TABS = [
+      { id: 'basic', label: 'Basic' },
+      { id: 'toolDetails', label: 'Tool details' },
+    ];
+    return (
+      <div className={styles.tabbedContainer}>
+        <div className={styles.tabTrack} role="tablist" aria-label="Action sections">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              className={`${styles.tabButton}${activeBodyTab === tab.id ? ` ${styles.tabButtonActive}` : ''}`}
+              onClick={() => setActiveBodyTab(tab.id)}
+              aria-selected={activeBodyTab === tab.id}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className={styles.tabContent} role="tabpanel">
+          {activeBodyTab === 'toolDetails' ? toolsSection : basicFields}
+        </div>
+      </div>
+    );
+  }
 
   if (option2Stepper) {
     const STEPS = [
       {
         id: 1,
         label: 'Basic',
-        content: (
-          <div className={styles.stepFields}>
-            {taskNameField}
-            {descriptionField}
-          </div>
-        ),
+        content: basicFields,
       },
       {
         id: 2,

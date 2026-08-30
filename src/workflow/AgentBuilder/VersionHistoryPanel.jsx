@@ -112,9 +112,10 @@ export default function VersionHistoryPanel({
                     Active
                   </span>
                 )}
-                {/* Draft chip carries no dot, matching the canvas header's Draft badge. */}
                 {version.status === 'Draft' && (
-                  <span className="ab-header-status ab-header-status--draft">Draft</span>
+                  <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
+                    Draft
+                  </span>
                 )}
               </div>
               <div className="rr-version-history__author">

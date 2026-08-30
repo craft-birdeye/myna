@@ -104,7 +104,7 @@ const RATING_CELL = (v: unknown) =>
   )
 
 const LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -147,7 +147,7 @@ function ExplorationIntentCell({ intent }: { intent: string }) {
 }
 
 const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
   { key: 'contact', label: 'Contact', width: 180, sortable: true },
   { key: 'channel', label: 'Channel', width: 140, sortable: true },
   { key: 'duration', label: 'Duration', width: 120, sortable: true },
@@ -170,7 +170,7 @@ const EXPLORATION_FRONTDESK_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
 ]
 
 const REMINDER_LOG_COLUMNS: Column<HealthcareLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -198,7 +198,7 @@ const SOURCE_CELL = (v: unknown) => {
 
 /** Shared by review generation's Logs tab, which doesn't carry duration/rating/comment. */
 const REVIEW_GENERATION_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true },
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true },
   {
     key: 'status',
     label: 'Status',
@@ -215,7 +215,7 @@ function withoutLogDuration<T>(columns: Column<T>[]): Column<T>[] {
 }
 
 const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 200, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'timestamp', label: 'Time', width: 200, sortable: true, render: TIMESTAMP_CELL, tooltip: TEXT_TOOLTIP },
   { key: 'duration', label: 'Duration', width: 110, sortable: true, tooltip: TEXT_TOOLTIP },
   {
     key: 'status',
@@ -225,10 +225,10 @@ const REVIEW_RESPONSE_LOG_COLUMNS: Column<ReviewResponseLogRow>[] = [
     truncate: false,
     render: (v) => renderLogStatusCell(v),
   },
-  { key: 'contact', label: 'Reviewer name', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
-  { key: 'rating', label: 'Review rating', width: 140, truncate: false, render: RATING_CELL },
-  { key: 'source', label: 'Review source', width: 160, sortable: true, truncate: false, render: SOURCE_CELL },
-  { key: 'comment', label: 'Review summary', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'contact', label: 'Reviewer', width: 180, sortable: true, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
+  { key: 'rating', label: 'Rating', width: 140, truncate: false, render: RATING_CELL },
+  { key: 'source', label: 'Source', width: 160, sortable: true, truncate: false, render: SOURCE_CELL },
+  { key: 'comment', label: 'Review', width: 320, render: TEXT_CELL, tooltip: TEXT_TOOLTIP },
 ]
 
 const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
@@ -238,7 +238,7 @@ const PREVISIT_STATUS_VARIANT: Record<string, ChipVariant> = {
 }
 
 const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 220, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 220, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',
@@ -252,7 +252,7 @@ const PREVISIT_COLUMNS: Column<PrevisitLogRow>[] = [
 ]
 
 const TAGGING_ROUTING_LOG_COLUMNS: Column<PrevisitLogRow>[] = [
-  { key: 'timestamp', label: 'Timestamp', width: 240, sortable: true, render: TIMESTAMP_CELL },
+  { key: 'timestamp', label: 'Time', width: 240, sortable: true, render: TIMESTAMP_CELL },
   {
     key: 'status',
     label: 'Status',

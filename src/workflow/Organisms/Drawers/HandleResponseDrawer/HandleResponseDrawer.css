@@ -113,14 +113,21 @@
 }
 
 .hrd--embedded .hrd__label {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 18px;
-  letter-spacing: -0.26px;
+  letter-spacing: -0.24px;
+  color: #717182; /* text/secondary — matches FormInput / Select tool */
+}
+
+.hrd--embedded .hrd__field {
+  gap: 4px;
 }
 
 .hrd--embedded .hrd__radio-label {
-  font-size: 13px;
-  line-height: 18px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
 }
 
 .hrd--embedded .hrd__textarea {

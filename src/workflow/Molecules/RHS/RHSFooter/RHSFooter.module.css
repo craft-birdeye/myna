@@ -2,7 +2,7 @@
 
 .footer {
   background: #ffffff;
-  padding: 24px; /* 2xl */
+  padding: 48px 24px 24px; /* double top padding above Prompt strength / Save */
   display: flex;
   flex-direction: column;
   gap: 16px;
