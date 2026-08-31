@@ -1130,7 +1130,7 @@ export default function ProcedureDetailBody({
 
       <div className={styles.section}>
         <div className={etStyles.sectionLabelWrapper}>
-          <span className={etStyles.sectionLabelText}>When to exit this procedure?</span>
+          <span className={etStyles.sectionLabelText}>When to exit this procedure</span>
         </div>
         {viewOnly ? (
           showTitle ? (

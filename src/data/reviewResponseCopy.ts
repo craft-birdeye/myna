@@ -1,15 +1,15 @@
 /** Live Review response copy. Kept out of `agentWorkflows.ts` so Vite actually hot-reloads it. */
 
-export const RR_COPY_REV = 'rr-copy-7'
+export const RR_COPY_REV = 'rr-copy-10'
 
 export const RR_GOALS =
   "Respond to reviews automatically using the right template. If it can't post right away, save the response for someone to review."
 
 export const RR_TRIGGER_DESC =
-  'Agent triggers when a new review is received or an existing review is updated across all sources and locations'
+  'Starts when a new review is received or an existing review is updated across all sources and locations'
 
 export const RR_TRIAGE_DESC =
-  'Checks whether the review is genuine or spam, then decides if a response is needed'
+  'Checks whether the review is genuine or spam'
 
 export const RR_EXTRACT_DESC =
   "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors"

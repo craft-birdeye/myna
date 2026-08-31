@@ -18,7 +18,7 @@ import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolVi
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { formatSelectByCanvasSubtitle } from '../RHSDrawer/LocationsDrawer.jsx';
-import { RR_GOALS, RR_BRANCH_TITLE, RR_BRANCH_DESC } from '../../data/reviewResponseCopy';
+import { RR_GOALS, RR_TRIGGER_DESC, RR_BRANCH_TITLE, RR_BRANCH_DESC } from '../../data/reviewResponseCopy';
 import { FD_GOALS } from '../../data/frontDeskCopy';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
@@ -171,10 +171,10 @@ class RHSErrorBoundary extends React.Component {
 // is dropped as a trigger (Review response / Review generation agents only — see
 // handleDropNode). The last entry matches REVIEW_RESPONSE_WORKFLOW's rr-1 node verbatim.
 const REVIEWS_TRIGGER_LEAF_COPY = {
-  'When a new review is received': 'Agent triggers when a new review is received across all sources and locations.',
-  'When a review is updated': 'Agent triggers when an existing review is updated across all sources and locations.',
-  'When a review is responded': 'Agent triggers when a review receives a response across all sources and locations.',
-  'When a new review is received or updated': 'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
+  'When a new review is received': 'Starts when a customer leaves a new review on any connected source or location',
+  'When a review is updated': 'Starts when an existing review is edited, including rating or comment changes',
+  'When a review is responded': 'Starts when a response is posted to a review by your agent or a team member',
+  'When a new review is received or updated': RR_TRIGGER_DESC,
 };
 
 function makeNodeDetails(type, label) {

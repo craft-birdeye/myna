@@ -85,7 +85,7 @@ export function ProcedureSidePanel({ open, title, whenToUse, steps, exitCriteria
 
           {exitCriteria && (
             <div className="flex flex-col gap-xs">
-              <p className="text-small text-text-secondary">When to exit this procedure?</p>
+              <p className="text-small text-text-secondary">When to exit this procedure</p>
               <p className="text-body text-text-primary">{exitCriteria}</p>
             </div>
           )}

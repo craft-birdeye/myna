@@ -1082,7 +1082,7 @@ const REVIEW_RESPONSE_NODES = [
       hasAiIcon: false,
       titlePlaceholder: 'Enter task name',
       descriptionPlaceholder:
-        'Checks whether the review is genuine or spam, then decides if a response is needed',
+        'Checks whether the review is genuine or spam',
     },
   },
   {
@@ -1137,7 +1137,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   },
   'rr-1': {
     triggerName: 'When a new review is received or updated',
-    description: 'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
+    description: 'Starts when a new review is received or an existing review is updated across all sources and locations',
     conditions: [],
     conditionOptions: {
       field: [
@@ -1156,7 +1156,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   'rr-2': {
     taskName: 'Triage review',
     description:
-      'Checks whether the review is genuine or spam, then decides if a response is needed',
+      'Checks whether the review is genuine or spam',
     llmModel: 'Fast',
     contextFields: [
       { value: 'Review.comment', type: 'variable' },

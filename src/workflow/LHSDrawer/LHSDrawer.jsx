@@ -8,6 +8,7 @@ import {
   appendCreateAiDraftTurn,
   getCreateAiDraftSession,
 } from '../../data/createAgentChatStore';
+import { RR_TRIGGER_DESC, RR_TRIAGE_DESC } from '../../data/reviewResponseCopy';
 
 // Uploaded procedure.svg icon — used for all procedure category cards
 const ProcedureSvgIcon = () => (
@@ -73,19 +74,19 @@ const TRIGGER_SUB_ITEMS = {
     items: [
       {
         label: 'When a new review is received',
-        description: 'Fires when a customer leaves a new review on any connected source or location.',
+        description: 'Starts when a customer leaves a new review on any connected source or location',
       },
       {
         label: 'When a review is updated',
-        description: 'Fires when an existing review is edited, including rating or comment changes.',
+        description: 'Starts when an existing review is edited, including rating or comment changes',
       },
       {
         label: 'When a review is responded',
-        description: 'Fires when a response is posted to a review, by your agent or a team member.',
+        description: 'Starts when a response is posted to a review by your agent or a team member',
       },
       {
         label: 'When a new review is received or updated',
-        description: 'Fires on both new reviews and updates so one workflow can cover either event.',
+        description: RR_TRIGGER_DESC,
       },
     ],
   },
@@ -241,7 +242,7 @@ export const HEALTHCARE_SECTION_TRIGGER_CATEGORIES = [
     items: [
       {
         label: 'Schedule-based',
-        description: 'Runs the workflow on a set schedule or cadence.',
+        description: 'Runs the workflow on a set schedule or cadence',
       },
     ],
   },
@@ -262,7 +263,7 @@ export const AUTOMOTIVE_SECTION_TRIGGER_CATEGORIES = [
     items: [
       {
         label: 'Schedule-based',
-        description: 'Runs the workflow on a set schedule or cadence.',
+        description: 'Runs the workflow on a set schedule or cadence',
       },
     ],
   },
@@ -379,8 +380,7 @@ export const REVIEWS_TASK_SUB_ITEMS = {
       },
       {
         label: 'Triage review',
-        description:
-          'Checks whether the review is genuine or spam, then decides if a response is needed',
+        description: RR_TRIAGE_DESC,
       },
       {
         label: 'Publish response',
@@ -718,6 +718,35 @@ function buildHCProcedureCards(procedures) {
     nodeType: 'procedures',
     procedureId: name,
   }));
+}
+
+/** Front desk Procedures palette blurbs. Unlisted cards keep the generic Adds line. */
+const HC_PROCEDURE_PALETTE_DESCRIPTIONS = {
+  Custom: 'Adds a custom procedure for this workflow',
+  'General inquiry':
+    'Answers informational questions like hours, location, insurance, and services',
+  'Talk to human':
+    'Hands off to a live agent when the patient asks for a person or shows frustration',
+  'Book, cancel, reschedule appointment':
+    'Books, confirms, cancels, or reschedules an appointment',
+  'Reschedule appointment': 'Moves an existing upcoming appointment to a new time',
+  'Cancel appointment': 'Cancels an existing appointment and releases the slot',
+  'Handle slot conflict': 'Re-offers availability when the chosen slot was already taken',
+  'Verify insurance':
+    "Checks the patient's insurance so they know their coverage before booking",
+  'Appointment confirmation': 'Calls the patient to confirm the appointment slot',
+  'Waitlist slot confirmation':
+    'Calls the patient to confirm a newly available slot from the waitlist',
+  'Handle emergency or urgent concern':
+    'Detects urgent symptoms or concerns and escalates for patient safety',
+  'Handle unclear message':
+    "Clarifies vague or out-of-scope messages to recover the patient's intent",
+  'Handle prescription refill request':
+    "Processes a patient's request to refill an existing prescription",
+};
+
+function procedurePaletteDescription(card) {
+  return HC_PROCEDURE_PALETTE_DESCRIPTIONS[card?.label] || 'Adds this procedure to the workflow';
 }
 
 /* ─── Controls data ─── */
@@ -1364,7 +1393,7 @@ export default function LHSDrawer({
         label: 'Schedule based',
         icon: 'schedule',
         items: [
-          { label: 'Schedule-based', description: 'Runs the workflow on a set schedule or cadence.' },
+          { label: 'Schedule-based', description: 'Runs the workflow on a set schedule or cadence' },
         ],
       };
       const baseCategories = isReviewsAgent
@@ -1703,7 +1732,7 @@ export default function LHSDrawer({
                   items={[
                     {
                       label: card.label,
-                      description: 'Adds this procedure to the workflow',
+                      description: procedurePaletteDescription(card),
                       icon: card.icon || 'menu_book',
                     },
                   ]}
