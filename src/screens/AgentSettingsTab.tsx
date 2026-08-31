@@ -1235,7 +1235,7 @@ function FrontDeskSettings() {
           <div>
             <label className="text-small text-text-secondary">Language</label>
             <p className="mt-[2px] text-small text-text-secondary">
-              Choose the default and additional languages the agent will communicate in.
+              Choose the default and additional languages the agent will communicate in
             </p>
           </div>
           <div ref={langRef} className="relative">

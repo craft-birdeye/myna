@@ -19,6 +19,7 @@ import { useProcedureStore } from '../data/ProcedureStoreContext'
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
 import { isFrontDeskCanvasAgent } from '../workflow/LHSDrawer/LHSDrawer'
 import { applyReviewResponseCopy, RR_COPY_REV } from '../data/reviewResponseCopy'
+import { applyFrontDeskCopy, FD_COPY_REV } from '../data/frontDeskCopy'
 const AgentBuilder = AgentBuilderRaw as unknown as React.ComponentType<any>
 
 const EMPTY_WORKFLOW = {
@@ -56,17 +57,22 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
         : workflowMap[agentName] ?? EMPTY_WORKFLOW
 
   // Patch the start-node label so newly created drafts show their draft name on the canvas.
-  const workflow = applyReviewResponseCopy(
-    {
-      nodes: baseWorkflow.nodes,
-      nodeDetails: {
-        ...baseWorkflow.nodeDetails,
-        '__start__': {
-          ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
-          agentName: shownName,
+  const workflow = applyFrontDeskCopy(
+    applyReviewResponseCopy(
+      {
+        nodes: baseWorkflow.nodes,
+        nodeDetails: {
+          ...baseWorkflow.nodeDetails,
+          '__start__': {
+            ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
+            agentName: shownName,
+          },
         },
       },
-    },
+      agentName,
+      shownName,
+      instanceName,
+    ),
     agentName,
     shownName,
     instanceName,
@@ -106,7 +112,7 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
           </div>
         }>
           <AgentBuilder
-            key={`${agentName}::${shownName}::${product ?? 'automotive'}::${RR_COPY_REV}::${
+            key={`${agentName}::${shownName}::${product ?? 'automotive'}::${RR_COPY_REV}::${FD_COPY_REV}::${
               Object.entries(workflow.nodeDetails ?? {})
                 .map(([id, d]) => {
                   const n = d as Record<string, unknown> | undefined
