@@ -279,7 +279,7 @@ export function ReviewSummaryStep({
 
           <ReadField
             label="Language"
-            hint="Choose the default and additional languages the agent will communicate in."
+            hint="Choose the default and additional languages the agent will communicate in"
           >
             <div className={`${READONLY_SHELL} flex h-9 items-center gap-sm px-md`}>
               <LanguageFlag countryCode={primaryLang.countryCode} label={primaryLang.label} />

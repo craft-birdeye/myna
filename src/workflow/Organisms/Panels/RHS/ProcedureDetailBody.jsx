@@ -829,7 +829,7 @@ export default function ProcedureDetailBody({
   contextEditable = false,
   contextLibraryStyle = false,
   showTypeField = false,
-  whenToUseLabel = 'When should this procedure be used?',
+  whenToUseLabel = 'When to use this procedure',
   onOpenToolDrawer = undefined,
   onAddContext,
   hideContext = false,
@@ -1061,7 +1061,7 @@ export default function ProcedureDetailBody({
               <span className={etStyles.sectionLabelText}>
                 Steps<span className={styles.required}> *</span>
               </span>
-              <SectionInfoIcon tooltip="Ordered instructions the agent follows for this procedure. Expand to edit the full list." />
+              <SectionInfoIcon tooltip="Shows what the agent does, step by step. Expand to edit the list." />
             </div>
             <button
               type="button"
@@ -1078,7 +1078,7 @@ export default function ProcedureDetailBody({
             <span className={etStyles.sectionLabelText}>
               Steps<span className={styles.required}> *</span>
             </span>
-            <SectionInfoIcon tooltip="Ordered instructions the agent follows for this procedure. Expand to edit the full list." />
+            <SectionInfoIcon tooltip="Shows what the agent does, step by step. Expand to edit the list." />
           </div>
         )}
         {allowStepsExpand && stepsExpanded ? (

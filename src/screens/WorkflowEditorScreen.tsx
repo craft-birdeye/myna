@@ -14,6 +14,7 @@ import {
   applyReviewResponseCopy,
   RR_COPY_REV,
 } from '../data/reviewResponseCopy'
+import { applyFrontDeskCopy, FD_COPY_REV, FD_GOALS } from '../data/frontDeskCopy'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -51,7 +52,7 @@ const REVIEW_GENERATION_SCRATCH_START = {
 // any module-cache staleness from agentWorkflows.ts.
 const HC_FRONTDESK_START = {
   agentName: 'Front desk agent',
-  goals: 'Serves as the first point of contact for inbound calls, texts, and chats, resolving patient inquiries, managing appointments, verifying insurance, and escalating complex cases when needed',
+  goals: FD_GOALS,
   outcomes:
     "1. Patient's query is resolved or routed without human intervention\n" +
     '2. Appointment is confirmed, modified, or cancelled and reflected in the system\n' +
@@ -266,7 +267,12 @@ export function WorkflowEditorScreen({
           nodes: patchNodes(baseWorkflow.nodes as unknown[]) as typeof baseWorkflow.nodes,
           nodeDetails: patchNodeDetails(baseWorkflow.nodeDetails as unknown as Record<string, unknown>) as typeof baseWorkflow.nodeDetails,
         }
-  const workflow = applyReviewResponseCopy(rawWorkflow, agentBaseName, shownName, agentName)
+  const workflow = applyFrontDeskCopy(
+    applyReviewResponseCopy(rawWorkflow, agentBaseName, shownName, agentName),
+    agentBaseName,
+    shownName,
+    agentName,
+  )
 
   // Create-from-scratch opens an empty canvas — never show "Active".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
@@ -291,7 +297,7 @@ export function WorkflowEditorScreen({
       return `${id}:${n?.taskName ?? ''}:${n?.branchNodeTitle ?? ''}:${n?.triggerName ?? ''}:${n?.description ?? ''}:${n?.goals ?? ''}`
     })
     .join('|')
-  const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${RR_COPY_REV}::${copyFingerprint}`
+  const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${RR_COPY_REV}::${FD_COPY_REV}::${copyFingerprint}`
 
   return (
     <div className="flex h-full w-full overflow-hidden">
