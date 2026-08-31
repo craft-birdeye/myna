@@ -558,7 +558,7 @@ function VoiceChannelSettings({
           value={greeting}
           onChange={(e) => onGreetingChange(e.target.value)}
           rows={4}
-          placeholder="e.g. Thank you for calling — my name is Myna, your virtual assistant. How can I help you today?"
+          placeholder="Example: Thank you for calling. My name is Myna, your virtual assistant. How can I help you today?"
           className={`${INPUT_CLASS} resize-none py-sm placeholder:text-text-tertiary`}
         />
       </div>
@@ -594,7 +594,7 @@ function VoiceChannelSettings({
                   value={consent}
                   onChange={(e) => onConsentChange(e.target.value)}
                   rows={3}
-                  placeholder="e.g. This call may be recorded for quality and training purposes."
+                  placeholder="Example: This call may be recorded for quality and training purposes."
                   className={`${INPUT_CLASS} resize-none py-sm placeholder:text-text-tertiary`}
                 />
               </div>
@@ -675,7 +675,7 @@ function GettingStartedStep({
           type="text"
           value={agentName}
           onChange={(e) => onAgentNameChange(e.target.value)}
-          placeholder="e.g. Myna, Front desk AI, Scheduling assistant"
+          placeholder="Example: Myna, Front desk AI, Scheduling assistant"
           className={`${INPUT_CLASS} h-9 placeholder:text-text-tertiary`}
         />
       </div>
@@ -847,7 +847,7 @@ function ConfigureAgentStep({
           <div>
             <label className="text-body text-text-primary">Language</label>
             <p className="mt-[2px] text-small text-text-secondary">
-              Choose the default and additional languages the agent will communicate in.
+              Choose the default and additional languages the agent will communicate in
             </p>
           </div>
 
@@ -1205,9 +1205,9 @@ function SelectLocationsStep({
     <div className="mt-xl flex w-full flex-col gap-sm">
       <div className="flex items-start justify-between gap-xl">
         <div>
-          <label className="text-body text-text-primary">Select locations</label>
+          <label className="text-body text-text-primary">Locations</label>
           <p className="mt-[2px] text-small text-text-tertiary">
-            Choose the locations which this agent will work for. Select by{' '}
+            Choose the locations this agent will work for. Select by{' '}
             <span className="relative inline-block">
               <button
                 type="button"

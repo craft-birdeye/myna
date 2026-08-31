@@ -740,7 +740,7 @@ export const CONTROL_CARDS = [
  *  Each carries a `description` so it renders as a rich `LHSEntityGroup` card (title +
  *  description + drag handle) — the same treatment as the Trigger / Task panels. */
 export const BRANCH_VARIANT_ITEMS = [
-  { label: 'Based on condition', description: 'Route the flow down different paths based on conditions you define.' },
+  { label: 'Evaluate conditions', description: 'Checks your conditions, then sends the flow down the matching branch. If nothing matches, it uses the fallback branch.' },
   { label: 'Split traffic', description: 'Splits traffic across paths by percentage, useful for testing variations' },
   { label: 'Always run', description: 'Adds a path that always runs, regardless of any conditions' },
 ];
@@ -1703,9 +1703,7 @@ export default function LHSDrawer({
                   items={[
                     {
                       label: card.label,
-                      description: isCustom
-                        ? 'Build a custom procedure for this workflow.'
-                        : `Add the "${card.label}" procedure to this workflow.`,
+                      description: 'Adds this procedure to the workflow',
                       icon: card.icon || 'menu_book',
                     },
                   ]}

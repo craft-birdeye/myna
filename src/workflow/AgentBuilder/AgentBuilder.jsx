@@ -18,7 +18,8 @@ import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolVi
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { formatSelectByCanvasSubtitle } from '../RHSDrawer/LocationsDrawer.jsx';
-import { RR_GOALS } from '../../data/reviewResponseCopy';
+import { RR_GOALS, RR_BRANCH_TITLE, RR_BRANCH_DESC } from '../../data/reviewResponseCopy';
+import { FD_GOALS } from '../../data/frontDeskCopy';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
 import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
@@ -213,8 +214,8 @@ function makeNodeDetails(type, label) {
   if (type === 'branch') {
     return {
       basedOn: 'conditions',
-      branchNodeTitle: 'Based on conditions',
-      description: 'Build condition-specific flows',
+      branchNodeTitle: RR_BRANCH_TITLE,
+      description: RR_BRANCH_DESC,
       mergeBranches: true,
       // Paths are fully seeded on drop (with node-scoped ids). Keep a named
       // placeholder here so the RHS never opens on an empty Branches list.
@@ -1344,6 +1345,9 @@ export default function AgentBuilder({
     const base = initialNodeDetails || {};
     const startNode = base[START_NODE_ID];
     const pageTitleStr = (typeof pageTitle === 'string' ? pageTitle : '') || '';
+    const overlayFrontDeskGoals = agentNameIsFrontDesk(pageTitleStr)
+      ? { goals: FD_GOALS }
+      : {};
     if (!startNode || !startNode.agentName) {
       return {
         ...base,
@@ -1352,11 +1356,14 @@ export default function AgentBuilder({
           outcomes: '',
           locations: [],
           ...(startNode || {}),
+          ...overlayFrontDeskGoals,
           agentName: startNode?.agentName || pageTitleStr,
         },
       };
     }
-    return base;
+    return overlayFrontDeskGoals.goals
+      ? { ...base, [START_NODE_ID]: { ...startNode, ...overlayFrontDeskGoals } }
+      : base;
   });
   const [agentStatus, setAgentStatus] = useState(initialStatus || 'Draft');
 
@@ -1516,6 +1523,9 @@ export default function AgentBuilder({
       const base = initialNodeDetails;
       const startNode = base[START_NODE_ID];
       const pageTitleStr = (typeof pageTitle === 'string' ? pageTitle : '') || '';
+      const overlayFrontDeskGoals = agentNameIsFrontDesk(pageTitleStr)
+        ? { goals: FD_GOALS }
+        : {};
       if (!startNode || !startNode.agentName) {
         return {
           ...base,
@@ -1524,11 +1534,14 @@ export default function AgentBuilder({
             outcomes: '',
             locations: [],
             ...(startNode || {}),
+            ...overlayFrontDeskGoals,
             agentName: startNode?.agentName || pageTitleStr,
           },
         };
       }
-      return base;
+      return overlayFrontDeskGoals.goals
+        ? { ...base, [START_NODE_ID]: { ...startNode, ...overlayFrontDeskGoals } }
+        : base;
     });
   }, [seedFingerprint, viewOnly, initialNodes, initialNodeDetails, pageTitle]);
 
@@ -2845,11 +2858,11 @@ export default function AgentBuilder({
           [path1Id]: makePath({ branchName: 'Always run', isFallback: true }),
         };
       } else {
-        // 'Based on condition' (and the legacy plain "Branch" card / add-step menu)
+        // 'Evaluate conditions' (legacy: 'Based on condition' / plain "Branch" card)
         Object.assign(details, {
           basedOn: 'conditions',
-          branchNodeTitle: 'Based on conditions',
-          description: 'Build condition-specific flows',
+          branchNodeTitle: RR_BRANCH_TITLE,
+          description: RR_BRANCH_DESC,
           mergeBranches: true,
           branches: [
             { id: path1Id, name: 'Branch 1' },
@@ -3147,15 +3160,22 @@ export default function AgentBuilder({
     if (selectedNodeId === START_NODE_ID) {
       const isReviewGeneration = /review generation/i.test(pageTitle || '');
       const isReviewResponse = /review response/i.test(pageTitle || '');
+      const isFrontDesk = agentNameIsFrontDesk(pageTitle);
       const rawStart = nodeDetails[START_NODE_ID];
       const startDetails = rawStart
         ? {
             ...rawStart,
-            goals: isReviewResponse && !rawStart.goals ? RR_GOALS : rawStart.goals,
+            goals: isFrontDesk
+              ? FD_GOALS
+              : isReviewResponse && !rawStart.goals
+                ? RR_GOALS
+                : rawStart.goals,
           }
         : {
         agentName: pageTitle,
-        goals: isReviewGeneration
+        goals: isFrontDesk
+          ? FD_GOALS
+          : isReviewGeneration
           ? 'Request reviews from customers after a completed transaction, using email and text to maximize response rates.'
           : isReviewResponse
             ? RR_GOALS

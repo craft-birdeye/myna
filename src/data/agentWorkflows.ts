@@ -172,7 +172,7 @@ const OUTREACH_NODE_DETAILS: Record<string, any> = {
 const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
   '__start__': {
     agentName: 'Front desk agent - North region',
-    goals: 'Serves as the first point of contact for inbound calls, texts, and chats — routing customer inquiries, scheduling service and sales appointments, answering vehicle and inventory questions, and escalating complex cases to the right department.',
+    goals: 'Answer all inbound calls, texts, and chats. Handle general questions, book, cancel, and reschedule appointments, verify insurance, and bring in a human when something is too complex to handle.',
     outcomes: [
       '1. Customer inquiry is resolved or routed without human intervention',
       '2. Service or sales appointment is confirmed, modified, or cancelled and reflected in the DMS',
