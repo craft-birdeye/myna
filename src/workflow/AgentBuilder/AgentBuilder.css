@@ -730,25 +730,17 @@
   inset: 0;
   z-index: 10000;
   display: flex;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 72px;
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
 
-.ab-publish-blocked-overlay {
-  align-items: flex-start;
-  padding-top: 72px;
-}
-
-/* Draft / delete confirms — true viewport center */
-.ab-confirm-overlay {
-  align-items: center;
-  padding: 24px;
-}
-
-/* Shift horizontal center left when the RHS panel is open (450px + 8px inset + 12px gap). */
+/* Shift horizontal center left when the RHS panel is open (450px + 8px inset + 12px gap).
+   Confirm dialogs stay viewport-centered — only publish-blocked follows the RHS. */
 .ab-publish-blocked-overlay--rhs-open {
   padding-right: 470px;
 }
