@@ -36,6 +36,7 @@ import {
 } from '../components'
 import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
+import { GreyTriggerIcon } from '../workflow/Molecules/Canvas/CanvasNodeIcons'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
 import { AgentInstanceScreen } from './AgentInstanceScreen'
 import { NewFrontdeskAgentSetupScreen } from './NewFrontdeskAgentSetupScreen'
@@ -125,7 +126,6 @@ interface AgentDetailScreenProps {
 const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
   'response-agents-sep-1',
   'response-agents',
-  'frontdesk-agent',
   'reminder-agent-sep-1',
 ])
 
@@ -2030,7 +2030,11 @@ function CreateAgentThinkingPanel({
         aria-expanded={open}
         className="group flex items-center gap-sm text-left disabled:cursor-default"
       >
-        <Icon name="bolt" size={18} className="shrink-0 text-text-icon" />
+        <GreyTriggerIcon
+          size={16}
+          inAvatarColumn
+          className="text-text-secondary transition-colors group-hover:text-text-primary"
+        />
         <span className="text-body text-text-secondary transition-colors group-hover:text-text-primary">{label}</span>
         <Icon
           name={open ? 'expand_less' : 'expand_more'}
@@ -2044,7 +2048,7 @@ function CreateAgentThinkingPanel({
         }`}
         aria-hidden={!open}
       >
-        <div className="ml-[9px] border-l border-border pl-lg text-body leading-6 text-text-tertiary">
+        <div className="ml-[12px] border-l border-border pl-lg text-body leading-6 text-text-tertiary">
           {lines.map((line, i) => {
             const isLast = i === lines.length - 1
             const caret = isLast && !done ? <TypingCaret /> : null
@@ -2078,7 +2082,7 @@ function CreateAgentThinkingPanel({
   )
 }
 
-// Intro "Thinking" loader — sits in the same slot the Thoughts row (bolt icon + label) takes
+// Intro "Thinking" loader — sits in the same slot the Thoughts row (trigger icon + label) takes
 // over once loading finishes.
 function IntroThinkingLoaderRow() {
   return (
@@ -8704,7 +8708,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 <>
                   {useAgentCardGrid ? (
                     // Dropdown: Default = icon card; R1 = metric-forward; R2 = compact + footer meta.
-                    <div className="grid grid-cols-1 items-start gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 items-stretch gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">
                       {visibleData.map((row) => {
                         const cardMetrics = isExplorationFrontDeskAgents
                           ? [
@@ -8768,7 +8772,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               key={`${row.name}-${row.status}`}
                               role="presentation"
                               onClick={() => openAgentInstanceDetails(row)}
-                              className="group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
+                              className="group relative flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                             >
                               <div className="flex min-w-0 items-start gap-sm">
                                 <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} />
@@ -8799,7 +8803,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                 />
                               ) : null}
 
-                              <div className="mt-md flex min-w-0 items-center gap-sm">
+                              <div className="mt-auto flex min-w-0 items-end gap-sm pt-md">
                                 <div className="flex shrink-0 items-center gap-sm" onClick={(e) => e.stopPropagation()}>
                                   <button
                                     type="button"

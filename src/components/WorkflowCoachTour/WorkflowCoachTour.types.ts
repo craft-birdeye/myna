@@ -12,7 +12,7 @@ export interface WorkflowCoachStep {
 export interface WorkflowCoachTourProps {
   open: boolean
   onClose: () => void
-  /** Override the default five workflow-editor steps. */
+  /** Override the default six workflow-editor steps. */
   steps?: WorkflowCoachStep[]
 }
 
@@ -34,16 +34,24 @@ export const WORKFLOW_COACH_STEPS: WorkflowCoachStep[] = [
     placement: 'right',
   },
   {
-    id: 'tasks-controls',
-    title: 'Tasks & controls',
+    id: 'procedures',
+    title: 'Procedures',
     description:
-      'Add tasks to define what your workflow does. Use conditions and other controls to decide how the workflow should move from one step to the next.',
+      'Add procedures to guide your front desk agent through common situations. Define the steps it should follow, the information it should collect, and how it should respond to customers.',
+    anchorIds: ['procedures'],
+    placement: 'right',
+  },
+  {
+    id: 'tasks-controls',
+    title: 'Action & controls',
+    description:
+      'Add actions to define what your workflow does. Use conditions and other controls to decide how the workflow should move from one step to the next.',
     anchorIds: ['tasks', 'controls'],
     placement: 'right',
   },
   {
     id: 'test-run',
-    title: 'Test run',
+    title: 'Run test',
     description:
       'Run your workflow to see how each step behaves and make sure everything works as expected before turning it on.',
     anchorIds: ['test-run'],
@@ -51,10 +59,32 @@ export const WORKFLOW_COACH_STEPS: WorkflowCoachStep[] = [
   },
   {
     id: 'publish',
-    title: 'Publish',
+    title: 'Activate',
     description:
-      'Once your workflow is configured and tested, publish it to start running automatically when your trigger occurs.',
+      'Once your workflow is configured and tested, activate it to start running automatically when your trigger occurs.',
     anchorIds: ['publish'],
     placement: 'bottom',
   },
 ]
+
+const FRONT_DESK_PREVIEW_STEP_COPY = {
+  title: 'Preview',
+  description:
+    'Test your agent to see how it handles inbound calls, texts, and chats. Walk through common front desk scenarios and confirm each step works before you activate it.',
+} as const
+
+/** Coach steps with optional Procedures step and front desk Preview wording. */
+export function buildWorkflowCoachSteps(options?: {
+  includeProcedures?: boolean
+  frontDeskPreview?: boolean
+}): WorkflowCoachStep[] {
+  const includeProcedures = options?.includeProcedures ?? true
+  const frontDeskPreview = options?.frontDeskPreview ?? false
+
+  return WORKFLOW_COACH_STEPS.filter((step) => includeProcedures || step.id !== 'procedures').map(
+    (step) =>
+      frontDeskPreview && step.id === 'test-run'
+        ? { ...step, ...FRONT_DESK_PREVIEW_STEP_COPY }
+        : step,
+  )
+}

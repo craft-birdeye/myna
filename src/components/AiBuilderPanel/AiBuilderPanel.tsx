@@ -4,6 +4,7 @@ import { SendIcon } from '../../assets/SendIcon'
 import iconAgentsTwoStarSparkle from '../../assets/icon-agents-two-star-sparkle.svg'
 import type { CreateChatTurn } from '../../data/createAgentChatStore'
 import { FrontDeskDraftReviewContent } from '../AgentDraftReview/FrontDeskDraftReviewContent'
+import { GreyTriggerIcon } from '../../workflow/Molecules/Canvas/CanvasNodeIcons'
 import { AiBuilderPanelProps } from './AiBuilderPanel.types'
 import { useAiBuilderTrail } from './useAiBuilderTrail'
 
@@ -73,7 +74,7 @@ function TrailSparkle({ size = 14 }: { size?: number }) {
   )
 }
 
-/** Mirrors CreateAgentThinkingPanel chrome (bolt + Thoughts + vertical rule). */
+/** Mirrors CreateAgentThinkingPanel chrome (trigger icon + Thoughts + vertical rule). */
 function TrailThoughts({
   text,
   label = 'Thoughts',
@@ -94,7 +95,11 @@ function TrailThoughts({
         aria-expanded={open}
         className="group flex items-center gap-sm text-left"
       >
-        <Icon name="bolt" size={16} className="shrink-0 text-text-icon" />
+        <GreyTriggerIcon
+          size={16}
+          inAvatarColumn
+          className="text-text-secondary transition-colors group-hover:text-text-primary"
+        />
         <span className="text-[13px] leading-5 text-text-secondary transition-colors group-hover:text-text-primary">
           {label}
         </span>
@@ -110,7 +115,7 @@ function TrailThoughts({
         }`}
         aria-hidden={!open}
       >
-        <div className="ml-[9px] border-l border-border pl-lg text-[13px] leading-5 text-text-tertiary">
+        <div className="ml-[12px] border-l border-border pl-lg text-[13px] leading-5 text-text-tertiary">
           {lines.map((line, i) => {
             if (line.startsWith('•')) {
               const bullet = line.slice(1).trimStart()

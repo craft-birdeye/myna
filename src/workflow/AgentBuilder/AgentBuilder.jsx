@@ -24,6 +24,7 @@ import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
 import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
 import { WorkflowCoachTour } from '../../components/WorkflowCoachTour/WorkflowCoachTour';
+import { buildWorkflowCoachSteps } from '../../components/WorkflowCoachTour/WorkflowCoachTour.types';
 import ReminderToolDrawer from '../Organisms/Drawers/ReminderToolDrawer/ReminderToolDrawer';
 import VoiceCallToolDrawer from '../Organisms/Drawers/VoiceCallToolDrawer/VoiceCallToolDrawer';
 import TransferToolDrawer from '../Organisms/Drawers/TransferToolDrawer/TransferToolDrawer';
@@ -4167,7 +4168,7 @@ export default function AgentBuilder({
                             icon: 'menu_book',
                             color: '#7C3AED',
                             label: 'Procedures',
-                            tourId: null,
+                            tourId: 'procedures',
                           }]
                         : []),
                       {
@@ -4724,7 +4725,14 @@ export default function AgentBuilder({
       />
 
       {!viewOnly && (
-        <WorkflowCoachTour open={coachTourOpen} onClose={handleCoachTourClose} />
+        <WorkflowCoachTour
+          open={coachTourOpen}
+          onClose={handleCoachTourClose}
+          steps={buildWorkflowCoachSteps({
+            includeProcedures: showProceduresFloater,
+            frontDeskPreview: isFrontDeskAgentName,
+          })}
+        />
       )}
 
       <GlossaryModal

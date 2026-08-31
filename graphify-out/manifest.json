@@ -150,9 +150,9 @@
     "semantic_hash": "f91bb36c63f67790dbfedcef72fcfda5"
   },
   "src/components/AiBuilderPanel/AiBuilderPanel.tsx": {
-    "mtime": 1788022825.3632357,
-    "seen": 1788022843.65071,
-    "ast_hash": "c893ec25e5a3e1f5ebc6e650656db5e1",
+    "mtime": 1788179271.3868327,
+    "seen": 1788179302.4420328,
+    "ast_hash": "0bf3d54afffe526f4d1ae2e75b115f78",
     "semantic_hash": ""
   },
   "src/components/AiBuilderPanel/AiBuilderPanel.types.ts": {
@@ -1074,16 +1074,16 @@
     "semantic_hash": "167df90829687ebcb26b7688de1559fe"
   },
   "src/components/WorkflowCoachTour/WorkflowCoachTour.tsx": {
-    "mtime": 1786643369.0267324,
-    "seen": 1787896827.221815,
-    "ast_hash": "cc9a01b374a25238a786472ae3ffdaff",
-    "semantic_hash": "cc9a01b374a25238a786472ae3ffdaff"
+    "mtime": 1788178964.9406154,
+    "seen": 1788179177.4514089,
+    "ast_hash": "ae4c7b5a5381b201773efe0551ab2aa8",
+    "semantic_hash": ""
   },
   "src/components/WorkflowCoachTour/WorkflowCoachTour.types.ts": {
-    "mtime": 1786643369.0272393,
-    "seen": 1787896827.221815,
-    "ast_hash": "3ccbeae9c1169a46392e734435f73234",
-    "semantic_hash": "3ccbeae9c1169a46392e734435f73234"
+    "mtime": 1788178952.2888446,
+    "seen": 1788179177.451411,
+    "ast_hash": "2e8a36271d0a2464e53577244a198a11",
+    "semantic_hash": ""
   },
   "src/components/charts/ChartCard.tsx": {
     "mtime": 1786352375.0536184,
@@ -4128,9 +4128,9 @@
     "semantic_hash": ""
   },
   "src/data/agentWorkflows.ts": {
-    "mtime": 1788168009.9620674,
-    "seen": 1788170424.727624,
-    "ast_hash": "92f13d82e096970f103b0df4beabe73d",
+    "mtime": 1788177576.748252,
+    "seen": 1788179177.451844,
+    "ast_hash": "ce2e9a62ba046c33f8502aba0bff89ba",
     "semantic_hash": ""
   },
   "src/data/annetteBlackChatConversation.ts": {
@@ -4146,10 +4146,10 @@
     "semantic_hash": "febadc8fbeef4311423bcd2bee1a7beb"
   },
   "src/data/buildWizardAgentWorkflow.ts": {
-    "mtime": 1783586902.3247287,
-    "seen": 1787896827.2222111,
-    "ast_hash": "a3900b934d972a99fc9350d314d1a140",
-    "semantic_hash": "a3900b934d972a99fc9350d314d1a140"
+    "mtime": 1788177576.749188,
+    "seen": 1788179177.4518468,
+    "ast_hash": "cff39feebbc115cbcbf418af83544905",
+    "semantic_hash": ""
   },
   "src/data/coachingCallConversations.ts": {
     "mtime": 1786085272.626439,
@@ -4200,10 +4200,10 @@
     "semantic_hash": "dfe364ace9ed24090d06dc5aa90ccb19"
   },
   "src/data/healthcareProcedureCatalog.ts": {
-    "mtime": 1783586902.3254957,
-    "seen": 1787896827.2223182,
-    "ast_hash": "fdb8ccd0d08ea225c3719e5afffa7b0a",
-    "semantic_hash": "fdb8ccd0d08ea225c3719e5afffa7b0a"
+    "mtime": 1788177576.7503493,
+    "seen": 1788179177.451856,
+    "ast_hash": "b0d30c3275496c7d6a0331dddaa085aa",
+    "semantic_hash": ""
   },
   "src/data/overviewData.ts": {
     "mtime": 1787029124.0409737,
@@ -4296,9 +4296,9 @@
     "semantic_hash": "8c8e65450fb7302dacd5e4592b2b7236"
   },
   "src/screens/AgentDetailScreen.tsx": {
-    "mtime": 1788176797.085397,
-    "seen": 1788176843.310339,
-    "ast_hash": "c58825ec3691eaabd948634ca2b20d16",
+    "mtime": 1788179265.0501597,
+    "seen": 1788179302.442624,
+    "ast_hash": "e5408d7e0da88c0b438591552f215b6c",
     "semantic_hash": ""
   },
   "src/screens/AgentDirectoryScreen.tsx": {
@@ -4320,10 +4320,10 @@
     "semantic_hash": ""
   },
   "src/screens/AgentSettingsTab.tsx": {
-    "mtime": 1787638738.3193274,
-    "seen": 1787896827.2225049,
-    "ast_hash": "c11d990553934a7af779358ac87abcad",
-    "semantic_hash": "c11d990553934a7af779358ac87abcad"
+    "mtime": 1788177576.75135,
+    "seen": 1788179177.4518762,
+    "ast_hash": "dcf8803ea8877f91f95a1e534f90f9ca",
+    "semantic_hash": ""
   },
   "src/screens/AllReviewsScreen.tsx": {
     "mtime": 1788071175.281317,
@@ -4482,10 +4482,10 @@
     "semantic_hash": "09aaba8436367f1f3d90dc025f4ffc4b"
   },
   "src/screens/NewFrontdeskAgentSetupScreen.tsx": {
-    "mtime": 1786684734.5352943,
-    "seen": 1787896827.222525,
-    "ast_hash": "daf3dd387caf64642546ed3b98f6c7f3",
-    "semantic_hash": "daf3dd387caf64642546ed3b98f6c7f3"
+    "mtime": 1788177576.752429,
+    "seen": 1788179177.4519,
+    "ast_hash": "d4d2059a3d8d2d7279222593174a9c31",
+    "semantic_hash": ""
   },
   "src/screens/OutboundAgentLogsTab.tsx": {
     "mtime": 1787989598.3413503,
@@ -4542,10 +4542,10 @@
     "semantic_hash": ""
   },
   "src/screens/ReviewSummaryStep.tsx": {
-    "mtime": 1786677372.515464,
-    "seen": 1787896827.222532,
-    "ast_hash": "ed368abecd2f19379c90642d3959624f",
-    "semantic_hash": "ed368abecd2f19379c90642d3959624f"
+    "mtime": 1788177576.753805,
+    "seen": 1788179177.4519098,
+    "ast_hash": "3e1df141ff4ce8e749dde42f5b9b2019",
+    "semantic_hash": ""
   },
   "src/screens/ReviewWaitlistScreen.tsx": {
     "mtime": 1786352375.3056529,
@@ -4602,15 +4602,15 @@
     "semantic_hash": "64dfcf4e858e05e355d1ea533b9ce9ab"
   },
   "src/screens/WorkflowEditorScreen.tsx": {
-    "mtime": 1788176809.5651464,
-    "seen": 1788176843.31042,
-    "ast_hash": "5dab0ce914026bc41cd635830b4c85ea",
+    "mtime": 1788177576.7543395,
+    "seen": 1788179177.4519522,
+    "ast_hash": "e50b865cdc753b2510af625c649639dc",
     "semantic_hash": ""
   },
   "src/screens/WorkflowViewerTab.tsx": {
-    "mtime": 1788168009.9659016,
-    "seen": 1788170424.727726,
-    "ast_hash": "47e4f37a71db404ba80aa3e0444bf4b7",
+    "mtime": 1788177576.7553003,
+    "seen": 1788179177.451953,
+    "ast_hash": "de1c83428ca5497dcc574dd3f0afa037",
     "semantic_hash": ""
   },
   "src/screens/channelSetupSettings.tsx": {
@@ -4848,9 +4848,9 @@
     "semantic_hash": "0352474ba2918efe13895edbc3780d94"
   },
   "src/workflow/AgentBuilder/AgentBuilder.jsx": {
-    "mtime": 1788176206.3349385,
-    "seen": 1788176843.3104541,
-    "ast_hash": "5d139e358d6cc3b087b14b9f2d41a197",
+    "mtime": 1788178953.9195397,
+    "seen": 1788179177.451988,
+    "ast_hash": "40f74a5394569a6c43c2df37bfa9b7b8",
     "semantic_hash": ""
   },
   "src/workflow/AgentBuilder/AgentBuilder.stories.jsx": {
@@ -4914,9 +4914,9 @@
     "semantic_hash": "da886bdac70ed0bb703c92aacbfbe307"
   },
   "src/workflow/LHSDrawer/LHSDrawer.jsx": {
-    "mtime": 1788168009.9680908,
-    "seen": 1788170424.7277682,
-    "ast_hash": "8877bef0fdb5dae5f2cf693d1c88dd88",
+    "mtime": 1788177576.7570932,
+    "seen": 1788179177.451997,
+    "ast_hash": "622257d17ef9be64d9c8ee53ea74b30b",
     "semantic_hash": ""
   },
   "src/workflow/LHSDrawer/LHSDrawer.stories.jsx": {
@@ -5250,10 +5250,10 @@
     "semantic_hash": "287dc4158222713d0fd62aed06897b05"
   },
   "src/workflow/Molecules/Canvas/CanvasNodeIcons.jsx": {
-    "mtime": 1787575377.4887483,
-    "seen": 1787896827.222879,
-    "ast_hash": "45b5e6208723822994ba6a3ce5b4a3c5",
-    "semantic_hash": "45b5e6208723822994ba6a3ce5b4a3c5"
+    "mtime": 1788179258.4299295,
+    "seen": 1788179302.442796,
+    "ast_hash": "b4253cd1752d6f35570404ca1153314c",
+    "semantic_hash": ""
   },
   "src/workflow/Molecules/Canvas/EndNode/EndNode.jsx": {
     "mtime": 1786429130.0587156,
@@ -6036,10 +6036,10 @@
     "semantic_hash": "6b19e5e6f50a5029ca0226b7c9faf20a"
   },
   "src/workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx": {
-    "mtime": 1787645675.7241986,
-    "seen": 1787896827.22297,
-    "ast_hash": "59f6c6f0ff8f5dd3fe2c9e3272c59560",
-    "semantic_hash": "59f6c6f0ff8f5dd3fe2c9e3272c59560"
+    "mtime": 1788177576.7583866,
+    "seen": 1788179177.4521642,
+    "ast_hash": "fbe92b88e207ef40aebf57da18e11761",
+    "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/ProcedureTaskBody.jsx": {
     "mtime": 1787639593.055395,
@@ -7566,9 +7566,21 @@
     "semantic_hash": ""
   },
   "src/assets/library-cards/icon-front-desk.svg": {
-    "mtime": 1788175562.8508666,
-    "seen": 1788175700.9487932,
-    "ast_hash": "53a3d4d636ec8e3c0523df563066417c",
+    "mtime": 1788177802.0427504,
+    "seen": 1788179177.452317,
+    "ast_hash": "c585890691c0800d018335b7274a9263",
+    "semantic_hash": ""
+  },
+  "src/data/frontDeskCopy.ts": {
+    "mtime": 1788177576.7497628,
+    "seen": 1788179177.451853,
+    "ast_hash": "8bfc79b19be21f924d25047b3ea86e72",
+    "semantic_hash": ""
+  },
+  "icons/Cue_Create with AI.svg": {
+    "mtime": 1788178483.4348125,
+    "seen": 1788179177.452224,
+    "ast_hash": "287db51b69c06d2424daa30118ce21f3",
     "semantic_hash": ""
   }
 }

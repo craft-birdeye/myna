@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import cueCreateWithAiIllustration from '@icons/Cue_Create with AI.svg'
 import { Icon } from '../Icon/Icon'
 import {
   WORKFLOW_COACH_STEPS,
@@ -26,6 +27,20 @@ function measureAnchors(ids: string[]): DOMRect | null {
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
+}
+
+/** Create with AI step cue art from Figma (node 15862:2500). */
+function CreateWithAiCoachIllustration() {
+  return (
+    <div className="mt-lg flex justify-center">
+      <img
+        src={cueCreateWithAiIllustration}
+        alt=""
+        className="block h-auto w-[85%]"
+        aria-hidden
+      />
+    </div>
+  )
 }
 
 /** Simplified chat + canvas preview used inside every coach card (matches Figma mock). */
@@ -94,9 +109,9 @@ function positionCard(
 }
 
 /**
- * First-time workflow editor coach queue — five anchored cards (Create with AI →
- * Trigger → Tasks & controls → Test run → Publish). Opens when `open` is true;
- * dismiss with Done on the last step (or Next through the queue).
+ * First-time workflow editor coach queue — six anchored cards (Create with AI →
+ * Trigger → Procedures → Action & controls → Run test (Preview on front desk) → Activate).
+ * Opens when `open` is true; dismiss with Done on the last step (or Next through the queue).
  */
 export function WorkflowCoachTour({
   open,
@@ -212,9 +227,13 @@ export function WorkflowCoachTour({
         </h2>
         <p className="m-0 mt-sm text-body text-text-secondary">{step.description}</p>
 
-        <CoachIllustration />
+        {step.id === 'create-with-ai' ? (
+          <CreateWithAiCoachIllustration />
+        ) : step.id === 'procedures' ? null : (
+          <CoachIllustration />
+        )}
 
-        <div className="mt-xl flex items-center justify-between gap-md">
+        <div className={`flex items-center justify-between gap-md ${step.id === 'procedures' ? 'mt-lg' : 'mt-xl'}`}>
           <div className="flex items-center gap-sm" aria-label={`Step ${stepIndex + 1} of ${steps.length}`}>
             {steps.map((s, i) => (
               <span
