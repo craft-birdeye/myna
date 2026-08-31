@@ -40,7 +40,7 @@ const CATALOG_DETAIL_KEY: Record<string, string> = {
   'talk-human': 'Talk to human',
   'identify-patient': 'Identify patient',
   'new-patient': 'New patient intake',
-  'book-appointment': 'Book, cancel, reschedule appointment',
+  'book-appointment': 'Book, cancel, or reschedule appointment',
 }
 
 /** Catalog id → healthcare library procedure name */
@@ -49,7 +49,7 @@ const CATALOG_PROCEDURE_NAME: Record<string, string> = {
   emergency: 'Handle emergency or urgent concern',
   unclear: 'Handle unclear message',
   'talk-human': 'Talk to human',
-  'book-appointment': 'Book, cancel, reschedule appointment',
+  'book-appointment': 'Book, cancel, or reschedule appointment',
 }
 
 const GREET_STEPS = [

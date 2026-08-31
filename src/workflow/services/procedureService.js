@@ -132,7 +132,7 @@ export const PROCEDURES = [
     id: 'Handle general inquiry',
     name: 'Handle general inquiry',
     category: 'Healthcare Frontdesk',
-    whenToUse: 'Patient asks a general query related to the hospital or anything that should come from the knowledge base — website, FAQs, hours, location, insurance, services, doctors.',
+    whenToUse: 'Patient asks a general question about the practice, or anything that should come from the knowledge base: website, FAQs, hours, location, insurance, services, or doctors',
     tools: ['knowledge_base', 'update_state', 'transfer_to_human', 'agent_turn'],
     steps: [
       'Identify the core need (general information, service details, location, billing, health concern) and determine if it\'s about {{location_name}} or a general healthcare question.',
@@ -246,7 +246,7 @@ export const PROCEDURE_PANEL_DISPLAY = { ...FRONTDESK_PROCEDURE_PANEL };
 export const PROCEDURE_PANEL_DISPLAY_HC = {
   'Greet and open conversation':        { name: 'Greet and open conversation',        whenToUse: 'Identifies the patient, screens for urgency, and routes them to the right procedure.' },
   'Appointment confirmation':           { name: 'Appointment confirmation',           whenToUse: 'Use when the patient wants to book a new appointment or schedule a visit with a provider.' },
-  'Handle general inquiry':             { name: 'Handle general inquiry',             whenToUse: 'Patient asks a general query related to the hospital or anything answerable from the knowledge base.' },
+  'Handle general inquiry':             { name: 'Handle general inquiry',             whenToUse: 'Patient asks a general question about the practice, or anything that should come from the knowledge base: website, FAQs, hours, location, insurance, services, or doctors' },
   'Handle emergency or urgent concern': { name: 'Handle emergency or urgent concern', whenToUse: "Patient describes worsening symptoms or a time-sensitive medical issue." },
   'Handle unclear message':             { name: 'Handle unclear message',             whenToUse: "Patient's message is too vague or out-of-scope." },
   'Talk to human':                      { name: 'Talk to human',                      whenToUse: 'Patient explicitly asks to speak with a person or expresses frustration.' },

@@ -1361,7 +1361,7 @@ const RECOMMENDED_PROCEDURES = [
     description: 'Detects urgent symptoms or safety issues and routes the caller fast, for caller safety.',
   },
   {
-    name: 'Book, cancel, reschedule appointment',
+    name: 'Book, cancel, or reschedule appointment',
     description: 'Verifies patient identity, confirms insurance, matches services, and secures a slot.',
   },
   {
@@ -1415,7 +1415,7 @@ const JOB_TO_PROCEDURE: Record<string, string> = {
   dfc: 'Talk to human',
   rcu: 'General inquiry',
   slc: 'Handle emergency or urgent concern',
-  mau: 'Book, cancel, reschedule appointment',
+  mau: 'Book, cancel, or reschedule appointment',
 }
 
 

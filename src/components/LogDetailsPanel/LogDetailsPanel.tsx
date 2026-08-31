@@ -70,8 +70,8 @@ export const CALL_LOG_STEPS: RunLogStep[] = [
     title: 'Follow procedures',
     durationMs: 760,
     output: [
-      { key: 'Procedure path', value: 'General inquiry → Book, cancel, reschedule appointment' },
-      { key: 'Procedure used', value: 'Book, cancel, reschedule appointment' },
+      { key: 'Procedure path', value: 'General inquiry → Book, cancel, or reschedule appointment' },
+      { key: 'Procedure used', value: 'Book, cancel, or reschedule appointment' },
       { key: 'Intent detected', value: 'Headache / migraine → appointment booking' },
       { key: 'Summary', value: "You're all set for Thursday at 2 PM with Dr. Patel." },
       {
@@ -79,7 +79,7 @@ export const CALL_LOG_STEPS: RunLogStep[] = [
         properties: [
           { key: '1', value: 'General inquiry' },
           { key: '2', value: 'Talk to human' },
-          { key: '3', value: 'Book, cancel, reschedule appointment' },
+          { key: '3', value: 'Book, cancel, or reschedule appointment' },
           { key: '4', value: 'Verify insurance' },
         ],
       },

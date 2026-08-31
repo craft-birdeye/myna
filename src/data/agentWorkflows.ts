@@ -200,7 +200,7 @@ const FRONTDESK_HC_NODE_DETAILS: Record<string, any> = {
     procedureIds: [
       'General inquiry',
       'Talk to human',
-      'Book, cancel, reschedule appointment',
+      'Book, cancel, or reschedule appointment',
       'Verify insurance',
     ],
   },

@@ -724,14 +724,15 @@ function buildHCProcedureCards(procedures) {
 const HC_PROCEDURE_PALETTE_DESCRIPTIONS = {
   Custom: 'Adds a custom procedure for this workflow',
   'General inquiry':
-    'Answers informational questions like hours, location, insurance, and services',
+    'Answers informational questions like hours, location, and insurance',
   'Talk to human':
-    'Hands off to a live agent when the patient asks for a person or shows frustration',
-  'Book, cancel, reschedule appointment':
+    'Hands off to a live agent when the patient asks for a person',
+  'Book, cancel, or reschedule appointment':
     'Books, confirms, cancels, or reschedules an appointment',
   'Reschedule appointment': 'Moves an existing upcoming appointment to a new time',
   'Cancel appointment': 'Cancels an existing appointment and releases the slot',
   'Handle slot conflict': 'Re-offers availability when the chosen slot was already taken',
+  'Handle booking failure': 'Recovers when a booking action fails unexpectedly',
   'Verify insurance':
     "Checks the patient's insurance so they know their coverage before booking",
   'Appointment confirmation': 'Calls the patient to confirm the appointment slot',

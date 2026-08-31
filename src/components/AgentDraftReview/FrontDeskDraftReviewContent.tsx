@@ -47,7 +47,7 @@ export function FrontDeskDraftReviewContent({
     {
       label: 'Book an appointment',
       note: 'from your transcripts + SOP · verifies insurance eligibility before confirming a new-patient visit (per your SOP)',
-      open: 'Book, cancel, reschedule appointment',
+      open: 'Book, cancel, or reschedule appointment',
     },
     { label: 'Reschedule an appointment', note: 'from your transcripts', open: 'Reschedule appointment' },
     {

@@ -1615,7 +1615,7 @@ export const HC_PROCEDURE_ORDER = [
   'Treatment plan — schedule recommended treatment',
   'General inquiry',
   'Talk to human',
-  'Book, cancel, reschedule appointment',
+  'Book, cancel, or reschedule appointment',
   'Reschedule appointment',
   'Cancel appointment',
   'Handle slot conflict',
@@ -1647,7 +1647,7 @@ const HC_PROCEDURES_UNSORTED: Procedure[] = [
     channels: ['Voice call'],
     description: 'Answers informational questions about hours, location, insurance, services, and directions. Includes emergency triage when patient mentions an urgent concern.',
     lastEdited: 'Jun 26',
-    whenToUse: 'Patient asks a general query related to the hospital or anything that should come from the knowledge base — website, FAQs, hours, location, insurance, services, doctors.',
+    whenToUse: 'Patient asks a general question about the practice, or anything that should come from the knowledge base: website, FAQs, hours, location, insurance, services, or doctors',
     steps: [
       {
         title: 'Personality & environment',
@@ -1817,7 +1817,7 @@ const HC_PROCEDURES_UNSORTED: Procedure[] = [
   },
   {
     id: 'hc-fd-06',
-    name: 'Book, cancel, reschedule appointment',
+    name: 'Book, cancel, or reschedule appointment',
     category: 'Healthcare Frontdesk',
     queue: 'Inbound',
     channels: ['Voice call'],
