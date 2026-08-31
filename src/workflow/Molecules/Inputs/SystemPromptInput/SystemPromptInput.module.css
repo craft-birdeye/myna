@@ -149,12 +149,14 @@
   box-sizing: border-box;
 }
 
-.inputBox:focus-within {
+.inputBox:focus-within,
+.inputBoxOpen {
   border-color: #1976d2; /* text/action */
 }
 
 .inputBoxError,
-.inputBoxError:focus-within {
+.inputBoxError:focus-within,
+.inputBoxError.inputBoxOpen {
   border-color: #de1b0c;
 }
 

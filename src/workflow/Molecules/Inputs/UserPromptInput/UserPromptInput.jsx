@@ -110,10 +110,14 @@ export default function UserPromptInput({
     }
   }, []);
 
-  const handleOpenFieldModal = useCallback(() => {
+  const handleToggleFieldModal = useCallback(() => {
+    if (fieldModalOpen) {
+      setFieldModalOpen(false);
+      return;
+    }
     saveRange();
     setFieldModalOpen(true);
-  }, [saveRange]);
+  }, [fieldModalOpen, saveRange]);
 
   const handleInsertProcedure = useCallback(() => {
     saveRange();
@@ -122,10 +126,10 @@ export default function UserPromptInput({
   }, [saveRange, emitChange]);
 
   const handleFieldSelect = useCallback((fieldValue) => {
-    setFieldModalOpen(false);
     insertChipAt(editorRef.current, savedRangeRef.current, emitChange, 'variable', fieldValue);
-    savedRangeRef.current = null;
-  }, [emitChange]);
+    // Keep picker open; close only via X or Fields icon. Re-save caret for the next insert.
+    saveRange();
+  }, [emitChange, saveRange]);
 
   const closeSlashMenu = useCallback(() => {
     setSlashOpen(false);
@@ -181,14 +185,17 @@ export default function UserPromptInput({
   // @ mention → field picker; / → tool slash menu
   const handleKeyDown = useCallback((e) => {
     if (e.key === '@') {
-      handleOpenFieldModal();
+      if (!fieldModalOpen) {
+        saveRange();
+        setFieldModalOpen(true);
+      }
       return;
     }
     if (enableToolSlash && e.key === '/') {
       e.preventDefault();
       openSlashMenu(() => getCaretAnchor(editorRef.current));
     }
-  }, [handleOpenFieldModal, enableToolSlash, openSlashMenu]);
+  }, [fieldModalOpen, saveRange, enableToolSlash, openSlashMenu]);
 
   return (
     <>
@@ -200,7 +207,7 @@ export default function UserPromptInput({
           </div>
         )}
         <div
-          className={`${styles.inputBox}${!readOnly && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${error ? ` ${styles.inputBoxError}` : ''}`}
+          className={`${styles.inputBox}${!readOnly && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}`}
         >
           {!readOnly && isEmpty && (
             <div className={styles.placeholderOverlay} aria-hidden>
@@ -230,7 +237,7 @@ export default function UserPromptInput({
                 icon={<VariableIcon />}
                 tooltip="Fields"
                 active={fieldModalOpen}
-                onClick={handleOpenFieldModal}
+                onClick={handleToggleFieldModal}
               />
             </div>
             {!fieldsOnly && (

@@ -129,13 +129,16 @@ export default function SystemPromptInput({
     }
   }, [activeEditorRef]);
 
-  const handleOpenFieldModal = useCallback(() => {
+  const handleToggleFieldModal = useCallback(() => {
+    if (fieldModalOpen) {
+      setFieldModalOpen(false);
+      return;
+    }
     saveRange();
     setFieldModalOpen(true);
-  }, [saveRange]);
+  }, [fieldModalOpen, saveRange]);
 
   const handleFieldSelect = useCallback((fieldValue) => {
-    setFieldModalOpen(false);
     insertChipAt(activeEditorRef.current, savedRangeRef.current, () => {
       const el = activeEditorRef.current;
       if (!el) return;
@@ -147,8 +150,9 @@ export default function SystemPromptInput({
         deserializeInto(editorRef.current, s, () => {});
       }
     }, 'variable', fieldValue);
-    savedRangeRef.current = null;
-  }, [activeEditorRef, expanded]);
+    // Keep picker open; close only via X or Fields icon. Re-save caret for the next insert.
+    saveRange();
+  }, [activeEditorRef, expanded, saveRange]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === '@') {
@@ -171,7 +175,7 @@ export default function SystemPromptInput({
   }, []);
 
   const editorBlock = (ref, editorClassName, fieldsRef) => (
-    <div className={`${styles.inputBox}${error ? ` ${styles.inputBoxError}` : ''}`}>
+    <div className={`${styles.inputBox}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}`}>
       <div
         ref={ref}
         className={editorClassName}
@@ -187,7 +191,7 @@ export default function SystemPromptInput({
             icon={<VariableIcon />}
             tooltip="Fields"
             active={fieldModalOpen}
-            onClick={handleOpenFieldModal}
+            onClick={handleToggleFieldModal}
           />
         </div>
         {!expanded && (

@@ -182,7 +182,8 @@
 }
 
 .accordionItemFallback {
-  background: #eef0f4;
+  /* Same surface as regular branch rows */
+  background: #f8f9fb;
 }
 
 .accordionItemOpen {

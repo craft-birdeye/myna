@@ -6,9 +6,6 @@ import {
   Chip,
   CustomizeColumnsDrawer,
   DataTable,
-  EstimateSavingsModal,
-  REVIEW_RESPONSE_SAVINGS_COPY,
-  parseTimeSavedHours,
   FilesModal,
   FilterPanel,
   HeaderSearchField,
@@ -18,7 +15,6 @@ import {
   InfoTooltip,
   LibraryCardIcon,
   MediaLibraryModal,
-  MetricTiles,
   PromptComposer,
   RefChip,
   ReviewResponseOutcomesCharts,
@@ -32,11 +28,9 @@ import {
   type ChipVariant,
   type Column,
   type ColumnOption,
-  type EstimateSavingsValues,
   type FilterField,
   type LibraryCardGlyph,
   type LibraryCardTone,
-  type Metric,
   type RowMenuItem,
   type Tab,
 } from '../components'
@@ -7480,125 +7474,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setToastVisible(true)
   }
 
-  const [savingsModalOpen, setSavingsModalOpen] = useState(false)
-  const [savingsSettings, setSavingsSettings] = useState<EstimateSavingsValues>({
-    mode: 'time',
-    minutesPerResolution: 5,
-    wageCurrency: 'USD',
-    hourlyWage: 40,
-  })
-
-  const METRICS_BY_AGENT: Record<string, Metric[]> = {
-    [FRONTDESK_AGENT_NAME]: [
-      { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
-      { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
-      { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
-      { id: 'timeSaved', value: '40h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved based on average handle time for equivalent human-handled conversations.' },
-    ],
-    [FRONTDESK_EXPLORATION_AGENT_NAME]: [
-      { id: 'responded', value: '18,420', label: 'Conversations responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total inbound conversations handled by the agent across all channels in the selected period.' },
-      { id: 'resolved', value: '16,230', label: 'Conversations resolved', delta: '2.1%', trend: 'up', info: true, tooltip: 'Conversations closed without requiring human escalation.' },
-      { id: 'resolutionRate', value: '88%', label: 'Resolution rate', delta: '1.8%', trend: 'up', info: true, tooltip: 'Percentage of conversations fully resolved by the agent. Calculated as resolved ÷ responded.' },
-      { id: 'timeSaved', value: '40h', label: 'Time saved', delta: '12%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved based on average handle time for equivalent human-handled conversations.' },
-    ],
-    'Reminder agent': [
-      { id: 'bookings', value: '450', label: 'Total bookings', delta: '20%', trend: 'up', info: true, tooltip: 'Total appointments booked across all locations in the selected period.' },
-      { id: 'confirmed', value: '100', label: 'Appointments confirmed', delta: '36.6%', trend: 'up', info: true, tooltip: 'Number of upcoming appointments confirmed by the patient via automated reminder outreach, reducing the likelihood of a no-show.' },
-      { id: 'confirmRate', value: '23.7%', label: 'Confirmation rate', delta: '20%', trend: 'up', info: true, tooltip: 'Percentage of total bookings where the patient confirmed attendance. Calculated as appointments confirmed ÷ total bookings.' },
-      { id: 'timeSaved', value: '8 min', label: 'Time saved', delta: '5.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved per confirmed appointment by automating reminder outreach and follow-up.' },
-    ],
-    'Waitlist agent': [
-      { id: 'outreachSent', value: '5.5K', label: 'Outreach sent', delta: '12%', trend: 'up', info: true, tooltip: 'Total waitlist outreach messages sent by the agent to fill cancelled or open slots.' },
-      { id: 'slotsFilled', value: '7.9K', label: 'Slots filled', delta: '36.6%', trend: 'up', info: true, tooltip: 'Number of open or cancelled slots successfully filled via waitlist outreach.' },
-      { id: 'fillRate', value: '23.7%', label: 'Fill rate', delta: '20%', trend: 'up', info: true, tooltip: 'Percentage of waitlisted patients who booked after receiving outreach. Calculated as slots filled ÷ outreach sent.' },
-      { id: 'timeSaved', value: '2.5 hrs', label: 'Time saved', delta: '20%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved by automating waitlist outreach instead of manually calling through the list.' },
-    ],
-    'Pre-visit agent': [
-      { id: 'outreach',   value: '463',   label: 'Outreach sent',    delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Total intake reminder outreach sent by the agent across all channels in the selected period.' },
-      { id: 'intakes',    value: '2,700', label: 'Intakes completed', delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Number of patient intake forms fully completed following agent outreach.' },
-      { id: 'completion', value: '90%',   label: 'Completion rate',   delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Percentage of outreach that resulted in a completed intake. Calculated as intakes completed ÷ outreach sent.' },
-      { id: 'timeSaved',  value: '1h',    label: 'Time saved',        delta: '1.3%', trend: 'up' as const, info: true, tooltip: 'Estimated staff hours saved by automating intake collection instead of manual follow-up calls.' },
-    ],
-    'Outreach agent': [
-      { id: 'leads', value: '2,103', label: 'Leads contacted', info: true, tooltip: 'Total leads the agent reached out to via call or message in the selected period.' },
-      { id: 'response', value: '38%', label: 'Response rate', info: true, tooltip: 'Percentage of contacted leads that replied to the outreach.' },
-      { id: 'appointments', value: '641', label: 'Appointments scheduled', info: true, tooltip: 'Leads that confirmed a visit or test drive after being contacted.' },
-      { id: 'conversion', value: '11%', label: 'Conversion rate', info: true, tooltip: 'Percentage of contacted leads that resulted in a scheduled appointment. Calculated as appointments ÷ leads contacted.' },
-    ],
-    'Recall agent': [
-      { id: 'patientsContacted', value: '3,410', label: 'Patients contacted', delta: '4.2%', trend: 'up', info: true, tooltip: 'Distinct patients who received at least one successfully delivered agent touch in the period. Base population = patients flagged recall-due (hygiene, dormant, or unscheduled treatment).' },
-      { id: 'recallConversion', value: '68%', label: 'Recall conversion rate', delta: '2.1%', trend: 'up', info: true, tooltip: 'Share of contacted patients who booked a recare/recall appointment attributable to the agent within the attribution window.' },
-      { id: 'staffHoursSaved', value: '274h', label: 'Staff hours saved', delta: '8.2%', trend: 'up', info: true, tooltip: 'Estimated staff hours saved by automating recall outreach — based on average time-per-manual-contact across converted patients.' },
-      { id: 'revenueRecovered', value: '$124K', label: 'Revenue recovered', delta: '5.8%', trend: 'up', info: true, tooltip: 'Production value of attributed recare appointments, recognized on completion.' },
-    ],
-    'Revenue agent': [
-      { id: 'balancesContacted', value: '1,820', label: 'Balances contacted', delta: '3.1%', trend: 'up', info: true, tooltip: 'Distinct A/R accounts that received ≥1 delivered agent touch about a balance. Base = balance ≥ threshold and aging ≥ threshold days, excluded (active plan / in collections / disputed).' },
-      { id: 'amountCollected', value: '$142K', label: 'Amount collected', delta: '5.4%', trend: 'up', info: true, tooltip: 'Total payments completed that are attributable to the agent within the window (via agent-sent link or call).' },
-      { id: 'arDaysReduced', value: '-28%', label: 'A/R days reduced', delta: '2.3%', trend: 'up', positiveDown: true, info: true, tooltip: 'Reduction in the balance-weighted average age of outstanding A/R versus baseline. Lower is better.' },
-      { id: 'staffHoursSaved', value: '176h', label: 'Staff hours saved', delta: '6.4%', trend: 'up', info: true, tooltip: 'Staff time avoided by automating outreach touches.' },
-    ],
-    'Treatment plan agent': [
-      { id: 'plansFollowedUp', value: '2,140', label: 'Plans followed up', delta: '6.0%', trend: 'up', info: true, tooltip: 'Distinct treatment plans that received ≥1 delivered agent touch. Base = presented, unscheduled plans aged ≥ T+3 days, not opted out / suppressed.' },
-      { id: 'acceptanceRate', value: '61%', label: 'Acceptance rate', delta: '3.2%', trend: 'up', info: true, tooltip: 'Share of followed-up plans accepted (agreed + booked, or marked accepted) attributable to the agent within the window.' },
-      { id: 'revenueUnlocked', value: '$892K', label: 'Revenue unlocked', delta: '7.1%', trend: 'up', info: true, tooltip: 'Estimated value of accepted + booked plans attributable to the agent.' },
-      { id: 'staffHoursSaved', value: '262h', label: 'Staff hours saved', delta: '7.8%', trend: 'up', info: true, tooltip: 'Staff follow-up time avoided by automating outreach.' },
-    ],
-    'Tagging & routing agent': [
-      { id: 'statusUpdated', value: '2,850', label: 'Statuses updated', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations that received an updated contact status in the selected period.' },
-      { id: 'conversationsAssigned', value: '2000', label: 'Conversations assigned', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations assigned to a team or user by the agent.' },
-      { id: 'conversationsManaged', value: '2500', label: 'Conversations managed', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total conversations tagged and routed end-to-end by the agent.' },
-      { id: 'timeSaved', value: '40m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating conversation tagging and routing.' },
-    ],
-    [REVIEW_RESPONSE_AGENT_NAME]: [
-      { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
-      { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
-      { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
-      { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
-    ],
-    [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
-      { id: 'reviewsResponded', value: '835', label: 'Reviews responded', delta: '1.3%', trend: 'up', info: true, tooltip: 'Total reviews the agent has replied to across all locations in the selected period.' },
-      { id: 'responseRate', value: '92%', label: 'Response rate', delta: '1.3%', trend: 'up', info: true, tooltip: 'Percentage of eligible reviews that received a reply from the agent.' },
-      { id: 'avgResponseTime', value: '20m', label: 'Average response time', delta: '1.3%', trend: 'up', info: true, tooltip: 'Average time from review receipt to published reply across all locations.' },
-      { id: 'timeSaved', value: '6h 20m', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Estimated staff time saved by automating review responses.' },
-    ],
-    'Review generation agents': [
-      { id: 'reviewsReceived', value: '249', label: 'Reviews received', delta: '16.4%', trend: 'up', info: true, tooltip: 'The number of reviews that the business locations received as a result of the agent.' },
-      { id: 'contactsReached', value: '265', label: 'Contacts reached', delta: '2.9%', trend: 'up', info: true, tooltip: 'Total unique contacts who received at least one review request via channel. A contact is counted once, even if they received multiple requests.' },
-      { id: 'clickThroughRate', value: '4.9%', label: 'Click-through rate', delta: '0.3%', trend: 'down', info: true, tooltip: 'Percentage of unique contacts who clicked at least once on a review request received across email and text.' },
-      { id: 'timeSaved', value: '9h', label: 'Time saved', delta: '1.3%', trend: 'up', info: true, tooltip: 'Quantify operational efficiency gains from using the agent.' },
-    ],
-    'Review tagging agents': [
-      { id: 'reviewsTagged', value: '0', label: 'Reviews tagged', info: true, tooltip: 'Total reviews the agent has tagged across all locations in the selected period.' },
-      { id: 'topicsIdentified', value: '0', label: 'Topics identified', info: true, tooltip: 'Unique topics identified from review comments.' },
-      { id: 'highRiskTagged', value: '0', label: 'High-risk reviews tagged', info: true, tooltip: 'Reviews tagged for extreme negative sentiment or critical issues.' },
-      { id: 'timeSaved', value: '0m', label: 'Time saved', info: true, tooltip: 'Estimated staff time saved by automating review tagging.' },
-    ],
-  }
-
-  const DEFAULT_METRICS: Metric[] = [
-    { id: 'interactions', value: '2,850', label: 'Interactions handled', info: true, tooltip: 'Total customer interactions managed by the agent in the selected period.' },
-    { id: 'fcr', value: '92%', label: 'First contact resolution rate', info: true, tooltip: 'Percentage of interactions resolved on the first contact without follow-up.' },
-    { id: 'aht', value: '2m 34s', label: 'Average handle time', info: true, tooltip: 'Average duration of a single interaction from start to resolution.' },
-    { id: 'escalation', value: '11%', label: 'Escalation rate', info: true, tooltip: 'Percentage of interactions escalated to a human agent. Lower is generally better.' },
-  ]
-
-  const metrics: Metric[] = METRICS_BY_AGENT[agentName] ?? DEFAULT_METRICS
-
-  const isFrontdeskAgent = isFrontdeskAgentName(agentName)
-  const displayMetrics: Metric[] = isFrontdeskAgent || isReviewResponseAgentName(agentName)
-    ? metrics.map((m) => {
-        if (m.id !== 'timeSaved' || savingsSettings.mode === 'time') return m
-        const hours = parseTimeSavedHours(String(m.value))
-        const cost = hours * savingsSettings.hourlyWage
-        const formattedCost = new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: savingsSettings.wageCurrency,
-          maximumFractionDigits: 0,
-        }).format(cost)
-        return { ...m, value: formattedCost, label: 'Cost saved' }
-      })
-    : metrics
-
   const regionSourceKey =
     isSep1Agents && isReviewResponseAgentName(agentName)
       ? REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
@@ -8741,74 +8616,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
 
               {activeTab === 'outcomes' && useExplorationOutcomesTab ? (
                 <>
-                  <div className="px-2xl pt-lg">
-                    <MetricTiles
-                      metrics={displayMetrics}
-                      renderTileAction={
-                        isFrontdesk || isReviewResponse
-                          ? (metric) =>
-                              metric.id === 'timeSaved' ? (
-                                <button
-                                  type="button"
-                                  aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
-                                  onClick={() => setSavingsModalOpen(true)}
-                                  className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-                                >
-                                  <Icon name="tune" size={18} />
-                                </button>
-                              ) : null
-                          : undefined
-                      }
-                    />
-                  </div>
                   {isReviewResponse ? <ReviewResponseOutcomesCharts /> : null}
-                  <EstimateSavingsModal
-                    open={savingsModalOpen}
-                    onClose={() => setSavingsModalOpen(false)}
-                    initialValues={savingsSettings}
-                    copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
-                    onSave={(values) => {
-                      setSavingsSettings(values)
-                      setSavingsModalOpen(false)
-                    }}
-                  />
                 </>
               ) : activeTab === 'agents' ? (
                 <>
-                  {!useExplorationOutcomesTab && !isReviewResponse && !useDefaultAgentCardGrid && (
-                    <>
-                      <div className="px-2xl pt-lg">
-                        <MetricTiles
-                          metrics={displayMetrics}
-                          renderTileAction={
-                            isFrontdesk || isReviewResponse
-                              ? (metric) =>
-                                  metric.id === 'timeSaved' ? (
-                                    <button
-                                      type="button"
-                                      aria-label={isReviewResponse ? 'Configure' : 'Estimate savings'}
-                                      onClick={() => setSavingsModalOpen(true)}
-                                      className="flex size-8 items-center justify-center rounded-sm border border-border-selected bg-surface text-text-icon hover:bg-surface-l2"
-                                    >
-                                      <Icon name="tune" size={18} />
-                                    </button>
-                                  ) : null
-                              : undefined
-                          }
-                        />
-                      </div>
-                      <EstimateSavingsModal
-                        open={savingsModalOpen}
-                        onClose={() => setSavingsModalOpen(false)}
-                        initialValues={savingsSettings}
-                        copy={isReviewResponse ? REVIEW_RESPONSE_SAVINGS_COPY : undefined}
-                        onSave={(values) => {
-                          setSavingsSettings(values)
-                          setSavingsModalOpen(false)
-                        }}
-                      />
-                    </>
-                  )}
                   {useAgentCardGrid ? (
                     // Dropdown: Default = icon card; R1 = metric-forward; R2 = compact + footer meta.
                     <div className="grid grid-cols-1 items-start gap-lg px-2xl py-lg sm:grid-cols-2 lg:grid-cols-3">

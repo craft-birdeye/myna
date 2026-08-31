@@ -60,12 +60,14 @@
   pointer-events: none;
 }
 
-.inputBox:focus-within {
+.inputBox:focus-within,
+.inputBoxOpen {
   border-color: #1976d2;
 }
 
 .inputBoxError,
-.inputBoxError:focus-within {
+.inputBoxError:focus-within,
+.inputBoxError.inputBoxOpen {
   border-color: #de1b0c;
 }
 

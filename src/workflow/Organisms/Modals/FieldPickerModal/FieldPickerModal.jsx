@@ -14,7 +14,7 @@ import {
 } from './fieldPickerData';
 import styles from './FieldPickerModal.module.css';
 
-const POPOVER_WIDTH = 672;
+const POPOVER_WIDTH = 630;
 const POPOVER_MAX_HEIGHT = 560;
 const DRAWER_GAP = 0;
 const BASE_CATEGORY_IDS = new Set(BASE_CATEGORIES.map((c) => c.id));
@@ -91,14 +91,14 @@ function CatLabel({ text }) {
   );
 }
 
-function FieldLeaf({ field, onSelect }) {
+function FieldLeaf({ field, onSelect, isAdded = false }) {
   const sample = formatSample(field.sample, field.valueType);
   return (
     <button
       type="button"
-      className={styles.fieldRow}
+      className={`${styles.fieldRow}${isAdded ? ` ${styles.fieldRowAdded}` : ''}`}
       onClick={() => onSelect?.(field.value, field.name)}
-      aria-label={`Insert ${field.name}`}
+      aria-label={isAdded ? `${field.name} added` : `Add ${field.name}`}
     >
       <FieldChip name={field.name} />
       <span
@@ -108,11 +108,16 @@ function FieldLeaf({ field, onSelect }) {
       >
         {sample}
       </span>
+      <span className={styles.fieldAction} aria-hidden>
+        <span className={`material-symbols-outlined ${styles.fieldActionIcon}`}>
+          {isAdded ? 'check' : 'add'}
+        </span>
+      </span>
     </button>
   );
 }
 
-function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true }) {
+function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, addedValues }) {
   const [open, setOpen] = useState(true);
   const isGroup = node.type === 'group';
   const isObject = node.type === 'object';
@@ -123,7 +128,13 @@ function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true }) {
   const isSingleLevel = kids.length > 0 && kids.every((child) => child.type === 'field');
 
   if (node.type === 'field') {
-    return <FieldLeaf field={node} onSelect={onSelect} />;
+    return (
+      <FieldLeaf
+        field={node}
+        onSelect={onSelect}
+        isAdded={addedValues?.has(node.value)}
+      />
+    );
   }
 
   const label = isGroup ? node.label : node.name;
@@ -153,6 +164,7 @@ function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true }) {
               key={child.id || child.value || child.name}
               field={child}
               onSelect={onSelect}
+              isAdded={addedValues?.has(child.value)}
             />
           ))}
         </div>
@@ -193,6 +205,7 @@ function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true }) {
               onSelect={onSelect}
               depth={depth + 1}
               allowCollapse
+              addedValues={addedValues}
             />
           ))}
         </div>
@@ -306,6 +319,9 @@ export default function FieldPickerModal({
   const [searchSelectedId, setSearchSelectedId] = useState(null);
   const [pos, setPos] = useState(() => computePosition(anchorEl, placement));
   const [userMoved, setUserMoved] = useState(false);
+  /** Brief Add → Added flash (clears after ~1.5s, like Copy → Copied). */
+  const [addedValues, setAddedValues] = useState(() => new Set());
+  const addedTimersRef = useRef(new Map());
   const rootRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -415,8 +431,31 @@ export default function FieldPickerModal({
   };
 
   const handleSelect = (value, name) => {
+    setAddedValues((prev) => {
+      if (prev.has(value)) return prev;
+      const next = new Set(prev);
+      next.add(value);
+      return next;
+    });
+    const existing = addedTimersRef.current.get(value);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      setAddedValues((prev) => {
+        if (!prev.has(value)) return prev;
+        const next = new Set(prev);
+        next.delete(value);
+        return next;
+      });
+      addedTimersRef.current.delete(value);
+    }, 1500);
+    addedTimersRef.current.set(value, timer);
     onSelectField?.(value, name);
   };
+
+  useEffect(() => () => {
+    addedTimersRef.current.forEach(clearTimeout);
+    addedTimersRef.current.clear();
+  }, []);
 
   useEffect(() => {
     if (!showTriggerFields && WORKFLOW_CATEGORIES.some((c) => c.id === selectedCategoryId)) {
@@ -429,12 +468,9 @@ export default function FieldPickerModal({
     setPos(computePosition(anchorEl, placement));
   }, [anchorEl, placement, userMoved]);
 
+  // Persist until the close button or the Fields toolbar icon toggles it —
+  // no Escape / outside-click dismiss.
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    const onDown = (e) => {
-      if (dragRef.current) return;
-      if (rootRef.current && !rootRef.current.contains(e.target)) onClose();
-    };
     const reposition = () => {
       if (userMoved) {
         setPos((prev) => {
@@ -452,17 +488,13 @@ export default function FieldPickerModal({
       }
       setPos(computePosition(anchorEl, placement));
     };
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('mousedown', onDown);
     window.addEventListener('resize', reposition);
     document.addEventListener('scroll', reposition, true);
     return () => {
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('mousedown', onDown);
       window.removeEventListener('resize', reposition);
       document.removeEventListener('scroll', reposition, true);
     };
-  }, [onClose, anchorEl, placement, userMoved]);
+  }, [anchorEl, placement, userMoved]);
 
   const clampPos = (top, left, width, maxHeight) => {
     const margin = 12;
@@ -622,6 +654,7 @@ export default function FieldPickerModal({
                         node={node}
                         onSelect={handleSelect}
                         allowCollapse={allowCollapse}
+                        addedValues={addedValues}
                       />
                     );
                   })}
