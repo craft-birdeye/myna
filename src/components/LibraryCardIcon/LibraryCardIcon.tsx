@@ -1,6 +1,7 @@
 /** Library-card icons for create-agent flows (review / front desk / reminder). */
 
 import iconApproval from '../../assets/library-cards/icon-approval.svg'
+import iconFrontDesk from '../../assets/library-cards/icon-front-desk.svg'
 import iconAutonomous from '../../assets/library-cards/icon-autonomous.svg'
 import iconDashboard from '../../assets/library-cards/icon-dashboard.svg'
 import iconGeneration from '../../assets/library-cards/icon-generation.svg'
@@ -21,6 +22,7 @@ export type LibraryCardTone = 'info' | 'danger' | 'success' | 'ai' | 'warning'
 
 export type LibraryCardGlyph =
   | 'templates'
+  | 'front-desk'
   | 'autonomous'
   | 'approval'
   | 'dashboard'
@@ -39,6 +41,7 @@ export type LibraryCardGlyph =
 
 const ICONS: Record<LibraryCardGlyph, string> = {
   templates: iconTemplates,
+  'front-desk': iconFrontDesk,
   autonomous: iconAutonomous,
   approval: iconApproval,
   dashboard: iconDashboard,
@@ -67,9 +70,10 @@ export function LibraryCardIcon({
   size?: 'sm' | 'md'
 }) {
   const px = size === 'sm' ? 32 : 44
+  const src = ICONS[glyph] ?? ICONS.templates
   return (
     <img
-      src={ICONS[glyph]}
+      src={src}
       alt=""
       width={px}
       height={px}

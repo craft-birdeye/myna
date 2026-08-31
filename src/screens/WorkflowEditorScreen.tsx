@@ -47,6 +47,11 @@ const REVIEW_GENERATION_SCRATCH_START = {
   locations: [] as string[],
 }
 
+/** Create-from-scratch titles — empty canvas, not the seeded review workflow template. */
+function isReviewsScratchCreateName(name: string) {
+  return /^review (response|generation) agent 1$/i.test(name.trim())
+}
+
 // Healthcare / Dental Frontdesk start-node details — defined inline to avoid
 // any module-cache staleness from agentWorkflows.ts.
 const HC_FRONTDESK_START = {
@@ -122,6 +127,8 @@ interface WorkflowEditorScreenProps {
   inlineRhsFooter?: boolean
   /** Opens Settings > Account > Product research (Help center "Learn more"). */
   onOpenProductResearchSettings?: () => void
+  /** Opens the Agent builder basics coach tour on mount (Response agents coach cue nav). */
+  autoOpenCoachTour?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -152,6 +159,7 @@ export function WorkflowEditorScreen({
   llmTaskExplorationLayout = false,
   inlineRhsFooter = false,
   onOpenProductResearchSettings,
+  autoOpenCoachTour = false,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -186,7 +194,9 @@ export function WorkflowEditorScreen({
   const baseWorkflow = /review response/i.test(agentBaseName)
     ? REVIEW_RESPONSE_WORKFLOW
     : workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
-  const isEmptyScratch = !wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0
+  const isReviewScratchCreate = !wizardDraft && isReviewsScratchCreateName(shownName)
+  const isEmptyScratch =
+    isReviewScratchCreate || (!wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0)
   const resolvedExistingAgent = existingAgent ?? (!isEmptyScratch && !wizardDraft)
   const reviewScratchStart = /review response/i.test(shownName)
     ? REVIEW_RESPONSE_SCRATCH_START
@@ -319,7 +329,7 @@ export function WorkflowEditorScreen({
             publishDisabled={false}
             issueCount={issueCount}
             issues={getAgentIssues(agentName)}
-            defaultOpenSection={isEmptyScratch ? 'Trigger' : 'Tasks'}
+            defaultOpenSection={isEmptyScratch && !autoOpenCoachTour ? 'Trigger' : 'Tasks'}
             aiAssistOpen={aiAssistOpen}
             onAiAssistOpenChange={onAiAssistOpenChange}
             hideLhs={hideLhs}
@@ -340,6 +350,7 @@ export function WorkflowEditorScreen({
             sep1Chrome={sep1Chrome}
             llmTaskExplorationLayout={llmTaskExplorationLayout}
             onOpenProductResearchSettings={onOpenProductResearchSettings}
+            autoOpenCoachTour={autoOpenCoachTour}
           />
         </Suspense>
       </div>

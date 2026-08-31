@@ -11,6 +11,7 @@ export default defineConfig(({ command }) => ({
   resolve: {
     alias: [
       { find: /^@\//, replacement: path.resolve(__dirname, './src') + '/' },
+      { find: '@icons', replacement: path.resolve(__dirname, './icons') },
     ],
   },
   // Keep SVGs as real files (not data: URIs). CSS mask-image breaks with inlined

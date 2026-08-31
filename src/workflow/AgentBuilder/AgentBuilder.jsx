@@ -1205,6 +1205,8 @@ export default function AgentBuilder({
   externalFocusNodeId = null,
   /** Bumped when the same node is focused again so the canvas re-pans. */
   externalFocusNonce = 0,
+  /** Opens the workflow coach tour on mount (Response agents coach cue nav). */
+  autoOpenCoachTour = false,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -1365,6 +1367,9 @@ export default function AgentBuilder({
   // First-time coach queue on the edit canvas — Help center "Start tour" also reopens it.
   const [coachTourOpen, setCoachTourOpen] = useState(false);
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
+  useEffect(() => {
+    if (autoOpenCoachTour && !viewOnly) setCoachTourOpen(true);
+  }, [autoOpenCoachTour, viewOnly]);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [glossaryTermId, setGlossaryTermId] = useState(undefined);
   const openGlossary = (termId) => {
@@ -1776,6 +1781,21 @@ export default function AgentBuilder({
   useLayoutEffect(() => {
     latestRef.current = { agentId, agentName, agentDesc, moduleContext: agentModuleContext, sectionContext: agentSectionContext, agentStatus, nodeList, nodeDetails, selectedNodeId, templateId: agentTemplateId, templateSource: agentTemplateSource, moduleSlug: agentModuleSlug, agentSlug };
   }, [agentId, agentName, agentDesc, agentModuleContext, agentSectionContext, agentStatus, nodeList, nodeDetails, selectedNodeId, agentTemplateId, agentTemplateSource, agentModuleSlug, agentSlug]);
+
+  const handleCoachTourClose = useCallback(() => {
+    setCoachTourOpen(false);
+    const nodes = latestRef.current.nodeList ?? nodeList;
+    const hasBuiltWorkflow = nodes.some((n) => n.flowType === 'trigger');
+    if (hasBuiltWorkflow || viewOnly) return;
+    setVersionHistoryOpen(false);
+    if (rrAiPanelOpen) {
+      setPaletteInstant(true);
+      closeAiBuilderPanelInstant();
+    } else {
+      closeAiBuilderPanel();
+    }
+    setPaletteSection('Trigger');
+  }, [nodeList, viewOnly, rrAiPanelOpen, closeAiBuilderPanel, closeAiBuilderPanelInstant]);
 
   /* ─── Auto-save to Firestore (debounced 1.5 s) ─── */
   const saveTimerRef = useRef(null);
@@ -4684,7 +4704,7 @@ export default function AgentBuilder({
       />
 
       {!viewOnly && (
-        <WorkflowCoachTour open={coachTourOpen} onClose={() => setCoachTourOpen(false)} />
+        <WorkflowCoachTour open={coachTourOpen} onClose={handleCoachTourClose} />
       )}
 
       <GlossaryModal

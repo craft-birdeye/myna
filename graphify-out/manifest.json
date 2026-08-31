@@ -24,9 +24,9 @@
     "semantic_hash": "b45f0f0debf8134ed91b1b61a34f4e79"
   },
   "src/App.tsx": {
-    "mtime": 1788068700.9438107,
-    "seen": 1788069481.097047,
-    "ast_hash": "dfde236354b320aea7722ebe98e5b21b",
+    "mtime": 1788176795.5911925,
+    "seen": 1788176843.309731,
+    "ast_hash": "ede46964f428c1e4732a547590ba622f",
     "semantic_hash": ""
   },
   "src/assets/AiAgentIcon.tsx": {
@@ -582,9 +582,9 @@
     "semantic_hash": "ae6025609e96ee91a784245f3cc00dd1"
   },
   "src/components/LibraryCardIcon/LibraryCardIcon.tsx": {
-    "mtime": 1788022825.3645346,
-    "seen": 1788022843.650769,
-    "ast_hash": "bd24aaaf165100a78ffcaf9aee385cf4",
+    "mtime": 1788174304.7733421,
+    "seen": 1788174341.3818738,
+    "ast_hash": "10da6bf0596a74413f995081e43ce199",
     "semantic_hash": ""
   },
   "src/components/Link/Link.tsx": {
@@ -4122,9 +4122,9 @@
     "semantic_hash": "dfd2264353be1c3bf50ce644d266b06e"
   },
   "src/data/agentNavIds.ts": {
-    "mtime": 1788068305.8382938,
-    "seen": 1788068339.64221,
-    "ast_hash": "942ca8cc69ba1a1576f817c280bfa047",
+    "mtime": 1788176726.4370935,
+    "seen": 1788176843.3103092,
+    "ast_hash": "10ae74fa44b12b2eecf51682ee82b511",
     "semantic_hash": ""
   },
   "src/data/agentWorkflows.ts": {
@@ -4296,9 +4296,9 @@
     "semantic_hash": "8c8e65450fb7302dacd5e4592b2b7236"
   },
   "src/screens/AgentDetailScreen.tsx": {
-    "mtime": 1788168209.1263342,
-    "seen": 1788170424.7276502,
-    "ast_hash": "279a1bcabcd1032e5acf4cce3fd8e67d",
+    "mtime": 1788176797.085397,
+    "seen": 1788176843.310339,
+    "ast_hash": "c58825ec3691eaabd948634ca2b20d16",
     "semantic_hash": ""
   },
   "src/screens/AgentDirectoryScreen.tsx": {
@@ -4602,9 +4602,9 @@
     "semantic_hash": "64dfcf4e858e05e355d1ea533b9ce9ab"
   },
   "src/screens/WorkflowEditorScreen.tsx": {
-    "mtime": 1788168009.9650218,
-    "seen": 1788170424.727726,
-    "ast_hash": "eafdd957d9c73f55cae88aa3629a029d",
+    "mtime": 1788176809.5651464,
+    "seen": 1788176843.31042,
+    "ast_hash": "5dab0ce914026bc41cd635830b4c85ea",
     "semantic_hash": ""
   },
   "src/screens/WorkflowViewerTab.tsx": {
@@ -4848,9 +4848,9 @@
     "semantic_hash": "0352474ba2918efe13895edbc3780d94"
   },
   "src/workflow/AgentBuilder/AgentBuilder.jsx": {
-    "mtime": 1788168009.9666362,
-    "seen": 1788170424.7277591,
-    "ast_hash": "4200c3676308b497b5ca4250988fd6b3",
+    "mtime": 1788176206.3349385,
+    "seen": 1788176843.3104541,
+    "ast_hash": "5d139e358d6cc3b087b14b9f2d41a197",
     "semantic_hash": ""
   },
   "src/workflow/AgentBuilder/AgentBuilder.stories.jsx": {
@@ -6294,10 +6294,10 @@
     "semantic_hash": ""
   },
   "tsconfig.json": {
-    "mtime": 1786352375.3279998,
-    "seen": 1787896827.222999,
-    "ast_hash": "55ea25e583f0cf1025f7c389e3134735",
-    "semantic_hash": "55ea25e583f0cf1025f7c389e3134735"
+    "mtime": 1788172171.6315758,
+    "seen": 1788174341.3827431,
+    "ast_hash": "36deb4f968993da4bed3137a49db32bf",
+    "semantic_hash": ""
   },
   "tsconfig.node.json": {
     "mtime": 1783586902.3988729,
@@ -6312,9 +6312,9 @@
     "semantic_hash": "a79ee3378f5950e65c507c612f695431"
   },
   "vite.config.ts": {
-    "mtime": 1788022825.4348986,
-    "seen": 1788022843.651602,
-    "ast_hash": "7b56175271b127eb12b67c6070b7473e",
+    "mtime": 1788172171.6314945,
+    "seen": 1788174341.3827462,
+    "ast_hash": "6fc4f6fcdf740f97a6108836d1bab0e1",
     "semantic_hash": ""
   },
   "src/assets/voicemail_sample.mp3": {
@@ -6954,8 +6954,8 @@
     "semantic_hash": ""
   },
   "src/assets/library-cards/icon-autonomous.svg": {
-    "mtime": 1786365928.6512036,
-    "seen": 1787901403.170439,
+    "mtime": 1788172413.4788363,
+    "seen": 1788174341.382852,
     "ast_hash": "530ba2916ada29bd21b406a4b8d26c8d",
     "semantic_hash": ""
   },
@@ -7557,6 +7557,18 @@
     "mtime": 1788168009.962818,
     "seen": 1788170424.727639,
     "ast_hash": "0db56067e821a9d50f88b37298b559a5",
+    "semantic_hash": ""
+  },
+  "icons/FD.svg": {
+    "mtime": 1788172018.4962006,
+    "seen": 1788174341.382764,
+    "ast_hash": "fb9407c80b0c7e969e1d7343afc8cb98",
+    "semantic_hash": ""
+  },
+  "src/assets/library-cards/icon-front-desk.svg": {
+    "mtime": 1788175562.8508666,
+    "seen": 1788175700.9487932,
+    "ast_hash": "53a3d4d636ec8e3c0523df563066417c",
     "semantic_hash": ""
   }
 }

@@ -10,7 +10,8 @@ import {
   isExplorationHideCanvasStartNode,
   isLlmTaskExplorationLayout,
   isSep1Chrome,
-  RESPONSE_AGENTS_SEP1_NAV_ID,
+  isAgentCoachCueNav,
+  isResponseAgentsSep1StyleNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
@@ -164,7 +165,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
-      { id: 'frontdesk-agent', label: 'Front desk agent' },
+      { id: 'frontdesk-agent', label: 'Front desk agent (coach)' },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
       { id: 'reminder-agent',  label: 'Reminder agent'  },
@@ -209,7 +210,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
-      { id: 'frontdesk-agent',  label: 'Front desk agent'  },
+      { id: 'frontdesk-agent',  label: 'Front desk agent (coach)'  },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
       { id: 'pre-visit-agent',  label: 'Pre-visit agent'  },
@@ -259,7 +260,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent-sep-1',       label: 'Front desk agent (Sep 1)'       },
-      { id: 'frontdesk-agent',             label: 'Front desk agent'             },
+      { id: 'frontdesk-agent',             label: 'Front desk agent (coach)'             },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
       { id: 'pre-visit-agent',             label: 'Pre-visit agent'             },
@@ -319,7 +320,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'response-agents-sep-1',        label: 'Response agents (Sep 1)' },
-      { id: 'response-agents',              label: 'Response agents' },
+      { id: 'response-agents',              label: 'Response agents (coach cue)' },
       { id: 'response-agents-exploration',  label: 'Response agents (exploration)' },
       { id: 'generation-agents',       label: 'Generation agents' },
       { id: 'review-tagging-agent',    label: 'Review tagging agents' },
@@ -1176,7 +1177,8 @@ export function App() {
                           explorationChrome={isAgentExplorationChrome(navActive)}
                           sep1Chrome={isSep1Chrome(navActive)}
                           llmTaskExplorationLayout={isLlmTaskExplorationLayout(navActive)}
-                          inlineRhsFooter={navActive === RESPONSE_AGENTS_SEP1_NAV_ID}
+                          inlineRhsFooter={isResponseAgentsSep1StyleNav(navActive)}
+                          autoOpenCoachTour={isAgentCoachCueNav(navActive)}
                           onOpenProductResearchSettings={openUxImprovementSettings}
                         />
                       </div>

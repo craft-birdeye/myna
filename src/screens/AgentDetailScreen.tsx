@@ -48,6 +48,8 @@ import {
   isFrontdeskExplorationChrome,
   isLlmTaskExplorationLayout,
   isResponseAgentsExplorationChrome,
+  isResponseAgentsSep1StyleNav,
+  isSep1StyleAgentListNav,
 } from '../data/agentNavIds'
 import { instanceSlugFromName, type DeepRoute } from '../appRoutes'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
@@ -122,6 +124,8 @@ interface AgentDetailScreenProps {
 /** Nav ids that open Create agent as illustration + library cards only (no Ghostwriter chat). */
 const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
   'response-agents-sep-1',
+  'response-agents',
+  'frontdesk-agent',
   'reminder-agent-sep-1',
 ])
 
@@ -173,11 +177,80 @@ function formatCardAuthorMeta(updatedBy?: string, lastUpdated?: string): string 
   return date ?? '—'
 }
 
+/** Footer location count — "20 locations". */
+function formatCardLocationLabel(locations?: string): string | null {
+  if (!locations?.trim()) return null
+  const digits = locations.replace(/[^\d]/g, '')
+  if (!digits) return null
+  const count = Number.parseInt(digits, 10)
+  if (!Number.isFinite(count)) return null
+  return `${count.toLocaleString()} location${count === 1 ? '' : 's'}`
+}
+
+/** Tooltip only when line-clamp / truncate actually clips the text. */
+function TruncatedTooltipText({
+  text,
+  className,
+  tooltipClassName = 'block w-full min-w-0 max-w-full overflow-hidden',
+  as: Tag = 'span',
+}: {
+  text: string
+  className?: string
+  tooltipClassName?: string
+  as?: 'span' | 'h3' | 'p'
+}) {
+  const ref = useRef<HTMLElement>(null)
+  const [truncated, setTruncated] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => {
+      setTruncated(el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [text])
+
+  return (
+    <Tooltip
+      content={text}
+      variant="detail"
+      disabled={!truncated}
+      className={tooltipClassName}
+    >
+      <Tag ref={ref as never} className={className}>
+        {text}
+      </Tag>
+    </Tooltip>
+  )
+}
+
 const FRONTDESK_AGENT_NAME = 'Front desk agent'
 const FRONTDESK_EXPLORATION_AGENT_NAME = 'Front desk agent (exploration)'
 
 function isFrontdeskAgentName(name: string) {
   return name === FRONTDESK_AGENT_NAME || name === FRONTDESK_EXPLORATION_AGENT_NAME
+}
+
+/** Instance-card icon — resolved from agent + instance names so each agent type keeps its own glyph. */
+function getAgentInstanceCardGlyph(agentName: string, instanceName?: string): LibraryCardGlyph {
+  const key = `${instanceName ?? ''} ${agentName}`.toLowerCase()
+  if (key.includes('front desk') || isFrontdeskAgentName(agentName)) return 'front-desk'
+  if (key.includes('reminder')) return 'reminder'
+  if (key.includes('waitlist')) return 'scheduling'
+  if (key.includes('pre-visit') || key.includes('previsit')) return 'prep'
+  if (key.includes('recall')) return 'noshow'
+  if (key.includes('revenue')) return 'dashboard'
+  if (key.includes('treatment plan')) return 'medication'
+  if (key.includes('review generation')) return 'generation'
+  if (key.includes('review tagging')) return 'tagging'
+  if (key.includes('tagging') && key.includes('routing')) return 'routing'
+  if (key.includes('outreach')) return 'sms-webchat'
+  if (isReviewResponseAgentName(agentName) || key.includes('review response')) return 'autonomous'
+  return 'templates'
 }
 
 interface AgentInstance {
@@ -6629,8 +6702,8 @@ function HealthcareFrontdeskCreateAgentLive({
         <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI agent that gets the work done for you!</p>
       </div>
 
-      <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-[2px]">
-        <div className="flex flex-col gap-md rounded-[14px] bg-surface px-lg py-md shadow-card">
+      <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-px">
+        <div className="flex flex-col gap-md rounded-xl bg-surface px-lg py-md shadow-card">
           {landingAttachments.length > 0 && (
             <div className="flex flex-wrap items-center gap-sm">
               {landingAttachments.map((item) => (
@@ -7319,7 +7392,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
-  const isSep1Agents = Boolean(navId?.includes('sep-1'))
+  /** Sep 1 side-nav ids + production front desk / response agents share the same card grid chrome. */
+  const isSep1Agents = isSep1StyleAgentListNav(navId)
   const useExplorationOutcomesTab = false
   const [activeTab, setActiveTab] = useState('agents')
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
@@ -8026,14 +8100,18 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   if (showCreateFlow && isLibraryOnlyCreate) {
     const chatHistoryTitle = isReviewResponse
       ? 'Reviews AI'
-      : isWaitlist
+      : isFrontdesk
+        ? 'Front desk'
+        : isWaitlist
         ? 'Waitlist'
         : isPreVisit
           ? 'Pre-visit'
           : 'Reminder'
     const emptyCards = isReviewResponse
       ? REVIEW_RESPONSE_CREATE_CARDS
-      : isWaitlist
+      : isFrontdesk
+        ? HEALTHCARE_FRONTDESK_CREATE_CARDS
+        : isWaitlist
         ? WAITLIST_CREATE_CARDS
         : isPreVisit
           ? PREVISIT_CREATE_CARDS
@@ -8071,8 +8149,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             <CreateAgentEmptyState
               key={createFlowKey}
               cards={emptyCards}
-              fromScratchLabel="Create from scratch"
+              fromScratchLabel={isFrontdesk ? 'Setup manually' : 'Create from scratch'}
               onCreateFromScratch={() => {
+                if (isFrontdesk) {
+                  setShowSetupWizard(true)
+                  return
+                }
                 setShowCreateFlow(false)
                 onEditAgent?.(scratchName)
               }}
@@ -8472,7 +8554,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           onInitialRecommendationConsumed={onInitialRecommendationFocusConsumed}
           product={product}
           workflowButtonOpensEditor={isExplorationAgents}
-          hideRecommendationTab={navId === 'response-agents-sep-1'}
+          hideRecommendationTab={isResponseAgentsSep1StyleNav(navId)}
         />
         <Toast
           message={toastMessage}
@@ -8655,7 +8737,32 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
 
                         if (isTwoMetricFooterCard) {
                           const authorMeta = formatCardAuthorMeta(row.updatedBy, row.lastUpdated)
+                          const locationLabel = formatCardLocationLabel(row.locations)
                           const cardDescription = row.cardDescription ?? agentGoals
+                          const authorMetaRow = (
+                            <div className="inline-flex max-w-full min-w-0 items-center gap-sm text-small">
+                              <TruncatedTooltipText
+                                text={authorMeta}
+                                tooltipClassName="min-w-0 max-w-full overflow-hidden"
+                                className="min-w-0 truncate text-text-secondary"
+                              />
+                              {row.status === 'Active' && row.hasDraft ? (
+                                <>
+                                  <span aria-hidden className="h-3 w-px shrink-0 bg-border" />
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      onEditAgent?.(row.name, undefined, undefined, 'Draft')
+                                    }}
+                                    className="shrink-0 text-text-action hover:underline"
+                                  >
+                                    Draft · John, 2h ago
+                                  </button>
+                                </>
+                              ) : null}
+                            </div>
+                          )
                           return (
                             <div
                               key={`${row.name}-${row.status}`}
@@ -8664,30 +8771,15 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               className="group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                             >
                               <div className="flex min-w-0 items-start gap-sm">
-                                <LibraryCardIcon glyph="autonomous" />
+                                <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} />
                                 <div className="flex min-w-0 flex-1 items-start justify-between gap-sm">
                                   <div className="min-w-0 flex-1">
-                                    <h3 className="line-clamp-2 text-body leading-[22px] tracking-[-0.28px] text-text-primary">
-                                      {row.name}
-                                    </h3>
-                                    <div className="mt-xs flex min-w-0 items-center gap-sm truncate text-small">
-                                      <span className="truncate text-text-secondary">{authorMeta}</span>
-                                      {row.status === 'Active' && row.hasDraft ? (
-                                        <>
-                                          <span aria-hidden className="h-3 w-px shrink-0 bg-border" />
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              onEditAgent?.(row.name, undefined, undefined, 'Draft')
-                                            }}
-                                            className="shrink-0 text-text-action hover:underline"
-                                          >
-                                            Draft · John, 2h ago
-                                          </button>
-                                        </>
-                                      ) : null}
-                                    </div>
+                                    <TruncatedTooltipText
+                                      as="h3"
+                                      text={row.name}
+                                      className="line-clamp-2 min-w-0 text-body leading-[22px] tracking-[-0.28px] text-text-primary"
+                                    />
+                                    <div className="mt-xs hidden min-[1400px]:block">{authorMetaRow}</div>
                                   </div>
                                   <Chip
                                     label={row.status}
@@ -8697,28 +8789,43 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                 </div>
                               </div>
 
+                              <div className="mt-xs min-[1400px]:hidden">{authorMetaRow}</div>
+
                               {cardDescription ? (
-                                <p className="mt-xl mb-lg line-clamp-2 text-[13px] leading-[20px] text-text-secondary">
-                                  {cardDescription}
-                                </p>
+                                <TruncatedTooltipText
+                                  as="p"
+                                  text={cardDescription}
+                                  className="mt-xl mb-lg line-clamp-2 text-[13px] leading-[20px] text-text-secondary"
+                                />
                               ) : null}
 
-                              <div className="mt-md flex items-center gap-sm" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  type="button"
-                                  onClick={() => openAgentInstanceEditor(row)}
-                                  className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openAgentInstanceDetails(row)}
-                                  className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-                                >
-                                  View details
-                                </button>
-                                <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                              <div className="mt-md flex min-w-0 items-center gap-sm">
+                                <div className="flex shrink-0 items-center gap-sm" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    onClick={() => openAgentInstanceEditor(row)}
+                                    className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white hover:bg-primary-hover"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openAgentInstanceDetails(row)}
+                                    className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+                                  >
+                                    View details
+                                  </button>
+                                  <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
+                                </div>
+                                {locationLabel ? (
+                                  <div className="flex min-w-0 flex-1 justify-end overflow-hidden">
+                                    <TruncatedTooltipText
+                                      text={locationLabel}
+                                      tooltipClassName="min-w-0 max-w-full overflow-hidden"
+                                      className="min-w-0 max-w-full truncate text-small text-text-tertiary"
+                                    />
+                                  </div>
+                                ) : null}
                               </div>
                             </div>
                           )
@@ -8731,7 +8838,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               className="group relative flex min-h-[188px] min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface p-md transition-colors hover:bg-surface-hover"
                             >
                               <div className="flex items-center justify-between gap-sm">
-                                <LibraryCardIcon glyph="autonomous" size="sm" />
+                                <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} size="sm" />
                                 <div className="flex shrink-0 items-center gap-sm">
                                   {row.hasDraft ? (
                                     <>
@@ -8811,7 +8918,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                             <div className="flex min-w-0 items-start justify-between gap-sm">
                               <div className="flex min-w-0 flex-1 flex-col gap-xs">
                                 <div className="flex min-w-0 items-start gap-sm">
-                                  {isDefaultIconCard && <LibraryCardIcon glyph="autonomous" />}
+                                  {isDefaultIconCard && (
+                                    <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} />
+                                  )}
                                   <div className="flex min-w-0 flex-1 flex-col gap-xs">
                                     <button
                                       type="button"
