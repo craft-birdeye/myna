@@ -18,6 +18,7 @@ import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolVi
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { formatSelectByCanvasSubtitle } from '../RHSDrawer/LocationsDrawer.jsx';
+import { RR_GOALS } from '../../data/reviewResponseCopy';
 import { AiAssistPanel } from '../../components/AiAssistPanel/AiAssistPanel';
 import { HelpCenterPanel } from '../../components/HelpCenterPanel/HelpCenterPanel';
 import { GlossaryModal } from '../../components/HelpCenterPanel/GlossaryModal';
@@ -171,7 +172,7 @@ const REVIEWS_TRIGGER_LEAF_COPY = {
   'When a new review is received': 'Agent triggers when a new review is received across all sources and locations.',
   'When a review is updated': 'Agent triggers when an existing review is updated across all sources and locations.',
   'When a review is responded': 'Agent triggers when a review receives a response across all sources and locations.',
-  'When a new review is received or updated': 'Agent triggers on new or updated reviews across all sources and locations.',
+  'When a new review is received or updated': 'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
 };
 
 function makeNodeDetails(type, label) {
@@ -273,17 +274,19 @@ const TASK_DROP_DEFAULTS = {
   FreshDesk: { description: 'FreshDesk CRM tool' },
   'QuickBooks Online': { description: 'QuickBooks tool' },
   ServiceTitan: { description: 'ServiceTitan CRM tool' },
+  Salesforce: { description: 'Creates or updates the contact record in Salesforce' },
+  'Update Salesforce contact': { description: 'Creates or updates the contact record in Salesforce' },
   'Send data to external app': { description: 'Push data to a connected external application' },
   'Fetch data from external app': { description: 'Retrieve data from a connected external application' },
   'Trigger external webhook': { description: 'Fire a webhook to an external system' },
   // Legacy leaf names still used by older workflows / add-step shortcuts
   'Extract review details': {
     description:
-      'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
+      'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
   },
   'Review details extraction': {
     description:
-      'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
+      'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
   },
   'Review responder': { description: 'Reply to the review using the generated response' },
   'Message assembly': {
@@ -304,7 +307,7 @@ const TASK_DROP_DEFAULTS = {
   },
   'Generate response': {
     description:
-      'Assembles the response using the drafted strategy, extracted details, and brand voice',
+      'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
   },
   'Publish response': {
     description:
@@ -322,6 +325,53 @@ const TASK_DROP_DEFAULTS = {
     selectedTools: ['handle-response'],
   },
 };
+
+const DROPPED_TASK_COPY = {
+  Salesforce: {
+    taskName: 'Update Salesforce contact',
+    description: 'Creates or updates the contact record in Salesforce',
+  },
+  'Update Salesforce contact': {
+    taskName: 'Update Salesforce contact',
+    description: 'Creates or updates the contact record in Salesforce',
+  },
+  'Classify tags': {
+    taskName: 'Manage review tags',
+    description: 'Sets up the tags and descriptions the agent uses to tag reviews',
+  },
+  'Manage review tags': {
+    taskName: 'Manage review tags',
+    description: 'Sets up the tags and descriptions the agent uses to tag reviews',
+  },
+  'Extract review details': {
+    taskName: 'Extract review details',
+    description:
+      "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors",
+  },
+  'Review details extraction': {
+    taskName: 'Extract review details',
+    description:
+      "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors",
+  },
+  'Review analysis': {
+    taskName: 'Review analysis',
+    description:
+      "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors",
+  },
+  'Generate response': {
+    taskName: 'Generate response',
+    description:
+      "Writes a reply that matches the review's language and rating, and follows the rules for tone, length, and escalation",
+  },
+  'Apply escalation rules': {
+    taskName: 'Apply escalation rules',
+    description: 'Sends alerts or updates tickets when TAT is missed',
+  },
+};
+
+function remapDroppedTaskCopy(taskName, description) {
+  return DROPPED_TASK_COPY[taskName] || { taskName, description };
+}
 
 function makeNodeConfig(id, type, label, description) {
   let flowType = 'task';
@@ -562,15 +612,28 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             ...item.data,
             stepNumber: topLevelStep,
             title:
-              nodeDetails[nodeId]?.branchNodeTitle
-              || (nodeDetails[nodeId]?.basedOn === 'percentage'
-                ? 'Based on percentage'
-                : nodeDetails[nodeId]?.basedOn === 'field'
+              (nodeDetails[nodeId]?.basedOn === 'percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Based on percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Split traffic'
+                || item.data?.title === 'Based on percentage')
+                ? 'Split traffic'
+                : (nodeDetails[nodeId]?.branchNodeTitle
+              || item.data?.title
+              || (nodeDetails[nodeId]?.basedOn === 'field'
                   ? 'Based on field'
                   : nodeDetails[nodeId]?.basedOn === 'prompts'
                     ? 'Based on prompts'
-                    : 'Based on conditions'),
-            subtitle: nodeDetails[nodeId]?.description || 'Build condition-specific flows',
+                    : 'Based on conditions')),
+            subtitle:
+              (nodeDetails[nodeId]?.basedOn === 'percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Based on percentage'
+                || nodeDetails[nodeId]?.branchNodeTitle === 'Split traffic'
+                || item.data?.title === 'Based on percentage')
+                ? 'Splits traffic across paths by percentage, useful for testing variations'
+                : (nodeDetails[nodeId]?.description
+              || item.data?.description
+              || item.data?.descriptionPlaceholder
+              || 'Build condition-specific flows'),
           }
         : item.data?.subtype === 'Schedule-based'
           ? {
@@ -635,10 +698,15 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                       : {}),
                   // Pull title and subtitle from saved nodeDetails so canvas nodes
                   // show real content instead of placeholder text
-                  title: nodeDetails[nodeId]?.taskName
-                    ?? nodeDetails[nodeId]?.triggerName
-                    ?? item.data.title,
-                  subtitle: nodeDetails[nodeId]?.description ?? item.data.subtitle,
+                  ...(() => {
+                    const mapped = remapDroppedTaskCopy(
+                      nodeDetails[nodeId]?.taskName
+                        ?? nodeDetails[nodeId]?.triggerName
+                        ?? item.data.title,
+                      nodeDetails[nodeId]?.description ?? item.data.subtitle,
+                    );
+                    return { title: mapped.taskName, subtitle: mapped.description };
+                  })(),
                   showConfigWarning: isTaskConfigIncomplete(item, nodeDetails[nodeId]),
                 },
     });
@@ -800,10 +868,14 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             if (childNode.flowType === 'procedures') {
               childData = { ...childData, toggleEnabled: childNode.data?.toggleEnabled ?? true, procedureItems: mapProcedureItems(childDet.procedureIds, nodeDetails, childId, product) };
             } else if (childNode.flowType !== 'delay' && childNode.flowType !== 'branch') {
+              const mappedChild = remapDroppedTaskCopy(
+                childDet.taskName ?? childDet.triggerName ?? childData.title,
+                childDet.description ?? childData.subtitle,
+              );
               childData = {
                 ...childData,
-                title: childDet.taskName ?? childDet.triggerName ?? childData.title,
-                subtitle: childDet.description ?? childData.subtitle,
+                title: mappedChild.taskName,
+                subtitle: mappedChild.description,
                 showConfigWarning: isTaskConfigIncomplete(childNode, childDet),
               };
             }
@@ -1430,31 +1502,35 @@ export default function AgentBuilder({
     return () => cancelAnimationFrame(frame);
   }, [paletteInstant, paletteSection]);
 
-  /* ─── View-only: keep canvas state in sync when workflow props change ─── */
+  /* ─── Keep canvas in sync when seed workflow copy changes (edit + view-only) ───
+     Edit mode used to ignore `initialNodeDetails` after first mount, so HMR / source
+     copy edits never reached the RHS or canvas until a full remount. */
+  const seedFingerprint = JSON.stringify(initialNodeDetails ?? null);
+  const seedFpRef = useRef(seedFingerprint);
   useEffect(() => {
-    if (!viewOnly) return;
-    if (initialNodes) setNodeList(initialNodes);
-    if (initialNodeDetails) {
-      setNodeDetails((prev) => {
-        const base = initialNodeDetails;
-        const startNode = base[START_NODE_ID];
-        const pageTitleStr = (typeof pageTitle === 'string' ? pageTitle : '') || '';
-        if (!startNode || !startNode.agentName) {
-          return {
-            ...base,
-            [START_NODE_ID]: {
-              goals: '',
-              outcomes: '',
-              locations: [],
-              ...(startNode || {}),
-              agentName: startNode?.agentName || pageTitleStr,
-            },
-          };
-        }
-        return base;
-      });
-    }
-  }, [viewOnly, initialNodes, initialNodeDetails, pageTitle]);
+    if (seedFingerprint === seedFpRef.current) return;
+    seedFpRef.current = seedFingerprint;
+    if (viewOnly && initialNodes) setNodeList(initialNodes);
+    if (!initialNodeDetails) return;
+    setNodeDetails(() => {
+      const base = initialNodeDetails;
+      const startNode = base[START_NODE_ID];
+      const pageTitleStr = (typeof pageTitle === 'string' ? pageTitle : '') || '';
+      if (!startNode || !startNode.agentName) {
+        return {
+          ...base,
+          [START_NODE_ID]: {
+            goals: '',
+            outcomes: '',
+            locations: [],
+            ...(startNode || {}),
+            agentName: startNode?.agentName || pageTitleStr,
+          },
+        };
+      }
+      return base;
+    });
+  }, [seedFingerprint, viewOnly, initialNodes, initialNodeDetails, pageTitle]);
 
   /* ─── Open a tool viewer by tool name or id (used when clicking a tool chip in prompts) ─── */
   const openToolByName = useCallback((nameOrId) => {
@@ -2740,11 +2816,11 @@ export default function AgentBuilder({
       const fallbackId = `${id}-path-fallback`;
       const makePath = (extra) => ({ description: '', conditions: [], parentId: id, isBranchPath: true, nodes: [], ...extra });
 
-      if (controlVariant === 'Based on percentage') {
+      if (controlVariant === 'Based on percentage' || controlVariant === 'Split traffic') {
         Object.assign(details, {
           basedOn: 'percentage',
-          branchNodeTitle: 'Based on percentage',
-          description: 'Split the flow by percentage',
+          branchNodeTitle: 'Split traffic',
+          description: 'Splits traffic across paths by percentage, useful for testing variations',
           mergeBranches: true,
           branches: [
             { id: path1Id, name: 'Branch 1', percentage: 50 },
@@ -2921,7 +2997,13 @@ export default function AgentBuilder({
     setCanvasFocusNodeId(nodeId);
   }, [nodeList, nodeDetails]);
 
-  const currentDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
+  const rawDetails = selectedNodeId ? (nodeDetails[selectedNodeId] || {}) : {};
+  const remappedTask = remapDroppedTaskCopy(rawDetails.taskName, rawDetails.description);
+  const currentDetails = selectedNodeId
+    ? (rawDetails.taskName
+      ? { ...rawDetails, taskName: remappedTask.taskName, description: remappedTask.description }
+      : rawDetails)
+    : {};
 
   /**
    * Task details Save — validates the node's tool config and flags the canvas card when a
@@ -3065,12 +3147,18 @@ export default function AgentBuilder({
     if (selectedNodeId === START_NODE_ID) {
       const isReviewGeneration = /review generation/i.test(pageTitle || '');
       const isReviewResponse = /review response/i.test(pageTitle || '');
-      const startDetails = nodeDetails[START_NODE_ID] || {
+      const rawStart = nodeDetails[START_NODE_ID];
+      const startDetails = rawStart
+        ? {
+            ...rawStart,
+            goals: isReviewResponse && !rawStart.goals ? RR_GOALS : rawStart.goals,
+          }
+        : {
         agentName: pageTitle,
         goals: isReviewGeneration
           ? 'Request reviews from customers after a completed transaction, using email and text to maximize response rates.'
           : isReviewResponse
-            ? 'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review'
+            ? RR_GOALS
             : 'Respond to customer reviews promptly and professionally, maintaining brand voice and addressing specific customer feedback.',
         outcomes: isReviewGeneration
           ? 'Increase review volume across locations while saving staff time on manual follow-up.'

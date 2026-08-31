@@ -20,7 +20,7 @@ export const REVIEW_TRIGGER_OPTIONS = [
     label: 'New review is received or updated',
     description: 'Trigger fired when a new review is received or updated',
     agentDescription:
-      'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+      'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
   },
 ];
 

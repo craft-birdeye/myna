@@ -196,8 +196,9 @@ export default function AgentDetailsBody({
           <>
             {locationsSelectBy && (
               <p className={styles.selectBySummary}>
-                {selectByEntities.length === 1 ? 'Location' : 'Locations'} assigned to{' '}
-                {formatSelectByGroupLabel(locationsSelectBy.label, selectByEntities.length)}
+                This agent runs on the locations assigned to the{' '}
+                {formatSelectByGroupLabel(locationsSelectBy.label, selectByEntities.length)}{' '}
+                you select
               </p>
             )}
 

@@ -11,12 +11,14 @@ import {
   DENTAL_AGENT_WORKFLOWS,
   HEALTHCARE_AGENT_WORKFLOWS,
   HEALTHCARE_REMINDER_NORTH_WORKFLOW,
+  REVIEW_RESPONSE_WORKFLOW,
 } from '../data/agentWorkflows'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 
 // @ts-ignore
 import AgentBuilderRaw from '../workflow/AgentBuilder/AgentBuilder'
 import { isFrontDeskCanvasAgent } from '../workflow/LHSDrawer/LHSDrawer'
+import { applyReviewResponseCopy, RR_COPY_REV } from '../data/reviewResponseCopy'
 const AgentBuilder = AgentBuilderRaw as unknown as React.ComponentType<any>
 
 const EMPTY_WORKFLOW = {
@@ -47,21 +49,28 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
   const baseWorkflow =
-    product === 'healthcare' && instanceName === 'Reminder agent - North region'
-      ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
-      : workflowMap[agentName] ?? EMPTY_WORKFLOW
+    /review response/i.test(agentName)
+      ? REVIEW_RESPONSE_WORKFLOW
+      : product === 'healthcare' && instanceName === 'Reminder agent - North region'
+        ? HEALTHCARE_REMINDER_NORTH_WORKFLOW
+        : workflowMap[agentName] ?? EMPTY_WORKFLOW
 
   // Patch the start-node label so newly created drafts show their draft name on the canvas.
-  const workflow = {
-    nodes: baseWorkflow.nodes,
-    nodeDetails: {
-      ...baseWorkflow.nodeDetails,
-      '__start__': {
-        ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
-        agentName: shownName,
+  const workflow = applyReviewResponseCopy(
+    {
+      nodes: baseWorkflow.nodes,
+      nodeDetails: {
+        ...baseWorkflow.nodeDetails,
+        '__start__': {
+          ...(baseWorkflow.nodeDetails?.['__start__'] ?? {}),
+          agentName: shownName,
+        },
       },
     },
-  }
+    agentName,
+    shownName,
+    instanceName,
+  )
 
   return (
     <div className="relative flex-1 overflow-hidden" style={{ height: '100%' }}>
@@ -97,7 +106,14 @@ export function WorkflowViewerTab({ instanceName, displayName, onEdit, product }
           </div>
         }>
           <AgentBuilder
-            key={`${agentName}::${shownName}::${product ?? 'automotive'}`}
+            key={`${agentName}::${shownName}::${product ?? 'automotive'}::${RR_COPY_REV}::${
+              Object.entries(workflow.nodeDetails ?? {})
+                .map(([id, d]) => {
+                  const n = d as Record<string, unknown> | undefined
+                  return `${id}:${n?.taskName ?? ''}:${n?.branchNodeTitle ?? ''}:${n?.description ?? ''}:${n?.goals ?? ''}`
+                })
+                .join('|')
+            }`}
             pageTitle={shownName}
             appTitle={shownName}
             viewOnly={true}

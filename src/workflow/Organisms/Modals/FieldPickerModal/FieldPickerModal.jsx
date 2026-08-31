@@ -19,10 +19,6 @@ const POPOVER_MAX_HEIGHT = 560;
 const DRAWER_GAP = 0;
 const BASE_CATEGORY_IDS = new Set(BASE_CATEGORIES.map((c) => c.id));
 
-const FIELDS_SUBTITLE =
-  'Insert data fields to pull in real business or workflow details.';
-
-/** Placeholder help article — swap for the real Fields docs URL when available. */
 const FIELDS_LEARN_MORE_HREF =
   'https://help.birdeye.com/hc/en-us/articles/fields-in-workflows';
 
@@ -536,7 +532,8 @@ export default function FieldPickerModal({
         <div className={styles.titleBlock}>
           <span className={styles.title}>Fields</span>
           <span className={styles.subtitle}>
-            {FIELDS_SUBTITLE}{' '}
+            Select a field to add it to your prompt. It&apos;s replaced with the
+            actual value when the agent runs.{' '}
             <a
               href={FIELDS_LEARN_MORE_HREF}
               target="_blank"
