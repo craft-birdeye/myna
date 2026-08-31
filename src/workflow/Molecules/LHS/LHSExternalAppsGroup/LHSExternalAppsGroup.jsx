@@ -6,7 +6,7 @@ export const EXTERNAL_APPS_TASK_ITEMS = [
   { id: 'freshdesk', name: 'FreshDesk', description: 'FreshDesk CRM tool' },
   { id: 'quickbooks', name: 'QuickBooks Online', description: 'QuickBooks tool' },
   { id: 'servicetitan', name: 'ServiceTitan', description: 'ServiceTitan CRM tool' },
-  { id: 'salesforce', name: 'Salesforce', description: 'Salesforce CRM tools' },
+  { id: 'salesforce', name: 'Update Salesforce contact', description: 'Creates or updates the contact record in Salesforce' },
   { id: 'zendesk', name: 'Create Zendesk ticket', description: 'Creates a ticket in Zendesk' },
 ];
 

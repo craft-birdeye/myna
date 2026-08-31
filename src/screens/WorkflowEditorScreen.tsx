@@ -3,12 +3,17 @@ import {
   AUTOMOTIVE_AGENT_WORKFLOWS,
   HEALTHCARE_AGENT_WORKFLOWS,
   DENTAL_AGENT_WORKFLOWS,
+  REVIEW_RESPONSE_WORKFLOW,
 } from '../data/agentWorkflows'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { getLastSavedCreateChat, createChatVariantForAgent, getRetainedCreateAiChat } from '../data/createAgentChatStore'
 import { AGENT_INSTANCE_ISSUE_COUNTS, getAgentIssues } from '../data/agentIssues'
 import { instanceHasUnpublishedDraft } from '../data/agentUnpublishedDrafts'
+import {
+  applyReviewResponseCopy,
+  RR_COPY_REV,
+} from '../data/reviewResponseCopy'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -28,7 +33,7 @@ const EMPTY_WORKFLOW = {
 /** Goals / outcomes for Reviews AI create-from-scratch (empty canvas). Locations stay empty. */
 const REVIEW_RESPONSE_SCRATCH_START = {
   goals:
-    'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review',
+    'Respond to reviews automatically using the right template. If it can\'t post right away, save the response for someone to review.',
   outcomes:
     'Ensure safe, effortless engagement by relying exclusively on your pre-approved templates. Eliminate manual effort and operational overhead by autonomously responding across platforms',
   locations: [] as string[],
@@ -178,7 +183,9 @@ export function WorkflowEditorScreen({
     product === 'healthcare' ? HEALTHCARE_AGENT_WORKFLOWS :
     product === 'dental'     ? DENTAL_AGENT_WORKFLOWS     :
                                AUTOMOTIVE_AGENT_WORKFLOWS
-  const baseWorkflow = workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
+  const baseWorkflow = /review response/i.test(agentBaseName)
+    ? REVIEW_RESPONSE_WORKFLOW
+    : workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
   const isEmptyScratch = !wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0
   const resolvedExistingAgent = existingAgent ?? (!isEmptyScratch && !wizardDraft)
   const reviewScratchStart = /review response/i.test(shownName)
@@ -233,7 +240,7 @@ export function WorkflowEditorScreen({
     })
   }
 
-  const workflow = wizardDraft
+  const rawWorkflow = wizardDraft
     ? buildWizardAgentWorkflow(wizardDraft)
     : isEmptyScratch && reviewScratchStart
       ? {
@@ -259,6 +266,7 @@ export function WorkflowEditorScreen({
           nodes: patchNodes(baseWorkflow.nodes as unknown[]) as typeof baseWorkflow.nodes,
           nodeDetails: patchNodeDetails(baseWorkflow.nodeDetails as unknown as Record<string, unknown>) as typeof baseWorkflow.nodeDetails,
         }
+  const workflow = applyReviewResponseCopy(rawWorkflow, agentBaseName, shownName, agentName)
 
   // Create-from-scratch opens an empty canvas — never show "Active".
   const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
@@ -277,8 +285,13 @@ export function WorkflowEditorScreen({
     'Review generation agent': 'reviews',
   }
   const activeNavId = AGENT_NAV_MAP[agentBaseName] ?? 'frontdesk'
-  const publishNode = workflow.nodeDetails?.['rr-6'] as { taskName?: string; description?: string } | undefined
-  const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${publishNode?.taskName ?? ''}::${publishNode?.description ?? ''}`
+  const copyFingerprint = Object.entries(workflow.nodeDetails ?? {})
+    .map(([id, d]) => {
+      const n = d as Record<string, unknown> | undefined
+      return `${id}:${n?.taskName ?? ''}:${n?.branchNodeTitle ?? ''}:${n?.triggerName ?? ''}:${n?.description ?? ''}:${n?.goals ?? ''}`
+    })
+    .join('|')
+  const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${RR_COPY_REV}::${copyFingerprint}`
 
   return (
     <div className="flex h-full w-full overflow-hidden">

@@ -365,22 +365,22 @@ export const REVIEWS_TASK_SUB_ITEMS = {
         description: 'Add tags to a review',
       },
       {
-        label: 'Classify tags',
-        description: 'Manage review tags and their descriptions',
+        label: 'Manage review tags',
+        description: 'Sets up the tags and descriptions the agent uses to tag reviews',
       },
       {
         label: 'Generate response',
-        description: 'Assembles the response using the drafted strategy, extracted details, and brand voice',
+        description: 'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
       },
       {
         label: 'Review analysis',
         description:
-          'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
+          'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
       },
       {
         label: 'Triage review',
         description:
-          'The system evaluates each review to determine if a response is needed, filtering out spam, irrelevant content, or policy violations.',
+          'Checks whether the review is genuine or spam, then decides if a response is needed',
       },
       {
         label: 'Publish response',
@@ -424,7 +424,7 @@ export const REVIEWS_TASK_SUB_ITEMS = {
     items: [
       {
         label: 'Apply escalation rules',
-        description: 'Send alerts or update tickets when TAT is missed',
+        description: 'Sends alerts or updates tickets when TAT is missed',
       },
       {
         label: 'Create ticket in Birdeye',
@@ -448,8 +448,8 @@ export const REVIEWS_TASK_SUB_ITEMS = {
         description: 'ServiceTitan CRM tool',
       },
       {
-        label: 'Salesforce',
-        description: 'Salesforce CRM tools',
+        label: 'Update Salesforce contact',
+        description: 'Creates or updates the contact record in Salesforce',
       },
       {
         label: 'Create Zendesk ticket',
@@ -741,8 +741,8 @@ export const CONTROL_CARDS = [
  *  description + drag handle) — the same treatment as the Trigger / Task panels. */
 export const BRANCH_VARIANT_ITEMS = [
   { label: 'Based on condition', description: 'Route the flow down different paths based on conditions you define.' },
-  { label: 'Based on percentage', description: 'Split traffic across paths by percentage — useful for testing variations.' },
-  { label: 'Always run', description: 'Add a path that always runs, regardless of any conditions.' },
+  { label: 'Split traffic', description: 'Splits traffic across paths by percentage, useful for testing variations' },
+  { label: 'Always run', description: 'Adds a path that always runs, regardless of any conditions' },
 ];
 
 export const DELAY_VARIANT_ITEMS = [
@@ -799,9 +799,9 @@ const CONTROL_SECTION_CATEGORIES = [
 
 /** Single controls (no sub-variants) shown as standalone rich cards below the categories. */
 const CONTROL_STANDALONE_DESCRIPTIONS = {
-  'Parallel tasks': 'Run several tasks at the same time, then continue once they all finish.',
-  Loop: 'Repeat a set of steps for each item or until a condition is met.',
-  'Sub-agent': 'Call another agent’s workflow as a step. Coming soon.',
+  'Parallel tasks': 'Runs several tasks at the same time, then continues once they all finish',
+  Loop: 'Repeats a set of steps for each item or until a condition is met',
+  'Sub-agent': 'Calls another agent\'s workflow as a step. Coming soon',
 };
 
 /** Sub-items for the canvas add-step menu, keyed by product. */

@@ -1082,20 +1082,20 @@ const REVIEW_RESPONSE_NODES = [
       hasAiIcon: false,
       titlePlaceholder: 'Enter task name',
       descriptionPlaceholder:
-        'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+        'Checks whether the review is genuine or spam, then decides if a response is needed',
     },
   },
   {
     id: 'rr-3',
     flowType: 'branch' as const,
     data: {
-      title: 'Based on conditions',
+      title: 'Evaluate conditions',
       subtype: 'Branch',
       hasToggle: true,
       toggleEnabled: true,
       hasAiIcon: false,
       titlePlaceholder: 'Enter branch name',
-      descriptionPlaceholder: 'Build condition-specific flows',
+      descriptionPlaceholder: 'Checks your conditions, then sends the flow down the matching branch. If nothing matches, it uses the fallback branch.',
     },
   },
 ]
@@ -1130,14 +1130,14 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   '__start__': {
     agentName: 'Review response agent replying autonomously',
     goals:
-      'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review',
+      'Respond to reviews automatically using the right template. If it can\'t post right away, save the response for someone to review.',
     outcomes:
       'Ensure safe, effortless engagement by relying exclusively on your pre-approved templates. Eliminate manual effort and operational overhead by autonomously responding across platforms',
     locations: REVIEW_RESPONSE_LOCATIONS,
   },
   'rr-1': {
     triggerName: 'When a new review is received or updated',
-    description: 'Agent triggers on new or updated reviews across all sources and locations.',
+    description: 'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
     conditions: [],
     conditionOptions: {
       field: [
@@ -1156,7 +1156,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   'rr-2': {
     taskName: 'Triage review',
     description:
-      'The system checks the review to decide whether a response is required based on whether it is a genuine customer review or spam content that is irrelevant to the business or in any way violates the content policy of the source.',
+      'Checks whether the review is genuine or spam, then decides if a response is needed',
     llmModel: 'Fast',
     contextFields: [
       { value: 'Review.comment', type: 'variable' },
@@ -1190,6 +1190,8 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   },
   'rr-3': {
     basedOn: 'conditions',
+    branchNodeTitle: 'Evaluate conditions',
+    description: 'Checks your conditions, then sends the flow down the matching branch. If nothing matches, it uses the fallback branch.',
     branches: [
       { id: 'rr-3-path-respond', name: 'Respond' },
       { id: 'rr-3-path-fallback', name: 'Fallback branch', isFallback: true },
@@ -1228,7 +1230,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
+            'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
         },
       },
       {
@@ -1242,7 +1244,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
           hasAiIcon: false,
           titlePlaceholder: 'Enter task name',
           descriptionPlaceholder:
-            'Assembles the response using the drafted strategy, extracted details, and brand voice',
+            'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
         },
       },
       {
@@ -1264,7 +1266,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   'rr-4': {
     taskName: 'Extract review details',
     description:
-      'Identifies what the reviewer means, matches it to the business\'s terms, scores severity, and flags staff or competitors mentioned',
+      'Reads the review to understand what it\'s about, how serious it is, and if it mentions any staff or competitors',
     llmModel: 'Thinking',
     contextFields: [
       { value: 'Location.name', type: 'variable' },
@@ -1306,7 +1308,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
   'rr-5': {
     taskName: 'Generate response',
     description:
-      'Assembles the response using the drafted strategy, extracted details, and brand voice',
+      'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
     llmModel: 'Balanced',
     contextFields: [
       { value: 'Location.brand', type: 'variable' },

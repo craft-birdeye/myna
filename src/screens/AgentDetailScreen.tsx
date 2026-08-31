@@ -468,7 +468,7 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
       locations: '500',
       instanceName: 'Review response agent - North Region',
       cardDescription:
-        'Executes rule-based logic to rotate through qualifying templates and publish them automatically. If technical restrictions prevent immediate posting, the response is queued as a suggestion for manual review.',
+        'Respond to reviews automatically using the right template. If it can\'t post right away, save the response for someone to review.',
     },
     {
       region: 'East Region',
@@ -789,7 +789,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
         kind: 'trigger',
         title: '1. New review is received or updated',
         description:
-          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
       },
       {
         kind: 'task',
@@ -812,7 +812,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
         kind: 'trigger',
         title: '1. New review is received or updated',
         description:
-          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
       },
       {
         kind: 'task',
@@ -841,7 +841,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
         kind: 'trigger',
         title: '1. New review is received or updated',
         description:
-          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
       },
       {
         kind: 'task',
@@ -869,7 +869,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
         kind: 'trigger',
         title: '1. New review is received or updated',
         description:
-          'Agent triggers when there is a new review or an existing review is updated across all sources and locations',
+          'Agent triggers when a new review is received or an existing review is updated across all sources and locations',
       },
       {
         kind: 'task',
@@ -942,7 +942,7 @@ const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
         kind: 'trigger',
         title: '1. New review is received or updated',
         description:
-          'Agent triggers when there is a new review or an existing review is updated across all sources and locations.',
+          'Agent triggers when a new review is received or an existing review is updated across all sources and locations.',
       },
       {
         kind: 'task',
@@ -966,7 +966,7 @@ const REVIEW_TAGGING_CREATE_CARDS: CreateLibraryCard[] = [
         kind: 'trigger',
         title: '1. New review is received or updated',
         description:
-          'Agent triggers when there is a new review or an existing review is updated across all sources and locations.',
+          'Agent triggers when a new review is received or an existing review is updated across all sources and locations.',
       },
       {
         kind: 'task',
