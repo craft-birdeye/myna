@@ -1177,7 +1177,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
       { value: 'Review.rating', type: 'variable' },
     ],
     systemPrompt:
-      'You are the First-Line triaging agent. Analyze the incoming review if it is a genuine customer review or irrelevant spam.',
+      'You are the first-line triaging agent. Analyze the incoming review if it is a genuine customer review or irrelevant spam.',
     userPrompt:
       'If the review content violates any content terms of {{Review.source}}, treat it as spam.\n' +
       'If the review contains business-unrelated self-promotion or distracts from the business profile, treat it as spam.\n' +
