@@ -182,7 +182,7 @@ const SECTIONS: SettingsSection[] = [
     items: [
       { icon: '', iconSrc: iconUsers,     label: 'Users', subtext: 'Add users and manage roles, permissions, and notifications' },
       { icon: '', iconSrc: iconTeams,     label: 'Teams', subtext: 'Organize users into teams for efficient collaboration' },
-      { icon: '', iconSrc: iconEmployees, label: 'Employees', subtext: 'Add employees and manage customer-facing interactions' },
+      { icon: '', iconSrc: iconEmployees, label: 'Employees', subtext: 'Add, edit, and manage your employees’ interactions' },
       { icon: '', iconSrc: iconBilling,   label: 'Billing', subtext: 'View invoices, subscriptions, and payment information' },
       { icon: '', iconSrc: iconSupport,   label: 'Support', subtext: 'Access help resources and contact the support team' },
       { icon: 'language',                 label: 'Timezone', subtext: "Configure your account's timezone and regional settings" },
