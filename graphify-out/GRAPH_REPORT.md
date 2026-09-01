@@ -1,16 +1,16 @@
 # Graph Report - myna-1  (2026-08-31)
 
 ## Corpus Check
-- 1070 files · ~956,653 words
+- 1070 files · ~956,844 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8171 nodes · 14929 edges · 370 communities (299 shown, 71 thin omitted)
+- 8171 nodes · 14928 edges · 359 communities (291 shown, 68 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 385 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `29a7ec64`
+- Built from commit: `ebe3c534`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -18,18 +18,18 @@
 - cn
 - ContentFlowControls.tsx
 - BlockCanvas.tsx
-- FormInput
-- alert-dialog.v1.tsx
+- workflow/Molecules/Conditions/Conditions.jsx
+- ServiceScreen.tsx
 - AgentDetailScreen.tsx
 - index.ts
-- workflow/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.stories.jsx
+- workflow/Organisms/Panels/RHS/LLMTaskBody.jsx
 - VoiceCallEngineSettings.tsx
 - faq-agents/Organisms/Panels/RHS/RHS.jsx
 - OverviewV2_1Screen.tsx
 - AgentSettingsTab.tsx
 - AddToolDrawer.jsx
-- Link
-- Icon
+- IntakeScreen.tsx
+- ReviewWaitlistScreen.tsx
 - workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.jsx
 - CreateView.tsx
 - workflow/LHSDrawer/LHSDrawer.jsx
@@ -41,56 +41,56 @@
 - ContentShareModal.tsx
 - ClassicOverviewScreen.tsx
 - workflow/AgentBuilder/AgentBuilder.jsx
-- FloatingSheetFrame.tsx
-- contenthub-ui/utils.ts
+- sheet.v1.tsx
+- FAQAgentsDashboardView.tsx
 - InboxScreen.tsx
 - faqStore.ts
 - faq-agents/Organisms/Panels/RHS/LLMTaskBody.jsx
-- HelpCenterPanel.tsx
+- Icon
 - workflow/Molecules/Inputs/VariableChip/VariableChip.jsx
 - ReviewSummaryStep.tsx
 - DayCalendar.tsx
-- ContentScorePanel
+- workflow/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.stories.jsx
 - CreatePostView.tsx
 - VoiceCallToolDrawer.jsx
 - LogDetailsPanel.tsx
 - procedureData.ts
 - ManageAppointmentsScreen.tsx
 - SearchAIView.tsx
-- l1Icons.tsx
+- OverviewV2Screen.tsx
 - workflow/Organisms/Panels/RHS/RHS.jsx
 - RecommendationDetailScreen.tsx
 - RunDetailsPanel.tsx
 - FAQSectionCanvas.tsx
 - workflow/FlowCanvas/FlowCanvas.jsx
-- Step2Source
+- ProjectInlineCreationFlow.tsx
 - agentWorkflows.ts
 - workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx
 - AgentLogsTab.tsx
 - RecDetailView.tsx
 - InlineCreationFlow.tsx
 - workflow/services/procedureService.js
-- button.tsx
+- SocialEditor.tsx
 - workflow/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.jsx
 - faq-agents/Organisms/TemplateLibrary/TemplateLibrary.jsx
-- TextArea
+- workflow/Organisms/Drawers/CustomToolBuilder/CustomToolBuilder.jsx
 - Column
 - TemplateGallery.tsx
-- faq-agents/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx
+- AppointmentTypeScreen.tsx
 - EscalationNotifier.jsx
-- ContentHubL2NavPanel.tsx
+- ContentHome.tsx
 - AvailabilityScreen.tsx
 - App.tsx
 - TestRunPanel.tsx
 - AgentInstanceScreen.tsx
 - faq-agents/Modules/ModuleView.jsx
-- faq-agents/LHSDrawer/LHSDrawer.jsx
-- ColumnSettingsSheet.tsx
+- faq-agents/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.jsx
+- contenthub-ui/utils.ts
 - workflow/Modules/ModuleView.jsx
 - faq-agents/FlowCanvas/FlowCanvas.jsx
 - HealthcareReminderCanvas.tsx
 - BlogSectionCanvas.tsx
-- faq-agents/Organisms/Drawers/CustomToolBuilder/CustomToolBuilder.jsx
+- faq-agents/AgentBuilder/AgentBuilder.jsx
 - L2NavLayout.v1.tsx
 - context-menu.v1.tsx
 - workflow/Organisms/Modals/ContextFieldModal/ContextFieldModal.jsx
@@ -100,7 +100,7 @@
 - RunDetailView.tsx
 - workflow/elemental-stubs.jsx
 - AutoAvailabilityScreen.tsx
-- faq-agents/AgentBuilder/AgentBuilder.stories.jsx
+- faq-agents/LHSDrawer/LHSDrawer.jsx
 - faq-agents/Organisms/Panels/RHS/RHS.stories.jsx
 - workflow/Organisms/DataViews/AgentsTable/AgentsTable.jsx
 - workflow/Organisms/Panels/RHS/RHS.stories.jsx
@@ -118,12 +118,12 @@
 - dependencies
 - compilerOptions
 - AllReviewsScreen.tsx
-- blockDefinitions.ts
+- AutoProvidersScreen.tsx
 - PreviewPanel.jsx
 - PromptComposer.tsx
 - OverviewScreen.tsx
 - VoiceChatDrawer.tsx
-- BlogPublishModal.tsx
+- HandleResponseDrawer.jsx
 - carousel.v1.tsx
 - PhoneNumberScreen.tsx
 - faq-agents/FAQAgentsDashboard.jsx
@@ -139,7 +139,7 @@
 - EditorChromeToolbar.tsx
 - agentDirectoryData.ts
 - logRunSteps.ts
-- HealthcareFrontdeskCreateAgentLive
+- TemplatePickerModal.tsx
 - ManageIntakeScreen.tsx
 - PostDetailsDrawerContent.tsx
 - WorkflowCoachTour.tsx
@@ -161,9 +161,9 @@
 - IconRail.tsx
 - AGENTS.md — Figma-to-Prototype Playbook
 - FrontDeskSettings
-- workflow/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx
+- ComposerAttachPopover.tsx
 - faq-agents/Molecules/DataType/DataType.stories.jsx
-- workflow/FAQAgentsDashboard.jsx
+- workflow/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx
 - AppDataTable.tsx
 - SideNav.tsx
 - ProcedurePickerDetailView.tsx
@@ -171,22 +171,22 @@
 - faq-agents/Molecules/Conditions/Conditions.stories.jsx
 - chain-of-thought.v1.tsx
 - TopNav
-- BlogMetaPanel.tsx
-- ApprovalsSetupView.tsx
+- FAQPreviewPanel.tsx
+- SocialView.tsx
 - workflow/Organisms/Panels/RHS/ConversationTriggerBody.jsx
-- Button
+- faq-agents/Molecules/ExpandedRHS/ExpandedRHSFooter/ExpandedRHSFooter.jsx
 - faq-agents/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx
 - EditorialScorePanel.tsx
 - GenericSkeletonCard.tsx
 - CLAUDE.md — Figma-to-Prototype Playbook
-- ActivityFeed.tsx
+- postData.ts
 - workflow/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx
 - ScheduleDemoPanel.tsx
-- FAQRichToolbar.tsx
+- faq-agents/Molecules/Header/Header.stories.jsx
 - MetricCard
-- EmailEditor.tsx
-- LeadCapture.jsx
-- AiBuilderPanel.tsx
+- BlogEditor.tsx
+- AvailabilityScreen
+- FrontDeskDraftReviewContent.tsx
 - workflow/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx
 - coachingFeedbackRecommendations.ts
 - faq-agents/Organisms/Modals/AdvancedFiltersModal/AdvancedFiltersModal.stories.jsx
@@ -196,27 +196,27 @@
 - workflow/Organisms/Modals/AdvancedFiltersModal/AdvancedFiltersModal.stories.jsx
 - ProceduresScreen.tsx
 - workflow/Organisms/DataViews/PerformanceTable/PerformanceTable.jsx
-- faq-agents/AgentBuilder/AgentBuilder.jsx
+- FAQSectionBlock.tsx
 - message.v1.tsx
 - DatePickerModal.tsx
 - content-hub/CalendarView.tsx
 - faq-agents/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx
 - chart.v1.tsx
-- workflow/Molecules/RHS/Trigger/ScheduleBased/ScheduleBased.jsx
+- workflow/Molecules/ExpandedRHS/ExpandedRHSFooter/ExpandedRHSFooter.jsx
 - Recommendation
-- SocialView.tsx
+- RejectedPostsView.tsx
 - workflow/Molecules/MetricCard/MetricCard.stories.jsx
 - faq-agents/Templates/AgentPerformanceTemplate/AgentPerformanceTemplate.jsx
 - faq-agents/Organisms/Panels/RHS/ConversationTriggerBody.jsx
 - workflow/Organisms/Drawers/CustomToolViewer/CustomToolViewer.jsx
 - channelSetupSettings.tsx
-- RangeVariant
+- TestimonialsBlock.tsx
 - compilerOptions
 - healthcareIntegrations.ts
 - workflow/AgentBuilder/AgentBuilder.stories.jsx
 - ReminderToolDrawer.tsx
 - workflow/Organisms/Panels/RHS/ControlBranchBody.jsx
-- faq-agents/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.stories.jsx
+- SlidingSidePanel.tsx
 - AutoAppointmentTypeScreen.tsx
 - socialTableFixtures.ts
 - content-hub/ContentCard.tsx
@@ -224,10 +224,10 @@
 - InitiateVoiceCallDrawer.tsx
 - TtsFailoverSettings
 - EditorCopilot
-- BookAppointmentDrawer
+- SettingsScreen.tsx
 - ContentActivityDrawer.tsx
 - FilesModal
-- blockStore.ts
+- blockTypes.ts
 - SearchAIRecommendationsPanel.tsx
 - workflow/Organisms/Nav/PrimaryRailNav/PrimaryRailNav.jsx
 - 6. Component Rules
@@ -236,34 +236,29 @@
 - draftStore.ts
 - setup-content-hub.py
 - workflow/Templates/AgentPerformanceTemplate/AgentPerformanceTemplate.jsx
-- ContentShareModal
+- ApptTypeDrawer
 - CallRecordingPlayer.tsx
 - AgentL2Nav
 - RHSErrorBoundary
-- CreateFrontdeskAgentScreen.tsx
+- LocationAccordion
 - faq-agents/services/templateService.js
 - 6. Component Rules
-- faq-agents/Modules/ExpandedRHSModal/ExpandedRHSTest/ExpandedRHSTest.jsx
-- file-upload.v1.tsx
+- Button
+- AutoAvailabilityScreen
 - 17. Building Agents from a PRD
 - workflow/Modules/FlowCanvas/GraphControls/GraphControls.jsx
 - ConfigureAgentStep
 - BlockLibraryPanel.tsx
 - 17. Building Agents from a PRD
 - workflow/services/templateService.js
-- workflow/Molecules/Header/Header.stories.jsx
+- Button
 - HealthcareReminderWorkflow.tsx
 - MetricCard
-- workflow/services/agentService.js
 - Tooltip
 - AddInputFieldModal
-- DatetimeVariant
-- AssignConversationDrawer.jsx
 - generate-ai-sparkle-gif.mjs
-- MonthView.tsx
 - 8. Workflow: Building a New Screen
 - 8. Workflow: Building a New Screen
-- toggle-group.v1.tsx
 - workflow/Molecules/Canvas/StartNode/StartNode.jsx
 - QueryConfigDrawer.jsx
 - PageTransition.tsx
@@ -273,7 +268,6 @@
 - faq-agents/Patterns/NodeDraggingStates/NodeDraggingStates.stories.jsx
 - faq-agents/Patterns/NodeSelectionStates/NodeSelectionStates.stories.jsx
 - faq-agents/Patterns/PermissionStates/PermissionStates.stories.jsx
-- faq-agents/Molecules/AppHeader/AppHeader.jsx
 - workflow/Molecules/AIPromptBox/AIPromptBox.stories.jsx
 - workflow/Patterns/ErrorStates/ErrorStates.stories.jsx
 - workflow/Patterns/LoadingStates/LoadingStates.stories.jsx
@@ -331,10 +325,9 @@
 - workflow/firebase.js
 - UserPromptInput.d.ts
 - FieldPickerModal.d.ts
-- FAQWizard.tsx
+- button.tsx
 - 12. Prompt Templates
 - 12. Prompt Templates
-- faq-agents/RHSDrawer/LocationsDrawer.jsx
 - AddStepMenu.jsx
 - 9. Tabs + Table Pattern (Reference Implementation)
 - 9. Tabs + Table Pattern (Reference Implementation)
@@ -342,18 +335,14 @@
 - 18. Graphify Knowledge Graph (context lookup + upkeep)
 - 2. Figma MCP Setup
 - FAQPublishModal
-- workflow/Molecules/AppHeader/AppHeader.jsx
-- calendarData.ts
-- useSubtleScrollbar
+- MonthView.tsx
 - NewFrontdeskAgentSetupScreen.tsx
-- toLibraryPreviewData
-- FeatureGridBlock
+- FeatureGridBlock.tsx
 - ListBlock
 - CreateBlogPage
 - StatsRowBlock.tsx
 - WeekView.tsx
 - faq-agents/Molecules/MetricCard/MetricCard.stories.jsx
-- faq-agents/Molecules/AIChatBubble/AIChatBubble.stories.jsx
 - BlogInlineCreationFlow.tsx
 
 ## God Nodes (most connected - your core abstractions)
@@ -369,54 +358,54 @@
 10. `App()` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Chip()` --calls--> `cn()`  [EXTRACTED]
-  src/content-hub/AiCopilot.tsx → src/contenthub-ui/utils.ts
-- `ContentHome()` --calls--> `cn()`  [EXTRACTED]
-  src/content-hub/ContentHome.tsx → src/contenthub-ui/utils.ts
-- `renderStep2()` --calls--> `cn()`  [EXTRACTED]
-  src/content-hub/CreateBlogPage.tsx → src/contenthub-ui/utils.ts
-- `ProjectManualForm()` --calls--> `cn()`  [EXTRACTED]
-  src/content-hub/CreateView.tsx → src/contenthub-ui/utils.ts
-- `FAQBulkCopilotPanel()` --calls--> `cn()`  [EXTRACTED]
-  src/content-hub/CreateView.tsx → src/contenthub-ui/utils.ts
+- `RecListCardProps` --references--> `Recommendation`  [EXTRACTED]
+  src/search-ai/recommendations/RecListCard.tsx → src/search-ai/recommendations/recTypes.ts
+- `DropdownFieldProps` --references--> `SelectOption`  [EXTRACTED]
+  src/screens/AutoProvidersScreen.tsx → src/components/SelectMenu/SelectMenu.types.ts
+- `FAQPublishModalProps` --references--> `FAQItem`  [EXTRACTED]
+  src/content-hub/faq/FAQPublishModal.tsx → src/content-hub/faq/FAQReviewCard.tsx
+- `BrandKitSetup()` --calls--> `cn()`  [EXTRACTED]
+  src/content-hub/BrandKitSetup.tsx → src/contenthub-ui/utils.ts
+- `FAQLeftPanel()` --calls--> `cn()`  [EXTRACTED]
+  src/content-hub/faq/FAQLeftPanel.tsx → src/contenthub-ui/utils.ts
 
 ## Import Cycles
 - 3-file cycle: `src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx -> src/workflow/LHSDrawer/LHSDrawer.jsx -> src/components/index.ts -> src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx`
 - 4-file cycle: `src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx -> src/workflow/AgentBuilder/AgentBuilder.jsx -> src/workflow/LHSDrawer/LHSDrawer.jsx -> src/components/index.ts -> src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx`
 
-## Communities (370 total, 71 thin omitted)
+## Communities (359 total, 68 thin omitted)
 
 ### Community 0 - "cn"
 Cohesion: 0.02
-Nodes (117): BrandKit, BrandKitSetup(), BrandKitSetupProps, BrandVoiceOption, DEFAULT_KIT, DEFAULT_LOCATIONS, VOICE_OPTIONS, FAQLeftPanel() (+109 more)
+Nodes (117): AccordionContent(), AccordionItem(), AccordionTrigger(), AlertDialogAction(), AlertDialogCancel(), AlertDialogContent(), AlertDialogDescription(), AlertDialogFooter() (+109 more)
 
 ### Community 1 - "ContentFlowControls.tsx"
 Cohesion: 0.02
-Nodes (133): BLOG_AGENTS, BRAND_BLOG_AGENTS, BRAND_KITS, BrandKit, CreateBlogPageFlowData, CreateBlogPageProps, FUNNEL_OPTIONS, GENERATED_TOPIC_PAIRS (+125 more)
+Nodes (114): BLOG_AGENTS, BRAND_BLOG_AGENTS, BRAND_KITS, BrandKit, CreateBlogPageFlowData, CreateBlogPageProps, FUNNEL_OPTIONS, GENERATED_TOPIC_PAIRS (+106 more)
 
 ### Community 2 - "BlockCanvas.tsx"
-Cohesion: 0.04
-Nodes (42): BLOCK_COMPONENTS, GenericMarketingBlock(), MODE_META, text(), TEXT_BLOCK_TYPES, AuthorBarBlock(), AuthorBarContent, CodeBlock() (+34 more)
-
-### Community 3 - "FormInput"
-Cohesion: 0.07
-Nodes (29): CONDITION_OPERATORS, operatorNeedsValue(), VALUELESS_OPERATORS, FormInput(), buildFixedMenuStyle(), Conditions(), Dropdown(), AndOrSelector (+21 more)
-
-### Community 4 - "alert-dialog.v1.tsx"
 Cohesion: 0.05
-Nodes (27): AlertDialogAction(), AlertDialogCancel(), AlertDialogContent(), AlertDialogDescription(), AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay(), AlertDialogTitle() (+19 more)
+Nodes (35): BLOCK_COMPONENTS, BlockCanvas(), GenericMarketingBlock(), getBlockDisplayLabel(), getBlogBlockTopClass(), getShimmerBlockIds(), MODE_META, text() (+27 more)
+
+### Community 3 - "workflow/Molecules/Conditions/Conditions.jsx"
+Cohesion: 0.06
+Nodes (31): CONDITION_OPERATORS, operatorNeedsValue(), VALUELESS_OPERATORS, buildFixedMenuStyle(), Conditions(), Dropdown(), AndOrSelector, Default (+23 more)
+
+### Community 4 - "ServiceScreen.tsx"
+Cohesion: 0.02
+Nodes (88): ChartCard(), ChartCardProps, MoreMenu(), ChartCardButton(), ChartCardButtonProps, chartColors, ChartTooltip(), ChartTooltipItem (+80 more)
 
 ### Community 5 - "AgentDetailScreen.tsx"
 Cohesion: 0.02
-Nodes (86): AGENT_BUILD_LOADER_STEPS, AgentInstance, ANALYSIS_INSIGHTS, BUILD_ACTIVITY_MESSAGES, BUILD_STEPS, CALLER_JOB_BREAKDOWN, CARD_LAYOUT_OPTIONS, ChatHistoryTranscript (+78 more)
+Nodes (100): useSubtleScrollbar(), AGENT_BUILD_LOADER_STEPS, AgentInstance, agentParagraphs(), ANALYSIS_INSIGHTS, BUILD_ACTIVITY_MESSAGES, BUILD_STEPS, buildCreateChatTrail() (+92 more)
 
 ### Community 6 - "index.ts"
 Cohesion: 0.03
-Nodes (95): AeroFormModalProps, AgentLibraryPreviewData, AgentLibraryPreviewModalProps, AgentLibraryPreviewStep, AgentsIntroVideoModal(), AgentsIntroVideoModalProps, BAR_VARIANT, Block() (+87 more)
+Nodes (73): AgentLibraryPreviewData, AgentLibraryPreviewModalProps, AgentLibraryPreviewStep, AgentsIntroVideoModal(), AgentsIntroVideoModalProps, BAR_VARIANT, Block(), BlockProps (+65 more)
 
-### Community 7 - "workflow/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.stories.jsx"
-Cohesion: 0.03
-Nodes (56): AgentDetails, Branch, conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, ControlBranch, CustomTask, Delay (+48 more)
+### Community 7 - "workflow/Organisms/Panels/RHS/LLMTaskBody.jsx"
+Cohesion: 0.04
+Nodes (39): AgentDetails, Branch, conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, ControlBranch, CustomTask, Delay (+31 more)
 
 ### Community 8 - "VoiceCallEngineSettings.tsx"
 Cohesion: 0.07
@@ -424,7 +413,7 @@ Nodes (38): InfoTooltip(), InfoTooltipProps, LanguageFlag(), LanguageSelectMenu(
 
 ### Community 9 - "faq-agents/Organisms/Panels/RHS/RHS.jsx"
 Cohesion: 0.03
-Nodes (71): CHIP_COLOR_MAP, FormInput(), SingleSelect(), TextArea(), AgentDetails, Branch, conditionFieldOptions, conditionOperatorOptions (+63 more)
+Nodes (83): Chip(), CHIP_COLOR_MAP, FormInput(), SingleSelect(), TextArea(), AgentDetails, Branch, conditionFieldOptions (+75 more)
 
 ### Community 10 - "OverviewV2_1Screen.tsx"
 Cohesion: 0.03
@@ -435,16 +424,16 @@ Cohesion: 0.06
 Nodes (22): AUTOMOTIVE_INTEGRATION_CATALOG, AutomotiveIntegration, DEFAULT_AUTO_ACCOUNT_CONNECTED_INTEGRATION_IDS, DEFAULT_AUTO_AGENT_SELECTED_INTEGRATION_ID, DEFAULT_AUTO_WIZARD_CONNECTED_INTEGRATION_IDS, getAutomotiveIntegration(), AgentSettingsTab(), AgentSettingsTabProps (+14 more)
 
 ### Community 12 - "AddToolDrawer.jsx"
-Cohesion: 0.04
-Nodes (30): DrawerHeader(), TabHeader(), Tooltip(), BRAND_TOOL_CONFIGS, BRAND_TOOLS, EHR_TOOLS, ENTITY_OPTIONS, EXTERNAL_INTEGRATIONS (+22 more)
-
-### Community 13 - "Link"
-Cohesion: 0.06
-Nodes (21): IntegrationListCardProps, IntegrationSelectCard(), IntegrationSelectCardProps, Link(), LinkAsAnchorProps, LinkAsButtonProps, LinkBaseProps, LinkProps (+13 more)
-
-### Community 14 - "Icon"
 Cohesion: 0.03
-Nodes (85): Chip(), ChipProps, ChipVariant, VARIANTS, Icon(), ApptCard, CHANNEL_LABEL, Message (+77 more)
+Nodes (40): DrawerHeader(), TabHeader(), Tooltip(), BRAND_TOOL_CONFIGS, BRAND_TOOLS, EHR_TOOLS, ENTITY_OPTIONS, EXTERNAL_INTEGRATIONS (+32 more)
+
+### Community 13 - "IntakeScreen.tsx"
+Cohesion: 0.04
+Nodes (41): Chip(), ChipProps, ChipVariant, VARIANTS, CustomizeColumnsDrawer(), ApptCard, CHANNEL_LABEL, Message (+33 more)
+
+### Community 14 - "ReviewWaitlistScreen.tsx"
+Cohesion: 0.04
+Nodes (66): Link(), LinkAsAnchorProps, LinkAsButtonProps, LinkBaseProps, LinkProps, ProcedureListCard(), ProcedureListCardProps, AccordionSection() (+58 more)
 
 ### Community 15 - "workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.jsx"
 Cohesion: 0.13
@@ -452,7 +441,7 @@ Nodes (24): appendPlainText(), appendRichNodes(), buildViewChipContents(), CHIP_
 
 ### Community 16 - "CreateView.tsx"
 Cohesion: 0.06
-Nodes (27): buildProjectMessages(), CONTENT_OVERALL_SCORE, CONTENT_TYPES, DEFAULT_PROJECT_DRAFT, DEFAULT_SCORE_DIMS, draftUserText(), FAQ_SHIMMER_STEPS, FAQBulkCopilotPanel() (+19 more)
+Nodes (29): ContentHomeInitialMode, ContentHubL2NavPanelProps, buildProjectMessages(), CONTENT_OVERALL_SCORE, CONTENT_TYPES, CreateViewProps, DEFAULT_PROJECT_DRAFT, DEFAULT_SCORE_DIMS (+21 more)
 
 ### Community 17 - "workflow/LHSDrawer/LHSDrawer.jsx"
 Cohesion: 0.03
@@ -472,31 +461,31 @@ Nodes (51): CardRow(), ExpandedRHSModal(), CanvasPreview, ExpandedRHS, LHSPrevie
 
 ### Community 21 - "ContentEditorShell.tsx"
 Cohesion: 0.02
-Nodes (119): BlogGenerationProgress(), GEN_STEPS, GenStep, PREVIEW_BLOCKS, REGEN_STEPS, StepRow(), StepStatus, Avatar() (+111 more)
+Nodes (77): BlogMetaPanel(), BlogMetaPanelContent(), BlogMetaPanelProps, INITIAL_KEYWORDS, arrangeCardLayouts(), BLOCK_MODES, BLOG_DIM_META, BRAND_KIT_LABELS (+69 more)
 
 ### Community 22 - "PostCard.tsx"
 Cohesion: 0.14
 Nodes (8): ScheduledItem, getImageUrl(), imageSeeds, PostCard(), PostCardProps, StatusChip(), statusChipClasses, StatusType
 
 ### Community 23 - "ContentShareModal.tsx"
-Cohesion: 0.03
-Nodes (93): CodeContent, LANGUAGES, APPROVAL_WORKFLOWS, EXISTING_PAGES, ExistingPage, FAQPublishModalProps, BRAND_KITS, FAQQuickSetupData (+85 more)
+Cohesion: 0.02
+Nodes (114): BlogPublishModal(), handleUpdate(), resetAndClose(), BlogPublishModalProps, CONNECTED_SITES, ConnectedSite, ManageState(), ModalView (+106 more)
 
 ### Community 24 - "ClassicOverviewScreen.tsx"
 Cohesion: 0.04
-Nodes (61): AiAgentIcon(), SIZE_CLASS, getAgentDirectory(), OVERVIEW_APPOINTMENTS_STATS, OVERVIEW_BIRDEYE_SCORE, OVERVIEW_INBOX_ACTIVITY_STATS, OVERVIEW_INBOX_ALERT_STATS, OVERVIEW_LISTINGS_GOOGLE_REPORT (+53 more)
+Nodes (60): AiAgentIcon(), SIZE_CLASS, getAgentDirectory(), OVERVIEW_APPOINTMENTS_STATS, OVERVIEW_BIRDEYE_SCORE, OVERVIEW_INBOX_ACTIVITY_STATS, OVERVIEW_INBOX_ALERT_STATS, OVERVIEW_LISTINGS_QA (+52 more)
 
 ### Community 25 - "workflow/AgentBuilder/AgentBuilder.jsx"
-Cohesion: 0.07
-Nodes (41): buildTestRunSteps(), useTestRun(), AgentBuilder(), buildFlow(), cloneSubtreeForPaste(), collectAllIds(), collectDetailsSnapshot(), computeLoopFlowWidth() (+33 more)
-
-### Community 26 - "FloatingSheetFrame.tsx"
-Cohesion: 0.09
-Nodes (18): compareTexts(), Version, VersionHistoryView(), VersionHistoryViewProps, versions, Sheet(), ActivityDrawer(), ActivityDrawerProps (+10 more)
-
-### Community 27 - "contenthub-ui/utils.ts"
 Cohesion: 0.05
-Nodes (37): AGENT_FILTERS_DEFAULT, AgentRowActionsProps, AgentStatus, col, DEFAULT_TEMPLATES, FAQAgentsDashboardViewProps, INITIAL_AGENTS, LIBRARY_FILTERS_DEFAULT (+29 more)
+Nodes (61): buildTestRunSteps(), useTestRun(), AgentBuilder(), buildFlow(), cloneSubtreeForPaste(), collectAllIds(), collectDetailsSnapshot(), computeLoopFlowWidth() (+53 more)
+
+### Community 26 - "sheet.v1.tsx"
+Cohesion: 0.04
+Nodes (35): BrandKit, BrandKitSetup(), BrandKitSetupProps, BrandVoiceOption, DEFAULT_KIT, DEFAULT_LOCATIONS, VOICE_OPTIONS, compareTexts() (+27 more)
+
+### Community 27 - "FAQAgentsDashboardView.tsx"
+Cohesion: 0.08
+Nodes (24): AGENT_FILTERS_DEFAULT, AgentRow, AgentRowActionsProps, AgentStatus, col, DEFAULT_TEMPLATES, FAQAgentsDashboardView(), FAQAgentsDashboardViewProps (+16 more)
 
 ### Community 28 - "InboxScreen.tsx"
 Cohesion: 0.06
@@ -504,31 +493,31 @@ Nodes (30): FRONT_DESK_CALL_SUMMARY, FRONT_DESK_INBOX_CONVERSATION_ID, FRONT_DES
 
 ### Community 29 - "faqStore.ts"
 Cohesion: 0.09
-Nodes (48): CreateView(), ActionId, AI_QUICK_ACTIONS, EditFAQPanel(), EditFAQPanelProps, FAQCanvas(), FAQCanvasProps, simulateAI() (+40 more)
+Nodes (49): CreateView(), ActionId, AI_QUICK_ACTIONS, EditFAQPanel(), EditFAQPanelProps, FAQCanvas(), FAQCanvasProps, simulateAI() (+41 more)
 
 ### Community 30 - "faq-agents/Organisms/Panels/RHS/LLMTaskBody.jsx"
 Cohesion: 0.06
 Nodes (47): cap(), ExpandedRHSTestInput(), Default, MixedTypes, MultipleFields, WithEmptyValues, cap(), ExpandedRHSTestOutput() (+39 more)
 
-### Community 31 - "HelpCenterPanel.tsx"
-Cohesion: 0.08
-Nodes (20): HelpCenterPanel(), HELP_ARTICLES, HELP_DICTIONARY, HELP_VIDEOS, HelpArticleItem, HelpCenterPanelProps, HelpCenterView, HelpDictionaryItem (+12 more)
+### Community 31 - "Icon"
+Cohesion: 0.03
+Nodes (49): AeroFormModal(), AeroFormModalProps, ChatBubble(), ChatSystemLabel(), ChatBubbleProps, ChatSender, DEFAULT_FILES, FILE_TYPE_STYLE (+41 more)
 
 ### Community 32 - "workflow/Molecules/Inputs/VariableChip/VariableChip.jsx"
-Cohesion: 0.07
-Nodes (28): ExpandedRHSTest(), fieldsKey(), normalizeFields(), Empty, Filled, WithInputOnly, WithOutputOnly, ExpandedRHSTestFeedback() (+20 more)
+Cohesion: 0.09
+Nodes (21): cap(), ExpandedRHSTestInput(), Default, MixedTypes, MultipleFields, WithEmptyValues, cap(), ExpandedRHSTestOutput() (+13 more)
 
 ### Community 33 - "ReviewSummaryStep.tsx"
 Cohesion: 0.10
 Nodes (18): SttSettingsValue, TtsFailoverSettingsValue, TtsModelSettingsValue, getAgentLanguage(), WIZARD_LOCATIONS, WizardLocation, DEFAULT_TEXT_CHANNEL_SETTINGS, DEFAULT_WEBCHAT_CHANNEL_SETTINGS (+10 more)
 
 ### Community 34 - "DayCalendar.tsx"
-Cohesion: 0.05
-Nodes (28): LUCIDE_ICON_MAP, DataTableProps, RowAction, RowMenuItem, SortDir, CalendarEvent, COLOR_MAP, COLUMN_FIELD_MAP (+20 more)
+Cohesion: 0.07
+Nodes (23): CalendarEvent, COLOR_MAP, COLUMN_FIELD_MAP, DayCalendar(), DayCalendarProps, EventTooltip(), MOCK_EVENTS, parseHour() (+15 more)
 
-### Community 35 - "ContentScorePanel"
-Cohesion: 0.31
-Nodes (6): ContentScorePanel(), commitMultiFix(), commitSingleFix(), handleFixDimension(), handleFixItem(), toSentenceCase()
+### Community 35 - "workflow/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.stories.jsx"
+Cohesion: 0.08
+Nodes (23): AgentDetails, Branch, conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, ControlBranch, CustomTask, Delay (+15 more)
 
 ### Community 36 - "CreatePostView.tsx"
 Cohesion: 0.04
@@ -540,7 +529,7 @@ Nodes (37): DEFAULT_REMINDERS, DURATION_OPTIONS, EMAIL_TEMPLATE_OPTIONS, reminde
 
 ### Community 38 - "LogDetailsPanel.tsx"
 Cohesion: 0.06
-Nodes (28): agentMetaParts(), CALL_END_RESULT_VARIANT, CallDetailsTab(), DEFAULT_TOOL_INPUTS, DEFAULT_TOOL_OUTPUT, DEFAULT_TRANSCRIPT, DEFAULT_TRANSCRIPT_LANGUAGE, formatDurationLabel() (+20 more)
+Nodes (30): agentMetaParts(), CALL_END_RESULT_VARIANT, CallDetailsTab(), DEFAULT_TOOL_INPUTS, DEFAULT_TOOL_OUTPUT, DEFAULT_TRANSCRIPT, DEFAULT_TRANSCRIPT_LANGUAGE, formatDurationLabel() (+22 more)
 
 ### Community 39 - "procedureData.ts"
 Cohesion: 0.09
@@ -554,13 +543,13 @@ Nodes (27): DateChange(), formatDate(), formatWeekRange(), DateChangeProps, Page
 Cohesion: 0.06
 Nodes (25): SEARCH_AI_L2_DEFAULT_ACTIVE, SEARCH_AI_L2_KEY_RECOMMENDATIONS, SEARCH_AI_L2_KEY_TRACK_PROGRESS, fromL2Key(), SearchAIL2NavPanel(), SearchAIL2NavPanelProps, SECTIONS, toL2Key() (+17 more)
 
-### Community 42 - "l1Icons.tsx"
-Cohesion: 0.04
-Nodes (28): FigmaIconCampaigns(), FigmaIconContacts(), FigmaIconContentHub(), FigmaIconFrontDesk(), FigmaIconInbox(), FigmaIconInsights(), FigmaIconListings(), FigmaIconOverview() (+20 more)
+### Community 42 - "OverviewV2Screen.tsx"
+Cohesion: 0.09
+Nodes (16): FigmaIconContentHub(), FigmaIconFrontDesk(), FigmaIconRecommendations(), FigmaIconSurveys(), FigmaIconTicketing(), OVERVIEW_LISTINGS_GOOGLE_REPORT, AiWorkforceSummaryCard(), CX_SECTION_IDS (+8 more)
 
 ### Community 43 - "workflow/Organisms/Panels/RHS/RHS.jsx"
-Cohesion: 0.09
-Nodes (24): MultiSelect(), buildDraft(), HandleResponseDrawer(), HandleResponseForm(), insertAtCursor(), isHandleResponseConfigComplete(), normalizeTemplateIds(), POST_AFTER_OPTIONS (+16 more)
+Cohesion: 0.07
+Nodes (24): FormInput(), TextArea(), RHSPanelFooter(), Default, PromptMedium, PromptStrong, PromptWeak, SUGGESTIONS (+16 more)
 
 ### Community 44 - "RecommendationDetailScreen.tsx"
 Cohesion: 0.05
@@ -578,17 +567,21 @@ Nodes (35): FAQGenerationProgressProps, FAQSection, buildDocItemsFromQuestions()
 Cohesion: 0.08
 Nodes (17): AddStepButton(), AddButtonEdge(), BranchFanEdge(), EDGE_TYPES, FlowCanvasInner(), LEGACY_FALLBACK_CHIP_LABELS, LoopNodeWrapper(), NODE_TYPES (+9 more)
 
+### Community 48 - "ProjectInlineCreationFlow.tsx"
+Cohesion: 0.06
+Nodes (22): ALL_CONTENT_TYPES, ALL_LOCATION_IDS, APPROVAL_OPTIONS, BRAND_KITS, ContentMixItem, DATA_SOURCES, DEFAULT_CONTENT_MIX, FlowNavControls (+14 more)
+
 ### Community 49 - "agentWorkflows.ts"
 Cohesion: 0.05
-Nodes (41): AgentBuilder, AgentLibraryPreviewModal(), EMPTY_WORKFLOW, AGENT_WORKFLOWS, CONV_TRIGGER, FRONTDESK_HC_NODE_DETAILS, FRONTDESK_NODE_DETAILS, FRONTDESK_NODES (+33 more)
+Nodes (40): AGENT_WORKFLOWS, AgentWorkflow, CONV_TRIGGER, FRONTDESK_HC_NODE_DETAILS, FRONTDESK_NODE_DETAILS, FRONTDESK_NODES, HEALTHCARE_REMINDER_DEFAULT_NODE_DETAILS, HEALTHCARE_REMINDER_DEFAULT_NODES (+32 more)
 
 ### Community 50 - "workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx"
 Cohesion: 0.11
 Nodes (23): EmptyHintField(), EmptyHintFieldProps, serializeRichFrom(), getCaretAnchor(), SLASH_TOOLS, ToolSlashMenu(), ToolSlashMenuProps, ToolSlashMenuTool (+15 more)
 
 ### Community 51 - "AgentLogsTab.tsx"
-Cohesion: 0.06
-Nodes (43): HEALTHCARE_LOGS_METRICS, HEALTHCARE_LOGS_ROWS, HealthcareLogRow, LogStatus, PREVISIT_LOGS_METRICS, PREVISIT_LOGS_ROWS, PrevisitLogRow, PrevisitLogStatus (+35 more)
+Cohesion: 0.07
+Nodes (41): getUserRatingForLogStatus(), HEALTHCARE_LOGS_METRICS, HEALTHCARE_LOGS_ROWS, LogStatus, PREVISIT_LOGS_METRICS, PREVISIT_LOGS_ROWS, PrevisitLogRow, PrevisitLogStatus (+33 more)
 
 ### Community 52 - "RecDetailView.tsx"
 Cohesion: 0.05
@@ -596,15 +589,15 @@ Nodes (28): AeoLeftPanelProps, CitationShareSection(), COMP_AEO_SCORES, COMP_SUB
 
 ### Community 53 - "InlineCreationFlow.tsx"
 Cohesion: 0.03
-Nodes (73): FlowNavControls, FlowNavState, AdditionalContextSection(), ALL_PROJECT_LOCATION_IDS, BLOG_GOALS, BLOG_LENGTHS, buildIdeas(), buildProjectContentBrief() (+65 more)
+Nodes (67): FlowNavControls, FlowNavState, AdditionalContextSection(), ALL_PROJECT_LOCATION_IDS, BLOG_GOALS, BLOG_LENGTHS, buildIdeas(), buildProjectContentBrief() (+59 more)
 
 ### Community 54 - "workflow/services/procedureService.js"
 Cohesion: 0.12
 Nodes (27): useOptionalAgentSystemPromptStore(), makeNodeDetails(), mapProcedureItems(), ProcedureTaskBody(), AUTO_APPT_CHIPS, AUTO_BASE_CHIPS, AUTO_VEHICLE_CHIPS, CUSTOM_PROCEDURE_ID (+19 more)
 
-### Community 55 - "button.tsx"
+### Community 55 - "SocialEditor.tsx"
 Cohesion: 0.07
-Nodes (40): ScorePanel(), EmailDraft, EmailReviewCard(), EmailReviewCardProps, FAQCardItem, FAQGroupCard(), FAQGroupCardProps, FAQReviewCard() (+32 more)
+Nodes (37): AIIcon(), EmailEditor(), EmailEditorProps, MOCK_DIMS, Mode, ScorePanel(), EmailDraft, EmailReviewCard() (+29 more)
 
 ### Community 56 - "workflow/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.jsx"
 Cohesion: 0.06
@@ -614,65 +607,65 @@ Nodes (17): AiSparkleGlyphIcon(), CanvasNodeBody(), reposition(), showTooltip(),
 Cohesion: 0.10
 Nodes (10): Default, LibraryOpen, WorkspaceEmptyState(), Default, DEFAULT_TEMPLATES, emptyDraft, Default, SAMPLE_TEMPLATES (+2 more)
 
-### Community 58 - "TextArea"
-Cohesion: 0.07
-Nodes (21): Button(), Chip(), TextArea(), AddFieldPanel(), CustomToolBuilder(), emptyField(), FIELD_TYPES, FieldCard() (+13 more)
+### Community 58 - "workflow/Organisms/Drawers/CustomToolBuilder/CustomToolBuilder.jsx"
+Cohesion: 0.10
+Nodes (13): AddFieldPanel(), CustomToolBuilder(), emptyField(), FIELD_TYPES, FieldCard(), LivePreview(), makeId(), OPTION_FIELD_TYPES (+5 more)
 
 ### Community 59 - "Column"
 Cohesion: 0.04
-Nodes (46): Column, FormDrawer(), FormDrawerProps, FormField, FormFieldType, TemplateOption, FIELDS, SetupAppointmentDrawer() (+38 more)
+Nodes (51): LUCIDE_ICON_MAP, Column, DataTableProps, RowAction, RowMenuItem, SortDir, FormDrawer(), FormDrawerProps (+43 more)
 
 ### Community 60 - "TemplateGallery.tsx"
 Cohesion: 0.09
 Nodes (18): ADS_DATA, BLOG_THUMB_IMG, EMAIL_DATA, idHash(), mockBrand(), mockDate(), mockScore(), PreviewModal() (+10 more)
 
-### Community 61 - "faq-agents/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx"
-Cohesion: 0.07
-Nodes (22): CANVAS_EDGES, CANVAS_NODES, CanvasPreview, DASHED_EDGE_STYLE, EDGE_STYLE, ExpandedRHSPreview, NODE_TYPES, RHSPreview (+14 more)
+### Community 61 - "AppointmentTypeScreen.tsx"
+Cohesion: 0.11
+Nodes (17): SelectOption, AppointmentTypeScreen(), APPT_TYPES, ApptTypeRow, AT_DURATION_OPTIONS, AT_LOCATION_OPTIONS, AT_MAPPING_TYPE_OPTIONS, AT_PMS_APPT_OPTIONS (+9 more)
 
 ### Community 62 - "EscalationNotifier.jsx"
 Cohesion: 0.06
 Nodes (20): ChatPreview(), buildTabState(), CHANNEL_LABELS, CHAT_TAB, COLORS, EMAIL_TAB, EMPTY_TAB, EscalationNotifier() (+12 more)
 
-### Community 63 - "ContentHubL2NavPanel.tsx"
-Cohesion: 0.08
-Nodes (18): ContentHome(), ContentHomeInitialMode, ContentHomeProps, CREATE_OPTIONS, SUGGESTIONS, ContentHubL2NavPanel(), ContentHubL2NavPanelProps, ContentHubSubView (+10 more)
+### Community 63 - "ContentHome.tsx"
+Cohesion: 0.18
+Nodes (5): ContentHome(), ContentHomeProps, CREATE_OPTIONS, SUGGESTIONS, ChannelChip()
 
 ### Community 64 - "AvailabilityScreen.tsx"
 Cohesion: 0.07
 Nodes (23): AddTimeOffDrawer(), AddTimeOffDrawerProps, AddWindowDrawer(), AddWindowDrawerProps, APPT_TYPE_OPTIONS, ConfirmDialogProps, DAY_LABELS, DayKey (+15 more)
 
 ### Community 65 - "App.tsx"
-Cohesion: 0.04
-Nodes (53): AGENT_NAMES, AGENT_NAV_ID_BY_NAME, App(), handleEditAgent(), openAgentByNavId(), openAgentFromOverview(), AUTOMOTIVE_NAV_SECTIONS, currentHref() (+45 more)
+Cohesion: 0.03
+Nodes (64): AGENT_NAMES, AGENT_NAV_ID_BY_NAME, App(), handleEditAgent(), openAgentByNavId(), openAgentFromOverview(), AUTOMOTIVE_NAV_SECTIONS, currentHref() (+56 more)
 
 ### Community 66 - "TestRunPanel.tsx"
-Cohesion: 0.12
-Nodes (15): FieldList(), StepTypeIcon(), TYPE_META, TestRunPanel(), TestRunPanelProps, TestRunStepStatus, FLOW_TYPE_TO_STEP_TYPE, PLACEHOLDER_INPUTS (+7 more)
+Cohesion: 0.11
+Nodes (16): FieldList(), StepTypeIcon(), TYPE_META, RunLogStepType, TestRunPanel(), TestRunPanelProps, TestRunStepStatus, FLOW_TYPE_TO_STEP_TYPE (+8 more)
 
 ### Community 67 - "AgentInstanceScreen.tsx"
 Cohesion: 0.05
-Nodes (45): AGENT_LIST_TABS, AppRoute, DeepRoute, DEFAULT_INSTANCE_SLUG, INSTANCE_TABS, instanceSlugFromName(), logSlugFromTimestamp(), slugify() (+37 more)
+Nodes (42): AGENT_LIST_TABS, AppRoute, DeepRoute, DEFAULT_INSTANCE_SLUG, INSTANCE_TABS, instanceSlugFromName(), logSlugFromTimestamp(), slugify() (+34 more)
 
 ### Community 68 - "faq-agents/Modules/ModuleView.jsx"
 Cohesion: 0.13
 Nodes (5): getAllTemplates(), getModuleTemplates(), MODULE_DEFINITIONS, MODULE_ORDER, ModuleView()
 
-### Community 69 - "faq-agents/LHSDrawer/LHSDrawer.jsx"
+### Community 69 - "faq-agents/Modules/ExpandedRHSModal/ExpandedRHSModal/ExpandedRHSModal.jsx"
 Cohesion: 0.03
-Nodes (74): AI_OPTIONS, CardRow(), CONTROL_CARDS, getProcedureCards(), INITIAL_SUB_ITEMS, LHSDrawer(), CreateManually, CreateWithAI (+66 more)
+Nodes (70): CardRow(), ExpandedRHSModal(), CanvasPreview, ExpandedRHS, LHSPreview, RHSPreview, CanvasPreview, ExpandedRHS (+62 more)
 
-### Community 70 - "ColumnSettingsSheet.tsx"
-Cohesion: 0.10
-Nodes (17): reorderColumnIds(), ColumnSettingsSheet(), ColumnSettingsSheetColumn, ColumnSettingsSheetProps, insertSlotAnnouncement(), FormControl(), FormDescription(), FormFieldContext (+9 more)
+### Community 70 - "contenthub-ui/utils.ts"
+Cohesion: 0.04
+Nodes (39): execCmd(), FAQRichToolbar(), FAQRichToolbarProps, SelectPillProps, ToolBtn(), ToolBtnProps, reorderColumnIds(), ColumnSettingsSheet() (+31 more)
 
 ### Community 71 - "workflow/Modules/ModuleView.jsx"
 Cohesion: 0.08
 Nodes (16): applyAgent(), getAllTemplates(), getModuleTemplates(), MODULE_DEFINITIONS, MODULE_ORDER, agentChildren(), expandedSections(), firstAgentItemId() (+8 more)
 
 ### Community 72 - "faq-agents/FlowCanvas/FlowCanvas.jsx"
-Cohesion: 0.06
-Nodes (18): EDGE_TYPES, FlowCanvas(), NODE_TYPES, Default, Empty, Filled, FILLED_EDGES, FILLED_NODES (+10 more)
+Cohesion: 0.04
+Nodes (26): EDGE_TYPES, FlowCanvas(), NODE_TYPES, Default, Empty, Filled, FILLED_EDGES, FILLED_NODES (+18 more)
 
 ### Community 73 - "HealthcareReminderCanvas.tsx"
 Cohesion: 0.06
@@ -680,15 +673,15 @@ Nodes (8): card, CardNodeProps, cardSelected, HealthcareReminderCanvasProps, Nod
 
 ### Community 74 - "BlogSectionCanvas.tsx"
 Cohesion: 0.06
-Nodes (35): BlogGenerationProgressProps, BlogSection, BLOCK_PALETTE, BlockRow(), BlockRowProps, BlockType, BLOG_PREBUILT_TEMPLATES, BlogBlock (+27 more)
+Nodes (35): BLOCK_PALETTE, BlockRow(), BlockRowProps, BlockType, BLOG_PREBUILT_TEMPLATES, BlogBlock, BlogManualContentProps, BlogManualTab (+27 more)
 
-### Community 75 - "faq-agents/Organisms/Drawers/CustomToolBuilder/CustomToolBuilder.jsx"
-Cohesion: 0.08
-Nodes (12): AddFieldPanel(), CustomToolBuilder(), emptyField(), FIELD_TYPES, FieldCard(), LivePreview(), makeId(), OPTION_FIELD_TYPES (+4 more)
+### Community 75 - "faq-agents/AgentBuilder/AgentBuilder.jsx"
+Cohesion: 0.05
+Nodes (37): AgentBuilder(), buildFlow(), makeNodeConfig(), makeNodeDetails(), nextId(), RHSErrorBoundary, AddFieldPanel(), CustomToolBuilder() (+29 more)
 
 ### Community 76 - "L2NavLayout.v1.tsx"
-Cohesion: 0.08
-Nodes (26): CHILD_ACTIVE, CHILD_FLAT_ACCENT_ACTIVE, CHILD_INACTIVE, HOVER, L2_CONTENT_MUTED_BAND, L2_FLAT_NAV_KEY_PREFIX, L2_HEADER_PLUS_GLYPH_GREEN, L2_HEADER_PLUS_WRAPPER_GREEN (+18 more)
+Cohesion: 0.03
+Nodes (66): ContentHubL2NavPanel(), ContentHubSubView, CREATE_ITEMS, LABEL_TO_VIEW, Avatar(), Comment, CommentCard(), CommentPanel() (+58 more)
 
 ### Community 77 - "context-menu.v1.tsx"
 Cohesion: 0.08
@@ -712,19 +705,19 @@ Nodes (15): BOOK_APPOINTMENT_STEPS, buildProcedureDetailDraft(), CATALOG_DETAIL_
 
 ### Community 82 - "RunDetailView.tsx"
 Cohesion: 0.13
-Nodes (24): getUserRatingForLogStatus(), AgentBuilder, AgentWorkflowRunCanvas(), buildReviewGenerationRunSteps(), buildReviewResponseRunSteps(), clampLogViewZoom(), findStepOutputValue(), flattenWorkflowNodes() (+16 more)
+Nodes (23): AgentBuilder, AgentWorkflowRunCanvas(), buildReviewGenerationRunSteps(), buildReviewResponseRunSteps(), clampLogViewZoom(), findStepOutputValue(), flattenWorkflowNodes(), formatDurationLabel() (+15 more)
 
 ### Community 83 - "workflow/elemental-stubs.jsx"
-Cohesion: 0.06
-Nodes (33): blue100, blue20, blue50, CHIP_COLOR_MAP, gray2000, gray30, gray300, gray60 (+25 more)
+Cohesion: 0.07
+Nodes (31): blue100, blue20, blue50, CHIP_COLOR_MAP, gray2000, gray30, gray300, gray60 (+23 more)
 
 ### Community 84 - "AutoAvailabilityScreen.tsx"
-Cohesion: 0.05
-Nodes (26): AddTimeOffDrawer(), AddWindowDrawer(), AutoAvailabilityScreen(), handleCopyApply(), showToast(), BAY_OPTIONS, DAY_LABELS, DayKey (+18 more)
+Cohesion: 0.08
+Nodes (18): AddTimeOffDrawer(), AddWindowDrawer(), BAY_OPTIONS, DAY_LABELS, DayKey, DaySchedule, DEFAULT_CONFIG, DEPT_OPTIONS (+10 more)
 
-### Community 85 - "faq-agents/AgentBuilder/AgentBuilder.stories.jsx"
-Cohesion: 0.15
-Nodes (12): Default, Filled, FILLED_EDGES, FILLED_NODE_DATA, FILLED_NODES, FilledPreview(), getFilledVariant(), nextStoryId() (+4 more)
+### Community 85 - "faq-agents/LHSDrawer/LHSDrawer.jsx"
+Cohesion: 0.05
+Nodes (37): Default, Filled, FILLED_EDGES, FILLED_NODE_DATA, FILLED_NODES, FilledPreview(), getFilledVariant(), nextStoryId() (+29 more)
 
 ### Community 86 - "faq-agents/Organisms/Panels/RHS/RHS.stories.jsx"
 Cohesion: 0.06
@@ -739,8 +732,8 @@ Cohesion: 0.06
 Nodes (27): conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, DAY_OPTIONS, FREQUENCY_OPTIONS, RHSBranchDetails, rhsBranchDetailsProps, RHSControlBranch (+19 more)
 
 ### Community 89 - "EmailWizard.tsx"
-Cohesion: 0.10
-Nodes (18): DEFAULT_LOCATIONS, DEFAULT_TOKENS, EmailWizard(), EmailWizardProps, EmailWizardState, STEPS, EMAIL_TEMPLATES, EmailWizardStep1() (+10 more)
+Cohesion: 0.08
+Nodes (23): DEFAULT_LOCATIONS, DEFAULT_TOKENS, EmailWizard(), EmailWizardProps, EmailWizardState, STEPS, EMAIL_TEMPLATES, EmailWizardStep1() (+15 more)
 
 ### Community 90 - "UnifiedReviewCanvas.tsx"
 Cohesion: 0.11
@@ -759,12 +752,12 @@ Cohesion: 0.16
 Nodes (10): AgentsTable(), focusInput(), startCellEdit(), startHeaderEdit(), DEFAULT_COLUMNS, NON_EDITABLE_CELLS, STATUS_DOT, STATUS_VARIANT (+2 more)
 
 ### Community 94 - "createAgentChatStore.ts"
-Cohesion: 0.13
-Nodes (27): normalizeKey(), useAiBuilderTrail(), appendCreateAiDraftTurn(), builtinDraftTrails, clearCreateAiDraftSession(), CreateAiDraftSession, CreateChatTurn, CreateChatVariant (+19 more)
+Cohesion: 0.08
+Nodes (31): AiBuilderPanel(), DEFAULT_SUGGESTIONS, suggestionsForAgent(), AiBuilderPanelProps, normalizeKey(), useAiBuilderTrail(), appendCreateAiDraftTurn(), builtinDraftTrails (+23 more)
 
 ### Community 95 - "WorkflowEditorScreen.tsx"
-Cohesion: 0.07
-Nodes (42): getAgentIssues(), instanceHasUnpublishedDraft(), INSTANCES_WITH_UNPUBLISHED_DRAFT, AgentWorkflow, AUTOMOTIVE_AGENT_WORKFLOWS, DENTAL_AGENT_WORKFLOWS, HEALTHCARE_AGENT_WORKFLOWS, HEALTHCARE_REMINDER_NORTH_WORKFLOW (+34 more)
+Cohesion: 0.06
+Nodes (46): AgentBuilder, AgentLibraryPreviewModal(), EMPTY_WORKFLOW, AGENT_INSTANCE_ISSUE_COUNTS, AGENT_INSTANCE_ISSUES, AgentIssue, getAgentIssues(), instanceHasUnpublishedDraft() (+38 more)
 
 ### Community 96 - "workflow/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.jsx"
 Cohesion: 0.10
@@ -779,8 +772,8 @@ Cohesion: 0.08
 Nodes (23): ContentFlowChip(), ContentFlowChoiceCard(), PLATFORM_LABELS, SocialPhonePreviewPanel(), SocialPhonePreviewPanelProps, TONE_EMOJIS, DEFAULT_LOCATIONS, SocialWizard() (+15 more)
 
 ### Community 99 - "ListView.tsx"
-Cohesion: 0.18
-Nodes (11): mockProjects, CONTENT_TYPE_ICON, CONTENT_TYPE_LABEL, fmtDateRange(), fmtItemDate(), ItemRow(), ListView(), ListViewProps (+3 more)
+Cohesion: 0.20
+Nodes (10): CONTENT_TYPE_ICON, CONTENT_TYPE_LABEL, fmtDateRange(), fmtItemDate(), ItemRow(), ListView(), ListViewProps, MONTHS_LONG (+2 more)
 
 ### Community 100 - "dependencies"
 Cohesion: 0.07
@@ -791,12 +784,12 @@ Cohesion: 0.07
 Nodes (28): DOM, DOM.Iterable, ES2020, ./icons/*, src, compilerOptions, allowImportingTsExtensions, allowJs (+20 more)
 
 ### Community 102 - "AllReviewsScreen.tsx"
-Cohesion: 0.16
-Nodes (13): StarRating(), ALL_REVIEWS, Review, ReviewReply, AllReviewsScreen(), FILTER_FIELDS, parseReviewDate(), REVIEW_SORT_OPTIONS (+5 more)
+Cohesion: 0.17
+Nodes (12): ALL_REVIEWS, Review, ReviewReply, AllReviewsScreen(), FILTER_FIELDS, parseReviewDate(), REVIEW_SORT_OPTIONS, ReviewsMoreMenu() (+4 more)
 
-### Community 103 - "blockDefinitions.ts"
-Cohesion: 0.09
-Nodes (23): BlockCanvasProps, CanvasBlockInfo, advancedGroup, alignOptions, basicLayoutGroup, BLOCK_DEFINITIONS, BlockDefinition, buttonVariantOptions (+15 more)
+### Community 103 - "AutoProvidersScreen.tsx"
+Cohesion: 0.12
+Nodes (12): AdvisorRow, ADVISORS, BAY_OPTIONS, DMS_ADVISOR_OPTIONS, DMS_SYSTEM_OPTIONS, DropdownField(), DropdownFieldProps, EditDrawer() (+4 more)
 
 ### Community 104 - "PreviewPanel.jsx"
 Cohesion: 0.13
@@ -807,16 +800,16 @@ Cohesion: 0.11
 Nodes (18): SendIcon(), AiAssistPanel(), AiAssistPanelProps, AttachMenuPopover(), OPTIONS, AttachMenuOption, AttachMenuPopoverProps, ProcedureSidePanel() (+10 more)
 
 ### Community 106 - "OverviewScreen.tsx"
-Cohesion: 0.11
-Nodes (15): ClassicOverviewScreen(), AGENT_PRIMARY_METRIC_TOOLTIP, AgentCard(), COWORKER_ACCENT, COWORKER_LOGO, COWORKER_NAME, COWORKER_TAB_ORDER, CoworkerTabId (+7 more)
+Cohesion: 0.09
+Nodes (18): MetricTiles(), Metric, MetricTilesProps, ClassicOverviewScreen(), AGENT_PRIMARY_METRIC_TOOLTIP, AgentCard(), COWORKER_ACCENT, COWORKER_LOGO (+10 more)
 
 ### Community 107 - "VoiceChatDrawer.tsx"
 Cohesion: 0.14
 Nodes (10): AiCoachSparkleIcon(), SIZE_CLASS, VoiceChatDrawerProps, VoiceChatMessage, VoiceChatDrawer(), fmtMmSs(), VoicemailMessageProps, VoicemailMessage() (+2 more)
 
-### Community 108 - "BlogPublishModal.tsx"
-Cohesion: 0.12
-Nodes (12): BlogPublishModal(), handleUpdate(), resetAndClose(), BlogPublishModalProps, CONNECTED_SITES, ConnectedSite, ManageState(), ModalView (+4 more)
+### Community 108 - "HandleResponseDrawer.jsx"
+Cohesion: 0.23
+Nodes (13): MultiSelect(), buildDraft(), HandleResponseDrawer(), HandleResponseForm(), insertAtCursor(), isHandleResponseConfigComplete(), normalizeTemplateIds(), POST_AFTER_OPTIONS (+5 more)
 
 ### Community 109 - "carousel.v1.tsx"
 Cohesion: 0.17
@@ -831,8 +824,8 @@ Cohesion: 0.16
 Nodes (6): DEFAULT_TEMPLATES, INITIAL_AGENTS, METRICS, TABS, EmptyStates(), Placeholder
 
 ### Community 112 - "AgentDetailScreen"
-Cohesion: 0.09
-Nodes (35): EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS, explorationHidesCanvasStartNode(), FRONTDESK_EXPLORATION_NAV_ID, FRONTDESK_NAV_ID, FRONTDESK_SEP1_NAV_ID, isAgentCoachCueNav(), isAgentExplorationChrome(), isExplorationHideCanvasStartNode() (+27 more)
+Cohesion: 0.08
+Nodes (37): EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS, explorationHidesCanvasStartNode(), FRONTDESK_EXPLORATION_NAV_ID, FRONTDESK_NAV_ID, FRONTDESK_SEP1_NAV_ID, isAgentCoachCueNav(), isAgentExplorationChrome(), isExplorationHideCanvasStartNode() (+29 more)
 
 ### Community 113 - "RecommendationsTab.tsx"
 Cohesion: 0.21
@@ -847,11 +840,11 @@ Cohesion: 0.12
 Nodes (18): LOCATION_NAMES, seedBusiness, seedMetrics, seedRecommendations, StepInput, AeoScore, AssignChoice, ChecklistStep (+10 more)
 
 ### Community 116 - "workflow/Molecules/Inputs/OutputFields/OutputFields.jsx"
-Cohesion: 0.10
-Nodes (14): AeroFormModal(), Default, countVisibleForTwoLines(), useTwoLineChipCollapse(), cap(), MOCK_GENERATED_FIELDS, normalizeFields(), OutputFields() (+6 more)
+Cohesion: 0.26
+Nodes (8): countVisibleForTwoLines(), useTwoLineChipCollapse(), cap(), MOCK_GENERATED_FIELDS, normalizeFields(), OutputFields(), Empty, WithFields
 
 ### Community 117 - "workflow/RHSDrawer/LocationsDrawer.jsx"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (20): AgentDetailsBody(), DEFAULT_LOCATIONS, ALL_LOCATIONS, BASE_SELECT_BY_OPTIONS, CONTENT_MANAGERS, CUSTOM_FIELD_OPTIONS, CUSTOM_FIELD_VALUES, DEFAULT_SELECTED (+12 more)
 
 ### Community 118 - "devDependencies"
@@ -878,25 +871,25 @@ Nodes (37): AgentDirectoryEntry, AgentPersonaId, COMMON_AGENTS, CX_AGENTS, FRONT
 Cohesion: 0.20
 Nodes (14): CALL_LOG_STEPS, REMINDER_CALL_LOG_STEPS, LogStepId, buildFrontDeskPayloads(), buildLogRunSteps(), buildReminderPayloads(), collectExecutedWorkflowNodes(), filterByImplementedSteps() (+6 more)
 
-### Community 124 - "HealthcareFrontdeskCreateAgentLive"
-Cohesion: 0.18
-Nodes (12): agentParagraphs(), buildCreateChatTrail(), buildSavedCreateChat(), cleanTrailParagraph(), CreateAgentEmptyState(), CreateAgentThinkingPanel(), createLibraryGridClasses(), GhostwriterStreamFailTurn() (+4 more)
+### Community 124 - "TemplatePickerModal.tsx"
+Cohesion: 0.16
+Nodes (11): ContentType, TemplateItem, TEMPLATES, FILTER_TABS, FilterTab, TemplatePickerModal(), TemplatePickerModalProps, TYPE_BADGE_VARIANT (+3 more)
 
 ### Community 125 - "ManageIntakeScreen.tsx"
-Cohesion: 0.03
-Nodes (50): BackArrowIcon(), CustomizeColumnsDrawer(), DraftItem, ColumnOption, CustomizeColumnsDrawerProps, COLLAPSED_SECTIONS, IntakeFormPreviewDrawer(), QUICK_ACTION_ICONS (+42 more)
+Cohesion: 0.05
+Nodes (34): BackArrowIcon(), DraftItem, ColumnOption, CustomizeColumnsDrawerProps, COLLAPSED_SECTIONS, IntakeFormPreviewDrawer(), QUICK_ACTION_ICONS, IntakeBasicDetails (+26 more)
 
 ### Community 126 - "PostDetailsDrawerContent.tsx"
-Cohesion: 0.10
-Nodes (13): ActiveTab, aiSuggestionInsights, formatExpiry(), getPostPages(), Platform, platformMeta, postCreators, PostDetailsDrawerContent() (+5 more)
+Cohesion: 0.09
+Nodes (15): PostDetailsDrawer(), PostDetailsDrawerProps, ActiveTab, aiSuggestionInsights, formatExpiry(), getPostPages(), Platform, platformMeta (+7 more)
 
 ### Community 127 - "WorkflowCoachTour.tsx"
 Cohesion: 0.17
 Nodes (11): clamp(), measureAnchors(), positionCard(), buildWorkflowCoachSteps(), FRONT_DESK_PREVIEW_STEP_COPY, WORKFLOW_COACH_STEPS, WorkflowCoachPlacement, WorkflowCoachStep (+3 more)
 
 ### Community 128 - "BookAppointmentDrawer.tsx"
-Cohesion: 0.10
-Nodes (16): Accordion, APPT_FIELDS, APPT_TYPE_OPTIONS, ApptEvent, ApptKey, BOOK_FOR_OPTIONS, buildApptEvent(), GENDER_OPTIONS (+8 more)
+Cohesion: 0.09
+Nodes (21): Accordion, APPT_FIELDS, APPT_TYPE_OPTIONS, ApptEvent, ApptKey, BOOK_FOR_OPTIONS, BookAppointmentDrawer(), buildApptEvent() (+13 more)
 
 ### Community 129 - "ContextModal.tsx"
 Cohesion: 0.15
@@ -911,16 +904,16 @@ Cohesion: 0.06
 Nodes (20): Toggle(), CanvasNodeHeader(), ICON_CONFIG, AllTypes, BranchHeader, TaskHeader, TriggerHeader, ProceduresNode() (+12 more)
 
 ### Community 132 - "BlockSettingsPanel.tsx"
-Cohesion: 0.08
-Nodes (20): BlockCanvas(), getBlockDisplayLabel(), getBlogBlockTopClass(), getShimmerBlockIds(), getBlockDefinition(), InspectorField, useBlockEditorContext(), AlignmentControl() (+12 more)
+Cohesion: 0.06
+Nodes (28): advancedGroup, alignOptions, basicLayoutGroup, BlockDefinition, buttonVariantOptions, colorOptions, getBlockDefinition(), InspectorControl (+20 more)
 
 ### Community 133 - "RecFilterPanel.tsx"
 Cohesion: 0.11
 Nodes (12): cn(), FAQPreviewModal(), LLMResponsesCard(), Stepper(), ALL_CATEGORIES, CATEGORY_DISPLAY_LABEL, EFFORT_OPTIONS, RecFilterPanel() (+4 more)
 
 ### Community 134 - "approvalData.ts"
-Cohesion: 0.15
-Nodes (12): ApprovalData, ApprovalLocation, ATL, AUS, BOS, CHI, CURRENT_USER, DAL (+4 more)
+Cohesion: 0.10
+Nodes (18): ApprovePostsView(), ApprovePostsViewProps, PostCardProps, statusConfig, APPROVAL_DATA, ApprovalData, ApprovalLocation, ATL (+10 more)
 
 ### Community 135 - "Canvas/LoopNode/LoopNode.jsx"
 Cohesion: 0.12
@@ -935,8 +928,8 @@ Cohesion: 0.33
 Nodes (9): classifyRefinementTarget(), loadInitial(), RecommendationOverride, RecommendationOverridesStore, RecommendationOverridesStoreContext, RecommendationOverridesStoreProvider(), GapType, ProcedureStep (+1 more)
 
 ### Community 138 - "ProvidersScreen.tsx"
-Cohesion: 0.04
-Nodes (32): HeaderSearchField(), HeaderSearchFieldProps, AppointmentTypeScreen(), APPT_TYPES, ApptTypeDrawer(), ApptTypeRow, AT_DURATION_OPTIONS, AT_LOCATION_OPTIONS (+24 more)
+Cohesion: 0.06
+Nodes (25): HeaderSearchField(), HeaderSearchFieldProps, AppointmentWidgetsScreenProps, ApptWidgetRow, COLUMNS, DATA, TOGGLES, APPT_TYPE_OPTIONS (+17 more)
 
 ### Community 139 - "GroupTable"
 Cohesion: 0.17
@@ -966,21 +959,21 @@ Nodes (13): 10. Initial Project Setup Commands, 11. MCP Config File, 13. Quality
 Cohesion: 0.09
 Nodes (12): AgentSystemPromptStore, AgentSystemPromptStoreContext, AgentSystemPromptStoreProvider(), DEFAULT_AGENT_SYSTEM_PROMPT, useAgentSystemPromptStore(), FrontDeskSettings(), closeAdditionalDrawer(), handleRemoveAdditionalVoice() (+4 more)
 
-### Community 146 - "workflow/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx"
-Cohesion: 0.14
-Nodes (13): ShareModal(), getAgentsByModuleSlug(), AgentsDashboardTemplate(), handleExportAgentGroup(), collectToolIds(), DEFAULT_EMPTY, DEFAULT_GROUP_TABLE_COLUMNS, DEFAULT_METRICS (+5 more)
+### Community 146 - "ComposerAttachPopover.tsx"
+Cohesion: 0.18
+Nodes (9): ADD_FILE_ITEM, ComposerAttachPopover(), DEFAULT_PROCEDURES, DEFAULT_TOOLS, TabId, TABS, AttachItem, AttachItemKind (+1 more)
 
 ### Community 147 - "faq-agents/Molecules/DataType/DataType.stories.jsx"
 Cohesion: 0.13
 Nodes (13): DataType(), AllVariants, Document, Link, Tool, Variable, VARIANT_CONFIG, DEFAULT_NODES (+5 more)
 
-### Community 148 - "workflow/FAQAgentsDashboard.jsx"
-Cohesion: 0.08
-Nodes (12): DEFAULT_TEMPLATES, INITIAL_AGENTS, METRICS, TABS, DEFAULT_TEMPLATES, emptyDraft, Default, SAMPLE_TEMPLATES (+4 more)
+### Community 148 - "workflow/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx"
+Cohesion: 0.06
+Nodes (25): DEFAULT_TEMPLATES, INITIAL_AGENTS, METRICS, TABS, ShareModal(), DEFAULT_TEMPLATES, emptyDraft, Default (+17 more)
 
 ### Community 149 - "AppDataTable.tsx"
 Cohesion: 0.10
-Nodes (29): AppDataTable(), AppDataTableProps, applyTableUpdater(), buildDefaultSlice(), isSameColumnSizing(), mergeColumnOrder(), sumColumnWidthsBefore(), AppDataTableColumnMeta (+21 more)
+Nodes (30): AppDataTable(), AppDataTableProps, applyTableUpdater(), buildDefaultSlice(), isSameColumnSizing(), mergeColumnOrder(), sumColumnWidthsBefore(), AppDataTableColumnMeta (+22 more)
 
 ### Community 150 - "SideNav.tsx"
 Cohesion: 0.29
@@ -1003,24 +996,24 @@ Cohesion: 0.14
 Nodes (13): ChainOfThought(), ChainOfThoughtContent(), ChainOfThoughtContentProps, ChainOfThoughtItem(), ChainOfThoughtItemProps, ChainOfThoughtProps, ChainOfThoughtStep(), ChainOfThoughtStepProps (+5 more)
 
 ### Community 155 - "TopNav"
-Cohesion: 0.01
-Nodes (191): ChartCard(), ChartCardProps, MoreMenu(), ChartCardButton(), ChartCardButtonProps, chartColors, ChartStat, ChartStatRow() (+183 more)
+Cohesion: 0.02
+Nodes (114): ChartStat, ChartStatRow(), ChartStatRowProps, formatValue(), BreakdownTooltipProps, colorAt(), makeLink(), makeNode() (+106 more)
 
-### Community 156 - "BlogMetaPanel.tsx"
-Cohesion: 0.22
-Nodes (4): BlogMetaPanel(), BlogMetaPanelContent(), BlogMetaPanelProps, INITIAL_KEYWORDS
+### Community 156 - "FAQPreviewPanel.tsx"
+Cohesion: 0.18
+Nodes (10): FAQPair, FAQTemplatePreview(), FAQTemplatePreviewProps, PLACEHOLDER, PREVIEWS, TemplatePreviewData, DESTINATION_LABELS, FAQPreviewPanel() (+2 more)
 
-### Community 157 - "ApprovalsSetupView.tsx"
-Cohesion: 0.13
-Nodes (10): ALL_APPROVERS, ApprovalsSetupView(), Approver, DEFAULT_STEPS, hasAllLocationsApprover(), Step, StepCard(), Workflow (+2 more)
+### Community 157 - "SocialView.tsx"
+Cohesion: 0.10
+Nodes (13): ALL_APPROVERS, ApprovalsSetupView(), Approver, DEFAULT_STEPS, hasAllLocationsApprover(), Step, StepCard(), Workflow (+5 more)
 
 ### Community 158 - "workflow/Organisms/Panels/RHS/ConversationTriggerBody.jsx"
 Cohesion: 0.22
 Nodes (6): ConversationTriggerBody(), addRow(), makeRow(), TIME_OPTIONS, VOICE_OPTIONS, WEBCHAT_OPTIONS
 
-### Community 159 - "Button"
-Cohesion: 0.05
-Nodes (32): Button(), Chip(), ExpandedRHSFooter(), Default, PromptMedium, PromptStrong, PromptWeak, Header() (+24 more)
+### Community 159 - "faq-agents/Molecules/ExpandedRHS/ExpandedRHSFooter/ExpandedRHSFooter.jsx"
+Cohesion: 0.15
+Nodes (11): ExpandedRHSFooter(), Default, PromptMedium, PromptStrong, PromptWeak, PromptStrength(), Medium, Strong (+3 more)
 
 ### Community 160 - "faq-agents/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx"
 Cohesion: 0.13
@@ -1038,9 +1031,9 @@ Nodes (11): FAQCanvasProgress(), FAQCanvasProgressProps, getPosition(), FAQ_STEP
 Cohesion: 0.14
 Nodes (13): 10. Initial Project Setup Commands, 11. MCP Config File, 13. Quality Checklist, 14. Common Mistakes — Never Do These, 15. Working Agreement (keep token cost low), 16. Project State (so a new chat can resume), 1. Project Overview, 3. Folder Structure (+5 more)
 
-### Community 164 - "ActivityFeed.tsx"
-Cohesion: 0.24
-Nodes (8): ActivityDrawerContent(), ActivityDrawerContentProps, ActivityFeed(), getIconConfig(), mockActivities, RV, Activity, POST_ACTIVITIES
+### Community 164 - "postData.ts"
+Cohesion: 0.14
+Nodes (14): ActivityDrawer(), ActivityDrawerProps, ActivityDrawerContent(), ActivityDrawerContentProps, ActivityFeed(), getIconConfig(), mockActivities, RV (+6 more)
 
 ### Community 165 - "workflow/Organisms/Drawers/ToolSelectionDrawer/ToolSelectionDrawer.jsx"
 Cohesion: 0.13
@@ -1050,25 +1043,25 @@ Nodes (6): EXTERNAL_TOOLS, INTERNAL_TOOLS, ExternalTools, InternalTools, TABS, T
 Cohesion: 0.16
 Nodes (9): buildCalendarCells(), DAY_NAMES, formatDateHeader(), MONTHS, ScheduleDemoPanel(), TIME_SLOTS, TODAY, ScheduleDemoPanelProps (+1 more)
 
-### Community 167 - "FAQRichToolbar.tsx"
-Cohesion: 0.25
-Nodes (6): execCmd(), FAQRichToolbar(), FAQRichToolbarProps, SelectPillProps, ToolBtn(), ToolBtnProps
+### Community 167 - "faq-agents/Molecules/Header/Header.stories.jsx"
+Cohesion: 0.22
+Nodes (6): Header(), Default, SearchAndFilterOnly, TitleOnly, WithoutFilter, WithoutSearch
 
 ### Community 168 - "MetricCard"
 Cohesion: 0.11
 Nodes (19): MetricCard(), cancelEdit(), commitEdit(), handleContainerBlur(), handleKeyDown(), CARD_TYPES, GroupMetrics(), addCard() (+11 more)
 
-### Community 169 - "EmailEditor.tsx"
-Cohesion: 0.07
-Nodes (21): AIIcon(), BLOG_DIMS, BLOG_QUICK_WINS, BlogEditor(), BlogEditorProps, Mode, SEO_CHECKLIST, SEOItem (+13 more)
-
-### Community 170 - "LeadCapture.jsx"
+### Community 169 - "BlogEditor.tsx"
 Cohesion: 0.09
-Nodes (10): COLORS, EMAIL_FIELDS, EMPTY_CONFIG, LeadCapture(), SOCIAL_FIELDS, Default, TAB_CONFIG, TABS (+2 more)
+Nodes (17): BLOG_DIMS, BLOG_QUICK_WINS, BlogEditor(), BlogEditorProps, Mode, SEO_CHECKLIST, SEOItem, ContentScorePanel() (+9 more)
 
-### Community 171 - "AiBuilderPanel.tsx"
-Cohesion: 0.12
-Nodes (9): DRAFT_SETTINGS, DRAFT_TOOLS, FRONT_DESK_DRAFT_REFILL_PROCEDURE, FrontDeskDraftReviewContent(), FrontDeskDraftReviewContentProps, AiBuilderPanel(), DEFAULT_SUGGESTIONS, suggestionsForAgent() (+1 more)
+### Community 170 - "AvailabilityScreen"
+Cohesion: 0.28
+Nodes (4): AvailabilityScreen(), handleConfirmDelete(), handleSourceChange(), showToast()
+
+### Community 171 - "FrontDeskDraftReviewContent.tsx"
+Cohesion: 0.29
+Nodes (5): DRAFT_SETTINGS, DRAFT_TOOLS, FRONT_DESK_DRAFT_REFILL_PROCEDURE, FrontDeskDraftReviewContent(), FrontDeskDraftReviewContentProps
 
 ### Community 172 - "workflow/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx"
 Cohesion: 0.13
@@ -1087,8 +1080,8 @@ Cohesion: 0.18
 Nodes (9): CARD_TYPES, PRIMARY_LABELS, uid(), MetricsGroup(), PRIMARY_OPTIONS, Default, MetricCustomiserModal(), CostSaved (+1 more)
 
 ### Community 176 - "QuickCreateModal"
-Cohesion: 0.25
-Nodes (13): defaultIdeas(), makeDefaultProjectTypes(), QuickCreateModal(), renderBlogStep1(), renderBlogStep2(), renderFaqStep1(), renderFaqStep2(), renderProjectStep1() (+5 more)
+Cohesion: 0.30
+Nodes (11): QuickCreateModal(), renderBlogStep1(), renderBlogStep2(), renderFaqStep1(), renderFaqStep2(), renderProjectStep1(), renderProjectStep2(), renderProjectStep3() (+3 more)
 
 ### Community 177 - "ExpiredPostsView.tsx"
 Cohesion: 0.18
@@ -1106,21 +1099,21 @@ Nodes (11): Procedure, ProcedureStore, ProcedureDetailScreenProps, CardProps, HC
 Cohesion: 0.38
 Nodes (5): buildTableData(), COLUMNS, DEFAULT_ROWS, PerformanceTable(), Placeholder
 
-### Community 181 - "faq-agents/AgentBuilder/AgentBuilder.jsx"
-Cohesion: 0.07
-Nodes (35): AgentBuilder(), buildFlow(), makeNodeConfig(), makeNodeDetails(), nextId(), RHSErrorBoundary, handleDeleteTool(), ProcedureTaskBody() (+27 more)
+### Community 181 - "FAQSectionBlock.tsx"
+Cohesion: 0.29
+Nodes (3): FAQItem, FAQSectionBlock(), FAQSectionContent
 
 ### Community 182 - "message.v1.tsx"
-Cohesion: 0.07
-Nodes (24): Avatar(), AvatarFallback(), AvatarImage(), CodeBlock(), CodeBlockCode(), CodeBlockCodeProps, CodeBlockGroup(), CodeBlockGroupProps (+16 more)
+Cohesion: 0.06
+Nodes (31): ContentScoreInfoTooltipProps, RANGES, SIGNALS, Avatar(), AvatarFallback(), AvatarImage(), CodeBlock(), CodeBlockCode() (+23 more)
 
 ### Community 183 - "DatePickerModal.tsx"
-Cohesion: 0.18
-Nodes (10): CalendarPanelProps, DatePickerModal(), DAY_NAMES, MONTHS, PRESETS, SLOT_AVAILABILITY, TIME_SLOTS, TODAY (+2 more)
+Cohesion: 0.09
+Nodes (16): buildCalendarCells(), CalendarPanel(), CalendarPanelProps, DatePickerModal(), DatetimeVariant(), DAY_NAMES, formatDate(), formatDateHeader() (+8 more)
 
 ### Community 184 - "content-hub/CalendarView.tsx"
-Cohesion: 0.25
-Nodes (8): CalendarHeader(), CalendarHeaderProps, MONTH_NAMES, CALENDAR_FILTERS, CalendarView(), CalendarViewProps, CalendarViewType, DEFAULT_CONTENT_HUB_CALENDAR_DATE
+Cohesion: 0.16
+Nodes (14): CalendarHeader(), CalendarHeaderProps, MONTH_NAMES, CALENDAR_FILTERS, CalendarView(), CalendarViewProps, CalendarViewType, DEFAULT_CONTENT_HUB_CALENDAR_DATE (+6 more)
 
 ### Community 185 - "faq-agents/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx"
 Cohesion: 0.14
@@ -1130,17 +1123,17 @@ Nodes (14): ShareModal(), getAgentsByModuleSlug(), getCustomToolsByIds(), Agents
 Cohesion: 0.23
 Nodes (9): ChartConfig, ChartContainer(), ChartContext, ChartContextProps, ChartLegendContent(), ChartTooltipContent(), getPayloadConfigFromPayload(), THEMES (+1 more)
 
-### Community 187 - "workflow/Molecules/RHS/Trigger/ScheduleBased/ScheduleBased.jsx"
-Cohesion: 0.08
-Nodes (21): ExpandedRHSFooter(), Default, PromptMedium, PromptStrong, PromptWeak, PromptStrength(), Medium, Strong (+13 more)
+### Community 187 - "workflow/Molecules/ExpandedRHS/ExpandedRHSFooter/ExpandedRHSFooter.jsx"
+Cohesion: 0.15
+Nodes (11): ExpandedRHSFooter(), Default, PromptMedium, PromptStrong, PromptWeak, PromptStrength(), Medium, Strong (+3 more)
 
 ### Community 188 - "Recommendation"
 Cohesion: 0.26
 Nodes (12): BlogPreviewBoxProps, BlogPreviewModalProps, ContentDetailProps, FAQDetailProps, FAQPreviewBoxProps, FAQPreviewModalProps, GenericDetailProps, RecDetailViewProps (+4 more)
 
-### Community 189 - "SocialView.tsx"
-Cohesion: 0.08
-Nodes (22): ApprovePostsView(), ApprovePostsViewProps, PostCardProps, statusConfig, APPROVAL_DATA, ActivityType, POST_DATA, PostData (+14 more)
+### Community 189 - "RejectedPostsView.tsx"
+Cohesion: 0.17
+Nodes (7): CardStatus, EXPIRED_POST_IDS, FilterTab, RejectedPostCardProps, RejectedPostsView(), RejectedPostsViewProps, statusConfig
 
 ### Community 190 - "workflow/Molecules/MetricCard/MetricCard.stories.jsx"
 Cohesion: 0.29
@@ -1162,9 +1155,9 @@ Nodes (8): buildInitialSnapshot(), CustomToolViewer(), _DATA_TYPE_OPTS, isFieldV
 Cohesion: 0.09
 Nodes (9): EMOJI_CATEGORIES, EmojiPicker(), FallbackField(), handleClick(), formatFallbackChipLabel(), PERSONALIZE_TOKENS, SKIN_TONES, TextSetupSettings() (+1 more)
 
-### Community 195 - "RangeVariant"
-Cohesion: 0.20
-Nodes (4): buildCalendarCells(), CalendarPanel(), formatDate(), RangeVariant()
+### Community 195 - "TestimonialsBlock.tsx"
+Cohesion: 0.29
+Nodes (3): Testimonial, TestimonialsBlock(), TestimonialsContent
 
 ### Community 196 - "compilerOptions"
 Cohesion: 0.20
@@ -1186,21 +1179,21 @@ Nodes (3): DEFAULT_REMINDERS, Props, ReminderEntry
 Cohesion: 0.15
 Nodes (15): BranchAccordionItem(), handleAddCondition(), handleAddConditionGroup(), updateConditions(), ControlBranchBody(), addBranch(), clearDragState(), handleItemDrop() (+7 more)
 
-### Community 201 - "faq-agents/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.stories.jsx"
-Cohesion: 0.40
-Nodes (4): LHSEntityGroup(), InboxEvent, ReviewEvent, TaskEvent
+### Community 201 - "SlidingSidePanel.tsx"
+Cohesion: 0.48
+Nodes (5): closedTransform(), SLIDE_EASING, SLIDE_MS, SlidingSidePanel(), SlidingSidePanelProps
 
 ### Community 202 - "AutoAppointmentTypeScreen.tsx"
-Cohesion: 0.03
-Nodes (54): APPOINTMENT_TYPE_OPTIONS, BookTestAppointmentModal(), DATE_TIME_OPTIONS, EMPTY_VALUES, SelectField(), BookTestAppointmentModalProps, BookTestAppointmentValues, FilterField (+46 more)
+Cohesion: 0.04
+Nodes (36): APPOINTMENT_TYPE_OPTIONS, BookTestAppointmentModal(), DATE_TIME_OPTIONS, EMPTY_VALUES, SelectField(), BookTestAppointmentModalProps, BookTestAppointmentValues, FilterField (+28 more)
 
 ### Community 203 - "socialTableFixtures.ts"
 Cohesion: 0.29
 Nodes (9): buildApprovalWorkflowRows(), buildReportRows(), CHANNELS, pick(), REVIEWERS, seeded(), SocialApprovalWorkflowRow, SocialReportRow (+1 more)
 
 ### Community 204 - "content-hub/ContentCard.tsx"
-Cohesion: 0.07
-Nodes (13): ContentCard(), ContentCardProps, ContentItem, derivedScore(), getScoreRingColor(), CONTENT_TYPE_OPTIONS, DEFAULT_CONTENT, InfiniteCanvas() (+5 more)
+Cohesion: 0.12
+Nodes (5): ContentCard(), ContentCardProps, ContentItem, derivedScore(), getScoreRingColor()
 
 ### Community 205 - "package.json"
 Cohesion: 0.22
@@ -1214,17 +1207,17 @@ Nodes (3): TtsFailoverSettings(), closeFailoverAdditionalDrawer(), handleSaveFai
 Cohesion: 0.50
 Nodes (9): blockTypeIcon(), EditorCopilot(), buildConfirmation(), clearAndAddUser(), handleChip(), handleSend(), pushAi(), showPartialLoading() (+1 more)
 
-### Community 209 - "BookAppointmentDrawer"
-Cohesion: 0.29
-Nodes (5): BookAppointmentDrawer(), downloadICSFile(), openGoogleCalendar(), openOutlookCalendar(), toUTCStamp()
+### Community 209 - "SettingsScreen.tsx"
+Cohesion: 0.33
+Nodes (5): SECTIONS, SettingItem, SETTINGS_NAV, SettingsScreen(), SettingsSection
 
 ### Community 210 - "ContentActivityDrawer.tsx"
 Cohesion: 0.33
 Nodes (6): ActivityEntry, activityIcon(), ActivityPanelContent(), CONTENT_ACTIVITY, ContentActivityDrawer(), ContentActivityDrawerProps
 
-### Community 212 - "blockStore.ts"
-Cohesion: 0.20
-Nodes (15): BlockEditorContext, BlockEditorProvider(), BlockStoreCtx, applyBlockPatch(), BlockAction, BlockState, cloneValue(), deepMerge() (+7 more)
+### Community 212 - "blockTypes.ts"
+Cohesion: 0.16
+Nodes (19): BLOCK_DEFINITIONS, BlockEditorContext, BlockEditorProvider(), BlockStoreCtx, applyBlockPatch(), BlockAction, BlockState, cloneValue() (+11 more)
 
 ### Community 213 - "SearchAIRecommendationsPanel.tsx"
 Cohesion: 0.15
@@ -1258,10 +1251,6 @@ Nodes (4): fix_contenthub_ui_internal(), fix_imports_in_dir(), Walk all .ts/.tsx
 Cohesion: 0.33
 Nodes (5): AgentPerformanceTemplate(), DEFAULT_METRICS, STATUS_COLOR, Default, Paused
 
-### Community 221 - "ContentShareModal"
-Cohesion: 0.40
-Nodes (3): ContentShareModal(), addChip(), handleKeyDown()
-
 ### Community 222 - "CallRecordingPlayer.tsx"
 Cohesion: 0.31
 Nodes (8): CallRecordingPlayer, fmtSeek(), fmtTime(), Speed, speedLabel(), SPEEDS, CallRecordingPlayerHandle, CallRecordingPlayerProps
@@ -1269,10 +1258,6 @@ Nodes (8): CallRecordingPlayer, fmtSeek(), fmtTime(), Speed, speedLabel(), SPEED
 ### Community 223 - "AgentL2Nav"
 Cohesion: 0.19
 Nodes (5): AgentL2Nav(), cancelCreate(), commitCreate(), handleInputBlur(), handleInputKeyDown()
-
-### Community 225 - "CreateFrontdeskAgentScreen.tsx"
-Cohesion: 0.16
-Nodes (13): InfoCard(), INFO_CARD_LAYOUT, INFO_CARD_LIST_ITEM_LAYOUT, InfoCardListItemProps, InfoCardProps, InfoCardListItem(), ICONS, LibraryCardGlyph (+5 more)
 
 ### Community 226 - "faq-agents/services/templateService.js"
 Cohesion: 0.38
@@ -1282,13 +1267,13 @@ Nodes (5): deleteTemplate(), _listeners, _notify(), saveTemplate(), _templates
 Cohesion: 0.22
 Nodes (9): 6.1 When to create a component, 6.2 Component file structure, 6.3 Barrel exports, 6.4 Props contract, 6.5 No inline styles, 6.6 Typography — REGULAR WEIGHT ONLY (hard rule), 6.7 Reuse the shared chrome — don't invent new header/button/switcher variants, 6.8 Copy capitalization — sentence case (hard rule) (+1 more)
 
-### Community 228 - "faq-agents/Modules/ExpandedRHSModal/ExpandedRHSTest/ExpandedRHSTest.jsx"
-Cohesion: 0.18
-Nodes (10): ExpandedRHSTest(), fieldsKey(), normalizeFields(), Empty, Filled, WithInputOnly, WithOutputOnly, ExpandedRHSTestFeedback() (+2 more)
+### Community 228 - "Button"
+Cohesion: 0.07
+Nodes (21): Button(), ExpandedRHSTest(), fieldsKey(), normalizeFields(), Empty, Filled, WithInputOnly, WithOutputOnly (+13 more)
 
-### Community 229 - "file-upload.v1.tsx"
-Cohesion: 0.20
-Nodes (7): FileUploadContent(), FileUploadContentProps, FileUploadContext, FileUploadContextValue, FileUploadProps, FileUploadTrigger(), FileUploadTriggerProps
+### Community 229 - "AutoAvailabilityScreen"
+Cohesion: 1.00
+Nodes (3): AutoAvailabilityScreen(), handleCopyApply(), showToast()
 
 ### Community 230 - "17. Building Agents from a PRD"
 Cohesion: 0.25
@@ -1299,8 +1284,8 @@ Cohesion: 0.21
 Nodes (6): GraphControls(), renderCheck(), renderZoomDropdown(), Placeholder, ZOOM_PRESETS, GraphControlTooltip()
 
 ### Community 233 - "BlockLibraryPanel.tsx"
-Cohesion: 0.11
-Nodes (23): BlogManualContent(), BlogManualContentProps, BLOCK_ICON_MAP, BlockLibraryPanel(), BlockLibraryPanelProps, describePrebuiltStructure(), PREBUILT_BLOCKS, PrebuiltBlock (+15 more)
+Cohesion: 0.08
+Nodes (29): BlogManualContent(), BlockCanvasProps, CanvasBlockInfo, useBlockEditorContext(), BLOCK_ICON_MAP, BlockLibraryPanel(), BlockLibraryPanelProps, describePrebuiltStructure() (+21 more)
 
 ### Community 234 - "17. Building Agents from a PRD"
 Cohesion: 0.25
@@ -1310,9 +1295,9 @@ Nodes (8): 17. Building Agents from a PRD, Step 1 — Read the PRD sections you 
 Cohesion: 0.38
 Nodes (5): deleteTemplate(), _listeners, _notify(), saveTemplate(), _templates
 
-### Community 236 - "workflow/Molecules/Header/Header.stories.jsx"
-Cohesion: 0.22
-Nodes (6): Header(), Default, SearchAndFilterOnly, TitleOnly, WithoutFilter, WithoutSearch
+### Community 236 - "Button"
+Cohesion: 0.07
+Nodes (18): Button(), Chip(), AppHeader(), Default, NoUser, Header(), Default, SearchAndFilterOnly (+10 more)
 
 ### Community 237 - "HealthcareReminderWorkflow.tsx"
 Cohesion: 0.33
@@ -1322,10 +1307,6 @@ Nodes (4): InitiateVoiceCallDrawer(), ReminderToolDrawer(), HealthcareReminderCa
 Cohesion: 0.53
 Nodes (5): MetricCard(), cancelEdit(), commitEdit(), handleContainerBlur(), handleKeyDown()
 
-### Community 239 - "workflow/services/agentService.js"
-Cohesion: 0.10
-Nodes (20): AddToolDrawer(), _agentListeners, _agents, _customTools, deleteAgent(), deleteCustomTool(), _formatInputLabel(), getAgentBySlug() (+12 more)
-
 ### Community 240 - "Tooltip"
 Cohesion: 0.44
 Nodes (8): Tooltip(), clearHideTimer(), clearRaf(), hide(), onPointerDown(), onScroll(), scheduleHide(), show()
@@ -1334,17 +1315,9 @@ Nodes (8): Tooltip(), clearHideTimer(), clearRaf(), hide(), onPointerDown(), onS
 Cohesion: 0.22
 Nodes (3): Default, AddInputFieldModal(), Default
 
-### Community 243 - "AssignConversationDrawer.jsx"
-Cohesion: 0.33
-Nodes (3): AssignConversationDrawer(), TEAMS, USERS
-
 ### Community 244 - "generate-ai-sparkle-gif.mjs"
 Cohesion: 0.25
 Nodes (6): __dirname, gif, maskSvg, outPath, root, svgPath
-
-### Community 245 - "MonthView.tsx"
-Cohesion: 0.33
-Nodes (9): DAY_NAMES, getDaysInMonth(), getProjectsForWeek(), getWeeks(), isSameDay(), isToday(), MonthView(), MonthViewProps (+1 more)
 
 ### Community 246 - "8. Workflow: Building a New Screen"
 Cohesion: 0.29
@@ -1354,10 +1327,6 @@ Nodes (7): 8. Workflow: Building a New Screen, Step 1 — Fetch Figma context, S
 Cohesion: 0.29
 Nodes (7): 8. Workflow: Building a New Screen, Step 1 — Fetch Figma context, Step 2 — Audit the component registry, Step 3 — Build missing components first, Step 4 — Compose the screen, Step 5 — Register the route, Step 6 — Verify
 
-### Community 248 - "toggle-group.v1.tsx"
-Cohesion: 0.31
-Nodes (5): ToggleGroup(), ToggleGroupContext, ToggleGroupItem(), Toggle(), toggleVariants
-
 ### Community 249 - "workflow/Molecules/Canvas/StartNode/StartNode.jsx"
 Cohesion: 0.50
 Nodes (3): StartNode(), Default, LongTitle
@@ -1365,10 +1334,6 @@ Nodes (3): StartNode(), Default, LongTitle
 ### Community 250 - "QueryConfigDrawer.jsx"
 Cohesion: 0.22
 Nodes (5): DCODE_OPTIONS, OFFICE_OPTIONS, QueryConfigDrawer(), SCHED_OPTIONS, STATUS_CHIPS
-
-### Community 258 - "faq-agents/Molecules/AppHeader/AppHeader.jsx"
-Cohesion: 0.29
-Nodes (3): AppHeader(), Default, NoUser
 
 ### Community 265 - "vercel.json"
 Cohesion: 0.50
@@ -1378,9 +1343,9 @@ Nodes (3): buildCommand, outputDirectory, rewrites
 Cohesion: 0.33
 Nodes (3): VoiceChannelSettings(), closeAdditionalDrawer(), handleSaveAdditionalVoice()
 
-### Community 343 - "FAQWizard.tsx"
-Cohesion: 0.09
-Nodes (20): FAQPair, FAQTemplatePreview(), FAQTemplatePreviewProps, PLACEHOLDER, PREVIEWS, TemplatePreviewData, DEFAULT_STATE, FAQWizard() (+12 more)
+### Community 343 - "button.tsx"
+Cohesion: 0.06
+Nodes (29): FAQLeftPanel(), FAQLeftPanelProps, DEFAULT_STATE, FAQWizard(), FAQWizardProps, FAQWizardState, FAQ_STEPS, FAQWizardShell() (+21 more)
 
 ### Community 344 - "12. Prompt Templates"
 Cohesion: 0.40
@@ -1389,10 +1354,6 @@ Nodes (5): 12. Prompt Templates, Add a new column or tab, Build a new screen, Bu
 ### Community 345 - "12. Prompt Templates"
 Cohesion: 0.40
 Nodes (5): 12. Prompt Templates, Add a new column or tab, Build a new screen, Build a standalone component, Fix a visual discrepancy
-
-### Community 346 - "faq-agents/RHSDrawer/LocationsDrawer.jsx"
-Cohesion: 0.29
-Nodes (5): ALL_LOCATIONS, DEFAULT_SELECTED, LocationsDrawer(), SELECT_BY_OPTIONS, Default
 
 ### Community 347 - "AddStepMenu.jsx"
 Cohesion: 0.17
@@ -1422,21 +1383,21 @@ Nodes (3): 2. Figma MCP Setup, How to use it, Rules
 Cohesion: 0.67
 Nodes (4): FAQPublishModal(), handlePublish(), resetAndClose(), formatScheduleDate()
 
-### Community 357 - "workflow/Molecules/AppHeader/AppHeader.jsx"
-Cohesion: 0.29
-Nodes (3): AppHeader(), Default, NoUser
-
-### Community 358 - "calendarData.ts"
-Cohesion: 0.16
-Nodes (12): ContentType, mockScheduledItems, mockScheduledPosts, Project, PROJECT_COLOR_MAP, ProjectColor, SocialPlatform, fmtRange() (+4 more)
+### Community 358 - "MonthView.tsx"
+Cohesion: 0.12
+Nodes (21): ContentType, mockScheduledItems, mockScheduledPosts, Project, PROJECT_COLOR_MAP, ProjectColor, SocialPlatform, DAY_NAMES (+13 more)
 
 ### Community 360 - "NewFrontdeskAgentSetupScreen.tsx"
 Cohesion: 0.09
 Nodes (21): DEFAULT_AGENT_PROCEDURE_IDS, DEFAULT_WIZARD_PROCEDURE_IDS, HEALTHCARE_PROCEDURE_CATALOG, HealthcareProcedureCatalogItem, WizardAgentDraft, WizardChannelId, WizardRecordingMode, TextChannelSettings (+13 more)
 
+### Community 362 - "FeatureGridBlock.tsx"
+Cohesion: 0.29
+Nodes (3): Feature, FeatureGridBlock(), FeatureGridContent
+
 ### Community 363 - "ListBlock"
-Cohesion: 0.60
-Nodes (4): ListBlock(), addItem(), handleKeyDown(), removeItem()
+Cohesion: 0.38
+Nodes (5): ListBlock(), addItem(), handleKeyDown(), removeItem(), ListContent
 
 ### Community 365 - "CreateBlogPage"
 Cohesion: 0.28
@@ -1447,40 +1408,36 @@ Cohesion: 0.29
 Nodes (3): Stat, StatsRowBlock(), StatsRowContent
 
 ### Community 367 - "WeekView.tsx"
-Cohesion: 0.33
-Nodes (9): DAY_NAMES, getProjectsForWeek(), getWeekDays(), isPastDay(), isSameDay(), isToday(), ProjectWithSpan, WeekView() (+1 more)
+Cohesion: 0.29
+Nodes (10): mockProjects, DAY_NAMES, getProjectsForWeek(), getWeekDays(), isPastDay(), isSameDay(), isToday(), ProjectWithSpan (+2 more)
 
 ### Community 369 - "faq-agents/Molecules/MetricCard/MetricCard.stories.jsx"
 Cohesion: 0.29
 Nodes (6): Default, Full, WithConfig, WithDollarValue, WithNegativeTrend, WithTrend
 
-### Community 373 - "faq-agents/Molecules/AIChatBubble/AIChatBubble.stories.jsx"
-Cohesion: 0.50
-Nodes (3): AIChatBubble(), Default, MessageOnly
-
 ### Community 376 - "BlogInlineCreationFlow.tsx"
 Cohesion: 0.03
-Nodes (56): AeroCheckbox(), ALL_ITEMS, AssetRow(), AttachedFile, AttachmentPickerModal(), AttachmentPickerModalProps, DOC_FILES, DocFile (+48 more)
+Nodes (66): AeroCheckbox(), ALL_ITEMS, AssetRow(), AttachedFile, AttachmentPickerModal(), AttachmentPickerModalProps, DOC_FILES, DocFile (+58 more)
 
 ## Knowledge Gaps
-- **2886 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+2881 more)
+- **2886 isolated node(s):** `CONV_TRIGGER`, `FRONTDESK_NODES`, `FRONTDESK_NODE_DETAILS`, `OUTREACH_NODES`, `OUTREACH_NODE_DETAILS` (+2881 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **71 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **68 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `cn` to `ContentFlowControls.tsx`, `BlockCanvas.tsx`, `BlockSettingsPanel.tsx`, `alert-dialog.v1.tsx`, `CreateView.tsx`, `ContentEditorShell.tsx`, `PostCard.tsx`, `ContentShareModal.tsx`, `AppDataTable.tsx`, `chain-of-thought.v1.tsx`, `contenthub-ui/utils.ts`, `BlogMetaPanel.tsx`, `faqStore.ts`, `FloatingSheetFrame.tsx`, `ContentScorePanel`, `FAQRichToolbar.tsx`, `FAQSectionCanvas.tsx`, `QuickCreateModal`, `InlineCreationFlow.tsx`, `message.v1.tsx`, `button.tsx`, `content-hub/CalendarView.tsx`, `chart.v1.tsx`, `TemplateGallery.tsx`, `ContentHubL2NavPanel.tsx`, `ColumnSettingsSheet.tsx`, `BlogSectionCanvas.tsx`, `L2NavLayout.v1.tsx`, `context-menu.v1.tsx`, `ProjectsView.tsx`, `ContentActivityDrawer.tsx`, `FAQWizard.tsx`, `EmailWizard.tsx`, `UnifiedReviewCanvas.tsx`, `AiCopilot.tsx`, `ContentShareModal`, `prompt-input.v1.tsx`, `toggle-group.v1.tsx`, `FAQPublishModal`, `SocialWizard.tsx`, `ListView.tsx`, `copilot-prompt-box.v1.tsx`, `file-upload.v1.tsx`, `calendarData.ts`, `blockDefinitions.ts`, `BlockLibraryPanel.tsx`, `FeatureGridBlock`, `BlogPublishModal.tsx`, `CreateBlogPage`, `carousel.v1.tsx`, `WeekView.tsx`, `MonthView.tsx`, `BlogInlineCreationFlow.tsx`, `EditorChromeToolbar.tsx`?**
-  _High betweenness centrality (0.142) - this node is a cross-community bridge._
-- **Why does `Icon()` connect `Icon` to `ContextModal.tsx`, `FormInput`, `AgentDetailScreen.tsx`, `index.ts`, `VoiceCallEngineSettings.tsx`, `ProcedureDetailScreen.tsx`, `ProvidersScreen.tsx`, `AgentSettingsTab.tsx`, `OverviewV2_1Screen.tsx`, `Link`, `AddToolDrawer.jsx`, `IconRail.tsx`, `workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.jsx`, `OverviewV3Screen.tsx`, `MediaLibraryModal.tsx`, `ClassicOverviewScreen.tsx`, `workflow/AgentBuilder/AgentBuilder.jsx`, `TopNav`, `InboxScreen.tsx`, `HelpCenterPanel.tsx`, `ReviewSummaryStep.tsx`, `LogDetailsPanel.tsx`, `l1Icons.tsx`, `AiBuilderPanel.tsx`, `RecommendationDetailScreen.tsx`, `RunDetailsPanel.tsx`, `agentWorkflows.ts`, `workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx`, `AgentLogsTab.tsx`, `Column`, `AvailabilityScreen.tsx`, `App.tsx`, `TestRunPanel.tsx`, `AgentInstanceScreen.tsx`, `channelSetupSettings.tsx`, `AutoAppointmentTypeScreen.tsx`, `RunDetailView.tsx`, `AllReviewsScreen.tsx`, `NewFrontdeskAgentSetupScreen.tsx`, `PromptComposer.tsx`, `OverviewScreen.tsx`, `VoiceChatDrawer.tsx`, `RecommendationsTab.tsx`, `workflow/Molecules/Inputs/OutputFields/OutputFields.jsx`, `agentDirectoryData.ts`, `ManageIntakeScreen.tsx`, `WorkflowCoachTour.tsx`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
-- **Why does `TemplateLibrary()` connect `faq-agents/Organisms/TemplateLibrary/TemplateLibrary.jsx` to `faq-agents/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx`, `contenthub-ui/utils.ts`, `faq-agents/FAQAgentsDashboard.jsx`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **What connects `name`, `private`, `version` to the rest of the system?**
+- **Why does `cn()` connect `cn` to `ContentFlowControls.tsx`, `BlockCanvas.tsx`, `BlockSettingsPanel.tsx`, `CreateView.tsx`, `ContentEditorShell.tsx`, `PostCard.tsx`, `ContentShareModal.tsx`, `AppDataTable.tsx`, `sheet.v1.tsx`, `FAQAgentsDashboardView.tsx`, `chain-of-thought.v1.tsx`, `faqStore.ts`, `BlogEditor.tsx`, `FAQSectionCanvas.tsx`, `ProjectInlineCreationFlow.tsx`, `QuickCreateModal`, `FAQSectionBlock.tsx`, `InlineCreationFlow.tsx`, `SocialEditor.tsx`, `content-hub/CalendarView.tsx`, `message.v1.tsx`, `chart.v1.tsx`, `TemplateGallery.tsx`, `ContentHome.tsx`, `contenthub-ui/utils.ts`, `BlogSectionCanvas.tsx`, `L2NavLayout.v1.tsx`, `context-menu.v1.tsx`, `ProjectsView.tsx`, `ContentActivityDrawer.tsx`, `button.tsx`, `EmailWizard.tsx`, `UnifiedReviewCanvas.tsx`, `AiCopilot.tsx`, `prompt-input.v1.tsx`, `FAQPublishModal`, `SocialWizard.tsx`, `ListView.tsx`, `copilot-prompt-box.v1.tsx`, `MonthView.tsx`, `BlockLibraryPanel.tsx`, `FeatureGridBlock.tsx`, `CreateBlogPage`, `carousel.v1.tsx`, `WeekView.tsx`, `BlogInlineCreationFlow.tsx`, `EditorChromeToolbar.tsx`, `TemplatePickerModal.tsx`?**
+  _High betweenness centrality (0.190) - this node is a cross-community bridge._
+- **Why does `Icon()` connect `Icon` to `ContextModal.tsx`, `workflow/Molecules/Conditions/Conditions.jsx`, `AgentDetailScreen.tsx`, `index.ts`, `VoiceCallEngineSettings.tsx`, `ProcedureDetailScreen.tsx`, `ProvidersScreen.tsx`, `AgentSettingsTab.tsx`, `OverviewV2_1Screen.tsx`, `IntakeScreen.tsx`, `ReviewWaitlistScreen.tsx`, `IconRail.tsx`, `workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.jsx`, `AddToolDrawer.jsx`, `ComposerAttachPopover.tsx`, `OverviewV3Screen.tsx`, `MediaLibraryModal.tsx`, `ClassicOverviewScreen.tsx`, `workflow/AgentBuilder/AgentBuilder.jsx`, `TopNav`, `InboxScreen.tsx`, `ReviewSummaryStep.tsx`, `LogDetailsPanel.tsx`, `OverviewV2Screen.tsx`, `FrontDeskDraftReviewContent.tsx`, `RecommendationDetailScreen.tsx`, `RunDetailsPanel.tsx`, `workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx`, `AgentLogsTab.tsx`, `Column`, `AvailabilityScreen.tsx`, `App.tsx`, `TestRunPanel.tsx`, `AgentInstanceScreen.tsx`, `channelSetupSettings.tsx`, `AutoAppointmentTypeScreen.tsx`, `RunDetailView.tsx`, `createAgentChatStore.ts`, `WorkflowEditorScreen.tsx`, `AllReviewsScreen.tsx`, `AutoProvidersScreen.tsx`, `NewFrontdeskAgentSetupScreen.tsx`, `PromptComposer.tsx`, `OverviewScreen.tsx`, `VoiceChatDrawer.tsx`, `RecommendationsTab.tsx`, `agentDirectoryData.ts`, `ManageIntakeScreen.tsx`, `WorkflowCoachTour.tsx`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Why does `TemplateLibrary()` connect `faq-agents/Organisms/TemplateLibrary/TemplateLibrary.jsx` to `faq-agents/Templates/AgentsDashboardTemplate/AgentsDashboardTemplate.jsx`, `FAQAgentsDashboardView.tsx`, `faq-agents/FAQAgentsDashboard.jsx`?**
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
+- **What connects `CONV_TRIGGER`, `FRONTDESK_NODES`, `FRONTDESK_NODE_DETAILS` to the rest of the system?**
   _2886 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `cn` be split into smaller, more focused modules?**
-  _Cohesion score 0.020459081836327345 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.01969350719182686 - nodes in this community are weakly interconnected._
 - **Should `ContentFlowControls.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.01720386236910105 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.019690949227373068 - nodes in this community are weakly interconnected._
 - **Should `BlockCanvas.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.044427989633469084 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05026300409117475 - nodes in this community are weakly interconnected._

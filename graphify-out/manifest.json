@@ -108,10 +108,10 @@
     "semantic_hash": "43590754de5528280d593cf9a985de49"
   },
   "src/components/AgentDraftReview/FrontDeskDraftReviewContent.tsx": {
-    "mtime": 1787663052.2851946,
-    "seen": 1787896827.221676,
-    "ast_hash": "6cd340e3b22b33a4c47971a19dcfe043",
-    "semantic_hash": "6cd340e3b22b33a4c47971a19dcfe043"
+    "mtime": 1788185938.046028,
+    "seen": 1788187485.977091,
+    "ast_hash": "878735fd8c2e32092081b8f78d439058",
+    "semantic_hash": ""
   },
   "src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx": {
     "mtime": 1787155521.3071673,
@@ -150,9 +150,9 @@
     "semantic_hash": "f91bb36c63f67790dbfedcef72fcfda5"
   },
   "src/components/AiBuilderPanel/AiBuilderPanel.tsx": {
-    "mtime": 1788179271.3868327,
-    "seen": 1788179302.4420328,
-    "ast_hash": "0bf3d54afffe526f4d1ae2e75b115f78",
+    "mtime": 1788179411.9769053,
+    "seen": 1788187485.977097,
+    "ast_hash": "4a984ad79707b6439e89b9a49bf2820a",
     "semantic_hash": ""
   },
   "src/components/AiBuilderPanel/AiBuilderPanel.types.ts": {
@@ -600,9 +600,9 @@
     "semantic_hash": "c445409637726e96be9aaf105459faf4"
   },
   "src/components/LogDetailsPanel/LogDetailsPanel.tsx": {
-    "mtime": 1788071175.281183,
-    "seen": 1788170424.727148,
-    "ast_hash": "92b8346ca258107b0b55e282c616a141",
+    "mtime": 1788185938.0469983,
+    "seen": 1788187485.977162,
+    "ast_hash": "72f9edd14cec43b9c9a4c414e9f8fb00",
     "semantic_hash": ""
   },
   "src/components/LogDetailsPanel/LogDetailsPanel.types.ts": {
@@ -690,10 +690,10 @@
     "semantic_hash": "8a4dae6ee221947d320c101359ef0fc1"
   },
   "src/components/ProcedureSidePanel/ProcedureSidePanel.tsx": {
-    "mtime": 1786085272.6028566,
-    "seen": 1787896827.2217631,
-    "ast_hash": "c94cbdd46a303a142316864c2f653228",
-    "semantic_hash": "c94cbdd46a303a142316864c2f653228"
+    "mtime": 1788185938.0478604,
+    "seen": 1788187485.977175,
+    "ast_hash": "aa6e5344fe5b1cb30b8a797381f4f30b",
+    "semantic_hash": ""
   },
   "src/components/ProcedureSidePanel/ProcedureSidePanel.types.ts": {
     "mtime": 1786085272.6029942,
@@ -720,10 +720,10 @@
     "semantic_hash": "47740cf12c8165c0aea05933f20e16ce"
   },
   "src/components/ProceduresPickerDrawer/procedurePickerDetailData.ts": {
-    "mtime": 1786085272.6068006,
-    "seen": 1787896827.221768,
-    "ast_hash": "7083aae7e1dfa735a63ec6b80e865698",
-    "semantic_hash": "7083aae7e1dfa735a63ec6b80e865698"
+    "mtime": 1788185938.0485966,
+    "seen": 1788187485.9771788,
+    "ast_hash": "e5d47c527ac31fc5f862cd251bef8aab",
+    "semantic_hash": ""
   },
   "src/components/PromptComposer/PromptComposer.tsx": {
     "mtime": 1787664111.176294,
@@ -4128,9 +4128,9 @@
     "semantic_hash": ""
   },
   "src/data/agentWorkflows.ts": {
-    "mtime": 1788177576.748252,
-    "seen": 1788179177.451844,
-    "ast_hash": "ce2e9a62ba046c33f8502aba0bff89ba",
+    "mtime": 1788186760.9810429,
+    "seen": 1788187485.977675,
+    "ast_hash": "8094637a892344b017a820fafa3bc3c1",
     "semantic_hash": ""
   },
   "src/data/annetteBlackChatConversation.ts": {
@@ -4218,10 +4218,10 @@
     "semantic_hash": "5d609d2e18b5005d2bc9f22f5a99e892"
   },
   "src/data/procedureData.ts": {
-    "mtime": 1786085272.6299386,
-    "seen": 1787896827.22232,
-    "ast_hash": "6411a261ee052de163ca5e7a5283ee48",
-    "semantic_hash": "6411a261ee052de163ca5e7a5283ee48"
+    "mtime": 1788185938.0508728,
+    "seen": 1788187485.977691,
+    "ast_hash": "9c154a49f25d5816265dc1a03732385c",
+    "semantic_hash": ""
   },
   "src/data/recommendationsData.ts": {
     "mtime": 1786352171.641066,
@@ -4296,9 +4296,9 @@
     "semantic_hash": "8c8e65450fb7302dacd5e4592b2b7236"
   },
   "src/screens/AgentDetailScreen.tsx": {
-    "mtime": 1788179265.0501597,
-    "seen": 1788179302.442624,
-    "ast_hash": "e5408d7e0da88c0b438591552f215b6c",
+    "mtime": 1788185938.0535202,
+    "seen": 1788187485.977704,
+    "ast_hash": "0164db4d6cdd42022b04045619a442af",
     "semantic_hash": ""
   },
   "src/screens/AgentDirectoryScreen.tsx": {
@@ -4848,9 +4848,9 @@
     "semantic_hash": "0352474ba2918efe13895edbc3780d94"
   },
   "src/workflow/AgentBuilder/AgentBuilder.jsx": {
-    "mtime": 1788178953.9195397,
-    "seen": 1788179177.451988,
-    "ast_hash": "40f74a5394569a6c43c2df37bfa9b7b8",
+    "mtime": 1788185938.0555792,
+    "seen": 1788187485.9778292,
+    "ast_hash": "a9a32b62eeef0d349cd2fd85f64ff0a9",
     "semantic_hash": ""
   },
   "src/workflow/AgentBuilder/AgentBuilder.stories.jsx": {
@@ -4914,9 +4914,9 @@
     "semantic_hash": "da886bdac70ed0bb703c92aacbfbe307"
   },
   "src/workflow/LHSDrawer/LHSDrawer.jsx": {
-    "mtime": 1788177576.7570932,
-    "seen": 1788179177.451997,
-    "ast_hash": "622257d17ef9be64d9c8ee53ea74b30b",
+    "mtime": 1788185938.056321,
+    "seen": 1788187485.977839,
+    "ast_hash": "67f26b7d650f6302a8cc135c61630697",
     "semantic_hash": ""
   },
   "src/workflow/LHSDrawer/LHSDrawer.stories.jsx": {
@@ -5250,9 +5250,9 @@
     "semantic_hash": "287dc4158222713d0fd62aed06897b05"
   },
   "src/workflow/Molecules/Canvas/CanvasNodeIcons.jsx": {
-    "mtime": 1788179258.4299295,
-    "seen": 1788179302.442796,
-    "ast_hash": "b4253cd1752d6f35570404ca1153314c",
+    "mtime": 1788179422.6262608,
+    "seen": 1788187485.977889,
+    "ast_hash": "bc9d7bb6ec1ff7f8260df2c50f034892",
     "semantic_hash": ""
   },
   "src/workflow/Molecules/Canvas/EndNode/EndNode.jsx": {
@@ -5970,9 +5970,9 @@
     "semantic_hash": "d785afe2b86a63a030267fa5cb404286"
   },
   "src/workflow/Organisms/Panels/RHS/AgentDetailsBody.jsx": {
-    "mtime": 1788168009.9713902,
-    "seen": 1788170424.727916,
-    "ast_hash": "bef53ceb1bb410e8e84e9c2eb071ebc4",
+    "mtime": 1788186210.5140507,
+    "seen": 1788187485.977997,
+    "ast_hash": "f7089a98e4188870b2ce467822749668",
     "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/BranchBody.jsx": {
@@ -6036,9 +6036,9 @@
     "semantic_hash": "6b19e5e6f50a5029ca0226b7c9faf20a"
   },
   "src/workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx": {
-    "mtime": 1788177576.7583866,
-    "seen": 1788179177.4521642,
-    "ast_hash": "fbe92b88e207ef40aebf57da18e11761",
+    "mtime": 1788185938.0573792,
+    "seen": 1788187485.978007,
+    "ast_hash": "9ad27ee488bf2f468db1ce29d48afd26",
     "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/ProcedureTaskBody.jsx": {
@@ -6276,10 +6276,10 @@
     "semantic_hash": ""
   },
   "src/workflow/services/procedureService.js": {
-    "mtime": 1786352171.6843762,
-    "seen": 1787896827.222997,
-    "ast_hash": "6a98f42e819b9de45b69d4c0946abd1f",
-    "semantic_hash": "6a98f42e819b9de45b69d4c0946abd1f"
+    "mtime": 1788185938.0584445,
+    "seen": 1788187485.9780428,
+    "ast_hash": "a8909891c6de444306a91e32dae12c4e",
+    "semantic_hash": ""
   },
   "src/workflow/services/templateService.js": {
     "mtime": 1783586902.3985646,
@@ -7554,9 +7554,9 @@
     "semantic_hash": ""
   },
   "src/data/reviewResponseCopy.ts": {
-    "mtime": 1788168009.962818,
-    "seen": 1788170424.727639,
-    "ast_hash": "0db56067e821a9d50f88b37298b559a5",
+    "mtime": 1788185938.051664,
+    "seen": 1788187485.9776928,
+    "ast_hash": "d85183a4d9dbf300f7cf20be40fa0902",
     "semantic_hash": ""
   },
   "icons/FD.svg": {
