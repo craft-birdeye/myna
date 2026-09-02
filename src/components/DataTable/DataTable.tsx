@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import { Icon } from '../Icon/Icon'
+import { Tooltip } from '../Tooltip/Tooltip'
 import { Column, DataTableProps, SortDir } from './DataTable.types'
 
 const DEFAULT_WIDTH = 160
@@ -263,22 +264,46 @@ export function DataTable<T extends Record<string, unknown>>({
                 const row = sortedData[menu.rowIndex]
                 return item.visible ? item.visible(row) : true
               })
-              .map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    item.onClick(sortedData[menu.rowIndex])
-                    setMenu(null)
-                  }}
-                  className={`flex w-full items-center justify-between px-md py-md text-left text-body hover:bg-surface-hover ${
-                    item.variant === 'danger' ? 'text-chip-danger-text' : 'text-text-primary'
-                  }`}
-                >
-                  {item.label}
-                  {item.icon && <Icon name={item.icon} size={16} className="shrink-0 text-text-icon" />}
-                </button>
-              ))}
+              .map((item) => {
+                const row = sortedData[menu.rowIndex]
+                const isDisabled = item.disabled?.(row) ?? false
+                const itemClass = `flex w-full items-center justify-between px-md py-md text-left text-body ${
+                  isDisabled
+                    ? 'cursor-not-allowed text-text-tertiary'
+                    : `hover:bg-surface-hover ${item.variant === 'danger' ? 'text-chip-danger-text' : 'text-text-primary'}`
+                }`
+
+                if (isDisabled) {
+                  return (
+                    <Tooltip
+                      key={item.label}
+                      content={item.disabledTooltip ?? ''}
+                      variant="detail"
+                      className="block w-full"
+                    >
+                      <span className={itemClass} role="menuitem" aria-disabled="true">
+                        {item.label}
+                        {item.icon && <Icon name={item.icon} size={16} className="shrink-0 text-text-icon" />}
+                      </span>
+                    </Tooltip>
+                  )
+                }
+
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => {
+                      item.onClick(row)
+                      setMenu(null)
+                    }}
+                    className={itemClass}
+                  >
+                    {item.label}
+                    {item.icon && <Icon name={item.icon} size={16} className="shrink-0 text-text-icon" />}
+                  </button>
+                )
+              })}
           </div>
         </>
       )}

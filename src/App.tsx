@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { BookingTemplateStoreProvider } from './data/BookingTemplateStoreContext'
+import { FallbackFailoverStoreProvider } from './data/FallbackFailoverStoreContext'
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
@@ -18,6 +19,7 @@ import { ProvidersScreen } from './screens/ProvidersScreen'
 import { AppointmentTypeScreen } from './screens/AppointmentTypeScreen'
 import { AvailabilityScreen } from './screens/AvailabilityScreen'
 import { BookingTemplatesScreen } from './screens/BookingTemplatesScreen'
+import { FallbackFailoverScreen } from './screens/FallbackFailoverScreen'
 import { AutoAppointmentTypeScreen } from './screens/AutoAppointmentTypeScreen'
 import { AutoAvailabilityScreen } from './screens/AutoAvailabilityScreen'
 import { HCFrontdeskOverviewScreen } from './screens/HCFrontdeskOverviewScreen'
@@ -182,6 +184,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
       { id: 'appointment-type',  label: 'Appointment type'   },
       { id: 'availability',      label: 'Availability'       },
       { id: 'booking-templates', label: 'Booking templates' },
+      { id: 'fallback-failover', label: 'Fallback & failover' },
       { id: 'procedure-library', label: 'Procedures'         },
       { id: 'phone-number',      label: 'Phone number'       },
       { id: 'knowledge-base',    label: 'Knowledge base',    external: true },
@@ -233,6 +236,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
       { id: 'appointment-type',  label: 'Appointment type' },
       { id: 'availability',      label: 'Availability'     },
       { id: 'booking-templates', label: 'Booking templates' },
+      { id: 'fallback-failover', label: 'Fallback & failover' },
       { id: 'procedure-library', label: 'Procedures'       },
       { id: 'phone-number',      label: 'Phone number'     },
       { id: 'knowledge-base',    label: 'Knowledge base', external: true },
@@ -452,6 +456,7 @@ export function App() {
   return (
     <ProcedureStoreProvider>
     <BookingTemplateStoreProvider>
+    <FallbackFailoverStoreProvider>
     <FeedbackRecommendationsStoreProvider>
     <RecommendationOverridesStoreProvider>
     <div className="flex h-screen w-screen overflow-hidden bg-surface text-text-primary">
@@ -491,7 +496,7 @@ export function App() {
           />
         ) : (
           <SideNav
-            key="frontdesk"
+            key={`frontdesk-${activeProduct}`}
             title="Front desk"
             sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
             activeId={navActive}
@@ -794,6 +799,8 @@ export function App() {
             initialEditId={pendingBookingTemplateId}
             onInitialEditConsumed={() => setPendingBookingTemplateId(null)}
           />
+        ) : navActive === 'fallback-failover' ? (
+          <FallbackFailoverScreen />
         ) : navActive === 'hc-frontdesk-overview' || navActive === 'dental-frontdesk-overview' || navActive === 'auto-frontdesk-overview' ? (
           <HCFrontdeskOverviewScreen isDental={navActive === 'dental-frontdesk-overview'} />
         ) : navActive === 'hc-no-shows' || navActive === 'dental-no-shows' || navActive === 'auto-no-shows' ? (
@@ -857,6 +864,7 @@ export function App() {
     </div>
     </RecommendationOverridesStoreProvider>
     </FeedbackRecommendationsStoreProvider>
+    </FallbackFailoverStoreProvider>
     </BookingTemplateStoreProvider>
     </ProcedureStoreProvider>
   )
