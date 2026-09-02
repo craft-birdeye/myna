@@ -57,6 +57,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { IntegrationDetailScreen } from './screens/IntegrationDetailScreen'
 import { WebWidgetsScreen } from './screens/WebWidgetsScreen'
 import { AppointmentWidgetsScreen } from './screens/AppointmentWidgetsScreen'
+import { EmployeesScreen } from './screens/EmployeesScreen'
 import { UserExperienceImprovementScreen } from './screens/UserExperienceImprovementScreen'
 import { InboxScreen } from './screens/InboxScreen'
 import { AllReviewsScreen } from './screens/AllReviewsScreen'
@@ -1030,6 +1031,8 @@ export function App() {
                     <AppointmentWidgetsScreen onBack={() => setSettingsSubScreen(null)} />
                   ) : settingsSubScreen === 'user-experience-improvement' ? (
                     <UserExperienceImprovementScreen onBack={() => setSettingsSubScreen(null)} />
+                  ) : settingsSubScreen === 'employees' ? (
+                    <EmployeesScreen onBack={() => setSettingsSubScreen(null)} />
                   ) : (
                     <SettingsScreen
                       initialTab={settingsTab}
@@ -1037,6 +1040,7 @@ export function App() {
                       onWebWidgets={() => setSettingsSubScreen('web-widgets')}
                       onAppointmentWidgets={() => setSettingsSubScreen('appointment-widgets')}
                       onUxImprovement={openUxImprovementSettings}
+                      onEmployees={() => setSettingsSubScreen('employees')}
                     />
                   )
                 ) : railActive === 'inbox' ? (

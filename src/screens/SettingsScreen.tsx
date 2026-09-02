@@ -192,7 +192,7 @@ const SECTIONS: SettingsSection[] = [
   },
 ]
 
-export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppointmentWidgets, onUxImprovement }: { initialTab?: string | null; onTabConsumed?: () => void; onWebWidgets?: () => void; onAppointmentWidgets?: () => void; onUxImprovement?: () => void }) {
+export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppointmentWidgets, onUxImprovement, onEmployees }: { initialTab?: string | null; onTabConsumed?: () => void; onWebWidgets?: () => void; onAppointmentWidgets?: () => void; onUxImprovement?: () => void; onEmployees?: () => void }) {
   const [query, setQuery] = useState('')
   const [activeNav, setActiveNav] = useState(initialTab ?? SETTINGS_NAV[0])
 
@@ -273,7 +273,7 @@ export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppo
                 {/* Section header — 24px padding */}
                 <div className="px-2xl pt-2xl">
                   <div className="flex items-center gap-sm">
-                    <h3 className="text-h3 text-text-primary">{section.title}</h3>
+                    <h3 className="text-base text-text-primary">{section.title}</h3>
                     {section.titleBadge && (
                       <span className="rounded-sm border border-border px-xs py-[1px] text-[10px] text-text-secondary">
                         {section.titleBadge}
@@ -302,7 +302,9 @@ export function SettingsScreen({ initialTab, onTabConsumed, onWebWidgets, onAppo
                               ? onAppointmentWidgets
                               : item.label === 'User experience improvement program'
                                 ? onUxImprovement
-                                : undefined
+                                : item.label === 'Employees'
+                                  ? onEmployees
+                                  : undefined
                         }
                         className="group flex h-[88px] items-center gap-md overflow-hidden rounded-sm px-sm text-left hover:bg-surface-hover"
                       >

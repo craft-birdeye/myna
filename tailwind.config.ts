@@ -51,6 +51,7 @@ export default {
           muted: '#8F8F8F', // L1 rail section headers (Marketing / Operations / Customer experience)
           action: '#1976D2', // text/onLightSurface/action/primary
           icon: '#303030', // icon/primary/default
+          heading: '#212121', // Gray/900 — stepper / section labels
         },
         chip: {
           warning: { bg: '#fef3d6', text: '#c69204' }, // Yellow/40 · critical

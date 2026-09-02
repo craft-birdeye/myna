@@ -253,3 +253,5 @@ export type { DateRangeSelectorProps } from './DateRangeSelector/DateRangeSelect
 export type { ReportHeaderProps } from './ReportHeader/ReportHeader.types'
 export type { InfoCardProps, InfoCardListItemProps } from './InfoCard/InfoCard.types'
 export { INFO_CARD_LAYOUT, INFO_CARD_LIST_ITEM_LAYOUT } from './InfoCard/InfoCard.types'
+export { AddEmployeeDrawer } from './AddEmployeeDrawer/AddEmployeeDrawer'
+export type { AddEmployeeDrawerProps, AddEmployeeValues } from './AddEmployeeDrawer/AddEmployeeDrawer.types'
