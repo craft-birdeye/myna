@@ -4701,7 +4701,7 @@ export default function AgentBuilder({
           onClose={handleCoachTourClose}
           steps={buildWorkflowCoachSteps({
             includeProcedures: showProceduresFloater,
-            frontDeskPreview: isFrontDeskAgentName,
+            testRunTitle: isFrontDeskAgentName ? 'Preview' : 'Run test',
           })}
         />
       )}

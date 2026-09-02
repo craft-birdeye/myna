@@ -1,6 +1,12 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import cueCreateWithAiIllustration from '@icons/Cue_Create with AI.svg'
+import coachCueAi from '@icons/Coach cues/AI.svg'
+import coachCueTrigger from '@icons/Coach cues/Trigger.svg'
+import coachCueProcedures from '@icons/Coach cues/Procedures.svg'
+import coachCueActions from '@icons/Coach cues/Actions.svg'
+import coachCueControls from '@icons/Coach cues/Controls.svg'
+import coachCueRunTest from '@icons/Coach cues/Run test.svg'
+import coachCueActivate from '@icons/Coach cues/Activate.svg'
 import { Icon } from '../Icon/Icon'
 import {
   WORKFLOW_COACH_STEPS,
@@ -8,9 +14,19 @@ import {
   type WorkflowCoachTourProps,
 } from './WorkflowCoachTour.types'
 
-const CARD_WIDTH = 400
+const CARD_WIDTH = 300
 const GAP = 14
 const PADDING = 16
+
+const COACH_CUE_ILLUSTRATIONS: Partial<Record<WorkflowCoachStep['id'], string>> = {
+  'create-with-ai': coachCueAi,
+  trigger: coachCueTrigger,
+  procedures: coachCueProcedures,
+  action: coachCueActions,
+  controls: coachCueControls,
+  'test-run': coachCueRunTest,
+  publish: coachCueActivate,
+}
 
 function measureAnchors(ids: string[]): DOMRect | null {
   const rects = ids
@@ -29,58 +45,13 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
 }
 
-/** Create with AI step cue art from Figma (node 15862:2500). */
-function CreateWithAiCoachIllustration() {
+function CoachStepIllustration({ stepId }: { stepId: string }) {
+  const src = COACH_CUE_ILLUSTRATIONS[stepId]
+  if (!src) return null
+
   return (
     <div className="mt-lg flex justify-center">
-      <img
-        src={cueCreateWithAiIllustration}
-        alt=""
-        className="block h-auto w-[85%]"
-        aria-hidden
-      />
-    </div>
-  )
-}
-
-/** Simplified chat + canvas preview used inside every coach card (matches Figma mock). */
-function CoachIllustration() {
-  return (
-    <div className="mt-lg overflow-hidden rounded-md border border-border bg-surface-selected">
-      <div className="flex h-[168px]">
-        <div className="flex w-[48%] flex-col gap-sm border-r border-border bg-surface p-md">
-          <div className="h-2 w-4/5 rounded-sm bg-surface-l2" />
-          <div className="h-2 w-3/5 rounded-sm bg-surface-l2" />
-          <div className="mt-xs flex flex-col gap-xs">
-            <div className="h-5 w-full rounded-full border border-border bg-surface" />
-            <div className="h-5 w-[90%] rounded-full border border-border bg-surface" />
-            <div className="h-5 w-[80%] rounded-full border border-border bg-surface" />
-          </div>
-          <div className="mt-auto flex h-7 items-center rounded-sm border border-border bg-surface px-sm">
-            <div className="h-2 w-2/3 rounded-sm bg-surface-l2" />
-          </div>
-        </div>
-        <div
-          className="relative flex-1 p-md"
-          style={{
-            backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)',
-            backgroundSize: '12px 12px',
-          }}
-        >
-          <div className="absolute left-md top-md flex items-center gap-xs rounded-sm border border-border bg-surface px-sm py-xs shadow-dropdown">
-            <span className="size-3 rounded-full bg-primary/30" />
-            <span className="h-2 w-10 rounded-sm bg-surface-l2" />
-          </div>
-          <div className="absolute bottom-md left-md right-md rounded-sm border border-chip-warning-text/40 bg-surface p-sm shadow-dropdown">
-            <div className="mb-xs flex items-center gap-xs">
-              <span className="size-3 rounded-full bg-chip-warning-text" />
-              <span className="h-2 w-12 rounded-sm bg-surface-l2" />
-            </div>
-            <div className="h-2 w-full rounded-sm bg-surface-l2" />
-            <div className="mt-xs h-2 w-2/3 rounded-sm bg-surface-l2" />
-          </div>
-        </div>
-      </div>
+      <img src={src} alt="" className="block h-auto w-full" aria-hidden />
     </div>
   )
 }
@@ -109,8 +80,8 @@ function positionCard(
 }
 
 /**
- * First-time workflow editor coach queue — six anchored cards (Create with AI →
- * Trigger → Procedures → Action & controls → Run test (Preview on front desk) → Activate).
+ * First-time workflow editor coach queue — anchored cards (Create with AI → Trigger →
+ * Procedures (Front desk) → Action → Controls → Run test → Activate).
  * Opens when `open` is true; dismiss with Done on the last step (or Next through the queue).
  */
 export function WorkflowCoachTour({
@@ -164,6 +135,10 @@ export function WorkflowCoachTour({
 
   if (!open || !step) return null
 
+  function handleBack() {
+    setStepIndex((i) => Math.max(0, i - 1))
+  }
+
   function handleNext() {
     if (isLast) {
       onClose()
@@ -191,7 +166,7 @@ export function WorkflowCoachTour({
         role="dialog"
         aria-modal="false"
         aria-labelledby="workflow-coach-title"
-        className="pointer-events-auto absolute w-[400px] rounded-lg bg-surface p-xl shadow-modal"
+        className="pointer-events-auto absolute w-[300px] rounded-lg bg-surface p-xl shadow-modal"
         style={
           layout
             ? { top: layout.top, left: layout.left }
@@ -227,21 +202,18 @@ export function WorkflowCoachTour({
         </h2>
         <p className="m-0 mt-sm text-body text-text-secondary">{step.description}</p>
 
-        {step.id === 'create-with-ai' ? (
-          <CreateWithAiCoachIllustration />
-        ) : step.id === 'procedures' ? null : (
-          <CoachIllustration />
-        )}
+        <CoachStepIllustration stepId={step.id} />
 
-        <div className={`flex items-center justify-between gap-md ${step.id === 'procedures' ? 'mt-lg' : 'mt-xl'}`}>
-          <div className="flex items-center gap-sm" aria-label={`Step ${stepIndex + 1} of ${steps.length}`}>
-            {steps.map((s, i) => (
-              <span
-                key={s.id}
-                className={`size-2 rounded-full ${i === stepIndex ? 'bg-primary' : 'bg-border-strong'}`}
-              />
-            ))}
-          </div>
+        <div className="mt-xl flex items-center justify-end gap-md">
+          {stepIndex > 0 ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+            >
+              Back
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleNext}

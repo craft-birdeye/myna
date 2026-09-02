@@ -12,7 +12,7 @@ export interface WorkflowCoachStep {
 export interface WorkflowCoachTourProps {
   open: boolean
   onClose: () => void
-  /** Override the default six workflow-editor steps. */
+  /** Override the default workflow-editor steps. */
   steps?: WorkflowCoachStep[]
 }
 
@@ -21,7 +21,7 @@ export const WORKFLOW_COACH_STEPS: WorkflowCoachStep[] = [
     id: 'create-with-ai',
     title: 'Create with AI',
     description:
-      'Describe what you want your workflow to do, and AI will help you build it. You can review and refine the workflow before publishing.',
+      'Describe what you want your agent to do, and AI builds the workflow for you in minutes. Review and refine it before you activate.',
     anchorIds: ['create-with-ai'],
     placement: 'right',
   },
@@ -29,7 +29,7 @@ export const WORKFLOW_COACH_STEPS: WorkflowCoachStep[] = [
     id: 'trigger',
     title: 'Trigger',
     description:
-      'Set the event that starts your workflow. A trigger can be something like a new review, an incoming message, or a scheduled event.',
+      'Choose what starts your agent. It can be a new review, an incoming message, or a schedule you set.',
     anchorIds: ['trigger'],
     placement: 'right',
   },
@@ -37,23 +37,31 @@ export const WORKFLOW_COACH_STEPS: WorkflowCoachStep[] = [
     id: 'procedures',
     title: 'Procedures',
     description:
-      'Add procedures to guide your front desk agent through common situations. Define the steps it should follow, the information it should collect, and how it should respond to customers.',
+      'Add procedures so your agent knows what to do, what to collect, and how to respond to patients, every time.',
     anchorIds: ['procedures'],
     placement: 'right',
   },
   {
-    id: 'tasks-controls',
-    title: 'Action & controls',
+    id: 'action',
+    title: 'Action',
     description:
-      'Add actions to define what your workflow does. Use conditions and other controls to decide how the workflow should move from one step to the next.',
-    anchorIds: ['tasks', 'controls'],
+      'Add the steps your agent takes to get the job done, automatically, every time.',
+    anchorIds: ['tasks'],
+    placement: 'right',
+  },
+  {
+    id: 'controls',
+    title: 'Controls',
+    description:
+      'Add conditions and branches so your agent knows exactly which route to take in any situation.',
+    anchorIds: ['controls'],
     placement: 'right',
   },
   {
     id: 'test-run',
     title: 'Run test',
     description:
-      'Run your workflow to see how each step behaves and make sure everything works as expected before turning it on.',
+      'Test your agent so you know exactly how it will perform before you activate it.',
     anchorIds: ['test-run'],
     placement: 'bottom',
   },
@@ -61,30 +69,21 @@ export const WORKFLOW_COACH_STEPS: WorkflowCoachStep[] = [
     id: 'publish',
     title: 'Activate',
     description:
-      'Once your workflow is configured and tested, activate it to start running automatically when your trigger occurs.',
+      'Activate once your agent is fully configured and tested, so it runs automatically when triggered.',
     anchorIds: ['publish'],
     placement: 'bottom',
   },
 ]
 
-const FRONT_DESK_PREVIEW_STEP_COPY = {
-  title: 'Preview',
-  description:
-    'Test your agent to see how it handles inbound calls, texts, and chats. Walk through common front desk scenarios and confirm each step works before you activate it.',
-} as const
-
-/** Coach steps with optional Procedures step and front desk Preview wording. */
+/** Coach steps with optional Procedures step (Front desk only). */
 export function buildWorkflowCoachSteps(options?: {
   includeProcedures?: boolean
-  frontDeskPreview?: boolean
+  /** Matches the header run-test button — "Preview" on front desk, "Run test" elsewhere. */
+  testRunTitle?: string
 }): WorkflowCoachStep[] {
   const includeProcedures = options?.includeProcedures ?? true
-  const frontDeskPreview = options?.frontDeskPreview ?? false
-
+  const testRunTitle = options?.testRunTitle ?? 'Run test'
   return WORKFLOW_COACH_STEPS.filter((step) => includeProcedures || step.id !== 'procedures').map(
-    (step) =>
-      frontDeskPreview && step.id === 'test-run'
-        ? { ...step, ...FRONT_DESK_PREVIEW_STEP_COPY }
-        : step,
+    (step) => (step.id === 'test-run' ? { ...step, title: testRunTitle } : step),
   )
 }

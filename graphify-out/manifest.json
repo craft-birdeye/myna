@@ -972,16 +972,16 @@
     "semantic_hash": "2304b33f80bbbe017f4844df86199515"
   },
   "src/components/Tooltip/Tooltip.tsx": {
-    "mtime": 1787393042.3471584,
-    "seen": 1787896827.2217999,
-    "ast_hash": "7f325a14c4d9ef93c82247566967893a",
-    "semantic_hash": "7f325a14c4d9ef93c82247566967893a"
+    "mtime": 1788351267.4370449,
+    "seen": 1788351555.121152,
+    "ast_hash": "f1a8f63c8026cc2f6c1e01c552de181c",
+    "semantic_hash": ""
   },
   "src/components/Tooltip/Tooltip.types.ts": {
-    "mtime": 1786686262.6246972,
-    "seen": 1787896827.221801,
-    "ast_hash": "a5c0ea1daa867f4c6504f739c19e95b5",
-    "semantic_hash": "a5c0ea1daa867f4c6504f739c19e95b5"
+    "mtime": 1788351266.550146,
+    "seen": 1788351555.121153,
+    "ast_hash": "a02bbcf0f97908a3bbc17adb980e057f",
+    "semantic_hash": ""
   },
   "src/components/TopNav/TopNav.tsx": {
     "mtime": 1786352375.0515556,
@@ -1074,15 +1074,15 @@
     "semantic_hash": "167df90829687ebcb26b7688de1559fe"
   },
   "src/components/WorkflowCoachTour/WorkflowCoachTour.tsx": {
-    "mtime": 1788178964.9406154,
-    "seen": 1788179177.4514089,
-    "ast_hash": "ae4c7b5a5381b201773efe0551ab2aa8",
+    "mtime": 1788354981.7380235,
+    "seen": 1788355168.723705,
+    "ast_hash": "56132f37d54b3008268dd03b0232184e",
     "semantic_hash": ""
   },
   "src/components/WorkflowCoachTour/WorkflowCoachTour.types.ts": {
-    "mtime": 1788178952.2888446,
-    "seen": 1788179177.451411,
-    "ast_hash": "2e8a36271d0a2464e53577244a198a11",
+    "mtime": 1788355149.675353,
+    "seen": 1788355168.723706,
+    "ast_hash": "26f232b5dddb6405af76590b0eaac89e",
     "semantic_hash": ""
   },
   "src/components/charts/ChartCard.tsx": {
@@ -4848,9 +4848,9 @@
     "semantic_hash": "0352474ba2918efe13895edbc3780d94"
   },
   "src/workflow/AgentBuilder/AgentBuilder.jsx": {
-    "mtime": 1788350454.6513677,
-    "seen": 1788350494.037287,
-    "ast_hash": "3600078f594dc9a34b3b54b18e014831",
+    "mtime": 1788355150.3705523,
+    "seen": 1788355168.724385,
+    "ast_hash": "e4746adcfdf819984769438051c220f8",
     "semantic_hash": ""
   },
   "src/workflow/AgentBuilder/AgentBuilder.stories.jsx": {
@@ -4884,9 +4884,9 @@
     "semantic_hash": "0240080a8f7178675bc40bc49acf3918"
   },
   "src/workflow/FlowCanvas/AddStepButton.jsx": {
-    "mtime": 1788349558.3617094,
-    "seen": 1788349675.482164,
-    "ast_hash": "a2d1ccb86eae87cf5f64155fef8a18bd",
+    "mtime": 1788351268.9263508,
+    "seen": 1788351555.121794,
+    "ast_hash": "35d330cd1a30a929bb3d9c88d4ceaf55",
     "semantic_hash": ""
   },
   "src/workflow/FlowCanvas/AddStepMenu.jsx": {
@@ -4914,9 +4914,9 @@
     "semantic_hash": "da886bdac70ed0bb703c92aacbfbe307"
   },
   "src/workflow/LHSDrawer/LHSDrawer.jsx": {
-    "mtime": 1788350725.9170687,
-    "seen": 1788350760.035002,
-    "ast_hash": "fc27f4473dcdf5570d33704efd9c8e9c",
+    "mtime": 1788351085.8892086,
+    "seen": 1788351555.121799,
+    "ast_hash": "fb782b71c37f05cb89abe226d0d23545",
     "semantic_hash": ""
   },
   "src/workflow/LHSDrawer/LHSDrawer.stories.jsx": {
@@ -5484,9 +5484,9 @@
     "semantic_hash": "3c8c6ae539c0afd124cab89ad08e428c"
   },
   "src/workflow/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.jsx": {
-    "mtime": 1788350725.9049146,
-    "seen": 1788350760.0350919,
-    "ast_hash": "054c37f636ebfe3500c7b9b8d89a44d2",
+    "mtime": 1788351085.8889322,
+    "seen": 1788351555.1218822,
+    "ast_hash": "2079a33a670c2bb0b91c2bfb5f37925a",
     "semantic_hash": ""
   },
   "src/workflow/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.stories.jsx": {
@@ -7584,9 +7584,51 @@
     "semantic_hash": ""
   },
   "src/workflow/components/DraftBlockedTooltip.jsx": {
-    "mtime": 1788350884.7783732,
-    "seen": 1788351016.85987,
-    "ast_hash": "7c72207cf53d4ab40c13783d95ff2c15",
+    "mtime": 1788351274.0721884,
+    "seen": 1788351555.121994,
+    "ast_hash": "26384433112bb5739f57fae7d112a7af",
+    "semantic_hash": ""
+  },
+  "icons/Coach cues/AI.svg": {
+    "mtime": 1788354512.6343749,
+    "seen": 1788354936.872148,
+    "ast_hash": "8f793cc4b6f12fdef761be9630e78f7c",
+    "semantic_hash": ""
+  },
+  "icons/Coach cues/Actions.svg": {
+    "mtime": 1788354512.633456,
+    "seen": 1788354936.872149,
+    "ast_hash": "e692bfef352637df87763da91b907e29",
+    "semantic_hash": ""
+  },
+  "icons/Coach cues/Activate.svg": {
+    "mtime": 1788354512.6321201,
+    "seen": 1788354936.87215,
+    "ast_hash": "f9b9b513115f112378aa726dfce08e0f",
+    "semantic_hash": ""
+  },
+  "icons/Coach cues/Controls.svg": {
+    "mtime": 1788354512.632981,
+    "seen": 1788354936.8721511,
+    "ast_hash": "7f19212381f27888eb8c41d5feded5a4",
+    "semantic_hash": ""
+  },
+  "icons/Coach cues/Procedures.svg": {
+    "mtime": 1788354512.6317475,
+    "seen": 1788354936.872152,
+    "ast_hash": "6c9f3365392f1833c88766aa20bc0cdb",
+    "semantic_hash": ""
+  },
+  "icons/Coach cues/Run test.svg": {
+    "mtime": 1788354512.632678,
+    "seen": 1788354936.872152,
+    "ast_hash": "ec61106a63359488c1b26ad52eb8f8ae",
+    "semantic_hash": ""
+  },
+  "icons/Coach cues/Trigger.svg": {
+    "mtime": 1788354512.634083,
+    "seen": 1788354936.872153,
+    "ast_hash": "f34be4bf4ba2b8daafb0a8017fae89b4",
     "semantic_hash": ""
   }
 }
