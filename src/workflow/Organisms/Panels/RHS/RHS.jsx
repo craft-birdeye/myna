@@ -18,6 +18,8 @@ import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
 import SendResponseTaskBody from './SendResponseTaskBody';
+import { DraftBlockedOverlay } from '../../../components/DraftBlockedTooltip';
+import '../../../styles/aero-disabled.css';
 import styles from './RHS.module.css';
 
 const VARIANTS = {
@@ -126,12 +128,14 @@ const PANEL_WIDTH = {
 
 const DEFAULT_PANEL_WIDTH = 450;
 
-export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, product = 'automotive', inlineFooter = false, saveLabel, showPromptStrength: showPromptStrengthProp, titleLayoutMenu = null, titleTabMenu = null }) {
+export default function RHS({ variant = 'agentDetails', title, bodyProps, onClose, onSave, onPreview, onBack, viewOnly = false, draftBlocked = false, onEditDraft, product = 'automotive', inlineFooter = false, saveLabel, showPromptStrength: showPromptStrengthProp, titleLayoutMenu = null, titleTabMenu = null }) {
   const config = VARIANTS[variant];
   const Body = config.body;
   const panelWidth = PANEL_WIDTH[variant] ?? DEFAULT_PANEL_WIDTH;
   const showPromptStrength = showPromptStrengthProp ?? config.showPromptStrength;
   const resolvedSaveLabel = saveLabel ?? 'Save';
+  /** True view-only uses native fieldset lock; draft-blocked uses per-field disabled styling. */
+  const fieldsLocked = viewOnly;
 
   /** R1: LLMTaskBody exposes validate() via ref — Save runs it first and bails
    *  (leaving the body to open/highlight the offending accordion) when invalid. */
@@ -158,24 +162,26 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
             the Save button sit right under the content. Once the content is tall enough to
             scroll the body fills the space again and the footer lands at the bottom as usual. */}
         <div
-          className={`${styles['rhs-panel__body']}${inlineFooter ? ` ${styles['rhs-panel__body--inline']}` : ''}`}
+          className={`${styles['rhs-panel__body']}${inlineFooter ? ` ${styles['rhs-panel__body--inline']}` : ''}${draftBlocked ? ` ${styles['rhs-panel__body--draft-disabled']}` : ''}`}
         >
           {/* Read-only mode uses a disabled <fieldset>, not just pointer-events: that natively
               disables every nested control so Tab-and-type can't edit the panel either. The
               pointer-events guard stays for non-form click handlers (swatch pickers etc.). */}
           <FieldsetOrDiv
-            as={viewOnly ? 'fieldset' : 'div'}
-            {...(viewOnly ? { disabled: true, className: 'rhs-readonly' } : {})}
+            as={fieldsLocked ? 'fieldset' : 'div'}
+            {...(fieldsLocked ? { disabled: true, className: 'rhs-readonly' } : {})}
             style={{
-              pointerEvents: viewOnly ? 'none' : undefined,
-              userSelect: viewOnly ? 'text' : undefined,
-              ...(viewOnly ? { border: 0, margin: 0, padding: 0, minWidth: 0 } : {}),
+              pointerEvents: fieldsLocked ? 'none' : undefined,
+              userSelect: fieldsLocked ? 'text' : undefined,
+              ...(fieldsLocked ? { border: 0, margin: 0, padding: 0, minWidth: 0 } : {}),
             }}
           >
             <Body
               {...(bodyProps || {})}
               ref={variant === 'llmTask' ? bodyRef : undefined}
               viewOnly={viewOnly}
+              draftBlocked={draftBlocked}
+              onEditDraft={onEditDraft}
               product={product}
               allowStepsExpand={
                 bodyProps?.allowStepsExpand
@@ -186,13 +192,26 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
         </div>
 
         {!viewOnly && (
-          <RHSPanelFooter
-            onSave={handleSaveClick}
-            saveLabel={resolvedSaveLabel}
-            disabled={variant === 'llmTask' ? bodyProps?.saveBlocked : false}
-            missingFieldsWarning={variant === 'llmTask' ? bodyProps?.saveBlocked : false}
-            showPromptStrength={showPromptStrength}
-          />
+          draftBlocked ? (
+            <div className={styles['rhs-panel__footer-blocked']}>
+              <RHSPanelFooter
+                onSave={handleSaveClick}
+                saveLabel={resolvedSaveLabel}
+                disabled
+                missingFieldsWarning={false}
+                showPromptStrength={showPromptStrength}
+              />
+              <DraftBlockedOverlay onEditDraft={onEditDraft} className="draft-blocked-overlay-wrap--footer" />
+            </div>
+          ) : (
+            <RHSPanelFooter
+              onSave={handleSaveClick}
+              saveLabel={resolvedSaveLabel}
+              disabled={variant === 'llmTask' ? bodyProps?.saveBlocked : false}
+              missingFieldsWarning={variant === 'llmTask' ? bodyProps?.saveBlocked : false}
+              showPromptStrength={showPromptStrength}
+            />
+          )
         )}
       </div>
   );

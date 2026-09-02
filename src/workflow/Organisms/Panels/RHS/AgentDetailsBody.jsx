@@ -5,6 +5,7 @@ import LocationsDrawer, {
   resolveLocationsForSelectBy,
   formatSelectByGroupLabel,
 } from '../../../RHSDrawer/LocationsDrawer.jsx';
+import { DraftBlockedField, rhsFieldLock } from '../../../components/DraftBlockedTooltip';
 import styles from './AgentDetailsBody.module.css';
 
 const DEFAULT_LOCATIONS = [
@@ -26,11 +27,26 @@ export default function AgentDetailsBody({
   values: externalValues,
   onChange,
   viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
   /** Bumped by the canvas's "Add locations" link to jump straight to the Locations picker. */
   autoOpenLocationsToken = 0,
   /** Exploration: Select by includes custom fields (managers, departments). */
   includeCustomFields = false,
 }) {
+  const { inputDisabled, inputReadOnly, fieldsLocked } = rhsFieldLock({ viewOnly, draftBlocked });
+
+  const blockField = (node, className = '') => (
+    <DraftBlockedField
+      draftBlocked={draftBlocked}
+      viewOnly={viewOnly}
+      onEditDraft={onEditDraft}
+      className={className}
+    >
+      {node}
+    </DraftBlockedField>
+  );
+
   const [internalValues, setInternalValues] = useState({
     agentName: '',
     goals: '',
@@ -42,8 +58,8 @@ export default function AgentDetailsBody({
   const [showAllChips, setShowAllChips] = useState(false);
 
   useEffect(() => {
-    if (autoOpenLocationsToken) setShowLocations(true);
-  }, [autoOpenLocationsToken]);
+    if (autoOpenLocationsToken && !fieldsLocked) setShowLocations(true);
+  }, [autoOpenLocationsToken, fieldsLocked]);
 
   const values = externalValues ?? internalValues;
 
@@ -121,7 +137,7 @@ export default function AgentDetailsBody({
   };
 
   /* LocationsDrawer replaces the whole body when open */
-  if (showLocations) {
+  if (showLocations && !fieldsLocked) {
     return (
       <LocationsDrawer
         selectedIds={(values.locations || []).map((l) => l.id)}
@@ -140,99 +156,107 @@ export default function AgentDetailsBody({
     : chipSource.slice(0, VISIBLE_COUNT);
   const overflowCount = chipSource.length - VISIBLE_COUNT;
 
-  return (
-    <div className={styles.body}>
-      <FormInput
-        name="agentName"
-        type="text"
-        label="Agent name"
-        value={values.agentName}
-        onChange={set('agentName')}
-        required
-        readOnly={viewOnly}
-      />
-      <TextArea
-        name="goals"
-        label="Goals"
-        value={values.goals}
-        onChange={set('goals')}
-        required
-        noFloatingLabel
-        rows={6}
-        readOnly={viewOnly}
-        placeholder="Example: Respond to every new customer review within 24 hours with a reply"
-      />
-
-      {/* ─── Locations ─── */}
-      <div className={styles.locationsField}>
-        <div className={styles.locationsLabel}>
-          <span className={styles.locationsLabelText}>Locations</span>
-          <span className={styles.locationsRequired}>*</span>
-          {!viewOnly && hasLocationSelection && (
-            <button
-              className={styles.locationsEditBtn}
-              type="button"
-              onClick={() => setShowLocations(true)}
-              title="Edit locations"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                edit
-              </span>
-            </button>
-          )}
-        </div>
-
-        {!hasLocationSelection ? (
-          !viewOnly && (
-            <button
-              className={styles.addLink}
-              type="button"
-              onClick={() => setShowLocations(true)}
-            >
-              + Add locations
-            </button>
-          )
-        ) : (
-          <>
-            {locationsSelectBy && (
-              <p className={styles.selectBySummary}>
-                This agent runs on the locations assigned to the{' '}
-                {formatSelectByGroupLabel(locationsSelectBy.label, selectByEntities.length)}
-              </p>
-            )}
-
-            <div className={styles.chipsRow}>
-              {visibleChips.map((chip) => (
-                <span key={chip.id} className={styles.locationChip}>
-                  <span className={styles.locationChipName}>{chip.name}</span>
-                  {!viewOnly && (
-                    <button
-                      type="button"
-                      className={styles.locationChipClose}
-                      onClick={() => (
-                        locationsSelectBy
-                          ? handleRemoveEntityChip(chip.id)
-                          : handleRemoveLocationChip(chip.id)
-                      )}
-                      title="Remove"
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                        close
-                      </span>
-                    </button>
-                  )}
-                </span>
-              ))}
-            </div>
-
-            {!showAllChips && overflowCount > 0 && (
-              <button className={styles.moreLink} type="button" onClick={() => setShowAllChips(true)}>
-                + {overflowCount} more
-              </button>
-            )}
-          </>
+  const locationsField = (
+    <div className={`${styles.locationsField}${inputDisabled ? ` ${styles.locationsFieldDisabled}` : ''}`}>
+      <div className={styles.locationsLabel}>
+        <span className={styles.locationsLabelText}>Locations</span>
+        <span className={styles.locationsRequired}>*</span>
+        {!fieldsLocked && hasLocationSelection && (
+          <button
+            className={styles.locationsEditBtn}
+            type="button"
+            onClick={() => setShowLocations(true)}
+            title="Edit locations"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+              edit
+            </span>
+          </button>
         )}
       </div>
+
+      {!hasLocationSelection ? (
+        !fieldsLocked && (
+          <button
+            className={styles.addLink}
+            type="button"
+            onClick={() => setShowLocations(true)}
+          >
+            + Add locations
+          </button>
+        )
+      ) : (
+        <>
+          {locationsSelectBy && (
+            <p className={styles.selectBySummary}>
+              This agent runs on the locations assigned to the{' '}
+              {formatSelectByGroupLabel(locationsSelectBy.label, selectByEntities.length)}
+            </p>
+          )}
+
+          <div className={styles.chipsRow}>
+            {visibleChips.map((chip) => (
+              <span key={chip.id} className={styles.locationChip}>
+                <span className={styles.locationChipName}>{chip.name}</span>
+                {!fieldsLocked && (
+                  <button
+                    type="button"
+                    className={styles.locationChipClose}
+                    onClick={() => (
+                      locationsSelectBy
+                        ? handleRemoveEntityChip(chip.id)
+                        : handleRemoveLocationChip(chip.id)
+                    )}
+                    title="Remove"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 12, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
+                      close
+                    </span>
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+
+          {!showAllChips && overflowCount > 0 && (
+            <button className={styles.moreLink} type="button" onClick={() => setShowAllChips(true)}>
+              + {overflowCount} more
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <div className={styles.body}>
+      {blockField(
+        <FormInput
+          name="agentName"
+          type="text"
+          label="Agent name"
+          value={values.agentName}
+          onChange={set('agentName')}
+          required
+          readOnly={inputReadOnly}
+          disabled={inputDisabled}
+        />,
+      )}
+      {blockField(
+        <TextArea
+          name="goals"
+          label="Goals"
+          value={values.goals}
+          onChange={set('goals')}
+          required
+          noFloatingLabel
+          rows={6}
+          readOnly={inputReadOnly}
+          disabled={inputDisabled}
+          placeholder="Example: Respond to every new customer review within 24 hours with a reply"
+        />,
+      )}
+      {blockField(locationsField)}
     </div>
   );
 }

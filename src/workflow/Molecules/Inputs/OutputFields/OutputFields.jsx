@@ -39,7 +39,10 @@ export default function OutputFields({
   /** Exploration: "+ Add" on the label row instead of inside the chip box. */
   addInLabelRow = false,
   onOpenGlossary,
+  readOnly = false,
+  disabled = false,
 }) {
+  const locked = readOnly || disabled;
   const normalizedFields = normalizeFields(fields);
   const [generateState, setGenerateState] = useState('idle');
   const [addingNew, setAddingNew] = useState(false);
@@ -130,8 +133,8 @@ export default function OutputFields({
 
   const hasChips = normalizedFields.length > 0 || addingNew;
   const isEmpty = normalizedFields.length === 0 && !addingNew;
-  const showLabelAdd = addInLabelRow && !isEmpty;
-  const showInlineAdd = !addInLabelRow || isEmpty;
+  const showLabelAdd = !locked && addInLabelRow && !isEmpty;
+  const showInlineAdd = !locked && (!addInLabelRow || isEmpty);
 
   const chipsBlock = hasChips && (
     <div className={`${styles.chipWrap}${addInLabelRow ? ` ${styles.chipWrapCompact}` : ''}`}>
@@ -140,9 +143,9 @@ export default function OutputFields({
           key={`${f.value}-${i}`}
           value={f.value}
           type={f.type}
-          onChange={(v) => onChipChange(i, v)}
-          onDelete={() => onChipDelete(i)}
-          onSwatchClick={() => openForChip(i)}
+          onChange={locked ? undefined : (v) => onChipChange(i, v)}
+          onDelete={locked ? undefined : () => onChipDelete(i)}
+          onSwatchClick={locked ? undefined : () => openForChip(i)}
         />
       ))}
       {addingNew && (
@@ -285,7 +288,9 @@ export default function OutputFields({
         <div
           className={`${styles.chipContainer}${
             addInLabelRow && !isEmpty ? ` ${styles.chipContainerCompact}` : ''
-          }${addInLabelRow && isEmpty ? ` ${styles.chipContainerEmpty}` : ''}`}
+          }${addInLabelRow && isEmpty ? ` ${styles.chipContainerEmpty}` : ''}${
+            disabled ? ` ${styles.chipContainerDisabled}` : readOnly ? ` ${styles.chipContainerReadOnly}` : ''
+          }`}
         >
           {measureLayer}
           {chipsBlock}
@@ -294,7 +299,7 @@ export default function OutputFields({
         </div>
       )}
 
-      {generateUi}
+      {!locked && generateUi}
 
       {outputModalOpen && (
         <AddOutputFieldModal

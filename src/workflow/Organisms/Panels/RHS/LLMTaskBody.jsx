@@ -10,6 +10,7 @@ import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import infoIconUrl from '../../../../assets/icon-info.svg';
 import AddInputFieldModal from '../../Modals/AddInputFieldModal/AddInputFieldModal';
 import { useTwoLineChipCollapse } from '../../../Molecules/Inputs/chipTwoLineCollapse';
+import { DraftBlockedField, rhsFieldLock } from '../../../components/DraftBlockedTooltip';
 import styles from './LLMTaskBody.module.css';
 
 const LLM_MODEL_OPTIONS = [
@@ -89,7 +90,10 @@ function ChipContainer({
   /** Exploration Context / Input: add opens an external modal — hide inline type picker. */
   suppressAdd = false,
   viewMoreLabel = (n) => `View ${n} more`,
+  readOnly = false,
+  disabled = false,
 }) {
+  const locked = readOnly || disabled;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerFor, setPickerFor] = useState(null);
   const [pendingType, setPendingType] = useState('variable');
@@ -147,8 +151,8 @@ function ChipContainer({
 
   const hasChips = chips.length > 0 || addingNew;
   const isEmpty = chips.length === 0 && !addingNew;
-  const showLabelAdd = !suppressAdd && addInLabelRow && !isEmpty;
-  const showInlineAdd = !suppressAdd && (!addInLabelRow || isEmpty);
+  const showLabelAdd = !locked && !suppressAdd && addInLabelRow && !isEmpty;
+  const showInlineAdd = !locked && !suppressAdd && (!addInLabelRow || isEmpty);
 
   const chipsBlock = hasChips && (
     <div className={`${styles.chipWrap}${addInLabelRow ? ` ${styles.chipWrapCompact}` : ''}`}>
@@ -157,9 +161,9 @@ function ChipContainer({
           key={`${chip.value}-${i}`}
           value={chip.value}
           type={chip.type}
-          onChange={(v) => onChipChange(i, v)}
-          onDelete={() => onChipDelete(i)}
-          onSwatchClick={() => openForChip(i)}
+          onChange={locked ? undefined : (v) => onChipChange(i, v)}
+          onDelete={locked ? undefined : () => onChipDelete(i)}
+          onSwatchClick={locked ? undefined : () => openForChip(i)}
         />
       ))}
       {addingNew && (
@@ -248,7 +252,9 @@ function ChipContainer({
     <div
       className={`${styles.chipContainer}${
         addInLabelRow && !isEmpty ? ` ${styles.chipContainerCompact}` : ''
-      }${addInLabelRow && isEmpty ? ` ${styles.chipContainerEmpty}` : ''}`}
+      }${addInLabelRow && isEmpty ? ` ${styles.chipContainerEmpty}` : ''}${
+        disabled ? ` ${styles.chipContainerDisabled}` : readOnly ? ` ${styles.chipContainerReadOnly}` : ''
+      }`}
     >
       {measureLayer}
       {chipsBlock}
@@ -349,7 +355,22 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
   /** R1/R2/R3/R4: notified whenever the missing-required-field state changes, so the RHS
    *  footer's Save button can disable itself and show the warning. */
   onValidationChange,
+  viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
 }, ref) {
+  const { inputDisabled, inputReadOnly, fieldsLocked } = rhsFieldLock({ viewOnly, draftBlocked });
+
+  const blockField = (node, className = '') => (
+    <DraftBlockedField
+      draftBlocked={draftBlocked}
+      viewOnly={viewOnly}
+      onEditDraft={onEditDraft}
+      className={className}
+    >
+      {node}
+    </DraftBlockedField>
+  );
   const [taskName, setTaskName] = useState(initialValues.taskName ?? '');
   const [description, setDescription] = useState(initialValues.description ?? '');
   const [llmModel, setLlmModel] = useState(initialValues.llmModel ?? 'Fast');
@@ -534,7 +555,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
     setInputModalOpen(false);
   };
 
-  const contextSection = collapseChipsToTwoLines ? (
+  const contextSection = blockField(collapseChipsToTwoLines ? (
     <div className={`${styles.fieldGroup} ${styles.fieldGroupCompact}`}>
       <div className={styles.labelRow}>
         <span className={styles.label}>Context</span>
@@ -544,7 +565,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
           learnMoreHref={onOpenGlossary ? undefined : CONTEXT_LEARN_MORE_HREF}
           onLearnMore={onOpenGlossary ? () => onOpenGlossary('context') : undefined}
         />
-        {contextFields.length > 0 && (
+        {contextFields.length > 0 && !fieldsLocked && (
           <button
             type="button"
             className={styles.fieldAddBtn}
@@ -556,7 +577,10 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
         )}
       </div>
       {contextFields.length === 0 ? (
-        <div className={`${styles.chipContainer} ${styles.chipContainerEmpty}`}>
+        <div className={`${styles.chipContainer} ${styles.chipContainerEmpty}${
+          inputDisabled ? ` ${styles.chipContainerDisabled}` : inputReadOnly ? ` ${styles.chipContainerReadOnly}` : ''
+        }`}>
+          {!fieldsLocked && (
           <button
             type="button"
             className={styles.addBtn}
@@ -565,6 +589,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
             <span className="material-symbols-outlined">add_circle</span>
             <span className={styles.addBtnLabel}>Add</span>
           </button>
+          )}
         </div>
       ) : (
         <ChipContainer
@@ -579,6 +604,8 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
           collapseToTwoLines
           addInLabelRow
           suppressAdd
+          readOnly={inputReadOnly}
+          disabled={inputDisabled}
         />
       )}
     </div>
@@ -597,10 +624,12 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
       onCancelAdd={() => setAddingContext(false)}
       onCommitAdd={(v, t) => { updateContextFields([...contextFields, { value: v, type: t || 'variable' }]); setAddingContext(false); }}
       onChangeChipType={(i, type) => updateContextFields(contextFields.map((c, idx) => idx === i ? { ...c, type } : c))}
+      readOnly={inputReadOnly}
+      disabled={inputDisabled}
     />
-  );
+  ));
 
-  const inputFieldsSection = collapseChipsToTwoLines ? (
+  const inputFieldsSection = blockField(collapseChipsToTwoLines ? (
     <div className={`${styles.fieldGroup} ${styles.fieldGroupCompact}`}>
       <div className={styles.labelRow}>
         <span className={styles.label}>Input fields</span>
@@ -610,7 +639,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
           learnMoreHref={onOpenGlossary ? undefined : INPUT_FIELDS_LEARN_MORE_HREF}
           onLearnMore={onOpenGlossary ? () => onOpenGlossary('input-field') : undefined}
         />
-        {inputFields.length > 0 && (
+        {inputFields.length > 0 && !fieldsLocked && (
           <button
             type="button"
             className={styles.fieldAddBtn}
@@ -622,7 +651,10 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
         )}
       </div>
       {inputFields.length === 0 ? (
-        <div className={`${styles.chipContainer} ${styles.chipContainerEmpty}`}>
+        <div className={`${styles.chipContainer} ${styles.chipContainerEmpty}${
+          inputDisabled ? ` ${styles.chipContainerDisabled}` : inputReadOnly ? ` ${styles.chipContainerReadOnly}` : ''
+        }`}>
+          {!fieldsLocked && (
           <button
             type="button"
             className={styles.addBtn}
@@ -631,6 +663,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
             <span className="material-symbols-outlined">add_circle</span>
             <span className={styles.addBtnLabel}>Add</span>
           </button>
+          )}
         </div>
       ) : (
         <ChipContainer
@@ -645,6 +678,8 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
           collapseToTwoLines
           addInLabelRow
           suppressAdd
+          readOnly={inputReadOnly}
+          disabled={inputDisabled}
         />
       )}
     </div>
@@ -663,20 +698,24 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
       onCancelAdd={() => setAddingInput(false)}
       onCommitAdd={(v, t) => { updateInputFields([...inputFields, { value: v, type: t || 'variable' }]); setAddingInput(false); }}
       onChangeChipType={(i, type) => updateInputFields(inputFields.map((c, idx) => idx === i ? { ...c, type } : c))}
+      readOnly={inputReadOnly}
+      disabled={inputDisabled}
     />
-  );
+  ));
 
-  const systemPromptSection = (
+  const systemPromptSection = blockField(
     <SystemPromptInput
       value={systemPrompt}
       onChange={(val) => { setSystemPrompt(val); emit('systemPrompt', val); clearInvalid('systemPrompt', val); }}
       required
       error={invalidField === 'systemPrompt'}
       showExpandButton={!accordionLayout && !segmentedLayout}
-    />
+      readOnly={inputReadOnly}
+      disabled={inputDisabled}
+    />,
   );
 
-  const userPromptSection = (
+  const userPromptSection = blockField(
     <UserPromptInput
       value={userPrompt}
       onChange={(val) => { setUserPrompt(val); emit('userPrompt', val); clearInvalid('userPrompt', val); }}
@@ -685,10 +724,12 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
       onOpenTool={onOpenTool}
       showTriggerFields
       error={invalidField === 'userPrompt'}
-    />
+      readOnly={inputReadOnly}
+      disabled={inputDisabled}
+    />,
   );
 
-  const outputFieldsSection = (
+  const outputFieldsSection = blockField(
     <OutputFields
       fields={outputFields}
       onFieldsChange={updateOutputFields}
@@ -699,10 +740,12 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
       onOpenGlossary={onOpenGlossary}
       collapseToTwoLines={collapseChipsToTwoLines}
       addInLabelRow={collapseChipsToTwoLines}
-    />
+      readOnly={inputReadOnly}
+      disabled={inputDisabled}
+    />,
   );
 
-  const llmModelSection = (
+  const llmModelSection = blockField(
     <div className={styles.fieldGroup}>
       <div className={styles.labelRow}>
         <span className={styles.label}>LLM model</span>
@@ -745,11 +788,12 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
         options={LLM_MODEL_OPTIONS}
         onChange={(opt) => { setLlmModel(opt.value); emit('llmModel', opt.value); }}
         placeholder="Select"
+        disabled={fieldsLocked}
       />
-    </div>
+    </div>,
   );
 
-  const taskNameField = (
+  const taskNameField = blockField(
     <FormInput
       name="taskName"
       type="text"
@@ -763,10 +807,12 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
       }}
       required
       error={invalidField === 'taskName'}
-    />
+      readOnly={viewOnly}
+      disabled={inputDisabled}
+    />,
   );
 
-  const descriptionField = (
+  const descriptionField = blockField(
     <div
       className={`${styles.descriptionField}${
         segmentedLayout ? ` ${styles.descriptionFieldSegmented}` : ''
@@ -790,8 +836,10 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
         resize={hideDescriptionLabel ? 'none' : undefined}
         error={invalidField === 'description'}
         errorMessage={hideDescriptionLabel ? 'Description is required' : undefined}
+        readOnly={viewOnly}
+        disabled={inputDisabled}
       />
-    </div>
+    </div>,
   );
 
   if (option3Stepper) {
@@ -968,7 +1016,7 @@ const LLMTaskBody = forwardRef(function LLMTaskBody({
             </button>
           ))}
         </div>
-        <div className={styles.segmentedContent} role="tabpanel">
+        <div className={styles.segmentedContent}>
           {activeSetupTab === 'advanced' ? advancedContent : setupContent}
         </div>
         {collapseChipsToTwoLines && contextModalOpen && (

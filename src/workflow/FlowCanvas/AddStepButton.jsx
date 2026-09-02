@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Tooltip } from '../../components/Tooltip/Tooltip';
+import { DraftBlockedTooltipContent, draftBlockedTooltipProps } from '../components/DraftBlockedTooltip';
 import AddStepMenu from './AddStepMenu';
 import './AddStepMenu.css';
 
@@ -22,6 +24,9 @@ export default function AddStepButton({
   singleSearch = false,
   /** When true, the + control is display-only (no click / menu). Drag-drop still works. */
   disableClick = false,
+  /** Live Active version is locked while an unpublished draft exists. */
+  draftBlocked = false,
+  onEditDraft,
 }) {
   const btnRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -73,7 +78,7 @@ export default function AddStepButton({
   function handleClick(e) {
     e.preventDefault();
     e.stopPropagation();
-    if (disableClick) return;
+    if (disableClick || draftBlocked) return;
     if (showPasteOption) {
       setShortcutMenuOpen((open) => !open);
       return;
@@ -118,7 +123,7 @@ export default function AddStepButton({
     if (r) setAnchorRect(r);
   }
 
-  const showPasteCues = showPasteOption && shortcutMenuOpen && !disableClick && !isDraggingFromLHS;
+  const showPasteCues = showPasteOption && shortcutMenuOpen && !disableClick && !draftBlocked && !isDraggingFromLHS;
   const isEmptySlot = className.includes('add-step-btn--empty-slot');
 
   const btnClass = [
@@ -130,7 +135,8 @@ export default function AddStepButton({
     showPasteCues ? 'add-step-btn--paste-active' : '',
     isDraggingFromLHS ? 'add-step-btn--lhs-drag' : '',
     isDragOver ? 'add-step-btn--drop-target' : '',
-    disableClick ? 'add-step-btn--noninteractive' : '',
+    disableClick && !draftBlocked ? 'add-step-btn--noninteractive' : '',
+    draftBlocked ? 'add-step-btn--draft-blocked' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -140,6 +146,7 @@ export default function AddStepButton({
     isDragOver ? 'add-step-btn-wrap--drop-target' : '',
     isDraggingFromLHS ? 'add-step-btn-wrap--lhs-drag' : '',
     showPasteCues ? 'add-step-btn-wrap--paste-cues' : '',
+    draftBlocked ? 'add-step-btn-wrap--draft-blocked' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -152,21 +159,36 @@ export default function AddStepButton({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <button
-        ref={btnRef}
-        type="button"
-        className={btnClass}
-        aria-label="Add step"
-        aria-disabled={disableClick || undefined}
-        tabIndex={disableClick ? -1 : undefined}
-        onClick={handleClick}
-        onMouseEnter={handlePlusMouseEnter}
+      <Tooltip
+        content={
+          draftBlocked
+            ? <DraftBlockedTooltipContent onEditDraft={onEditDraft} />
+            : 'Add'
+        }
+        variant={draftBlocked ? 'detail' : 'brief'}
+        side={draftBlocked ? draftBlockedTooltipProps.side : 'bottom'}
+        followCursor={draftBlocked ? draftBlockedTooltipProps.followCursor : undefined}
+        offset={draftBlocked ? draftBlockedTooltipProps.offset : undefined}
+        showDelay={draftBlocked ? draftBlockedTooltipProps.showDelay : undefined}
+        interactive={draftBlocked}
+        disabled={!draftBlocked && (menuOpen || showPasteCues || isDragOver || isDraggingFromLHS)}
       >
-        <span className="material-symbols-outlined">add</span>
-        {isDragOver && !isEmptySlot && (
-          <span className="add-step-btn__drop-label">Drop here</span>
-        )}
-      </button>
+        <button
+          ref={btnRef}
+          type="button"
+          className={btnClass}
+          aria-label="Add"
+          aria-disabled={disableClick || draftBlocked || undefined}
+          tabIndex={disableClick || draftBlocked ? -1 : undefined}
+          onClick={handleClick}
+          onMouseEnter={handlePlusMouseEnter}
+        >
+          <span className="material-symbols-outlined">add</span>
+          {isDragOver && !isEmptySlot && (
+            <span className="add-step-btn__drop-label">Drop here</span>
+          )}
+        </button>
+      </Tooltip>
 
       {showPasteCues && (
         <div

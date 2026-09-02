@@ -4848,9 +4848,9 @@
     "semantic_hash": "0352474ba2918efe13895edbc3780d94"
   },
   "src/workflow/AgentBuilder/AgentBuilder.jsx": {
-    "mtime": 1788185938.0555792,
-    "seen": 1788187485.9778292,
-    "ast_hash": "a9a32b62eeef0d349cd2fd85f64ff0a9",
+    "mtime": 1788350454.6513677,
+    "seen": 1788350494.037287,
+    "ast_hash": "3600078f594dc9a34b3b54b18e014831",
     "semantic_hash": ""
   },
   "src/workflow/AgentBuilder/AgentBuilder.stories.jsx": {
@@ -4884,10 +4884,10 @@
     "semantic_hash": "0240080a8f7178675bc40bc49acf3918"
   },
   "src/workflow/FlowCanvas/AddStepButton.jsx": {
-    "mtime": 1787836081.5054042,
-    "seen": 1787896827.222626,
-    "ast_hash": "2adc9057d7fa49095674f69ee8b02f4f",
-    "semantic_hash": "2adc9057d7fa49095674f69ee8b02f4f"
+    "mtime": 1788349558.3617094,
+    "seen": 1788349675.482164,
+    "ast_hash": "a2d1ccb86eae87cf5f64155fef8a18bd",
+    "semantic_hash": ""
   },
   "src/workflow/FlowCanvas/AddStepMenu.jsx": {
     "mtime": 1788022825.398511,
@@ -4896,9 +4896,9 @@
     "semantic_hash": ""
   },
   "src/workflow/FlowCanvas/FlowCanvas.jsx": {
-    "mtime": 1788071175.2812538,
-    "seen": 1788170424.727766,
-    "ast_hash": "e5e1d3ecbfe43ca154b4a6ce0f221103",
+    "mtime": 1788349590.8822763,
+    "seen": 1788349675.482166,
+    "ast_hash": "22ddbe935fdaab9d49be41dbdff7a2f9",
     "semantic_hash": ""
   },
   "src/workflow/FlowCanvas/FlowCanvas.stories.jsx": {
@@ -4914,9 +4914,9 @@
     "semantic_hash": "da886bdac70ed0bb703c92aacbfbe307"
   },
   "src/workflow/LHSDrawer/LHSDrawer.jsx": {
-    "mtime": 1788185938.056321,
-    "seen": 1788187485.977839,
-    "ast_hash": "67f26b7d650f6302a8cc135c61630697",
+    "mtime": 1788350725.9170687,
+    "seen": 1788350760.035002,
+    "ast_hash": "fc27f4473dcdf5570d33704efd9c8e9c",
     "semantic_hash": ""
   },
   "src/workflow/LHSDrawer/LHSDrawer.stories.jsx": {
@@ -5214,10 +5214,10 @@
     "semantic_hash": "0090b6bcdab689d0fba4bd44750846e1"
   },
   "src/workflow/Molecules/Canvas/CanvasNode/CanvasNode.jsx": {
-    "mtime": 1787502917.8071592,
-    "seen": 1787896827.222873,
-    "ast_hash": "4b06ad7e53817fb5e4b2c08fcfcd8f52",
-    "semantic_hash": "4b06ad7e53817fb5e4b2c08fcfcd8f52"
+    "mtime": 1788349859.1912398,
+    "seen": 1788350285.232333,
+    "ast_hash": "46ba3dee05582451933cbc4204c0027d",
+    "semantic_hash": ""
   },
   "src/workflow/Molecules/Canvas/CanvasNode/CanvasNode.stories.jsx": {
     "mtime": 1783586902.3517194,
@@ -5238,10 +5238,10 @@
     "semantic_hash": "cbba532a91d62640304d4a31fbf8a5e0"
   },
   "src/workflow/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.jsx": {
-    "mtime": 1787894912.1589205,
-    "seen": 1787896827.222877,
-    "ast_hash": "3824381c6c06108717497f26efac9e53",
-    "semantic_hash": "3824381c6c06108717497f26efac9e53"
+    "mtime": 1788350725.9039085,
+    "seen": 1788350760.035053,
+    "ast_hash": "66f13935bdf7e6848e91ab263b1fa2bd",
+    "semantic_hash": ""
   },
   "src/workflow/Molecules/Canvas/CanvasNodeHeader/CanvasNodeHeader.stories.jsx": {
     "mtime": 1783586902.3531961,
@@ -5256,10 +5256,10 @@
     "semantic_hash": ""
   },
   "src/workflow/Molecules/Canvas/EndNode/EndNode.jsx": {
-    "mtime": 1786429130.0587156,
-    "seen": 1787896827.222879,
-    "ast_hash": "bc6b77da8b9d01ede141b3bc283d3581",
-    "semantic_hash": "bc6b77da8b9d01ede141b3bc283d3581"
+    "mtime": 1788349591.3689666,
+    "seen": 1788349675.482233,
+    "ast_hash": "f94914da426658b7d1f006e5215c9797",
+    "semantic_hash": ""
   },
   "src/workflow/Molecules/Canvas/EndNode/EndNode.stories.jsx": {
     "mtime": 1783586902.3538632,
@@ -5304,10 +5304,10 @@
     "semantic_hash": "cbefa3ba17394dea32971efdab48b898"
   },
   "src/workflow/Molecules/Conditions/Conditions.jsx": {
-    "mtime": 1787503665.5552015,
-    "seen": 1787896827.2228851,
-    "ast_hash": "94ca9f859f361dae85d7a7ecfaf1d471",
-    "semantic_hash": "94ca9f859f361dae85d7a7ecfaf1d471"
+    "mtime": 1788350982.0617878,
+    "seen": 1788351016.8597271,
+    "ast_hash": "3a15f9a01268bd69ba5f6c20078d8f77",
+    "semantic_hash": ""
   },
   "src/workflow/Molecules/Conditions/Conditions.stories.jsx": {
     "mtime": 1787399027.8598027,
@@ -5400,10 +5400,10 @@
     "semantic_hash": "0eb677e6fd6f3bf6397dfdfcc8491346"
   },
   "src/workflow/Molecules/Inputs/OutputFields/OutputFields.jsx": {
-    "mtime": 1787505109.181834,
-    "seen": 1787896827.2228968,
-    "ast_hash": "d2ab47f0985bca48a62a0cb02415ce65",
-    "semantic_hash": "d2ab47f0985bca48a62a0cb02415ce65"
+    "mtime": 1788350721.5928485,
+    "seen": 1788350760.03508,
+    "ast_hash": "fd8e633020bf1dc5983be547085bdd22",
+    "semantic_hash": ""
   },
   "src/workflow/Molecules/Inputs/OutputFields/OutputFields.stories.jsx": {
     "mtime": 1783586902.3623471,
@@ -5424,9 +5424,9 @@
     "semantic_hash": "d4d8be78f7b05f24214e9696c8a820a4"
   },
   "src/workflow/Molecules/Inputs/SystemPromptInput/SystemPromptInput.jsx": {
-    "mtime": 1788170385.9233198,
-    "seen": 1788170424.72784,
-    "ast_hash": "6ae8476fc131033cf39f953d86f30540",
+    "mtime": 1788350711.7254896,
+    "seen": 1788350760.035083,
+    "ast_hash": "6cc66cb7650bcd123a914bc5e0a56fd9",
     "semantic_hash": ""
   },
   "src/workflow/Molecules/Inputs/SystemPromptInput/SystemPromptInput.stories.jsx": {
@@ -5454,9 +5454,9 @@
     "semantic_hash": "8aa3c2db57324b64b4666b9f9f7e5dd7"
   },
   "src/workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.jsx": {
-    "mtime": 1788170381.6714187,
-    "seen": 1788170424.7278452,
-    "ast_hash": "6a43ff117a04de8491e3d5cd6e9e47be",
+    "mtime": 1788350720.2293832,
+    "seen": 1788350760.0350878,
+    "ast_hash": "4caaf2a65d6e1294b80eab23d610ae29",
     "semantic_hash": ""
   },
   "src/workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.stories.jsx": {
@@ -5484,10 +5484,10 @@
     "semantic_hash": "3c8c6ae539c0afd124cab89ad08e428c"
   },
   "src/workflow/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.jsx": {
-    "mtime": 1786385171.706768,
-    "seen": 1787896827.2229068,
-    "ast_hash": "d081a55e0458d4d48dd939b5a1ce9f77",
-    "semantic_hash": "d081a55e0458d4d48dd939b5a1ce9f77"
+    "mtime": 1788350725.9049146,
+    "seen": 1788350760.0350919,
+    "ast_hash": "054c37f636ebfe3500c7b9b8d89a44d2",
+    "semantic_hash": ""
   },
   "src/workflow/Molecules/LHS/LHSEntityGroup/LHSEntityGroup.stories.jsx": {
     "mtime": 1788022825.4175055,
@@ -5970,9 +5970,9 @@
     "semantic_hash": "d785afe2b86a63a030267fa5cb404286"
   },
   "src/workflow/Organisms/Panels/RHS/AgentDetailsBody.jsx": {
-    "mtime": 1788186210.5140507,
-    "seen": 1788187485.977997,
-    "ast_hash": "f7089a98e4188870b2ce467822749668",
+    "mtime": 1788350900.715242,
+    "seen": 1788351016.859828,
+    "ast_hash": "29c29f79e4b3ce8eafd6937733c10b51",
     "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/BranchBody.jsx": {
@@ -6018,9 +6018,9 @@
     "semantic_hash": "3a07d6a1624a3772e5175f8956d5e726"
   },
   "src/workflow/Organisms/Panels/RHS/LLMTaskBody.jsx": {
-    "mtime": 1788068310.1600003,
-    "seen": 1788068339.642538,
-    "ast_hash": "d536490945b4b225be697df7a764ceda",
+    "mtime": 1788350973.404847,
+    "seen": 1788351016.859835,
+    "ast_hash": "cd2eac43bca2d9b9ee5764aab34a4d9e",
     "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/LoopBody.jsx": {
@@ -6048,9 +6048,9 @@
     "semantic_hash": "1688f1d0200385a685fd9491c0ae9a6c"
   },
   "src/workflow/Organisms/Panels/RHS/RHS.jsx": {
-    "mtime": 1788071175.2811182,
-    "seen": 1788170424.727927,
-    "ast_hash": "80c6040e396a10d7d3740b67cebe2a45",
+    "mtime": 1788350885.0055556,
+    "seen": 1788351016.85984,
+    "ast_hash": "b134a159f39e29473eac965edee5db5b",
     "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/RHS.stories.jsx": {
@@ -6060,10 +6060,10 @@
     "semantic_hash": "0311ed15e845243e292d933ad74de2e4"
   },
   "src/workflow/Organisms/Panels/RHS/ReviewTriggerBody.jsx": {
-    "mtime": 1787427125.6848037,
-    "seen": 1787896827.222972,
-    "ast_hash": "75e81544d65d4e9bc8cef224788bdd2c",
-    "semantic_hash": "75e81544d65d4e9bc8cef224788bdd2c"
+    "mtime": 1788350971.9229877,
+    "seen": 1788351016.859842,
+    "ast_hash": "d5495bee16363c604da28af94d504912",
+    "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/SendResponseTaskBody.jsx": {
     "mtime": 1787560073.071038,
@@ -6246,9 +6246,9 @@
     "semantic_hash": "94150f2a080a8121116bb08ad0aa6512"
   },
   "src/workflow/elemental-stubs.jsx": {
-    "mtime": 1788026497.7469723,
-    "seen": 1788026992.477207,
-    "ast_hash": "1f6eac108a2afece3083050ca406eef2",
+    "mtime": 1788350027.5737314,
+    "seen": 1788350285.232492,
+    "ast_hash": "d1bbef8f2da0385a4aa6612c5accd7bb",
     "semantic_hash": ""
   },
   "src/workflow/firebase.js": {
@@ -7581,6 +7581,12 @@
     "mtime": 1788178483.4348125,
     "seen": 1788179177.452224,
     "ast_hash": "287db51b69c06d2424daa30118ce21f3",
+    "semantic_hash": ""
+  },
+  "src/workflow/components/DraftBlockedTooltip.jsx": {
+    "mtime": 1788350884.7783732,
+    "seen": 1788351016.85987,
+    "ast_hash": "7c72207cf53d4ab40c13783d95ff2c15",
     "semantic_hash": ""
   }
 }

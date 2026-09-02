@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { TooltipProps } from './Tooltip.types'
+import { TooltipProps, TooltipSide } from './Tooltip.types'
 
 const VARIANT_CLASS = {
   brief: 'whitespace-nowrap',
@@ -9,9 +9,34 @@ const VARIANT_CLASS = {
 
 const HIDE_DELAY_MS = 120
 const TRANSITION_MS = 120
-const OFFSET_BOTTOM_PX = 8
+const DEFAULT_OFFSET_PX = 8
 /** Gap from trigger edge to bubble; caret sits in this space. */
-const OFFSET_RIGHT_PX = 6
+const DEFAULT_OFFSET_RIGHT_PX = 6
+
+function positionFromAnchor(
+  anchor: HTMLElement,
+  side: TooltipSide,
+  offset: number,
+): { x: number; y: number } {
+  const r = anchor.getBoundingClientRect()
+  if (side === 'right') {
+    return { x: r.right + offset, y: r.top + r.height / 2 }
+  }
+  if (side === 'top') {
+    return { x: r.left + r.width / 2, y: r.top - offset }
+  }
+  return { x: r.left + r.width / 2, y: r.bottom + offset }
+}
+
+function positionFromCursor(clientX: number, clientY: number, side: TooltipSide, offset: number) {
+  if (side === 'right') {
+    return { x: clientX + offset, y: clientY }
+  }
+  if (side === 'top') {
+    return { x: clientX, y: clientY - offset }
+  }
+  return { x: clientX, y: clientY + offset }
+}
 
 export function Tooltip({
   content,
@@ -21,6 +46,9 @@ export function Tooltip({
   className = '',
   interactive = false,
   disabled = false,
+  followCursor = false,
+  offset = DEFAULT_OFFSET_PX,
+  showDelay = 0,
 }: TooltipProps) {
   // `mounted` keeps the bubble in the DOM through the fade-out; `entered` toggles
   // the opacity/scale classes that drive the ease-in/ease-out transition.
@@ -30,13 +58,22 @@ export function Tooltip({
   const triggerRef = useRef<HTMLSpanElement>(null)
   const panelRef = useRef<HTMLSpanElement>(null)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const unmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rafRef = useRef<number | null>(null)
+  const pendingCursorRef = useRef<{ x: number; y: number } | null>(null)
 
   function clearHideTimer() {
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current)
       hideTimerRef.current = null
+    }
+  }
+
+  function clearShowTimer() {
+    if (showTimerRef.current) {
+      clearTimeout(showTimerRef.current)
+      showTimerRef.current = null
     }
   }
 
@@ -47,24 +84,32 @@ export function Tooltip({
     }
   }
 
-  function show() {
+  function openAtCursor(clientX: number, clientY: number) {
+    setPos(positionFromCursor(clientX, clientY, side, offset))
+  }
+
+  function openAtAnchor() {
+    if (!triggerRef.current) return
+    // Prefer the interactive child (button/icon) so we hug the glyph, not a wider wrapper.
+    const anchor =
+      (triggerRef.current.firstElementChild as HTMLElement | null) ?? triggerRef.current
+    const edgeOffset = side === 'right' ? DEFAULT_OFFSET_RIGHT_PX : offset
+    setPos(positionFromAnchor(anchor, side, edgeOffset))
+  }
+
+  function showNow() {
     if (disabled || !triggerRef.current) return
     clearHideTimer()
+    clearShowTimer()
     clearRaf()
     if (unmountTimerRef.current) {
       clearTimeout(unmountTimerRef.current)
       unmountTimerRef.current = null
     }
-    // Prefer the interactive child (button/icon) so we hug the glyph, not a wider wrapper.
-    const anchor =
-      (triggerRef.current.firstElementChild as HTMLElement | null) ?? triggerRef.current
-    const r = anchor.getBoundingClientRect()
-    if (side === 'right') {
-      setPos({ x: r.right + OFFSET_RIGHT_PX, y: r.top + r.height / 2 })
-    } else if (side === 'top') {
-      setPos({ x: r.left + r.width / 2, y: r.top - OFFSET_BOTTOM_PX })
+    if (followCursor && pendingCursorRef.current) {
+      openAtCursor(pendingCursorRef.current.x, pendingCursorRef.current.y)
     } else {
-      setPos({ x: r.left + r.width / 2, y: r.bottom + OFFSET_BOTTOM_PX })
+      openAtAnchor()
     }
     setMounted(true)
     // Double rAF: setMounted and this call both happen inside the same mouseenter
@@ -76,14 +121,32 @@ export function Tooltip({
     })
   }
 
+  function scheduleShow(e?: ReactMouseEvent) {
+    if (disabled || !triggerRef.current) return
+    clearHideTimer()
+    if (followCursor && e) {
+      pendingCursorRef.current = { x: e.clientX, y: e.clientY }
+    }
+    clearShowTimer()
+    if (showDelay > 0) {
+      showTimerRef.current = setTimeout(showNow, showDelay)
+      return
+    }
+    showNow()
+  }
+
   function hide() {
     clearHideTimer()
+    clearShowTimer()
     clearRaf()
+    pendingCursorRef.current = null
     setEntered(false)
     unmountTimerRef.current = setTimeout(() => setMounted(false), TRANSITION_MS)
   }
 
   function scheduleHide() {
+    clearShowTimer()
+    pendingCursorRef.current = null
     if (!interactive) {
       hide()
       return
@@ -95,26 +158,21 @@ export function Tooltip({
   useEffect(() => {
     return () => {
       clearHideTimer()
+      clearShowTimer()
       clearRaf()
       if (unmountTimerRef.current) clearTimeout(unmountTimerRef.current)
     }
   }, [])
 
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || followCursor) return
 
     function reposition() {
       if (!triggerRef.current) return
       const anchor =
         (triggerRef.current.firstElementChild as HTMLElement | null) ?? triggerRef.current
-      const r = anchor.getBoundingClientRect()
-      if (side === 'right') {
-        setPos({ x: r.right + OFFSET_RIGHT_PX, y: r.top + r.height / 2 })
-      } else if (side === 'top') {
-        setPos({ x: r.left + r.width / 2, y: r.top - OFFSET_BOTTOM_PX })
-      } else {
-        setPos({ x: r.left + r.width / 2, y: r.bottom + OFFSET_BOTTOM_PX })
-      }
+      const edgeOffset = side === 'right' ? DEFAULT_OFFSET_RIGHT_PX : offset
+      setPos(positionFromAnchor(anchor, side, edgeOffset))
     }
 
     function onScroll() {
@@ -127,7 +185,15 @@ export function Tooltip({
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', reposition)
     }
-  }, [mounted, side])
+  }, [mounted, side, followCursor, offset])
+
+  function handleMouseMove(e: ReactMouseEvent) {
+    if (!followCursor) return
+    pendingCursorRef.current = { x: e.clientX, y: e.clientY }
+    if (mounted) {
+      openAtCursor(e.clientX, e.clientY)
+    }
+  }
 
   useEffect(() => {
     if (!interactive || !mounted) return
@@ -184,7 +250,8 @@ export function Tooltip({
     <span
       ref={triggerRef}
       className={`relative inline-flex items-center ${className}`}
-      onMouseEnter={show}
+      onMouseEnter={scheduleShow}
+      onMouseMove={handleMouseMove}
       onMouseLeave={scheduleHide}
     >
       {children}

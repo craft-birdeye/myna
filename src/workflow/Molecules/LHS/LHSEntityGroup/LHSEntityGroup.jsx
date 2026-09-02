@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { setFlowDragData } from '../../../flowDragData';
+import { DraftBlockedGuard } from '../../../components/DraftBlockedTooltip';
 import iconAgentsPurple from '../../../../assets/icon-agents-purple.svg';
 import './LHSEntityGroup.css';
 
@@ -138,9 +139,12 @@ export default function LHSEntityGroup({
   inline = false,
   /** When inline, still show the section title (e.g. "Reviews" / "Inbox"). */
   showTitle = false,
+  draftBlocked = false,
+  onEditDraft,
 }) {
   const disabledSet = disabledItems instanceof Set ? disabledItems : new Set(disabledItems ?? []);
-  const canEdit = !viewOnly && !readOnly && !!onItemsChange;
+  const dragBlocked = draftBlocked && !viewOnly;
+  const canEdit = !viewOnly && !readOnly && !dragBlocked && !!onItemsChange;
   const [editingIdx, setEditingIdx] = useState(null);
   const [editDraft, setEditDraft] = useState('');
   const hasDescriptions = items.some((item) => Boolean(getItemDescription(item)));
@@ -204,8 +208,8 @@ export default function LHSEntityGroup({
           <div
             key={`${label}-${idx}`}
             className={`lhs-entity-group__item${description ? ' lhs-entity-group__item--described' : ''}${editingIdx === idx ? ' lhs-entity-group__item--editing' : ''}${isDisabled ? ' lhs-entity-group__item--disabled' : ''}`}
-            draggable={!viewOnly && !isDisabled && (readOnly || editingIdx !== idx)}
-            onDragStart={(e) => !viewOnly && !isDisabled && (readOnly || editingIdx !== idx) && handleDragStart(e, item)}
+            draggable={!viewOnly && !isDisabled && !dragBlocked && (readOnly || editingIdx !== idx)}
+            onDragStart={(e) => !viewOnly && !isDisabled && !dragBlocked && (readOnly || editingIdx !== idx) && handleDragStart(e, item)}
             aria-disabled={isDisabled || undefined}
           >
             {icon ? (
@@ -260,13 +264,24 @@ export default function LHSEntityGroup({
                     <span className="material-symbols-outlined">edit</span>
                   </button>
                 ) : null}
-                <span
-                  className={`lhs-entity-group__item-drag material-symbols-outlined${
-                    dragAlwaysVisible || isDisabled ? ' lhs-entity-group__item-drag--visible' : ''
-                  }`}
-                >
-                  drag_indicator
-                </span>
+                {dragBlocked ? (
+                  <DraftBlockedGuard blocked onEditDraft={onEditDraft} inline className="lhs-entity-group__item-drag-wrap">
+                    <span
+                      className="lhs-entity-group__item-drag material-symbols-outlined lhs-entity-group__item-drag--visible lhs-entity-group__item-drag--draft-blocked"
+                      aria-hidden
+                    >
+                      drag_indicator
+                    </span>
+                  </DraftBlockedGuard>
+                ) : (
+                  <span
+                    className={`lhs-entity-group__item-drag material-symbols-outlined${
+                      dragAlwaysVisible || isDisabled ? ' lhs-entity-group__item-drag--visible' : ''
+                    }`}
+                  >
+                    drag_indicator
+                  </span>
+                )}
               </div>
             )}
           </div>

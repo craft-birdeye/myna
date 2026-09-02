@@ -141,6 +141,17 @@
   min-height: 0;
 }
 
+.chipContainerDisabled {
+  background: var(--aero-field-disabled-bg, #f5f5f5);
+  border-color: var(--aero-field-disabled-border, #e5e9f0);
+  cursor: not-allowed;
+}
+
+.chipContainerReadOnly {
+  background: #fafafa;
+  cursor: default;
+}
+
 .chipMeasure {
   position: absolute;
   visibility: hidden;

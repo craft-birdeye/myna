@@ -142,3 +142,18 @@
   letter-spacing: -0.24px;
   color: #717182; /* text/secondary */
 }
+
+.locationsFieldDisabled .chipsRow {
+  min-height: 36px;
+  padding: 8px 10px;
+  background: var(--aero-field-disabled-bg, #f5f5f5);
+  border: 1px solid var(--aero-field-disabled-border, #e5e9f0);
+  border-radius: var(--aero-field-radius, 4px);
+  box-sizing: border-box;
+  cursor: not-allowed;
+}
+
+.locationsFieldDisabled .locationChip {
+  background: #ebebeb;
+  border-color: #e5e9f0;
+}

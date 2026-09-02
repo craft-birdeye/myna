@@ -37,6 +37,7 @@ function Dropdown({
   placeholder = 'Select',
   onOptionsChange,
   valueAsChip = false,
+  disabled = false,
 }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
@@ -203,20 +204,21 @@ function Dropdown({
         <button
           ref={triggerRef}
           type="button"
-          className={`tc-dropdown__trigger${open ? ' tc-dropdown__trigger--open' : ''} ${styles.dropdownTrigger}`}
+          className={`tc-dropdown__trigger${open ? ' tc-dropdown__trigger--open' : ''}${disabled ? ' tc-dropdown__trigger--readonly' : ''} ${styles.dropdownTrigger}`}
           onClick={() => {
-            if (editMode) return;
+            if (disabled || editMode) return;
             setOpen((wasOpen) => !wasOpen);
           }}
           aria-haspopup="listbox"
           aria-expanded={open}
+          disabled={disabled}
         >
           {valueAsChip && selectedLabel ? (
             <span className={styles.chipValue}>
               <VariableChip
                 value={selectedLabel}
                 type="variable"
-                onDelete={() => onChange({ value: '', label: '' })}
+                onDelete={disabled ? undefined : () => onChange({ value: '', label: '' })}
               />
             </span>
           ) : (
@@ -224,7 +226,7 @@ function Dropdown({
               {selectedLabel || placeholder}
             </span>
           )}
-          {onOptionsChange && (
+          {onOptionsChange && !disabled && (
             <span
               className={styles.editTrigger}
               role="button"
@@ -255,7 +257,7 @@ function Dropdown({
   );
 }
 
-function LogicConnector({ value, onChange }) {
+function LogicConnector({ value, onChange, disabled = false }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
   const ref = useRef(null);
@@ -316,8 +318,9 @@ function LogicConnector({ value, onChange }) {
       <button
         ref={triggerRef}
         type="button"
-        className="tc-connector__btn"
-        onClick={() => setOpen((v) => !v)}
+        className={`tc-connector__btn${disabled ? ' tc-connector__btn--disabled' : ''}`}
+        onClick={() => { if (!disabled) setOpen((v) => !v); }}
+        disabled={disabled}
       >
         <span>{value}</span>
         <span className="material-symbols-outlined">expand_more</span>
@@ -327,7 +330,7 @@ function LogicConnector({ value, onChange }) {
   );
 }
 
-function AddConditionButton({ onAddCondition, onAddConditionGroup }) {
+function AddConditionButton({ onAddCondition, onAddConditionGroup, disabled = false }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
   const wrapRef = useRef(null);
@@ -336,17 +339,17 @@ function AddConditionButton({ onAddCondition, onAddConditionGroup }) {
   const showGroup = typeof onAddConditionGroup === 'function';
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || disabled) return undefined;
     const close = (e) => {
       if (wrapRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
       setOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
-  }, [open]);
+  }, [open, disabled]);
 
   useLayoutEffect(() => {
-    if (!open || !triggerRef.current) return undefined;
+    if (!open || disabled || !triggerRef.current) return undefined;
     const updatePlacement = () => {
       const rect = triggerRef.current.getBoundingClientRect();
       setMenuStyle({
@@ -364,7 +367,22 @@ function AddConditionButton({ onAddCondition, onAddConditionGroup }) {
       window.removeEventListener('resize', updatePlacement);
       window.removeEventListener('scroll', updatePlacement, true);
     };
-  }, [open]);
+  }, [open, disabled]);
+
+  if (disabled) {
+    return (
+      <div className="tc-add-wrap">
+        <button
+          type="button"
+          className="trigger-conditions__add-btn trigger-conditions__add-btn--disabled"
+          disabled
+        >
+          <span className="material-symbols-outlined">add_circle</span>
+          Add condition
+        </button>
+      </div>
+    );
+  }
 
   const pick = (action) => {
     setOpen(false);
@@ -448,6 +466,7 @@ export default function Conditions({
   labelHelpLearnMoreHref,
   labelHelpLearnMoreLabel,
   showAdvancedFilters = true,
+  disabled = false,
 }) {
   return (
     <div className="trigger-conditions">
@@ -489,7 +508,7 @@ export default function Conditions({
             ) : null}
           </div>
         ) : null}
-        <div className="trigger-conditions__card">
+        <div className={`trigger-conditions__card${disabled ? ' trigger-conditions__card--disabled' : ''}`}>
           <div className="trigger-conditions__conditions">
             {conditions.map((condition, index) => {
               const fieldOpts = conditionOptions?.field ?? condition.fieldOptions ?? [];
@@ -502,7 +521,7 @@ export default function Conditions({
               // Falls back to the single shared `logic` prop for callers that haven't opted in yet.
               const connector = condition.connector ?? logic;
               const showValueField = operatorNeedsValue(condition.operatorValue);
-              const canRemove = conditions.length > 1 && Boolean(onRemoveCondition);
+              const canRemove = !disabled && conditions.length > 1 && Boolean(onRemoveCondition);
 
               const conditionHeader = (
                 <div className={styles.conditionHeader}>
@@ -511,6 +530,7 @@ export default function Conditions({
                   ) : (
                     <LogicConnector
                       value={connector}
+                      disabled={disabled}
                       onChange={(val) =>
                         onConnectorChange ? onConnectorChange(condition.id, val) : onLogicChange?.(val)
                       }
@@ -537,6 +557,7 @@ export default function Conditions({
                     options={fieldOpts}
                     valueAsChip
                     placeholder="Select"
+                    disabled={disabled}
                     onChange={(opt) => onConditionChange?.(condition.id, 'field', opt.value)}
                     onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('field', opts) : undefined}
                   />
@@ -545,6 +566,7 @@ export default function Conditions({
                     selected={condition.operatorValue}
                     options={operatorOpts}
                     placeholder="Select"
+                    disabled={disabled}
                     onChange={(opt) => {
                       onConditionChange?.(condition.id, 'operator', opt.value);
                       if (!operatorNeedsValue(opt.value)) {
@@ -559,6 +581,7 @@ export default function Conditions({
                       selected={condition.valueValue}
                       options={valueOpts}
                       placeholder="Select"
+                      disabled={disabled}
                       onChange={(opt) => onConditionChange?.(condition.id, 'value', opt.value)}
                       onOptionsChange={onOptionsChange ? (opts) => onOptionsChange('value', opts) : undefined}
                     />
@@ -588,10 +611,11 @@ export default function Conditions({
           <AddConditionButton
             onAddCondition={onAddCondition}
             onAddConditionGroup={onAddConditionGroup}
+            disabled={disabled}
           />
         </div>
       </div>
-      {showAdvancedFilters && (
+      {showAdvancedFilters && !disabled && (
         <button type="button" className="trigger-conditions__advanced-filters" onClick={onAdvancedFilters}>
           Advanced filters
         </button>

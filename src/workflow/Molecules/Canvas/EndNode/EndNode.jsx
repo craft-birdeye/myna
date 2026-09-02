@@ -6,6 +6,8 @@ import './EndNode.css';
 export default function EndNode({
   selected = false,
   viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
   isDraggingFromLHS = false,
   onDropBeforeEnd,
   onAddStep = undefined,
@@ -71,6 +73,8 @@ export default function EndNode({
               onDrop={handleAddSlotDrop}
               showPasteOption={!!hasClipboard}
               onPaste={onPaste}
+              draftBlocked={draftBlocked}
+              onEditDraft={onEditDraft}
             />
           </div>
         )}

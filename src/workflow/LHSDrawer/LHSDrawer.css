@@ -593,6 +593,12 @@
   opacity: 1 !important;
 }
 
+.lhs-drawer__card-action--draft-blocked {
+  opacity: 1 !important;
+  color: #c4c4c4 !important;
+  cursor: not-allowed;
+}
+
 /* Chevron uses chevron_right / expand_less glyphs — no rotate needed */
 
 /* ─── Card wrapper (for dropdown positioning) ─── */

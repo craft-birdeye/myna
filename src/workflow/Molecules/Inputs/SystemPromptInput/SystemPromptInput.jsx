@@ -24,7 +24,10 @@ export default function SystemPromptInput({
   showExpandButton = true,
   error,
   errorMessage = 'This field is required',
+  readOnly = false,
+  disabled = false,
 }) {
+  const locked = readOnly || disabled;
   const editorRef = useRef(null);
   const overlayEditorRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -175,16 +178,17 @@ export default function SystemPromptInput({
   }, []);
 
   const editorBlock = (ref, editorClassName, fieldsRef) => (
-    <div className={`${styles.inputBox}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}`}>
+    <div className={`${styles.inputBox}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}${disabled ? ` ${styles.inputBoxDisabled}` : readOnly ? ` ${styles.inputBoxReadOnly}` : ''}`}>
       <div
         ref={ref}
         className={editorClassName}
-        contentEditable
+        contentEditable={!locked}
         suppressContentEditableWarning
-        onInput={emitChange}
-        onKeyDown={handleKeyDown}
+        onInput={locked ? undefined : emitChange}
+        onKeyDown={locked ? undefined : handleKeyDown}
         data-placeholder="Enter prompt"
       />
+      {!locked && (
       <div className={styles.toolbar}>
         <div ref={fieldsRef}>
           <ToolbarButton
@@ -202,6 +206,7 @@ export default function SystemPromptInput({
           />
         )}
       </div>
+      )}
     </div>
   );
 
@@ -216,7 +221,7 @@ export default function SystemPromptInput({
               <InfoTooltip text={SYSTEM_PROMPT_INFO} variant="detail" />
             )}
           </div>
-          {showLabelActions && showExpandButton && needsExpand && (
+          {showLabelActions && showExpandButton && needsExpand && !locked && (
             <button
               type="button"
               className={styles.expandBtn}

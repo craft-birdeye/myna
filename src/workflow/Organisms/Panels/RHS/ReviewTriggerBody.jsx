@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { TextArea } from '../../../elemental-stubs';
 import Conditions from '../../../Molecules/Conditions/Conditions';
 import ChooseTriggerModal, { REVIEW_TRIGGER_OPTIONS } from './ChooseTriggerModal';
+import { DraftBlockedField, rhsFieldLock } from '../../../components/DraftBlockedTooltip';
 import { CONDITION_OPERATORS, operatorNeedsValue } from '../../../constants/conditionOperators';
 import descStyles from './TriggerDescription.module.css';
 
@@ -89,7 +90,26 @@ function buildPreview(entity, conditions, conditionOptions, logic) {
   return ['IF', ...lines].join('\n');
 }
 
-export default function ReviewTriggerBody({ initialValues = {}, onFieldChange }) {
+export default function ReviewTriggerBody({
+  initialValues = {},
+  onFieldChange,
+  viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
+}) {
+  const { inputDisabled, inputReadOnly, fieldsLocked } = rhsFieldLock({ viewOnly, draftBlocked });
+
+  const blockField = (node, className = '') => (
+    <DraftBlockedField
+      draftBlocked={draftBlocked}
+      viewOnly={viewOnly}
+      onEditDraft={onEditDraft}
+      className={className}
+    >
+      {node}
+    </DraftBlockedField>
+  );
+
   const initialTrigger = resolveTrigger(initialValues);
   const [trigger, setTrigger] = useState(initialTrigger);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -152,61 +172,75 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
     [conditions, conditionOptions, logic],
   );
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 12, lineHeight: '16px', color: '#757575', fontFamily: '"Roboto", sans-serif' }}>
-          Trigger<span style={{ color: '#d32f2f' }}>*</span>
-        </span>
-        <div className="tc-dropdown" ref={triggerFieldRef}>
-          <button
-            type="button"
-            name="trigger"
-            className={`tc-dropdown__trigger${pickerOpen ? ' tc-dropdown__trigger--open' : ''}`}
-            onClick={() => setPickerOpen((open) => !open)}
-            aria-haspopup="dialog"
-            aria-expanded={pickerOpen}
-          >
-            <span className="tc-dropdown__value">{trigger.label}</span>
-            <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
-          </button>
-        </div>
-      </div>
-      {descriptionOpen ? (
-        <div className={descStyles.descriptionField}>
-          <TextArea
-            name="description"
-            label="Description"
-            placeholder="Enter description"
-            value={description}
-            onChange={handleDescription}
-            noFloatingLabel
-          />
-        </div>
-      ) : (
+  const triggerField = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={{ fontSize: 12, lineHeight: '16px', color: '#757575', fontFamily: '"Roboto", sans-serif' }}>
+        Trigger<span style={{ color: '#d32f2f' }}>*</span>
+      </span>
+      <div className="tc-dropdown" ref={triggerFieldRef}>
         <button
           type="button"
-          className={descStyles.addDescriptionBtn}
-          onClick={() => setDescriptionOpen(true)}
+          name="trigger"
+          className={`tc-dropdown__trigger${pickerOpen ? ' tc-dropdown__trigger--open' : ''}${fieldsLocked ? ' tc-dropdown__trigger--readonly' : ''}`}
+          onClick={() => { if (!fieldsLocked) setPickerOpen((open) => !open); }}
+          aria-haspopup="dialog"
+          aria-expanded={pickerOpen}
+          disabled={inputDisabled}
         >
-          <span className="material-symbols-outlined">add_circle</span>
-          Add description
+          <span className="tc-dropdown__value">{trigger.label}</span>
+          <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
         </button>
-      )}
-      <Conditions
-        conditions={conditions}
-        logic={logic}
-        onConditionChange={handleConditionChange}
-        onLogicChange={(val) => { setLogic(val); onFieldChange?.('logic', val); }}
-        onConnectorChange={handleConnectorChange}
-        onAddCondition={handleAddCondition}
-        onRemoveCondition={handleRemoveCondition}
-        conditionOptions={conditionOptions}
-        label="Trigger condition"
-        labelHelp={TRIGGER_CONDITION_HELP}
-        labelHelpLearnMoreHref={TRIGGER_CONDITION_LEARN_MORE_HREF}
-        showAdvancedFilters={false}
+      </div>
+    </div>
+  );
+
+  const descriptionField = descriptionOpen ? (
+    <div className={descStyles.descriptionField}>
+      <TextArea
+        name="description"
+        label="Description"
+        placeholder="Enter description"
+        value={description}
+        onChange={handleDescription}
+        noFloatingLabel
+        readOnly={inputReadOnly}
+        disabled={inputDisabled}
       />
+    </div>
+  ) : !fieldsLocked ? (
+    <button
+      type="button"
+      className={descStyles.addDescriptionBtn}
+      onClick={() => setDescriptionOpen(true)}
+    >
+      <span className="material-symbols-outlined">add_circle</span>
+      Add description
+    </button>
+  ) : null;
+
+  const conditionsField = (
+    <Conditions
+      conditions={conditions}
+      logic={logic}
+      onConditionChange={handleConditionChange}
+      onLogicChange={(val) => { setLogic(val); onFieldChange?.('logic', val); }}
+      onConnectorChange={handleConnectorChange}
+      onAddCondition={handleAddCondition}
+      onRemoveCondition={handleRemoveCondition}
+      conditionOptions={conditionOptions}
+      label="Trigger condition"
+      labelHelp={TRIGGER_CONDITION_HELP}
+      labelHelpLearnMoreHref={TRIGGER_CONDITION_LEARN_MORE_HREF}
+      showAdvancedFilters={false}
+      disabled={inputDisabled}
+    />
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {blockField(triggerField)}
+      {descriptionField ? blockField(descriptionField) : null}
+      {blockField(conditionsField)}
       {preview && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={{ fontSize: 12, lineHeight: '16px', color: '#757575', fontFamily: '"Roboto", sans-serif' }}>
@@ -232,13 +266,15 @@ export default function ReviewTriggerBody({ initialValues = {}, onFieldChange })
         </div>
       )}
 
-      <ChooseTriggerModal
-        open={pickerOpen}
-        selectedValue={trigger.value}
-        anchorRef={triggerFieldRef}
-        onClose={() => setPickerOpen(false)}
-        onSelect={handleTriggerSelect}
-      />
+      {!fieldsLocked && (
+        <ChooseTriggerModal
+          open={pickerOpen}
+          selectedValue={trigger.value}
+          anchorRef={triggerFieldRef}
+          onClose={() => setPickerOpen(false)}
+          onSelect={handleTriggerSelect}
+        />
+      )}
     </div>
   );
 }

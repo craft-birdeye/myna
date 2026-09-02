@@ -17,6 +17,7 @@ const ProcedureSvgIcon = () => (
   </svg>
 );
 import LHSEntityGroup from '../Molecules/LHS/LHSEntityGroup/LHSEntityGroup';
+import { DraftBlockedGuard } from '../components/DraftBlockedTooltip';
 import LHSExternalAppsGroup from '../Molecules/LHS/LHSExternalAppsGroup/LHSExternalAppsGroup';
 import iconRrTrigger from '../../assets/rr-chrome/icon-trigger.svg';
 import iconRrTasks from '../../assets/rr-chrome/icon-tasks.svg';
@@ -884,6 +885,8 @@ export function CardRow({
   procedureId,
   dragLabel,
   disabled = false,
+  draftBlocked = false,
+  onEditDraft,
 }) {
   const handleDragStart = (e) => {
     setFlowDragData(e.dataTransfer, {
@@ -895,7 +898,8 @@ export function CardRow({
     });
   };
 
-  const isDraggable = action === 'drag' && !viewOnly && !disabled;
+  const isDraggable = action === 'drag' && !viewOnly && !disabled && !draftBlocked;
+  const dragIconBlocked = action === 'drag' && draftBlocked && !viewOnly;
 
   return (
     <div
@@ -918,8 +922,14 @@ export function CardRow({
       )}
       <span className="lhs-drawer__card-label">{label}</span>
       {action === 'drag' ? (
-        <span className="lhs-drawer__card-action">
-          <span className="material-symbols-outlined">drag_indicator</span>
+        <span className={`lhs-drawer__card-action${dragIconBlocked ? ' lhs-drawer__card-action--draft-blocked' : ''}`}>
+          {dragIconBlocked ? (
+            <DraftBlockedGuard blocked onEditDraft={onEditDraft} inline>
+              <span className="material-symbols-outlined" aria-hidden>drag_indicator</span>
+            </DraftBlockedGuard>
+          ) : (
+            <span className="material-symbols-outlined">drag_indicator</span>
+          )}
         </span>
       ) : (
         <span className="lhs-drawer__card-action lhs-drawer__card-action--chevron">
@@ -1074,6 +1084,8 @@ export default function LHSDrawer({
    *  pill in the Create with AI composer so a follow-up message can reference it. */
   nodeContext = null,
   onClearNodeContext = null,
+  draftBlocked = false,
+  onEditDraft,
 }) {
   const isHC = product === 'healthcare' || product === 'dental';
   // Review response / Review generation agents get their own "Event based" trigger
@@ -1081,6 +1093,7 @@ export default function LHSDrawer({
   // see LHSDrawer plan notes) so the picker matches the Reviews AI create-from-scratch mock.
   const isReviewsAgent = /review (response|generation) agent/i.test(agentName || '');
   const isFrontDesk = isFrontDeskAgent(agentName);
+  const lhsDraftProps = { draftBlocked, onEditDraft };
 
   const activeTriggerCards = isReviewsAgent
     ? REVIEWS_TRIGGER_CARDS
@@ -1319,6 +1332,8 @@ export default function LHSDrawer({
           procedureId={card.procedureId}
           dragLabel={card.dragLabel}
           disabled={card.disabled}
+          draftBlocked={draftBlocked}
+          onEditDraft={onEditDraft}
         />
         {showInline && (
           <div className="lhs-drawer__inline-group">
@@ -1336,6 +1351,7 @@ export default function LHSDrawer({
                 parentLabel={subKey}
                 onItemsChange={(newItems) => handleSubItemsChange(subKey, newItems)}
                 viewOnly={viewOnly}
+                {...lhsDraftProps}
                 readOnly={
                   (section === 'trigger' && READONLY_TRIGGER_SUBMENUS.has(subKey))
                   || (section === 'task' && READONLY_TASK_SUBMENUS.has(subKey))
@@ -1454,6 +1470,7 @@ export default function LHSDrawer({
                           : undefined
                       }
                       viewOnly={viewOnly}
+                      {...lhsDraftProps}
                       readOnly
                       inline
                       showTitle={false}
@@ -1547,6 +1564,7 @@ export default function LHSDrawer({
                   nodeType="task"
                   parentLabel={card.dragLabel || card.label}
                   viewOnly={viewOnly}
+                  {...lhsDraftProps}
                   readOnly
                   inline
                   showTitle={false}
@@ -1588,6 +1606,7 @@ export default function LHSDrawer({
                         parentLabel={cat.label}
                         onItemsChange={(newItems) => handleSubItemsChange(cat.id, newItems)}
                         viewOnly={viewOnly}
+                        {...lhsDraftProps}
                         readOnly
                         inline
                         showTitle={false}
@@ -1658,6 +1677,7 @@ export default function LHSDrawer({
                       nodeType={cat.nodeType}
                       parentLabel={cat.label}
                       viewOnly={viewOnly}
+                      {...lhsDraftProps}
                       readOnly
                       inline
                       showTitle={false}
@@ -1676,6 +1696,7 @@ export default function LHSDrawer({
                   nodeType={card.nodeType}
                   parentLabel={name}
                   viewOnly={viewOnly}
+                  {...lhsDraftProps}
                   readOnly
                   inline
                   showTitle={false}
@@ -1740,6 +1761,7 @@ export default function LHSDrawer({
                   nodeType="procedures"
                   parentLabel={isCustom ? '__custom__' : name}
                   viewOnly={viewOnly}
+                  {...lhsDraftProps}
                   readOnly
                   inline
                   showTitle={false}
@@ -2139,6 +2161,7 @@ export default function LHSDrawer({
               onItemsChange={(newItems) => handleSubItemsChange(expandedCard, newItems)}
               onDragStartItem={handleFlyoutItemDragStart}
               viewOnly={viewOnly}
+              {...lhsDraftProps}
               readOnly={
                 (expandedSection === 'trigger' && READONLY_TRIGGER_SUBMENUS.has(expandedCard))
                 || (expandedSection === 'task' && READONLY_TASK_SUBMENUS.has(expandedCard))

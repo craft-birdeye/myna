@@ -17,6 +17,8 @@ export default function CanvasNode({
   toggleEnabled = true,
   toggleDisabled = false,
   viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
   onToggleChange,
   hasAddButton = false,
   onAddClick,
@@ -48,13 +50,14 @@ export default function CanvasNode({
   }, [copied]);
 
   const handleToggle = (val) => {
-    if (toggleDisabled) return;
+    if (toggleDisabled || draftBlocked) return;
     setOn(val);
     onToggleChange?.(val);
   };
 
   const handleCopyClick = (e) => {
     e.stopPropagation();
+    if (draftBlocked) return;
     onCopy?.();
     setCopied(true);
   };
@@ -75,8 +78,10 @@ export default function CanvasNode({
           hasAiIcon={hasAiIcon}
           hasToggle={hasToggle}
           toggleEnabled={on}
-          toggleDisabled={toggleDisabled}
+          toggleDisabled={toggleDisabled || draftBlocked}
           viewOnly={viewOnly}
+          draftBlocked={draftBlocked}
+          onEditDraft={onEditDraft}
           onToggleChange={handleToggle}
           hasAddButton={showHeaderAdd}
           onAddClick={onAddClick}
@@ -108,7 +113,7 @@ export default function CanvasNode({
           </div>
         )}
       </div>
-      {!viewOnly && (onDelete || onCopy) ? (
+      {!viewOnly && !draftBlocked && (onDelete || onCopy) ? (
         <div className="canvas-node__hover-actions">
           {nodeType !== 'trigger' && onCopy ? (
             <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief" side="right">

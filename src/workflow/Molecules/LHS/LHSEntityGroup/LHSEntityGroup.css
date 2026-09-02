@@ -309,6 +309,16 @@
   opacity: 1;
 }
 
+.lhs-entity-group__item-drag-wrap {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.lhs-entity-group__item-drag--draft-blocked {
+  color: #c4c4c4;
+  cursor: not-allowed;
+}
+
 /* Native HTML5 drag ghost — label chip only */
 .lhs-entity-group__drag-ghost {
   position: fixed;

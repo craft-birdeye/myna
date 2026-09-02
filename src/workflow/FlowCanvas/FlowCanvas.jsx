@@ -91,6 +91,8 @@ function TriggerNodeWrapper({ id, data }) {
         toggleEnabled={data.toggleEnabled}
         toggleDisabled={data.viewOnly}
         viewOnly={data.viewOnly}
+        draftBlocked={data.draftBlocked}
+        onEditDraft={data.onEditDraft}
         state={isDropTarget ? 'drop-target' : (isSelected ? 'selected' : 'default')}
         onDelete={data.onDelete}
         onCopy={data.onCopy}
@@ -112,7 +114,7 @@ function TaskNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="task" label="Action" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="task" label="Action" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -123,7 +125,7 @@ function VoiceCallNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="task" label="Action" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="task" label="Action" runStatus={data.runStatus} hasError={data.hasError} errorTooltip={data.errorTooltip} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasAiIcon={data.hasAiIcon} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft} onToggleChange={data.onToggleChange} state={isSelected ? 'selected' : 'default'} showConfigWarning={!!data.showConfigWarning} configWarningText={data.configWarningText} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -134,7 +136,7 @@ function BranchNodeWrapper({ id, data }) {
   return (
     <div className="flow-canvas__node-center">
       <Handle type="target" position={Position.Top} />
-      <CanvasNode nodeType="branch" label="Branch" runStatus={data.runStatus} hasError={data.hasError} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} state={isSelected ? 'selected' : 'default'} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
+      <CanvasNode nodeType="branch" label="Branch" runStatus={data.runStatus} hasError={data.hasError} stepNumber={data.stepNumber} title={data.title} description={data.subtitle} titlePlaceholder={data.titlePlaceholder} descriptionPlaceholder={data.descriptionPlaceholder} hasToggle={data.hasToggle} toggleEnabled={data.toggleEnabled} toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft} state={isSelected ? 'selected' : 'default'} onDelete={data.onDelete} onCopy={data.onCopy} hasClipboard={data.hasClipboard} onPasteBelow={data.onPasteBelow} onPasteReplace={data.onPasteReplace} onMoveUp={data.onMoveUp} onMoveDown={data.onMoveDown} canMoveUp={data.canMoveUp} canMoveDown={data.canMoveDown} />
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -156,7 +158,7 @@ function ControlNodeWrapper({ id, data, nodeType, label }) {
         descriptionPlaceholder={data.descriptionPlaceholder}
         hasToggle={data.hasToggle}
         toggleEnabled={data.toggleEnabled}
-        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly}
+        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft}
         state={isSelected ? 'selected' : 'default'}
         onDelete={data.onDelete}
         onCopy={data.onCopy}
@@ -184,7 +186,7 @@ function ProceduresNodeWrapper({ id, data }) {
         procedureItems={data.procedureItems || []}
         hasToggle={data.hasToggle}
         toggleEnabled={data.toggleEnabled}
-        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly}
+        toggleDisabled={data.viewOnly} viewOnly={data.viewOnly} draftBlocked={data.draftBlocked} onEditDraft={data.onEditDraft}
         state={isSelected ? 'selected' : 'default'}
         onDelete={data.onDelete}
         onCopy={data.onCopy}
@@ -234,6 +236,8 @@ function LoopNodeWrapper({ id, data }) {
         toggleEnabled={data.toggleEnabled}
         toggleDisabled={data.viewOnly}
         viewOnly={data.viewOnly}
+        draftBlocked={data.draftBlocked}
+        onEditDraft={data.onEditDraft}
         loopChildren={loopChildren}
         loopFlow={loopFlow}
         loopNodeDetails={loopNodeDetails}
@@ -435,6 +439,8 @@ function EndNodeWrapper({ id, data }) {
       <EndNode
         selected={isSelected}
         viewOnly={data.viewOnly}
+        draftBlocked={data.draftBlocked}
+        onEditDraft={data.onEditDraft}
         isDraggingFromLHS={data.isDraggingFromLHS}
         onDropBeforeEnd={data.onDropBeforeEnd}
         onAddStep={data.onAddStepBeforeEnd}
@@ -569,6 +575,8 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
               singleSearch={!!data?.singleAddStepSearch}
               showPasteOption={!!data?.hasClipboard && !!data?.betweenCards}
               onPaste={data?.onPasteAtEdge}
+              draftBlocked={!!data?.draftBlocked}
+              onEditDraft={data?.onEditDraft}
             />
           </div>
         </foreignObject>
@@ -642,6 +650,8 @@ function FlowCanvasInner({
   onView,
   selectedNodeId,
   viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
   product = 'healthcare',
   agentName = '',
   rrChrome = false,
@@ -719,6 +729,8 @@ function FlowCanvasInner({
         ...n.data,
         selectedNodeId,
         viewOnly,
+        draftBlocked,
+        onEditDraft,
         // The trigger placeholder pulses only for trigger drags; every other node (incl. the
         // End "+") pulses only for non-trigger step drags.
         isDraggingFromLHS: n.type === 'triggerPlaceholder'
@@ -781,7 +793,7 @@ function FlowCanvasInner({
         ...(n.id === '__end__' ? { hideAdd: !!n.data?.hideAddBeforeEnd } : {}),
       },
     })),
-    [nodes, selectedNodeId, viewOnly, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName, hasClipboard]
+    [nodes, selectedNodeId, viewOnly, draftBlocked, onEditDraft, isDraggingFromLHS, draggingLhsKind, endEdgeSourceId, onNodeClick, product, agentName, hasClipboard]
   );
 
   // Pin the flow entry 24px below the controls bar, horizontally centered in the
@@ -1029,11 +1041,13 @@ function FlowCanvasInner({
           isDraggingFromLHS,
           draggingLhsKind,
           viewOnly,
+          draftBlocked,
+          onEditDraft,
           product,
           agentName,
           hasClipboard,
           singleAddStepSearch,
-          onDropOnEdge: viewOnly ? undefined : (type, label, description) => {
+          onDropOnEdge: viewOnly || draftBlocked ? undefined : (type, label, description) => {
             if (type === 'trigger') return;
             onDropNodeRef.current?.({
               type,
@@ -1043,12 +1057,12 @@ function FlowCanvasInner({
               branchPathId: edge.data?.branchPathId,
             });
           },
-          onPasteAtEdge: (viewOnly || !edge.data?.betweenCards) ? undefined : () => {
+          onPasteAtEdge: (viewOnly || draftBlocked || !edge.data?.betweenCards) ? undefined : () => {
             onPasteAtConnectorRef.current?.(edge.data?.afterNodeId ?? edge.source);
           },
         },
       })),
-    [edges, isDraggingFromLHS, draggingLhsKind, viewOnly, product, agentName, hasClipboard, singleAddStepSearch]
+    [edges, isDraggingFromLHS, draggingLhsKind, viewOnly, draftBlocked, onEditDraft, product, agentName, hasClipboard, singleAddStepSearch]
   );
 
   const handleViewportChange = useCallback(({ zoom: z }) => {

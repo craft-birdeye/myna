@@ -1311,6 +1311,8 @@ export default function AgentBuilder({
     defaultOpenSection === 'Trigger' ? 'Trigger' : null,
   );
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  /** Draft agent toggled to "View active version" — read-only active canvas, no history panel. */
+  const [previewingActiveVersion, setPreviewingActiveVersion] = useState(false);
   /**
    * True only when history was opened from a Draft agent's "View active version" link.
    * That entry point prepends the unpublished draft as the first card; the three-dots
@@ -1636,7 +1638,6 @@ export default function AgentBuilder({
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
   const [publishBlockedModalOpen, setPublishBlockedModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [draftRedirectModalOpen, setDraftRedirectModalOpen] = useState(false);
   const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
   const publishMenuRef = useRef(null);
@@ -1981,32 +1982,30 @@ export default function AgentBuilder({
     setPaletteSection(null);
     if (!versionHistoryOpen) closeAiBuilderPanel();
     setDraftVersionHistory(false);
+    setPreviewingActiveVersion(false);
     setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
     setVersionHistoryOpen((open) => !open);
     setHelpCenterOpen(false);
   }, [versionHistoryOpen, closeAiBuilderPanel]);
 
   /**
-   * Draft agent's "View active version": opens history with the unpublished draft as the
-   * first card and the live version selected, so the canvas shows what's actually running.
-   * The agent stays in Draft — this only browses.
+   * Toggle to the live Active canvas (read-only) without opening version history.
+   * From a Draft agent with an existing published version.
    */
   const handleViewActiveVersion = useCallback(() => {
     setHeaderMenuOpen(false);
     setPaletteSection(null);
     closeAiBuilderPanel();
-    setDraftVersionHistory(true);
-    const liveVersion = VERSION_HISTORY_VERSIONS.find((v) => v.status === 'Active');
-    setVersionHistorySelectedId(liveVersion?.id ?? VERSION_HISTORY_VERSIONS[0]?.id ?? null);
-    setVersionHistoryOpen(true);
+    setDrawerOpen(false);
+    setPreviewingActiveVersion(true);
     setHelpCenterOpen(false);
   }, [closeAiBuilderPanel]);
 
-  /** Leave Active and open the unpublished draft so the user can continue editing there. */
+  /** Toggle back to the unpublished draft for editing. */
   const handleGoToDraftVersion = useCallback(() => {
-    setDraftRedirectModalOpen(false);
     setVersionHistoryOpen(false);
     setDraftVersionHistory(false);
+    setPreviewingActiveVersion(false);
     setAgentStatus('Draft');
   }, []);
 
@@ -2111,10 +2110,7 @@ export default function AgentBuilder({
 
   /* ─── Live node sync: RHS → canvas ─── */
   const handleNodeFieldChange = useCallback((nodeId, field, value) => {
-    if (blockActiveEditsForDraftRef.current) {
-      setDraftRedirectModalOpen(true);
-      return;
-    }
+    if (blockActiveEditsForDraftRef.current) return;
     setNodeDetails((prev) => {
       const nodeDet = prev[nodeId] || {};
       const updated = { ...prev, [nodeId]: { ...nodeDet, [field]: value } };
@@ -2187,6 +2183,7 @@ export default function AgentBuilder({
   /* ─── Node management ─── */
 
   const handleDeleteNode = useCallback((nodeId) => {
+    if (blockActiveEditsForDraftRef.current) return;
     const target = (latestRef.current.nodeList || []).find((n) => n.id === nodeId);
     const wasTrigger = target?.flowType === 'trigger';
 
@@ -2234,6 +2231,7 @@ export default function AgentBuilder({
   }, [selectedNodeId]);
 
   const handleCopyNode = useCallback((nodeId) => {
+    if (blockActiveEditsForDraftRef.current) return;
     const located = locateNodeContainer(nodeId, nodeList, nodeDetails);
     if (!located) return;
     const nodeEntry = located.containerId
@@ -2335,6 +2333,7 @@ export default function AgentBuilder({
   }, []);
 
   const handleNodeToggleChange = useCallback((nodeId, enabled) => {
+    if (blockActiveEditsForDraftRef.current) return;
     setNodeList((prev) => {
       const inMain = prev.some((n) => n.id === nodeId);
       if (inMain) {
@@ -2476,9 +2475,17 @@ export default function AgentBuilder({
    * actions, and Publish is swapped for a Restore CTA.
    */
   const versionHistoryMode = versionHistoryOpen && explorationChrome;
-  /** Live Active + unpublished draft — RHS mutations redirect to the draft instead. */
-  blockActiveEditsForDraftRef.current =
-    Boolean(hasUnpublishedDraft) && agentStatus !== 'Draft' && !viewOnly && !versionHistoryMode;
+  /** Browsing the live Active version (opened as Active, or toggled from Draft). */
+  const isViewingActiveVersion =
+    (Boolean(hasUnpublishedDraft) && agentStatus === 'Active')
+    || (previewingActiveVersion && existingAgent);
+  /** Live Active + unpublished draft — block canvas/RHS edits with inline tooltips. */
+  const blockActiveEditsForDraft =
+    isViewingActiveVersion && !viewOnly && !versionHistoryMode;
+  blockActiveEditsForDraftRef.current = blockActiveEditsForDraft;
+  const rhsDraftProps = blockActiveEditsForDraft
+    ? { draftBlocked: true, onEditDraft: handleGoToDraftVersion }
+    : {};
   /** Draft entry point prepends the working copy; every other entry point uses the plain list. */
   const versionHistoryList = draftVersionHistory
     ? [DRAFT_VERSION, ...VERSION_HISTORY_VERSIONS]
@@ -2499,6 +2506,7 @@ export default function AgentBuilder({
   const closeVersionHistory = () => {
     setVersionHistoryOpen(false);
     setDraftVersionHistory(false);
+    setPreviewingActiveVersion(false);
     setVersionHistorySelectedId(VERSION_HISTORY_VERSIONS[0]?.id ?? null);
   };
   /**
@@ -2566,6 +2574,8 @@ export default function AgentBuilder({
       || (hasTaskSaveError ? 'Missing mandatory fields' : undefined);
     const nodeIdx = nodeList.findIndex((nl) => nl.id === n.id);
     const extra = {
+      draftBlocked: blockActiveEditsForDraft,
+      onEditDraft: handleGoToDraftVersion,
       onDelete: () => handleDeleteNode(n.id),
       onCopy: () => handleCopyNode(n.id),
       hasClipboard: !!clipboard,
@@ -3162,6 +3172,7 @@ export default function AgentBuilder({
           variant="procedureDetail"
           title={mergedProc.name}
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           onBack={closeLhsPreview}
@@ -3213,15 +3224,13 @@ export default function AgentBuilder({
           variant="agentDetails"
           title="Agent details"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
             values: startDetails,
             onChange: (field, value) => {
-              if (blockActiveEditsForDraftRef.current) {
-                setDraftRedirectModalOpen(true);
-                return;
-              }
+              if (blockActiveEditsForDraftRef.current) return;
               setNodeDetails((prev) => ({
                 ...prev,
                 [START_NODE_ID]: { ...(prev[START_NODE_ID] || startDetails), [field]: value },
@@ -3242,6 +3251,7 @@ export default function AgentBuilder({
           variant="branch"
           title="Branch"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
@@ -3288,6 +3298,7 @@ export default function AgentBuilder({
           variant="conversationTrigger"
           title="Trigger"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
@@ -3303,6 +3314,7 @@ export default function AgentBuilder({
           variant={(isReviewResponseAgent || isReviewGenerationAgent) ? 'reviewTrigger' : 'entityTrigger'}
           title="Trigger"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
@@ -3321,6 +3333,7 @@ export default function AgentBuilder({
           variant="controlBranch"
           title="Branch"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter
           product={product}
           bodyProps={{
@@ -3354,6 +3367,7 @@ export default function AgentBuilder({
           variant="subagent"
           title="Sub-agent"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
@@ -3369,6 +3383,7 @@ export default function AgentBuilder({
           variant="delay"
           title="Delay"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
@@ -3384,6 +3399,7 @@ export default function AgentBuilder({
           variant="parallel"
           title="Parallel tasks"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
@@ -3399,6 +3415,7 @@ export default function AgentBuilder({
           variant="loop"
           title="Loop"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
@@ -3421,6 +3438,7 @@ export default function AgentBuilder({
               variant="createCustomProcedure"
               title="Create custom procedure"
               viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
               inlineFooter={inlineRhsFooter}
               product={product}
               onBack={() => setActiveProcedureId(null)}
@@ -3453,6 +3471,7 @@ export default function AgentBuilder({
             variant="procedureDetail"
             title={mergedProc.name}
             viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
             inlineFooter={inlineRhsFooter}
             product={product}
             onBack={() => setActiveProcedureId(null)}
@@ -3478,6 +3497,7 @@ export default function AgentBuilder({
           variant="procedureTask"
           title="Procedures"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
@@ -3509,6 +3529,7 @@ export default function AgentBuilder({
           variant="llmTask"
           title="Action"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           saveLabel="Save"
@@ -3565,6 +3586,7 @@ export default function AgentBuilder({
           variant="voiceCallTask"
           title="Action"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
@@ -3591,6 +3613,7 @@ export default function AgentBuilder({
           variant="sendResponseTask"
           title="Action"
           viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
           bodyProps={{
@@ -3608,6 +3631,7 @@ export default function AgentBuilder({
         variant="entityTask"
         title="Action"
         viewOnly={rhsViewOnly}
+        {...rhsDraftProps}
         inlineFooter={inlineRhsFooter}
         titleLayoutMenu={llmTaskExplorationLayout ? {
           value: entityTaskLayoutOption,
@@ -4037,20 +4061,7 @@ export default function AgentBuilder({
                             </button>
                           </Tooltip>
                         )}
-                        {agentStatus === 'Draft' && existingAgent ? (
-                          <>
-                            <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
-                              Draft
-                            </span>
-                            <button
-                              type="button"
-                              className="ab-header-status__view-live"
-                              onClick={handleViewActiveVersion}
-                            >
-                              View active version
-                            </button>
-                          </>
-                        ) : hasUnpublishedDraft && agentStatus === 'Active' ? (
+                        {isViewingActiveVersion && existingAgent ? (
                           <>
                             <span className="ab-header-status ab-header-status--active ab-header-status--dot">
                               Active
@@ -4061,6 +4072,19 @@ export default function AgentBuilder({
                               onClick={handleGoToDraftVersion}
                             >
                               View draft
+                            </button>
+                          </>
+                        ) : agentStatus === 'Draft' && existingAgent ? (
+                          <>
+                            <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
+                              Draft
+                            </span>
+                            <button
+                              type="button"
+                              className="ab-header-status__view-live"
+                              onClick={handleViewActiveVersion}
+                            >
+                              View active version
                             </button>
                           </>
                         ) : (
@@ -4248,7 +4272,9 @@ export default function AgentBuilder({
                     agentName={agentName}
                     procedures={procedures}
                     onCollapse={() => setPaletteSection(null)}
-                    onDropNode={handleDropNode}
+                    onDropNode={blockActiveEditsForDraft ? undefined : handleDropNode}
+                    draftBlocked={blockActiveEditsForDraft}
+                    onEditDraft={handleGoToDraftVersion}
                     onProcedureClick={(procedureId) => {
                       setLhsPreviewProcedureId(procedureId);
                       setSelectedNodeId(null);
@@ -4330,14 +4356,16 @@ export default function AgentBuilder({
               nodes={nodes}
               edges={edges}
               onNodeClick={nodesInteractive ? handleNodeClick : undefined}
-              onDropNode={viewOnly ? undefined : handleDropNode}
-              onNodesReorder={viewOnly ? undefined : handleNodesReorder}
-              hasClipboard={!viewOnly && !!clipboard}
-              onPasteAtConnector={viewOnly ? undefined : handlePasteBelow}
+              onDropNode={viewOnly || blockActiveEditsForDraft ? undefined : handleDropNode}
+              onNodesReorder={viewOnly || blockActiveEditsForDraft ? undefined : handleNodesReorder}
+              hasClipboard={!viewOnly && !blockActiveEditsForDraft && !!clipboard}
+              onPasteAtConnector={viewOnly || blockActiveEditsForDraft ? undefined : handlePasteBelow}
               selectedNodeId={selectedNodeId}
               orientation={canvasOrientation}
               onOrientationChange={setCanvasOrientation}
               viewOnly={viewOnly}
+              draftBlocked={blockActiveEditsForDraft}
+              onEditDraft={handleGoToDraftVersion}
               product={product}
               agentName={agentName}
               rrChrome
@@ -4491,63 +4519,6 @@ export default function AgentBuilder({
             document.body,
           )}
 
-          {/* ─── Draft redirect alert (edit Active while unpublished draft exists) ─── */}
-          {draftRedirectModalOpen && createPortal(
-            <div
-              className={`ab-confirm-overlay${
-                rightPanelOpen
-                  ? rightPanelWide
-                    ? ' ab-confirm-overlay--rhs-wide'
-                    : ' ab-confirm-overlay--rhs-open'
-                  : ''
-              }`}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setDraftRedirectModalOpen(false);
-              }}
-            >
-              <div
-                className="ab-confirm-dialog"
-                onClick={(e) => e.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="ab-draft-redirect-title"
-              >
-                <div className="ab-confirm-dialog__header">
-                  <h2 id="ab-draft-redirect-title" className="ab-confirm-dialog__title">
-                    This agent has an unpublished draft
-                  </h2>
-                  <button
-                    type="button"
-                    aria-label="Close"
-                    onClick={() => setDraftRedirectModalOpen(false)}
-                    className="ab-confirm-dialog__close"
-                  >
-                    <span className="material-symbols-outlined">close</span>
-                  </button>
-                </div>
-                <p className="ab-confirm-dialog__body">
-                  Continue editing the draft — changes to the active version won't carry over once it's published.
-                </p>
-                <div className="ab-confirm-dialog__footer">
-                  <button
-                    type="button"
-                    className="ab-confirm-dialog__cancel"
-                    onClick={() => setDraftRedirectModalOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="ab-confirm-dialog__primary"
-                    onClick={handleGoToDraftVersion}
-                  >
-                    Edit draft
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )}
 
           {/* ─── Delete agent confirm (viewport overlay) ─── */}
           {deleteConfirmOpen && createPortal(

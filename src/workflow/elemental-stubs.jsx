@@ -123,7 +123,7 @@ export function FormInput({
           outline: 'none',
           boxSizing: 'border-box',
           width: '100%',
-          cursor: readOnly ? 'default' : undefined,
+          cursor: disabled ? 'not-allowed' : readOnly ? 'default' : undefined,
         }}
         onFocus={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#1976d2'; }}
         onBlur={(e) => { if (!noBorder && !readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#e5e9f0'; }}
@@ -195,7 +195,7 @@ export function TextArea({
           width: '100%',
           lineHeight: '20px',
           letterSpacing: '-0.28px',
-          cursor: readOnly ? 'default' : undefined,
+          cursor: disabled ? 'not-allowed' : readOnly ? 'default' : undefined,
         }}
         onFocus={(e) => { if (!readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#1976d2'; }}
         onBlur={(e) => { if (!readOnly) e.target.style.borderColor = error ? '#de1b0c' : '#e5e9f0'; }}

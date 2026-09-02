@@ -71,6 +71,28 @@
   border-color: #de1b0c;
 }
 
+.inputBoxReadOnly {
+  background: #fafafa;
+  border-radius: 4px;
+  cursor: default;
+}
+
+.inputBoxReadOnly .editor {
+  cursor: default;
+}
+
+.inputBoxDisabled {
+  background: var(--aero-field-disabled-bg, #f5f5f5);
+  border-color: var(--aero-field-disabled-border, #e5e9f0);
+  border-radius: 4px;
+  cursor: not-allowed;
+}
+
+.inputBoxDisabled .editor {
+  background: transparent;
+  cursor: not-allowed;
+}
+
 .errorText {
   font-size: 12px;
   line-height: 16px;

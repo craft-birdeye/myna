@@ -3,6 +3,7 @@ import { Toggle } from '../../../elemental-stubs';
 import { Button } from '../../../elemental-stubs';
 import { AiSparkleGlyphIcon } from '../../../../assets/AiSparkleGlyphIcon';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
+import { DraftBlockedGuard } from '../../../components/DraftBlockedTooltip';
 /* Same assets as the left floater (Trigger / Task / Controls). */
 import iconRrTrigger from '../../../../assets/rr-chrome/icon-trigger.svg';
 import iconRrTasks from '../../../../assets/rr-chrome/icon-tasks.svg';
@@ -62,6 +63,8 @@ export default function CanvasNodeHeader({
   toggleEnabled = true,
   toggleDisabled = false,
   viewOnly = false,
+  draftBlocked = false,
+  onEditDraft,
   onToggleChange,
   hasAiIcon = false,
   hasAddButton = false,
@@ -178,22 +181,25 @@ export default function CanvasNodeHeader({
           </Tooltip>
         )}
         {hasToggle && (
-          <div
-            className="cnh__toggle"
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <Toggle
-              name={`cnh-toggle-${nodeType}`}
-              checked={toggleEnabled}
-              onChange={(checked, e) => {
-                e?.stopPropagation();
-                onToggleChange?.(checked);
-              }}
-              roundedToggle
-              disabled={toggleDisabled}
-            />
-          </div>
+          <DraftBlockedGuard blocked={draftBlocked} onEditDraft={onEditDraft} side="top" inline>
+            <div
+              className="cnh__toggle"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <Toggle
+                name={`cnh-toggle-${nodeType}`}
+                checked={toggleEnabled}
+                onChange={(checked, e) => {
+                  e?.stopPropagation();
+                  if (draftBlocked) return;
+                  onToggleChange?.(checked);
+                }}
+                roundedToggle
+                disabled={toggleDisabled || draftBlocked}
+              />
+            </div>
+          </DraftBlockedGuard>
         )}
         {hasAddButton && (
           <Button type="link" customIcon={<AddIcon />} onClick={onAddClick} noHover aria-label="Add" />

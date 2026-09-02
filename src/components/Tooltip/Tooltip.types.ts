@@ -19,4 +19,10 @@ export interface TooltipProps {
   interactive?: boolean
   /** When true, hover never opens the bubble (e.g. ellipsized text that isn't truncated). */
   disabled?: boolean
+  /** Anchor the bubble to the pointer instead of the trigger center. */
+  followCursor?: boolean
+  /** Gap from anchor point in px. Defaults to 8. */
+  offset?: number
+  /** Milliseconds to wait before opening on hover. Defaults to 0. */
+  showDelay?: number
 }

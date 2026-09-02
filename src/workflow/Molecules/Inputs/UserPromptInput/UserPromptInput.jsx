@@ -26,6 +26,7 @@ export default function UserPromptInput({
   required,
   hideLabel = false,
   readOnly = false,
+  disabled = false,
   autoHeight = false,
   minEditorHeight,
   placeholder = 'Enter prompt',
@@ -43,6 +44,7 @@ export default function UserPromptInput({
   error,
   errorMessage = 'This field is required',
 }) {
+  const locked = readOnly || disabled;
   const editorRef = useRef(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -207,9 +209,9 @@ export default function UserPromptInput({
           </div>
         )}
         <div
-          className={`${styles.inputBox}${!readOnly && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}`}
+          className={`${styles.inputBox}${!locked && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}${disabled ? ` ${styles.inputBoxDisabled}` : readOnly ? ` ${styles.inputBoxReadOnly}` : ''}`}
         >
-          {!readOnly && isEmpty && (
+          {!locked && isEmpty && (
             <div className={styles.placeholderOverlay} aria-hidden>
               {placeholder}
             </div>
@@ -217,10 +219,10 @@ export default function UserPromptInput({
           <div
             ref={editorRef}
             className={`${styles.editor}${autoHeight ? ` ${styles.editorAutoHeight}` : ''}`}
-            contentEditable={!readOnly}
+            contentEditable={!locked}
             suppressContentEditableWarning
-            onInput={readOnly ? undefined : emitChange}
-            onKeyDown={readOnly ? undefined : handleKeyDown}
+            onInput={locked ? undefined : emitChange}
+            onKeyDown={locked ? undefined : handleKeyDown}
             style={minEditorHeight ? { minHeight: minEditorHeight } : undefined}
             onClick={onOpenTool ? (e) => {
               const chip = e.target.closest('[data-chip-type="tool"], .prompt-chip--tool');
@@ -230,7 +232,7 @@ export default function UserPromptInput({
               }
             } : undefined}
           />
-          {!readOnly && (
+          {!locked && (
           <div className={styles.toolbar} ref={pickerContainerRef}>
             <div ref={fieldsBtnRef}>
               <ToolbarButton
