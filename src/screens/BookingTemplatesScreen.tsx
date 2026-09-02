@@ -206,7 +206,13 @@ export function BookingTemplatesScreen({ initialEditId, onInitialEditConsumed }:
                     addTemplate({ ...t, id: `${t.id}-copy-${Date.now()}`, name: `${t.name} (Copy)`, usedBy: [] })
                   },
                 },
-                { label: 'Delete', variant: 'danger', onClick: (row) => deleteTemplate(row.id) },
+                {
+                  label: 'Delete',
+                  variant: 'danger',
+                  onClick: (row) => deleteTemplate(row.id),
+                  disabled: (row) => row.template.usedBy.length > 0,
+                  disabledTooltip: 'This template is in use and can’t be deleted.',
+                },
               ]}
             />
           </div>

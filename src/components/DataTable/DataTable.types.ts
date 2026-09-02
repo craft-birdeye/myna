@@ -39,6 +39,9 @@ export interface RowMenuItem<T> {
   onClick: (row: T) => void
   /** When omitted, the item is always shown. */
   visible?: (row: T) => boolean
+  /** When true, the item is non-interactive and shows `disabledTooltip` on hover. */
+  disabled?: (row: T) => boolean
+  disabledTooltip?: string
   variant?: 'default' | 'danger'
   icon?: string
 }
