@@ -124,6 +124,11 @@ interface WorkflowEditorScreenProps {
    * not Sep 1). Independent of sep1Chrome, which is true for all exploration-family navs.
    */
   llmTaskExplorationLayout?: boolean
+  /**
+   * Location-aware identity header — Add location CTA until locations exist, 38-char
+   * name truncation, name + location hover card (Response agents exploration only).
+   */
+  identityLocationChrome?: boolean
   /** RHS Save follows the content instead of pinning to the panel bottom (Response agents Sep 1 only). */
   inlineRhsFooter?: boolean
   /** Opens Settings > Account > Product research (Help center "Learn more"). */
@@ -158,6 +163,7 @@ export function WorkflowEditorScreen({
   explorationChrome = hideTopIdentity,
   sep1Chrome = false,
   llmTaskExplorationLayout = false,
+  identityLocationChrome = false,
   inlineRhsFooter = false,
   onOpenProductResearchSettings,
   autoOpenCoachTour = false,
@@ -355,6 +361,7 @@ export function WorkflowEditorScreen({
             inlineRhsFooter={inlineRhsFooter}
             sep1Chrome={sep1Chrome}
             llmTaskExplorationLayout={llmTaskExplorationLayout}
+            identityLocationChrome={identityLocationChrome}
             onOpenProductResearchSettings={onOpenProductResearchSettings}
             autoOpenCoachTour={autoOpenCoachTour}
           />

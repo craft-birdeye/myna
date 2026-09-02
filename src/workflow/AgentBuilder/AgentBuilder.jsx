@@ -129,6 +129,47 @@ function RrChromeAgentTitle({ text, onClick }) {
   );
 }
 
+/** Exploration identity title truncates past this many characters. */
+const IDENTITY_NAME_MAX_CHARS = 38;
+
+/**
+ * Exploration chrome identity title (Review response). Unlike `RrChromeAgentTitle`
+ * — which ellipsizes on available width and only reveals the name when it actually
+ * clipped — this truncates on a fixed character count and always offers the full
+ * name plus the agent's location summary on hover.
+ */
+function RrChromeIdentityTitle({ fullName, locationSummary, onClick }) {
+  const displayName =
+    fullName.length > IDENTITY_NAME_MAX_CHARS
+      ? `${fullName.slice(0, IDENTITY_NAME_MAX_CHARS).trimEnd()}…`
+      : fullName;
+
+  return (
+    <Tooltip
+      // `brief` (nowrap), not `detail` (max-w-280px): the name has to stay on one
+      // line however long it is, so the second line belongs to the location alone.
+      variant="brief"
+      side="bottom"
+      className="rr-chrome-identity__name-tip"
+      content={
+        <>
+          <span className="block">{fullName}</span>
+          {locationSummary && <span className="block">{locationSummary}</span>}
+        </>
+      }
+    >
+      <button
+        type="button"
+        className="rr-chrome-identity__title"
+        onClick={onClick}
+        aria-label={`Open agent details for ${fullName}`}
+      >
+        <span className="rr-chrome-identity__name">{displayName}</span>
+      </button>
+    </Tooltip>
+  );
+}
+
 /* ─── Error boundary for RHS panel — prevents blank screen on render error ─── */
 class RHSErrorBoundary extends React.Component {
   constructor(props) {
@@ -1197,6 +1238,13 @@ export default function AgentBuilder({
    * because sep1Chrome is now true for the whole exploration family.
    */
   llmTaskExplorationLayout = false,
+  /**
+   * Location-aware identity header — Add location CTA until locations exist, 38-char
+   * name truncation, name + location hover card. True only for Response agents
+   * exploration: the Sep 1 and coach-cue navs share both this agent's name and
+   * `explorationChrome`, so neither the name nor those flags can gate this.
+   */
+  identityLocationChrome = false,
   /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. */
   hideCanvasStartNode = hideTopIdentity,
   /** Exploration editor UX — defaults to hideTopIdentity for backward compatibility. */
@@ -2448,25 +2496,36 @@ export default function AgentBuilder({
     setVersionHistoryOpen(false);
     setSelectedNodeId(START_NODE_ID);
     setDrawerOpen(true);
+    // Agent details opens on its own fields, never straight into Locations. The token
+    // has to be cleared, not just left alone: the RHS unmounts when it closes, so a
+    // stale non-zero token would re-fire the auto-open effect on the next mount.
+    setStartLocationsOpenToken(0);
   }, []);
 
   const startAgentName = nodeDetails[START_NODE_ID]?.agentName || pageTitle;
   const startLocations = nodeDetails[START_NODE_ID]?.locations || [];
   const locationsSelectBy = nodeDetails[START_NODE_ID]?.locationsSelectBy || null;
   const locationCount = startLocations.length;
-  const startSubtitle = (() => {
+  const hasLocationSelection = locationCount > 0 || !!locationsSelectBy;
+  /** "Locations assigned to Sarah Chen" / "2 locations" — null until something is picked. */
+  const locationSummary = (() => {
     const byGroup = formatSelectByCanvasSubtitle(locationsSelectBy);
     if (byGroup) return byGroup;
-    if (locationCount === 0) return 'Add locations';
+    if (locationCount === 0) return null;
     if (locationCount === 1) return '1 location';
     return `${locationCount} locations`;
   })();
+  const startSubtitle = locationSummary || 'Add locations';
   const startData = {
     title: startAgentName,
     subtitle: startSubtitle,
-    subtitleIsLink: locationCount === 0 && !locationsSelectBy,
-    onSubtitleClick: locationCount === 0 && !locationsSelectBy ? handleAddLocationsFromCanvas : undefined,
+    subtitleIsLink: !hasLocationSelection,
+    onSubtitleClick: hasLocationSelection ? undefined : handleAddLocationsFromCanvas,
   };
+  // Response agents (exploration) only — every other canvas keeps the plain title +
+  // pencil. Until locations exist the pencil gives way to Add location.
+  const identityFullName = agentName || 'Untitled agent';
+  const showAddLocationCta = identityLocationChrome && !hasLocationSelection;
   // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
   const isScratchCreate = explorationChrome && !existingAgent;
   /**
@@ -4036,18 +4095,37 @@ export default function AgentBuilder({
                     <div className="rr-chrome-identity">
                       <div className="rr-chrome-identity__row">
                         <div className="rr-chrome-identity__name-group">
-                          <button
-                            type="button"
-                            className="rr-chrome-identity__title"
-                            onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
-                            aria-label={`Open agent details for ${agentName || 'Untitled agent'}`}
-                          >
-                            <span className="rr-chrome-identity__name">
-                              {agentName || 'Untitled agent'}
-                            </span>
-                          </button>
+                          {identityLocationChrome ? (
+                            <RrChromeIdentityTitle
+                              fullName={identityFullName}
+                              locationSummary={locationSummary}
+                              onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="rr-chrome-identity__title"
+                              onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
+                              aria-label={`Open agent details for ${identityFullName}`}
+                            >
+                              <span className="rr-chrome-identity__name">
+                                {identityFullName}
+                              </span>
+                            </button>
+                          )}
                         </div>
-                        {nodesInteractive && (
+                        {nodesInteractive && (showAddLocationCta ? (
+                          <>
+                            <span className="ab-header-status__divider" aria-hidden />
+                            <button
+                              type="button"
+                              className="rr-chrome-identity__add-location"
+                              onClick={handleAddLocationsFromCanvas}
+                            >
+                              Add location
+                            </button>
+                          </>
+                        ) : (
                           <Tooltip content="Edit" variant="brief" side="bottom">
                             <button
                               type="button"
@@ -4060,7 +4138,7 @@ export default function AgentBuilder({
                               </span>
                             </button>
                           </Tooltip>
-                        )}
+                        ))}
                         {isViewingActiveVersion && existingAgent ? (
                           <>
                             <span className="ab-header-status ab-header-status--active ab-header-status--dot">

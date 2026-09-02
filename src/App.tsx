@@ -12,6 +12,7 @@ import {
   isSep1Chrome,
   isAgentCoachCueNav,
   isResponseAgentsSep1StyleNav,
+  isResponseAgentsExplorationNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
@@ -1177,6 +1178,7 @@ export function App() {
                           explorationChrome={isAgentExplorationChrome(navActive)}
                           sep1Chrome={isSep1Chrome(navActive)}
                           llmTaskExplorationLayout={isLlmTaskExplorationLayout(navActive)}
+                          identityLocationChrome={isResponseAgentsExplorationNav(navActive)}
                           inlineRhsFooter={isResponseAgentsSep1StyleNav(navActive)}
                           autoOpenCoachTour={isAgentCoachCueNav(navActive)}
                           onOpenProductResearchSettings={openUxImprovementSettings}

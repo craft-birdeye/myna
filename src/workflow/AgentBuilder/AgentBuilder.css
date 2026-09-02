@@ -1039,7 +1039,9 @@
   background: #bdbdbd;
 }
 
-.ab-header-status__view-live {
+/* Header text CTAs — "View active version" / "View draft" / "Add location". */
+.ab-header-status__view-live,
+.rr-chrome-identity__add-location {
   margin: 0;
   padding: 0;
   border: none;
@@ -1052,8 +1054,14 @@
   color: #1976d2;
 }
 
-.ab-header-status__view-live:hover {
+.ab-header-status__view-live:hover,
+.rr-chrome-identity__add-location:hover {
   text-decoration: underline;
+}
+
+.rr-chrome-identity__add-location {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ab-header-status--with-info {
@@ -1625,6 +1633,11 @@
   min-width: 0;
   align-items: center;
   gap: 2px;
+}
+
+/* Tooltip wrapper around the title must not block the name's ellipsis. */
+.rr-chrome-identity__name-tip {
+  min-width: 0;
 }
 
 .rr-chrome-identity__title {

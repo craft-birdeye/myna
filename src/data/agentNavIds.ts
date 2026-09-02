@@ -38,6 +38,15 @@ export function isResponseAgentsExplorationChrome(navId?: string | null) {
   return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || isResponseAgentsSep1StyleNav(navId)
 }
 
+/**
+ * Response agents (exploration) *only* — not Sep 1, not the coach-cue nav, which
+ * share both the agent name and `explorationChrome` with it. Gates the
+ * location-aware identity header (Add location CTA, name truncation, hover card).
+ */
+export function isResponseAgentsExplorationNav(navId?: string | null) {
+  return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID
+}
+
 /** Production + Sep 1 front desk navs — same agent-list card chrome (not the exploration variant). */
 export function isFrontdeskSep1StyleNav(navId?: string | null) {
   return navId === FRONTDESK_SEP1_NAV_ID || navId === FRONTDESK_NAV_ID
