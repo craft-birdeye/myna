@@ -3923,22 +3923,30 @@ export default function AgentBuilder({
       ) : (
         <>
           <div className="ab-publish-split" ref={publishMenuRef}>
-            {/* Inactive agents re-activate through the same CTA (handleActivateMain routes
-                to resume vs publish), so there is no separate Resume button. */}
+            {/* Live Active + unpublished draft: primary CTA switches to the draft.
+                Inactive agents re-activate through the same CTA (handleActivateMain
+                routes to resume vs publish), so there is no separate Resume button. */}
             <button
               type="button"
               className="ab-publish-split__main"
-              aria-label="Activate"
+              aria-label={blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
               data-tour-id="publish"
               disabled={publishDisabled}
-              onClick={handleActivateMain}
+              onClick={() => {
+                if (blockActiveEditsForDraft) {
+                  setPublishMenuOpen(false);
+                  handleGoToDraftVersion();
+                  return;
+                }
+                handleActivateMain();
+              }}
             >
-              Activate
+              {blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
             </button>
             <button
               type="button"
               className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
-              aria-label="More activate options"
+              aria-label={blockActiveEditsForDraft ? 'More draft options' : 'More activate options'}
               aria-haspopup="menu"
               aria-expanded={publishMenuOpen}
               disabled={publishDisabled}
@@ -3948,16 +3956,21 @@ export default function AgentBuilder({
             </button>
             {publishMenuOpen && (
               <div className="ab-publish-split__menu" role="menu">
-                <button
-                  type="button"
-                  className="ab-publish-split__menu-item"
-                  role="menuitem"
-                  onClick={handleSaveAsDraft}
-                >
-                  Save as draft
-                </button>
-                {/* Only a live agent can be deactivated. */}
-                {agentStatus === 'Active' && (
+                {/* Active + draft view: only Deactivate — Save as draft would overwrite
+                    the working draft with the locked live canvas. */}
+                {!blockActiveEditsForDraft && (
+                  <button
+                    type="button"
+                    className="ab-publish-split__menu-item"
+                    role="menuitem"
+                    onClick={handleSaveAsDraft}
+                  >
+                    Save as draft
+                  </button>
+                )}
+                {/* Only a live agent can be deactivated (including while browsing
+                    the Active canvas of an agent that also has a draft). */}
+                {(agentStatus === 'Active' || blockActiveEditsForDraft) && (
                   <button
                     type="button"
                     className="ab-publish-split__menu-item"
@@ -4084,7 +4097,7 @@ export default function AgentBuilder({
                           </span>
                         )}
                         {selectedVersion?.status === 'Draft' && (
-                          <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
+                          <span className="ab-header-status ab-header-status--draft">
                             Draft
                           </span>
                         )}
@@ -4154,7 +4167,7 @@ export default function AgentBuilder({
                           </>
                         ) : agentStatus === 'Draft' && existingAgent ? (
                           <>
-                            <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
+                            <span className="ab-header-status ab-header-status--draft">
                               Draft
                             </span>
                             <button
@@ -4166,7 +4179,7 @@ export default function AgentBuilder({
                             </button>
                           </>
                         ) : (
-                          <span className={`ab-header-status ${statusBadgeClass} ab-header-status--dot`}>
+                          <span className={`ab-header-status ${statusBadgeClass}${agentStatus === 'Draft' ? '' : ' ab-header-status--dot'}`}>
                             {agentStatus}
                           </span>
                         )}
@@ -4209,7 +4222,7 @@ export default function AgentBuilder({
                       text={agentName || 'Untitled agent'}
                       onClick={nodesInteractive ? handleOpenAgentDetails : undefined}
                     />
-                    <span className={`ab-header-status ${statusBadgeClass} ab-header-status--dot`}>
+                    <span className={`ab-header-status ${statusBadgeClass}${agentStatus === 'Draft' ? '' : ' ab-header-status--dot'}`}>
                       {agentStatus}
                     </span>
                     <div className="rr-chrome-top__spacer" aria-hidden />

@@ -299,6 +299,9 @@ interface AgentInstance {
   updatedBy?: string
   /** When true, Agents table nests a Draft name under this live row (same row, no divider). */
   hasDraft?: boolean
+  /** Draft line values when `hasDraft` — metrics/locations show "-"; these stay real. */
+  draftLastUpdated?: string
+  draftUpdatedBy?: string
   /** Region label from the source RegionRow — used by Agents FilterPanel. */
   region?: string
   /** City mapped from region for Location filter. */
@@ -443,6 +446,9 @@ interface RegionRow {
   hasDraft?: boolean
   lastUpdated?: string
   updatedBy?: string
+  /** Draft-line Last updated / Updated by when `hasDraft` is set. */
+  draftLastUpdated?: string
+  draftUpdatedBy?: string
   /** Default exploration card body copy — falls back to workflow goals when omitted. */
   cardDescription?: string
 }
@@ -455,6 +461,21 @@ const LAST_UPDATED_SAMPLES = [
   'July 29',
 ] as const
 const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as const
+
+/** Stack Active + Draft cell lines for unpublished-draft agent rows. */
+function renderDraftStackedCell(
+  activeValue: ReactNode,
+  draftValue: string,
+  hasDraft?: boolean,
+) {
+  if (!hasDraft) return activeValue
+  return (
+    <div className="flex flex-col gap-md">
+      <div className="flex h-7 items-center">{activeValue}</div>
+      <div className="flex h-7 items-center">{draftValue}</div>
+    </div>
+  )
+}
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
   [FRONTDESK_AGENT_NAME]: [
@@ -7603,6 +7624,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     lastUpdated: r.lastUpdated ?? LAST_UPDATED_SAMPLES[i % LAST_UPDATED_SAMPLES.length],
     updatedBy: r.updatedBy ?? UPDATED_BY_SAMPLES[i % UPDATED_BY_SAMPLES.length],
     hasDraft: r.hasDraft,
+    draftLastUpdated: r.hasDraft
+      ? (r.draftLastUpdated ?? LAST_UPDATED_SAMPLES[(i + 2) % LAST_UPDATED_SAMPLES.length])
+      : undefined,
+    draftUpdatedBy: r.hasDraft
+      ? (r.draftUpdatedBy ?? UPDATED_BY_SAMPLES[(i + 1) % UPDATED_BY_SAMPLES.length])
+      : undefined,
     cardDescription: r.cardDescription,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
 
@@ -7708,7 +7735,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       locked: true,
       truncate: false,
       render: (v, row) => (
-        <div className={`flex flex-col ${row.hasDraft ? 'gap-xs' : ''}`}>
+        <div className={`flex flex-col ${row.hasDraft ? 'gap-md' : ''}`}>
           <button
             type="button"
             onClick={(e) => {
@@ -7751,9 +7778,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       sortable: true,
       truncate: false,
       render: (v, row) => (
-        <div className={`flex flex-col ${row.hasDraft ? 'gap-xs' : ''}`}>
+        <div className={`flex flex-col ${row.hasDraft ? 'gap-md' : ''}`}>
           <div className={`flex items-center gap-sm ${row.hasDraft ? 'h-7' : 'min-h-5'}`}>
-            <Chip label={String(v)} variant={STATUS_VARIANT[String(v)] ?? 'neutral'} />
+            <Chip
+              label={String(v)}
+              variant={STATUS_VARIANT[String(v)] ?? 'neutral'}
+              showDot={String(v) !== 'Draft'}
+            />
             {row.issues ? (
               <span className="flex items-center gap-xs text-small text-text-secondary">
                 <Icon name="error" size={14} className="text-chip-danger-text" />
@@ -7833,7 +7864,25 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     { key: 'lastUpdated', label: 'Last updated', width: 150, sortable: true },
     { key: 'updatedBy', label: 'Updated by', width: 160, sortable: true },
     { key: 'locations', label: 'Locations', width: 120, sortable: true },
-  ]
+  ].map((col) => {
+    // Name + Status already render their own Active/Draft stack.
+    if (col.key === 'name' || col.key === 'status') return col
+    const prevRender = col.render
+    return {
+      ...col,
+      truncate: false,
+      render: (v: unknown, row: AgentInstance) => {
+        const active = prevRender ? prevRender(v, row) : String(v ?? '')
+        const draftValue =
+          col.key === 'lastUpdated'
+            ? (row.draftLastUpdated ?? '-')
+            : col.key === 'updatedBy'
+              ? (row.draftUpdatedBy ?? '-')
+              : '-'
+        return renderDraftStackedCell(active, draftValue, row.hasDraft)
+      },
+    }
+  })
 
   const DEF_BY_KEY = new Map(COLUMN_DEFS.map((c) => [String(c.key), c]))
   const DEFAULT_ORDER = COLUMN_DEFS.map((c) => String(c.key))
@@ -7941,8 +7990,30 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     )
   }
 
+  const openAgentDraftEditor = (row: AgentInstance) => {
+    onEditAgent?.(row.name, undefined, undefined, 'Draft')
+  }
+
+  const openAgentActiveVersion = (row: AgentInstance) => {
+    onEditAgent?.(row.name, undefined, undefined, 'Active')
+  }
+
   const agentInstanceRowMenuItems = useMemo<RowMenuItem<AgentInstance>[]>(() => [
-    { label: 'Edit', onClick: openAgentInstanceEditor },
+    {
+      label: 'Edit draft',
+      onClick: openAgentDraftEditor,
+      visible: (row) => !!row.hasDraft,
+    },
+    {
+      label: 'View active version',
+      onClick: openAgentActiveVersion,
+      visible: (row) => !!row.hasDraft,
+    },
+    {
+      label: 'Edit',
+      onClick: openAgentInstanceEditor,
+      visible: (row) => !row.hasDraft,
+    },
     {
       label: 'Deactivate',
       onClick: () => {},
@@ -7959,7 +8030,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
 
   const agentInstanceCardOverflowMenuItems = useMemo(
     () => agentInstanceRowMenuItems.filter(
-      (item) => item.label !== 'Edit' && item.label !== 'View details',
+      (item) =>
+        item.label !== 'Edit'
+        && item.label !== 'Edit draft'
+        && item.label !== 'View details',
     ),
     [agentInstanceRowMenuItems],
   )
@@ -8860,7 +8934,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                       <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
                                     </>
                                   ) : null}
-                                  <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
+                                  <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} showDot={row.status !== 'Draft'} />
                                 </div>
                               </div>
 
@@ -8964,7 +9038,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                     <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
                                   </>
                                 ) : null}
-                                <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} />
+                                <Chip label={row.status} variant={STATUS_VARIANT[row.status] ?? 'neutral'} showDot={row.status !== 'Draft'} />
                               </div>
                             </div>
                             <div
@@ -9018,9 +9092,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         }}
                         rowMenuItems={agentInstanceRowMenuItems}
                         rowClassName={(row) =>
-                          // Equal inset + shared 24px live-line so metrics sit with Active name/chip.
+                          // Taller dual-line row for Active + nested Draft; cells grow with content.
                           row.hasDraft
-                            ? '[&>td]:!h-auto [&>td]:align-top [&>td]:py-sm [&>td>span]:!flex [&>td>span]:h-7 [&>td>span]:items-center'
+                            ? '[&>td]:!h-auto [&>td]:!align-top [&>td]:!pt-lg [&>td]:!pb-lg'
                             : ''
                         }
                       />

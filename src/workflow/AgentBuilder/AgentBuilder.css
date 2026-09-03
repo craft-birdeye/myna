@@ -1846,10 +1846,6 @@
   flex-shrink: 0;
 }
 
-.ab-header-status--draft.ab-header-status--dot::before {
-  background: #c69204;
-}
-
 /* Left AI sparkle + Add-nodes floater stack (vertically centered) */
 .rr-chrome-left-stack {
   position: absolute;

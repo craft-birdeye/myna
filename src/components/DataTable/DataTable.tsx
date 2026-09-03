@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { EmptyState } from '../EmptyState/EmptyState'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -324,7 +324,11 @@ export function DataTable<T extends Record<string, unknown>>({
                 return (
                   <td
                     key={String(col.key)}
-                    style={{ height: rowHeight }}
+                    style={
+                      rowClassName?.(row, i)?.includes('h-auto')
+                        ? undefined
+                        : { height: rowHeight }
+                    }
                   className={`px-[10px] align-middle text-body text-text-primary ${
                       isLast ? 'relative min-w-0 overflow-hidden' : 'min-w-0 overflow-hidden'
                     }`}

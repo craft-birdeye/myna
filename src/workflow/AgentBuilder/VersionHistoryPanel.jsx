@@ -113,7 +113,7 @@ export default function VersionHistoryPanel({
                   </span>
                 )}
                 {version.status === 'Draft' && (
-                  <span className="ab-header-status ab-header-status--draft ab-header-status--dot">
+                  <span className="ab-header-status ab-header-status--draft">
                     Draft
                   </span>
                 )}
