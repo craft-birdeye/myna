@@ -215,9 +215,9 @@ export function FallbackFailoverScreen() {
       <div className="flex flex-1 flex-col overflow-auto bg-surface">
         <div className="sticky top-0 z-10 flex items-start justify-between bg-surface px-2xl py-xl">
           <div className="flex flex-col gap-xs">
-            <span className="text-h3 text-text-primary">Fallback &amp; failover</span>
+            <span className="text-h3 text-text-primary">Fallback and failover</span>
             <span className="text-small text-text-secondary">
-              What callers hear and get by text when the agent can&apos;t answer.
+              Set what callers hear and get by text when the agent can&apos;t answer.
             </span>
           </div>
           <button
@@ -238,9 +238,9 @@ export function FallbackFailoverScreen() {
           {/* Fallback voice greeting */}
           <section className="rounded-sm border border-border bg-surface p-xl transition-colors duration-150">
             <SectionHeader
-              title="Fallback voice greeting"
+              title="Fallback"
               badge="Prevents dead air"
-              subtext="Played when the agent is off, paused, or unavailable. You can customize the default greeting."
+              subtext="Played when the agent is off, paused, or unavailable. Customize below."
             />
 
             <div className="mt-md">
@@ -279,8 +279,8 @@ export function FallbackFailoverScreen() {
           {/* Text message after the call */}
           <section className="rounded-sm border border-border bg-surface p-xl transition-colors duration-150">
             <SectionHeader
-              title="Text message after the call"
-              subtext="Sent after the call ends so missed calls still get a follow-up."
+              title="Text"
+              subtext="Text the caller after the call ends, so missed calls still get a follow-up."
             />
 
             <div className="mt-md">
@@ -332,7 +332,7 @@ export function FallbackFailoverScreen() {
           {/* Forward to your team */}
           <section className="rounded-sm border border-border bg-surface p-xl transition-colors duration-150">
             <SectionHeader
-              title="Forward to your team"
+              title="Forward to team"
               subtext="Route callers to a live number. If no one picks up, they get the fallback text above."
             />
 
@@ -381,7 +381,7 @@ export function FallbackFailoverScreen() {
           <section className="rounded-sm border border-border bg-surface p-xl transition-colors duration-150">
             <SectionHeader
               title="When every line is busy"
-              subtext="Play a short busy message and collect name and number for a callback."
+              subtext="Play a short busy message and collect caller's name and number for a callback"
             />
 
             <div className="mt-md flex flex-col gap-sm">
@@ -418,8 +418,8 @@ export function FallbackFailoverScreen() {
           {/* After hours */}
           <section className="rounded-sm border border-border bg-surface p-xl transition-colors duration-150">
             <SectionHeader
-              title="After hours"
-              subtext="A different greeting outside your business hours."
+              title="After-hours"
+              subtext="Play a different greeting outside your business hours."
             />
 
             <div className="mt-md">
