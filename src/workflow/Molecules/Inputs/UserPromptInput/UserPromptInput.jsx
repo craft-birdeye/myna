@@ -286,6 +286,7 @@ export default function UserPromptInput({
           anchorEl={fieldsBtnRef.current}
           showTriggerFields={showTriggerFields}
           placement={fieldPickerPlacement}
+          insertedText={serializeFrom(editorRef.current)}
           {...(fieldPickerZIndex != null ? { overlayZIndex: fieldPickerZIndex } : {})}
         />
       )}

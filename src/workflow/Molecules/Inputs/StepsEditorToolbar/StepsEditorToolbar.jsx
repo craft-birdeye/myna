@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { insertChipAt } from '../promptChipHelpers.js';
+import { insertChipAt, serializeFrom } from '../promptChipHelpers.js';
 import { VariableIcon, BuildIcon, ProcedureIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import ToolbarButton from '../ToolbarButton.jsx';
@@ -68,14 +68,15 @@ export default function StepsEditorToolbar({ getActiveEditable, onAfterInsert, o
   }, [saveActiveRange]);
 
   const handleFieldSelect = useCallback((fieldValue) => {
-    setFieldModalOpen(false);
     const el = getActiveEditable?.();
     if (!el) return;
     insertChipAt(el, savedRangeRef.current, () => {
-      savedRangeRef.current = null;
       onAfterInsert?.();
     }, 'variable', fieldValue);
-  }, [getActiveEditable, onAfterInsert]);
+    // Keep the picker open; close only via X or the Fields icon. Re-save the caret
+    // (now just after the inserted chip) so the next selection inserts in the right spot.
+    saveActiveRange();
+  }, [getActiveEditable, onAfterInsert, saveActiveRange]);
 
   const handleInsertProcedure = useCallback(() => {
     saveActiveRange();
@@ -211,6 +212,7 @@ export default function StepsEditorToolbar({ getActiveEditable, onAfterInsert, o
           onClose={() => setFieldModalOpen(false)}
           onSelectField={handleFieldSelect}
           anchorEl={fieldsBtnRef.current}
+          insertedText={serializeFrom(getActiveEditable?.())}
         />
       )}
     </div>
