@@ -355,6 +355,22 @@ const _SEED_TOOLS = [
     outputs: [{ name: 'tagged', type: 'boolean' }],
   },
   {
+    id: 'classify-tags',
+    name: 'Classify tags',
+    icon: 'label',
+    isBirdeye: true,
+    description: 'Manage review tags and their descriptions',
+    category: 'Reviews',
+    modules: ['Reviews'],
+    products: ['healthcare', 'dental', 'automotive'],
+    entities: ['review'],
+    fields: [
+      { id: 'ct-tags', type: 'tag-select', label: 'Tags', required: false, placeholder: 'Search or create tags...' },
+    ],
+    inputs: [],
+    outputs: [{ name: 'tags', type: 'array' }],
+  },
+  {
     id: 'handle-response',
     name: 'Publish response',
     icon: 'publish',

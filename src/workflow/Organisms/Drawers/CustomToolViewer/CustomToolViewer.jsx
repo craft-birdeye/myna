@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { FormInput, TextArea, Toggle } from '../../../elemental-stubs';
 function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
   React.useEffect(() => {
@@ -26,6 +27,9 @@ import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import ToolbarButton from '../../../Molecules/Inputs/ToolbarButton.jsx';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal.jsx';
+import CreateTagModal from '../../Modals/CreateTagModal/CreateTagModal.jsx';
+import { Tooltip } from '../../../../components/Tooltip/Tooltip';
+import { getTags, createTag, findTagByName } from '../../../services/tagService';
 import styles from './CustomToolViewer.module.css';
 
 // ─── Template picker data ─────────────────────────────────────────────────────
@@ -296,7 +300,16 @@ function InteractiveField({ field, onValueChange }) {
   const [bodySegments, setBodySegments] = useState(() => (
     Array.isArray(field.segments) ? field.segments.map((s) => ({ ...s })) : null
   ));
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [tagQuery, setTagQuery] = useState('');
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const [createTagModalOpen, setCreateTagModalOpen] = useState(false);
+  const [createTagName, setCreateTagName] = useState('');
+  const [tagMenuRect, setTagMenuRect] = useState(null);
   const fieldsBtnRef = useRef(null);
+  const tagSelectRef = useRef(null);
+  const tagMenuRef = useRef(null);
+  const tagInputRef = useRef(null);
 
   useEffect(() => {
     if (['text', 'number', 'date', 'textarea', 'variable'].includes(field.type)) {
@@ -330,6 +343,10 @@ function InteractiveField({ field, onValueChange }) {
     if (field.type === 'tags') {
       setTags(Array.isArray(field.defaultValue) ? [...field.defaultValue] : []);
     }
+    if (field.type === 'tag-select') {
+      const defaults = Array.isArray(field.defaultValue) ? field.defaultValue : [];
+      setSelectedTags(defaults.map((t) => (typeof t === 'string' ? (findTagByName(t) || { id: t, name: t, description: '' }) : t)));
+    }
     if (Array.isArray(field.segments)) {
       setBodySegments(field.segments.map((s) => ({ ...s })));
     }
@@ -350,6 +367,46 @@ function InteractiveField({ field, onValueChange }) {
     // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tags, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type === 'tag-select') {
+      onValueChange?.(field.id, selectedTags.map((t) => t.name));
+    }
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTags, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type !== 'tag-select' || !tagDropdownOpen) return undefined;
+    function handlePointerDown(e) {
+      // The menu is portaled to <body>, so a click on an option is NOT inside
+      // tagSelectRef — check the menu too or the close fires first and swallows
+      // the option's own onClick.
+      if (tagSelectRef.current?.contains(e.target)) return;
+      if (tagMenuRef.current?.contains(e.target)) return;
+      setTagDropdownOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [field.type, tagDropdownOpen]);
+
+  // Anchor the portaled menu to the input; the RHS panel scrolls, so re-measure.
+  useEffect(() => {
+    if (field.type !== 'tag-select' || !tagDropdownOpen) return undefined;
+    function measure() {
+      const el = tagSelectRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setTagMenuRect({ left: r.left, top: r.bottom + 4, width: r.width });
+    }
+    measure();
+    window.addEventListener('scroll', measure, true);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure, true);
+      window.removeEventListener('resize', measure);
+    };
+  }, [field.type, tagDropdownOpen, selectedTags.length]);
 
   const label = field.label || 'Untitled field';
   const required = field.required;
@@ -777,6 +834,137 @@ function InteractiveField({ field, onValueChange }) {
         </div>
       );
 
+    case 'tag-select': {
+      const allTags = getTags();
+      const query = tagQuery.trim().toLowerCase();
+      const availableTags = allTags.filter((t) => !selectedTags.some((s) => s.id === t.id));
+      const filteredTags = query
+        ? availableTags.filter((t) => t.name.toLowerCase().includes(query))
+        : availableTags;
+      const showCreateOption = query.length > 0 && !allTags.some((t) => t.name.toLowerCase() === query);
+
+      const selectTag = (tag) => {
+        setSelectedTags((prev) => [...prev, tag]);
+        setTagQuery('');
+        // Clicking an option moves focus to that button; hand it back so the next
+        // keystroke keeps filtering instead of going nowhere.
+        tagInputRef.current?.focus();
+      };
+
+      // The picker's "Create tag" row hands off to the modal (prefilled) rather
+      // than creating on the spot, so a description can be written with it.
+      const openCreateModal = (prefill = '') => {
+        setCreateTagName(prefill);
+        setTagDropdownOpen(false);
+        setCreateTagModalOpen(true);
+      };
+
+      const commitNewTag = ({ name, description }) => {
+        const created = createTag({ name, description });
+        setSelectedTags((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
+        setTagQuery('');
+        setCreateTagName('');
+      };
+
+      return (
+        <div className={styles.fieldWrap}>
+          <div className={styles.tagLabelRow}>
+            <span className={styles.fieldLabel}>
+              {label}{required && <span className={styles.required}> *</span>}
+            </span>
+            <button type="button" className={styles.addTagBtn} onClick={() => openCreateModal()}>
+              <span className="material-symbols-outlined">add_circle</span>
+              <span className={styles.addTagBtnLabel}>Add tag</span>
+            </button>
+          </div>
+          <div className={styles.tagSelectWrap} ref={tagSelectRef}>
+            <div className={styles.tagsInput} onClick={() => setTagDropdownOpen(true)}>
+              {selectedTags.map((tag) => (
+                <Tooltip
+                  key={tag.id}
+                  variant="detail"
+                  side="top"
+                  content={
+                    <div className="flex flex-col gap-0.5">
+                      <span>{tag.name}</span>
+                      {tag.description && <span className="text-white/70">{tag.description}</span>}
+                    </div>
+                  }
+                >
+                  <span className={styles.tagChip}>
+                    {tag.name}
+                    <button
+                      type="button"
+                      className={styles.tagChipRemove}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTags((prev) => prev.filter((t) => t.id !== tag.id));
+                      }}
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </span>
+                </Tooltip>
+              ))}
+              <input
+                ref={tagInputRef}
+                className={styles.tagInputInner}
+                value={tagQuery}
+                onFocus={() => setTagDropdownOpen(true)}
+                onChange={(e) => { setTagQuery(e.target.value); setTagDropdownOpen(true); }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' || !tagQuery.trim()) return;
+                  e.preventDefault();
+                  if (showCreateOption) openCreateModal(tagQuery.trim());
+                  else if (filteredTags[0]) selectTag(filteredTags[0]);
+                }}
+                placeholder={field.placeholder || (selectedTags.length === 0 ? 'Search or create tags...' : '')}
+              />
+            </div>
+          </div>
+          {/* Portaled to <body>: the RHS panel clips an absolutely-positioned
+              menu to its own scroll box, cutting the list off after one row. */}
+          {tagDropdownOpen && tagMenuRect && (filteredTags.length > 0 || showCreateOption) && createPortal(
+            <div
+              ref={tagMenuRef}
+              className={styles.tagDropdown}
+              style={{ left: tagMenuRect.left, top: tagMenuRect.top, width: tagMenuRect.width }}
+            >
+              {filteredTags.map((tag) => (
+                <button
+                  type="button"
+                  key={tag.id}
+                  className={styles.tagOption}
+                  onClick={() => selectTag(tag)}
+                >
+                  <span className={styles.tagOptionName}>{tag.name}</span>
+                  {tag.description && <span className={styles.tagOptionDesc}>{tag.description}</span>}
+                </button>
+              ))}
+              {showCreateOption && (
+                <button
+                  type="button"
+                  className={styles.tagCreateOption}
+                  onClick={() => openCreateModal(tagQuery.trim())}
+                >
+                  <span className="material-symbols-outlined">add</span>
+                  Create tag &quot;{tagQuery.trim()}&quot;
+                </button>
+              )}
+            </div>,
+            document.body,
+          )}
+          {createTagModalOpen && (
+            <CreateTagModal
+              initialName={createTagName}
+              onClose={() => { setCreateTagModalOpen(false); setCreateTagName(''); }}
+              onAdd={commitNewTag}
+            />
+          )}
+        </div>
+      );
+    }
+
     case 'abSection':
       return (
         <div className={styles.abCard}>
@@ -1133,12 +1321,18 @@ export function ToolViewerContent({
     return buildInitialSnapshot(tool?.fields);
   }, [fieldSnapshot, tool?.fields]);
 
+  // Mirror of the latest snapshot so the next value can be derived without a
+  // state updater. React may run an updater during the render phase, and
+  // notifying the parent from in there makes it setState mid-render
+  // ("Cannot update a component while rendering a different component").
+  const snapshotRef = useRef(fieldSnapshot);
+  snapshotRef.current = fieldSnapshot;
+
   const handleValueChange = useCallback((id, val) => {
-    setFieldSnapshot((prev) => {
-      const next = { ...prev, [id]: val };
-      onFieldValuesChange?.(next);
-      return next;
-    });
+    const next = { ...snapshotRef.current, [id]: val };
+    snapshotRef.current = next;
+    setFieldSnapshot(next);
+    onFieldValuesChange?.(next);
   }, [onFieldValuesChange]);
 
   if (!tool) return null;
