@@ -8077,7 +8077,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     glyph: tpl.glyph,
     tone: tpl.tone,
     chipLabel: tpl.valueProp,
-    chipVariant: 'neutral' as const,
+    chipVariant: 'info' as const,
     compact: Boolean(tpl.valueProp),
     actionLabel: 'Use agent' as const,
     onAction: () => onEditAgent?.(tpl.title),

@@ -4296,9 +4296,9 @@
     "semantic_hash": "8c8e65450fb7302dacd5e4592b2b7236"
   },
   "src/screens/AgentDetailScreen.tsx": {
-    "mtime": 1788779071.2468247,
-    "seen": 1788779120.3140512,
-    "ast_hash": "17c8788d663caa43cb33206108953717",
+    "mtime": 1788783595.801345,
+    "seen": 1788783661.095813,
+    "ast_hash": "a61b51150ed3632667f8b40a147ecdb4",
     "semantic_hash": ""
   },
   "src/screens/AgentDirectoryScreen.tsx": {
