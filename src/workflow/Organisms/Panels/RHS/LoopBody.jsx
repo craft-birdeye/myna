@@ -82,6 +82,7 @@ function LoopOverField({ chips, onAdd, onRemove }) {
             setFieldPickerOpen(false);
           }}
           showTriggerFields
+          insertedText={chips[0] ? `{{${chips[0]}}}` : ''}
         />
       )}
     </>

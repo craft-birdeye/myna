@@ -36,8 +36,7 @@ export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLe
   function handleFieldSelect(value, name) {
     const label = name || value;
     setFieldValueChips((prev) => (prev.includes(label) ? prev : [...prev, label]));
-    setFieldPickerOpen(false);
-    requestAnimationFrame(() => textInputRef.current?.focus());
+    // Keep the picker open so more than one field can be added per visit.
   }
 
   function handleAdd() {
@@ -123,6 +122,7 @@ export default function AddInputFieldModal({ onClose, onAdd, zIndex = 2100, onLe
           placement="dropdown"
           showTriggerFields
           overlayZIndex={zIndex + 100}
+          insertedText={fieldValueChips.map((label) => `{{${label}}}`).join(' ')}
         />
       )}
     </>

@@ -474,8 +474,11 @@ function InteractiveField({ field, onValueChange }) {
     case 'textarea':
       if (field.showVariableToolbar) {
         const segments = bodySegments;
+        const insertedText = segments
+          ? segments.map((s) => (s.type === 'chip' ? `{{${s.value}}}` : s.value)).join('')
+          : textValue;
         const handleFieldSelect = (fieldValue) => {
-          setFieldModalOpen(false);
+          // Keep the picker open; close only via X or the Fields icon.
           if (segments) {
             setBodySegments((prev) => {
               const next = [...(prev || [])];
@@ -546,6 +549,7 @@ function InteractiveField({ field, onValueChange }) {
                 onSelectField={handleFieldSelect}
                 anchorEl={fieldsBtnRef.current}
                 showTriggerFields
+                insertedText={insertedText}
               />
             )}
           </div>
