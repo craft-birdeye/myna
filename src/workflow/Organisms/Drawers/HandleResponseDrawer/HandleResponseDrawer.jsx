@@ -240,13 +240,14 @@ export function HandleResponseForm({
                     onClose={() => setFieldPickerOpen(false)}
                     onSelectField={(fieldValue, name) => {
                       const token = `{{${name || fieldValue}}}`;
+                      // Keep the picker open — the row's own + -> check flips in place.
                       setCustomText((prev) => insertAtCursor(textareaRef.current, token, prev));
-                      setFieldPickerOpen(false);
                     }}
                     anchorEl={fieldTriggerRef.current?.closest('.hrd__textarea-box') || fieldTriggerRef.current}
                     showTriggerFields
                     placement={fieldPickerPlacement}
                     overlayZIndex={fieldPickerZIndex}
+                    insertedText={customText}
                   />
                 )}
               </div>

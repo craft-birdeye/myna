@@ -18,6 +18,20 @@ const POPOVER_WIDTH = 630;
 const POPOVER_MAX_HEIGHT = 560;
 const DRAWER_GAP = 0;
 const BASE_CATEGORY_IDS = new Set(BASE_CATEGORIES.map((c) => c.id));
+/** "Partial" preview — the only two categories kept, each trimmed to one field. */
+const PARTIAL_CATEGORY_IDS = ['business', 'trigger'];
+
+/** Trim a normalized category down to its first field, so Partial reads as sparse. */
+function firstFieldOnlyCategory(cat) {
+  const tree = cat.trees?.[0];
+  const kids = tree?.children || [];
+  const firstLeaf = kids.find((k) => k.type === 'field') ?? kids[0];
+  return {
+    ...cat,
+    trees: tree && firstLeaf ? [{ ...tree, children: [firstLeaf] }] : [],
+    count: firstLeaf ? 1 : 0,
+  };
+}
 
 const FIELDS_LEARN_MORE_HREF =
   'https://help.birdeye.com/hc/en-us/articles/fields-in-workflows';
@@ -91,7 +105,22 @@ function CatLabel({ text }) {
   );
 }
 
-function FieldLeaf({ field, onSelect, isAdded = false }) {
+/**
+ * A field reads as "added" for as long as its token is actually present in the prompt —
+ * not a timed flash. Deleting the token flips it back to "+". Callers insert tokens keyed
+ * by either the human name (`{{Business name}}`) or the raw dotted value
+ * (`{{Business.name}}`) depending on the surface, so check both.
+ */
+function isFieldInsertedIn(field, insertedText) {
+  if (!insertedText) return false;
+  return (
+    (field.name && insertedText.includes(`{{${field.name}}}`))
+    || (field.value && insertedText.includes(`{{${field.value}}}`))
+  );
+}
+
+function FieldLeaf({ field, onSelect, insertedText = '' }) {
+  const isAdded = isFieldInsertedIn(field, insertedText);
   const sample = formatSample(field.sample, field.valueType);
   return (
     <button
@@ -117,7 +146,7 @@ function FieldLeaf({ field, onSelect, isAdded = false }) {
   );
 }
 
-function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, addedValues }) {
+function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, insertedText = '' }) {
   const [open, setOpen] = useState(true);
   const isGroup = node.type === 'group';
   const isObject = node.type === 'object';
@@ -132,7 +161,7 @@ function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, addedValu
       <FieldLeaf
         field={node}
         onSelect={onSelect}
-        isAdded={addedValues?.has(node.value)}
+        insertedText={insertedText}
       />
     );
   }
@@ -164,7 +193,7 @@ function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, addedValu
               key={child.id || child.value || child.name}
               field={child}
               onSelect={onSelect}
-              isAdded={addedValues?.has(child.value)}
+              insertedText={insertedText}
             />
           ))}
         </div>
@@ -205,7 +234,7 @@ function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, addedValu
               onSelect={onSelect}
               depth={depth + 1}
               allowCollapse
-              addedValues={addedValues}
+              insertedText={insertedText}
             />
           ))}
         </div>
@@ -217,7 +246,7 @@ function TreeBranch({ node, onSelect, depth = 0, allowCollapse = true, addedValu
 /** Panels the picker docks to the left of — slide-in drawers and the workflow node-config RHS. */
 const PANEL_SELECTOR = 'aside, .agent-builder__rhs';
 
-function computeDockPosition(anchorEl) {
+function computeDockPosition(anchorEl, { fullHeight = false } = {}) {
   const margin = 12;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -229,6 +258,10 @@ function computeDockPosition(anchorEl) {
     const availableWidth = Math.max(320, panelRect.left - DRAWER_GAP - margin);
     const width = Math.min(POPOVER_WIDTH, availableWidth);
     const left = Math.max(margin, panelRect.left - DRAWER_GAP - width);
+    if (fullHeight) {
+      // Match the anchor panel's own top/height exactly — same surface, not just "tall".
+      return { top: panelRect.top, left, width, maxHeight: panelRect.height };
+    }
     // Match the spacious 5-step Fields card — do not shrink to the RHS panel height.
     const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
     const idealTop = panelRect.top;
@@ -237,6 +270,14 @@ function computeDockPosition(anchorEl) {
   }
 
   const width = Math.min(POPOVER_WIDTH, vw - margin * 2);
+
+  if (fullHeight) {
+    let left = anchorRect?.left ?? margin;
+    left = Math.min(left, vw - width - margin);
+    left = Math.max(margin, left);
+    return { top: margin, left, width, maxHeight: vh - margin * 2 };
+  }
+
   const maxHeight = Math.min(POPOVER_MAX_HEIGHT, vh - margin * 2);
 
   let top = (anchorRect?.top ?? vh / 2) - maxHeight - margin;
@@ -294,15 +335,24 @@ function computeDropdownPosition(anchorEl) {
   return { top, left, width, maxHeight: height };
 }
 
+/** `dock` placements are always full height; `dropdown` stays a small contextual popover. */
 function computePosition(anchorEl, placement = 'dock') {
   return placement === 'dropdown'
     ? computeDropdownPosition(anchorEl)
-    : computeDockPosition(anchorEl);
+    : computeDockPosition(anchorEl, { fullHeight: true });
+}
+
+/** The panel (if any) this picker is currently docked flush against. */
+function getDockedPanelEl(anchorEl, placement) {
+  if (placement === 'dropdown') return null;
+  return anchorEl?.closest ? anchorEl.closest(PANEL_SELECTOR) : null;
 }
 
 /**
  * Contextual Fields picker — docks to the left of the nearest drawer, or opens as a
  * dropdown under the trigger. Nested trees match workflow task/tool output shapes.
+ * `dock` placements always run full height and flush against that panel (same top/height,
+ * no shadow at the seam, squared touching corners) — there's no compact variant anymore.
  */
 export default function FieldPickerModal({
   onClose,
@@ -311,25 +361,33 @@ export default function FieldPickerModal({
   overlayZIndex = 120,
   /** Workflow canvas / tool drawers — include trigger + task output trees. */
   showTriggerFields = false,
-  /** `dock` = left of enclosing panel; `dropdown` = under the trigger. */
+  /** `dock` = left of enclosing panel, full height; `dropdown` = small popover under the trigger. */
   placement = 'dock',
+  /** Current prompt text — a field's + shows as a check for as long as its token is in here. */
+  insertedText = '',
 }) {
   const [search, setSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('business');
   const [searchSelectedId, setSearchSelectedId] = useState(null);
   const [pos, setPos] = useState(() => computePosition(anchorEl, placement));
   const [userMoved, setUserMoved] = useState(false);
-  /** Brief Add → Added flash (clears after ~1.5s, like Copy → Copied). */
-  const [addedValues, setAddedValues] = useState(() => new Set());
-  const addedTimersRef = useRef(new Map());
+  /** Full = every category/field is shown. Partial = a sparse preview — just Business
+   *  fields and the trigger step, each trimmed to one field. */
+  const [completeness, setCompleteness] = useState('full');
   const rootRef = useRef(null);
   const dragRef = useRef(null);
 
   const categories = useMemo(() => {
     const base = BASE_CATEGORIES.map(normalizeCategory);
-    if (!showTriggerFields) return base;
-    return [...base, ...WORKFLOW_CATEGORIES.map(normalizeCategory)];
-  }, [showTriggerFields]);
+    const all = showTriggerFields ? [...base, ...WORKFLOW_CATEGORIES.map(normalizeCategory)] : base;
+    if (!showTriggerFields || completeness !== 'partial') return all;
+    // Partial preview — only two categories exist at all this early in the run, each
+    // down to a single field, so the picker reads as genuinely sparse.
+    return PARTIAL_CATEGORY_IDS
+      .map((id) => all.find((cat) => cat.id === id))
+      .filter(Boolean)
+      .map(firstFieldOnlyCategory);
+  }, [showTriggerFields, completeness]);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) ?? categories[0];
   const query = search.trim();
@@ -387,10 +445,13 @@ export default function FieldPickerModal({
     [sidebarCategories],
   );
 
-  const clipSidebarToFiveSteps =
+  const sidebarNeedsScrollbar =
     showTriggerFields
     && !isSearching
     && workflowSidebarCategories.length > SIDEBAR_VISIBLE_WORKFLOW_COUNT;
+  // `dock` placements are always full height, so the body has room to grow and scroll
+  // internally — only the compact `dropdown` placement still needs the fixed-height clip.
+  const clipSidebarToFiveSteps = sidebarNeedsScrollbar && placement === 'dropdown';
 
   const renderCategoryButton = (cat) => {
     const isSelected = isSearching
@@ -431,31 +492,8 @@ export default function FieldPickerModal({
   };
 
   const handleSelect = (value, name) => {
-    setAddedValues((prev) => {
-      if (prev.has(value)) return prev;
-      const next = new Set(prev);
-      next.add(value);
-      return next;
-    });
-    const existing = addedTimersRef.current.get(value);
-    if (existing) clearTimeout(existing);
-    const timer = setTimeout(() => {
-      setAddedValues((prev) => {
-        if (!prev.has(value)) return prev;
-        const next = new Set(prev);
-        next.delete(value);
-        return next;
-      });
-      addedTimersRef.current.delete(value);
-    }, 1500);
-    addedTimersRef.current.set(value, timer);
     onSelectField?.(value, name);
   };
-
-  useEffect(() => () => {
-    addedTimersRef.current.forEach(clearTimeout);
-    addedTimersRef.current.clear();
-  }, []);
 
   useEffect(() => {
     if (!showTriggerFields && WORKFLOW_CATEGORIES.some((c) => c.id === selectedCategoryId)) {
@@ -495,6 +533,16 @@ export default function FieldPickerModal({
       document.removeEventListener('scroll', reposition, true);
     };
   }, [anchorEl, placement, userMoved]);
+
+  // Flush-dock: whatever panel we're actually docked against gets its near corners
+  // squared off too, so the seam between it and this popover reads as one straight
+  // line rather than a rounded notch. Self-contained — no caller needs to opt in.
+  const dockedPanelEl = getDockedPanelEl(anchorEl, placement);
+  useEffect(() => {
+    if (!dockedPanelEl) return undefined;
+    dockedPanelEl.classList.add(styles.flushDockPanel);
+    return () => dockedPanelEl.classList.remove(styles.flushDockPanel);
+  }, [dockedPanelEl]);
 
   const clampPos = (top, left, width, maxHeight) => {
     const margin = 12;
@@ -544,13 +592,15 @@ export default function FieldPickerModal({
   return createPortal(
     <div
       ref={rootRef}
-      className={`${styles.popover}${placement === 'dropdown' ? ` ${styles.popoverDropdown}` : ''}`}
+      className={`${styles.popover}${placement === 'dropdown' ? ` ${styles.popoverDropdown}` : ''}${dockedPanelEl ? ` ${styles.popoverFlushDock}` : ''}`}
       style={{
         top: pos.top,
         left: pos.left,
         width: pos.width,
         // Spacious 5-step card: don't let the dock/RHS maxHeight crop the list.
         maxHeight: clipSidebarToFiveSteps ? undefined : pos.maxHeight,
+        // Match the anchor panel's own height exactly, not just "tall".
+        height: dockedPanelEl ? pos.maxHeight : undefined,
         zIndex: overlayZIndex,
       }}
       role="dialog"
@@ -562,7 +612,35 @@ export default function FieldPickerModal({
         role="presentation"
       >
         <div className={styles.titleBlock}>
-          <span className={styles.title}>Fields</span>
+          <div className={styles.titleRow}>
+            <span className={styles.title}>Fields</span>
+            {showTriggerFields && (
+              <div
+                className={styles.completenessToggle}
+                role="radiogroup"
+                aria-label="Preview data completeness"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={completeness === 'full'}
+                  className={`${styles.completenessBtn}${completeness === 'full' ? ` ${styles.completenessBtnActive}` : ''}`}
+                  onClick={() => setCompleteness('full')}
+                >
+                  Full
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={completeness === 'partial'}
+                  className={`${styles.completenessBtn}${completeness === 'partial' ? ` ${styles.completenessBtnActive}` : ''}`}
+                  onClick={() => setCompleteness('partial')}
+                >
+                  Partial
+                </button>
+              </div>
+            )}
+          </div>
           <span className={styles.subtitle}>
             Select a field to add it to your prompt. It&apos;s replaced with the
             actual value when the agent runs.{' '}
@@ -620,7 +698,7 @@ export default function FieldPickerModal({
         style={clipSidebarToFiveSteps ? { height: SPACIOUS_BODY_HEIGHT_PX } : undefined}
       >
         <div
-          className={`${styles.sidebar}${clipSidebarToFiveSteps ? ` ${styles.sidebarScrollable}` : ''}`}
+          className={`${styles.sidebar}${sidebarNeedsScrollbar ? ` ${styles.sidebarScrollable}` : ''}`}
         >
           {baseSidebarCategories.map(renderCategoryButton)}
           {workflowSidebarCategories.length > 0 && (
@@ -654,7 +732,7 @@ export default function FieldPickerModal({
                         node={node}
                         onSelect={handleSelect}
                         allowCollapse={allowCollapse}
-                        addedValues={addedValues}
+                        insertedText={insertedText}
                       />
                     );
                   })}

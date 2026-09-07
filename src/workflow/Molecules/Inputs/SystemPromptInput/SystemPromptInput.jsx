@@ -298,6 +298,7 @@ export default function SystemPromptInput({
           onSelectField={handleFieldSelect}
           anchorEl={fieldAnchorRef.current}
           showTriggerFields={showTriggerFields}
+          insertedText={serializeFrom(activeEditorRef.current)}
         />
       )}
     </>

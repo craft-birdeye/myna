@@ -297,11 +297,10 @@ interface AgentInstance {
   issues?: number
   lastUpdated?: string
   updatedBy?: string
-  /** When true, Agents table nests a Draft name under this live row (same row, no divider). */
+  /** When true, Agents table shows a "Draft by {draftUpdatedBy} · {draftUpdatedAgo}" subtext under this row's name. */
   hasDraft?: boolean
-  /** Draft line values when `hasDraft` — metrics/locations show "-"; these stay real. */
-  draftLastUpdated?: string
   draftUpdatedBy?: string
+  draftUpdatedAgo?: string
   /** Region label from the source RegionRow — used by Agents FilterPanel. */
   region?: string
   /** City mapped from region for Location filter. */
@@ -442,13 +441,12 @@ interface RegionRow {
   clickThroughRate?: string
   /** Overrides the default `${agentName} - ${region}` row label. */
   instanceName?: string
-  /** Live instance also has an unpublished draft — shown indented in the same Agents table row. */
+  /** Live instance also has an unpublished draft — shown as a subtext under the row's name. */
   hasDraft?: boolean
   lastUpdated?: string
   updatedBy?: string
-  /** Draft-line Last updated / Updated by when `hasDraft` is set. */
-  draftLastUpdated?: string
   draftUpdatedBy?: string
+  draftUpdatedAgo?: string
   /** Default exploration card body copy — falls back to workflow goals when omitted. */
   cardDescription?: string
 }
@@ -461,21 +459,8 @@ const LAST_UPDATED_SAMPLES = [
   'July 29',
 ] as const
 const UPDATED_BY_SAMPLES = ['Rupa C', 'Akhil', 'Raynil Kumar', 'Haresh'] as const
-
-/** Stack Active + Draft cell lines for unpublished-draft agent rows. */
-function renderDraftStackedCell(
-  activeValue: ReactNode,
-  draftValue: string,
-  hasDraft?: boolean,
-) {
-  if (!hasDraft) return activeValue
-  return (
-    <div className="flex flex-col gap-md">
-      <div className="flex h-7 items-center">{activeValue}</div>
-      <div className="flex h-7 items-center">{draftValue}</div>
-    </div>
-  )
-}
+/** Relative timestamps for the Agents table's "Draft by {name} · {ago}" subtext. */
+const DRAFT_AGO_SAMPLES = ['2h ago', '4h ago', '1d ago', '3d ago'] as const
 
 const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
   [FRONTDESK_AGENT_NAME]: [
@@ -541,7 +526,7 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
   [REVIEW_RESPONSE_AGENT_NAME]: [
     { region: 'North Region', status: 'Active', channels: 'Email', reviewsResponded: '102', responseRate: '15%', avgResponseTime: '20m', timeSaved: '4h 20m', locations: '500', instanceName: 'Review response agent - North Region' },
     { region: 'East Region',  status: 'Active', channels: 'Email', reviewsResponded: '98',  responseRate: '9%',  avgResponseTime: '5m',  timeSaved: '1h 10m', locations: '250', instanceName: 'Review response agent - East Region' },
-    { region: 'South Region', status: 'Active', channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region', hasDraft: true },
+    { region: 'South Region', status: 'Active', channels: 'Email', reviewsResponded: '53',  responseRate: '9%',  avgResponseTime: '10m', timeSaved: '45m',    locations: '200', instanceName: 'Review response agent - South Region', hasDraft: true, draftUpdatedAgo: '4h ago' },
     { region: 'West Region',  status: 'Inactive', channels: 'Email', reviewsResponded: '35',  responseRate: '8%',  avgResponseTime: '2m',  timeSaved: '3h 20m', locations: '100', instanceName: 'Review response agent - West Region' },
   ],
   [REVIEW_RESPONSE_EXPLORATION_AGENT_NAME]: [
@@ -582,6 +567,7 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
       locations: '200',
       instanceName: 'Review response agent - South Region',
       hasDraft: true,
+      draftUpdatedAgo: '4h ago',
       cardDescription:
         'Publishes templated responses across Google and Facebook for every new review. A pending draft updates the rotation rules for negative-star reviews.',
     },
@@ -707,6 +693,8 @@ type CreateLibraryCard = {
   tone?: LibraryCardTone
   /** Preview modal Outcome — falls back to a generic coverage blurb when omitted. */
   outcome?: string
+  /** Short value-proposition chip shown on the library card, after the description. */
+  valueProp?: string
   steps?: AgentLibraryPreviewStep[]
 }
 
@@ -870,6 +858,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
     description: 'Uses pre-defined templates and responds to reviews automatically',
     glyph: 'templates',
     tone: 'info',
+    valueProp: 'On-brand & consistent',
     outcome:
       'Respond to more reviews consistently with on-brand templates. Reduce drafting time while keeping reply quality steady across locations.',
     steps: [
@@ -893,6 +882,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
       'Uses AI to analyze review sentiment, generates and posts unique, context-aware replies automatically',
     glyph: 'autonomous',
     tone: 'danger',
+    valueProp: 'Fully autonomous',
     outcome:
       'Increase review coverage by responding to more reviews across platforms effortlessly. Boost response rates with faster, personalized replies that build trust and satisfaction.',
     steps: [
@@ -922,6 +912,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
       'Uses AI to analyze review sentiment, generates and sends unique, context-aware replies for a human approval before posting',
     glyph: 'approval',
     tone: 'success',
+    valueProp: 'Human-in-the-loop',
     outcome:
       'Keep humans in the loop for sensitive replies while still drafting faster. Improve consistency without losing final approval control.',
     steps: [
@@ -950,6 +941,7 @@ const REVIEW_RESPONSE_CREATE_CARDS: CreateLibraryCard[] = [
       'Uses AI to analyze review sentiment, generates and shows unique, context-aware replies in the dashboard for one-click manual posting',
     glyph: 'dashboard',
     tone: 'ai',
+    valueProp: 'One-click posting',
     outcome:
       'Give your team ready-to-post drafts in the dashboard. Speed up manual responses while keeping full control of when replies go live.',
     steps: [
@@ -6852,16 +6844,18 @@ function HealthcareFrontdeskCreateAgentLive({
                 <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
               )}
               <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
-              <div className={INFO_CARD_LAYOUT.ctaShell}>
-                <div className={INFO_CARD_LAYOUT.ctaInner}>
-                  <div className={INFO_CARD_LAYOUT.ctaWrap}>
-                    <button
-                      type="button"
-                      onClick={() => onSelectFromLibrary(tpl.id)}
-                      className={`${INFO_CARD_LAYOUT.ctaSecondary} max-w-fit flex-none`}
-                    >
-                      Use agent
-                    </button>
+              <div className={INFO_CARD_LAYOUT.bottomShell}>
+                <div className={INFO_CARD_LAYOUT.ctaShell}>
+                  <div className={INFO_CARD_LAYOUT.ctaInner}>
+                    <div className={INFO_CARD_LAYOUT.ctaWrap}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectFromLibrary(tpl.id)}
+                        className={`${INFO_CARD_LAYOUT.ctaSecondary} max-w-fit flex-none`}
+                      >
+                        Use agent
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -7624,11 +7618,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     lastUpdated: r.lastUpdated ?? LAST_UPDATED_SAMPLES[i % LAST_UPDATED_SAMPLES.length],
     updatedBy: r.updatedBy ?? UPDATED_BY_SAMPLES[i % UPDATED_BY_SAMPLES.length],
     hasDraft: r.hasDraft,
-    draftLastUpdated: r.hasDraft
-      ? (r.draftLastUpdated ?? LAST_UPDATED_SAMPLES[(i + 2) % LAST_UPDATED_SAMPLES.length])
-      : undefined,
     draftUpdatedBy: r.hasDraft
       ? (r.draftUpdatedBy ?? UPDATED_BY_SAMPLES[(i + 1) % UPDATED_BY_SAMPLES.length])
+      : undefined,
+    draftUpdatedAgo: r.hasDraft
+      ? (r.draftUpdatedAgo ?? DRAFT_AGO_SAMPLES[i % DRAFT_AGO_SAMPLES.length])
       : undefined,
     cardDescription: r.cardDescription,
   })).sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
@@ -7735,16 +7729,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       locked: true,
       truncate: false,
       render: (v, row) => (
-        <div className={`flex flex-col ${row.hasDraft ? 'gap-md' : ''}`}>
+        <div className="flex flex-col gap-xs">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
               openAgentInstanceDetails(row)
             }}
-            className={`truncate text-left text-body text-text-primary hover:text-text-action ${
-              row.hasDraft ? 'flex h-7 items-center' : ''
-            }`}
+            className="truncate text-left text-body text-text-primary hover:text-text-action"
           >
             {String(v)}
           </button>
@@ -7760,12 +7752,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   'Draft',
                 )
               }}
-              className="flex h-7 items-center gap-sm truncate -ml-xs text-left text-body text-text-secondary hover:text-text-action"
+              className="truncate text-left text-small text-text-secondary hover:text-text-action"
             >
-              <span className="text-text-tertiary" aria-hidden>
-                └
-              </span>
-              <span className="truncate">{String(v)}</span>
+              Draft by {row.draftUpdatedBy} · {row.draftUpdatedAgo}
             </button>
           ) : null}
         </div>
@@ -7778,24 +7767,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       sortable: true,
       truncate: false,
       render: (v, row) => (
-        <div className={`flex flex-col ${row.hasDraft ? 'gap-md' : ''}`}>
-          <div className={`flex items-center gap-sm ${row.hasDraft ? 'h-7' : 'min-h-5'}`}>
-            <Chip
-              label={String(v)}
-              variant={STATUS_VARIANT[String(v)] ?? 'neutral'}
-              showDot={String(v) !== 'Draft'}
-            />
-            {row.issues ? (
-              <span className="flex items-center gap-xs text-small text-text-secondary">
-                <Icon name="error" size={14} className="text-chip-danger-text" />
-                {row.issues} {row.issues === 1 ? 'issue' : 'issues'}
-              </span>
-            ) : null}
-          </div>
-          {row.hasDraft ? (
-            <div className="flex h-7 items-center">
-              <Chip label="Draft" variant={STATUS_VARIANT.Draft} />
-            </div>
+        <div className="flex min-h-5 items-center gap-sm">
+          <Chip
+            label={String(v)}
+            variant={STATUS_VARIANT[String(v)] ?? 'neutral'}
+            showDot={String(v) !== 'Draft'}
+          />
+          {row.issues ? (
+            <span className="flex items-center gap-xs text-small text-text-secondary">
+              <Icon name="error" size={14} className="text-chip-danger-text" />
+              {row.issues} {row.issues === 1 ? 'issue' : 'issues'}
+            </span>
           ) : null}
         </div>
       ),
@@ -7865,23 +7847,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     { key: 'updatedBy', label: 'Updated by', width: 160, sortable: true },
     { key: 'locations', label: 'Locations', width: 120, sortable: true },
   ].map((col) => {
-    // Name + Status already render their own Active/Draft stack.
+    // Name + Status already render their own content above.
     if (col.key === 'name' || col.key === 'status') return col
-    const prevRender = col.render
-    return {
-      ...col,
-      truncate: false,
-      render: (v: unknown, row: AgentInstance) => {
-        const active = prevRender ? prevRender(v, row) : String(v ?? '')
-        const draftValue =
-          col.key === 'lastUpdated'
-            ? (row.draftLastUpdated ?? '-')
-            : col.key === 'updatedBy'
-              ? (row.draftUpdatedBy ?? '-')
-              : '-'
-        return renderDraftStackedCell(active, draftValue, row.hasDraft)
-      },
-    }
+    return { ...col, truncate: false }
   })
 
   const DEF_BY_KEY = new Map(COLUMN_DEFS.map((c) => [String(c.key), c]))
@@ -8108,6 +8076,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     description: tpl.description,
     glyph: tpl.glyph,
     tone: tpl.tone,
+    chipLabel: tpl.valueProp,
+    chipVariant: 'neutral' as const,
+    compact: Boolean(tpl.valueProp),
     actionLabel: 'Use agent' as const,
     onAction: () => onEditAgent?.(tpl.title),
     onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl, { product, agentName })),
