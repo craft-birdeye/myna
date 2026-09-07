@@ -16,6 +16,8 @@ export interface InfoCardProps {
   /** Optional value-proposition chip shown after the description (always visible, not hover-gated). */
   chipLabel?: string
   chipVariant?: ChipVariant
+  /** Extra classes for the chip — overriding one instance without touching the shared variant tokens. */
+  chipClassName?: string
   /** Response agents (Sep 1) library only — ~20% shorter card, chip+CTA bottom-anchored as one group. */
   compact?: boolean
 }

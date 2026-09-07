@@ -1,16 +1,16 @@
 # Graph Report - myna-agent-feedback-7-sep  (2026-09-07)
 
 ## Corpus Check
-- 1071 files · ~973,250 words
+- 1071 files · ~973,316 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8196 nodes · 15011 edges · 399 communities (330 shown, 69 thin omitted)
+- 8196 nodes · 15011 edges · 398 communities (329 shown, 69 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 387 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `417e355d`
+- Built from commit: `88845539`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -65,7 +65,7 @@
 - workflow/FlowCanvas/FlowCanvas.jsx
 - L2NavLayout.v1.tsx
 - Column
-- ContentFlowControls.tsx
+- BlogInlineCreationFlow.tsx
 - AgentLogsTab.tsx
 - RecDetailView.tsx
 - InlineCreationFlow.tsx
@@ -104,7 +104,7 @@
 - faq-agents/Organisms/Panels/RHS/RHS.stories.jsx
 - workflow/Organisms/DataViews/AgentsTable/AgentsTable.jsx
 - workflow/Organisms/Panels/RHS/RHS.stories.jsx
-- ContentCreationWizardModal.tsx
+- ContentFlowControls.tsx
 - faq-agents/AgentBuilder/AgentBuilder.stories.jsx
 - workflow/services/procedureService.js
 - AiCopilot.tsx
@@ -235,7 +235,7 @@
 - workflow/Molecules/AppHeader/AppHeader.jsx
 - draftStore.ts
 - setup-content-hub.py
-- CreateBlogPage
+- AttachmentPickerModal.tsx
 - AgentDetailScreen
 - CallRecordingPlayer.tsx
 - savedBlocksStore.ts
@@ -375,7 +375,6 @@
 - faq-agents/LHSDrawer/LHSDrawer.jsx
 - SettingsScreen.tsx
 - ListBlock
-- VideoEmbedBlock.tsx
 - AiCopilot
 - workflow/Molecules/Canvas/StartNode/StartNode.jsx
 - IntegrationDetailScreen.tsx
@@ -413,7 +412,7 @@
 - 3-file cycle: `src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx -> src/workflow/LHSDrawer/LHSDrawer.jsx -> src/components/index.ts -> src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx`
 - 4-file cycle: `src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx -> src/workflow/AgentBuilder/AgentBuilder.jsx -> src/workflow/LHSDrawer/LHSDrawer.jsx -> src/components/index.ts -> src/components/AgentLibraryPreviewModal/AgentLibraryPreviewModal.tsx`
 
-## Communities (399 total, 69 thin omitted)
+## Communities (398 total, 69 thin omitted)
 
 ### Community 0 - "cn"
 Cohesion: 0.02
@@ -424,8 +423,8 @@ Cohesion: 0.06
 Nodes (34): BlogManualContentProps, BlockCanvasProps, CanvasBlockInfo, advancedGroup, alignOptions, basicLayoutGroup, BLOCK_DEFINITIONS, BlockDefinition (+26 more)
 
 ### Community 2 - "BlockCanvas.tsx"
-Cohesion: 0.06
-Nodes (35): BLOCK_COMPONENTS, BlockCanvas(), GenericMarketingBlock(), getBlockDisplayLabel(), getBlogBlockTopClass(), getShimmerBlockIds(), MODE_META, text() (+27 more)
+Cohesion: 0.05
+Nodes (38): BLOCK_COMPONENTS, BlockCanvas(), GenericMarketingBlock(), getBlockDisplayLabel(), getBlogBlockTopClass(), getShimmerBlockIds(), MODE_META, text() (+30 more)
 
 ### Community 3 - "workflow/Molecules/Conditions/Conditions.jsx"
 Cohesion: 0.08
@@ -600,8 +599,8 @@ Cohesion: 0.04
 Nodes (44): FAQLeftPanel(), FAQLeftPanelProps, FAQ_STEPS, FAQWizardShell(), FAQWizardShellProps, ContentWizardShell(), ContentWizardShellProps, PLATFORM_COLOR (+36 more)
 
 ### Community 46 - "FAQSectionCanvas.tsx"
-Cohesion: 0.03
-Nodes (65): FAQGenerationProgress(), FAQGenerationProgressProps, GEN_STEPS, GenStep, PREVIEW_QA, StepRow(), StepStatus, AgentSelect() (+57 more)
+Cohesion: 0.04
+Nodes (48): FAQGenerationProgress(), FAQGenerationProgressProps, GEN_STEPS, GenStep, PREVIEW_QA, StepRow(), StepStatus, FAQSection (+40 more)
 
 ### Community 47 - "workflow/FlowCanvas/FlowCanvas.jsx"
 Cohesion: 0.07
@@ -615,9 +614,9 @@ Nodes (28): L1_STRIP_ICON_SIZE, L1_STRIP_ICON_STROKE_PX, CHILD_ACTIVE, CHILD_FLA
 Cohesion: 0.04
 Nodes (43): LUCIDE_ICON_MAP, Column, DataTableProps, RowAction, RowMenuItem, SortDir, AutoAppointmentTypeScreen(), Department (+35 more)
 
-### Community 50 - "ContentFlowControls.tsx"
-Cohesion: 0.02
-Nodes (102): AeroCheckbox(), ALL_ITEMS, AssetRow(), AttachedFile, AttachmentPickerModal(), AttachmentPickerModalProps, DOC_FILES, DocFile (+94 more)
+### Community 50 - "BlogInlineCreationFlow.tsx"
+Cohesion: 0.03
+Nodes (76): AttachedFile, BLOG_AGENTS, BLOG_DESCRIPTIONS, BlogFlowData, BlogInlineCreationFlow(), BlogInlineCreationFlowProps, BRAND_BLOG_AGENTS, BRAND_KITS (+68 more)
 
 ### Community 51 - "AgentLogsTab.tsx"
 Cohesion: 0.09
@@ -771,9 +770,9 @@ Nodes (10): AgentsTable(), focusInput(), startCellEdit(), startHeaderEdit(), DEF
 Cohesion: 0.06
 Nodes (27): conditionFieldOptions, conditionOperatorOptions, conditionValueOptions, DAY_OPTIONS, FREQUENCY_OPTIONS, RHSBranchDetails, rhsBranchDetailsProps, RHSControlBranch (+19 more)
 
-### Community 89 - "ContentCreationWizardModal.tsx"
-Cohesion: 0.04
-Nodes (61): handleBlogFlowComplete(), handleFAQFlowComplete(), DEFAULT_STATE, FAQWizard(), FAQWizardProps, FAQWizardState, AGENT_OPTIONS, FAQWizardStep1() (+53 more)
+### Community 89 - "ContentFlowControls.tsx"
+Cohesion: 0.03
+Nodes (91): handleBlogFlowComplete(), handleFAQFlowComplete(), AgentSelect(), BRAND_FAQ_AGENTS, BRAND_KITS, CUSTOM_AGENTS, DEFAULT_SECTIONS, distributeQuestionCount() (+83 more)
 
 ### Community 90 - "faq-agents/AgentBuilder/AgentBuilder.stories.jsx"
 Cohesion: 0.09
@@ -881,7 +880,7 @@ Nodes (18): LOCATION_NAMES, seedBusiness, seedMetrics, seedRecommendations, Step
 
 ### Community 116 - "button.tsx"
 Cohesion: 0.03
-Nodes (87): BlogPublishModalProps, CONNECTED_SITES, ConnectedSite, ManageState(), ModalView, PublishedInfo, PublishedState(), relativeTime() (+79 more)
+Nodes (88): BlogPublishModalProps, CONNECTED_SITES, ConnectedSite, ManageState(), ModalView, PublishedInfo, PublishedState(), relativeTime() (+80 more)
 
 ### Community 117 - "workflow/RHSDrawer/LocationsDrawer.jsx"
 Cohesion: 0.12
@@ -1291,9 +1290,9 @@ Nodes (6): deleteDraft(), DraftReport, getDrafts(), listeners, notify(), saveDra
 Cohesion: 0.29
 Nodes (4): fix_contenthub_ui_internal(), fix_imports_in_dir(), Walk all .ts/.tsx files in directory and fix import paths., Inside contenthub-ui, @/contenthub-ui/X refs become ./X (relative).
 
-### Community 220 - "CreateBlogPage"
-Cohesion: 0.28
-Nodes (7): CreateBlogPage(), handleAddUrl(), handleFiles(), handleNext(), renderStep1(), renderStep2(), validateYoutubeUrl()
+### Community 220 - "AttachmentPickerModal.tsx"
+Cohesion: 0.07
+Nodes (19): AeroCheckbox(), ALL_ITEMS, AssetRow(), AttachmentPickerModal(), AttachmentPickerModalProps, DOC_FILES, DocFile, EXT_COLORS (+11 more)
 
 ### Community 221 - "AgentDetailScreen"
 Cohesion: 0.16
@@ -1591,10 +1590,6 @@ Nodes (5): SECTIONS, SettingItem, SETTINGS_NAV, SettingsScreen(), SettingsSectio
 Cohesion: 0.60
 Nodes (4): ListBlock(), addItem(), handleKeyDown(), removeItem()
 
-### Community 390 - "VideoEmbedBlock.tsx"
-Cohesion: 0.50
-Nodes (3): extractEmbedUrl(), VideoEmbedBlock(), VideoEmbedContent
-
 ### Community 391 - "AiCopilot"
 Cohesion: 0.60
 Nodes (4): AiCopilot(), advance(), handleKeyDown(), handleTextSend()
@@ -1623,7 +1618,7 @@ Nodes (3): AutoAvailabilityScreen(), handleCopyApply(), showToast()
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `cn` to `BlockLibraryPanel.tsx`, `BlockCanvas.tsx`, `ContentScorePanel.tsx`, `QuickCreateModal`, `CreateView.tsx`, `BlockSettingsPanel.tsx`, `AppDataTable.tsx`, `PostCard.tsx`, `carousel.v1.tsx`, `sheet.v1.tsx`, `chain-of-thought.v1.tsx`, `faqStore.ts`, `ProjectWizardStep3.tsx`, `contenthub-ui/utils.ts`, `ContentHome.tsx`, `FAQSectionCanvas.tsx`, `L2NavLayout.v1.tsx`, `ContentFlowControls.tsx`, `ProjectGenerationProgress.tsx`, `InlineCreationFlow.tsx`, `UnifiedReviewCanvas.tsx`, `ColumnSettingsSheet.tsx`, `chart.v1.tsx`, `ProjectInlineCreationFlow.tsx`, `BlogSectionCanvas.tsx`, `ContentEditorShell.tsx`, `MonthView.tsx`, `ProjectsView.tsx`, `SocialEditor.tsx`, `QuickCreateModal.tsx`, `ListView.tsx`, `prompt-input.v1.tsx`, `ContentCreationWizardModal.tsx`, `ProjectWizardStep3`, `CreateBlogPage`, `AiCopilot.tsx`, `savedBlocksStore.ts`, `FAQAgentsDashboardView.tsx`, `SocialWizard.tsx`, `TemplateGallery.tsx`, `copilot-prompt-box.v1.tsx`, `ProjectBar.tsx`, `TemplatePickerModal.tsx`, `FAQRichToolbar.tsx`, `BlogEditor.tsx`, `EmailWizard.tsx`, `toggle-group.v1.tsx`, `WeekView.tsx`, `FAQPublishModal`, `context-menu.v1.tsx`, `AdditionalContextSection`, `ContentHubL2NavPanel.tsx`, `button.tsx`, `BlogMetaPanel.tsx`, `FAQSectionBlock.tsx`, `FeatureGridBlock.tsx`, `message.v1.tsx`, `EditorChromeToolbar.tsx`?**
+- **Why does `cn()` connect `cn` to `BlockLibraryPanel.tsx`, `BlockCanvas.tsx`, `ContentScorePanel.tsx`, `QuickCreateModal`, `CreateView.tsx`, `BlockSettingsPanel.tsx`, `AppDataTable.tsx`, `PostCard.tsx`, `carousel.v1.tsx`, `sheet.v1.tsx`, `chain-of-thought.v1.tsx`, `faqStore.ts`, `ProjectWizardStep3.tsx`, `contenthub-ui/utils.ts`, `ContentHome.tsx`, `FAQSectionCanvas.tsx`, `L2NavLayout.v1.tsx`, `BlogInlineCreationFlow.tsx`, `ProjectGenerationProgress.tsx`, `InlineCreationFlow.tsx`, `UnifiedReviewCanvas.tsx`, `ColumnSettingsSheet.tsx`, `chart.v1.tsx`, `ProjectInlineCreationFlow.tsx`, `BlogSectionCanvas.tsx`, `ContentEditorShell.tsx`, `MonthView.tsx`, `ProjectsView.tsx`, `SocialEditor.tsx`, `QuickCreateModal.tsx`, `ListView.tsx`, `prompt-input.v1.tsx`, `ContentFlowControls.tsx`, `ProjectWizardStep3`, `AiCopilot.tsx`, `AttachmentPickerModal.tsx`, `savedBlocksStore.ts`, `FAQAgentsDashboardView.tsx`, `SocialWizard.tsx`, `TemplateGallery.tsx`, `copilot-prompt-box.v1.tsx`, `ProjectBar.tsx`, `TemplatePickerModal.tsx`, `FAQRichToolbar.tsx`, `BlogEditor.tsx`, `EmailWizard.tsx`, `toggle-group.v1.tsx`, `WeekView.tsx`, `FAQPublishModal`, `context-menu.v1.tsx`, `AdditionalContextSection`, `ContentHubL2NavPanel.tsx`, `button.tsx`, `BlogMetaPanel.tsx`, `FAQSectionBlock.tsx`, `FeatureGridBlock.tsx`, `message.v1.tsx`, `EditorChromeToolbar.tsx`?**
   _High betweenness centrality (0.184) - this node is a cross-community bridge._
 - **Why does `Icon()` connect `Icon` to `ContextModal.tsx`, `workflow/Molecules/Conditions/Conditions.jsx`, `AgentDetailScreen.tsx`, `index.ts`, `ReviewSummaryStep.tsx`, `VoiceCallEngineSettings.tsx`, `AgentSettingsTab.tsx`, `OverviewV2_1Screen.tsx`, `Link`, `ReviewWaitlistScreen.tsx`, `IconRail.tsx`, `workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.jsx`, `AddToolDrawer.jsx`, `OverviewV3Screen.tsx`, `recommendationsData.ts`, `ManageIntakeScreen.tsx`, `ClassicOverviewScreen.tsx`, `workflow/AgentBuilder/AgentBuilder.jsx`, `TopNav`, `InboxScreen.tsx`, `NewFrontdeskAgentSetupScreen.tsx`, `workflow/Molecules/Inputs/OutputFields/OutputFields.jsx`, `VoiceChatDrawer.tsx`, `PromptComposer.tsx`, `LogDetailsPanel.tsx`, `OverviewScreen.tsx`, `VoiceSettingsDrawers.tsx`, `AgentInstanceScreen.tsx`, `AutoProvidersScreen.tsx`, `RecommendationDetailScreen.tsx`, `Column`, `AgentLogsTab.tsx`, `ServiceRequestsScreen.tsx`, `workflow/Organisms/Panels/RHS/ProcedureDetailBody.jsx`, `RunDetailsPanel.tsx`, `AvailabilityScreen.tsx`, `App.tsx`, `channelSetupSettings.tsx`, `FilterField`, `AiBuilderPanel.tsx`, `RunDetailView.tsx`, `UserExperienceImprovementScreen.tsx`, `WorkflowEditorScreen.tsx`, `ProcedureDetailScreen.tsx`, `OverviewV2Screen.tsx`, `TestRunPanel.tsx`, `RecommendationsTab.tsx`, `LanguageSelectMenu.tsx`, `AllReviewsScreen.tsx`, `workflow/Organisms/Modals/AddInputFieldModal/AddInputFieldModal.jsx`, `agentDirectoryData.ts`, `HeaderSearchField`, `WorkflowCoachTour.tsx`?**
   _High betweenness centrality (0.048) - this node is a cross-community bridge._
@@ -1636,4 +1631,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `BlockLibraryPanel.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.06342494714587738 - nodes in this community are weakly interconnected._
 - **Should `BlockCanvas.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.056107539450613676 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.052083333333333336 - nodes in this community are weakly interconnected._
