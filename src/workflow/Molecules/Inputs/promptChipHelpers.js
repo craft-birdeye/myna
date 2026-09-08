@@ -135,14 +135,167 @@ function appendPlainText(el, text) {
   });
 }
 
+/** Like serializeFrom but also emits **bold**, *italic*, ~underline~, [label](url) for the tags deserializeRichInto understands. */
+function richStyleFlags(node) {
+  if (!node || node.nodeType !== 1) return { bold: false, italic: false, underline: false };
+  const name = node.nodeName;
+  const s = node.style || {};
+  const fw = String(s.fontWeight || '');
+  const bold = name === 'B' || name === 'STRONG'
+    || fw === 'bold' || fw === 'bolder' || (!Number.isNaN(parseInt(fw, 10)) && parseInt(fw, 10) >= 600);
+  const italic = name === 'I' || name === 'EM' || s.fontStyle === 'italic';
+  const deco = `${s.textDecorationLine || ''} ${s.textDecoration || ''}`.toLowerCase();
+  const underline = name === 'U' || deco.includes('underline');
+  return { bold, italic, underline };
+}
+
+function wrapRichMarkdown(inner, flags) {
+  let out = inner;
+  if (flags.underline) out = `~${out}~`;
+  if (flags.italic) out = `*${out}*`;
+  if (flags.bold) out = `**${out}**`;
+  return out;
+}
+
+export function serializeRichFrom(el) {
+  if (!el) return '';
+  let text = '';
+  const children = Array.from(el.childNodes);
+  children.forEach((node, index) => {
+    if (node.nodeType === 3) {
+      text += node.textContent;
+    } else if (node.nodeName === 'BR') {
+      text += '\n';
+    } else if (node.nodeType === 1 && node.dataset.chip !== undefined) {
+      text += `{{${node.dataset.chip}}}`;
+    } else if (node.nodeType === 1) {
+      const inner = serializeRichFrom(node);
+      if (!inner && node.nodeName !== 'LI') return;
+      switch (node.nodeName) {
+        case 'B':
+        case 'STRONG':
+          text += `**${inner}**`;
+          break;
+        case 'U':
+          text += `~${inner}~`;
+          break;
+        case 'I':
+        case 'EM':
+          text += `*${inner}*`;
+          break;
+        case 'A':
+          text += `[${inner}](${node.getAttribute('href') || ''})`;
+          break;
+        case 'UL': {
+          const items = Array.from(node.children).filter((c) => c.nodeName === 'LI');
+          items.forEach((li) => {
+            const liText = serializeRichFrom(li).replace(/\n+$/, '');
+            text += `- ${liText}\n`;
+          });
+          break;
+        }
+        case 'OL': {
+          const items = Array.from(node.children).filter((c) => c.nodeName === 'LI');
+          items.forEach((li, i) => {
+            const liText = serializeRichFrom(li).replace(/\n+$/, '');
+            text += `${i + 1}. ${liText}\n`;
+          });
+          break;
+        }
+        case 'LI':
+          text += inner;
+          break;
+        case 'DIV':
+        case 'P':
+          text += inner;
+          if (index < children.length - 1 && !text.endsWith('\n')) text += '\n';
+          break;
+        case 'SPAN':
+        case 'FONT': {
+          // Browsers often apply bold/italic/underline via styled spans when
+          // styleWithCSS is on — map those back to markdown so round-trips keep formatting.
+          text += wrapRichMarkdown(inner, richStyleFlags(node));
+          break;
+        }
+        default:
+          text += wrapRichMarkdown(inner, richStyleFlags(node));
+      }
+    }
+  });
+  return text;
+}
+
+/** Convert leading markdown list lines into HTML lists before rich parse. */
+function preprocessMarkdownLists(value) {
+  if (!value || (!value.includes('\n') && !/^(\d+\.|-)\s/.test(value))) return value;
+  const lines = value.split('\n');
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const ulMatch = lines[i].match(/^- (.*)$/);
+    const olMatch = lines[i].match(/^(\d+)\. (.*)$/);
+    if (ulMatch) {
+      const items = [];
+      while (i < lines.length) {
+        const m = lines[i].match(/^- (.*)$/);
+        if (!m) break;
+        items.push(m[1]);
+        i += 1;
+      }
+      out.push(`[[UL]]${items.join('[[LI]]')}[[/UL]]`);
+      continue;
+    }
+    if (olMatch) {
+      const items = [];
+      while (i < lines.length) {
+        const m = lines[i].match(/^\d+\. (.*)$/);
+        if (!m) break;
+        items.push(m[1]);
+        i += 1;
+      }
+      out.push(`[[OL]]${items.join('[[LI]]')}[[/OL]]`);
+      continue;
+    }
+    out.push(lines[i]);
+    i += 1;
+  }
+  return out.join('\n');
+}
+
+function appendListBlock(el, tag, items, onDelete, resolveType) {
+  const list = document.createElement(tag);
+  items.forEach((item) => {
+    const li = document.createElement('li');
+    appendRichNodes(li, item, onDelete, resolveType);
+    list.appendChild(li);
+  });
+  el.appendChild(list);
+}
+
 function appendRichNodes(el, value, onDelete, resolveType) {
+  if (!value) return;
+  const prepared = preprocessMarkdownLists(value);
+  // Expand list markers produced by preprocessMarkdownLists into real DOM lists.
+  const listBlockRe = /\[\[(UL|OL)\]\]([\s\S]*?)\[\[\/\1\]\]/g;
+  let last = 0;
+  let m;
+  while ((m = listBlockRe.exec(prepared))) {
+    if (m.index > last) {
+      appendRichInline(el, prepared.slice(last, m.index), onDelete, resolveType);
+    }
+    const items = m[2].split('[[LI]]');
+    appendListBlock(el, m[1].toLowerCase(), items, onDelete, resolveType);
+    last = listBlockRe.lastIndex;
+  }
+  if (last < prepared.length) {
+    appendRichInline(el, prepared.slice(last), onDelete, resolveType);
+  }
+}
+
+function appendRichInline(el, value, onDelete, resolveType) {
   if (!value) return;
   let lastIndex = 0;
   let m;
-  // A fresh RegExp per call (rather than a shared module-level one) so that
-  // recursive calls building nested marks don't clobber the outer call's
-  // lastIndex — a shared `g`-flagged regex resets to 0 whenever an inner
-  // exec() run completes, which desyncs the outer loop and spins forever.
   const richTokenRe = new RegExp(RICH_TOKEN_SOURCE, 'g');
   while ((m = richTokenRe.exec(value))) {
     if (m.index > lastIndex) appendPlainText(el, value.slice(lastIndex, m.index));
@@ -158,19 +311,19 @@ function appendRichNodes(el, value, onDelete, resolveType) {
       const a = document.createElement('a');
       a.href = linkMatch[2];
       a.className = 'prompt-rich-link';
-      appendRichNodes(a, linkMatch[1], onDelete, resolveType);
+      appendRichInline(a, linkMatch[1], onDelete, resolveType);
       el.appendChild(a);
     } else if (m[3]) {
       const b = document.createElement('b');
-      appendRichNodes(b, m[3].slice(2, -2), onDelete, resolveType);
+      appendRichInline(b, m[3].slice(2, -2), onDelete, resolveType);
       el.appendChild(b);
     } else if (m[4]) {
       const u = document.createElement('u');
-      appendRichNodes(u, m[4].slice(1, -1), onDelete, resolveType);
+      appendRichInline(u, m[4].slice(1, -1), onDelete, resolveType);
       el.appendChild(u);
     } else if (m[5]) {
       const em = document.createElement('em');
-      appendRichNodes(em, m[5].slice(1, -1), onDelete, resolveType);
+      appendRichInline(em, m[5].slice(1, -1), onDelete, resolveType);
       el.appendChild(em);
     }
     lastIndex = richTokenRe.lastIndex;
@@ -178,47 +331,24 @@ function appendRichNodes(el, value, onDelete, resolveType) {
   if (lastIndex < value.length) appendPlainText(el, value.slice(lastIndex));
 }
 
-/** Like deserializeIntoTyped but also parses **bold**, *italic*, ~underline~, [label](url). */
+/** Like deserializeIntoTyped but also parses **bold**, *italic*, ~underline~, [label](url), and markdown lists. */
 export function deserializeRichInto(el, value, onDelete, resolveType) {
   el.innerHTML = '';
   appendRichNodes(el, value, onDelete, resolveType);
 }
 
-/** Like serializeFrom but also emits **bold**, *italic*, ~underline~, [label](url) for the tags deserializeRichInto understands. */
-export function serializeRichFrom(el) {
+/**
+ * Serialize a rich contentEditable; if the result is blank, wipe residual browser
+ * markup (`<br>`, empty tags) so `:empty` / placeholder overlays can show again.
+ */
+export function serializeRichFromNormalized(el) {
   if (!el) return '';
-  let text = '';
-  el.childNodes.forEach((node) => {
-    if (node.nodeType === 3) {
-      text += node.textContent;
-    } else if (node.nodeName === 'BR') {
-      text += '\n';
-    } else if (node.nodeType === 1 && node.dataset.chip !== undefined) {
-      text += `{{${node.dataset.chip}}}`;
-    } else if (node.nodeType === 1) {
-      const inner = serializeRichFrom(node);
-      if (!inner) return;
-      switch (node.nodeName) {
-        case 'B':
-        case 'STRONG':
-          text += `**${inner}**`;
-          break;
-        case 'U':
-          text += `~${inner}~`;
-          break;
-        case 'I':
-        case 'EM':
-          text += `_${inner}_`;
-          break;
-        case 'A':
-          text += `[${inner}](${node.getAttribute('href') || ''})`;
-          break;
-        default:
-          text += inner;
-      }
-    }
-  });
-  return text;
+  const s = serializeRichFrom(el);
+  if (!s.trim()) {
+    if (el.innerHTML !== '') el.innerHTML = '';
+    return '';
+  }
+  return s;
 }
 
 export function insertChipAt(el, range, onFinalize, type = 'variable', initialValue = null) {

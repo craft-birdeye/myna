@@ -106,3 +106,13 @@
 .prompt-chip-swatch--address    .prompt-chip-mat-icon { color: #3949ab; }
 .prompt-chip-swatch--product    .prompt-chip-mat-icon { color: #37a248; }
 .prompt-chip-swatch--tool       .prompt-chip-mat-icon { color: #555555; }
+
+.prompt-rich-link {
+  color: #1976d2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.prompt-rich-link:hover {
+  color: #1565c0;
+}

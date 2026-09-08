@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import toolbarStyles from './UserPromptInput/UserPromptInput.module.css';
 
 /** Icon toolbar button with a hover tooltip (portal-based so it escapes any clipping ancestor) and optional disabled state. */
-export default function ToolbarButton({ icon, tooltip, active, disabled, onClick }) {
+export default function ToolbarButton({ icon, tooltip, active, disabled, onClick, tooltipZIndex = 120 }) {
   const [pos, setPos] = useState(null);
   const ref = useRef(null);
 
@@ -27,8 +27,8 @@ export default function ToolbarButton({ icon, tooltip, active, disabled, onClick
       </button>
       {pos && tooltip && createPortal(
         <div
-          className="pointer-events-none fixed z-[120] w-max max-w-[200px] rounded-sm bg-[#212121] px-sm py-xs text-small text-white shadow-dropdown"
-          style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
+          className="pointer-events-none fixed w-max max-w-[200px] rounded-sm bg-[#212121] px-sm py-xs text-small text-white"
+          style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)', zIndex: tooltipZIndex }}
         >
           {tooltip}
         </div>,
