@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import '../prompt-chip.css';
-import { serializeFrom, deserializeInto, insertChipAt } from '../promptChipHelpers.js';
+import { serializeRichFrom, serializeRichFromNormalized, deserializeRichInto, insertChipAt } from '../promptChipHelpers.js';
 import { VariableIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
 import ToolbarButton from '../ToolbarButton.jsx';
+import PromptFormatControl from '../PromptFormatControl/PromptFormatControl.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { Icon } from '../../../../components/Icon/Icon';
@@ -42,13 +43,14 @@ export default function SystemPromptInput({
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [needsExpand, setNeedsExpand] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(!(value ?? '').trim());
   const fieldAnchorRef = expanded ? overlayFieldsBtnRef : fieldsBtnRef;
   const activeEditorRef = expanded ? overlayEditorRef : editorRef;
 
   const checkNeedsExpand = useCallback(() => {
     const el = editorRef.current;
     if (!el || expanded) return;
-    const text = serializeFrom(el).trim();
+    const text = serializeRichFromNormalized(el).trim();
     if (!text) {
       setNeedsExpand(false);
       return;
@@ -60,15 +62,16 @@ export default function SystemPromptInput({
   const emitChange = useCallback(() => {
     const el = activeEditorRef.current;
     if (!el) return;
-    const s = serializeFrom(el);
+    const s = serializeRichFromNormalized(el);
     lastEmittedRef.current = s;
+    setIsEmpty(!s.trim());
     onChangeRef.current?.(s);
     if (!expanded) {
       // Defer until layout reflects the new content height.
       requestAnimationFrame(() => {
         const inline = editorRef.current;
         if (!inline) return;
-        const text = serializeFrom(inline).trim();
+        const text = serializeRichFromNormalized(inline).trim();
         setNeedsExpand(Boolean(text) && inline.scrollHeight > inline.clientHeight + 1);
       });
     }
@@ -79,13 +82,15 @@ export default function SystemPromptInput({
     if (!el) return;
     const newVal = value ?? '';
     if (newVal === lastEmittedRef.current) {
+      setIsEmpty(!newVal.trim());
       requestAnimationFrame(checkNeedsExpand);
       return;
     }
     lastEmittedRef.current = newVal;
-    deserializeInto(el, newVal, () => {
-      const s = serializeFrom(el);
+    deserializeRichInto(el, newVal, () => {
+      const s = serializeRichFromNormalized(el);
       lastEmittedRef.current = s;
+      setIsEmpty(!s.trim());
       onChangeRef.current?.(s);
       requestAnimationFrame(checkNeedsExpand);
     });
@@ -104,9 +109,10 @@ export default function SystemPromptInput({
     if (!expanded) return undefined;
     const el = overlayEditorRef.current;
     if (el) {
-      deserializeInto(el, value ?? '', () => {
-        const s = serializeFrom(el);
+      deserializeRichInto(el, value ?? '', () => {
+        const s = serializeRichFromNormalized(el);
         lastEmittedRef.current = s;
+        setIsEmpty(!s.trim());
         onChangeRef.current?.(s);
       });
     }
@@ -145,12 +151,13 @@ export default function SystemPromptInput({
     insertChipAt(activeEditorRef.current, savedRangeRef.current, () => {
       const el = activeEditorRef.current;
       if (!el) return;
-      const s = serializeFrom(el);
+      const s = serializeRichFromNormalized(el);
       lastEmittedRef.current = s;
+      setIsEmpty(!s.trim());
       onChangeRef.current?.(s);
       // Keep the inline editor in sync when inserting from the overlay.
       if (expanded && editorRef.current) {
-        deserializeInto(editorRef.current, s, () => {});
+        deserializeRichInto(editorRef.current, s, () => {});
       }
     }, 'variable', fieldValue);
     // Keep picker open; close only via X or Fields icon. Re-save caret for the next insert.
@@ -167,18 +174,24 @@ export default function SystemPromptInput({
   const handleCloseExpand = useCallback(() => {
     const el = overlayEditorRef.current;
     if (el) {
-      const s = serializeFrom(el);
+      const s = serializeRichFromNormalized(el);
       lastEmittedRef.current = s;
+      setIsEmpty(!s.trim());
       onChangeRef.current?.(s);
       if (editorRef.current) {
-        deserializeInto(editorRef.current, s, () => {});
+        deserializeRichInto(editorRef.current, s, () => {});
       }
     }
     setExpanded(false);
   }, []);
 
   const editorBlock = (ref, editorClassName, fieldsRef) => (
-    <div className={`${styles.inputBox}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}${disabled ? ` ${styles.inputBoxDisabled}` : readOnly ? ` ${styles.inputBoxReadOnly}` : ''}`}>
+    <div className={`${styles.inputBox}${!locked && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}${disabled ? ` ${styles.inputBoxDisabled}` : readOnly ? ` ${styles.inputBoxReadOnly}` : ''}`}>
+      {!locked && isEmpty && (
+        <div className={styles.placeholderOverlay} aria-hidden>
+          Describe the persona of this agent
+        </div>
+      )}
       <div
         ref={ref}
         className={editorClassName}
@@ -205,6 +218,11 @@ export default function SystemPromptInput({
             disabled={!value}
           />
         )}
+        <PromptFormatControl
+          getEditor={() => ref.current}
+          onAfterFormat={emitChange}
+          persistKey="system-prompt-format"
+        />
       </div>
       )}
     </div>
@@ -298,7 +316,7 @@ export default function SystemPromptInput({
           onSelectField={handleFieldSelect}
           anchorEl={fieldAnchorRef.current}
           showTriggerFields={showTriggerFields}
-          insertedText={serializeFrom(activeEditorRef.current)}
+          insertedText={serializeRichFrom(activeEditorRef.current)}
         />
       )}
     </>

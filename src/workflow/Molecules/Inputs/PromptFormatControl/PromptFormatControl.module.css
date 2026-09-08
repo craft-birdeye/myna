@@ -1,0 +1,43 @@
+.anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.formatIcon {
+  color: #303030;
+}
+
+/* Portaled fixed bar — stretches to the input's right edge; Format button stays put. */
+.popover {
+  position: fixed;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 2px 8px;
+  background: #f2f4f7;
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.popover button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background: #dfe3ea;
+  margin: 0 6px;
+  flex-shrink: 0;
+  border-radius: 1px;
+}

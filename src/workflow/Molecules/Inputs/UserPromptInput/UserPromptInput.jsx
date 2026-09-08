@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import '../prompt-chip.css';
-import { serializeFrom, deserializeInto, deserializeIntoTyped, insertChipAt } from '../promptChipHelpers.js';
+import { serializeRichFrom, serializeRichFromNormalized, deserializeRichInto, insertChipAt } from '../promptChipHelpers.js';
 import { VariableIcon, BuildIcon, ProcedureIcon, ExpandIcon } from '../PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import ToolbarButton from '../ToolbarButton.jsx';
+import PromptFormatControl from '../PromptFormatControl/PromptFormatControl.jsx';
 import { ToolSlashMenu, getCaretAnchor } from '../ToolSlashMenu/ToolSlashMenu';
 import styles from './UserPromptInput.module.css';
 
@@ -67,11 +68,11 @@ export default function UserPromptInput({
 
   const syncEmpty = useCallback(() => {
     const el = editorRef.current;
-    setIsEmpty(!el || !serializeFrom(el).trim());
+    setIsEmpty(!el || !serializeRichFromNormalized(el).trim());
   }, []);
 
   const emitChange = useCallback(() => {
-    const s = serializeFrom(editorRef.current);
+    const s = serializeRichFromNormalized(editorRef.current);
     lastEmittedRef.current = s;
     setIsEmpty(!s.trim());
     onChangeRef.current?.(s);
@@ -83,11 +84,7 @@ export default function UserPromptInput({
     const newVal = value ?? '';
     if (newVal === lastEmittedRef.current) return;
     lastEmittedRef.current = newVal;
-    if (resolveType) {
-      deserializeIntoTyped(el, newVal, emitChange, resolveType);
-    } else {
-      deserializeInto(el, newVal, emitChange);
-    }
+    deserializeRichInto(el, newVal, emitChange, resolveType || undefined);
     syncEmpty();
   }, [value, emitChange, resolveType, syncEmpty]);
 
@@ -266,11 +263,18 @@ export default function UserPromptInput({
               />
             )}
             {!fieldsOnly && (
-              <ToolbarButton
-                icon={<ExpandIcon />}
-                tooltip="Rephrase"
-                disabled={isEmpty}
-              />
+              <>
+                <ToolbarButton
+                  icon={<ExpandIcon />}
+                  tooltip="Rephrase"
+                  disabled={isEmpty}
+                />
+                <PromptFormatControl
+                  getEditor={() => editorRef.current}
+                  onAfterFormat={emitChange}
+                  persistKey="user-prompt-format"
+                />
+              </>
             )}
           </div>
           )}
@@ -286,7 +290,7 @@ export default function UserPromptInput({
           anchorEl={fieldsBtnRef.current}
           showTriggerFields={showTriggerFields}
           placement={fieldPickerPlacement}
-          insertedText={serializeFrom(editorRef.current)}
+          insertedText={serializeRichFrom(editorRef.current)}
           {...(fieldPickerZIndex != null ? { overlayZIndex: fieldPickerZIndex } : {})}
         />
       )}

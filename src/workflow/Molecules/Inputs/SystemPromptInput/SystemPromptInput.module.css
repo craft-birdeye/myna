@@ -140,6 +140,7 @@
 }
 
 .inputBox {
+  position: relative;
   display: flex;
   flex-direction: column;
   border: 1px solid #e5e9f0; /* border */
@@ -147,6 +148,27 @@
   background: #fff;
   width: 100%;
   box-sizing: border-box;
+}
+
+.inputBoxWithHint {
+  min-height: 0;
+}
+
+.placeholderOverlay {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  left: 12px;
+  z-index: 0;
+  color: #9ca3af; /* text/tertiary */
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: none;
 }
 
 .inputBox:focus-within,
@@ -189,6 +211,8 @@
 }
 
 .editor {
+  position: relative;
+  z-index: 1;
   min-height: 76px; /* matches Description textarea (3 rows × 20px + 16px padding) */
   max-height: 168px;
   overflow-y: auto;
@@ -203,6 +227,32 @@
   word-break: break-word;
   white-space: pre-wrap;
   box-sizing: border-box;
+  background: transparent;
+}
+
+.editor b,
+.editor strong {
+  font-weight: 700;
+}
+
+.editor i,
+.editor em {
+  font-style: italic;
+}
+
+.editor u {
+  text-decoration: underline;
+}
+
+.editor ul,
+.editor ol {
+  margin: 4px 0;
+  padding-left: 1.4em;
+}
+
+.editor li {
+  margin: 2px 0;
+  white-space: normal;
 }
 
 .editorTall {
@@ -220,8 +270,10 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 8px;
-  height: 36px;
+  padding: 6px 8px;
+  min-height: 44px;
+  height: 44px;
+  box-sizing: border-box;
   border-top: 1px solid transparent;
   flex-shrink: 0;
   gap: 4px;
@@ -233,13 +285,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   padding: 0;
+  flex-shrink: 0;
 }
 
 .toolbarBtn:hover {

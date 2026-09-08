@@ -120,6 +120,31 @@
   background: transparent;
 }
 
+.editor b,
+.editor strong {
+  font-weight: 700;
+}
+
+.editor i,
+.editor em {
+  font-style: italic;
+}
+
+.editor u {
+  text-decoration: underline;
+}
+
+.editor ul,
+.editor ol {
+  margin: 4px 0;
+  padding-left: 1.4em;
+}
+
+.editor li {
+  margin: 2px 0;
+  white-space: normal;
+}
+
 .editorAutoHeight {
   max-height: none;
   overflow-y: visible;
@@ -130,8 +155,10 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 8px;
-  height: 36px;
+  padding: 6px 8px;
+  min-height: 44px;
+  height: 44px;
+  box-sizing: border-box;
   border-top: 1px solid transparent;
   flex-shrink: 0;
   gap: 4px;
@@ -143,13 +170,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   background: none;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   padding: 0;
+  flex-shrink: 0;
 }
 
 .toolbarBtn:hover {
