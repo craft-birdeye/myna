@@ -8,13 +8,17 @@ import {
 import { ToolViewerContent } from '../../Drawers/CustomToolViewer/CustomToolViewer';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import birdeyeLogoUrl from '../../../../assets/birdeye-logo.svg';
+import {
+  getExternalToolConfig,
+  resolveExternalToolId,
+} from '../../../data/externalToolConfigs';
+import ExternalToolDetails from './ExternalToolDetails';
 import styles from './EntityTaskBody.module.css';
 
 export default function EntityTaskBody({
   initialValues = {},
   onFieldChange,
   onOpenTool,
-  onSwapTool,
   /**
    * True once this task has been saved with a tool still missing mandatory config. Until
    * then an unconfigured tool shows no error — just the Configure CTA — so a freshly
@@ -35,7 +39,7 @@ export default function EntityTaskBody({
   const [selectedTools, setSelectedTools] = useState(initialValues.selectedTools ?? []);
   const [allTools, setAllTools] = useState([]);
   const [openSteps, setOpenSteps] = useState({ 1: false, 2: true });
-  const [activeBodyTab, setActiveBodyTab] = useState('basic');
+  const [activeBodyTab, setActiveBodyTab] = useState('toolDetails');
 
   const inlineToolLayout = option2Stepper || option3Tabs;
 
@@ -65,15 +69,50 @@ export default function EntityTaskBody({
     onFieldChange?.('description', val);
   };
 
-  const displayedTools = allTools.filter((t) => selectedTools.includes(t.id));
+  const externalToolId = useMemo(
+    () => resolveExternalToolId({ selectedTools, taskName }),
+    [selectedTools, taskName],
+  );
+  // Read config fresh each render so field copy/schema edits aren't stuck behind a memoized object.
+  const externalToolConfig = getExternalToolConfig(externalToolId);
+
+  const displayedTools = useMemo(() => {
+    const fromCatalog = allTools.filter((t) => selectedTools.includes(t.id));
+    if (externalToolConfig && !fromCatalog.some((t) => t.id === externalToolConfig.id)) {
+      return [
+        {
+          id: externalToolConfig.id,
+          name: externalToolConfig.name,
+          icon: externalToolConfig.icon,
+          iconBg: externalToolConfig.iconBg,
+        },
+        ...fromCatalog,
+      ];
+    }
+    return fromCatalog.map((t) =>
+      externalToolConfig && t.id === externalToolConfig.id
+        ? { ...t, iconBg: externalToolConfig.iconBg || t.iconBg }
+        : t,
+    );
+  }, [allTools, selectedTools, externalToolConfig]);
+
   const viewerTools = useMemo(
-    () => selectedTools.map((id) => resolveToolForViewer(id)).filter(Boolean),
-    [selectedTools],
+    () =>
+      selectedTools
+        .filter((id) => id !== externalToolId)
+        .map((id) => resolveToolForViewer(id))
+        .filter(Boolean),
+    [selectedTools, externalToolId],
   );
 
   const handleInlineToolValues = useCallback((toolId, values) => {
     onToolFieldValuesChange?.(toolId, values);
   }, [onToolFieldValuesChange]);
+
+  const handleExternalToolValues = useCallback((values) => {
+    if (!externalToolId) return;
+    onToolFieldValuesChange?.(externalToolId, values);
+  }, [externalToolId, onToolFieldValuesChange]);
 
   /**
    * Tools with their own mandatory config. Unconfigured → the row offers Configure instead
@@ -113,7 +152,7 @@ export default function EntityTaskBody({
   const toolsSection = (
     <div className={styles.toolsSection}>
       <div className={styles.toolSelectField}>
-        <span className={styles.sectionLabelText}>Select tool</span>
+        <span className={styles.sectionLabelText}>Tool</span>
 
         {displayedTools.length > 0 && (
           <div className={styles.toolCard}>
@@ -122,14 +161,20 @@ export default function EntityTaskBody({
                 key={tool.id}
                 className={styles.toolRow}
                 onClick={() => {
-                  if (inlineToolLayout) return;
+                  if (inlineToolLayout || externalToolConfig?.id === tool.id) return;
                   onOpenTool?.(tool.id);
                 }}
-                style={{ cursor: inlineToolLayout ? 'default' : (onOpenTool ? 'pointer' : 'default') }}
+                style={{
+                  cursor:
+                    inlineToolLayout || externalToolConfig?.id === tool.id
+                      ? 'default'
+                      : (onOpenTool ? 'pointer' : 'default'),
+                }}
               >
                 <div className={styles.toolRowMain}>
                   <div
                     className={`${styles.toolIconWrap}${tool.isBirdeye ? ` ${styles.toolIconWrapBirdeye}` : ''}`}
+                    style={tool.iconBg ? { background: tool.iconBg } : undefined}
                   >
                     {tool.isBirdeye ? (
                       <img
@@ -140,7 +185,11 @@ export default function EntityTaskBody({
                     ) : tool.icon ? (
                       <span
                         className="material-symbols-outlined"
-                        style={{ fontSize: 16, color: '#555', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
+                        style={{
+                          fontSize: 16,
+                          color: tool.iconBg ? '#fff' : '#555',
+                          fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+                        }}
                       >
                         {tool.icon}
                       </span>
@@ -186,7 +235,7 @@ export default function EntityTaskBody({
                     </button>
                   ) : (
                     <>
-                      {!inlineToolLayout && (
+                      {!inlineToolLayout && externalToolConfig?.id !== tool.id && (
                         <button
                           type="button"
                           className={styles.toolActionBtn}
@@ -198,18 +247,6 @@ export default function EntityTaskBody({
                           </span>
                         </button>
                       )}
-                      <Tooltip content="Replace tool" variant="brief" side="top">
-                        <button
-                          type="button"
-                          className={styles.toolActionBtn}
-                          onClick={(e) => { e.stopPropagation(); onSwapTool?.(); }}
-                          aria-label="Replace tool"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}>
-                            swap_horiz
-                          </span>
-                        </button>
-                      </Tooltip>
                     </>
                   )}
                 </div>
@@ -218,6 +255,15 @@ export default function EntityTaskBody({
           </div>
         )}
       </div>
+
+      {externalToolConfig && (
+        <ExternalToolDetails
+          config={externalToolConfig}
+          values={toolFieldValues?.[externalToolConfig.id] || {}}
+          onChange={handleExternalToolValues}
+          viewOnly={viewOnly}
+        />
+      )}
 
       {displayedTools.length > 0 && inlineToolLayout && selectedTools.includes('handle-response') && (
         <div className={styles.inlineToolConfig}>

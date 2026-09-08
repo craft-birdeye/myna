@@ -314,7 +314,7 @@ const TASK_DROP_DEFAULTS = {
   'Remove contact from list': { description: 'Removes the contact from a list' },
   'Create Zendesk ticket': { description: 'Creates a ticket in Zendesk' },
   Zendesk: { description: 'Creates a ticket in Zendesk' },
-  FreshDesk: { description: 'FreshDesk CRM tool' },
+  FreshDesk: { description: 'FreshDesk CRM tool', selectedTools: ['freshdesk'] },
   'QuickBooks Online': { description: 'QuickBooks tool' },
   ServiceTitan: { description: 'ServiceTitan CRM tool' },
   Salesforce: { description: 'Creates or updates the contact record in Salesforce' },

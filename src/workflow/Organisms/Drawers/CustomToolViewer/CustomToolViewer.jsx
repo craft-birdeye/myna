@@ -29,6 +29,7 @@ import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal.jsx';
 import CreateTagModal from '../../Modals/CreateTagModal/CreateTagModal.jsx';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
+import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { getTags, createTag, updateTag, findTagByName } from '../../../services/tagService';
 import styles from './CustomToolViewer.module.css';
 
@@ -240,20 +241,24 @@ function FieldLabel({ label, required, showInfoIcon, infoText }) {
       <span className={styles.fieldLabel}>
         {label}{required && <span className={styles.required}> *</span>}
       </span>
-      {showInfoIcon && (
-        <span className={`material-symbols-outlined ${styles.fieldInfoIcon}`} title={infoText || label}>
-          info
-        </span>
-      )}
+      {showInfoIcon && infoText ? (
+        <InfoTooltip text={infoText} variant="detail" />
+      ) : null}
     </span>
   );
 }
 
 function FieldHeader({ label, required, helpText, showInfoIcon, infoText }) {
+  const tip = showInfoIcon ? infoText : undefined;
   return (
     <>
-      <FieldLabel label={label} required={required} showInfoIcon={showInfoIcon} infoText={infoText || helpText} />
-      {helpText && <span className={styles.fieldHelp}>{helpText}</span>}
+      <FieldLabel
+        label={label}
+        required={required}
+        showInfoIcon={Boolean(tip)}
+        infoText={tip}
+      />
+      {helpText ? <span className={styles.fieldHelp}>{helpText}</span> : null}
     </>
   );
 }
@@ -704,6 +709,62 @@ function InteractiveField({ field, onValueChange }) {
           </div>
         );
       }
+      if (field.helpText || field.showVariableToolbar) {
+        const handleFieldSelect = (fieldValue) => {
+          setTextValue((prev) => {
+            const base = prev || '';
+            const sep = !base || /\s$/.test(base) ? '' : ' ';
+            const next = `${base}${sep}{{${fieldValue}}}`;
+            onValueChange?.(field.id, next);
+            return next;
+          });
+        };
+        return (
+          <div className={styles.fieldWrap}>
+            <FieldHeader
+              label={label}
+              required={required}
+              helpText={field.helpText}
+              showInfoIcon={field.showInfoIcon}
+              infoText={field.infoText}
+            />
+            <div className={field.showVariableToolbar ? styles.promptBox : undefined}>
+              <div className={field.showVariableToolbar ? styles.variableTextRow : undefined}>
+                <input
+                  name={`view_${field.id}`}
+                  type={field.type === 'number' || field.type === 'date' ? field.type : 'text'}
+                  className={field.showVariableToolbar ? styles.variableTextInput : styles.selectInput}
+                  placeholder={field.placeholder || ''}
+                  value={textValue}
+                  onChange={(e) => {
+                    setTextValue(e.target.value);
+                    onValueChange?.(field.id, e.target.value);
+                  }}
+                />
+                {field.showVariableToolbar && (
+                  <div ref={fieldsBtnRef} className={styles.variableTextToolbar}>
+                    <ToolbarButton
+                      icon={<VariableIcon />}
+                      tooltip="Fields"
+                      active={fieldModalOpen}
+                      onClick={() => setFieldModalOpen(true)}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            {field.showVariableToolbar && fieldModalOpen && (
+              <FieldPickerModal
+                onClose={() => setFieldModalOpen(false)}
+                onSelectField={handleFieldSelect}
+                anchorEl={fieldsBtnRef.current}
+                showTriggerFields
+                insertedText={textValue}
+              />
+            )}
+          </div>
+        );
+      }
       return (
         <div className={styles.fieldWrap}>
           <FormInput
@@ -820,12 +881,25 @@ function InteractiveField({ field, onValueChange }) {
     case 'select':
       return (
         <div className={styles.fieldWrap}>
-          <FieldLabel label={label} required={required} showInfoIcon={field.showInfoIcon} />
+          {(field.helpText || field.showInfoIcon) ? (
+            <FieldHeader
+              label={label}
+              required={required}
+              helpText={field.helpText}
+              showInfoIcon={field.showInfoIcon}
+              infoText={field.infoText}
+            />
+          ) : (
+            <FieldLabel label={label} required={required} showInfoIcon={field.showInfoIcon} infoText={field.infoText} />
+          )}
           <div className={styles.selectWrap}>
             <select
               className={styles.selectInput}
               value={selectValue}
-              onChange={(e) => setSelectValue(e.target.value)}
+              onChange={(e) => {
+                setSelectValue(e.target.value);
+                onValueChange?.(field.id, e.target.value);
+              }}
             >
               <option value="">{field.placeholder || 'Select'}</option>
               {(field.options || []).map((rawOpt) => {
