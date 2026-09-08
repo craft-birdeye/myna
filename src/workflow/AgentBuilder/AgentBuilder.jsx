@@ -360,6 +360,10 @@ const TASK_DROP_DEFAULTS = {
     description: 'Finds keywords your competitors rank for',
     selectedTools: ['discover-competitor-keywords'],
   },
+  'Create ticket in Birdeye': {
+    description: 'Creates a Birdeye ticket for a review or survey response',
+    selectedTools: ['create-ticket-birdeye'],
+  },
   'Generate response': {
     description:
       'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',

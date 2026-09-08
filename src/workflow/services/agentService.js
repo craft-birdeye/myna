@@ -433,6 +433,22 @@ const _SEED_TOOLS = [
     outputs: [{ name: 'keywords', type: 'array' }],
   },
   {
+    id: 'create-ticket-birdeye',
+    name: 'Create ticket in Birdeye',
+    icon: 'confirmation_number',
+    isBirdeye: true,
+    description: 'Creates a Birdeye ticket for a review or survey response',
+    category: 'Ticketing',
+    modules: ['Reviews'],
+    products: ['healthcare', 'dental', 'automotive'],
+    entities: ['ticket', 'review'],
+    fields: [
+      { id: 'ctb-ticket', type: 'ticketBuilder', label: 'Create ticket in Birdeye' },
+    ],
+    inputs: [],
+    outputs: [{ name: 'ticketId', type: 'string' }],
+  },
+  {
     id: 'handle-response',
     name: 'Publish response',
     icon: 'publish',

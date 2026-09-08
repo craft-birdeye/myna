@@ -279,6 +279,10 @@ export function MultiSelect({
   onChange,
   placeholder = 'Select',
   disabled,
+  /** Optional override for the closed-trigger text, e.g. "2 roles". */
+  formatLabel,
+  /** When set and something is selected, the chevron becomes a clear (✕). */
+  onClear,
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -295,9 +299,11 @@ export function MultiSelect({
 
   const displayLabel = selected.length === 0
     ? placeholder
-    : selected.length === 1
-      ? (options.find((o) => o.value === selected[0])?.label || '1 selected')
-      : `${selected.length} selected`;
+    : formatLabel
+      ? formatLabel(selected)
+      : selected.length === 1
+        ? (options.find((o) => o.value === selected[0])?.label || '1 selected')
+        : `${selected.length} selected`;
 
   const toggle = (value) => {
     const next = selectedSet.has(value)
@@ -321,7 +327,24 @@ export function MultiSelect({
         <span className={`tc-dropdown__value${selected.length === 0 ? ' tc-dropdown__value--placeholder' : ''}`}>
           {displayLabel}
         </span>
-        <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
+        {onClear && selected.length > 0 && !disabled ? (
+          // A span with role=button, not a <button> — the trigger is already a
+          // button and nesting one inside trips React's DOM-nesting warning.
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Clear selection"
+            className="material-symbols-outlined tc-dropdown__chevron"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onClear(); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClear(); }
+            }}
+          >
+            close
+          </span>
+        ) : (
+          <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
+        )}
       </button>
       {open && !disabled && (
         <ul className="tc-dropdown__menu" role="listbox" aria-multiselectable="true">

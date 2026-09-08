@@ -803,6 +803,450 @@
 
 /* ─── A/B section card ─── */
 
+/* ─── Create ticket in Birdeye (ticketBuilder) ─── */
+
+.ticketWrap {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sections are separated by rules rather than boxed, per the design. */
+/* Only the rule *between* the two sections is kept — see the first-child
+   override below, and no closing rule at the bottom. */
+.ticketSection {
+  border-top: 1px solid #eef0f4;
+  position: relative;
+}
+
+/* Sits right under the Tool row: no line. No extra padding either — the
+   embedded body's 20px field gap plus the header's own 12px already space it. */
+.ticketSection:first-child {
+  border-top: none;
+}
+
+.ticketSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #303030;
+}
+
+.ticketSectionHeader :global(.material-symbols-outlined) {
+  font-size: 20px;
+  color: #303030;
+}
+
+.ticketSectionTitle {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.ticketSectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 16px;
+}
+
+/* "Assign ticket to  Users ▾" — label with an inline type switch. */
+.ticketInlineLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.ticketInlineSelect {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0 16px 0 4px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #1976d2;
+  cursor: pointer;
+  outline: none;
+}
+
+.ticketInlineChevron {
+  font-size: 18px !important;
+  color: #1976d2;
+  margin-left: -18px;
+  pointer-events: none;
+}
+
+/* Plain section header — no divider rule beneath it. */
+.ticketGroupLabelRow {
+  padding-bottom: 2px;
+  margin-top: 4px;
+}
+
+/* Sentence case, primary text — reads as a section header, not an eyebrow. */
+.ticketGroupLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #212121;
+}
+
+/* Box that holds inserted variable chips + free text + the {x} trigger. */
+.ticketVarBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  box-sizing: border-box;
+  padding: 4px 36px 4px 12px;
+  cursor: text;
+  transition: border-color 0.12s ease;
+}
+
+.ticketVarBox:hover {
+  border-color: #cccccc;
+}
+
+.ticketVarBox:focus-within {
+  border-color: #1976d2;
+}
+
+.ticketVarBoxMultiline {
+  min-height: 96px;
+  align-items: flex-start;
+  padding: 8px 12px 32px;
+}
+
+.ticketVarChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ticketVarInput {
+  flex: 1;
+  min-width: 60px;
+  height: 26px;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  background: transparent;
+}
+
+.ticketVarTextarea {
+  width: 100%;
+  min-height: 56px;
+  border: none;
+  outline: none;
+  padding: 0;
+  resize: none;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  background: transparent;
+}
+
+.ticketVarBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #303030;
+  border-radius: 4px;
+}
+
+.ticketVarBtn:hover {
+  background: #f4f6f7;
+}
+
+/* Multiline puts the trigger bottom-left, as in the design. */
+.ticketVarBtnBottom {
+  top: auto;
+  bottom: 6px;
+  left: 8px;
+  right: auto;
+  transform: none;
+}
+
+/* ── Escalation rules ── */
+
+.ticketRuleCard {
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.ticketRuleCardTitle {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+}
+
+.ticketCondBlock,
+.ticketActionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Inline condition/action row: label, slot(s), then the remove button. */
+.ticketCondRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Shared left column so "if", "and" and "Exclude" all start at the same x. */
+.ticketCondJoin {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+
+.ticketCondJoinMid {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+  flex-shrink: 0;
+}
+
+/* Empty slot — the picker shares the row evenly with its sibling. */
+.ticketCondSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Exclude's picker starts where the field chip starts and runs the full row. */
+.ticketExcludeSelect {
+  flex: 1;
+  min-width: 0;
+  margin-right: 36px; /* clears the trash column above it */
+}
+
+/* With days chosen it becomes the same chip treatment as the slots above it:
+   light-blue fill, no border, blue value, clear cross. */
+.ticketExcludeSelectFilled :global(.tc-dropdown__trigger) {
+  background: #eaf2fd;
+  border-color: transparent;
+}
+
+.ticketExcludeSelectFilled :global(.tc-dropdown__trigger):hover {
+  background: #dfeafb;
+  border-color: transparent;
+}
+
+.ticketExcludeSelectFilled :global(.tc-dropdown__value) {
+  color: #1976d2;
+}
+
+.ticketExcludeSelectFilled :global(.tc-dropdown__chevron) {
+  color: #303030;
+  cursor: pointer;
+}
+
+/* Second action row: aligned under the chip above, clear of the trash. */
+.ticketActionSub {
+  display: flex;
+  padding-left: 84px;
+  padding-right: 36px;
+}
+
+/* Value chips — blue pill; the cross clears the slot. */
+.ticketChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  background: #eaf2fd;
+  border-radius: 4px;
+  padding: 7px 10px;
+  box-sizing: border-box;
+}
+
+.ticketChipLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #1976d2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticketChipClear {
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ticketChipClear :global(.material-symbols-outlined) {
+  font-size: 16px;
+  color: #303030;
+}
+
+.ticketCondJoin {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+  min-width: 24px;
+}
+
+.ticketActionLabel {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+  min-width: 76px;
+}
+
+.ticketRowDelete {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #303030;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ticketRowDelete:hover {
+  background: #eef0f4;
+}
+
+.ticketRowDelete :global(.material-symbols-outlined) {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ticketAddWrap {
+  position: relative;
+  align-self: flex-start;
+}
+
+.ticketAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.ticketAddBtn:hover {
+  color: #1565c0;
+}
+
+.ticketAddBtnDisabled,
+.ticketAddBtnDisabled:hover {
+  color: #b0b5bd;
+  cursor: not-allowed;
+}
+
+.ticketAddBtn :global(.material-symbols-outlined) {
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.ticketAddBtnLabel {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+/* Portaled to <body>; left/top come from the anchor measurement. */
+.ticketActionMenu {
+  position: fixed;
+  z-index: 10001;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ticketActionMenuItem {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.ticketActionMenuItem:hover {
+  background: #f2f4f7;
+}
+
 /* ─── Competitor list (Track keywords from competitor domains) ─── */
 
 .compList {

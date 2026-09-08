@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { FormInput, TextArea, Toggle, SingleSelect } from '../../../elemental-stubs';
+import { FormInput, TextArea, Toggle, SingleSelect, MultiSelect } from '../../../elemental-stubs';
 function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
   React.useEffect(() => {
     if (isOpen) { document.body.style.overflow = 'hidden'; }
@@ -28,6 +28,7 @@ import ToolbarButton from '../../../Molecules/Inputs/ToolbarButton.jsx';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal.jsx';
 import CreateTagModal from '../../Modals/CreateTagModal/CreateTagModal.jsx';
+import DataType from '../../../Molecules/DataType/DataType';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { getTags, createTag, updateTag, findTagByName } from '../../../services/tagService';
@@ -284,6 +285,543 @@ function SectionField({ field, onValueChange }) {
             <InteractiveField key={sf.id} field={sf} onValueChange={onValueChange} />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Create-ticket builder field ───────────────────────────────────────── */
+
+const TICKET_ASSIGNEE_TYPES = [
+  { value: 'Users', label: 'Users' },
+  { value: 'Roles', label: 'Roles' },
+];
+
+/** Condition field → its allowed values. Status is shared with the Set status action. */
+const TICKET_CONDITION_VALUES = {
+  Status: ['New', 'Assigned', 'In progress'],
+  'Time elapsed': ['1 day', '2 days', '3 days', '1 week', '2 weeks'],
+};
+
+const TICKET_CONDITION_FIELDS = Object.keys(TICKET_CONDITION_VALUES).map((v) => ({ value: v, label: v }));
+
+const TICKET_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  .map((d) => ({ value: d, label: d }));
+
+/** Only Time elapsed can skip days. */
+const TICKET_EXCLUDE_FIELD = 'Time elapsed';
+
+const TICKET_ACTION_TYPES = [
+  { id: 'assignee', menuLabel: 'Select assignee', rowLabel: 'Assign to' },
+  { id: 'status', menuLabel: 'Set status', rowLabel: 'Set status' },
+  { id: 'notify', menuLabel: 'Select whom to notify', rowLabel: 'Notify' },
+];
+
+/** Enough for the three action rows; used to decide whether to flip upward. */
+const TICKET_ACTION_MENU_H = 132;
+
+const TICKET_ROLES = ['Client Admin', 'Client Manager', 'Client User', 'Location Manager'];
+const TICKET_USERS = ['Jane Cooper', 'Devon Lane', 'Naveen K'];
+/** Cap behind the "Select upto 10 users" placeholder on the assignee action. */
+const TICKET_ASSIGNEE_MAX = 10;
+
+/** "Client Admin" for one, "2 roles" past that. */
+function ticketCountLabel(noun) {
+  return (selected) => (selected.length === 1 ? selected[0] : `${selected.length} ${noun}`);
+}
+
+/** Blue pill for a chosen value; the cross clears it back to its picker. */
+function TicketChip({ label, onClear }) {
+  return (
+    <span className={styles.ticketChip}>
+      <span className={styles.ticketChipLabel}>{label}</span>
+      <button type="button" className={styles.ticketChipClear} aria-label={`Clear ${label}`} onClick={onClear}>
+        <span className="material-symbols-outlined">close</span>
+      </button>
+    </span>
+  );
+}
+
+const TICKET_CUSTOMER_FIELDS = [
+  { id: 'firstName', label: 'First name' },
+  { id: 'lastName', label: 'Last name' },
+  { id: 'email', label: 'Email' },
+  { id: 'phone', label: 'Phone' },
+];
+
+/**
+ * "Create ticket in Birdeye" — Default fields + Apply escalation rules, each a
+ * collapsible section. Rendered for `type: 'ticketBuilder'` fields.
+ */
+function TicketBuilderField({ field, onValueChange }) {
+  const [openSections, setOpenSections] = useState({ defaults: true, escalation: false });
+  const [assign, setAssign] = useState({ type: 'Users', values: [] });
+  const [watchers, setWatchers] = useState({ type: 'Users', values: [] });
+  const [description, setDescription] = useState({ chips: [], text: '' });
+  const [customer, setCustomer] = useState(() =>
+    Object.fromEntries(TICKET_CUSTOMER_FIELDS.map((f) => [f.id, { chips: [], text: '' }])),
+  );
+  const [conditions, setConditions] = useState([]);
+  const [actions, setActions] = useState([]);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  // Action id whose target picker is being edited. The row collapses to a
+  // "2 roles" chip once done, so without this the first pick would collapse it
+  // and a second value could never be added.
+  const [targetEditing, setTargetEditing] = useState(null);
+  const [actionMenuRect, setActionMenuRect] = useState(null);
+  const targetRefs = useRef({});
+  const actionMenuPanelRef = useRef(null);
+  // { key } — which variable box the Fields picker is inserting into.
+  const [picker, setPicker] = useState(null);
+  const anchorRefs = useRef({});
+  const actionMenuRef = useRef(null);
+  const nextId = useRef(0);
+
+  useEffect(() => {
+    onValueChange?.(field.id, { assign, watchers, description, customer, conditions, actions });
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assign, watchers, description, customer, conditions, actions, field.id]);
+
+  useEffect(() => {
+    if (!actionMenuOpen) return undefined;
+    function onDown(e) {
+      // The menu is portaled to <body>, so check it as well as the trigger —
+      // otherwise the close fires before an item's own onClick.
+      if (actionMenuRef.current?.contains(e.target)) return;
+      if (actionMenuPanelRef.current?.contains(e.target)) return;
+      setActionMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [actionMenuOpen]);
+
+  // Anchor the portaled menu below the trigger. Being portaled at a high
+  // z-index it paints over the Save footer rather than behind it, so it only
+  // flips up if it would leave the viewport entirely.
+  useEffect(() => {
+    if (!actionMenuOpen) return undefined;
+    function measure() {
+      const el = actionMenuRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const openUp = r.bottom + 6 + TICKET_ACTION_MENU_H > window.innerHeight;
+      setActionMenuRect({
+        left: r.left,
+        top: openUp ? r.top - 6 - TICKET_ACTION_MENU_H : r.bottom + 6,
+        width: Math.max(r.width, 200),
+      });
+    }
+    measure();
+    window.addEventListener('scroll', measure, true);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure, true);
+      window.removeEventListener('resize', measure);
+    };
+  }, [actionMenuOpen]);
+
+  // Clicking away settles the target picker into its chip.
+  useEffect(() => {
+    if (!targetEditing) return undefined;
+    function onDown(e) {
+      const el = targetRefs.current[targetEditing];
+      if (el && !el.contains(e.target)) setTargetEditing(null);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [targetEditing]);
+
+
+  const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  /** Every condition row needs a field and a value before another can be added. */
+  // Each field / action type can only be used once, so the add actions also
+  // switch off once every one of them is on the board.
+  const usedActionTypes = actions.map((a) => a.type);
+  const remainingActionTypes = TICKET_ACTION_TYPES.filter((t) => !usedActionTypes.includes(t.id));
+  const canAddCondition = conditions.every((c) => c.field && c.value)
+    && conditions.length < TICKET_CONDITION_FIELDS.length;
+  const canAddAction = actions.every((a) => (a.type === 'status' ? a.status : a.values?.length))
+    && remainingActionTypes.length > 0;
+
+  function insertVariable(name) {
+    const key = picker?.key;
+    if (!key) return;
+    if (key === 'description') {
+      setDescription((prev) => (prev.chips.includes(name) ? prev : { ...prev, chips: [...prev.chips, name] }));
+    } else {
+      setCustomer((prev) => (prev[key].chips.includes(name)
+        ? prev
+        : { ...prev, [key]: { ...prev[key], chips: [...prev[key].chips, name] } }));
+    }
+    setPicker(null);
+  }
+
+  /** Bordered box holding inserted variable chips, free text, and the {x} trigger. */
+  const variableBox = (key, value, setValue, { multiline = false, placeholder = '' } = {}) => (
+    <div
+      ref={(el) => { anchorRefs.current[key] = el; }}
+      className={`${styles.ticketVarBox}${multiline ? ` ${styles.ticketVarBoxMultiline}` : ''}`}
+    >
+      <div className={styles.ticketVarChips}>
+        {value.chips.map((chip) => (
+          <DataType
+            key={chip}
+            type="variable"
+            label={chip}
+            onRemove={() => setValue({ ...value, chips: value.chips.filter((c) => c !== chip) })}
+          />
+        ))}
+        {multiline ? (
+          <textarea
+            className={styles.ticketVarTextarea}
+            value={value.text}
+            placeholder={placeholder}
+            onChange={(e) => setValue({ ...value, text: e.target.value })}
+          />
+        ) : (
+          <input
+            type="text"
+            className={styles.ticketVarInput}
+            value={value.text}
+            placeholder={value.chips.length === 0 ? placeholder : ''}
+            onChange={(e) => setValue({ ...value, text: e.target.value })}
+          />
+        )}
+      </div>
+      <button
+        type="button"
+        className={`${styles.ticketVarBtn}${multiline ? ` ${styles.ticketVarBtnBottom}` : ''}`}
+        aria-label="Insert field"
+        onClick={() => setPicker({ key })}
+      >
+        <VariableIcon />
+      </button>
+    </div>
+  );
+
+  /** "Assign ticket to  Users ▾" + the matching select below it. */
+  const assigneeRow = (label, state, setState) => (
+    <div className={styles.fieldWrap}>
+      <div className={styles.ticketInlineLabelRow}>
+        <span className={styles.fieldLabel}>{label}</span>
+        <select
+          className={styles.ticketInlineSelect}
+          value={state.type}
+          onChange={(e) => setState({ type: e.target.value, values: [] })}
+        >
+          {TICKET_ASSIGNEE_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
+        <span className={`material-symbols-outlined ${styles.ticketInlineChevron}`}>arrow_drop_down</span>
+      </div>
+      <MultiSelect
+        name={`${field.id}-${label}`}
+        selected={state.values || []}
+        options={(state.type === 'Roles' ? TICKET_ROLES : TICKET_USERS)
+          .map((o) => ({ value: o, label: o }))}
+        placeholder={state.type === 'Roles' ? 'Select roles' : 'Select users'}
+        onChange={(vals) => setState({ ...state, values: vals })}
+      />
+    </div>
+  );
+
+  return (
+    <div className={styles.ticketWrap}>
+      {/* ── Default fields ── */}
+      <div className={styles.ticketSection}>
+        <button type="button" className={styles.ticketSectionHeader} onClick={() => toggleSection('defaults')}>
+          <span className={styles.ticketSectionTitle}>
+            Default fields
+          </span>
+          <span className="material-symbols-outlined">
+            {openSections.defaults ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+          </span>
+        </button>
+        {openSections.defaults && (
+          <div className={styles.ticketSectionBody}>
+            {assigneeRow('Assign ticket to', assign, setAssign)}
+            {assigneeRow('Assign watchers to', watchers, setWatchers)}
+
+            <div className={styles.fieldWrap}>
+              <span className={styles.fieldLabel}>
+                Ticket description<span className={styles.required}> *</span>
+              </span>
+              {variableBox('description', description, setDescription, { multiline: true })}
+            </div>
+
+            <div className={styles.ticketGroupLabelRow}>
+              <span className={styles.ticketGroupLabel}>Customer information</span>
+            </div>
+
+            {TICKET_CUSTOMER_FIELDS.map((cf) => (
+              <div key={cf.id} className={styles.fieldWrap}>
+                <span className={styles.fieldLabel}>{cf.label}</span>
+                {variableBox(
+                  cf.id,
+                  customer[cf.id],
+                  (next) => setCustomer((prev) => ({ ...prev, [cf.id]: next })),
+                  { placeholder: cf.label },
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Apply escalation rules ── */}
+      <div className={styles.ticketSection}>
+        <button type="button" className={styles.ticketSectionHeader} onClick={() => toggleSection('escalation')}>
+          <span className={styles.ticketSectionTitle}>
+            Apply escalation rules
+          </span>
+          <span className="material-symbols-outlined">
+            {openSections.escalation ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+          </span>
+        </button>
+        {openSections.escalation && (
+          <div className={styles.ticketSectionBody}>
+            {/* Conditions */}
+            <div className={styles.ticketRuleCard}>
+              <span className={styles.ticketRuleCardTitle}>Conditions</span>
+              {conditions.map((cond, i) => {
+                const values = TICKET_CONDITION_VALUES[cond.field] || [];
+                // A field already used by another row isn't offered again.
+                const takenFields = conditions.filter((c) => c.id !== cond.id).map((c) => c.field);
+                const fieldOptions = TICKET_CONDITION_FIELDS.filter((f) => !takenFields.includes(f.value));
+                const update = (patch) => setConditions((prev) =>
+                  prev.map((c) => (c.id === cond.id ? { ...c, ...patch } : c)));
+                return (
+                  <div key={cond.id} className={styles.ticketCondBlock}>
+                    {/* Chip once chosen, picker while empty — the cross clears
+                        a slot back to its picker. */}
+                    <div className={styles.ticketCondRow}>
+                      <span className={styles.ticketCondJoin}>{i === 0 ? 'if' : 'and'}</span>
+                      {cond.field ? (
+                        <TicketChip
+                          label={cond.field}
+                          onClear={() => update({ field: '', value: '', exclude: [] })}
+                        />
+                      ) : (
+                        <div className={styles.ticketCondSelect}>
+                          <SingleSelect
+                            name={`${cond.id}-field`}
+                            selected=""
+                            options={fieldOptions}
+                            placeholder="Select"
+                            onChange={(opt) => update({ field: opt.value, value: '', exclude: [] })}
+                          />
+                        </div>
+                      )}
+                      {cond.field && <span className={styles.ticketCondJoinMid}>is</span>}
+                      {cond.field && (cond.value ? (
+                        <TicketChip label={cond.value} onClear={() => update({ value: '' })} />
+                      ) : (
+                        <div className={styles.ticketCondSelect}>
+                          <SingleSelect
+                            name={`${cond.id}-value`}
+                            selected=""
+                            options={values.map((v) => ({ value: v, label: v }))}
+                            placeholder="Select"
+                            onChange={(opt) => update({ value: opt.value })}
+                          />
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className={styles.ticketRowDelete}
+                        aria-label="Remove condition"
+                        onClick={() => setConditions((prev) => prev.filter((c) => c.id !== cond.id))}
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                    {/* Exclude stays a dropdown so several days stay tickable. */}
+                    {cond.field === TICKET_EXCLUDE_FIELD && (
+                      <div className={styles.ticketCondRow}>
+                        <span className={styles.ticketCondJoin}>Exclude</span>
+                        <div
+                          className={`${styles.ticketExcludeSelect}${
+                            cond.exclude?.length ? ` ${styles.ticketExcludeSelectFilled}` : ''
+                          }`}
+                        >
+                          <MultiSelect
+                            name={`${cond.id}-exclude`}
+                            selected={cond.exclude || []}
+                            options={TICKET_WEEKDAYS}
+                            placeholder="Select days"
+                            formatLabel={ticketCountLabel('days')}
+                            onChange={(vals) => update({ exclude: vals })}
+                            onClear={() => update({ exclude: [] })}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                className={`${styles.ticketAddBtn}${canAddCondition ? '' : ` ${styles.ticketAddBtnDisabled}`}`}
+                disabled={!canAddCondition}
+                onClick={() => setConditions((prev) => [
+                  ...prev,
+                  { id: `cond-${nextId.current++}`, field: '', value: '', exclude: [] },
+                ])}
+              >
+                <span className="material-symbols-outlined">add_circle</span>
+                <span className={styles.ticketAddBtnLabel}>Add condition</span>
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className={styles.ticketRuleCard}>
+              <span className={styles.ticketRuleCardTitle}>Actions</span>
+              {actions.map((act) => {
+                const meta = TICKET_ACTION_TYPES.find((t) => t.id === act.type);
+                const update = (patch) => setActions((prev) =>
+                  prev.map((a) => (a.id === act.id ? { ...a, ...patch } : a)));
+                const people = (act.valueType === 'Roles' ? TICKET_ROLES : TICKET_USERS)
+                  .map((o) => ({ value: o, label: o }));
+                return (
+                  <div key={act.id} className={styles.ticketActionBlock}>
+                    <div className={styles.ticketCondRow}>
+                      <span className={styles.ticketActionLabel}>{meta.rowLabel}</span>
+                      {act.type === 'status' ? (
+                        act.status ? (
+                          <TicketChip label={act.status} onClear={() => update({ status: '' })} />
+                        ) : (
+                          <div className={styles.ticketCondSelect}>
+                            <SingleSelect
+                              name={`${act.id}-status`}
+                              selected=""
+                              options={TICKET_CONDITION_VALUES.Status.map((v) => ({ value: v, label: v }))}
+                              placeholder="Select"
+                              onChange={(opt) => update({ status: opt.value })}
+                            />
+                          </div>
+                        )
+                      ) : act.valueType ? (
+                        <TicketChip
+                          label={act.valueType}
+                          onClear={() => update({ valueType: '', values: [] })}
+                        />
+                      ) : (
+                        <div className={styles.ticketCondSelect}>
+                          <SingleSelect
+                            name={`${act.id}-type`}
+                            selected=""
+                            options={TICKET_ASSIGNEE_TYPES}
+                            placeholder="Select"
+                            onChange={(opt) => update({ valueType: opt.value, values: [] })}
+                          />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.ticketRowDelete}
+                        aria-label={`Remove ${meta.rowLabel}`}
+                        onClick={() => setActions((prev) => prev.filter((a) => a.id !== act.id))}
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                    {/* Target sits on its own full-width row, cross but no trash. */}
+                    {act.type !== 'status' && act.valueType && (
+                      <div
+                        className={styles.ticketActionSub}
+                        ref={(el) => { targetRefs.current[act.id] = el; }}
+                        onMouseDown={() => setTargetEditing(act.id)}
+                      >
+                        {act.values?.length && targetEditing !== act.id ? (
+                          <TicketChip
+                            label={ticketCountLabel(act.valueType.toLowerCase())(act.values)}
+                            onClear={() => update({ values: [] })}
+                          />
+                        ) : (
+                          <MultiSelect
+                            name={`${act.id}-target`}
+                            selected={act.values || []}
+                            options={people}
+                            placeholder={act.type === 'assignee'
+                              ? (act.valueType === 'Roles' ? 'Select upto 10 roles' : 'Select upto 10 users')
+                              : (act.valueType === 'Roles' ? 'Select roles' : 'Select users')}
+                            // Same wording open or settled, so the label doesn't
+                            // change from "2 selected" to "2 users" on blur.
+                            formatLabel={ticketCountLabel(act.valueType.toLowerCase())}
+                            // "upto 10" in the placeholder is a real cap on the assignee action.
+                            onChange={(vals) => {
+                              if (act.type === 'assignee' && vals.length > TICKET_ASSIGNEE_MAX) return;
+                              update({ values: vals });
+                            }}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div className={styles.ticketAddWrap} ref={actionMenuRef}>
+                <button
+                  type="button"
+                  className={`${styles.ticketAddBtn}${canAddAction ? '' : ` ${styles.ticketAddBtnDisabled}`}`}
+                  disabled={!canAddAction}
+                  onClick={() => setActionMenuOpen((v) => !v)}
+                >
+                  <span className="material-symbols-outlined">add_circle</span>
+                  <span className={styles.ticketAddBtnLabel}>Add action</span>
+                </button>
+                {/* Portaled: the RHS panel body scrolls, which clipped this menu
+                    and pushed it behind the Save footer. */}
+                {actionMenuOpen && actionMenuRect && createPortal(
+                  <div
+                    ref={actionMenuPanelRef}
+                    className={styles.ticketActionMenu}
+                    style={{
+                      left: actionMenuRect.left,
+                      top: actionMenuRect.top,
+                      minWidth: actionMenuRect.width,
+                    }}
+                  >
+                    {remainingActionTypes.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={styles.ticketActionMenuItem}
+                        onClick={() => {
+                          setActions((prev) => [...prev, {
+                            id: `act-${nextId.current++}`,
+                            type: t.id,
+                            valueType: t.id === 'notify' ? 'Roles' : 'Users',
+                            values: [],
+                            status: '',
+                          }]);
+                          setActionMenuOpen(false);
+                        }}
+                      >
+                        {t.menuLabel}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body,
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {picker && (
+        <FieldPickerModal
+          onClose={() => setPicker(null)}
+          onSelectField={(value, name) => insertVariable(name || value)}
+          anchorEl={anchorRefs.current[picker.key]}
+          // No `placement` → the default flush-docked full-height position every
+          // other Fields trigger in the builder uses.
+          showTriggerFields
+        />
       )}
     </div>
   );
@@ -1316,6 +1854,9 @@ function InteractiveField({ field, onValueChange }) {
 
     case 'competitorList':
       return <CompetitorListField field={field} onValueChange={onValueChange} />;
+
+    case 'ticketBuilder':
+      return <TicketBuilderField field={field} onValueChange={onValueChange} />;
 
     case 'prefChannel': {
       const setPref = (keyId, value) => {
