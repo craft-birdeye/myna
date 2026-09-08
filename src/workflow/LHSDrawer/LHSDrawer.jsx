@@ -308,6 +308,7 @@ const AUTOMOTIVE_TASK_SUB_ITEMS = {
       'Update contact property',
       'Add contact to list',
       'Remove contact from list',
+      'Update contact preference',
     ],
   },
   'External apps-task': {
@@ -345,6 +346,7 @@ export const HEALTHCARE_TASK_SUB_ITEMS = {
       'Update contact property',
       'Add contact to list',
       'Remove contact from list',
+      'Update contact preference',
     ],
   },
   'External apps-task': {
@@ -391,6 +393,24 @@ export const REVIEWS_TASK_SUB_ITEMS = {
       {
         label: 'Select template',
         description: 'Choose which templates can be used as review responses',
+      },
+    ],
+  },
+  Contact: {
+    title: 'Contact',
+    items: [
+      {
+        label: 'Update contact preference',
+        description: 'Updates permissions on a contact record',
+      },
+    ],
+  },
+  Listings: {
+    title: 'Listings',
+    items: [
+      {
+        label: 'Discover competitor keywords',
+        description: 'Finds keywords your competitors rank for',
       },
     ],
   },
@@ -480,6 +500,8 @@ export const REVIEWS_TASK_SUB_ITEMS = {
 export const REVIEWS_TASK_CARDS = [
   { label: 'Custom', icon: 'dashboard_customize', action: 'drag' },
   { label: 'Review', icon: 'grade', action: 'chevron', subKey: 'Review' },
+  { label: 'Contact', icon: 'group', action: 'chevron', subKey: 'Contact' },
+  { label: 'Listings', icon: 'location_on', action: 'chevron', subKey: 'Listings' },
   { label: 'Referral', icon: 'featured_seasonal_and_gifts', action: 'chevron', subKey: 'Referral' },
   { label: 'Survey', icon: 'assignment_turned_in', action: 'chevron', subKey: 'Survey' },
   { label: 'Ticketing', icon: 'shapes', action: 'chevron', subKey: 'Ticketing' },

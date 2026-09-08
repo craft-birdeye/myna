@@ -29,6 +29,15 @@ export function findTagByName(name) {
   return _tags.find((t) => t.name.toLowerCase() === needle) || null;
 }
 
+/** Edits a tag in place; returns the updated tag (or null when the id is unknown). */
+export function updateTag(id, { name, description = '' }) {
+  const existing = _tags.find((t) => t.id === id);
+  if (!existing) return null;
+  const updated = { ...existing, name: (name || '').trim() || existing.name, description: description.trim() };
+  _tags = _tags.map((t) => (t.id === id ? updated : t));
+  return updated;
+}
+
 /** Adds a new tag to the shared library and returns it (or the existing match). */
 export function createTag({ name, description = '' }) {
   const trimmedName = (name || '').trim();
