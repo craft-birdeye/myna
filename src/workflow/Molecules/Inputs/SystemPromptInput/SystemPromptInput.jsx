@@ -186,7 +186,7 @@ export default function SystemPromptInput({
         suppressContentEditableWarning
         onInput={locked ? undefined : emitChange}
         onKeyDown={locked ? undefined : handleKeyDown}
-        data-placeholder="Enter prompt"
+        data-placeholder="Describe the persona of this agent"
       />
       {!locked && (
       <div className={styles.toolbar}>

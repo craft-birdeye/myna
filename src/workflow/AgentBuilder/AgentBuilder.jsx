@@ -314,7 +314,7 @@ const TASK_DROP_DEFAULTS = {
   'Remove contact from list': { description: 'Removes the contact from a list' },
   'Create Zendesk ticket': { description: 'Creates a ticket in Zendesk' },
   Zendesk: { description: 'Creates a ticket in Zendesk' },
-  FreshDesk: { description: 'FreshDesk CRM tool' },
+  FreshDesk: { description: 'FreshDesk CRM tool', selectedTools: ['freshdesk'] },
   'QuickBooks Online': { description: 'QuickBooks tool' },
   ServiceTitan: { description: 'ServiceTitan CRM tool' },
   Salesforce: { description: 'Creates or updates the contact record in Salesforce' },
@@ -348,6 +348,10 @@ const TASK_DROP_DEFAULTS = {
     description: 'Add tags to a review',
     selectedTools: ['assign-tags'],
   },
+  'Classify tags': {
+    description: 'Manage review tags and their descriptions',
+    selectedTools: ['classify-tags'],
+  },
   'Generate response': {
     description:
       'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
@@ -379,12 +383,13 @@ const DROPPED_TASK_COPY = {
     description: 'Creates or updates the contact record in Salesforce',
   },
   'Classify tags': {
-    taskName: 'Manage review tags',
-    description: 'Sets up the tags and descriptions the agent uses to tag reviews',
+    taskName: 'Classify tags',
+    description: 'Manage review tags and their descriptions',
   },
+  // Alias: normalizes nodes saved under the older palette label onto the current copy.
   'Manage review tags': {
-    taskName: 'Manage review tags',
-    description: 'Sets up the tags and descriptions the agent uses to tag reviews',
+    taskName: 'Classify tags',
+    description: 'Manage review tags and their descriptions',
   },
   'Extract review details': {
     taskName: 'Extract review details',

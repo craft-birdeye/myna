@@ -367,8 +367,8 @@ export const REVIEWS_TASK_SUB_ITEMS = {
         description: 'Add tags to a review',
       },
       {
-        label: 'Manage review tags',
-        description: 'Sets up the tags and descriptions the agent uses to tag reviews',
+        label: 'Classify tags',
+        description: 'Manage review tags and their descriptions',
       },
       {
         label: 'Generate response',
