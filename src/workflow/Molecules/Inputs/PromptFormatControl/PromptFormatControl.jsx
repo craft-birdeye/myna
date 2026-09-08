@@ -5,6 +5,7 @@ import { Icon } from '../../../../components/Icon/Icon';
 import styles from './PromptFormatControl.module.css';
 
 const OPEN_BY_KEY = new Map();
+const CLOSE_EVENT = 'prompt-format-close';
 const TOOLTIP_Z = 10100;
 
 function FormatIcon({ name }) {
@@ -13,9 +14,8 @@ function FormatIcon({ name }) {
 
 /**
  * Format toolbar control for System / User prompt editors.
- * Toggle via the format icon only — stays open until clicked again.
- * Options open to the right of Format (flip left if clipped); Format button stays put.
- * Bold / Italic / Underline | Bulleted list / Numbered list / Outdent / Indent.
+ * Toggle via Format icon; also closes when focusing another prompt or switching tabs.
+ * Options open to the right of Format (stretch to input end); Format button stays put.
  */
 export default function PromptFormatControl({
   getEditor,
@@ -32,9 +32,31 @@ export default function PromptFormatControl({
   const setOpen = useCallback((next) => {
     setOpenState((prev) => {
       const value = typeof next === 'function' ? next(prev) : next;
+      if (value) {
+        OPEN_BY_KEY.forEach((_, key) => {
+          if (key !== persistKey) OPEN_BY_KEY.set(key, false);
+        });
+        window.dispatchEvent(new CustomEvent(CLOSE_EVENT, { detail: { except: persistKey } }));
+      }
       OPEN_BY_KEY.set(persistKey, value);
       return value;
     });
+  }, [persistKey]);
+
+  // Sibling format bars close when this one opens.
+  useEffect(() => {
+    const onCloseOthers = (e) => {
+      if (e.detail?.except === persistKey) return;
+      setOpenState(false);
+      OPEN_BY_KEY.set(persistKey, false);
+    };
+    window.addEventListener(CLOSE_EVENT, onCloseOthers);
+    return () => window.removeEventListener(CLOSE_EVENT, onCloseOthers);
+  }, [persistKey]);
+
+  // Leaving a tab (unmount) must not leave this bar "stuck" open for remount.
+  useEffect(() => () => {
+    OPEN_BY_KEY.set(persistKey, false);
   }, [persistKey]);
 
   const measure = useCallback(() => {
@@ -76,6 +98,33 @@ export default function PromptFormatControl({
       window.removeEventListener('scroll', measure, true);
     };
   }, [open, measure]);
+
+  // Close when the user clicks another prompt field or a tab.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointerDown = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (triggerRef.current?.contains(t)) return;
+      if (t.closest('[data-prompt-format-popover]')) return;
+
+      const ourBox = triggerRef.current?.closest('[class*="inputBox"]');
+      const clickedBox = t.closest('[class*="inputBox"]');
+      if (clickedBox && ourBox && clickedBox !== ourBox) {
+        setOpen(false);
+        return;
+      }
+
+      if (
+        t.closest('[role="tab"]')
+        || t.closest('[class*="segmentedTab"]')
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown, true);
+    return () => document.removeEventListener('mousedown', onPointerDown, true);
+  }, [open, setOpen]);
 
   // Keep selection while the bar is open — only overwrite when the caret is still inside the editor.
   useEffect(() => {
@@ -158,6 +207,7 @@ export default function PromptFormatControl({
       {open && menuPos && createPortal(
         <div
           className={styles.popover}
+          data-prompt-format-popover=""
           style={{
             top: menuPos.top,
             left: menuPos.left,
