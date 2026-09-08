@@ -29,7 +29,7 @@ export default function UserPromptInput({
   disabled = false,
   autoHeight = false,
   minEditorHeight,
-  placeholder = 'Enter prompt',
+  placeholder = "Describe agent's task",
   resolveType = null,
   onOpenToolDrawer,
   onOpenTool,
