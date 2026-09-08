@@ -22,6 +22,9 @@
  */
 .popoverFlushDock {
   border-radius: 16px 0 0 16px;
+  /* The docked panel draws its own left border at this seam — drop ours so the two
+   * 1px borders don't stack into a visibly thicker line than the rest of the widget. */
+  border-right: none;
   box-shadow: none;
 }
 

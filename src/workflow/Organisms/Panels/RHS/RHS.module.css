@@ -14,6 +14,15 @@
   box-sizing: border-box;
 }
 
+/* Flush-dock (see FieldPickerModal's `ab-flush-dock`): the Fields popover docks to our
+ * left with its own touching corners already squared, so square ours off to match —
+ * this is the actual rounded white surface, not the plain `.agent-builder__rhs`
+ * positioning wrapper the class lands on. */
+:global(.ab-flush-dock) .rhs-panel {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
 .rhs-panel__body {
   flex: 1;
   min-height: 0;
