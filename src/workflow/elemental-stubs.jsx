@@ -8,8 +8,9 @@
  *
  * Styled to look clean but deliberately lightweight: no external deps.
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { buildFixedMenuStyle, MENU_Z_INDEX } from './menuPlacement';
 import './Molecules/Conditions/Conditions.css';
 
 const font = '"Roboto", arial, sans-serif';
@@ -217,20 +218,109 @@ export function SingleSelect({
   onChange,
   placeholder = 'Select',
   disabled,
+  /** Portal the menu to <body> so it isn't clipped by a scrolling panel (and doesn't
+   *  vanish behind the panel footer's Save CTA). Opt-in — callers inside a modal that
+   *  stacks above `MENU_Z_INDEX` should keep the default in-flow menu. */
+  portalMenu = false,
+  /** Adds a pinned search box to the menu — for long option lists (e.g. Delay's events). */
+  searchable = false,
+  /** Grey caption above the search box, e.g. "Select events". */
+  menuHeader,
+  searchPlaceholder = 'Search',
 }) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
+  const [query, setQuery] = useState('');
   const ref = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!open || disabled) return undefined;
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      // A portaled menu lives outside the trigger wrapper — check it too, or clicking an
+      // option would close the menu before its own onClick ran.
+      if (ref.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open, disabled]);
 
+  // Anchor the portaled menu to the trigger; the host panel scrolls, so re-measure.
+  useLayoutEffect(() => {
+    if (!portalMenu || !open || disabled || !ref.current) return undefined;
+    const updatePlacement = () => setMenuStyle(
+      // The header + search box need room the option count alone doesn't account for.
+      buildFixedMenuStyle(ref.current, options.length, MENU_Z_INDEX, searchable ? { maxHeight: 360 } : {}),
+    );
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [portalMenu, open, disabled, options.length, searchable]);
+
+  // Every open starts from an unfiltered list.
+  useEffect(() => {
+    if (!open) setQuery('');
+  }, [open]);
+
   const selectedLabel = options.find((o) => o.value === selected)?.label;
+
+  const q = query.trim().toLowerCase();
+  const visibleOptions = searchable && q
+    ? options.filter((o) => String(o.label).toLowerCase().includes(q))
+    : options;
+
+  const optionItems = visibleOptions.map((opt) => (
+    <li
+      key={opt.value}
+      role="option"
+      aria-selected={opt.value === selected}
+      className={`tc-dropdown__option${opt.value === selected ? ' tc-dropdown__option--selected' : ''}`}
+      onClick={() => { onChange?.(opt); setOpen(false); }}
+    >
+      {opt.label}
+      {opt.value === selected && (
+        <span className="material-symbols-outlined tc-dropdown__check">check</span>
+      )}
+    </li>
+  ));
+
+  const menuClassName = `tc-dropdown__menu${searchable ? ' tc-dropdown__menu--searchable' : ''}${portalMenu ? ' tc-dropdown__menu--portaled' : ''}`;
+
+  const menuList = searchable ? (
+    <div ref={menuRef} className={menuClassName} style={portalMenu ? menuStyle : undefined}>
+      {menuHeader && <div className="tc-dropdown__menu-header">{menuHeader}</div>}
+      <div className="tc-dropdown__search">
+        <span className="material-symbols-outlined">search</span>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
+          autoFocus
+        />
+      </div>
+      {optionItems.length > 0 ? (
+        <ul className="tc-dropdown__menu-list" role="listbox">{optionItems}</ul>
+      ) : (
+        <div className="tc-dropdown__empty">No results</div>
+      )}
+    </div>
+  ) : (
+    <ul
+      ref={menuRef}
+      className={menuClassName}
+      style={portalMenu ? menuStyle : undefined}
+      role="listbox"
+    >
+      {optionItems}
+    </ul>
+  );
 
   return (
     <div className="tc-dropdown" ref={ref}>
@@ -250,22 +340,9 @@ export function SingleSelect({
         <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
       </button>
       {open && !disabled && (
-        <ul className="tc-dropdown__menu" role="listbox">
-          {options.map((opt) => (
-            <li
-              key={opt.value}
-              role="option"
-              aria-selected={opt.value === selected}
-              className={`tc-dropdown__option${opt.value === selected ? ' tc-dropdown__option--selected' : ''}`}
-              onClick={() => { onChange?.(opt); setOpen(false); }}
-            >
-              {opt.label}
-              {opt.value === selected && (
-                <span className="material-symbols-outlined tc-dropdown__check">check</span>
-              )}
-            </li>
-          ))}
-        </ul>
+        portalMenu
+          ? (menuStyle ? createPortal(menuList, document.body) : null)
+          : menuList
       )}
     </div>
   );
@@ -283,19 +360,36 @@ export function MultiSelect({
   formatLabel,
   /** When set and something is selected, the chevron becomes a clear (✕). */
   onClear,
+  /** See SingleSelect — portal the menu so a scrolling panel can't clip it. */
+  portalMenu = false,
 }) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
   const ref = useRef(null);
+  const menuRef = useRef(null);
   const selectedSet = new Set(selected);
 
   useEffect(() => {
     if (!open || disabled) return undefined;
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open, disabled]);
+
+  useLayoutEffect(() => {
+    if (!portalMenu || !open || disabled || !ref.current) return undefined;
+    const updatePlacement = () => setMenuStyle(buildFixedMenuStyle(ref.current, options.length));
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [portalMenu, open, disabled, options.length]);
 
   const displayLabel = selected.length === 0
     ? placeholder
@@ -311,6 +405,36 @@ export function MultiSelect({
       : [...selected, value];
     onChange?.(next);
   };
+
+  const menuList = (
+    <ul
+      ref={menuRef}
+      className={`tc-dropdown__menu${portalMenu ? ' tc-dropdown__menu--portaled' : ''}`}
+      style={portalMenu ? menuStyle : undefined}
+      role="listbox"
+      aria-multiselectable="true"
+    >
+      {options.map((opt) => {
+        const isSelected = selectedSet.has(opt.value);
+        return (
+          <li
+            key={opt.value}
+            role="option"
+            aria-selected={isSelected}
+            className={`tc-dropdown__option tc-dropdown__option--multi${isSelected ? ' tc-dropdown__option--selected' : ''}`}
+            onClick={() => toggle(opt.value)}
+          >
+            <span className={`tc-dropdown__checkbox${isSelected ? ' tc-dropdown__checkbox--checked' : ''}`}>
+              {isSelected && (
+                <span className="material-symbols-outlined tc-dropdown__checkbox-icon">check</span>
+              )}
+            </span>
+            {opt.label}
+          </li>
+        );
+      })}
+    </ul>
+  );
 
   return (
     <div className="tc-dropdown" ref={ref}>
@@ -347,27 +471,9 @@ export function MultiSelect({
         )}
       </button>
       {open && !disabled && (
-        <ul className="tc-dropdown__menu" role="listbox" aria-multiselectable="true">
-          {options.map((opt) => {
-            const isSelected = selectedSet.has(opt.value);
-            return (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={isSelected}
-                className={`tc-dropdown__option tc-dropdown__option--multi${isSelected ? ' tc-dropdown__option--selected' : ''}`}
-                onClick={() => toggle(opt.value)}
-              >
-                <span className={`tc-dropdown__checkbox${isSelected ? ' tc-dropdown__checkbox--checked' : ''}`}>
-                  {isSelected && (
-                    <span className="material-symbols-outlined tc-dropdown__checkbox-icon">check</span>
-                  )}
-                </span>
-                {opt.label}
-              </li>
-            );
-          })}
-        </ul>
+        portalMenu
+          ? (menuStyle ? createPortal(menuList, document.body) : null)
+          : menuList
       )}
     </div>
   );

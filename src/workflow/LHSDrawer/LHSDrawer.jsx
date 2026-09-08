@@ -799,11 +799,14 @@ export const BRANCH_VARIANT_ITEMS = [
 ];
 
 export const DELAY_VARIANT_ITEMS = [
-  { label: 'For a set amount of time', description: 'Pause the workflow for a fixed duration before continuing.' },
-  { label: 'Until a calendar date', description: 'Wait until a specific calendar date to continue.' },
-  { label: 'Until a date property', description: 'Wait until a date stored on the contact or record.' },
-  { label: 'Until a date of the week', description: 'Wait until a specific day of the week to continue.' },
-  { label: 'Until a specific time of the day', description: 'Wait until a set time of day before continuing.' },
+  { label: 'Set amount of time', description: 'Pause the workflow for a fixed duration before continuing.' },
+  { label: 'Calendar date', description: 'Wait until a specific calendar date to continue.' },
+  { label: 'Update in the date field', description: 'Wait until a date stored on the contact or record.' },
+  { label: 'Day of the week', description: 'Wait until a specific day of the week to continue.' },
+  { label: 'Specific time of the day', description: 'Wait until a set time of day before continuing.' },
+  { label: 'Optimal send time and day', description: 'Wait until the best predicted send time and day for this contact.' },
+  { label: 'Event occurs', description: 'Wait until a specific event happens on the contact or record.' },
+  { label: 'DND window ends', description: "Wait until the contact's do-not-disturb window ends before continuing." },
 ];
 
 /** Compact card variants (label only) used by the tabbed accordion's `TriggerGroup` rows. */
@@ -818,11 +821,14 @@ export const DELAY_VARIANT_CARDS = DELAY_VARIANT_ITEMS.map((it) => ({
  *  handleDropNode, which reads the variant from the drag payload's `description`).
  *  Branch variants are seeded by AgentBuilder's branch scaffold, which owns the path structure. */
 export const DELAY_VARIANT_PRESETS = {
-  'For a set amount of time': 'set-time',
-  'Until a calendar date': 'calendar-date',
-  'Until a date property': 'date-property',
-  'Until a date of the week': 'day-of-week',
-  'Until a specific time of the day': 'time-of-day',
+  'Set amount of time': 'set-time',
+  'Calendar date': 'calendar-date',
+  'Update in the date field': 'date-property',
+  'Day of the week': 'day-of-week',
+  'Specific time of the day': 'time-of-day',
+  'Optimal send time and day': 'optimal-send-time',
+  'Event occurs': 'event-occurs',
+  'DND window ends': 'dnd-window-end',
 };
 
 /** Controls list rendered in the LHS drawer's "Controls" accordion — Branch/Delay expand

@@ -221,6 +221,75 @@
   z-index: 5200;
 }
 
+/* Searchable menu — pinned title + search box over a scrolling option list, so the
+   search field stays put instead of scrolling away with the options. */
+.tc-dropdown__menu--searchable {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0 4px;
+  overflow: hidden;
+}
+
+.tc-dropdown__menu-header {
+  flex-shrink: 0;
+  padding: 0 12px 8px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  color: #9e9e9e;
+}
+
+.tc-dropdown__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 36px;
+  margin: 0 12px 8px;
+  padding: 0 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.tc-dropdown__search .material-symbols-outlined {
+  font-size: 20px;
+  color: #9e9e9e;
+}
+
+.tc-dropdown__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+}
+
+.tc-dropdown__search input::placeholder {
+  color: #9ca3af;
+}
+
+.tc-dropdown__menu-list {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.tc-dropdown__empty {
+  padding: 10px 12px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #9e9e9e;
+}
+
 .tc-dropdown__option {
   display: flex;
   align-items: center;

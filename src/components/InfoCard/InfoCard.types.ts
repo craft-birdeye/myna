@@ -65,7 +65,7 @@ export const INFO_CARD_LAYOUT_COMPACT = {
   bottomSlot: 'relative mt-sm h-8 shrink-0',
   chip: 'absolute inset-0 flex items-center opacity-100 transition-opacity duration-150 group-hover:opacity-0',
   ctaWrap:
-    'absolute inset-0 flex items-center gap-sm pointer-events-none opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100',
+    'absolute inset-0 flex items-center justify-end gap-sm pointer-events-none opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100',
   cta: 'flex h-8 items-center justify-center whitespace-nowrap rounded-sm bg-primary px-md text-body text-white hover:bg-primary-hover',
   ctaSecondary:
     'flex h-8 items-center justify-center whitespace-nowrap rounded-sm border border-border-strong bg-surface px-md text-body text-text-primary hover:bg-surface-l2',

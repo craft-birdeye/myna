@@ -9,6 +9,7 @@ import LHSDrawer, {
 } from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
 import RHS from '../Organisms/Panels/RHS/RHS';
+import { formatDelaySummary } from '../Organisms/Panels/RHS/DelayBody';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
 import ShareModal from '../Organisms/Modals/ShareModal/ShareModal';
 import EmptyStates from '../Patterns/EmptyStates/EmptyStates';
@@ -2818,8 +2819,8 @@ export default function AgentBuilder({
     // `label` may be the parent group name ('Branch' / 'Delay') for the palette cards.
     const controlVariant = description || label;
 
-    // Delay dropped from one of the LHS Controls variant cards (For a set amount
-    // of time / Until a calendar date / …) — preselect that delay option.
+    // Delay dropped from one of the LHS Controls variant cards (Set amount of
+    // time / Calendar date / …) — preselect that delay option.
     // (Branch variants are handled by the scaffold block below since it owns the
     // branch/path structure the canvas renders.)
     if (effectiveType === 'delay' && DELAY_VARIANT_PRESETS[controlVariant]) {
@@ -3150,6 +3151,20 @@ export default function AgentBuilder({
     [selectedNodeId, handleNodeFieldChange]
   );
 
+  /**
+   * Delay Save — retitle the canvas card from the saved config ("Delay for 5 days",
+   * "Delay until Tuesday", …). `name` is one of the fields handleNodeFieldChange already
+   * mirrors into `data.title`, on the top-level list and inside branch paths alike.
+   */
+  const handleSaveDelayDetails = () => {
+    const id = selectedNodeId;
+    if (id) {
+      const summary = formatDelaySummary(nodeDetails[id]);
+      if (summary) handleNodeFieldChange(id, 'name', summary);
+    }
+    handleCloseDrawer();
+  };
+
   const handleSaveCustomProcedure = useCallback(() => {
     if (!selectedNodeId) return;
     const nodeData = nodeDetails[selectedNodeId] || {};
@@ -3464,7 +3479,7 @@ export default function AgentBuilder({
           product={product}
           bodyProps={{ initialValues: currentDetails, onFieldChange: activeFieldChange }}
           onClose={handleCloseDrawer}
-          onSave={handleCloseDrawer}
+          onSave={handleSaveDelayDetails}
         />
       );
     }

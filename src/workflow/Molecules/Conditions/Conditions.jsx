@@ -4,30 +4,9 @@ import { Icon } from '../../../components/Icon/Icon';
 import { Tooltip } from '../../../components/Tooltip/Tooltip';
 import VariableChip from '../Inputs/VariableChip/VariableChip';
 import { operatorNeedsValue } from '../../constants/conditionOperators';
+import { buildFixedMenuStyle, MENU_Z_INDEX } from '../../menuPlacement';
 import './Conditions.css';
 import styles from './Conditions.module.css';
-
-const MENU_Z_INDEX = 5200;
-const MENU_MAX_HEIGHT = 240;
-
-function buildFixedMenuStyle(triggerEl, optionCount, zIndex = MENU_Z_INDEX) {
-  if (!triggerEl) return null;
-  const rect = triggerEl.getBoundingClientRect();
-  const estimatedHeight = Math.min(optionCount * 36 + 8, MENU_MAX_HEIGHT);
-  const spaceBelow = window.innerHeight - rect.bottom - 8;
-  const spaceAbove = rect.top - 8;
-  const openUp = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
-
-  return {
-    position: 'fixed',
-    left: rect.left,
-    width: rect.width,
-    zIndex,
-    ...(openUp
-      ? { bottom: window.innerHeight - rect.top + 4, maxHeight: Math.min(MENU_MAX_HEIGHT, spaceAbove) }
-      : { top: rect.bottom + 4, maxHeight: Math.min(MENU_MAX_HEIGHT, spaceBelow) }),
-  };
-}
 
 function Dropdown({
   name,
