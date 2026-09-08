@@ -17,13 +17,22 @@ function FieldLabel({ children, required = false }) {
 }
 
 /**
- * Add tag — same shell as `AddInputFieldModal` so both read as one pattern.
- * `initialName` prefills from the tag picker's `Create tag "…"` row.
+ * Add / edit tag — same shell as `AddInputFieldModal` so both read as one pattern.
+ * `initialName` prefills from the tag picker's `Create tag "…"` row; `mode='edit'`
+ * comes from a chip's pencil and prefills both fields.
  */
-export default function CreateTagModal({ initialName = '', onClose, onAdd, zIndex = 2100 }) {
+export default function CreateTagModal({
+  initialName = '',
+  initialDescription = '',
+  mode = 'add',
+  onClose,
+  onAdd,
+  zIndex = 2100,
+}) {
   const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(initialDescription);
 
+  const isEdit = mode === 'edit';
   const canAdd = name.trim().length > 0;
 
   function handleAdd() {
@@ -34,12 +43,12 @@ export default function CreateTagModal({ initialName = '', onClose, onAdd, zInde
 
   return (
     <AeroFormModal
-      title="Add tag"
+      title={isEdit ? 'Edit tag' : 'Add tag'}
       subtitle={TAG_MODAL_SUBTITLE}
       learnMoreHref={TAGS_LEARN_MORE_HREF}
       onClose={onClose}
       onPrimary={handleAdd}
-      primaryLabel="Add tag"
+      primaryLabel={isEdit ? 'Save' : 'Add tag'}
       primaryDisabled={!canAdd}
       zIndex={zIndex}
       panelClassName="h-[360px]"
@@ -53,8 +62,7 @@ export default function CreateTagModal({ initialName = '', onClose, onAdd, zInde
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Tag name"
-            // Prefilled from the picker → the description is what's left to type.
-            autoFocus={!initialName}
+            autoFocus={isEdit || !initialName}
           />
         </label>
 
@@ -66,7 +74,8 @@ export default function CreateTagModal({ initialName = '', onClose, onAdd, zInde
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description"
             rows={3}
-            autoFocus={!!initialName}
+            // Name arrived prefilled from the picker → the description is what's left to type.
+            autoFocus={!isEdit && !!initialName}
           />
         </label>
       </div>

@@ -8078,6 +8078,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     tone: tpl.tone,
     chipLabel: tpl.valueProp,
     chipVariant: 'neutral' as const,
+    // Darker than the shared neutral-chip token (#555555) — scoped to this card only.
+    chipClassName: '!text-[#212121]',
     compact: Boolean(tpl.valueProp),
     actionLabel: 'Use agent' as const,
     onAction: () => onEditAgent?.(tpl.title),

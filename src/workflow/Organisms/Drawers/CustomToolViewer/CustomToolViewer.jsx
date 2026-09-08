@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { FormInput, TextArea, Toggle } from '../../../elemental-stubs';
+import { FormInput, TextArea, Toggle, SingleSelect } from '../../../elemental-stubs';
 function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
   React.useEffect(() => {
     if (isOpen) { document.body.style.overflow = 'hidden'; }
@@ -30,7 +30,7 @@ import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal.jsx
 import CreateTagModal from '../../Modals/CreateTagModal/CreateTagModal.jsx';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
-import { getTags, createTag, findTagByName } from '../../../services/tagService';
+import { getTags, createTag, updateTag, findTagByName } from '../../../services/tagService';
 import styles from './CustomToolViewer.module.css';
 
 // ─── Template picker data ─────────────────────────────────────────────────────
@@ -289,6 +289,238 @@ function SectionField({ field, onValueChange }) {
   );
 }
 
+/* ─── Competitor list field ─────────────────────────────────────────────── */
+
+/** Tinted avatar pairs; picked by name so a competitor keeps its color. */
+const COMPETITOR_TINTS = [
+  { bg: '#e8f5e9', fg: '#2e7d32' },
+  { bg: '#e3f2fd', fg: '#1565c0' },
+  { bg: '#fff3e0', fg: '#ef6c00' },
+  { bg: '#f3e5f5', fg: '#7b1fa2' },
+  { bg: '#fce4ec', fg: '#c2185b' },
+];
+
+function competitorTint(name) {
+  const sum = [...(name || '?')].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return COMPETITOR_TINTS[sum % COMPETITOR_TINTS.length];
+}
+
+const COMPETITOR_LIMIT_MSG = 'Only 5 competitors can be added. Please remove one to add another';
+
+/**
+ * "Track keywords from competitor domains" — a capped list of name + URL rows
+ * with hover edit/delete, plus an inline add/edit form. Rendered for
+ * `type: 'competitorList'` fields.
+ */
+function CompetitorListField({ field, onValueChange }) {
+  const maxItems = field.maxItems ?? 5;
+  const [competitors, setCompetitors] = useState(() =>
+    (Array.isArray(field.defaultValue) ? field.defaultValue : []).map((c) => ({ ...c })),
+  );
+  // null = no form; otherwise { mode: 'add' | 'edit', id?, name, url }
+  const [form, setForm] = useState(null);
+  // Competitor pending delete confirmation.
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const nextId = useRef(0);
+
+  useEffect(() => {
+    setCompetitors((Array.isArray(field.defaultValue) ? field.defaultValue : []).map((c) => ({ ...c })));
+    setForm(null);
+  }, [field.id, field.defaultValue]);
+
+  useEffect(() => {
+    onValueChange?.(field.id, competitors);
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competitors, field.id]);
+
+  const atLimit = competitors.length >= maxItems;
+  const canSubmit = Boolean(form?.name.trim() && form?.url.trim());
+  const isEdit = form?.mode === 'edit';
+
+  function submitForm() {
+    if (!canSubmit) return;
+    const name = form.name.trim();
+    const url = form.url.trim();
+    if (isEdit) {
+      setCompetitors((prev) => prev.map((c) => (c.id === form.id ? { ...c, name, url } : c)));
+    } else {
+      setCompetitors((prev) => [...prev, { id: `comp-new-${nextId.current++}`, name, url }]);
+    }
+    setForm(null);
+  }
+
+  // Shared by both entry points: an edit form swaps in for its own row, while
+  // the add form sits below the list.
+  const formCard = form ? (
+    <div className={styles.compForm}>
+      <span className={styles.compFormTitle}>{isEdit ? 'Edit competitor' : 'Add competitor'}</span>
+      <input
+        type="text"
+        className={styles.compFormInput}
+        placeholder="Enter competitor name"
+        value={form.name}
+        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+        autoFocus
+      />
+      <input
+        type="text"
+        className={styles.compFormInput}
+        placeholder="Enter URL"
+        value={form.url}
+        onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitForm(); } }}
+      />
+      <div className={styles.compFormActions}>
+        <button type="button" className={styles.compFormCancel} onClick={() => setForm(null)}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className={styles.compFormSubmit}
+          disabled={!canSubmit}
+          onClick={submitForm}
+        >
+          {isEdit ? 'Save' : 'Add'}
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className={styles.fieldWrap}>
+      <span className={styles.fieldLabel}>{field.label}</span>
+
+      <div className={styles.compList}>
+        {competitors.map((comp) => {
+          // Editing swaps this row's read view for the form, in place.
+          if (isEdit && form.id === comp.id) {
+            return <React.Fragment key={comp.id}>{formCard}</React.Fragment>;
+          }
+          const tint = competitorTint(comp.name);
+          return (
+            <div key={comp.id} className={styles.compRow}>
+              <span
+                className={styles.compAvatar}
+                style={{ background: tint.bg, color: tint.fg }}
+                aria-hidden
+              >
+                {(comp.name || '?').trim().charAt(0).toUpperCase()}
+              </span>
+              <div className={styles.compInfo}>
+                <Tooltip content={comp.name} variant="brief" side="top">
+                  <span className={styles.compName}>{comp.name}</span>
+                </Tooltip>
+                <span className={styles.compUrl}>{comp.url}</span>
+              </div>
+              <div className={styles.compActions}>
+                <Tooltip content="Edit" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.compActionBtn}
+                    aria-label={`Edit ${comp.name}`}
+                    onClick={() => setForm({ mode: 'edit', id: comp.id, name: comp.name, url: comp.url })}
+                  >
+                    <span className="material-symbols-outlined">edit</span>
+                  </button>
+                </Tooltip>
+                <Tooltip content="Delete" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.compActionBtn}
+                    aria-label={`Delete ${comp.name}`}
+                    onClick={() => setPendingDelete(comp)}
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {form?.mode === 'add' ? formCard : (
+        // Tooltip listens on its wrapper, so it still fires over a disabled button.
+        <Tooltip content={COMPETITOR_LIMIT_MSG} variant="detail" side="top" disabled={!atLimit}>
+          <button
+            type="button"
+            className={`${styles.compAddBtn}${atLimit ? ` ${styles.compAddBtnDisabled}` : ''}`}
+            disabled={atLimit}
+            onClick={() => setForm({ mode: 'add', name: '', url: '' })}
+          >
+            <span className="material-symbols-outlined">add_circle</span>
+            <span className={styles.compAddBtnLabel}>Add competitor</span>
+          </button>
+        </Tooltip>
+      )}
+
+      {/* Reuses AgentBuilder's global `ab-confirm-dialog` chrome (same as
+          "Delete agent?") so destructive confirms look the same everywhere. */}
+      {pendingDelete && createPortal(
+        <div
+          className="ab-confirm-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingDelete(null); }}
+        >
+          <div
+            className="ab-confirm-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="comp-delete-confirm-title"
+          >
+            <div className="ab-confirm-dialog__header">
+              <h2 id="comp-delete-confirm-title" className="ab-confirm-dialog__title">
+                Delete competitor?
+              </h2>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPendingDelete(null)}
+                className="ab-confirm-dialog__close"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <p className="ab-confirm-dialog__body">
+              Are you sure you want to delete <strong>{pendingDelete.name}</strong>?
+            </p>
+            <div className="ab-confirm-dialog__footer">
+              <button
+                type="button"
+                className="ab-confirm-dialog__cancel"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ab-confirm-dialog__primary ab-confirm-dialog__primary--danger"
+                onClick={() => {
+                  setCompetitors((prev) => prev.filter((c) => c.id !== pendingDelete.id));
+                  setForm((f) => (f?.id === pendingDelete.id ? null : f));
+                  setPendingDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+/** Contact-preference permission states — same set for every channel/category. */
+const PREF_NO_CHANGE = 'No change';
+const PREF_OPTIONS = [
+  { value: PREF_NO_CHANGE, label: 'No change' },
+  { value: 'Enable', label: 'Enable' },
+  { value: 'Disable', label: 'Disable' },
+];
+
 function InteractiveField({ field, onValueChange }) {
   const [textValue, setTextValue] = useState('');
   const [radioValue, setRadioValue] = useState('');
@@ -308,9 +540,11 @@ function InteractiveField({ field, onValueChange }) {
   const [selectedTags, setSelectedTags] = useState([]);
   const [tagQuery, setTagQuery] = useState('');
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
-  const [createTagModalOpen, setCreateTagModalOpen] = useState(false);
-  const [createTagName, setCreateTagName] = useState('');
+  // null = closed; otherwise { mode: 'add' | 'edit', id?, name, description }
+  const [tagModal, setTagModal] = useState(null);
   const [tagMenuRect, setTagMenuRect] = useState(null);
+  const [prefChannelOn, setPrefChannelOn] = useState(false);
+  const [prefValues, setPrefValues] = useState({});
   const fieldsBtnRef = useRef(null);
   const tagSelectRef = useRef(null);
   const tagMenuRef = useRef(null);
@@ -380,6 +614,19 @@ function InteractiveField({ field, onValueChange }) {
     // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTags, field.id, field.type]);
+
+  useEffect(() => {
+    if (field.type !== 'prefChannel') return;
+    if (!prefChannelOn) {
+      onValueChange?.(field.id, null);
+      return;
+    }
+    onValueChange?.(field.id, Object.fromEntries(
+      (field.prefKeys || []).map((p) => [p.label, prefValues[p.id] ?? PREF_NO_CHANGE]),
+    ));
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefChannelOn, prefValues, field.id, field.type]);
 
   useEffect(() => {
     if (field.type !== 'tag-select' || !tagDropdownOpen) return undefined;
@@ -932,16 +1179,27 @@ function InteractiveField({ field, onValueChange }) {
       // The picker's "Create tag" row hands off to the modal (prefilled) rather
       // than creating on the spot, so a description can be written with it.
       const openCreateModal = (prefill = '') => {
-        setCreateTagName(prefill);
         setTagDropdownOpen(false);
-        setCreateTagModalOpen(true);
+        setTagModal({ mode: 'add', name: prefill, description: '' });
       };
 
-      const commitNewTag = ({ name, description }) => {
+      const openEditModal = (tag) => {
+        setTagDropdownOpen(false);
+        setTagModal({ mode: 'edit', id: tag.id, name: tag.name, description: tag.description || '' });
+      };
+
+      const commitTagModal = ({ name, description }) => {
+        if (tagModal?.mode === 'edit') {
+          // Edits the library entry, so every chip pointing at this tag follows.
+          const updated = updateTag(tagModal.id, { name, description });
+          if (updated) {
+            setSelectedTags((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+          }
+          return;
+        }
         const created = createTag({ name, description });
         setSelectedTags((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
         setTagQuery('');
-        setCreateTagName('');
       };
 
       return (
@@ -973,7 +1231,18 @@ function InteractiveField({ field, onValueChange }) {
                     {tag.name}
                     <button
                       type="button"
+                      className={styles.tagChipEdit}
+                      aria-label={`Edit ${tag.name}`}
+                      // stopPropagation: the chip sits inside the input box, whose
+                      // click opens the picker.
+                      onClick={(e) => { e.stopPropagation(); openEditModal(tag); }}
+                    >
+                      <span className="material-symbols-outlined">edit</span>
+                    </button>
+                    <button
+                      type="button"
                       className={styles.tagChipRemove}
+                      aria-label={`Remove ${tag.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedTags((prev) => prev.filter((t) => t.id !== tag.id));
@@ -1032,12 +1301,52 @@ function InteractiveField({ field, onValueChange }) {
             </div>,
             document.body,
           )}
-          {createTagModalOpen && (
+          {tagModal && (
             <CreateTagModal
-              initialName={createTagName}
-              onClose={() => { setCreateTagModalOpen(false); setCreateTagName(''); }}
-              onAdd={commitNewTag}
+              mode={tagModal.mode}
+              initialName={tagModal.name}
+              initialDescription={tagModal.description}
+              onClose={() => setTagModal(null)}
+              onAdd={commitTagModal}
             />
+          )}
+        </div>
+      );
+    }
+
+    case 'competitorList':
+      return <CompetitorListField field={field} onValueChange={onValueChange} />;
+
+    case 'prefChannel': {
+      const setPref = (keyId, value) => {
+        setPrefValues((prev) => ({ ...prev, [keyId]: value }));
+      };
+
+      return (
+        <div className={styles.prefCard}>
+          <label className={styles.prefCardHeader}>
+            <input
+              type="checkbox"
+              checked={prefChannelOn}
+              onChange={(e) => setPrefChannelOn(e.target.checked)}
+              className={styles.optionInput}
+            />
+            <span className={styles.abCheckboxLabel}>{label}</span>
+          </label>
+          {prefChannelOn && (
+            <div className={styles.prefCardContent}>
+              {(field.prefKeys || []).map((pref) => (
+                <div key={pref.id} className={styles.fieldWrap}>
+                  <span className={styles.fieldLabel}>{pref.label}</span>
+                  <SingleSelect
+                    name={pref.id}
+                    selected={prefValues[pref.id] ?? PREF_NO_CHANGE}
+                    options={PREF_OPTIONS}
+                    onChange={(opt) => setPref(pref.id, opt.value)}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       );

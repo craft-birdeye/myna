@@ -352,6 +352,14 @@ const TASK_DROP_DEFAULTS = {
     description: 'Manage review tags and their descriptions',
     selectedTools: ['classify-tags'],
   },
+  'Update contact preference': {
+    description: 'Updates permissions on a contact record',
+    selectedTools: ['update-contact-preference'],
+  },
+  'Discover competitor keywords': {
+    description: 'Finds keywords your competitors rank for',
+    selectedTools: ['discover-competitor-keywords'],
+  },
   'Generate response': {
     description:
       'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',

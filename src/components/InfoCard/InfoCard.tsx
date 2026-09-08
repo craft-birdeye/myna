@@ -14,6 +14,7 @@ export function InfoCard({
   tone,
   chipLabel,
   chipVariant,
+  chipClassName,
   compact = false,
 }: InfoCardProps) {
   const layout = compact ? INFO_CARD_LAYOUT_COMPACT : INFO_CARD_LAYOUT
@@ -40,7 +41,7 @@ export function InfoCard({
         <div className={INFO_CARD_LAYOUT_COMPACT.bottomSlot}>
           {chipLabel ? (
             <div className={INFO_CARD_LAYOUT_COMPACT.chip}>
-              <Chip label={chipLabel} variant={chipVariant} />
+              <Chip label={chipLabel} variant={chipVariant} className={chipClassName} />
             </div>
           ) : null}
           <div className={INFO_CARD_LAYOUT_COMPACT.ctaWrap}>
@@ -72,7 +73,7 @@ export function InfoCard({
         <div className={INFO_CARD_LAYOUT.bottomShell}>
           {chipLabel ? (
             <div className={INFO_CARD_LAYOUT.chip}>
-              <Chip label={chipLabel} variant={chipVariant} />
+              <Chip label={chipLabel} variant={chipVariant} className={chipClassName} />
             </div>
           ) : null}
           <div className={INFO_CARD_LAYOUT.ctaShell}>

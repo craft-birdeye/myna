@@ -342,6 +342,9 @@ function computePosition(anchorEl, placement = 'dock') {
     : computeDockPosition(anchorEl, { fullHeight: true });
 }
 
+/** Plain global class so panel-internal CSS (outside this module) can react to flush-dock. */
+const FLUSH_DOCK_GLOBAL_CLASS = 'ab-flush-dock';
+
 /** The panel (if any) this picker is currently docked flush against. */
 function getDockedPanelEl(anchorEl, placement) {
   if (placement === 'dropdown') return null;
@@ -537,11 +540,15 @@ export default function FieldPickerModal({
   // Flush-dock: whatever panel we're actually docked against gets its near corners
   // squared off too, so the seam between it and this popover reads as one straight
   // line rather than a rounded notch. Self-contained — no caller needs to opt in.
+  // `FLUSH_DOCK_GLOBAL_CLASS` (plain, unscoped) is what actually reaches the visible
+  // rounded card — the docked element itself (`.agent-builder__rhs`) is just an
+  // unstyled positioning wrapper; its rounded white surface is a separate CSS-module
+  // child (`RHS.module.css`'s `.rhs-panel`) that can't see `styles.flushDockPanel`.
   const dockedPanelEl = getDockedPanelEl(anchorEl, placement);
   useEffect(() => {
     if (!dockedPanelEl) return undefined;
-    dockedPanelEl.classList.add(styles.flushDockPanel);
-    return () => dockedPanelEl.classList.remove(styles.flushDockPanel);
+    dockedPanelEl.classList.add(styles.flushDockPanel, FLUSH_DOCK_GLOBAL_CLASS);
+    return () => dockedPanelEl.classList.remove(styles.flushDockPanel, FLUSH_DOCK_GLOBAL_CLASS);
   }, [dockedPanelEl]);
 
   const clampPos = (top, left, width, maxHeight) => {
@@ -614,32 +621,6 @@ export default function FieldPickerModal({
         <div className={styles.titleBlock}>
           <div className={styles.titleRow}>
             <span className={styles.title}>Fields</span>
-            {showTriggerFields && (
-              <div
-                className={styles.completenessToggle}
-                role="radiogroup"
-                aria-label="Preview data completeness"
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={completeness === 'full'}
-                  className={`${styles.completenessBtn}${completeness === 'full' ? ` ${styles.completenessBtnActive}` : ''}`}
-                  onClick={() => setCompleteness('full')}
-                >
-                  Full
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={completeness === 'partial'}
-                  className={`${styles.completenessBtn}${completeness === 'partial' ? ` ${styles.completenessBtnActive}` : ''}`}
-                  onClick={() => setCompleteness('partial')}
-                >
-                  Partial
-                </button>
-              </div>
-            )}
           </div>
           <span className={styles.subtitle}>
             Select a field to add it to your prompt. It&apos;s replaced with the
