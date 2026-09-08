@@ -506,22 +506,28 @@
   gap: 10px;
   width: 100%;
   padding: 2px var(--tree-pad);
-  border: none;
+  border: 1px solid transparent;
   border-radius: 4px; /* Corner Radius/sm */
-  background: transparent;
+  background: #f2f4f7; /* surface/hover — full-row darker fill */
   cursor: pointer;
   text-align: left;
   box-sizing: border-box;
   min-width: 0;
-  transition: background-color 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .fieldRow:hover {
-  background: #f2f4f7; /* surface/hover */
+  background: #e5e9f0; /* surface/selected */
+  border-color: #1976d2; /* primary — full-row blue border */
+  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.16);
 }
 
 .fieldRow:active {
-  background: #e5e9f0; /* surface/selected */
+  background: #dfe3ea;
+  border-color: #1565c0; /* primary/hover */
 }
 
 .fieldRow:focus {
@@ -530,11 +536,12 @@
 
 .fieldRow:focus-visible {
   background: #e8f1fc; /* chip/info/bg */
-  outline: 2px solid #1976d2; /* primary */
-  outline-offset: -2px;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.16);
+  outline: none;
 }
 
-/* Hover / focus: reveal + Add. Brief Added flash stays visible ~1.5s. */
+/* Hover / focus: reveal + Add. Green check flashes ~3s after insert. */
 .fieldAction {
   display: inline-flex;
   align-items: center;
@@ -565,6 +572,14 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 }
 
+.fieldActionIconAdd {
+  color: #1976d2; /* primary / blue */
+}
+
+.fieldActionIconCheck {
+  color: #377e2c; /* chip/success / green */
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -584,14 +599,15 @@
 
 .fieldRow:hover .chip,
 .fieldRow:focus-visible .chip {
-  border-color: #1976d2; /* primary — interactive chip */
-  background: #ecf5fd;
-  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.16);
+  /* Keep chip stable — interactive blue border is on the full row. */
+  border-color: #d1e5f9;
+  background: #ffffff;
+  box-shadow: none;
 }
 
 .fieldRow:active .chip {
-  border-color: #1565c0; /* primary/hover */
-  background: #e8f1fc;
+  border-color: #d1e5f9;
+  background: #ffffff;
 }
 
 .chipSwatch {

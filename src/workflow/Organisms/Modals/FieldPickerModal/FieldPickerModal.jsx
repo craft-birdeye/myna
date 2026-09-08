@@ -106,10 +106,9 @@ function CatLabel({ text }) {
 }
 
 /**
- * A field reads as "added" for as long as its token is actually present in the prompt —
- * not a timed flash. Deleting the token flips it back to "+". Callers insert tokens keyed
- * by either the human name (`{{Business name}}`) or the raw dotted value
- * (`{{Business.name}}`) depending on the surface, so check both.
+ * Detect whether a field token is present in the prompt text.
+ * Callers insert tokens keyed by either the human name (`{{Business name}}`) or the
+ * raw dotted value (`{{Business.name}}`) depending on the surface, so check both.
  */
 function isFieldInsertedIn(field, insertedText) {
   if (!insertedText) return false;
@@ -119,15 +118,35 @@ function isFieldInsertedIn(field, insertedText) {
   );
 }
 
+const ADDED_FLASH_MS = 3000;
+
 function FieldLeaf({ field, onSelect, insertedText = '' }) {
-  const isAdded = isFieldInsertedIn(field, insertedText);
+  const isInserted = isFieldInsertedIn(field, insertedText);
+  const wasInsertedRef = useRef(isInserted);
+  const [showCheck, setShowCheck] = useState(false);
   const sample = formatSample(field.sample, field.valueType);
+
+  // Flash the green tick for 3s after a new insert, then revert to "+".
+  useEffect(() => {
+    if (isInserted && !wasInsertedRef.current) {
+      wasInsertedRef.current = true;
+      setShowCheck(true);
+      const t = window.setTimeout(() => setShowCheck(false), ADDED_FLASH_MS);
+      return () => window.clearTimeout(t);
+    }
+    if (!isInserted) {
+      wasInsertedRef.current = false;
+      setShowCheck(false);
+    }
+    return undefined;
+  }, [isInserted]);
+
   return (
     <button
       type="button"
-      className={`${styles.fieldRow}${isAdded ? ` ${styles.fieldRowAdded}` : ''}`}
+      className={`${styles.fieldRow}${showCheck ? ` ${styles.fieldRowAdded}` : ''}`}
       onClick={() => onSelect?.(field.value, field.name)}
-      aria-label={isAdded ? `${field.name} added` : `Add ${field.name}`}
+      aria-label={showCheck ? `${field.name} added` : `Add ${field.name}`}
     >
       <FieldChip name={field.name} />
       <span
@@ -138,8 +157,12 @@ function FieldLeaf({ field, onSelect, insertedText = '' }) {
         {sample}
       </span>
       <span className={styles.fieldAction} aria-hidden>
-        <span className={`material-symbols-outlined ${styles.fieldActionIcon}`}>
-          {isAdded ? 'check' : 'add'}
+        <span
+          className={`material-symbols-outlined ${styles.fieldActionIcon} ${
+            showCheck ? styles.fieldActionIconCheck : styles.fieldActionIconAdd
+          }`}
+        >
+          {showCheck ? 'check' : 'add'}
         </span>
       </span>
     </button>
