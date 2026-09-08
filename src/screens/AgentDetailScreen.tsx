@@ -8819,7 +8819,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                               key={`${row.name}-${row.status}`}
                               role="presentation"
                               onClick={() => openAgentInstanceDetails(row)}
-                              className="group relative flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
+                              // One gap for the whole card body instead of per-block
+                              // margins, so title/author/description/footer are evenly spaced.
+                              className="group relative flex h-full min-w-0 cursor-pointer flex-col gap-md overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
                             >
                               <div className="flex min-w-0 items-start gap-sm">
                                 <LibraryCardIcon glyph={getAgentInstanceCardGlyph(agentName, row.name)} />
@@ -8830,28 +8832,44 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                       text={row.name}
                                       className="line-clamp-2 min-w-0 text-body leading-[22px] tracking-[-0.28px] text-text-primary"
                                     />
-                                    <div className="mt-xs hidden min-[1400px]:block">{authorMetaRow}</div>
                                   </div>
                                   <Chip
                                     label={row.status}
                                     variant={STATUS_VARIANT[row.status] ?? 'neutral'}
-                                    showDot={row.status !== 'Draft'}
+                                    showDot={false}
                                   />
                                 </div>
                               </div>
 
-                              <div className="mt-xs min-[1400px]:hidden">{authorMetaRow}</div>
+                              {/* Always flush to the card edge rather than indented under
+                                  the title, so it gets the full width and stops truncating. */}
+                              <div className="min-w-0">{authorMetaRow}</div>
 
                               {cardDescription ? (
                                 <TruncatedTooltipText
                                   as="p"
                                   text={cardDescription}
-                                  className="mt-xl mb-lg line-clamp-2 text-[13px] leading-[20px] text-text-secondary"
+                                  className="line-clamp-2 text-[13px] leading-[20px] text-text-secondary"
                                 />
                               ) : null}
 
-                              <div className="mt-auto flex min-w-0 items-end gap-sm pt-md">
-                                <div className="flex shrink-0 items-center gap-sm" onClick={(e) => e.stopPropagation()}>
+                              {/* Locations sit left and stay put; the actions live on the
+                                  right and only surface on hover. They keep their space at
+                                  opacity-0 so the card height doesn't shift. */}
+                              <div className="mt-auto flex min-w-0 items-center gap-sm">
+                                <div className="flex min-w-0 flex-1 overflow-hidden">
+                                  {locationLabel ? (
+                                    <TruncatedTooltipText
+                                      text={locationLabel}
+                                      tooltipClassName="min-w-0 max-w-full overflow-hidden"
+                                      className="min-w-0 max-w-full truncate text-small text-text-tertiary"
+                                    />
+                                  ) : null}
+                                </div>
+                                <div
+                                  className="pointer-events-none flex shrink-0 items-center gap-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <button
                                     type="button"
                                     onClick={() => openAgentInstanceEditor(row)}
@@ -8868,15 +8886,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                                   </button>
                                   <AgentInstanceMoreMenu row={row} items={agentInstanceCardOverflowMenuItems} />
                                 </div>
-                                {locationLabel ? (
-                                  <div className="flex min-w-0 flex-1 justify-end overflow-hidden">
-                                    <TruncatedTooltipText
-                                      text={locationLabel}
-                                      tooltipClassName="min-w-0 max-w-full overflow-hidden"
-                                      className="min-w-0 max-w-full truncate text-small text-text-tertiary"
-                                    />
-                                  </div>
-                                ) : null}
                               </div>
                             </div>
                           )
