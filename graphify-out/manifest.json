@@ -4848,9 +4848,9 @@
     "semantic_hash": "0352474ba2918efe13895edbc3780d94"
   },
   "src/workflow/AgentBuilder/AgentBuilder.jsx": {
-    "mtime": 1788801275.3803818,
-    "seen": 1788839653.351108,
-    "ast_hash": "39d497ae1691f4810ef078f6f194e241",
+    "mtime": 1788841502.2224622,
+    "seen": 1788841544.270786,
+    "ast_hash": "4e9b1ee8975dac569b765bf3c5dd8985",
     "semantic_hash": ""
   },
   "src/workflow/AgentBuilder/AgentBuilder.stories.jsx": {
@@ -5424,9 +5424,9 @@
     "semantic_hash": ""
   },
   "src/workflow/Molecules/Inputs/SystemPromptInput/SystemPromptInput.jsx": {
-    "mtime": 1788839625.2550838,
-    "seen": 1788839653.351181,
-    "ast_hash": "ac12761275238529644dc81989025609",
+    "mtime": 1788845118.2960804,
+    "seen": 1788845137.461174,
+    "ast_hash": "8332d962ad0323ffa9ae0be3baf8349a",
     "semantic_hash": ""
   },
   "src/workflow/Molecules/Inputs/SystemPromptInput/SystemPromptInput.stories.jsx": {
@@ -5454,9 +5454,9 @@
     "semantic_hash": "8aa3c2db57324b64b4666b9f9f7e5dd7"
   },
   "src/workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.jsx": {
-    "mtime": 1788839625.255084,
-    "seen": 1788839653.3511848,
-    "ast_hash": "3e02f1c57538c2abc3aafd9b2a29d8d5",
+    "mtime": 1788845118.2968662,
+    "seen": 1788845137.46118,
+    "ast_hash": "c95d7fdb8982f13cad0021d1def378cd",
     "semantic_hash": ""
   },
   "src/workflow/Molecules/Inputs/UserPromptInput/UserPromptInput.stories.jsx": {
@@ -5676,9 +5676,9 @@
     "semantic_hash": "de5993f639b47d5d8d90430b0da34e15"
   },
   "src/workflow/Organisms/Drawers/CustomToolViewer/CustomToolViewer.jsx": {
-    "mtime": 1788801275.3850152,
-    "seen": 1788839653.351212,
-    "ast_hash": "be41ebbb997da3cea7ec40364b512176",
+    "mtime": 1788845271.7190087,
+    "seen": 1788845292.783148,
+    "ast_hash": "b47d4b52087790d3c460c6681f578549",
     "semantic_hash": ""
   },
   "src/workflow/Organisms/Drawers/HandleResponseDrawer/HandleResponseDrawer.jsx": {
@@ -6006,9 +6006,9 @@
     "semantic_hash": "6ac47a91ebc0b0f2cb8d66d346947328"
   },
   "src/workflow/Organisms/Panels/RHS/EntityTaskBody.jsx": {
-    "mtime": 1788069567.1921737,
-    "seen": 1788839653.351255,
-    "ast_hash": "117a9fb43f78e33b349dbd87bbc3b244",
+    "mtime": 1788845075.0651972,
+    "seen": 1788845104.3817532,
+    "ast_hash": "147d779bdde8633ed0ba037ebfa1ac06",
     "semantic_hash": ""
   },
   "src/workflow/Organisms/Panels/RHS/EntityTriggerBody.jsx": {
@@ -7641,6 +7641,18 @@
     "mtime": 1788801275.3937347,
     "seen": 1788839653.3512902,
     "ast_hash": "5069594131ea73bb23fe8a3780a25da2",
+    "semantic_hash": ""
+  },
+  "src/workflow/Organisms/Panels/RHS/ExternalToolDetails.jsx": {
+    "mtime": 1788845078.9596102,
+    "seen": 1788845104.3817549,
+    "ast_hash": "24a3625c018114d4949cf1e69876ee48",
+    "semantic_hash": ""
+  },
+  "src/workflow/data/externalToolConfigs.js": {
+    "mtime": 1788844885.6015105,
+    "seen": 1788844919.190664,
+    "ast_hash": "93a275605301b00e6ba7ce0a0cd3eca1",
     "semantic_hash": ""
   }
 }
