@@ -391,6 +391,11 @@ export const REVIEWS_TASK_SUB_ITEMS = {
           'Sends the response automatically or holds it for approval',
       },
       {
+        label: 'Handle response',
+        description:
+          'Decide what the agent will do with the response composed for a review — have a human in the loop or post it directly',
+      },
+      {
         label: 'Select template',
         description: 'Choose which templates can be used as review responses',
       },
@@ -411,6 +416,10 @@ export const REVIEWS_TASK_SUB_ITEMS = {
       {
         label: 'Discover competitor keywords',
         description: 'Finds keywords your competitors rank for',
+      },
+      {
+        label: 'Discover business keywords',
+        description: 'Finds high-impact keywords for your business category and location',
       },
     ],
   },
@@ -437,6 +446,15 @@ export const REVIEWS_TASK_SUB_ITEMS = {
       {
         label: 'Send survey request email',
         description: 'Sends survey emails to your contacts',
+      },
+    ],
+  },
+  Social: {
+    title: 'Social',
+    items: [
+      {
+        label: 'Localize media',
+        description: 'Adds location details to your images before publishing',
       },
     ],
   },
@@ -504,6 +522,7 @@ export const REVIEWS_TASK_CARDS = [
   { label: 'Listings', icon: 'location_on', action: 'chevron', subKey: 'Listings' },
   { label: 'Referral', icon: 'featured_seasonal_and_gifts', action: 'chevron', subKey: 'Referral' },
   { label: 'Survey', icon: 'assignment_turned_in', action: 'chevron', subKey: 'Survey' },
+  { label: 'Social', icon: 'workspaces', action: 'chevron', subKey: 'Social' },
   { label: 'Ticketing', icon: 'shapes', action: 'chevron', subKey: 'Ticketing' },
   { label: 'External apps', icon: 'dashboard_customize', action: 'chevron', subKey: 'External apps-task' },
   { label: 'General', icon: 'grid_view', action: 'chevron', subKey: 'General' },
@@ -583,6 +602,7 @@ const READONLY_TASK_SUBMENUS = new Set([
   'Referral',
   'Survey',
   'Surveys',
+  'Social',
   'General',
   'External apps-task',
 ]);

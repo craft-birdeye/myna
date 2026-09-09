@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { MultiSelect, SingleSelect } from '../../../elemental-stubs';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { MessageTemplateModal } from '../../../../components/MessageTemplateModal/MessageTemplateModal';
-import { getTemplateTitle } from '../../../../data/messageTemplateLibrary';
+import { formatTemplateSelection } from '../../../../data/messageTemplateLibrary';
 import { buildFixedMenuStyle } from '../../../menuPlacement';
 import '../../../Molecules/Conditions/Conditions.css';
 import styles from './DelayBody.module.css';
@@ -416,8 +416,8 @@ function TemplateField({ label, value, kind, onOpen, disabled }) {
           aria-haspopup="dialog"
           disabled={disabled}
         >
-          <span className={`tc-dropdown__value${value ? '' : ' tc-dropdown__value--placeholder'}`}>
-            {getTemplateTitle(kind, value) || 'Select'}
+          <span className={`tc-dropdown__value${value?.length ? '' : ' tc-dropdown__value--placeholder'}`}>
+            {formatTemplateSelection(kind, value) || 'Select'}
           </span>
           <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
         </button>
@@ -742,8 +742,10 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
   const [reviewSource, setReviewSource] = useState(initialValues.reviewSource ?? 'google');
   const [reviewRating, setReviewRating] = useState(initialValues.reviewRating ?? '4');
   const [surveyId, setSurveyId] = useState(initialValues.surveyId ?? '');
-  const [emailTemplate, setEmailTemplate] = useState(initialValues.emailTemplate ?? '');
-  const [textTemplate, setTextTemplate] = useState(initialValues.textTemplate ?? '');
+  // Multi-select: a list of template ids (tolerates a single saved id from the earlier picker).
+  const asIdList = (saved) => (Array.isArray(saved) ? saved : saved ? [saved] : []);
+  const [emailTemplate, setEmailTemplate] = useState(() => asIdList(initialValues.emailTemplate));
+  const [textTemplate, setTextTemplate] = useState(() => asIdList(initialValues.textTemplate));
   /** null | 'email' | 'text' — which template library the picker is showing. */
   const [templatePicker, setTemplatePicker] = useState(null);
 
@@ -780,13 +782,13 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
   const handleUnitChange = (val) => { setTimeUnit(val); onFieldChange?.('unit', val); };
   const handleAddBranchChange = (checked) => { setAddBranch(checked); onFieldChange?.('addBranch', checked); };
 
-  const handleTemplatePicked = (template) => {
+  const handleTemplatesChange = (ids) => {
     if (templatePicker === 'text') {
-      setTextTemplate(template.id);
-      onFieldChange?.('textTemplate', template.id);
+      setTextTemplate(ids);
+      onFieldChange?.('textTemplate', ids);
     } else {
-      setEmailTemplate(template.id);
-      onFieldChange?.('emailTemplate', template.id);
+      setEmailTemplate(ids);
+      onFieldChange?.('emailTemplate', ids);
     }
   };
 
@@ -1114,8 +1116,9 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
       <MessageTemplateModal
         open={templatePicker !== null}
         kind={templatePicker ?? 'text'}
+        selected={templatePicker === 'text' ? textTemplate : emailTemplate}
         onClose={() => setTemplatePicker(null)}
-        onSelect={handleTemplatePicked}
+        onChange={handleTemplatesChange}
       />
     </div>
   );

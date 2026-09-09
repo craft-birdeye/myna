@@ -5,8 +5,10 @@ export interface MessageTemplateModalProps {
   /** Drives the title, search placeholder and which seeded library is shown. */
   kind: TemplateKind
   onClose: () => void
-  /** Picking a row commits immediately — the popup has no footer. */
-  onSelect: (template: MessageTemplate) => void
+  /** Ids of the picked templates. */
+  selected?: string[]
+  /** Multi-select — a row toggles immediately, so the popup has no footer. */
+  onChange: (ids: string[]) => void
   /** Override the seeded library (defaults to `getTemplateLibrary(kind)`). */
   categories?: TemplateCategory[]
   templates?: MessageTemplate[]
@@ -43,6 +45,9 @@ export const MESSAGE_TEMPLATE_LAYOUT = {
   railCount: 'shrink-0 text-body',
   list: 'min-h-0 flex-1 overflow-y-auto px-lg',
   row: 'flex w-full items-center gap-md border-b border-border py-md text-left last:border-0 hover:bg-surface-hover',
+  checkbox: 'flex size-[18px] shrink-0 items-center justify-center rounded-[2px] border transition-colors',
+  checkboxOn: 'border-primary bg-primary',
+  checkboxOff: 'border-control-border bg-surface',
   /** Mini rendering of the message itself — deliberately below the type scale, so it reads
    *  as a shrunken preview of the sent text rather than copy. */
   thumb: 'h-[72px] w-[96px] shrink-0 overflow-hidden rounded-sm bg-surface-l2 p-xs',

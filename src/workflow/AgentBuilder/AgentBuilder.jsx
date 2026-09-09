@@ -33,7 +33,7 @@ import QueryConfigDrawer from '../Organisms/Drawers/QueryConfigDrawer/QueryConfi
 import AssignContactStatusDrawer from '../Organisms/Drawers/AssignContactStatusDrawer/AssignContactStatusDrawer';
 import AssignConversationDrawer from '../Organisms/Drawers/AssignConversationDrawer/AssignConversationDrawer';
 import AssignConversationStatusDrawer from '../Organisms/Drawers/AssignConversationStatusDrawer/AssignConversationStatusDrawer';
-import HandleResponseDrawer, { isHandleResponseConfigComplete } from '../Organisms/Drawers/HandleResponseDrawer/HandleResponseDrawer';
+import HandleResponseDrawer, { isHandleResponseConfigComplete, isHandleResponseTool } from '../Organisms/Drawers/HandleResponseDrawer/HandleResponseDrawer';
 import ToolLibraryDrawer from '../Organisms/Drawers/ToolLibraryDrawer/ToolLibraryDrawer';
 import AddToolDrawer from '../Organisms/Drawers/AddToolDrawer/AddToolDrawer';
 import {
@@ -361,25 +361,37 @@ const TASK_DROP_DEFAULTS = {
     description: 'Finds keywords your competitors rank for',
     selectedTools: ['discover-competitor-keywords'],
   },
+  'Discover business keywords': {
+    description: 'Finds high-impact keywords for your business category and location',
+    selectedTools: ['discover-business-keywords'],
+  },
   'Create ticket in Birdeye': {
     description: 'Creates a Birdeye ticket for a review or survey response',
     selectedTools: ['create-ticket-birdeye'],
+  },
+  'Localize media': {
+    description: 'Adds location details to your images before publishing',
+    selectedTools: ['localize-media'],
   },
   'Generate response': {
     description:
       'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
   },
+  'Handle response': {
+    description:
+      'Decide what the agent will do with the response composed for a review — have a human in the loop or post it directly',
+    selectedTools: ['handle-response'],
+  },
+  'Select template': {
+    description: 'Choose which templates can be used as review responses',
+    selectedTools: ['select-template'],
+  },
   'Publish response': {
     description:
       'Sends the response automatically or holds it for approval',
-    selectedTools: ['handle-response'],
+    selectedTools: ['publish-response'],
   },
   'Route response for approval or publish': {
-    description:
-      'Sends the response automatically or holds it for approval',
-    selectedTools: ['handle-response'],
-  },
-  'Handle response': {
     description:
       'Sends the response automatically or holds it for approval',
     selectedTools: ['handle-response'],
@@ -561,7 +573,7 @@ function isTaskConfigIncomplete(_item, _details = {}) {
  */
 function taskHasToolConfigError(details = {}) {
   const tools = details.selectedTools || [];
-  return tools.includes('handle-response') && !isHandleResponseConfigComplete(details.handleResponse);
+  return tools.some(isHandleResponseTool) && !isHandleResponseConfigComplete(details.handleResponse);
 }
 
 function getNodeBlockHeight(item, nodeId, nodeDetails, product = 'automotive') {
@@ -3602,7 +3614,7 @@ export default function AgentBuilder({
       );
     }
 
-    if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).includes('handle-response'))) {
+    if (data.hasAiIcon || (data.subtype === 'Custom' && !(currentDetails.selectedTools || []).some(isHandleResponseTool))) {
       const llmTaskOption2 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option2';
       const llmTaskOption3 = llmTaskExplorationLayout && llmTaskLayoutOption === 'option3';
       // R1/R2/R3/R4 layouts are scoped to the Review response agent's exploration chrome
@@ -3756,7 +3768,7 @@ export default function AgentBuilder({
             if (toolId === 'assign-contact-status') { setAssignContactStatusToolOpen(true); return; }
             if (toolId === 'assign-conversation') { setAssignConversationToolOpen(true); return; }
             if (toolId === 'assign-conversation-status') { setAssignConversationStatusToolOpen(true); return; }
-            if (toolId === 'handle-response') { setHandleResponseToolOpen(true); return; }
+            if (isHandleResponseTool(toolId)) { setHandleResponseToolOpen(true); return; }
             getCustomToolsByIds([toolId]).then((tools) => {
               if (tools[0]) setViewingTool(tools[0]);
             });

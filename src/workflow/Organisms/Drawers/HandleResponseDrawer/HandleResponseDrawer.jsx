@@ -4,6 +4,12 @@ import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons';
 import './HandleResponseDrawer.css';
 
+/** Tools whose config is this form — `publish-response` is the same capability under the
+ *  name its own action card uses. */
+export const HANDLE_RESPONSE_TOOL_IDS = ['handle-response', 'publish-response'];
+
+export const isHandleResponseTool = (toolId) => HANDLE_RESPONSE_TOOL_IDS.includes(toolId);
+
 export const RESPONSE_HANDLING_OPTIONS = [
   {
     value: 'post-directly',
@@ -194,7 +200,7 @@ export function HandleResponseForm({
       <div className="hrd__body">
         <div className="hrd__field">
           <span className="hrd__label">
-            How do you want to respond?<span className="hrd__required"> *</span>
+            Type of response<span className="hrd__required"> *</span>
           </span>
           <div className="hrd__radios">
             <label className="hrd__radio hrd__radio--compact">
@@ -270,7 +276,7 @@ export function HandleResponseForm({
                   name={`${namePrefix}-templates`}
                   selected={templateIds}
                   options={RESPONSE_TEMPLATE_OPTIONS}
-                  placeholder="Select templates"
+                  placeholder="Select upto 10 templates"
                   onChange={setTemplateIds}
                 />
               </div>

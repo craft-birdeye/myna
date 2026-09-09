@@ -9,7 +9,8 @@ export function MessageTemplateModal({
   open,
   kind,
   onClose,
-  onSelect,
+  selected = [],
+  onChange,
   categories,
   templates,
 }: MessageTemplateModalProps) {
@@ -131,25 +132,32 @@ export function MessageTemplateModal({
         </div>
 
         <div className={L.list}>
-          {visible.map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              onClick={() => {
-                onSelect(template)
-                onClose()
-              }}
-              className={L.row}
-            >
-              <div className={L.thumb}>
-                <p className={L.thumbText}>{template.body}</p>
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className={L.rowTitle}>{template.title}</h3>
-                <p className={L.rowBody}>{template.body}</p>
-              </div>
-            </button>
-          ))}
+          {visible.map((template) => {
+            const checked = selected.includes(template.id)
+            return (
+              <button
+                key={template.id}
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                onClick={() => onChange(
+                  checked ? selected.filter((id) => id !== template.id) : [...selected, template.id],
+                )}
+                className={L.row}
+              >
+                <span className={`${L.checkbox} ${checked ? L.checkboxOn : L.checkboxOff}`}>
+                  {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
+                </span>
+                <div className={L.thumb}>
+                  <p className={L.thumbText}>{template.body}</p>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className={L.rowTitle}>{template.title}</h3>
+                  <p className={L.rowBody}>{template.body}</p>
+                </div>
+              </button>
+            )
+          })}
 
           {visible.length === 0 && (
             <p className="py-2xl text-center text-body text-text-secondary">No templates found.</p>

@@ -364,12 +364,26 @@ export function MultiSelect({
   portalMenu = false,
   /** When set, prepends a row that checks/clears every option, e.g. "Select all". */
   selectAllLabel,
+  /** Pinned search box over the option list. */
+  searchable = false,
+  searchPlaceholder = 'Search',
+  /** `(ids) => string` caption above the search box; falls back to `placeholder`. */
+  menuHeaderLabel,
+  /** When set, picks are staged and only committed (onChange) when this footer button is
+   *  pressed — the menu owns the draft while it's open. */
+  applyLabel,
 }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState(selected);
   const ref = useRef(null);
   const menuRef = useRef(null);
-  const selectedSet = new Set(selected);
+
+  // With an Apply footer the menu edits a draft; without one it edits `selected` directly.
+  const staged = Boolean(applyLabel);
+  const current = staged && open ? draft : selected;
+  const selectedSet = new Set(current);
 
   useEffect(() => {
     if (!open || disabled) return undefined;
@@ -381,10 +395,20 @@ export function MultiSelect({
     return () => document.removeEventListener('mousedown', handler);
   }, [open, disabled]);
 
+  useEffect(() => {
+    if (!open) return;
+    setQuery('');
+    setDraft(selected);
+    // `selected` intentionally read only at open time — a staged menu owns its draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   useLayoutEffect(() => {
     if (!portalMenu || !open || disabled || !ref.current) return undefined;
     const updatePlacement = () => setMenuStyle(
-      buildFixedMenuStyle(ref.current, options.length + (selectAllLabel ? 1 : 0)),
+      buildFixedMenuStyle(ref.current, options.length + (selectAllLabel ? 1 : 0), MENU_Z_INDEX, {
+        maxHeight: searchable || applyLabel ? 420 : undefined,
+      }),
     );
     updatePlacement();
     window.addEventListener('resize', updatePlacement);
@@ -393,7 +417,7 @@ export function MultiSelect({
       window.removeEventListener('resize', updatePlacement);
       window.removeEventListener('scroll', updatePlacement, true);
     };
-  }, [portalMenu, open, disabled, options.length, selectAllLabel]);
+  }, [portalMenu, open, disabled, options.length, selectAllLabel, searchable, applyLabel]);
 
   const displayLabel = selected.length === 0
     ? placeholder
@@ -403,15 +427,17 @@ export function MultiSelect({
         ? (options.find((o) => o.value === selected[0])?.label || '1 selected')
         : `${selected.length} selected`;
 
-  const toggle = (value) => {
-    const next = selectedSet.has(value)
-      ? selected.filter((v) => v !== value)
-      : [...selected, value];
-    onChange?.(next);
+  const commit = (next) => {
+    if (staged) setDraft(next);
+    else onChange?.(next);
   };
 
-  const allSelected = options.length > 0 && selected.length >= options.length;
-  const toggleAll = () => onChange?.(allSelected ? [] : options.map((o) => o.value));
+  const toggle = (value) => commit(
+    selectedSet.has(value) ? current.filter((v) => v !== value) : [...current, value],
+  );
+
+  const allSelected = options.length > 0 && current.length >= options.length;
+  const toggleAll = () => commit(allSelected ? [] : options.map((o) => o.value));
 
   const checkbox = (checked) => (
     <span className={`tc-dropdown__checkbox${checked ? ' tc-dropdown__checkbox--checked' : ''}`}>
@@ -419,15 +445,15 @@ export function MultiSelect({
     </span>
   );
 
-  const menuList = (
-    <ul
-      ref={menuRef}
-      className={`tc-dropdown__menu${portalMenu ? ' tc-dropdown__menu--portaled' : ''}`}
-      style={portalMenu ? menuStyle : undefined}
-      role="listbox"
-      aria-multiselectable="true"
-    >
-      {selectAllLabel && (
+  const q = query.trim().toLowerCase();
+  const visibleOptions = searchable && q
+    ? options.filter((o) => String(o.label).toLowerCase().includes(q)
+      || String(o.description ?? '').toLowerCase().includes(q))
+    : options;
+
+  const optionRows = (
+    <>
+      {selectAllLabel && !q && (
         <li
           role="option"
           aria-selected={allSelected}
@@ -438,7 +464,7 @@ export function MultiSelect({
           {selectAllLabel}
         </li>
       )}
-      {options.map((opt) => {
+      {visibleOptions.map((opt) => {
         const isSelected = selectedSet.has(opt.value);
         return (
           <li
@@ -449,10 +475,65 @@ export function MultiSelect({
             onClick={() => toggle(opt.value)}
           >
             {checkbox(isSelected)}
-            {opt.label}
+            {opt.description ? (
+              <span className="tc-dropdown__option-body">
+                <span className="tc-dropdown__option-title">{opt.label}</span>
+                <span className="tc-dropdown__option-desc">{opt.description}</span>
+              </span>
+            ) : opt.label}
           </li>
         );
       })}
+      {visibleOptions.length === 0 && <li className="tc-dropdown__empty">No results</li>}
+    </>
+  );
+
+  const menuClassName = `tc-dropdown__menu${searchable || applyLabel ? ' tc-dropdown__menu--searchable' : ''}${portalMenu ? ' tc-dropdown__menu--portaled' : ''}`;
+
+  const menuList = searchable || applyLabel ? (
+    <div ref={menuRef} className={menuClassName} style={portalMenu ? menuStyle : undefined}>
+      {menuHeaderLabel && (
+        <div className={`tc-dropdown__menu-header${current.length ? ' tc-dropdown__menu-header--filled' : ''}`}>
+          {menuHeaderLabel(current) || placeholder}
+        </div>
+      )}
+      {searchable && (
+        <div className="tc-dropdown__search">
+          <span className="material-symbols-outlined">search</span>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            autoFocus
+          />
+        </div>
+      )}
+      <ul className="tc-dropdown__menu-list" role="listbox" aria-multiselectable="true">
+        {optionRows}
+      </ul>
+      {applyLabel && (
+        <div className="tc-dropdown__menu-footer">
+          <button
+            type="button"
+            className="tc-dropdown__apply"
+            onClick={() => { onChange?.(draft); setOpen(false); }}
+          >
+            {applyLabel}
+          </button>
+        </div>
+      )}
+    </div>
+  ) : (
+    <ul
+      ref={menuRef}
+      className={menuClassName}
+      style={portalMenu ? menuStyle : undefined}
+      role="listbox"
+      aria-multiselectable="true"
+    >
+      {optionRows}
     </ul>
   );
 
