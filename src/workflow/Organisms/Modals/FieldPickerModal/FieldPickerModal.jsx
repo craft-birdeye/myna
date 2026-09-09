@@ -34,7 +34,7 @@ function firstFieldOnlyCategory(cat) {
 }
 
 const FIELDS_LEARN_MORE_HREF =
-  'https://help.birdeye.com/hc/en-us/articles/fields-in-workflows';
+  'https://support.birdeye.com/en/articles/16880538-ai-agent-variables-glossary'
 
 const WORKFLOW_SECTION_HEADING = 'Output fields from previous steps';
 
