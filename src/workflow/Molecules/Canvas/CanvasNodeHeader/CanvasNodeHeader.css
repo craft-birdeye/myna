@@ -41,11 +41,14 @@
   flex-shrink: 0;
 }
 
-/* Same rr-chrome assets as the left floater; match prior card glyph size. */
+/* Glyph node types (delay / parallel / subagent) inherit the 20px base above — they used to
+   carry an inline `fontSize: 14` that overrode it. */
+
+/* Same rr-chrome assets as the left floater; sized to match the glyph types. */
 .cnh__floater-icon {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
@@ -53,6 +56,17 @@
   color: #6834b7;
 }
 
+/* Delay's clock glyph reads heavier than the others at the shared 20px, so it runs slightly
+   smaller — and in the controls blue. `!important` because `.flow-canvas
+   .material-symbols-outlined` pins 20px at equal specificity. */
+.cnh__node-icon--delay .material-symbols-outlined {
+  color: #5071ce;
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+}
+
+/* Never matched — the wrapper only takes --subagent / --delay modifiers. */
 .cnh__node-icon--loop .material-symbols-outlined {
   color: #5071ce;
   font-size: 16px !important;
@@ -101,16 +115,16 @@
 .cnh .cnh__run-done {
   color: #4caf50;
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
-  font-size: 16px !important;
-  width: 16px;
-  height: 16px;
+  font-size: 20px !important;
+  width: 20px;
+  height: 20px;
 }
 
 .cnh__label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 18px;
-  letter-spacing: -0.24px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
   color: #8f8f8f;
   flex: 1;
   min-width: 0;

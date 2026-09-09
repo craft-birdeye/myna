@@ -362,6 +362,8 @@ export function MultiSelect({
   onClear,
   /** See SingleSelect — portal the menu so a scrolling panel can't clip it. */
   portalMenu = false,
+  /** When set, prepends a row that checks/clears every option, e.g. "Select all". */
+  selectAllLabel,
 }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
@@ -381,7 +383,9 @@ export function MultiSelect({
 
   useLayoutEffect(() => {
     if (!portalMenu || !open || disabled || !ref.current) return undefined;
-    const updatePlacement = () => setMenuStyle(buildFixedMenuStyle(ref.current, options.length));
+    const updatePlacement = () => setMenuStyle(
+      buildFixedMenuStyle(ref.current, options.length + (selectAllLabel ? 1 : 0)),
+    );
     updatePlacement();
     window.addEventListener('resize', updatePlacement);
     window.addEventListener('scroll', updatePlacement, true);
@@ -389,7 +393,7 @@ export function MultiSelect({
       window.removeEventListener('resize', updatePlacement);
       window.removeEventListener('scroll', updatePlacement, true);
     };
-  }, [portalMenu, open, disabled, options.length]);
+  }, [portalMenu, open, disabled, options.length, selectAllLabel]);
 
   const displayLabel = selected.length === 0
     ? placeholder
@@ -406,6 +410,15 @@ export function MultiSelect({
     onChange?.(next);
   };
 
+  const allSelected = options.length > 0 && selected.length >= options.length;
+  const toggleAll = () => onChange?.(allSelected ? [] : options.map((o) => o.value));
+
+  const checkbox = (checked) => (
+    <span className={`tc-dropdown__checkbox${checked ? ' tc-dropdown__checkbox--checked' : ''}`}>
+      {checked && <span className="material-symbols-outlined tc-dropdown__checkbox-icon">check</span>}
+    </span>
+  );
+
   const menuList = (
     <ul
       ref={menuRef}
@@ -414,6 +427,17 @@ export function MultiSelect({
       role="listbox"
       aria-multiselectable="true"
     >
+      {selectAllLabel && (
+        <li
+          role="option"
+          aria-selected={allSelected}
+          className={`tc-dropdown__option tc-dropdown__option--multi${allSelected ? ' tc-dropdown__option--selected' : ''}`}
+          onClick={toggleAll}
+        >
+          {checkbox(allSelected)}
+          {selectAllLabel}
+        </li>
+      )}
       {options.map((opt) => {
         const isSelected = selectedSet.has(opt.value);
         return (
@@ -424,11 +448,7 @@ export function MultiSelect({
             className={`tc-dropdown__option tc-dropdown__option--multi${isSelected ? ' tc-dropdown__option--selected' : ''}`}
             onClick={() => toggle(opt.value)}
           >
-            <span className={`tc-dropdown__checkbox${isSelected ? ' tc-dropdown__checkbox--checked' : ''}`}>
-              {isSelected && (
-                <span className="material-symbols-outlined tc-dropdown__checkbox-icon">check</span>
-              )}
-            </span>
+            {checkbox(isSelected)}
             {opt.label}
           </li>
         );

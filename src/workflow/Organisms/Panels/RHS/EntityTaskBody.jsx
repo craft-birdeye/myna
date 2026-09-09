@@ -186,7 +186,7 @@ export default function EntityTaskBody({
                       <span
                         className="material-symbols-outlined"
                         style={{
-                          fontSize: 16,
+                          fontSize: 18,
                           color: tool.iconBg ? '#fff' : '#555',
                           fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
                         }}

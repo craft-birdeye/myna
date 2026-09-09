@@ -19,7 +19,7 @@ const ReplaceIcon = () => <span className="material-symbols-outlined cnh__btn-ic
 const PasteIcon = () => <span className="material-symbols-outlined cnh__btn-icon">content_paste</span>;
 
 const FloaterIcon = ({ src, alt = '' }) => (
-  <img src={src} alt={alt} width={14} height={14} className="cnh__floater-icon" draggable={false} />
+  <img src={src} alt={alt} width={20} height={20} className="cnh__floater-icon" draggable={false} />
 );
 
 const TriggerIcon = () => <FloaterIcon src={iconRrTrigger} />;
@@ -30,12 +30,12 @@ const ProcedureIcon = () => <FloaterIcon src={iconRrProcedures} />;
 /*
  * Same SVG used by the Test details panel's step stepper (TestRunPanel.tsx) — a font glyph
  * sits off-centre in its line-box, so `animate-spin` would make it orbit instead of spin. This
- * circle is centred at 8,8 of a 16×16 box (this header's icon size), so it rotates in place.
+ * circle is centred at 10,10 of a 20×20 box (this header's icon size), so it rotates in place.
  */
 const RunSpinnerIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="cnh__run-spinner" aria-hidden>
-    <circle cx="8" cy="8" r="6.4" stroke="#1976d2" strokeOpacity="0.2" strokeWidth="1.6" />
-    <path d="M14.4 8a6.4 6.4 0 0 0-6.4-6.4" stroke="#1976d2" strokeWidth="1.6" strokeLinecap="round" />
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="cnh__run-spinner" aria-hidden>
+    <circle cx="10" cy="10" r="8" stroke="#1976d2" strokeOpacity="0.2" strokeWidth="2" />
+    <path d="M18 10a8 8 0 0 0-8-8" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
@@ -144,7 +144,7 @@ export default function CanvasNodeHeader({
   return (
     <div className="cnh">
       <div className="cnh__left">
-        <span className={`cnh__node-icon${nodeType === 'subagent' ? ' cnh__node-icon--subagent' : ''}`}>
+        <span className={`cnh__node-icon${['subagent', 'delay'].includes(nodeType) ? ` cnh__node-icon--${nodeType}` : ''}`}>
           {runStatus === 'running' ? (
             <RunSpinnerIcon />
           ) : runStatus === 'done' ? (
@@ -152,7 +152,7 @@ export default function CanvasNodeHeader({
           ) : NodeSvg ? (
             <NodeSvg />
           ) : (
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{config.icon}</span>
+            <span className="material-symbols-outlined">{config.icon}</span>
           )}
         </span>
         <span className="cnh__label">{label}</span>
