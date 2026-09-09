@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { FormInput, TextArea, Toggle, SingleSelect, MultiSelect } from '../../../elemental-stubs';
 function NativeDrawer({ isOpen, onClose, children, width = 960 }) {
@@ -27,6 +27,10 @@ import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import ToolbarButton from '../../../Molecules/Inputs/ToolbarButton.jsx';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
 import FieldPickerModal from '../../Modals/FieldPickerModal/FieldPickerModal.jsx';
+import { MediaLibraryModal } from '../../../../components/MediaLibraryModal/MediaLibraryModal';
+import localizeSampleImage from '../../../../assets/media-library/photo-1.jpg';
+import { REVIEW_RESPONSE_TEMPLATES } from '../../../../data/messageTemplateLibrary';
+import { Chip } from '../../../../components/Chip/Chip';
 import CreateTagModal from '../../Modals/CreateTagModal/CreateTagModal.jsx';
 import DataType from '../../../Molecules/DataType/DataType';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
@@ -330,7 +334,14 @@ function ticketCountLabel(noun) {
   return (selected) => (selected.length === 1 ? selected[0] : `${selected.length} ${noun}`);
 }
 
-/** Blue pill for a chosen value; the cross clears it back to its picker. */
+/** ['Mon','Tue','Wed','Thu'] -> 'Mon, Tue, Wed, and Thu'. */
+function ticketOxfordList(selected) {
+  if (selected.length <= 1) return selected[0] || '';
+  if (selected.length === 2) return `${selected[0]} and ${selected[1]}`;
+  return `${selected.slice(0, -1).join(', ')}, and ${selected[selected.length - 1]}`;
+}
+
+/** A chosen value, styled as a filled field box; the cross clears it back to its picker. */
 function TicketChip({ label, onClear }) {
   return (
     <span className={styles.ticketChip}>
@@ -339,6 +350,312 @@ function TicketChip({ label, onClear }) {
         <span className="material-symbols-outlined">close</span>
       </button>
     </span>
+  );
+}
+
+const LOCALIZE_CORNERS = [
+  { id: 'top-left', label: 'top left' },
+  { id: 'top-right', label: 'top right' },
+  { id: 'bottom-left', label: 'bottom left' },
+  { id: 'bottom-right', label: 'bottom right' },
+];
+
+const LOCALIZE_IMAGE_SOURCES = [
+  { id: 'computer', label: 'Computer', icon: 'devices' },
+  { id: 'media-library', label: 'Media library', icon: 'cloud' },
+  { id: 'free-media', label: 'Free media', icon: 'camera' },
+];
+
+/**
+ * "Localize media" — a preview image with a field slot in each corner. Clicking a corner
+ * opens the same `FieldPickerModal` every other Fields trigger in the builder uses, and the
+ * chosen token is stamped into that corner. The centred button swaps the preview image.
+ */
+function LocalizeMediaField({ field, onValueChange }) {
+  const [image, setImage] = useState(field.defaultImage || localizeSampleImage);
+  // { [cornerId]: token } — the location detail stamped in that corner.
+  const [corners, setCorners] = useState(field.defaultValue || {});
+  const [pickerCorner, setPickerCorner] = useState(null);
+  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const cornerRefs = useRef({});
+  const sourceMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!sourceMenuOpen) return undefined;
+    const close = (e) => {
+      if (!sourceMenuRef.current?.contains(e.target)) setSourceMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [sourceMenuOpen]);
+
+  const commit = (next) => {
+    setCorners(next);
+    onValueChange?.(field.id, next);
+  };
+
+  const handleSource = (id) => {
+    setSourceMenuOpen(false);
+    if (id === 'media-library') setMediaOpen(true);
+    // 'computer' wants a real file input, and 'free-media' a stock-photo browser — neither
+    // exists yet, so both are inert rather than pointed at the wrong picker.
+  };
+
+  return (
+    <div className={styles.localizeField}>
+      <FieldHeader
+        label={field.label}
+        required={field.required}
+        helpText={field.helpText}
+        showInfoIcon={field.showInfoIcon}
+        infoText={field.infoText}
+      />
+
+      <div className={styles.localizeCanvas} style={{ backgroundImage: `url(${image})` }}>
+        {LOCALIZE_CORNERS.map((corner) => {
+          const token = corners[corner.id];
+          return (
+            <div key={corner.id} className={`${styles.localizeCorner} ${styles[`localizeCorner--${corner.id}`]}`}>
+              {token ? (
+                /* Same variable chip the tool's other field boxes use — blue {x} cell,
+                   divider, name, clear cross. */
+                <span className={styles.localizeToken}>
+                  <DataType
+                    type="variable"
+                    label={token}
+                    onRemove={() => {
+                      const next = { ...corners };
+                      delete next[corner.id];
+                      commit(next);
+                    }}
+                  />
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  ref={(el) => { cornerRefs.current[corner.id] = el; }}
+                  className={styles.localizeAddBtn}
+                  aria-label={`Add a field to the ${corner.label}`}
+                  onClick={() => setPickerCorner(corner.id)}
+                >
+                  <span className="material-symbols-outlined">add</span>
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        <div className={styles.localizeChangeWrap} ref={sourceMenuRef}>
+          <button
+            type="button"
+            className={styles.localizeChangeBtn}
+            onClick={() => setSourceMenuOpen((v) => !v)}
+          >
+            <span>Change preview image</span>
+            <span className="material-symbols-outlined">expand_more</span>
+          </button>
+          {sourceMenuOpen && (
+            <div className={styles.localizeSourceMenu}>
+              {LOCALIZE_IMAGE_SOURCES.map((src) => (
+                <button
+                  key={src.id}
+                  type="button"
+                  className={styles.localizeSourceItem}
+                  onClick={() => handleSource(src.id)}
+                >
+                  <span className="material-symbols-outlined">{src.icon}</span>
+                  <span>{src.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {pickerCorner && (
+        <FieldPickerModal
+          onClose={() => setPickerCorner(null)}
+          onSelectField={(value, name) => {
+            commit({ ...corners, [pickerCorner]: name || value });
+            setPickerCorner(null);
+          }}
+          anchorEl={cornerRefs.current[pickerCorner]}
+          showTriggerFields
+        />
+      )}
+
+      <MediaLibraryModal
+        open={mediaOpen}
+        onClose={() => setMediaOpen(false)}
+        onDone={(selected) => {
+          if (selected[0]?.thumbnail) setImage(selected[0].thumbnail);
+          setMediaOpen(false);
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * "Templates" picker for the Select template action — the shared Aero `MultiSelect` with its
+ * search box, Select all row, two-line rows and Apply footer, rather than a bespoke panel.
+ * Picks stage inside the menu and commit on Apply.
+ */
+function TemplateMultiSelectField({ field, onValueChange }) {
+  const templates = field.options?.length ? field.options : REVIEW_RESPONSE_TEMPLATES;
+  const [selected, setSelected] = useState(field.defaultValue || []);
+
+  const options = templates.map((t) => ({ value: t.id, label: t.title, description: t.body }));
+
+  /** One pick reads by name; the whole list reads "All selected"; anything else counts. */
+  const labelFor = (ids) => {
+    if (ids.length === 0) return '';
+    if (ids.length >= templates.length) return 'All selected';
+    if (ids.length === 1) return templates.find((t) => t.id === ids[0])?.title ?? '1 template';
+    return `${ids.length} templates`;
+  };
+
+  const commit = (ids) => {
+    setSelected(ids);
+    onValueChange?.(field.id, ids);
+  };
+
+  return (
+    <div className={styles.tmsField}>
+      <FieldHeader
+        label={field.label}
+        required={field.required}
+        helpText={field.helpText}
+        showInfoIcon={field.showInfoIcon}
+        infoText={field.infoText}
+      />
+      <MultiSelect
+        name={field.id}
+        selected={selected}
+        options={options}
+        onChange={commit}
+        onClear={() => commit([])}
+        formatLabel={labelFor}
+        menuHeaderLabel={labelFor}
+        selectAllLabel="Select all"
+        applyLabel="Apply"
+        placeholder="Select"
+        searchable
+        portalMenu
+      />
+    </div>
+  );
+}
+
+/** Read-only chips in a tinted box — fields the keywords are pulled from, not editable. */
+function ReadOnlyChipsField({ field }) {
+  return (
+    <div className={styles.roChipsField}>
+      <FieldHeader
+        label={field.label}
+        required={field.required}
+        helpText={field.helpText}
+        showInfoIcon={field.showInfoIcon}
+        infoText={field.infoText}
+      />
+      <div className={styles.roChipsBox}>
+        {/* Same shared Chip the library cards use, with their darker label override. */}
+        {(field.options || []).map((chip) => (
+          <Chip key={chip} label={chip} variant="neutral" className="!text-[#212121]" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Chip input with an `n/max` counter — typing a comma (or Enter) turns what you've typed
+ * into a chip. Reuses the `tags` field's chip chrome so it matches the other tag inputs.
+ */
+function KeywordChipsField({ field, onValueChange }) {
+  const max = field.maxItems ?? 5;
+  const [chips, setChips] = useState(
+    Array.isArray(field.defaultValue) ? field.defaultValue : [],
+  );
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef(null);
+  const full = chips.length >= max;
+
+  const commit = (next) => {
+    setChips(next);
+    onValueChange?.(field.id, next);
+  };
+
+  /** Adds every complete (comma-terminated) part, keeping the tail as the live draft. */
+  const handleChange = (value) => {
+    if (!value.includes(',')) {
+      setDraft(full ? '' : value);
+      return;
+    }
+    const parts = value.split(',');
+    const tail = parts.pop();
+    const additions = parts.map((p) => p.trim()).filter(Boolean);
+    const next = [...chips];
+    additions.forEach((word) => {
+      if (next.length < max && !next.includes(word)) next.push(word);
+    });
+    commit(next);
+    setDraft(next.length >= max ? '' : tail);
+  };
+
+  const commitDraft = () => {
+    const word = draft.trim();
+    if (!word || full || chips.includes(word)) { setDraft(''); return; }
+    commit([...chips, word]);
+    setDraft('');
+  };
+
+  return (
+    <div className={styles.countedField}>
+      <div className={styles.countedHeader}>
+        <FieldHeader
+          label={field.label}
+          required={field.required}
+          showInfoIcon={field.showInfoIcon}
+          infoText={field.infoText}
+        />
+        <span className={styles.countedCount}>{chips.length}/{max}</span>
+      </div>
+
+      <div
+        className={`${styles.tagsInput} ${styles.keywordChipsBox}`}
+        onClick={() => inputRef.current?.focus()}
+      >
+        {chips.map((chip) => (
+          <span key={chip} className={styles.tagChip}>
+            {chip}
+            <button
+              type="button"
+              className={styles.tagChipRemove}
+              aria-label={`Remove ${chip}`}
+              onClick={(e) => { e.stopPropagation(); commit(chips.filter((c) => c !== chip)); }}
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          className={styles.tagInputInner}
+          value={draft}
+          disabled={full && !draft}
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commitDraft(); }
+            // Backspace on an empty draft picks off the last chip.
+            if (e.key === 'Backspace' && !draft && chips.length) commit(chips.slice(0, -1));
+          }}
+          placeholder={chips.length === 0 ? field.placeholder : ''}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -597,38 +914,8 @@ function TicketBuilderField({ field, onValueChange }) {
                   <div key={cond.id} className={styles.ticketCondBlock}>
                     {/* Chip once chosen, picker while empty — the cross clears
                         a slot back to its picker. */}
-                    <div className={styles.ticketCondRow}>
-                      <span className={styles.ticketCondJoin}>{i === 0 ? 'if' : 'and'}</span>
-                      {cond.field ? (
-                        <TicketChip
-                          label={cond.field}
-                          onClear={() => update({ field: '', value: '', exclude: [] })}
-                        />
-                      ) : (
-                        <div className={styles.ticketCondSelect}>
-                          <SingleSelect
-                            name={`${cond.id}-field`}
-                            selected=""
-                            options={fieldOptions}
-                            placeholder="Select"
-                            onChange={(opt) => update({ field: opt.value, value: '', exclude: [] })}
-                          />
-                        </div>
-                      )}
-                      {cond.field && <span className={styles.ticketCondJoinMid}>is</span>}
-                      {cond.field && (cond.value ? (
-                        <TicketChip label={cond.value} onClear={() => update({ value: '' })} />
-                      ) : (
-                        <div className={styles.ticketCondSelect}>
-                          <SingleSelect
-                            name={`${cond.id}-value`}
-                            selected=""
-                            options={values.map((v) => ({ value: v, label: v }))}
-                            placeholder="Select"
-                            onChange={(opt) => update({ value: opt.value })}
-                          />
-                        </div>
-                      ))}
+                    <div className={styles.ticketCondHead}>
+                      <span className={styles.ticketCondJoin}>{i === 0 ? 'IF' : 'AND'}</span>
                       <button
                         type="button"
                         className={styles.ticketRowDelete}
@@ -638,21 +925,47 @@ function TicketBuilderField({ field, onValueChange }) {
                         <span className="material-symbols-outlined">delete</span>
                       </button>
                     </div>
+                    {cond.field ? (
+                      <TicketChip
+                        label={cond.field}
+                        onClear={() => update({ field: '', value: '', exclude: [] })}
+                      />
+                    ) : (
+                      <div className={styles.ticketCondSelect}>
+                        <SingleSelect
+                          name={`${cond.id}-field`}
+                          selected=""
+                          options={fieldOptions}
+                          placeholder="Select"
+                          onChange={(opt) => update({ field: opt.value, value: '', exclude: [] })}
+                        />
+                      </div>
+                    )}
+                    {cond.field && <div className={styles.ticketCondStatic}>is</div>}
+                    {cond.field && (cond.value ? (
+                      <TicketChip label={cond.value} onClear={() => update({ value: '' })} />
+                    ) : (
+                      <div className={styles.ticketCondSelect}>
+                        <SingleSelect
+                          name={`${cond.id}-value`}
+                          selected=""
+                          options={values.map((v) => ({ value: v, label: v }))}
+                          placeholder="Select"
+                          onChange={(opt) => update({ value: opt.value })}
+                        />
+                      </div>
+                    ))}
                     {/* Exclude stays a dropdown so several days stay tickable. */}
                     {cond.field === TICKET_EXCLUDE_FIELD && (
-                      <div className={styles.ticketCondRow}>
-                        <span className={styles.ticketCondJoin}>Exclude</span>
-                        <div
-                          className={`${styles.ticketExcludeSelect}${
-                            cond.exclude?.length ? ` ${styles.ticketExcludeSelectFilled}` : ''
-                          }`}
-                        >
+                      <div className={styles.ticketExcludeRow}>
+                        <span className={styles.ticketExcludeLabel}>Exclude</span>
+                        <div className={styles.ticketExcludeSelect}>
                           <MultiSelect
                             name={`${cond.id}-exclude`}
                             selected={cond.exclude || []}
                             options={TICKET_WEEKDAYS}
                             placeholder="Select days"
-                            formatLabel={ticketCountLabel('days')}
+                            formatLabel={ticketOxfordList}
                             onChange={(vals) => update({ exclude: vals })}
                             onClear={() => update({ exclude: [] })}
                           />
@@ -687,9 +1000,18 @@ function TicketBuilderField({ field, onValueChange }) {
                   .map((o) => ({ value: o, label: o }));
                 return (
                   <div key={act.id} className={styles.ticketActionBlock}>
-                    <div className={styles.ticketCondRow}>
+                    <div className={styles.ticketCondHead}>
                       <span className={styles.ticketActionLabel}>{meta.rowLabel}</span>
-                      {act.type === 'status' ? (
+                      <button
+                        type="button"
+                        className={styles.ticketRowDelete}
+                        aria-label={`Remove ${meta.rowLabel}`}
+                        onClick={() => setActions((prev) => prev.filter((a) => a.id !== act.id))}
+                      >
+                        <span className="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                    {act.type === 'status' ? (
                         act.status ? (
                           <TicketChip label={act.status} onClear={() => update({ status: '' })} />
                         ) : (
@@ -719,15 +1041,6 @@ function TicketBuilderField({ field, onValueChange }) {
                           />
                         </div>
                       )}
-                      <button
-                        type="button"
-                        className={styles.ticketRowDelete}
-                        aria-label={`Remove ${meta.rowLabel}`}
-                        onClick={() => setActions((prev) => prev.filter((a) => a.id !== act.id))}
-                      >
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
-                    </div>
                     {/* Target sits on its own full-width row, cross but no trash. */}
                     {act.type !== 'status' && act.valueType && (
                       <div
@@ -1617,12 +1930,14 @@ function InteractiveField({ field, onValueChange }) {
                 <span className={`material-symbols-outlined ${styles.fieldInfoIcon}`} style={{ marginLeft: 4, verticalAlign: 'middle' }}>info</span>
               )}
             </span>
+            {/* Title carries the weight in #0d0d12; the line under it stays secondary grey. */}
             {field.helpText && <p style={{ fontSize: 12, color: '#6b7280', fontFamily: 'Roboto, sans-serif', margin: 0, lineHeight: '18px' }}>{field.helpText}</p>}
           </div>
           <Toggle
             name={`view_toggle_${field.id}`}
             checked={toggled}
             onChange={(instance, e) => setToggled(e.target.checked)}
+            roundedToggle
           />
         </div>
       );
@@ -1857,6 +2172,18 @@ function InteractiveField({ field, onValueChange }) {
 
     case 'ticketBuilder':
       return <TicketBuilderField field={field} onValueChange={onValueChange} />;
+
+    case 'localizeMedia':
+      return <LocalizeMediaField field={field} onValueChange={onValueChange} />;
+
+    case 'templateMultiSelect':
+      return <TemplateMultiSelectField field={field} onValueChange={onValueChange} />;
+
+    case 'readOnlyChips':
+      return <ReadOnlyChipsField field={field} />;
+
+    case 'keywordChips':
+      return <KeywordChipsField field={field} onValueChange={onValueChange} />;
 
     case 'prefChannel': {
       const setPref = (keyId, value) => {

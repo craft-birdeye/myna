@@ -1356,7 +1356,7 @@ const REVIEW_RESPONSE_NODE_DETAILS: Record<string, any> = {
     taskName: 'Publish response',
     description:
       'Sends the response automatically or holds it for approval',
-    selectedTools: ['handle-response'],
+    selectedTools: ['publish-response'],
   },
   'rr-3-path-fallback': {
     branchName: 'Fallback branch',

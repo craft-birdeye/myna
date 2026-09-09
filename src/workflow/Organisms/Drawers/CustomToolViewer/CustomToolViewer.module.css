@@ -201,14 +201,16 @@
   line-height: 18px;
 }
 
-/* Match FormInput / Select tool labels inside the Action RHS embed */
+/* Match FormInput / Select tool labels inside the Action RHS embed. Field labels are the
+   headings of a tool's details, so they keep the primary text colour here too — the grey
+   belongs to the help line under them, not the label. */
 .embeddedBody .fieldLabel,
 .embeddedBody .fieldLabelRow .fieldLabel {
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
   letter-spacing: -0.24px;
-  color: #717182; /* text/secondary */
+  color: #0d0d12; /* text/primary */
 }
 
 .embeddedBody .fieldWrap {
@@ -229,11 +231,15 @@
   gap: 4px;
 }
 
+/* Same heading type as the "Tool" label above the panel (EntityTaskBody's
+   .sectionLabelText) and ExternalToolDetails' field labels, so every heading in a tool's
+   details reads at one size. */
 .fieldLabel {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
-  color: #212121;
   line-height: 18px;
+  letter-spacing: -0.24px;
+  color: #0d0d12;
   font-family: 'Roboto', sans-serif;
 }
 
@@ -1002,7 +1008,9 @@
 .ticketRuleCard {
   border: 1px solid #e5e9f0;
   border-radius: 4px;
-  background: #fff;
+  /* Same grey surface as a branch row (ControlBranchBody's .accordionItem), so the white
+     field boxes inside read as fields on a panel rather than boxes on a white card. */
+  background: #f8f9fb;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -1032,21 +1040,58 @@
   gap: 8px;
 }
 
-/* Shared left column so "if", "and" and "Exclude" all start at the same x. */
-.ticketCondJoin {
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-  line-height: 20px;
-  color: #212121;
-  min-width: 56px;
-  flex-shrink: 0;
+/* IF / AND (or an action's name) with its delete on the right, above the stacked
+   field / operator / value boxes. */
+.ticketCondHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
 }
 
-.ticketCondJoinMid {
-  font-family: 'Roboto', sans-serif;
+/* The operator: a settled box with nothing to pick or clear. */
+.ticketCondStatic {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #fff;
+  font-family: 'Roboto', arial, sans-serif;
   font-size: 14px;
   line-height: 20px;
+  letter-spacing: -0.28px;
   color: #212121;
+}
+
+/* Label and field on one line; the field takes the rest of the row so it still ends at the
+   same right edge as the stacked dropdowns above. */
+.ticketExcludeRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ticketExcludeLabel {
+  flex-shrink: 0;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #717182;
+}
+
+/* IF / AND group label — uppercase and quiet, on its own row above the fields. */
+.ticketCondJoin {
+  text-transform: uppercase;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.26px;
+  color: #717182;
   flex-shrink: 0;
 }
 
@@ -1060,48 +1105,27 @@
 .ticketExcludeSelect {
   flex: 1;
   min-width: 0;
-  margin-right: 36px; /* clears the trash column above it */
 }
 
-/* With days chosen it becomes the same chip treatment as the slots above it:
-   light-blue fill, no border, blue value, clear cross. */
-.ticketExcludeSelectFilled :global(.tc-dropdown__trigger) {
-  background: #eaf2fd;
-  border-color: transparent;
-}
-
-.ticketExcludeSelectFilled :global(.tc-dropdown__trigger):hover {
-  background: #dfeafb;
-  border-color: transparent;
-}
-
-.ticketExcludeSelectFilled :global(.tc-dropdown__value) {
-  color: #1976d2;
-}
-
-.ticketExcludeSelectFilled :global(.tc-dropdown__chevron) {
-  color: #303030;
-  cursor: pointer;
-}
-
-/* Second action row: aligned under the chip above, clear of the trash. */
+/* Second action row — full width, stacked under the value above it. */
 .ticketActionSub {
   display: flex;
-  padding-left: 84px;
-  padding-right: 36px;
 }
 
-/* Value chips — blue pill; the cross clears the slot. */
+/* A settled value reads as a filled field box matching the pickers around it; the cross
+   clears the slot back to its picker. */
 .ticketChip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  background: #eaf2fd;
+  min-height: 36px;
+  border: 1px solid #e5e9f0;
   border-radius: 4px;
-  padding: 7px 10px;
+  background: #fff;
+  padding: 7px 12px;
   box-sizing: border-box;
 }
 
@@ -1110,7 +1134,7 @@
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.28px;
-  color: #1976d2;
+  color: #212121;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1129,14 +1153,6 @@
 .ticketChipClear :global(.material-symbols-outlined) {
   font-size: 16px;
   color: #303030;
-}
-
-.ticketCondJoin {
-  font-family: 'Roboto', sans-serif;
-  font-size: 14px;
-  line-height: 20px;
-  color: #212121;
-  min-width: 24px;
 }
 
 .ticketActionLabel {
@@ -1628,3 +1644,209 @@
   line-height: 20px;
   flex-shrink: 0;
 }
+
+/* ─── Localize media ─────────────────────────────────────────────────────────
+ * Preview image with a field slot in each corner; the centred button swaps the image.
+ */
+.localizeField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.localizeCanvas {
+  position: relative;
+  margin-top: 8px;
+  height: 200px;
+  border-radius: 8px;
+  border: 1px solid #e5e9f0;
+  background-color: #eef2f8;
+  background-size: cover;
+  background-position: center;
+  box-sizing: border-box;
+}
+
+.localizeCorner {
+  position: absolute;
+  display: flex;
+  max-width: calc(50% - 16px);
+}
+
+.localizeCorner--top-left { top: 10px; left: 10px; }
+.localizeCorner--top-right { top: 10px; right: 10px; justify-content: flex-end; }
+.localizeCorner--bottom-left { bottom: 10px; left: 10px; }
+.localizeCorner--bottom-right { bottom: 10px; right: 10px; justify-content: flex-end; }
+
+.localizeAddBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(33, 33, 33, 0.24);
+  cursor: pointer;
+  color: #212121;
+}
+
+.localizeAddBtn:hover {
+  background: #f2f4f7;
+}
+
+.localizeAddBtn :global(.material-symbols-outlined) {
+  font-size: 20px;
+}
+
+/* A stamped location detail, in place of that corner's +. The chip itself is `DataType`;
+   this only bounds it and keeps a long field name from spanning the whole image. */
+.localizeToken {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(33, 33, 33, 0.24);
+}
+
+.localizeToken :global(.data-type) {
+  max-width: 100%;
+  background: #ffffff;
+}
+
+.localizeToken :global(.data-type__label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.localizeChangeWrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* Absolutely positioned at left:50%, so shrink-to-fit caps the width at half the canvas
+     and the label wraps — keep it on one line and let it overhang the midpoint. */
+  white-space: nowrap;
+}
+
+.localizeChangeBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 6px;
+  background: #3b76c9;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.localizeChangeBtn:hover {
+  background: #1565c0;
+}
+
+.localizeChangeBtn :global(.material-symbols-outlined) {
+  font-size: 20px;
+}
+
+.localizeSourceMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  padding: 4px 0;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(33, 33, 33, 0.18);
+  z-index: 2;
+}
+
+.localizeSourceItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #212121;
+}
+
+.localizeSourceItem:hover {
+  background: #f2f4f7;
+}
+
+.localizeSourceItem :global(.material-symbols-outlined) {
+  font-size: 18px;
+  color: #555555;
+}
+
+/* ─── Templates picker (Select template action) ─────────────────────────────
+ * The dropdown itself is the shared Aero `MultiSelect`; only the field wrapper is local.
+ */
+.tmsField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ─── Read-only source chips (Discover business keywords) ─── */
+.roChipsField,
+.countedField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.roChipsBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid #e5e9f0;
+  border-radius: 4px;
+  background: #f5f5f5;
+  box-sizing: border-box;
+}
+
+/* ─── Counted textarea ─── */
+.countedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.countedCount {
+  flex-shrink: 0;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #212121;
+}
+
+/* Taller than the single-row `tags` input, and chips stack from the top. */
+.keywordChipsBox {
+  min-height: 120px;
+  align-items: flex-start;
+  align-content: flex-start;
+  padding: 10px 12px;
+}
+

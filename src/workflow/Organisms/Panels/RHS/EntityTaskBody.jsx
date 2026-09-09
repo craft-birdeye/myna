@@ -3,6 +3,7 @@ import { FormInput, TextArea } from '../../../elemental-stubs';
 import { subscribeToCustomTools, resolveToolForViewer } from '../../../services/agentService';
 import {
   HandleResponseForm,
+  isHandleResponseTool,
   isHandleResponseConfigComplete,
 } from '../../Drawers/HandleResponseDrawer/HandleResponseDrawer';
 import { ToolViewerContent } from '../../Drawers/CustomToolViewer/CustomToolViewer';
@@ -120,7 +121,7 @@ export default function EntityTaskBody({
    * in that state. `handle-response` is the only such tool today.
    */
   const toolNeedsConfig = (toolId) =>
-    toolId === 'handle-response' && !isHandleResponseConfigComplete(initialValues.handleResponse);
+    isHandleResponseTool(toolId) && !isHandleResponseConfigComplete(initialValues.handleResponse);
 
   const toggleStep = (id) =>
     setOpenSteps((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -265,7 +266,7 @@ export default function EntityTaskBody({
         />
       )}
 
-      {displayedTools.length > 0 && inlineToolLayout && selectedTools.includes('handle-response') && (
+      {displayedTools.length > 0 && inlineToolLayout && selectedTools.some(isHandleResponseTool) && (
         <div className={styles.inlineToolConfig}>
           <HandleResponseForm
             key="hr-inline"
@@ -280,7 +281,7 @@ export default function EntityTaskBody({
         </div>
       )}
       {displayedTools.length > 0 && inlineToolLayout && viewerTools
-        .filter((viewerTool) => viewerTool.id !== 'handle-response')
+        .filter((viewerTool) => !isHandleResponseTool(viewerTool.id))
         .map((viewerTool) => (
         <div key={viewerTool.id} className={styles.inlineToolConfig}>
           <ToolViewerContent
