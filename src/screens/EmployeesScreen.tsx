@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, ListFilter } from 'lucide-react'
-import { AddEmployeeDrawer, DataTable, FilterPanel, HeaderSearchField, Link, SelectMenu, TopNav } from '../components'
+import { AddEmployeeDrawer, DataTable, FilterPanel, HeaderSearchField, Link, TopNav } from '../components'
 import { EMPLOYEES, Employee } from '../data/employeesData'
 import { WIZARD_LOCATIONS } from '../data/wizardLocations'
 import { EmployeeBulkImportScreen } from './EmployeeBulkImportScreen'
@@ -14,8 +14,6 @@ interface EmployeesScreenProps {
 }
 
 export function EmployeesScreen({ onBack }: EmployeesScreenProps) {
-  const [locationOpen, setLocationOpen] = useState(false)
-  const [locationFilter, setLocationFilter] = useState<string[]>([])
   const [employees, setEmployees] = useState<Employee[]>(EMPLOYEES)
   const [addOpen, setAddOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -59,31 +57,7 @@ export function EmployeesScreen({ onBack }: EmployeesScreenProps) {
               Account
             </Link>
             <ChevronRight className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setLocationOpen((o) => !o)}
-                className="flex items-center gap-xs text-body text-text-primary hover:text-text-action"
-              >
-                {locationFilter.length === 0 ? 'All locations' : locationFilter[0]}
-                <ChevronDown className="size-4 text-text-tertiary" strokeWidth={1.6} absoluteStrokeWidth />
-              </button>
-              {locationOpen && (
-                <>
-                  <div className="fixed inset-0 z-[55]" onClick={() => setLocationOpen(false)} />
-                  <div className="absolute left-0 top-[calc(100%+4px)] z-[60] w-[200px]">
-                    <SelectMenu
-                      options={LOCATION_OPTIONS}
-                      value={locationFilter}
-                      onChange={(v) => {
-                        setLocationFilter(v)
-                        setLocationOpen(false)
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
+            <span className="text-body text-text-primary">Employee</span>
           </div>
 
           {/* Header bar */}

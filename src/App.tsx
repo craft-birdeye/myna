@@ -594,7 +594,7 @@ export function App() {
   const [railActive, setRailActive] = useState(() => {
     const detailNav = DETAIL_VIEW_NAV[parseInitialDetailView()?.view ?? '']
     if (detailNav) return NAV_IDS_BY_RAIL.reviews.has(detailNav) ? 'reviews' : 'frontdesk'
-    return parseAppRoute()?.railId ?? 'overview-v2-1'
+    return parseAppRoute()?.railId ?? 'settings'
   })
   const [navActive, setNavActive] = useState(() => {
     const fromDetail = DETAIL_VIEW_NAV[initialDetailView?.view ?? '']
