@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 're
 import { createPortal } from 'react-dom';
 import { MultiSelect, SingleSelect } from '../../../elemental-stubs';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
+import { MessageTemplateModal } from '../../../../components/MessageTemplateModal/MessageTemplateModal';
+import { getTemplateTitle } from '../../../../data/messageTemplateLibrary';
 import { buildFixedMenuStyle } from '../../../menuPlacement';
 import '../../../Molecules/Conditions/Conditions.css';
 import styles from './DelayBody.module.css';
@@ -120,18 +122,6 @@ const SURVEY_OPTIONS = [
 /** Email-delivery events — all four share the same template + timeout config. */
 const EMAIL_TEMPLATE_EVENTS = ['email_sent', 'email_delivered', 'email_opened', 'email_link_clicked'];
 
-const EMAIL_TEMPLATE_OPTIONS = [
-  { value: 'appointment_reminder', label: 'Appointment reminder' },
-  { value: 'appointment_confirmation', label: 'Appointment confirmation' },
-  { value: 'review_request', label: 'Review request' },
-  { value: 'survey_invitation', label: 'Survey invitation' },
-  { value: 'follow_up_outreach', label: 'Follow-up outreach' },
-];
-
-/** Text (SMS) templates — the same campaign purposes as the email set, until real
- *  per-channel template data lands and the two lists need to diverge. */
-const TEXT_TEMPLATE_OPTIONS = EMAIL_TEMPLATE_OPTIONS;
-
 /** Events the delay can wait on. Each will grow its own follow-up config, one at a time. */
 const EVENT_OPTIONS = [
   { value: 'review_submitted', label: 'Contact submitted a review' },
@@ -215,6 +205,21 @@ function formatTimeParts(hour, minute, meridiem) {
   return `${Number(hour)}:${minute} ${meridiem}`;
 }
 
+/** The panel has no timezone field yet, so the card states the business default. */
+const DELAY_TIMEZONE = 'PST';
+
+/** '2:50 PM PST', or nothing while the time row is incomplete. */
+function formatTimeWithZone(hour, minute, meridiem) {
+  const time = formatTimeParts(hour, minute, meridiem);
+  return time ? `${time} ${DELAY_TIMEZONE}` : '';
+}
+
+/** The same stamp as a trailing clause: ' at 2:50 PM PST'. */
+function atTimeClause(hour, minute, meridiem) {
+  const stamp = formatTimeWithZone(hour, minute, meridiem);
+  return stamp ? ` at ${stamp}` : '';
+}
+
 /** Lowercases a label for mid-sentence use, leaving acronyms/proper nouns alone. */
 function midSentence(label) {
   if (!label) return '';
@@ -224,12 +229,28 @@ function midSentence(label) {
 const optionLabel = (options, value) => options.find((o) => o.value === value)?.label || '';
 
 /**
- * ['friday','monday','thursday'] -> 'Monday, Thursday, Friday' — every picked day named (in
- * week order, however they were picked) rather than collapsed into a count.
+ * ['sunday','monday'] -> 'Sunday or Monday' — the delay fires on whichever lands first, so
+ * the days read as alternatives. Listed in the order they were picked. Used for the canvas
+ * card title, which has room for the full list.
  */
 export function formatDayList(days) {
-  const picked = new Set(Array.isArray(days) ? days : [days].filter(Boolean));
-  return DAY_OF_WEEK_OPTIONS.filter((o) => picked.has(o.value)).map((o) => o.label).join(', ');
+  const labels = (Array.isArray(days) ? days : [days])
+    .filter(Boolean)
+    .map((d) => optionLabel(DAY_OF_WEEK_OPTIONS, d))
+    .filter(Boolean);
+  if (labels.length === 0) return '';
+  if (labels.length === 1) return labels[0];
+  return `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}`;
+}
+
+/** Field label: a single day reads by name, several collapse to "2 selected", the whole
+ *  week to "All selected". */
+function formatDaysTriggerLabel(days) {
+  const list = Array.isArray(days) ? days : [days].filter(Boolean);
+  if (list.length === 0) return '';
+  if (list.length === 1) return formatDayList(list);
+  if (list.length >= DAY_OF_WEEK_OPTIONS.length) return 'All selected';
+  return `${list.length} selected`;
 }
 
 /**
@@ -249,8 +270,7 @@ export function formatDelaySummary(details = {}) {
     case 'calendar-date': {
       const date = formatCalendarDate(details.calendarDate);
       if (!date) return 'Delay until a calendar date';
-      const time = formatTimeParts(details.calendarHour, details.calendarMinute, details.calendarMeridiem);
-      return time ? `Delay until ${date}, ${time}` : `Delay until ${date}`;
+      return `Delay until ${date}${atTimeClause(details.calendarHour, details.calendarMinute, details.calendarMeridiem)}`;
     }
     case 'date-property': {
       const prop = midSentence(optionLabel(DATE_PROPERTY_OPTIONS, details.dateProperty));
@@ -259,22 +279,23 @@ export function formatDelaySummary(details = {}) {
         ? `${details.dateOffset} `
         : '';
       const customTime = details.dateTimeMode === 'custom'
-        ? formatTimeParts(details.propertyHour, details.propertyMinute, details.propertyMeridiem)
+        ? atTimeClause(details.propertyHour, details.propertyMinute, details.propertyMeridiem)
         : '';
-      return `Delay until ${offset}${prop}${customTime ? `, ${customTime}` : ''}`;
+      return `Delay until ${offset}${prop}${customTime}`;
     }
     case 'day-of-week': {
       const days = formatDayList(details.dayOfWeek);
-      return days ? `Delay until ${days}` : 'Delay until a day of the week';
+      if (!days) return 'Delay until a day of the week';
+      return `Delay until ${days}${atTimeClause(details.dayHour, details.dayMinute, details.dayMeridiem)}`;
     }
     case 'time-of-day': {
       const legacy = splitClockTime(details.timeOfDay);
-      const time = formatTimeParts(
+      const stamp = formatTimeWithZone(
         details.timeHour ?? legacy?.hour,
         details.timeMinute ?? legacy?.minute,
         details.timeMeridiem ?? legacy?.meridiem,
       );
-      return time ? `Delay until ${time}` : 'Delay until a specific time of the day';
+      return stamp ? `Delay until ${stamp}` : 'Delay until a specific time of the day';
     }
     case 'optimal-send-time': {
       const { bestDayToSend: day, bestTimeToSend: time } = details;
@@ -373,6 +394,33 @@ function DelayForField({ amount, amountOptions, unit, onAmountChange, onUnitChan
             portalMenu
           />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Template field — the shared `tc-dropdown` trigger chrome, but clicking it opens
+ * `MessageTemplateModal` (thumbnails + categories + search) instead of a menu, since a
+ * library of 200+ templates doesn't browse well in a dropdown.
+ */
+function TemplateField({ label, value, kind, onOpen, disabled }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <FieldLabel label={label} required />
+      <div className="tc-dropdown">
+        <button
+          type="button"
+          className={`tc-dropdown__trigger${disabled ? ' tc-dropdown__trigger--readonly' : ''}`}
+          onClick={() => { if (!disabled) onOpen(); }}
+          aria-haspopup="dialog"
+          disabled={disabled}
+        >
+          <span className={`tc-dropdown__value${value ? '' : ' tc-dropdown__value--placeholder'}`}>
+            {getTemplateTitle(kind, value) || 'Select'}
+          </span>
+          <span className="material-symbols-outlined tc-dropdown__chevron">expand_more</span>
+        </button>
       </div>
     </div>
   );
@@ -665,6 +713,11 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
     minute: initialValues.propertyMinute ?? '',
     meridiem: initialValues.propertyMeridiem ?? '',
   });
+  const [dayTime, setDayTime] = useState({
+    hour: initialValues.dayHour ?? '',
+    minute: initialValues.dayMinute ?? '',
+    meridiem: initialValues.dayMeridiem ?? '',
+  });
   const [dateProperty, setDateProperty] = useState(initialValues.dateProperty ?? '');
   // Multi-select now ("Days"), so tolerate a single saved day from the earlier single-select.
   const [dayOfWeek, setDayOfWeek] = useState(() => {
@@ -691,6 +744,8 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
   const [surveyId, setSurveyId] = useState(initialValues.surveyId ?? '');
   const [emailTemplate, setEmailTemplate] = useState(initialValues.emailTemplate ?? '');
   const [textTemplate, setTextTemplate] = useState(initialValues.textTemplate ?? '');
+  /** null | 'email' | 'text' — which template library the picker is showing. */
+  const [templatePicker, setTemplatePicker] = useState(null);
 
   // A saved node can carry an amount outside the 1-30 picker (e.g. a 48-hour delay) — keep it
   // selectable instead of falling back to the placeholder.
@@ -714,6 +769,7 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
   const handleCalendarTimeChange = makeTimeChangeHandler(setCalendarTime, 'calendar');
   const handlePropertyTimeChange = makeTimeChangeHandler(setPropertyTime, 'property');
   const handleTimeOfDayChange = makeTimeChangeHandler(setTimeOfDay, 'time');
+  const handleDayTimeChange = makeTimeChangeHandler(setDayTime, 'day');
 
   const handleAiConsiderationChange = (key, checked) => {
     setAiConsiderations((prev) => ({ ...prev, [key]: checked }));
@@ -723,6 +779,16 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
   const handleAmountChange = (val) => { setUnitValue(val); onFieldChange?.('duration', val); };
   const handleUnitChange = (val) => { setTimeUnit(val); onFieldChange?.('unit', val); };
   const handleAddBranchChange = (checked) => { setAddBranch(checked); onFieldChange?.('addBranch', checked); };
+
+  const handleTemplatePicked = (template) => {
+    if (templatePicker === 'text') {
+      setTextTemplate(template.id);
+      onFieldChange?.('textTemplate', template.id);
+    } else {
+      setEmailTemplate(template.id);
+      onFieldChange?.('emailTemplate', template.id);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -823,19 +889,36 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
       )}
 
       {delayOption === 'day-of-week' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <FieldLabel label="Days" required />
-          <MultiSelect
-            name="dayOfWeek"
-            selected={dayOfWeek}
-            options={DAY_OF_WEEK_OPTIONS}
-            onChange={(next) => { setDayOfWeek(next); onFieldChange?.('dayOfWeek', next); }}
-            formatLabel={(days) => formatDayList(days)}
-            placeholder="Select"
-            disabled={viewOnly}
-            portalMenu
-          />
-        </div>
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <FieldLabel label="Days" required />
+            <MultiSelect
+              name="dayOfWeek"
+              selected={dayOfWeek}
+              options={DAY_OF_WEEK_OPTIONS}
+              onChange={(next) => { setDayOfWeek(next); onFieldChange?.('dayOfWeek', next); }}
+              formatLabel={formatDaysTriggerLabel}
+              selectAllLabel="Select all"
+              placeholder="Select"
+              disabled={viewOnly}
+              portalMenu
+            />
+          </div>
+
+          {dayOfWeek.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <FieldLabel label="Time" required />
+              <TimeSelectRow
+                name="day"
+                hour={dayTime.hour}
+                minute={dayTime.minute}
+                meridiem={dayTime.meridiem}
+                onPartChange={handleDayTimeChange}
+                disabled={viewOnly}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {delayOption === 'time-of-day' && (
@@ -960,18 +1043,13 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
 
           {EMAIL_TEMPLATE_EVENTS.includes(eventType) && (
             <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <FieldLabel label="Email template" required />
-                <SingleSelect
-                  name="emailTemplate"
-                  selected={emailTemplate}
-                  options={EMAIL_TEMPLATE_OPTIONS}
-                  onChange={(opt) => { setEmailTemplate(opt.value); onFieldChange?.('emailTemplate', opt.value); }}
-                  placeholder="Select"
-                  disabled={viewOnly}
-                  portalMenu
-                />
-              </div>
+              <TemplateField
+                label="Email template"
+                kind="email"
+                value={emailTemplate}
+                onOpen={() => setTemplatePicker('email')}
+                disabled={viewOnly}
+              />
 
               <DelayForField
                 amount={unitValue}
@@ -986,31 +1064,21 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
 
           {eventType === 'email_text_link_clicked' && (
             <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <FieldLabel label="Email template" required />
-                <SingleSelect
-                  name="emailTemplate"
-                  selected={emailTemplate}
-                  options={EMAIL_TEMPLATE_OPTIONS}
-                  onChange={(opt) => { setEmailTemplate(opt.value); onFieldChange?.('emailTemplate', opt.value); }}
-                  placeholder="Select"
-                  disabled={viewOnly}
-                  portalMenu
-                />
-              </div>
+              <TemplateField
+                label="Email template"
+                kind="email"
+                value={emailTemplate}
+                onOpen={() => setTemplatePicker('email')}
+                disabled={viewOnly}
+              />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <FieldLabel label="Text template" required />
-                <SingleSelect
-                  name="textTemplate"
-                  selected={textTemplate}
-                  options={TEXT_TEMPLATE_OPTIONS}
-                  onChange={(opt) => { setTextTemplate(opt.value); onFieldChange?.('textTemplate', opt.value); }}
-                  placeholder="Select"
-                  disabled={viewOnly}
-                  portalMenu
-                />
-              </div>
+              <TemplateField
+                label="Text template"
+                kind="text"
+                value={textTemplate}
+                onOpen={() => setTemplatePicker('text')}
+                disabled={viewOnly}
+              />
 
               <DelayForField
                 amount={unitValue}
@@ -1042,6 +1110,13 @@ export default function DelayBody({ initialValues = {}, onFieldChange, viewOnly 
           Delivery will resume as soon as the contact's do-not-disturb window ends.
         </DelayNote>
       )}
+
+      <MessageTemplateModal
+        open={templatePicker !== null}
+        kind={templatePicker ?? 'text'}
+        onClose={() => setTemplatePicker(null)}
+        onSelect={handleTemplatePicked}
+      />
     </div>
   );
 }

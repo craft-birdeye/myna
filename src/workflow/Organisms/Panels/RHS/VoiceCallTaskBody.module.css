@@ -19,10 +19,9 @@
   font-family: 'Roboto', arial, sans-serif;
 }
 
+/* Unboxed — the tool row below is its own tinted card, matching EntityTaskBody. */
 .toolsBox {
-  border: 1px solid #e5e9f0;
-  border-radius: 8px;
-  padding: 8px 10px;
+  padding: 0;
   width: 100%;
   box-sizing: border-box;
 }
@@ -32,6 +31,11 @@
   align-items: center;
   gap: 4px;
   width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #f7f8fa;
   padding: 2px 0;
   font-family: 'Roboto', arial, sans-serif;
 }
@@ -45,18 +49,20 @@
 }
 
 .toolIconWrap {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  background: #f2f4f7;
 }
 
 .toolIconImg {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   object-fit: contain;
 }
 

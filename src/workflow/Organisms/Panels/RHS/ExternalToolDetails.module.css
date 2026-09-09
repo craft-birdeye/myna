@@ -107,13 +107,69 @@
   position: fixed;
   z-index: 10050;
   max-height: min(280px, calc(100vh - 24px));
-  overflow-y: auto;
+  /* Column so the search box stays pinned and only the option list scrolls. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1px solid #e5e9f0;
   border-radius: 4px;
   background: #ffffff;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  padding: 4px 0;
+  padding: 8px 0 4px;
   box-sizing: border-box;
+}
+
+.menuSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 36px;
+  margin: 0 12px 8px;
+  padding: 0 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.menuSearch:focus-within {
+  border-color: #1976d2;
+}
+
+.menuSearch :global(.material-symbols-outlined) {
+  font-size: 20px;
+  color: #9e9e9e;
+  flex-shrink: 0;
+}
+
+.menuSearch input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+}
+
+.menuSearch input::placeholder {
+  color: #9ca3af;
+}
+
+.menuList {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.menuEmpty {
+  padding: 10px 12px;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #9e9e9e;
 }
 
 .menuItem {

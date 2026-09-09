@@ -42,6 +42,8 @@ export default function ExternalToolDetails({
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
   const [actionOpen, setActionOpen] = useState(false);
+  const [accountQuery, setAccountQuery] = useState('');
+  const [actionQuery, setActionQuery] = useState('');
   const accountTriggerRef = useRef(null);
   const actionTriggerRef = useRef(null);
   const accountMenuRef = useRef(null);
@@ -98,6 +100,20 @@ export default function ExternalToolDetails({
     setActionOpen(false);
   };
 
+  // Each menu filters its own list; the query resets whenever that menu closes.
+  useEffect(() => { if (!accountOpen) setAccountQuery(''); }, [accountOpen]);
+  useEffect(() => { if (!actionOpen) setActionQuery(''); }, [actionOpen]);
+
+  const accountQ = accountQuery.trim().toLowerCase();
+  const visibleAccounts = (config.accounts || []).filter(
+    (a) => !accountQ || String(a.label).toLowerCase().includes(accountQ),
+  );
+
+  const actionQ = actionQuery.trim().toLowerCase();
+  const visibleActions = (config.actions || []).filter(
+    (a) => !actionQ || String(a.name).toLowerCase().includes(actionQ),
+  );
+
   const actionTool = selectedAction
     ? {
         id: `${config.id}-${selectedAction.id}`,
@@ -149,7 +165,19 @@ export default function ExternalToolDetails({
                 width: accountMenuRect.width,
               }}
             >
-              {(config.accounts || []).map((account) => (
+              <div className={styles.menuSearch}>
+                <span className="material-symbols-outlined" aria-hidden>search</span>
+                <input
+                  type="text"
+                  value={accountQuery}
+                  onChange={(e) => setAccountQuery(e.target.value)}
+                  placeholder="Search accounts"
+                  aria-label="Search accounts"
+                  autoFocus
+                />
+              </div>
+              <div className={styles.menuList}>
+              {visibleAccounts.map((account) => (
                 <button
                   key={account.id}
                   type="button"
@@ -169,6 +197,8 @@ export default function ExternalToolDetails({
                   <span className={styles.menuItemText}>{account.label}</span>
                 </button>
               ))}
+              {visibleAccounts.length === 0 && <div className={styles.menuEmpty}>No accounts found</div>}
+              </div>
             </div>,
             document.body,
           )}
@@ -215,7 +245,19 @@ export default function ExternalToolDetails({
                   width: actionMenuRect.width,
                 }}
               >
-                {(config.actions || []).map((action) => (
+                <div className={styles.menuSearch}>
+                  <span className="material-symbols-outlined" aria-hidden>search</span>
+                  <input
+                    type="text"
+                    value={actionQuery}
+                    onChange={(e) => setActionQuery(e.target.value)}
+                    placeholder="Search actions"
+                    aria-label="Search actions"
+                    autoFocus
+                  />
+                </div>
+                <div className={styles.menuList}>
+                {visibleActions.map((action) => (
                   <button
                     key={action.id}
                     type="button"
@@ -239,6 +281,8 @@ export default function ExternalToolDetails({
                     </span>
                   </button>
                 ))}
+                {visibleActions.length === 0 && <div className={styles.menuEmpty}>No actions found</div>}
+                </div>
               </div>,
               document.body,
             )}

@@ -56,18 +56,16 @@
   flex-shrink: 0;
 }
 
+/* No outer stroke or padding — each tool is its own tinted card instead, so several tools
+   read as separate objects rather than rows inside one box. */
 .toolCard {
-  border: 1px solid #e5e9f0; /* border/input — matches FormInput */
-  border-radius: 4px; /* Corner Radius/sm */
-  padding: 0 12px;
+  padding: 0;
   width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: #ffffff;
-  min-height: 36px;
-  justify-content: center;
+  gap: 6px;
+  background: transparent;
 }
 
 /*
@@ -91,12 +89,16 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
 }
 
+/* Tinted card — softer than a full stroke while still bounding each tool. */
 .toolRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  border-radius: 4px;
-  min-height: 36px;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #f7f8fa;
 }
 
 .toolRowActions {
@@ -182,8 +184,8 @@
 }
 
 .toolIconWrap {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -197,8 +199,8 @@
 }
 
 .toolIconBirdeye {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: block;
   filter: brightness(0) invert(1);
 }
