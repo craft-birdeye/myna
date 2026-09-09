@@ -30,32 +30,32 @@ const DELAY_OPTIONS = [
   {
     value: 'date-property',
     label: 'Update in the date field',
-    example: "Example: Delay until contact's last activity",
+    example: "Example: Delay until the contact's last activity",
   },
   {
     value: 'day-of-week',
     label: 'Day of the week',
-    example: 'Example: Delay until tuesday',
+    example: 'Example: Delay until Tuesday',
   },
   {
     value: 'time-of-day',
     label: 'Specific time of the day',
-    example: 'Example: Delay until 5:00 PM IST',
+    example: 'Example: Delay until 5:00 PM',
   },
   {
     value: 'optimal-send-time',
-    label: 'Optimal send time and day',
-    example: 'Example: Delay until 5:00 PM IST',
+    label: 'Best date and time to send',
+    example: 'Example: Delay until the best time to reach this contact',
   },
   {
     value: 'event-occurs',
     label: 'Event occurs',
-    example: 'Example: Delay until 5:00 PM IST',
+    example: 'Example: Delay until the customer opens an email',
   },
   {
     value: 'dnd-window-end',
-    label: 'DND window ends',
-    example: 'Example: Delay until 5:00 PM IST',
+    label: 'DND ends',
+    example: 'Example: Delay until DND ends, for example 8:00 AM',
   },
 ];
 
@@ -158,7 +158,7 @@ const MERIDIEM_OPTIONS = [
   { value: 'PM', label: 'PM' },
 ];
 
-/** Optimal send time and day — what the model is allowed to optimise. */
+/** Best date and time to send — what the model is allowed to optimise. */
 const AI_CONSIDERATION_OPTIONS = [
   {
     key: 'bestDayToSend',
@@ -281,14 +281,14 @@ export function formatDelaySummary(details = {}) {
       if (day && time) return 'Delay until best day and time to send';
       if (day) return 'Delay until best day to send';
       if (time) return 'Delay until best time to send';
-      return 'Delay until optimal send time';
+      return 'Delay until the best time to reach this contact';
     }
     case 'event-occurs': {
       const event = midSentence(optionLabel(EVENT_OPTIONS, details.eventType));
       return event ? `Delay until ${event}` : 'Delay until an event occurs';
     }
     case 'dnd-window-end':
-      return 'Delay until DND window ends';
+      return 'Delay until DND ends';
     default:
       return '';
   }

@@ -804,9 +804,9 @@ export const DELAY_VARIANT_ITEMS = [
   { label: 'Update in the date field', description: 'Wait until a date stored on the contact or record.' },
   { label: 'Day of the week', description: 'Wait until a specific day of the week to continue.' },
   { label: 'Specific time of the day', description: 'Wait until a set time of day before continuing.' },
-  { label: 'Optimal send time and day', description: 'Wait until the best predicted send time and day for this contact.' },
+  { label: 'Best date and time to send', description: 'Wait until the best predicted send time and day for this contact.' },
   { label: 'Event occurs', description: 'Wait until a specific event happens on the contact or record.' },
-  { label: 'DND window ends', description: "Wait until the contact's do-not-disturb window ends before continuing." },
+  { label: 'DND ends', description: "Wait until the contact's do-not-disturb window ends before continuing." },
 ];
 
 /** Compact card variants (label only) used by the tabbed accordion's `TriggerGroup` rows. */
@@ -826,9 +826,9 @@ export const DELAY_VARIANT_PRESETS = {
   'Update in the date field': 'date-property',
   'Day of the week': 'day-of-week',
   'Specific time of the day': 'time-of-day',
-  'Optimal send time and day': 'optimal-send-time',
+  'Best date and time to send': 'optimal-send-time',
   'Event occurs': 'event-occurs',
-  'DND window ends': 'dnd-window-end',
+  'DND ends': 'dnd-window-end',
 };
 
 /** Controls list rendered in the LHS drawer's "Controls" accordion — Branch/Delay expand
