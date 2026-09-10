@@ -373,6 +373,10 @@ export const REVIEWS_TASK_SUB_ITEMS = {
         description: 'Manage review tags and their descriptions',
       },
       {
+        label: 'Generate recommendations',
+        description: 'Suggests recommended next steps for the team based on the review\'s content and sentiment.',
+      },
+      {
         label: 'Generate response',
         description: 'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
       },
