@@ -1409,6 +1409,151 @@
   letter-spacing: -0.28px;
 }
 
+/* ─── Sentiment classifier list (Social sentiment classifier) ─── */
+
+.sentimentSectionTitle {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #0d0d12;
+  font-family: 'Roboto', sans-serif;
+}
+
+.sentimentHeaderActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sentimentRestoreBtn,
+.sentimentAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #1976d2;
+  font-family: 'Roboto', sans-serif;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.sentimentRestoreBtn:hover,
+.sentimentAddBtn:hover {
+  color: #1565c0;
+}
+
+.sentimentRestoreBtn:disabled {
+  cursor: not-allowed;
+  color: #b0b5bd;
+}
+
+.sentimentRestoreBtn :global(.material-symbols-outlined),
+.sentimentAddBtn :global(.material-symbols-outlined) {
+  font-size: 18px !important;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  overflow: hidden;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.sentimentAddBtnLabel {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+}
+
+.sentimentList {
+  display: flex;
+  flex-direction: column;
+}
+
+.sentimentRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 4px;
+  border-bottom: 1px solid #eef0f4;
+  box-sizing: border-box;
+}
+
+.sentimentRow:last-child {
+  border-bottom: none;
+}
+
+.sentimentRow:hover {
+  background: #f8f9fb;
+}
+
+.sentimentRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sentimentName {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.28px;
+  color: #212121;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Actions reveal on row hover (and on keyboard focus, so they stay reachable). */
+.sentimentRowActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sentimentRow:hover .sentimentRowActions,
+.sentimentRowActions:focus-within {
+  opacity: 1;
+}
+
+.sentimentActionBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #303030;
+  padding: 0;
+}
+
+.sentimentActionBtn:hover {
+  background: #eef0f4;
+}
+
+.sentimentActionBtn :global(.material-symbols-outlined) {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+.sentimentDesc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: #6b7280;
+  font-family: 'Roboto', sans-serif;
+}
+
 /* Inline add/edit form — bordered card, same surface as the tool card. */
 .compForm {
   border: 1px solid #e5e9f0;

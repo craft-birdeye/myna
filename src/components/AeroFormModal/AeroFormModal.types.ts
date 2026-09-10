@@ -20,4 +20,6 @@ export interface AeroFormModalProps {
   /** Prefer over href — opens in-app help (e.g. glossary) instead of an external page. */
   onLearnMore?: () => void
   learnMoreLabel?: string
+  /** Rendered next to the close button, e.g. a "Restore default" link. */
+  titleAction?: ReactNode
 }

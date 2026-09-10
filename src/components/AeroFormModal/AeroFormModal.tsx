@@ -22,6 +22,7 @@ export function AeroFormModal({
   learnMoreHref,
   onLearnMore,
   learnMoreLabel = 'Learn more',
+  titleAction,
   children,
 }: AeroFormModalProps) {
   return createPortal(
@@ -77,14 +78,17 @@ export function AeroFormModal({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-          >
-            <Icon name="close" size={20} />
-          </button>
+          <div className="flex shrink-0 items-center gap-md">
+            {titleAction}
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            >
+              <Icon name="close" size={20} />
+            </button>
+          </div>
         </div>
 
         <div

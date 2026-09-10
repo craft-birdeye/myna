@@ -32,10 +32,20 @@ import localizeSampleImage from '../../../../assets/media-library/photo-1.jpg';
 import { REVIEW_RESPONSE_TEMPLATES } from '../../../../data/messageTemplateLibrary';
 import { Chip } from '../../../../components/Chip/Chip';
 import CreateTagModal from '../../Modals/CreateTagModal/CreateTagModal.jsx';
+import SentimentModal from '../../Modals/SentimentModal/SentimentModal.jsx';
 import DataType from '../../../Molecules/DataType/DataType';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { getTags, createTag, updateTag, findTagByName } from '../../../services/tagService';
+import {
+  getSentiments,
+  createSentiment,
+  updateSentiment as updateSentimentEntry,
+  deleteSentiment,
+  restoreDefaultSentiments,
+  getDefaultSentiment,
+  isSentimentListAtDefault,
+} from '../../../services/sentimentService';
 import styles from './CustomToolViewer.module.css';
 
 // ─── Template picker data ─────────────────────────────────────────────────────
@@ -1364,6 +1374,169 @@ function CompetitorListField({ field, onValueChange }) {
   );
 }
 
+function SentimentClassifierField({ field, onValueChange }) {
+  const [sentiments, setSentiments] = useState(() => getSentiments());
+  // null = closed; otherwise { mode: 'add' | 'edit', id?, name, description, isDefault? }
+  const [sentimentModal, setSentimentModal] = useState(null);
+  // Sentiment pending delete confirmation.
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  useEffect(() => {
+    onValueChange?.(field.id, sentiments);
+    // Intentionally omit onValueChange — parent recreates it each render in embedded mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sentiments, field.id]);
+
+  const openAddModal = () => setSentimentModal({ mode: 'add', name: '', description: '' });
+
+  const openEditModal = (sentiment) =>
+    setSentimentModal({
+      mode: 'edit',
+      id: sentiment.id,
+      name: sentiment.name,
+      description: sentiment.description,
+      isDefault: sentiment.isDefault,
+    });
+
+  const commitSentimentModal = ({ name, description }) => {
+    if (sentimentModal?.mode === 'edit') {
+      const updated = updateSentimentEntry(sentimentModal.id, { name, description });
+      if (updated) setSentiments((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      return;
+    }
+    const created = createSentiment({ name, description });
+    setSentiments((prev) => [...prev, created]);
+  };
+
+  const restoreDefaults = () => setSentiments(restoreDefaultSentiments());
+  const isAtDefault = isSentimentListAtDefault(sentiments);
+
+  const activeDefault = sentimentModal?.isDefault ? getDefaultSentiment(sentimentModal.id) : null;
+
+  return (
+    <div className={styles.fieldWrap}>
+      <div className={styles.tagLabelRow}>
+        <span className={styles.sentimentSectionTitle}>{field.label}</span>
+        <div className={styles.sentimentHeaderActions}>
+          <button
+            type="button"
+            className={styles.sentimentRestoreBtn}
+            onClick={restoreDefaults}
+            disabled={isAtDefault}
+          >
+            <span className="material-symbols-outlined">restart_alt</span>
+            <span className={styles.sentimentAddBtnLabel}>Restore default</span>
+          </button>
+          <button type="button" className={styles.sentimentAddBtn} onClick={openAddModal}>
+            <span className="material-symbols-outlined">add_circle</span>
+            <span className={styles.sentimentAddBtnLabel}>Add</span>
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.sentimentList}>
+        {sentiments.map((sentiment) => (
+          <div key={sentiment.id} className={styles.sentimentRow}>
+            <div className={styles.sentimentRowHeader}>
+              <span className={styles.sentimentName}>{sentiment.name}</span>
+              <div className={styles.sentimentRowActions}>
+                <Tooltip content="Edit" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.sentimentActionBtn}
+                    aria-label={`Edit ${sentiment.name}`}
+                    onClick={() => openEditModal(sentiment)}
+                  >
+                    <span className="material-symbols-outlined">edit</span>
+                  </button>
+                </Tooltip>
+                <Tooltip content="Delete" variant="brief" side="top">
+                  <button
+                    type="button"
+                    className={styles.sentimentActionBtn}
+                    aria-label={`Delete ${sentiment.name}`}
+                    onClick={() => setPendingDelete(sentiment)}
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+            <p className={styles.sentimentDesc}>{sentiment.description}</p>
+          </div>
+        ))}
+      </div>
+
+      {sentimentModal && (
+        <SentimentModal
+          mode={sentimentModal.mode}
+          initialName={sentimentModal.name}
+          initialDescription={sentimentModal.description}
+          isDefault={sentimentModal.isDefault}
+          defaultName={activeDefault?.name}
+          defaultDescription={activeDefault?.description}
+          onClose={() => setSentimentModal(null)}
+          onSave={commitSentimentModal}
+        />
+      )}
+
+      {/* Reuses AgentBuilder's global `ab-confirm-dialog` chrome (same as "Delete intent"). */}
+      {pendingDelete && createPortal(
+        <div
+          className="ab-confirm-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingDelete(null); }}
+        >
+          <div
+            className="ab-confirm-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sentiment-delete-confirm-title"
+          >
+            <div className="ab-confirm-dialog__header">
+              <h2 id="sentiment-delete-confirm-title" className="ab-confirm-dialog__title">
+                Delete sentiment
+              </h2>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPendingDelete(null)}
+                className="ab-confirm-dialog__close"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <p className="ab-confirm-dialog__body">
+              Are you sure you want to delete this sentiment?
+            </p>
+            <div className="ab-confirm-dialog__footer">
+              <button
+                type="button"
+                className="ab-confirm-dialog__cancel"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ab-confirm-dialog__primary"
+                onClick={() => {
+                  deleteSentiment(pendingDelete.id);
+                  setSentiments((prev) => prev.filter((s) => s.id !== pendingDelete.id));
+                  setPendingDelete(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
 /** Contact-preference permission states — same set for every channel/category. */
 const PREF_NO_CHANGE = 'No change';
 const PREF_OPTIONS = [
@@ -2169,6 +2342,9 @@ function InteractiveField({ field, onValueChange }) {
 
     case 'competitorList':
       return <CompetitorListField field={field} onValueChange={onValueChange} />;
+
+    case 'sentimentClassifier':
+      return <SentimentClassifierField field={field} onValueChange={onValueChange} />;
 
     case 'ticketBuilder':
       return <TicketBuilderField field={field} onValueChange={onValueChange} />;

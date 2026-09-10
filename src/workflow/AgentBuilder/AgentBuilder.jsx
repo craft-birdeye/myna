@@ -373,6 +373,10 @@ const TASK_DROP_DEFAULTS = {
     description: 'Adds location details to your images before publishing',
     selectedTools: ['localize-media'],
   },
+  'Social sentiment classifier': {
+    description: 'Reads a social message and classifies its emotional tone as positive, negative, or neutral.',
+    selectedTools: ['social-sentiment-classifier'],
+  },
   'Generate response': {
     description:
       'Writes a reply that matches the review\'s language and rating, and follows the rules for tone, length, and escalation',
