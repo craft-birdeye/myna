@@ -456,6 +456,10 @@ export const REVIEWS_TASK_SUB_ITEMS = {
         label: 'Localize media',
         description: 'Adds location details to your images before publishing',
       },
+      {
+        label: 'Social sentiment classifier',
+        description: 'Reads a social message and classifies its emotional tone as positive, negative, or neutral.',
+      },
     ],
   },
   Ticketing: {

@@ -488,6 +488,22 @@ const _SEED_TOOLS = [
     outputs: [{ name: 'mediaUrl', type: 'string' }],
   },
   {
+    id: 'social-sentiment-classifier',
+    name: 'Social sentiment classifier',
+    icon: 'sentiment_satisfied',
+    isBirdeye: true,
+    description: 'Reads a social message and classifies its emotional tone as positive, negative, or neutral.',
+    category: 'Social',
+    modules: ['Social'],
+    products: ['healthcare', 'dental', 'automotive'],
+    entities: ['post'],
+    fields: [
+      { id: 'ssc-sentiments', type: 'sentimentClassifier', label: 'Sentiment classifiers', required: true },
+    ],
+    inputs: [{ name: 'message', type: 'string' }],
+    outputs: [{ name: 'sentiment', type: 'string' }, { name: 'confidence', type: 'number' }],
+  },
+  {
     id: 'handle-response',
     name: 'Handle response',
     icon: 'publish',
