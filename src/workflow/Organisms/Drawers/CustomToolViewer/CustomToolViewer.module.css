@@ -1554,6 +1554,16 @@
   font-family: 'Roboto', sans-serif;
 }
 
+/* "No configuration" plain-text state — tools with zero fields to set up.
+   Just one helper line under the Tool row, no icon, no accent color, no card. */
+.noConfigPlainText {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: #6b7280;
+  font-family: 'Roboto', sans-serif;
+}
+
 /* Inline add/edit form — bordered card, same surface as the tool card. */
 .compForm {
   border: 1px solid #e5e9f0;

@@ -353,6 +353,10 @@ const TASK_DROP_DEFAULTS = {
     description: 'Manage review tags and their descriptions',
     selectedTools: ['classify-tags'],
   },
+  'Generate recommendations': {
+    description: 'Suggests recommended next steps for the team based on the review\'s content and sentiment.',
+    selectedTools: ['generate-recommendations'],
+  },
   'Update contact preference': {
     description: 'Updates permissions on a contact record',
     selectedTools: ['update-contact-preference'],

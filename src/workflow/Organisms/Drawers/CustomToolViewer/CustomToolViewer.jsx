@@ -2773,17 +2773,23 @@ export function ToolViewerContent({
     else onClose?.();
   };
 
+  const hasFields = Array.isArray(tool.fields) && tool.fields.length > 0;
+
   const fieldsBody = (
     <div className={embedded ? styles.embeddedBody : styles.body}>
-      {tool.fields
-        ?.filter((f) => isFieldVisible(f, effectiveSnapshot))
-        .map((f) => (
-          <InteractiveField
-            key={f.id}
-            field={clearDefaults ? { ...f, defaultValue: undefined, defaultChecked: undefined } : f}
-            onValueChange={handleValueChange}
-          />
-        ))}
+      {hasFields ? (
+        tool.fields
+          .filter((f) => isFieldVisible(f, effectiveSnapshot))
+          .map((f) => (
+            <InteractiveField
+              key={f.id}
+              field={clearDefaults ? { ...f, defaultValue: undefined, defaultChecked: undefined } : f}
+              onValueChange={handleValueChange}
+            />
+          ))
+      ) : (
+        <p className={styles.noConfigPlainText}>No additional configurations required</p>
+      )}
     </div>
   );
 
