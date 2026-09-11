@@ -1,28 +1,38 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, Mail, MapPin, Phone, User } from 'lucide-react'
 import { BackArrowIcon } from '../../assets/BackArrowIcon'
+import { SelectMenu } from '../SelectMenu/SelectMenu'
 import { WIZARD_LOCATIONS } from '../../data/wizardLocations'
 import { AddEmployeeDrawerProps, AddEmployeeValues } from './AddEmployeeDrawer.types'
 
-const EMPTY_VALUES: AddEmployeeValues = { firstName: '', lastName: '', email: '', phone: '', location: '' }
+const LOCATION_MENU_OPTIONS = WIZARD_LOCATIONS.map((loc) => ({ value: loc.id, label: loc.name }))
+
+const EMPTY_VALUES: AddEmployeeValues = { firstName: '', lastName: '', email: '', phone: '', location: [] }
 
 export function AddEmployeeDrawer({ open, onClose, onAdd }: AddEmployeeDrawerProps) {
   const [values, setValues] = useState<AddEmployeeValues>(EMPTY_VALUES)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [locationOpen, setLocationOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
       setValues(EMPTY_VALUES)
       setPhotoUrl(null)
+      setLocationOpen(false)
     }
   }, [open])
 
   const canSubmit = values.email.trim().length > 0
 
-  function set<K extends keyof AddEmployeeValues>(key: K, value: string) {
+  function set<K extends keyof AddEmployeeValues>(key: K, value: AddEmployeeValues[K]) {
     setValues((v) => ({ ...v, [key]: value }))
   }
+
+  const locationLabel = values.location
+    .map((id) => LOCATION_MENU_OPTIONS.find((o) => o.value === id)?.label)
+    .filter(Boolean)
+    .join(', ')
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -153,27 +163,33 @@ export function AddEmployeeDrawer({ open, onClose, onAdd }: AddEmployeeDrawerPro
                   <Check className="size-5 shrink-0 text-chip-success-text" strokeWidth={1.6} absoluteStrokeWidth />
                 )}
               </div>
-              <div className="relative col-span-2 flex h-11 items-center gap-sm rounded-sm border border-border-input bg-surface px-md focus-within:border-primary">
-                <MapPin className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-                <select
-                  value={values.location}
-                  onChange={(e) => set('location', e.target.value)}
-                  className="min-w-0 flex-1 appearance-none bg-transparent pr-2xl text-body text-text-primary outline-none"
+              <div className="relative col-span-2">
+                <button
+                  type="button"
+                  onClick={() => setLocationOpen((o) => !o)}
+                  className={`flex h-11 w-full items-center gap-sm rounded-sm border bg-surface px-md ${
+                    locationOpen ? 'border-primary' : 'border-border-input'
+                  }`}
                 >
-                  <option value="" disabled hidden>
-                    Select location
-                  </option>
-                  {WIZARD_LOCATIONS.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="pointer-events-none absolute right-md top-1/2 size-4 -translate-y-1/2 text-text-icon"
-                  strokeWidth={1.6}
-                  absoluteStrokeWidth
-                />
+                  <MapPin className="size-5 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+                  <span className={`min-w-0 flex-1 truncate text-left text-body ${locationLabel ? 'text-text-primary' : 'text-text-tertiary'}`}>
+                    {locationLabel || 'Select location'}
+                  </span>
+                  <ChevronDown className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+                </button>
+                {locationOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[105]" onClick={() => setLocationOpen(false)} />
+                    <div className="absolute left-0 top-[calc(100%+4px)] z-[110] w-full">
+                      <SelectMenu
+                        options={LOCATION_MENU_OPTIONS}
+                        value={values.location}
+                        multi
+                        onChange={(v) => set('location', v)}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

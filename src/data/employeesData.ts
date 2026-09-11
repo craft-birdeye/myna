@@ -3,6 +3,7 @@ export interface Employee {
   email: string
   phone: string
   location: string
+  createdOn: string
 }
 
 const LOCATION_NAMES = [
@@ -26,6 +27,17 @@ function emailFor(name: string, i: number): string {
   return `${local}${i}@extraspace.com`
 }
 
+// Random-looking but deterministic date within the last ~2 years (ISO — sorts correctly as a string).
+const CREATED_ON_RANGE_START = new Date('2024-01-01T00:00:00Z').getTime()
+const CREATED_ON_RANGE_DAYS = 985 // through ~Sep 2026
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+function createdOnFor(i: number): string {
+  const dayOffset = (i * 41 + 17) % CREATED_ON_RANGE_DAYS
+  const date = new Date(CREATED_ON_RANGE_START + dayOffset * MS_PER_DAY)
+  return date.toISOString().slice(0, 10)
+}
+
 const NAMED_EMPLOYEES: Employee[] = [
   { name: 'aaronlammey lammey' },
   { name: 'ABC abc' },
@@ -47,6 +59,7 @@ const NAMED_EMPLOYEES: Employee[] = [
   email: emailFor(e.name, i),
   phone: usPhone(i),
   location: LOCATION_NAMES[i % LOCATION_NAMES.length],
+  createdOn: createdOnFor(i),
 }))
 
 const FIRST_NAMES = [
@@ -70,6 +83,7 @@ function generateFillerEmployees(count: number): Employee[] {
       email: `${first.toLowerCase()}.${last.toLowerCase()}${i}@extraspace.com`,
       phone: usPhone(i + NAMED_EMPLOYEES.length),
       location: LOCATION_NAMES[i % LOCATION_NAMES.length],
+      createdOn: createdOnFor(i + NAMED_EMPLOYEES.length),
     })
   }
   return out

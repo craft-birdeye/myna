@@ -3,7 +3,7 @@ export interface AddEmployeeValues {
   lastName: string
   email: string
   phone: string
-  location: string
+  location: string[]
 }
 
 export interface AddEmployeeDrawerProps {

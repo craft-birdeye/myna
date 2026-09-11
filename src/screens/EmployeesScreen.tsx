@@ -9,6 +9,11 @@ const LOCATION_OPTIONS = [{ value: 'all', label: 'All locations' }]
 
 const FILTER_FIELDS = [{ id: 'location', label: 'Location', options: LOCATION_OPTIONS }]
 
+function formatCreatedOn(iso: unknown): string {
+  const date = new Date(`${iso}T00:00:00Z`)
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+}
+
 interface EmployeesScreenProps {
   onBack: () => void
 }
@@ -28,6 +33,7 @@ export function EmployeesScreen({ onBack }: EmployeesScreenProps) {
     { key: 'email' as const, label: 'Email' },
     { key: 'phone' as const, label: 'Phone' },
     { key: 'location' as const, label: 'Location' },
+    { key: 'createdOn' as const, label: 'Created on', sortable: true, render: formatCreatedOn },
   ]
 
   const filteredEmployees = employees.filter(
@@ -131,6 +137,8 @@ export function EmployeesScreen({ onBack }: EmployeesScreenProps) {
             <DataTable
               columns={columns}
               data={filteredEmployees as unknown as Record<string, unknown>[]}
+              initialSortKey="createdOn"
+              initialSortDir="desc"
               rowMenuItems={[
                 { label: 'Edit', onClick: () => {} },
                 { label: 'Remove', onClick: () => {}, variant: 'danger' },
@@ -157,7 +165,12 @@ export function EmployeesScreen({ onBack }: EmployeesScreenProps) {
               name: `${values.firstName} ${values.lastName}`.trim() || 'Unnamed',
               email: values.email,
               phone: values.phone || '-',
-              location: WIZARD_LOCATIONS.find((l) => l.id === values.location)?.name ?? '-',
+              location:
+                values.location
+                  .map((id) => WIZARD_LOCATIONS.find((l) => l.id === id)?.name)
+                  .filter(Boolean)
+                  .join(', ') || '-',
+              createdOn: new Date().toISOString().slice(0, 10),
             },
             ...prev,
           ])
