@@ -31,7 +31,7 @@ const ITEM_DESCRIPTIONS = {
   'Fetch data from external app': 'Retrieve data from a connected external application',
   'Trigger external webhook': 'Fire a webhook to an external system',
   Branch: 'Split the flow based on conditions',
-  Delay: 'Wait for a specific time or event',
+  Delay: 'Waits until a specific time or event',
 };
 
 const AI_ITEMS = new Set(['Triage review', 'Review responder']);

@@ -6,6 +6,8 @@ import LHSDrawer, {
   INITIATE_VOICE_CALL_TASK,
   REVIEWS_TASK_SUB_ITEMS,
   DELAY_VARIANT_PRESETS,
+  delayVariantDescription,
+  DELAY_GENERIC_DESCRIPTION,
 } from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
 import RHS from '../Organisms/Panels/RHS/RHS';
@@ -473,7 +475,10 @@ function makeNodeConfig(id, type, label, description) {
   } else if (type === 'delay') {
     flowType = 'delay';
     titlePlaceholder = 'Configure delay settings';
-    descriptionPlaceholder = 'Wait for specific time or event.';
+    descriptionPlaceholder =
+      delayVariantDescription({ variantLabel: description })
+      || delayVariantDescription({ variantLabel: label })
+      || DELAY_GENERIC_DESCRIPTION;
   } else if (type === 'parallel') {
     flowType = 'parallel';
   } else if (type === 'loop') {
@@ -769,7 +774,11 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                   ...(item.flowType === 'delay'
                     ? {
                         titlePlaceholder: 'Configure delay settings',
-                        descriptionPlaceholder: 'Wait for specific time or event.',
+                        descriptionPlaceholder:
+                          delayVariantDescription({
+                            delayOption: nodeDetails[nodeId]?.delayOption,
+                            variantLabel: item.data?.description,
+                          }) || DELAY_GENERIC_DESCRIPTION,
                       }
                     : item.flowType === 'subagent'
                       ? {
@@ -948,7 +957,17 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             let childData = { ...childNode.data, stepNumber: ++stepCounter };
             if (childNode.flowType === 'procedures') {
               childData = { ...childData, toggleEnabled: childNode.data?.toggleEnabled ?? true, procedureItems: mapProcedureItems(childDet.procedureIds, nodeDetails, childId, product) };
-            } else if (childNode.flowType !== 'delay' && childNode.flowType !== 'branch') {
+            } else if (childNode.flowType === 'delay') {
+              childData = {
+                ...childData,
+                titlePlaceholder: 'Configure delay settings',
+                descriptionPlaceholder:
+                  delayVariantDescription({
+                    delayOption: childDet.delayOption,
+                    variantLabel: childData.description,
+                  }) || DELAY_GENERIC_DESCRIPTION,
+              };
+            } else if (childNode.flowType !== 'branch') {
               const mappedChild = remapDroppedTaskCopy(
                 childDet.taskName ?? childDet.triggerName ?? childData.title,
                 childDet.description ?? childData.subtitle,
@@ -2844,7 +2863,18 @@ export default function AgentBuilder({
     // (Branch variants are handled by the scaffold block below since it owns the
     // branch/path structure the canvas renders.)
     if (effectiveType === 'delay' && DELAY_VARIANT_PRESETS[controlVariant]) {
+      const delayBlurb = delayVariantDescription({
+        delayOption: DELAY_VARIANT_PRESETS[controlVariant],
+        variantLabel: controlVariant,
+      });
       details = { ...details, delayOption: DELAY_VARIANT_PRESETS[controlVariant] };
+      if (delayBlurb) {
+        newNode.data = {
+          ...newNode.data,
+          descriptionPlaceholder: delayBlurb,
+          subtitle: delayBlurb,
+        };
+      }
     }
 
     if (effectiveType === 'trigger' && !branchPathId) {
