@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import iconPlay from '../../assets/help-center/play.svg'
 import iconFileText from '../../assets/help-center/file-text.svg'
-import iconGlossary from '../../assets/help-center/glossary.svg'
 import iconConstruction from '../../assets/help-center/construction.svg'
 import iconFeedback from '../../assets/help-center/feedback.svg'
 import { Icon } from '../Icon/Icon'
@@ -52,7 +51,7 @@ export function HelpCenterPanel({
   open,
   onClose,
   onStartTour,
-  onOpenGlossary,
+  onOpenGlossary: _onOpenGlossary,
   onOpenProductResearchSettings,
 }: HelpCenterPanelProps) {
   const [view, setView] = useState<HelpCenterView>('home')
@@ -156,14 +155,7 @@ export function HelpCenterPanel({
                 description="Find detailed articles and guides to help you get started."
                 onClick={() => setView('articles')}
               />
-              <NavCard
-                iconSrc={iconGlossary}
-                iconSize={20}
-                title="Glossary"
-                description="Explore definitions and explanations for terms used across agent builder."
-                showChevron={false}
-                onClick={() => onOpenGlossary?.()}
-              />
+              {/* Glossary NavCard hidden for now — restore with onOpenGlossary when ready. */}
               <ActionCard
                 iconSrc={iconConstruction}
                 iconSize={18}

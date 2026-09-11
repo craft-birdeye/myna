@@ -27,6 +27,8 @@ export default function SystemPromptInput({
   errorMessage = 'This field is required',
   readOnly = false,
   disabled = false,
+  label = 'System prompt',
+  placeholder = 'Describe the persona of this agent',
 }) {
   const locked = readOnly || disabled;
   const editorRef = useRef(null);
@@ -189,7 +191,7 @@ export default function SystemPromptInput({
     <div className={`${styles.inputBox}${!locked && isEmpty ? ` ${styles.inputBoxWithHint}` : ''}${fieldModalOpen ? ` ${styles.inputBoxOpen}` : ''}${error ? ` ${styles.inputBoxError}` : ''}${disabled ? ` ${styles.inputBoxDisabled}` : readOnly ? ` ${styles.inputBoxReadOnly}` : ''}`}>
       {!locked && isEmpty && (
         <div className={styles.placeholderOverlay} aria-hidden>
-          Describe the persona of this agent
+          {placeholder}
         </div>
       )}
       <div
@@ -199,7 +201,7 @@ export default function SystemPromptInput({
         suppressContentEditableWarning
         onInput={locked ? undefined : emitChange}
         onKeyDown={locked ? undefined : handleKeyDown}
-        data-placeholder="Describe the persona of this agent"
+        data-placeholder={placeholder}
       />
       {!locked && (
       <div className={styles.toolbar}>
@@ -233,7 +235,7 @@ export default function SystemPromptInput({
       <div className={styles.wrap}>
         <div className={styles.labelRow}>
           <div className={styles.labelLeft}>
-            <span className={styles.label}>System prompt</span>
+            <span className={styles.label}>{label}</span>
             {required && <span className={styles.required}>*</span>}
             {showLabelActions && (
               <InfoTooltip text={SYSTEM_PROMPT_INFO} variant="detail" />
@@ -244,7 +246,7 @@ export default function SystemPromptInput({
               type="button"
               className={styles.expandBtn}
               onClick={() => setExpanded(true)}
-              aria-label="Expand system prompt"
+              aria-label={`Expand ${label.toLowerCase()}`}
               title="Expand"
             >
               <Icon name="open_in_full" size={18} />
@@ -257,7 +259,7 @@ export default function SystemPromptInput({
             className={styles.expandedPlaceholder}
             onClick={() => setExpanded(true)}
           >
-            System prompt is open in expanded view
+            {label} is open in expanded view
           </button>
         ) : (
           editorBlock(
@@ -281,11 +283,11 @@ export default function SystemPromptInput({
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="System prompt"
+            aria-label={label}
           >
             <div className={styles.overlayHeader}>
               <div className={styles.labelLeft}>
-                <span className={styles.overlayTitle}>System prompt</span>
+                <span className={styles.overlayTitle}>{label}</span>
                 {required && <span className={styles.required}>*</span>}
                 <InfoTooltip text={SYSTEM_PROMPT_INFO} variant="detail" />
               </div>
@@ -293,7 +295,7 @@ export default function SystemPromptInput({
                 type="button"
                 className={styles.expandBtn}
                 onClick={handleCloseExpand}
-                aria-label="Exit expanded system prompt"
+                aria-label={`Exit expanded ${label.toLowerCase()}`}
                 title="Exit expanded view"
               >
                 <Icon name="close_fullscreen" size={18} />

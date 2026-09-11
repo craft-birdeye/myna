@@ -52,8 +52,7 @@ export default function ProcedureTaskBody({
           {viewOnly ? (
             <>
               <div className={styles.systemPromptLabelRow}>
-                <span className={styles.systemPromptLabel}>System prompt</span>
-                <span className={styles.systemPromptRequired} aria-hidden>*</span>
+                <span className={styles.systemPromptLabel}>Instructions</span>
               </div>
               <textarea
                 className={styles.systemPromptReadOnly}
@@ -68,9 +67,10 @@ export default function ProcedureTaskBody({
             <SystemPromptInput
               value={promptStore.systemPrompt}
               onChange={promptStore.setSystemPrompt}
-              required
               tall
               showTriggerFields={false}
+              label="Instructions"
+              placeholder="Enter instructions on how to run these procedures"
             />
           )}
         </div>

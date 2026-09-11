@@ -19,8 +19,8 @@ export interface ShareFeedbackModalProps {
    */
   variant?: 'coaching' | 'help'
   /**
-   * `help` variant only — opens Settings > Account > Product research (the
-   * "I'd like to participate in product research" checkbox's "Learn more" link).
+   * `help` variant only — opens Settings > Account > Product research.
+   * Temporarily unused while the checkbox "Learn more" link is hidden.
    */
   onOpenProductResearchSettings?: () => void
 }
