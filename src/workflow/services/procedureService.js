@@ -837,5 +837,6 @@ export function getProcedureDetailContent(id, fieldOverrides = {}, product) {
     moreContextCount: liveContext ? 0 : (detail.moreContextCount ?? 0),
     stepsText: fieldOverrides.stepsText ?? liveSteps ?? detail.stepsText ?? formatProcedureSteps(proc?.steps),
     addToLibrary: fieldOverrides.addToLibrary ?? false,
+    includeSystemPrompt: fieldOverrides.includeSystemPrompt ?? true,
   };
 }

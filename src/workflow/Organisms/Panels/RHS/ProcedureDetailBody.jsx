@@ -841,6 +841,7 @@ export default function ProcedureDetailBody({
   const [whenToUse, setWhenToUse] = useState(initialValues.whenToUse ?? '');
   const [whenToExit, setWhenToExit] = useState(initialValues.whenToExit ?? '');
   const [contextChips, setContextChips] = useState(normalizeChips(initialValues.contextChips ?? []));
+  const [includeSystemPrompt, setIncludeSystemPrompt] = useState(initialValues.includeSystemPrompt ?? true);
   const [stepsText, setStepsText] = useState(initialValues.stepsText ?? '');
   const [addToLibrary, setAddToLibrary] = useState(initialValues.addToLibrary ?? false);
   const [stepsExpanded, setStepsExpanded] = useState(false);
@@ -854,9 +855,13 @@ export default function ProcedureDetailBody({
     setWhenToUse(initialValues.whenToUse ?? '');
     setWhenToExit(initialValues.whenToExit ?? '');
     setContextChips(normalizeChips(initialValues.contextChips ?? []));
+    setIncludeSystemPrompt(initialValues.includeSystemPrompt !== false);
     setStepsText(initialValues.stepsText ?? '');
     setAddToLibrary(initialValues.addToLibrary ?? false);
-  }, [initialValues.name, initialValues.whenToUse, initialValues.whenToExit, initialValues.contextChips, initialValues.stepsText, initialValues.addToLibrary, initialValues.id]);
+    // Only re-hydrate when switching procedures. Parent remounts via key on id change;
+    // including contextChips here would reset local state every render (live chips are a
+    // new array reference on each getProcedureDetailContent call).
+  }, [initialValues.id]);
 
   useEffect(() => {
     const el = whenToUseRef.current;
@@ -1018,21 +1023,47 @@ export default function ProcedureDetailBody({
       </div>
 
       {!hideContext && (
-        <ChipSection
-          label="Context"
-          chips={contextChips}
-          onChange={(next) => { setContextChips(next); onFieldChange?.('contextChips', next); }}
-          defaultType="variable"
-          viewOnly={viewOnly}
-          moreCount={moreContextCount}
-          chipsReadOnly={viewOnly || (!contextEditable && !onAddContext)}
-          showContextAdd={false}
-          libraryContextStyle={
-            viewOnly || contextLibraryStyle || contextEditable || Boolean(onAddContext)
-          }
-          tooltip="Uses your brand voice, industry knowledge, to generate accurate responses"
-          onAddContext={viewOnly ? undefined : onAddContext}
-        />
+        <>
+          <div className={styles.includeSystemPromptRow}>
+            <div className={etStyles.sectionLabelWrapper}>
+              <span className={etStyles.sectionLabelText}>Include system prompt</span>
+              <SectionInfoIcon tooltip="When on, this procedure uses the agent's system prompt, the instructions that define its persona." />
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={includeSystemPrompt}
+              aria-label="Include system prompt"
+              disabled={viewOnly}
+              onClick={() => {
+                if (viewOnly) return;
+                const next = !includeSystemPrompt;
+                setIncludeSystemPrompt(next);
+                onFieldChange?.('includeSystemPrompt', next);
+              }}
+              className={`${styles.includeSystemPromptToggle}${
+                includeSystemPrompt ? ` ${styles.includeSystemPromptToggleOn}` : ''
+              }${viewOnly ? ` ${styles.includeSystemPromptToggleDisabled}` : ''}`}
+            >
+              <span className={styles.includeSystemPromptThumb} />
+            </button>
+          </div>
+          <ChipSection
+            label="Context"
+            chips={contextChips}
+            onChange={(next) => { setContextChips(next); onFieldChange?.('contextChips', next); }}
+            defaultType="variable"
+            viewOnly={viewOnly}
+            moreCount={moreContextCount}
+            chipsReadOnly={viewOnly || (!contextEditable && !onAddContext)}
+            showContextAdd={false}
+            libraryContextStyle={
+              viewOnly || contextLibraryStyle || contextEditable || Boolean(onAddContext)
+            }
+            tooltip="Uses your brand voice, industry knowledge, to generate accurate responses"
+            onAddContext={viewOnly ? undefined : onAddContext}
+          />
+        </>
       )}
 
       {showTypeField && (
