@@ -566,6 +566,21 @@ const EMBED_CONTEXT = EMBED.context;
 const EMBED_ALIGN_CLASS = EMBED_NO_CHROME ? "" : "mx-auto";
 const EMBED_CANVAS_CLASS = EMBED_NO_CHROME ? "bg-white" : "bg-canvas";
 
+/* When embedded (chrome=none), this document's own modals/drawers are
+ * `position: fixed`, which only ever covers this iframe's own box — it can
+ * never visually reach the host's L1 rail or top nav that live in the
+ * parent document, outside the iframe. Every full-screen overlay in this
+ * file calls notifyOverlay(true) while it's open and notifyOverlay(false)
+ * when it closes; the host (SuperAgentApp.tsx) listens for these and
+ * temporarily promotes the iframe itself to a full-viewport fixed
+ * position so the overlay reads as covering the whole app, not just the
+ * embedded pane. No-op outside an iframe (e.g. the standalone/overlay app).
+ */
+const notifyOverlay = (isOpen) => {
+  if (window.parent === window) return;
+  window.parent.postMessage({ type: isOpen ? "superagent:overlay-open" : "superagent:overlay-close" }, "*");
+};
+
 /* ═══════════════════════════════════════════════════════════
  * ATOMS — ported from beautiful-ui/components/atoms
  * ═══════════════════════════════════════════════════════════ */
@@ -1679,6 +1694,11 @@ function Modal({ open, onClose, children, width = 420 }) {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [open, onClose]);
+  useEffect(() => {
+    if (!open) return;
+    notifyOverlay(true);
+    return () => notifyOverlay(false);
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ animation: "fade-in 160ms ease-out both" }}>
@@ -1698,6 +1718,11 @@ function ImageLightbox({ file, onClose }) {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [file, onClose]);
+  useEffect(() => {
+    if (!file) return;
+    notifyOverlay(true);
+    return () => notifyOverlay(false);
+  }, [file]);
   if (!file) return null;
   /* Portaled straight to <body> — this is a true full-viewport modal, not
    * something nested inside the composer bar, so it can never inherit the
@@ -4041,6 +4066,8 @@ function ChannelPreview({ app, onClose }) {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => { notifyOverlay(true); return () => notifyOverlay(false); }, []);
+
   useEffect(() => {
     const esc = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", esc);
@@ -4536,6 +4563,11 @@ function AgentInfoDrawer({ agent, app, open, onClose }) {
     document.addEventListener("keydown", esc);
     return () => document.removeEventListener("keydown", esc);
   }, [open, onClose]);
+  useEffect(() => {
+    if (!open) return;
+    notifyOverlay(true);
+    return () => notifyOverlay(false);
+  }, [open]);
   if (!agent) return null;
   return (
     <>
@@ -5256,6 +5288,11 @@ function LibAgentCard({ agent, onView, onUse, index }) {
 
 function LibraryDrawer({ agent, onClose, onUse }) {
   const open = Boolean(agent);
+  useEffect(() => {
+    if (!open) return;
+    notifyOverlay(true);
+    return () => notifyOverlay(false);
+  }, [open]);
   return (
     <>
       <div className="fixed inset-0 z-40 bg-[oklch(0.25_0.01_260_/_0.28)] backdrop-blur-[1px] transition-opacity duration-300"
@@ -5443,6 +5480,7 @@ function QrMock({ size = 168, cells = 25 }) {
 
 function ChannelConnectModal({ chKey, on, onClose, onConnect, onPreview }) {
   const c = CHANNEL_SETUP[chKey];
+  useEffect(() => { notifyOverlay(true); return () => notifyOverlay(false); }, []);
   useEffect(() => {
     const esc = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", esc);

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SuperAgentAppProps } from './SuperAgentApp.types'
 
 // Embeds the self-contained Super Agent prototype (public/super-agent-prototype.html).
@@ -49,6 +49,15 @@ export function SuperAgentApp({
   const frameRef = useRef<HTMLIFrameElement>(null)
   const loadedRef = useRef(false)
   const pendingRef = useRef<Array<Record<string, unknown>>>([])
+  // In 'embedded' mode the iframe is only sized to the L2 content pane, next to the
+  // host's own L1 rail and TopBar. The prototype's modals/drawers are `position: fixed`,
+  // which can only ever cover the iframe's own box — never the host chrome outside it.
+  // So the prototype posts 'superagent:overlay-open'/'-close' around every one of its
+  // own full-screen overlays; while any are open, promote this iframe itself to a
+  // full-viewport fixed layer (mirroring 'overlay' mode) so the dialog reads as covering
+  // the whole app. A count (not a flag) survives overlays opening on top of each other.
+  const overlayCountRef = useRef(0)
+  const [overlayOpen, setOverlayOpen] = useState(false)
 
   function send(message: Record<string, unknown>) {
     if (loadedRef.current) {
@@ -101,6 +110,14 @@ export function SuperAgentApp({
       if (e.data?.type === 'superagent:back-to-birdeye') onBackToBirdeye?.()
       if (e.data?.type === 'superagent:close-agent') onCloseAgent?.()
       if (e.data?.type === 'superagent:agent-opened') onOpenAgent?.()
+      if (e.data?.type === 'superagent:overlay-open') {
+        overlayCountRef.current += 1
+        setOverlayOpen(true)
+      }
+      if (e.data?.type === 'superagent:overlay-close') {
+        overlayCountRef.current = Math.max(0, overlayCountRef.current - 1)
+        if (overlayCountRef.current === 0) setOverlayOpen(false)
+      }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
@@ -109,10 +126,15 @@ export function SuperAgentApp({
   const containerClass = active
     ? mode === 'overlay'
       ? 'fixed inset-0 z-50 h-screen w-screen'
-      // 'embedded' sits below a sticky header as a flex-col sibling (see App.tsx) —
-      // flex-1/min-h-0 fills the remaining space instead of `h-full`, which would
-      // measure against the whole <main>, not the space left after the header.
-      : 'flex-1 min-h-0 w-full bg-white'
+      : overlayOpen
+        // IconRail's own expanded/flyout layer is z-[70] (see IconRail.tsx) — this
+        // has to clear that (and its z-[60] dropdowns) or the L1 rail paints on top
+        // of the promoted iframe instead of being covered by it.
+        ? 'fixed inset-0 z-[80] h-screen w-screen'
+        // 'embedded' sits below a sticky header as a flex-col sibling (see App.tsx) —
+        // flex-1/min-h-0 fills the remaining space instead of `h-full`, which would
+        // measure against the whole <main>, not the space left after the header.
+        : 'flex-1 min-h-0 w-full bg-white'
     : 'hidden'
 
   return (
