@@ -136,15 +136,8 @@ function isReviewResponseAgentName(name: string) {
   return name === REVIEW_RESPONSE_AGENT_NAME || name === REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
 }
 
-/** Review response agent (exploration) grid only — visual card variations.
- *  Default = Figma icon card (author meta, goals, Edit / View details / ⋮);
- *  R1 = 4-metric icon card; R2 = compact footer card; R3 = metric-forward (no icon) + View draft. */
-const CARD_LAYOUT_OPTIONS: Array<{ value: 'default' | 'r1' | 'r2' | 'r3'; label: string }> = [
-  { value: 'default', label: 'Default' },
-  { value: 'r1', label: 'R1' },
-  { value: 'r2', label: 'R2' },
-  { value: 'r3', label: 'R3' },
-]
+/** Review response agent (exploration) grid card layout — locked to Default (Figma icon card). */
+type ExplorationCardLayout = 'default' | 'r1' | 'r2' | 'r3'
 
 const SHORT_MONTH: Record<string, string> = {
   January: 'Jan',
@@ -7421,21 +7414,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [agentFilters, setAgentFilters] = useState<Record<string, string[]>>({})
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  /** Review response agent (exploration) grid: 'default' = icon card; 'r1' = metric-forward card. */
-  const [cardLayoutOption, setCardLayoutOption] = useState<'default' | 'r1' | 'r2' | 'r3'>('default')
-  const [cardLayoutMenuOpen, setCardLayoutMenuOpen] = useState(false)
-  const cardLayoutMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!cardLayoutMenuOpen) return
-    const handler = (e: MouseEvent) => {
-      if (cardLayoutMenuRef.current && !cardLayoutMenuRef.current.contains(e.target as Node)) {
-        setCardLayoutMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [cardLayoutMenuOpen])
+  /** Card layout variants remain in the renderer; UI picker removed — always Default. */
+  const cardLayoutOption: ExplorationCardLayout = 'default'
   const showExplorationAgentsToggle =
     isExplorationAgents && activeTab === 'agents'
   const useExplorationGrid =
@@ -8652,44 +8632,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         >
                           <Icon name="table_rows" size={18} />
                         </button>
-                      </div>
-                    )}
-                    {isReviewResponse && useExplorationGrid && (
-                      <div className="relative" ref={cardLayoutMenuRef}>
-                        <button
-                          type="button"
-                          onClick={() => setCardLayoutMenuOpen((o) => !o)}
-                          aria-haspopup="listbox"
-                          aria-expanded={cardLayoutMenuOpen}
-                          className="flex h-[34px] items-center gap-xs rounded-md border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
-                        >
-                          {CARD_LAYOUT_OPTIONS.find((opt) => opt.value === cardLayoutOption)?.label}
-                          <Icon name="expand_more" size={18} />
-                        </button>
-                        {cardLayoutMenuOpen && (
-                          <ul
-                            role="listbox"
-                            className="absolute right-0 top-full z-20 mt-xs min-w-[140px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
-                          >
-                            {CARD_LAYOUT_OPTIONS.map((opt) => (
-                              <li key={opt.value}>
-                                <button
-                                  type="button"
-                                  role="option"
-                                  aria-selected={cardLayoutOption === opt.value}
-                                  onClick={() => {
-                                    setCardLayoutOption(opt.value)
-                                    setCardLayoutMenuOpen(false)
-                                  }}
-                                  className="flex w-full items-center justify-between px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
-                                >
-                                  {opt.label}
-                                  {cardLayoutOption === opt.value && <Icon name="check" size={16} />}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
                       </div>
                     )}
                     <button

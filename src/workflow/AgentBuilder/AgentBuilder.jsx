@@ -10,6 +10,7 @@ import LHSDrawer, {
   DELAY_GENERIC_DESCRIPTION,
 } from '../LHSDrawer/LHSDrawer';
 import FlowCanvas from '../FlowCanvas/FlowCanvas';
+import { defaultUpdateStateDetails } from '../Organisms/Panels/RHS/UpdateStateTaskBody';
 import RHS from '../Organisms/Panels/RHS/RHS';
 import { formatDelaySummary } from '../Organisms/Panels/RHS/DelayBody';
 import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased';
@@ -306,6 +307,11 @@ const TASK_DROP_DEFAULTS = {
   'Send text during call': { description: 'Sends a text message to the caller during an active call', selectedTools: ['in-call-sms'] },
   'In-call SMS': { description: 'Sends a text message to the caller during an active call', selectedTools: ['in-call-sms'] },
   'Send response': { description: 'Sends the drafted response to the contact', selectedTools: ['send-response'] },
+  'Update state': {
+    description: 'Update dynamic variables when this step runs',
+    selectedTools: ['update-state'],
+    stateUpdates: defaultUpdateStateDetails().stateUpdates,
+  },
   'Schedule appointment': { description: 'Books a new appointment for the patient' },
   'Book new appointment': { description: 'Books a new appointment for the patient' },
   'Reschedule appointment': { description: 'Changes an existing appointment date or time' },
@@ -800,7 +806,6 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
                   showConfigWarning: isTaskConfigIncomplete(item, nodeDetails[nodeId]),
                 },
     });
-    const prevIsProcedures = i > 0 && nodeList[i - 1].flowType === 'procedures';
     // No "+" between the trigger placeholder and the first task — that slot is reserved for
     // the trigger, so nothing may be inserted above the first real node there.
     const fromPlaceholder = i === 0 && prevId === TRIGGER_PLACEHOLDER_ID;
@@ -810,7 +815,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
         source: prevId,
         target: nodeId,
         type: 'addButton',
-        data: { betweenCards: true, ...((prevIsProcedures || fromPlaceholder) ? { hideAddButton: true } : {}) },
+        data: { betweenCards: true, ...(fromPlaceholder ? { hideAddButton: true } : {}) },
       });
     }
 
@@ -949,7 +954,6 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
           if (pathCollapsed) return;
 
           let previousId = branch.id;
-          let previousChildFlowType = null;
           let childYOffset = 0;
           branchNodes.forEach((childNode) => {
             const childId = childNode.id;
@@ -981,9 +985,8 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
             }
             const childY = branchNodeStartY + childYOffset;
             nodes.push({ id: childId, type: childNode.flowType, position: { x: branchX, y: childY }, data: childData });
-            edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
+            edges.push({ id: `e-${previousId}-${childNode.id}`, source: previousId, target: childNode.id, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, betweenCards: previousId !== branch.id } });
             previousId = childNode.id;
-            previousChildFlowType = childNode.flowType;
             childYOffset += FLOW_NODE_STEP;
 
             if (childNode.flowType === 'voiceCall') {
@@ -1099,7 +1102,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
           if (!lastChildIsBranchLike) {
             const branchEndId = `${branch.id}-end`;
             nodes.push({ id: branchEndId, type: 'branchEnd', position: { x: branchX, y: branchNodeStartY + childYOffset }, data: { parentId: branch.id } });
-            edges.push({ id: `e-${previousId}-${branchEndId}`, source: previousId, target: branchEndId, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, viewOnly: !!branch.isFallback, ...(previousChildFlowType === 'procedures' ? { hideAddButton: true } : {}) } });
+            edges.push({ id: `e-${previousId}-${branchEndId}`, source: previousId, target: branchEndId, type: 'addButton', data: { branchPathId: branch.id, afterNodeId: previousId === branch.id ? null : previousId, viewOnly: !!branch.isFallback } });
           }
         });
       }
@@ -1110,7 +1113,6 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
   });
 
   const lastId = nodeList.length > 0 ? nodeList[nodeList.length - 1].id : entryId;
-  const lastNodeIsProcedures = nodeList.length > 0 && nodeList[nodeList.length - 1].flowType === 'procedures';
   const lastFlowType = nodeList.length > 0 ? nodeList[nodeList.length - 1].flowType : null;
   const lastBranchCollapsed = lastFlowType === 'branch' && !!collapsedBranches[lastId];
   if (!nodeList.length || (lastFlowType !== 'branch' && lastFlowType !== 'voiceCall') || lastBranchCollapsed) {
@@ -1121,7 +1123,7 @@ function buildFlow(nodeList, startData, nodeDetails = {}, product = 'automotive'
       type: 'end',
       // Top of End node aligns with the bottom of the preceding block; connector fills FLOW_CONNECTOR_GAP
       position: { x: 0, y: endY },
-      data: { afterNodeId: lastId, hideAddBeforeEnd: lastNodeIsProcedures },
+      data: { afterNodeId: lastId },
     });
     edges.push({
       id: `e-${endSourceId}-${END_NODE_ID}`,
@@ -2585,6 +2587,14 @@ export default function AgentBuilder({
   const showAddLocationCta = identityLocationChrome && !hasLocationSelection;
   // Scratch create (exploration): no version history yet; test/preview stays off until the agent exists.
   const isScratchCreate = explorationChrome && !existingAgent;
+  /** Exploration: a Trigger alone is not enough — Activate needs an Actions-palette step. */
+  const hasCanvasTrigger = nodeList.some((n) => n.flowType === 'trigger');
+  const hasCanvasActions = nodeList.some((n) =>
+    n.flowType === 'task'
+    || n.flowType === 'voiceCall'
+    || n.flowType === 'procedures'
+    || n.flowType === 'subagent',
+  );
   /**
    * Exploration only: while the version history panel is open the canvas turns into a
    * read-only "browsing an old version" surface — no add-node palette, no build/run
@@ -2846,6 +2856,8 @@ export default function AgentBuilder({
         taskName: description,
         description: seededDescription,
         ...(taskDefaults.selectedTools ? { selectedTools: taskDefaults.selectedTools } : {}),
+        ...(taskDefaults.stateUpdates ? { stateUpdates: taskDefaults.stateUpdates } : {}),
+        ...(taskDefaults.customVariables ? { customVariables: taskDefaults.customVariables } : {}),
       };
       // Mirror onto the canvas node so the card shows the LHS blurb immediately
       if (seededDescription) {
@@ -3767,6 +3779,25 @@ export default function AgentBuilder({
       );
     }
 
+    if (flowType === 'task' && (currentDetails.selectedTools || []).includes('update-state')) {
+      return (
+        <RHS
+          variant="updateStateTask"
+          title="Action"
+          viewOnly={rhsViewOnly}
+          {...rhsDraftProps}
+          inlineFooter={inlineRhsFooter}
+          product={product}
+          bodyProps={{
+            initialValues: currentDetails,
+            onFieldChange: activeFieldChange,
+          }}
+          onClose={handleCloseDrawer}
+          onSave={handleCloseDrawer}
+        />
+      );
+    }
+
     return (
       <RHS
         variant="entityTask"
@@ -4005,67 +4036,85 @@ export default function AgentBuilder({
       ) : (
         <>
           <div className="ab-publish-split" ref={publishMenuRef}>
-            {/* Live Active + unpublished draft: primary CTA switches to the draft.
-                Inactive agents re-activate through the same CTA (handleActivateMain
-                routes to resume vs publish), so there is no separate Resume button. */}
-            <button
-              type="button"
-              className="ab-publish-split__main"
-              aria-label={blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
-              data-tour-id="publish"
-              disabled={publishDisabled}
-              onClick={() => {
-                if (blockActiveEditsForDraft) {
-                  setPublishMenuOpen(false);
-                  handleGoToDraftVersion();
-                  return;
-                }
-                handleActivateMain();
-              }}
-            >
-              {blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
-            </button>
-            <button
-              type="button"
-              className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
-              aria-label={blockActiveEditsForDraft ? 'More draft options' : 'More activate options'}
-              aria-haspopup="menu"
-              aria-expanded={publishMenuOpen}
-              disabled={publishDisabled}
-              onClick={() => setPublishMenuOpen((open) => !open)}
-            >
-              <span className="material-symbols-outlined">expand_more</span>
-            </button>
-            {publishMenuOpen && (
-              <div className="ab-publish-split__menu" role="menu">
-                {/* Active + draft view: only Deactivate — Save as draft would overwrite
-                    the working draft with the locked live canvas. */}
-                {!blockActiveEditsForDraft && (
-                  <button
-                    type="button"
-                    className="ab-publish-split__menu-item"
-                    role="menuitem"
-                    onClick={handleSaveAsDraft}
-                  >
-                    Save as draft
-                  </button>
-                )}
-                {/* Only a live agent can be deactivated (including while browsing
-                    the Active canvas of an agent that also has a draft). */}
-                {(agentStatus === 'Active' || blockActiveEditsForDraft) && (
-                  <button
-                    type="button"
-                    className="ab-publish-split__menu-item"
-                    role="menuitem"
-                    onClick={() => {
+            {/* Exploration: Save as draft until an Action (task/etc.) is on the canvas —
+                a Trigger alone keeps this CTA. Disabled until a trigger exists.
+                Other agents / draft-blocked keep the Activate split. */}
+            {explorationChrome && !blockActiveEditsForDraft && !hasCanvasActions ? (
+              <button
+                type="button"
+                className="ab-publish-split__main ab-publish-split__main--solo"
+                aria-label="Save as draft"
+                data-tour-id="publish"
+                disabled={publishDisabled || !hasCanvasTrigger}
+                onClick={handleSaveAsDraft}
+              >
+                Save as draft
+              </button>
+            ) : (
+              <>
+                {/* Live Active + unpublished draft: primary CTA switches to the draft.
+                    Inactive agents re-activate through the same CTA (handleActivateMain
+                    routes to resume vs publish), so there is no separate Resume button. */}
+                <button
+                  type="button"
+                  className="ab-publish-split__main"
+                  aria-label={blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
+                  data-tour-id="publish"
+                  disabled={publishDisabled}
+                  onClick={() => {
+                    if (blockActiveEditsForDraft) {
                       setPublishMenuOpen(false);
-                      handlePause();
-                    }}
-                  >
-                    Deactivate
-                  </button>
+                      handleGoToDraftVersion();
+                      return;
+                    }
+                    handleActivateMain();
+                  }}
+                >
+                  {blockActiveEditsForDraft ? 'Edit as draft' : 'Activate'}
+                </button>
+                <button
+                  type="button"
+                  className={`ab-publish-split__chevron${publishMenuOpen ? ' ab-publish-split__chevron--open' : ''}`}
+                  aria-label={blockActiveEditsForDraft ? 'More draft options' : 'More activate options'}
+                  aria-haspopup="menu"
+                  aria-expanded={publishMenuOpen}
+                  disabled={publishDisabled}
+                  onClick={() => setPublishMenuOpen((open) => !open)}
+                >
+                  <span className="material-symbols-outlined">expand_more</span>
+                </button>
+                {publishMenuOpen && (
+                  <div className="ab-publish-split__menu" role="menu">
+                    {/* Active + draft view: only Deactivate — Save as draft would overwrite
+                        the working draft with the locked live canvas. */}
+                    {!blockActiveEditsForDraft && (
+                      <button
+                        type="button"
+                        className="ab-publish-split__menu-item"
+                        role="menuitem"
+                        onClick={handleSaveAsDraft}
+                      >
+                        Save as draft
+                      </button>
+                    )}
+                    {/* Only a live agent can be deactivated (including while browsing
+                        the Active canvas of an agent that also has a draft). */}
+                    {(agentStatus === 'Active' || blockActiveEditsForDraft) && (
+                      <button
+                        type="button"
+                        className="ab-publish-split__menu-item"
+                        role="menuitem"
+                        onClick={() => {
+                          setPublishMenuOpen(false);
+                          handlePause();
+                        }}
+                      >
+                        Deactivate
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
           {/* Version history + Delete live behind the three-dots menu. */}

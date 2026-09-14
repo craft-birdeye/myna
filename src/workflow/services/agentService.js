@@ -831,6 +831,20 @@ const _SEED_TOOLS = [
     outputs: [{ name: 'status', type: 'string', description: 'sent | failed' }],
   },
   {
+    id: 'update-state',
+    name: 'Update state',
+    icon: 'data_object',
+    description: 'Updates one or more dynamic variables when this step runs — literal values, references, or LLM-evaluated instructions.',
+    category: 'Data',
+    modules: ['Conversation'],
+    products: ['healthcare', 'automotive', 'dental'],
+    entities: ['conversation'],
+    inputs: [
+      { name: 'stateUpdates', type: 'array', description: 'List of variable updates to apply' },
+    ],
+    outputs: [{ name: 'status', type: 'string', description: 'updated | failed' }],
+  },
+  {
     id: 'send-email',
     name: 'Send email',
     icon: 'mail',
