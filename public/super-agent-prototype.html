@@ -554,6 +554,12 @@ const EMBED = (() => {
 })();
 const EMBED_IN_APP = EMBED.stage === "app";
 const EMBED_NO_CHROME = EMBED.chrome === "none";
+// Embedded (chrome=none, inside the myna L1 module): no left rail of its own, so
+// pages sit flush-left on a white canvas instead of centered on the gray one used
+// by the standalone app/overlay — scoped entirely to this flag, never touching the
+// standalone experience's own layout.
+const EMBED_ALIGN_CLASS = EMBED_NO_CHROME ? "" : "mx-auto";
+const EMBED_CANVAS_CLASS = EMBED_NO_CHROME ? "bg-white" : "bg-canvas";
 
 /* ═══════════════════════════════════════════════════════════
  * ATOMS — ported from beautiful-ui/components/atoms
@@ -868,13 +874,47 @@ const CAT_LABEL = Object.fromEntries(LIB_CATEGORIES.map((c) => [c.key, c.label])
 
 /* Agent avatars are transparent gradient marks — no disc, no ring, so the
  * shape itself reads as the agent's identity on any surface or theme. */
+// Embedded (chrome=none, inside the myna L1 module): per-agent flat glyph instead
+// of the same repeated Sparkle for every card — still one consistent (flat,
+// single-tone) icon language, but distinct enough to tell agents apart, matching
+// the host's own per-agent Material-icon chips on My agents/Library.
+const EMBED_AGENT_GLYPH = {
+  "front-desk": "agents", frontdesk: "agents",
+  "negative-review-recovery": "alert", reputation: "alert",
+  "missed-call-recovery": "phone",
+  "review-response": "reply",
+  "review-generation": "star",
+  "listings-health": "mapPin",
+  "location-performance": "chart",
+  "local-content": "file",
+  "business-info": "route",
+  "appointment-booking": "calendar",
+  "lead-qualification": "tag",
+  "social-publishing": "message",
+  "social-engagement": "users",
+  "local-social-content": "mapPin",
+  "executive-summary": "chart",
+  "performance-alert": "alert",
+  "marketing-content": "message",
+  "blog-seo": "file",
+  "content-repurposing": "refresh",
+};
+
 function AgentAvatarImg({ akey, size = 36, className = "" }) {
-  const src = AVATAR_URI[akey];
-  if (!src) return (
-    <span className={`flex shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-ink ${className}`} style={{ width: size, height: size }}>
-      <Sparkle size={Math.round(size * 0.5)} />
-    </span>
-  );
+  // Embedded (chrome=none, inside the myna L1 module): always use the flat neutral
+  // fallback chip instead of each agent's own colorful illustration, so every card
+  // (Create agent, My agents, Library) reads as one consistent icon language that
+  // matches the host's own Material-icon chips — scoped to this flag, so the
+  // standalone app/overlay keeps its original colorful set untouched.
+  const src = EMBED_NO_CHROME ? null : AVATAR_URI[akey];
+  if (!src) {
+    const glyph = EMBED_NO_CHROME ? (EMBED_AGENT_GLYPH[akey] || "star") : null;
+    return (
+      <span className={`flex shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-ink ${className}`} style={{ width: size, height: size }}>
+        {glyph ? <Icon name={glyph} size={Math.round(size * 0.55)} sw={1.8} /> : <Sparkle size={Math.round(size * 0.5)} />}
+      </span>
+    );
+  }
   return (
     <img src={src} alt="" aria-hidden="true" width={size} height={size}
       className={`shrink-0 object-contain ${className}`}
@@ -3065,7 +3105,7 @@ function AgentsScreen({ app }) {
   const paused = list.filter((a) => a.status === "paused");
 
   return (
-    <div className="mx-auto flex w-full max-w-[860px] flex-col px-6 py-9">
+    <div className={`${EMBED_ALIGN_CLASS} flex w-full max-w-[860px] flex-col px-6 py-9`}>
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">My agents</h1>
@@ -4465,6 +4505,26 @@ function AgentThread({ agent, app }) {
  *                        else. The Birdeye front desk screen passes its
  *                        exported canvas art here; every other agent in the
  *                        app gets the real, data-driven WorkflowCanvas. */
+/* The embedded workflow-viewer.html iframe (see WorkflowCanvas below) is a
+ * real page navigation, not a React remount — a postMessage sent to it
+ * before its own script has loaded and attached a listener is silently
+ * dropped. It announces "workflow-viewer:ready" once that listener is up;
+ * until then, queue the trigger and flush it on arrival. Reset on every
+ * agent switch by WorkflowCanvas's own effect, since a new src means a
+ * fresh navigation that isn't ready yet either. */
+let wfPreviewReady = false;
+let wfPreviewPending = false;
+window.addEventListener("message", (e) => {
+  if (e.data?.type !== "workflow-viewer:ready") return;
+  const frame = document.querySelector('iframe[title="Workflow"]');
+  if (!frame || e.source !== frame.contentWindow) return;
+  wfPreviewReady = true;
+  if (wfPreviewPending) {
+    wfPreviewPending = false;
+    frame.contentWindow.postMessage({ type: "workflow-viewer:trigger-preview" }, "*");
+  }
+});
+
 /* Run test/Preview + Activate — lives in the identity row now, only
  * while the Workflow tab is open, instead of its own duplicate bar
  * above the canvas. */
@@ -4479,9 +4539,29 @@ function WfHeaderActions({ agent, app }) {
   const isFrontDesk = agent.id === "frontdesk" || agent.akey === "front-desk";
   const errors = AGENT_WF_ERRORS[agent.id] || 0;
 
+  const openWorkflowPreview = () => {
+    /* WorkflowCanvas below renders the real canvas (AgentBuilder) in an
+     * iframe titled "Workflow" — this button lives in AgentScreen's own
+     * header, a sibling of that canvas, so it reaches in via postMessage
+     * rather than a prop (there is no shared parent state for it). The
+     * iframe side (src/workflow-viewer-main.tsx) clicks AgentBuilder's own
+     * Preview/Run-test button in response, so this opens the exact same
+     * real preview/test-run panel the dashboard itself would show. */
+    const frame = document.querySelector('iframe[title="Workflow"]');
+    if (!frame || !frame.contentWindow) {
+      app.toast(isFrontDesk ? "Opening preview…" : "Running test…");
+      return;
+    }
+    if (wfPreviewReady) {
+      frame.contentWindow.postMessage({ type: "workflow-viewer:trigger-preview" }, "*");
+    } else {
+      wfPreviewPending = true;
+    }
+  };
+
   return (
     <span className="ml-auto flex shrink-0 items-center gap-2">
-      <Button variant="secondary" size="sm" onClick={() => app.toast(isFrontDesk ? "Opening preview…" : "Running test…")}>
+      <Button variant="secondary" size="sm" onClick={openWorkflowPreview}>
         <Icon name="play" size={12} sw={2} />
         {isFrontDesk ? "Preview" : "Run test"}
       </Button>
@@ -4532,6 +4612,13 @@ function AgentScreen({ app, renderWorkflowTab, hideIdentity = false }) {
         <div className="mx-auto w-full max-w-[900px]">
           {!hideIdentity && (
           <div className="flex items-center gap-3">
+            {EMBED_NO_CHROME && (
+              <button type="button" aria-label="Back" title="Back"
+                onClick={() => { try { window.parent.postMessage({ type: "superagent:close-agent" }, "*"); } catch (e) {} }}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink">
+                <Icon name="chevronLeft" size={18} sw={1.9} />
+              </button>
+            )}
             <AgentAvatarImg akey={agent.akey} size={34} />
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <h1 className="truncate text-[19px] font-semibold tracking-[-0.02em] text-ink">{agent.name}</h1>
@@ -5403,7 +5490,7 @@ function LibraryScreen({ app }) {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1080px] flex-col px-6 py-9">
+    <div className={`${EMBED_ALIGN_CLASS} flex w-full max-w-[1080px] flex-col px-6 py-9`}>
       <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">Library</h1>
       <p className="mt-1 text-[13px] text-ink-2">Prebuilt agents that can take work off your team&rsquo;s plate.</p>
 
@@ -6374,19 +6461,24 @@ const WF_KIND = {
  * Everything else is derived from the library entry (see
  * deriveWorkflow) so no agent ever opens onto an empty tab. */
 const WF_AUTHORED = {
+  /* Ported verbatim (titles/descs/branch shape) from the dashboard's own
+   * Review response agent workflow — src/data/agentWorkflows.ts,
+   * REVIEW_RESPONSE_NODES / REVIEW_RESPONSE_NODE_DETAILS — so this canvas
+   * reads as the same agent, not a reworded stand-in. */
   "review-response": [
     { id: "t", kind: "trigger", title: "When a new review is received or updated",
-      desc: "Starts when a review arrives, or an existing one changes, across every source and location.", tools: ["Google Business Profile", "Facebook Pages"] },
+      desc: "Starts when a new review is received or an existing review is updated across all sources and locations.", tools: ["Google Business Profile", "Facebook Pages"] },
     { id: "a1", kind: "action", title: "Triage review", desc: "Checks whether the review is genuine or spam." },
     { id: "b", kind: "branch", title: "Evaluate conditions",
-      desc: "Sends the review down the matching branch. If nothing matches, it takes the fallback.",
+      desc: "Checks your conditions, then sends the flow down the matching branch. If nothing matches, it uses the fallback branch.",
       branches: [
         { label: "Respond", steps: [
-          { id: "r1", kind: "action", title: "Extract review details", desc: "Reads what it is about, how serious it is, and whether it names any staff." },
-          { id: "r2", kind: "action", title: "Draft and post the reply", desc: "Writes in your tone, then publishes to the source it came from.", tools: ["Google Business Profile"] },
+          { id: "r1", kind: "action", title: "Extract review details", desc: "Reads the review to understand what it's about, how serious it is, and if it mentions any staff or competitors." },
+          { id: "r2", kind: "action", title: "Generate response", desc: "Writes a reply that matches the review's language and rating, and follows the rules for tone, length, and escalation." },
+          { id: "r3", kind: "action", title: "Publish response", desc: "Sends the response automatically or holds it for approval.", tools: ["Google Business Profile"] },
         ] },
         { label: "Fallback branch", fallback: true, steps: [
-          { id: "f1", kind: "notify", title: "Send email alert", desc: "Tells your team a review needs manual action instead of replying to it." },
+          { id: "f1", kind: "notify", title: "Send email alert", desc: "Notifies your team when a review is marked as spam and needs manual action on the review site." },
         ] },
       ] },
   ],
@@ -6396,7 +6488,7 @@ const WF_AUTHORED = {
    * procedures to follow. So its canvas is exactly two nodes: the
    * channel it triggers on, and the procedures it runs. */
   frontdesk: [
-    { id: "t", kind: "trigger", triggerVariant: "conversation", title: "Channel",
+    { id: "t", kind: "trigger", triggerVariant: "conversation", title: "Channel", headerLabel: "Conversation trigger",
       desc: "Agent triggers when a voice, chat, or text event occurs.", tools: ["Phone number", "Website chat", "SMS"],
       channels: [
         { icon: "phone", title: "Voice call", conditionLabel: "Trigger conditions for voice",
@@ -6406,13 +6498,33 @@ const WF_AUTHORED = {
       ] },
     { id: "p", kind: "procedures", title: "Follow procedures",
       desc: "Runs the matching procedure for what the caller needs; falls back to a human when nothing matches.",
+      /* Same 22 procedures, in the same order, as the dashboard's own Front
+       * desk agent — src/data/agentWorkflows.ts FRONTDESK_NODE_DETAILS['fd-2']
+       * .procedureIds — with each one's whenToUse copy from
+       * src/workflow/services/procedureService.js. */
       procedures: [
-        { title: "Talk to human", desc: "Patient explicitly asks to speak with a person, real agent, receptionist, or human — or expresses frustration." },
-        { title: "General inquiry", desc: "Patient asks a general question about the practice, or anything that should come from the knowledge base." },
-        { title: "Book, cancel, or reschedule appointment", desc: "Route to the Appointment Agent if the caller wants to book, check availability, or change a visit." },
-        { title: "Verify insurance", desc: "Confirms whether a plan is accepted before booking goes any further." },
-        { title: "Handle unclear message", desc: "Asks a clarifying question rather than guessing what the caller meant." },
-        { title: "Emergency or urgent handling", desc: "Recognizes urgency language and hands off immediately instead of following a normal procedure." },
+        { title: "Greeting & Intent Detection", desc: "Every inbound call/chat/text session begins." },
+        { title: "Department Transfer", desc: "Caller requests specific department or intent maps to another department." },
+        { title: "General Inquiry", desc: "Caller has a question not matching a specific procedure." },
+        { title: "Handle Unclear Message", desc: "STT confidence is low or caller intent is ambiguous." },
+        { title: "Emergency / Urgent Handling", desc: "Caller reports safety issue, vehicle breakdown, or emergency." },
+        { title: "Talk to Human", desc: "Caller explicitly requests a human agent." },
+        { title: "Spanish Language Handling", desc: "Caller speaks Spanish or requests Spanish assistance." },
+        { title: "Schedule Service Appointment", desc: "Caller wants to book a service appointment." },
+        { title: "Repair / Diagnostic Triage", desc: "Caller describes a vehicle problem or warning light." },
+        { title: "Recall Inquiry", desc: "Caller asks about recalls on their vehicle." },
+        { title: "Service Status Check", desc: "Caller inquires about an in-progress repair." },
+        { title: "Reschedule / Cancel Appointment", desc: "Caller wants to change or cancel an existing appointment." },
+        { title: "Warranty Inquiry", desc: "Caller asks about warranty coverage." },
+        { title: "New Vehicle Inquiry", desc: "Caller interested in purchasing a new vehicle." },
+        { title: "Used / CPO Vehicle Inquiry", desc: "Caller interested in pre-owned or certified vehicles." },
+        { title: "Trade-In Valuation", desc: "Caller wants to know trade-in value of their current vehicle." },
+        { title: "Finance Pre-Qualification", desc: "Caller asks about financing options or payment estimates." },
+        { title: "Test Drive Scheduling", desc: "Caller wants to schedule a test drive." },
+        { title: "Internet Lead Qualification", desc: "Following up on an online form submission or website inquiry." },
+        { title: "Parts Availability & Pricing", desc: "Caller inquires about parts availability or pricing." },
+        { title: "After-Hours Lead Capture", desc: "Sales inquiry received outside business hours." },
+        { title: "After-Hours Service Request", desc: "Service inquiry received outside business hours." },
       ] },
   ],
   "treatment-followup": [
@@ -6568,440 +6680,111 @@ function workflowFor(agent) {
   return WF_AUTHORED[agent.id] || WF_AUTHORED[agent.akey] || deriveWorkflow(agent);
 }
 
-/* continuous numbering down the main line, then through each
- * branch in order — the numbers a person reads out loud */
-function wfNumbers(steps, start, out) {
-  let n = start;
-  steps.forEach((s) => {
-    out[s.id] = n++;
-    if (s.branches) s.branches.forEach((b) => { n = wfNumbers(b.steps, n, out); });
-  });
-  return n;
+/* This canvas used to be a hand-drawn CSS clone of the dashboard's
+ * workflow editor (plain divs standing in for FlowCanvas/AgentBuilder).
+ * It now embeds the literal production canvas instead: workflow-viewer.html
+ * is a real Vite entry (see vite.config.ts's rollupOptions.input) that
+ * mounts the actual AgentBuilder/FlowCanvas React component in isolation.
+ * Embedding it works here because, unlike the earlier attempt at embedding
+ * the whole app, this file is always served over http(s) by Vite (dev
+ * server or the GitHub Pages / Vercel build) — never opened via file://,
+ * where ES-module <script> tags are blocked — so a real <iframe src>
+ * to another same-origin build entry loads fine.
+ *
+ * Front desk and Review response route by name straight into the
+ * dashboard's own WorkflowEditorScreen lookup (src/data/agentWorkflows.ts),
+ * so those two show the literal real workflow, byte-for-byte, in full edit
+ * mode. Every other demo agent's own step tree (WF_AUTHORED / deriveWorkflow
+ * above) is converted into the same AgentBuilder node/nodeDetails schema
+ * and passed through the `data` param, so it renders through the identical
+ * real canvas component too — same node cards, connectors, toggles, and RHS
+ * config panel as every other agent's Workflow tab, just with this
+ * prototype's own content where no dashboard equivalent exists. */
+
+function slugify(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-function WfLine({ h = 26 }) {
-  return <div aria-hidden className="mx-auto w-px shrink-0" style={{ height: h, background: "var(--line-strong)" }} />;
+function wfKindToFlowType(kind) {
+  return kind === "trigger" ? "trigger" : kind === "branch" ? "branch" : kind === "procedures" ? "procedures" : "task";
 }
 
-function WfCard({ step, n, selected, off, onSelect, onToggle }) {
-  const k = WF_KIND[step.kind] || WF_KIND.action;
-  return (
-    <div role="button" tabIndex={0} onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
-      className={`w-[340px] cursor-pointer rounded-window bg-surface p-3.5 text-left shadow-card transition-[box-shadow,opacity,transform] duration-200 hover:shadow-raised ${off ? "opacity-45" : ""}`}
-      style={{ boxShadow: selected ? "0 0 0 2px var(--accent), var(--shadow-card)" : undefined }}>
-      <div className="flex items-center gap-1.5">
-        <span className={k.cls}><Icon name={k.icon} size={13} sw={2.1} /></span>
-        <span className="text-[11.5px] text-ink-3">{k.label}</span>
-        {step.kind !== "trigger" && (
-          <span className="ml-auto" onClick={(e) => { e.stopPropagation(); }}>
-            <Toggle on={!off} onChange={onToggle} label={`Turn ${step.title} ${off ? "on" : "off"}`} />
-          </span>
-        )}
-      </div>
-      <div className="mt-1.5 text-[13.5px] leading-[1.45] text-ink">
-        <span className="text-ink-3">{n}.</span> {step.title}
-      </div>
-      {step.desc && <p className="mt-1 text-[12px] leading-[1.5] text-ink-2">{step.desc}</p>}
-      {step.procedures && step.procedures.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {step.procedures.map((p) => (
-            <span key={p.title}
-              className="inline-flex items-center gap-1 rounded-control border border-line bg-field px-2 py-1 text-[11.5px] text-ink-2">
-              <Icon name="library" size={10.5} sw={2} className="text-ink-3" />
-              {p.title}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+function wfNodeData(step) {
+  if (step.kind === "trigger") {
+    const isConversation = step.triggerVariant === "conversation";
+    return {
+      title: step.title, subtype: isConversation ? "Conversation trigger" : "Entity trigger",
+      headerLabel: step.headerLabel || (isConversation ? "Conversation trigger" : "Trigger"),
+      hasToggle: true, toggleEnabled: true, hasAiIcon: false,
+      titlePlaceholder: "Enter trigger name", descriptionPlaceholder: "Enter description",
+    };
+  }
+  if (step.kind === "branch") {
+    return {
+      title: step.title, subtype: "Branch", hasToggle: true, toggleEnabled: true, hasAiIcon: false,
+      titlePlaceholder: "Enter branch name", descriptionPlaceholder: "Enter description",
+    };
+  }
+  return {
+    title: step.title, subtype: step.kind === "notify" ? "Integration" : "Custom",
+    hasToggle: true, toggleEnabled: true, hasAiIcon: false,
+    titlePlaceholder: "Enter task name", descriptionPlaceholder: "Enter description",
+  };
 }
 
-function WfSteps({ steps, nums, sel, offMap, collapsed, onSelect, onToggle, onCollapse }) {
-  return (
-    <>
-      {steps.map((s, i) => (
-        <React.Fragment key={s.id}>
-          {i > 0 && <WfLine />}
-          <WfCard step={s} n={nums[s.id]} selected={sel === s.id} off={!!offMap[s.id]}
-            onSelect={() => onSelect(s)} onToggle={() => onToggle(s.id)} />
-          {s.branches && (
-            <>
-              <WfLine h={18} />
-              <div className="relative flex items-start" style={{ gap: 40 }}>
-                <span aria-hidden className="absolute top-0"
-                  style={{ left: `${50 / s.branches.length}%`, right: `${50 / s.branches.length}%`, borderTop: "1px solid var(--line-strong)" }} />
-                {s.branches.map((b) => {
-                  const key = s.id + "/" + b.label;
-                  const shut = !!collapsed[key];
-                  return (
-                    <div key={b.label} className="flex flex-1 flex-col items-center" style={{ minWidth: 340 }}>
-                      <WfLine h={16} />
-                      <button type="button" onClick={() => onCollapse(key)}
-                        className="flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[11.5px] text-ink-2 shadow-btn transition-colors duration-150 hover:text-ink">
-                        {b.label}
-                        {b.fallback && <span className="text-ink-3">· fallback</span>}
-                        <Icon name={shut ? "chevronDown" : "chevronRight"} size={11} sw={2.4} className="text-ink-3" />
-                      </button>
-                      {!shut && (
-                        <>
-                          <WfLine h={16} />
-                          <div className="flex flex-col items-center">
-                            <WfSteps steps={b.steps} nums={nums} sel={sel} offMap={offMap} collapsed={collapsed}
-                              onSelect={onSelect} onToggle={onToggle} onCollapse={onCollapse} />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </React.Fragment>
-      ))}
-    </>
-  );
+/* Fills nodeDetails for a step and, when it is a branch, recurses into
+ * every branch path's own steps — mirrors the exact shape hand-authored
+ * in src/data/agentWorkflows.ts (e.g. REVIEW_RESPONSE_NODE_DETAILS'
+ * 'rr-3-path-respond' entry: branchName/description/conditions/parentId/
+ * isBranchPath/nodes). */
+function wfRegisterDetails(step, nodeDetails) {
+  if (step.kind === "trigger") {
+    nodeDetails[step.id] = { triggerName: step.title, description: step.desc || "", conditions: [], voiceConditions: [], webchatConditions: [] };
+    return;
+  }
+  if (step.kind === "branch") {
+    const branchMetas = step.branches.map((b) => ({ id: `${step.id}-path-${slugify(b.label)}`, name: b.label, isFallback: !!b.fallback }));
+    nodeDetails[step.id] = { basedOn: "conditions", branchNodeTitle: step.title, description: step.desc || "", branches: branchMetas };
+    step.branches.forEach((b, i) => {
+      nodeDetails[branchMetas[i].id] = {
+        branchName: b.label, description: "", conditions: [],
+        parentId: step.id, isBranchPath: true, isFallback: !!b.fallback,
+        nodes: b.steps.map((s) => ({ id: s.id, flowType: wfKindToFlowType(s.kind), data: wfNodeData(s) })),
+      };
+      b.steps.forEach((s) => wfRegisterDetails(s, nodeDetails));
+    });
+    return;
+  }
+  nodeDetails[step.id] = { taskName: step.title, description: step.desc || "" };
 }
 
-/* Procedures gets its own panel shape rather than the generic
- * step inspector below — this is the one node whose whole job is a
- * list of sub-behaviors, so the panel is a system prompt plus that
- * list, not a title/description/tools recap. */
-/* Shared by every RHS panel variant (Procedures and the generic
- * WfInspector) so their widths can never drift apart from each other —
- * one literal string, used in both places, instead of two copies that
- * could get hand-edited out of sync. */
-const RHS_PANEL_CLS = "flex w-[380px] shrink-0 flex-col border-l border-line-soft bg-surface";
-
-function ProceduresInspector({ step, app, onClose }) {
-  const [prompt, setPrompt] = useState(
-    "# Personality\nYou are the front desk agent. You make every caller feel heard — calm, clear, and quick to get them what they need.\n\n# Environment\nYou handle inbound calls, texts, and website chat for the practice."
-  );
-  return (
-    <div className={RHS_PANEL_CLS}
-      style={{ animation: "fade-up 240ms cubic-bezier(0.23,1,0.32,1) both" }}>
-      <div className="flex items-center gap-2 border-b border-line-soft px-4 py-3">
-        <span className="text-[13.5px] font-medium text-ink">Procedures</span>
-        <button type="button" aria-label="Close" onClick={onClose}
-          className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-          <Icon name="x" size={13} sw={2.2} />
-        </button>
-      </div>
-      <div className="quiet-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[12px] font-medium text-ink-2">Instructions</span>
-        </div>
-        <textarea rows={7} value={prompt} onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Enter instructions on how to run these procedures"
-          className="w-full resize-none rounded-control border border-line bg-field p-2.5 text-[12.5px] leading-[1.55] text-ink outline-none focus:border-line-strong" />
-
-        <div className="mt-5 flex flex-col gap-2">
-          {step.procedures.map((p) => (
-            <div key={p.title} className="flex items-start gap-2.5 rounded-card border border-line-soft p-2.5">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-control bg-inset text-ink-2 shadow-hairline">
-                <Icon name="library" size={12} sw={1.9} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[12.5px] font-medium text-ink">{p.title}</span>
-                <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-ink-2">{p.desc}</span>
-              </span>
-              <button type="button" aria-label="More" onClick={() => app.toast("Coming soon")}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-                <Icon name="settings" size={12} sw={1.9} />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="border-t border-line-soft p-3">
-        <Button variant="accent" size="sm" className="w-full" onClick={() => app.toast("Changes saved")}>Save</Button>
-      </div>
-    </div>
-  );
+function stepsToAgentBuilderPayload(steps, agentName) {
+  const nodes = steps.map((s) => ({ id: s.id, flowType: wfKindToFlowType(s.kind), data: wfNodeData(s) }));
+  const nodeDetails = { "__start__": { agentName, goals: "", outcomes: "", locations: [] } };
+  steps.forEach((s) => wfRegisterDetails(s, nodeDetails));
+  return { nodes, nodeDetails, agentName };
 }
 
-/* ── Node-type RHS bodies — field-for-field matches of the real Rupa
- * RHS panels (ConversationTriggerBody, ReviewTriggerBody, EntityTaskBody,
- * ControlBranchBody), not a generic recap. Same input/select styling as
- * the rest of the app; local state only, since nothing here persists
- * beyond this demo session anyway. ── */
-
-const RHS_VOICE_OPTIONS = ["Incoming call", "Outgoing call", "Missed call", "Voicemail received"];
-const RHS_WEBCHAT_OPTIONS = ["Message received", "Message sent", "Chat started", "Chat ended"];
-const RHS_TIME_OPTIONS = ["During business hours", "After business hours", "All hours"];
-const RHS_TRIGGER_TYPES = [
-  "When a new review is received or updated",
-  "When a review's rating changes",
-  "When a review is flagged as spam",
-];
-const RHS_CONDITION_FIELDS = ["Event", "Message type", "Rating", "Sentiment", "Source", "Location", "Keyword"];
-const RHS_CONDITION_OPERATORS = ["is", "is not", "contains", "is blank", "is not blank", "greater than", "less than"];
-
-const rhsInput = "h-9 rounded-control border border-line bg-field px-2.5 text-[13px] text-ink outline-none focus:border-line-strong";
-const rhsTextarea = "resize-none rounded-control border border-line bg-field p-2.5 text-[13px] leading-[1.5] text-ink outline-none focus:border-line-strong";
-const rhsSelectSm = "h-8 flex-1 rounded-control border border-line bg-field px-2 text-[12.5px] text-ink outline-none focus:border-line-strong";
-
-function RhsField({ label, required, children }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[12px] font-medium text-ink-2">{label}{required && <span className="text-red"> *</span>}</span>
-      {children}
-    </div>
-  );
+/* This file's own directory, so the iframe src works whether the prototype
+ * is served from "/" (dev/Vercel) or "/myna/" (GitHub Pages) — mirrors how
+ * SuperAgentApp.tsx resolves this file's own src from import.meta.env.BASE_URL. */
+function workflowViewerBase() {
+  return window.location.pathname.replace(/[^/]*$/, "");
 }
 
-function TriggerConversationBody({ step }) {
-  const [name, setName] = useState(step.title);
-  const [desc, setDesc] = useState(step.desc || "");
-  const [channels, setChannels] = useState(() => (step.channels || []).map((c) => ({ ...c, rows: c.rows.map((r) => ({ ...r })) })));
-
-  const updateRow = (ci, ri, key, val) =>
-    setChannels((cs) => cs.map((c, i) => (i !== ci ? c : { ...c, rows: c.rows.map((r, j) => (j !== ri ? r : { ...r, [key]: val })) })));
-  const addRow = (ci) =>
-    setChannels((cs) => cs.map((c, i) => (i !== ci ? c : { ...c, rows: [...c.rows, { condition: "", time: "" }] })));
-  const removeRow = (ci, ri) =>
-    setChannels((cs) => cs.map((c, i) => (i !== ci ? c : { ...c, rows: c.rows.filter((_, j) => j !== ri) })));
-
-  return (
-    <div className="flex flex-col gap-4">
-      <RhsField label="Trigger name" required>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={rhsInput} />
-      </RhsField>
-      <RhsField label="Description">
-        <textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} className={rhsTextarea} />
-      </RhsField>
-      {channels.map((c, ci) => (
-        <div key={c.title} className="flex flex-col gap-2.5 rounded-card border border-line-soft p-3">
-          <div className="flex items-center gap-1.5 text-ink-2">
-            <Icon name={c.icon} size={14} sw={1.9} />
-            <span className="text-[12.5px] font-medium">{c.title}</span>
-          </div>
-          <span className="text-[10.5px] font-medium uppercase tracking-[0.04em] text-ink-3">{c.conditionLabel}</span>
-          <div className="flex flex-col gap-2">
-            {c.rows.map((r, ri) => (
-              <div key={ri} className="flex items-center gap-1.5">
-                <select value={r.condition} onChange={(e) => updateRow(ci, ri, "condition", e.target.value)} className={rhsSelectSm}>
-                  <option value="">Select condition</option>
-                  {(c.icon === "phone" ? RHS_VOICE_OPTIONS : RHS_WEBCHAT_OPTIONS).map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <select value={r.time} onChange={(e) => updateRow(ci, ri, "time", e.target.value)} className={rhsSelectSm}>
-                  <option value="">Select time</option>
-                  {RHS_TIME_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-                {c.rows.length > 1 && (
-                  <button type="button" aria-label="Remove condition" onClick={() => removeRow(ci, ri)}
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-                    <Icon name="x" size={12} sw={2.2} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button type="button" onClick={() => addRow(ci)}
-            className="flex items-center gap-1 self-start text-[12px] font-medium text-accent-ink hover:underline">
-            <Icon name="plus" size={12} sw={2.2} /> Add
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TriggerReviewBody({ step }) {
-  const [triggerType, setTriggerType] = useState(step.title);
-  const [desc, setDesc] = useState(step.desc || "");
-  const [logic, setLogic] = useState("AND");
-  const [conditions, setConditions] = useState([{ id: 1, field: "", operator: "", value: "" }]);
-
-  const updateCond = (id, key, val) => setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, [key]: val } : c)));
-  const addCond = () => setConditions((cs) => [...cs, { id: Date.now(), field: "", operator: "", value: "" }]);
-  const removeCond = (id) => setConditions((cs) => (cs.length > 1 ? cs.filter((c) => c.id !== id) : cs));
-
-  const previewLines = conditions
-    .filter((c) => c.field && c.operator)
-    .map((c, i) => `${i === 0 ? "" : `${logic} `}Review.${c.field.toLowerCase().replace(/\s+/g, "_")} ${c.operator}${c.value ? ` ("${c.value}")` : ""};`);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <RhsField label="Trigger" required>
-        <select value={triggerType} onChange={(e) => setTriggerType(e.target.value)} className={rhsInput}>
-          {!RHS_TRIGGER_TYPES.includes(triggerType) && <option value={triggerType}>{triggerType}</option>}
-          {RHS_TRIGGER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-      </RhsField>
-      <RhsField label="Description">
-        <textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} className={rhsTextarea} />
-      </RhsField>
-      <div className="flex flex-col gap-2.5 rounded-card border border-line-soft p-3">
-        <span className="text-[12px] font-medium text-ink-2">Trigger condition</span>
-        {conditions.map((c, i) => (
-          <div key={c.id} className="flex flex-col gap-1.5">
-            {i > 0 && (
-              <div className="flex justify-center">
-                <div className="flex overflow-hidden rounded-full border border-line">
-                  {["AND", "OR"].map((op) => (
-                    <button key={op} type="button" onClick={() => setLogic(op)}
-                      className={`px-2.5 py-0.5 text-[11px] font-medium transition-colors ${logic === op ? "bg-accent text-white" : "text-ink-3 hover:text-ink"}`}>
-                      {op}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              <select value={c.field} onChange={(e) => updateCond(c.id, "field", e.target.value)} className={rhsSelectSm}>
-                <option value="">Field</option>
-                {RHS_CONDITION_FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
-              </select>
-              <select value={c.operator} onChange={(e) => updateCond(c.id, "operator", e.target.value)} className={rhsSelectSm}>
-                <option value="">Operator</option>
-                {RHS_CONDITION_OPERATORS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-              <input value={c.value} onChange={(e) => updateCond(c.id, "value", e.target.value)} placeholder="Value"
-                className="h-8 flex-1 rounded-control border border-line bg-field px-2 text-[12.5px] text-ink outline-none focus:border-line-strong" />
-              {conditions.length > 1 && (
-                <button type="button" aria-label="Remove condition" onClick={() => removeCond(c.id)}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-                  <Icon name="x" size={12} sw={2.2} />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-        <button type="button" onClick={addCond}
-          className="flex items-center gap-1 self-start text-[12px] font-medium text-accent-ink hover:underline">
-          <Icon name="plus" size={12} sw={2.2} /> Add condition
-        </button>
-      </div>
-      {previewLines.length > 0 && (
-        <RhsField label="Preview">
-          <pre className="whitespace-pre-wrap rounded-control border border-line bg-inset p-2.5 text-[11.5px] leading-[1.6] text-ink-2" style={{ fontFamily: "ui-monospace, monospace" }}>
-{`IF\n${previewLines.join("\n")}`}
-          </pre>
-        </RhsField>
-      )}
-    </div>
-  );
-}
-
-function ActionBody({ step, app }) {
-  const [name, setName] = useState(step.title);
-  const [desc, setDesc] = useState(step.desc || "");
-  return (
-    <div className="flex flex-col gap-4">
-      <RhsField label="Action name" required>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={rhsInput} />
-      </RhsField>
-      <RhsField label="Description" required>
-        <textarea rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} className={rhsTextarea} />
-      </RhsField>
-      {step.tools && step.tools.length > 0 && (
-        <RhsField label="Tool">
-          <div className="flex flex-col gap-1 rounded-card border border-line-soft p-1.5">
-            {step.tools.map((t) => (
-              <div key={t} className="flex items-center gap-2.5 rounded-control px-2 py-1.5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-inset text-ink-2 shadow-hairline">
-                  <Icon name="link" size={13} sw={1.9} />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">{t}</span>
-                <button type="button" aria-label="Edit tool" onClick={() => app.toast("Coming soon")}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-                  <Icon name="edit" size={12} sw={1.9} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </RhsField>
-      )}
-    </div>
-  );
-}
-
-function BranchInspectorBody({ step, app }) {
-  const nonFallback = step.branches.filter((b) => !b.fallback);
-  const fallback = step.branches.find((b) => b.fallback);
-  const [openLabel, setOpenLabel] = useState(nonFallback[0]?.label ?? null);
-  const [names, setNames] = useState(() => Object.fromEntries(nonFallback.map((b) => [b.label, b.label])));
-
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-[12px] leading-[1.5] text-ink-3">
-        Branches run in the order listed.{" "}
-        <button type="button" onClick={() => app.toast("Coming soon")} className="text-accent-ink hover:underline">Learn more</button>
-      </p>
-      <div className="flex flex-col gap-2">
-        {nonFallback.map((b) => {
-          const open = openLabel === b.label;
-          return (
-            <div key={b.label} className="overflow-hidden rounded-card border border-line-soft">
-              <button type="button" onClick={() => setOpenLabel(open ? null : b.label)}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-hover">
-                <Icon name="route" size={12} sw={2.1} className="text-ink-3" />
-                <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">{names[b.label]}</span>
-                <Icon name={open ? "chevronDown" : "chevronRight"} size={12} sw={2.2} className="text-ink-3" />
-              </button>
-              {open && (
-                <div className="flex flex-col gap-3 border-t border-line-soft p-3">
-                  <input value={names[b.label]} onChange={(e) => setNames((n) => ({ ...n, [b.label]: e.target.value }))} className={rhsInput} />
-                  <div className="flex items-center gap-1.5">
-                    <select className={rhsSelectSm} defaultValue="">
-                      <option value="" disabled>Field</option>
-                      {RHS_CONDITION_FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                    <select className={rhsSelectSm} defaultValue="">
-                      <option value="" disabled>Operator</option>
-                      {RHS_CONDITION_OPERATORS.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                    <input placeholder="Value" className="h-8 flex-1 rounded-control border border-line bg-field px-2 text-[12.5px] text-ink outline-none focus:border-line-strong" />
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <button type="button" onClick={() => app.toast("Coming soon")}
-        className="flex items-center gap-1.5 self-start text-[12px] font-medium text-accent-ink hover:underline">
-        <Icon name="plus" size={12} sw={2.2} /> Add a branch
-      </button>
-      {fallback && (
-        <div className="flex items-center gap-2 rounded-card bg-inset px-3 py-2.5">
-          <span className="min-w-0 flex-1 text-[12.5px] font-medium text-ink-2">{fallback.label}</span>
-          <span title="If none of the criteria are met, follow this branch." className="text-ink-3">
-            <Icon name="info" size={13} sw={1.8} />
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WfInspector({ step, app, onClose }) {
-  const k = WF_KIND[step.kind] || WF_KIND.action;
-  return (
-    <div key={step.id} className={RHS_PANEL_CLS}
-      style={{ animation: "fade-up 240ms cubic-bezier(0.23,1,0.32,1) both" }}>
-      <div className="flex items-center gap-2 border-b border-line-soft px-4 py-3">
-        <span className="text-[13.5px] font-medium text-ink">{k.label}</span>
-        <button type="button" aria-label="Close" onClick={onClose}
-          className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-          <Icon name="x" size={13} sw={2.2} />
-        </button>
-      </div>
-      <div className="quiet-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        {step.kind === "trigger"
-          ? (step.triggerVariant === "conversation" ? <TriggerConversationBody step={step} /> : <TriggerReviewBody step={step} />)
-          : step.kind === "branch"
-          ? <BranchInspectorBody step={step} app={app} />
-          : <ActionBody step={step} app={app} />}
-      </div>
-      <div className="border-t border-line-soft p-3">
-        <Button variant="accent" size="sm" className="w-full" onClick={() => app.toast("Changes saved")}>Save</Button>
-      </div>
-    </div>
-  );
+function workflowViewerSrc(agent) {
+  const base = workflowViewerBase();
+  const isFrontDesk = agent.id === "frontdesk" || agent.akey === "front-desk";
+  const isReviewResponse = agent.id === "review-response" || agent.akey === "review-response";
+  if (isFrontDesk) {
+    return `${base}workflow-viewer.html?instanceName=${encodeURIComponent("Front desk agent")}&product=automotive&displayName=${encodeURIComponent(agent.name)}`;
+  }
+  if (isReviewResponse) {
+    return `${base}workflow-viewer.html?instanceName=${encodeURIComponent("Review response agent")}&product=automotive&displayName=${encodeURIComponent(agent.name)}`;
+  }
+  const payload = stepsToAgentBuilderPayload(workflowFor(agent), agent.name);
+  const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+  return `${base}workflow-viewer.html?data=${encoded}`;
 }
 
 /* demo-only — a couple of agents show a nonzero error count so the
@@ -7009,100 +6792,14 @@ function WfInspector({ step, app, onClose }) {
  * reference product where most agents simply show none. */
 const AGENT_WF_ERRORS = { "review-response": 2, reputation: 1 };
 
-/* Tried embedding the real Rupa app in an iframe here — it needs the
- * embedded build's ES-module script, which browsers refuse to load
- * over file://, so it went blank the moment this file was opened by
- * double-click rather than a server. Reverted: this canvas is drawn
- * the same way as the rest of this prototype (plain CSS, no graph
- * library, no build step) so it never depends on how the file is
- * opened, and it is hand-matched to the Rupa screenshots node for
- * node, panel for panel. */
-function WorkflowCanvas({ agent, app }) {
-  const steps = useMemo(() => workflowFor(agent), [agent.id, agent.akey]);
-  const nums = useMemo(() => { const o = {}; wfNumbers(steps, 1, o); return o; }, [steps]);
-  const [zoom, setZoom] = useState(90);
-  const [selId, setSelId] = useState(null);
-  const [offMap, setOffMap] = useState({});
-  const [collapsed, setCollapsed] = useState({});
-
-  /* reset per agent, so opening a different agent never shows the
-     previous one's selection or switched-off steps */
-  useEffect(() => { setSelId(null); setOffMap({}); setCollapsed({}); }, [agent.id]);
-
-  const find = (list, id) => {
-    for (const s of list) {
-      if (s.id === id) return s;
-      if (s.branches) for (const b of s.branches) { const hit = find(b.steps, id); if (hit) return hit; }
-    }
-    return null;
-  };
-  const sel = selId ? find(steps, selId) : null;
-  /* compute first, then set, then toast — toasting from inside the
-     updater makes it impure and React warns about updating another
-     component mid-render */
-  const toggle = (id) => {
-    const nowOff = !offMap[id];
-    setOffMap((m) => ({ ...m, [id]: nowOff }));
-    app.toast(nowOff ? "Step switched off" : "Step switched on");
-  };
-
+function WorkflowCanvas({ agent }) {
+  const src = useMemo(() => workflowViewerSrc(agent), [agent.id, agent.akey, agent.name]);
+  /* New src = a fresh iframe navigation (key={src} below remounts it), which
+   * starts unready again — see the wfPreviewReady queue above WfHeaderActions. */
+  useEffect(() => { wfPreviewReady = false; wfPreviewPending = false; }, [src]);
   return (
     <div className="flex min-h-0 flex-1">
-      <div className="relative min-h-0 flex-1 bg-canvas">
-        <div className="quiet-scroll h-full overflow-auto px-8 py-8">
-          <div className="mx-auto w-fit" style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}>
-            <div className="flex flex-col items-center">
-              <div className="flex w-[340px] items-center gap-2.5 rounded-window bg-surface p-3 shadow-card">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-ink"><Sparkle size={13} /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12.5px] text-ink">{agent.name}</span>
-                  <span className="block text-[11.5px] text-ink-3">{agent.status === "draft" ? "Draft" : "Active"}</span>
-                </span>
-              </div>
-              <WfLine />
-              <WfSteps steps={steps} nums={nums} sel={selId} offMap={offMap} collapsed={collapsed}
-                onSelect={(s) => setSelId((c) => (c === s.id ? null : s.id))}
-                onToggle={toggle}
-                onCollapse={(k) => setCollapsed((c) => ({ ...c, [k]: !c[k] }))} />
-              <WfLine h={18} />
-              <span className="rounded-full bg-inset px-2.5 py-1 text-[11.5px] text-ink-3">End</span>
-            </div>
-          </div>
-        </div>
-
-        {/* canvas chrome, bottom left — same corner the product puts it in */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-start p-4">
-          <div className="pointer-events-auto flex items-center gap-0.5 rounded-full bg-surface px-1.5 py-1 shadow-raised">
-            <button type="button" aria-label="Undo" onClick={() => app.toast("Nothing to undo")}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-              <Icon name="reply" size={13} sw={2.1} />
-            </button>
-            <button type="button" aria-label="Redo" onClick={() => app.toast("Nothing to redo")}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink" style={{ transform: "scaleX(-1)" }}>
-              <Icon name="reply" size={13} sw={2.1} />
-            </button>
-            <span className="mx-1 h-4 w-px bg-line" />
-            <button type="button" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(50, z - 15))}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-              <Icon name="minus" size={14} sw={2.2} />
-            </button>
-            <button type="button" onClick={() => setZoom(90)}
-              className="min-w-[46px] rounded-full px-1 text-center text-[12px] tabular-nums text-ink-2 transition-colors hover:text-ink">
-              {zoom}%
-            </button>
-            <button type="button" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(140, z + 15))}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-              <Icon name="plus" size={14} sw={2.2} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {sel && (
-        sel.kind === "procedures"
-          ? <ProceduresInspector step={sel} app={app} onClose={() => setSelId(null)} />
-          : <WfInspector step={sel} app={app} onClose={() => setSelId(null)} />
-      )}
+      <iframe key={src} src={src} title="Workflow" className="h-full w-full border-0" style={{ background: "#f2f4f7" }} />
     </div>
   );
 }
@@ -8313,6 +8010,18 @@ function App() {
         setStage(onboardedRef.current ? "app" : "onboarding");
         return;
       }
+      if (data.type === "superagent:open-agent" && data.id) {
+        setSetup((s) => (s.onboarded ? s : { ...s, onboarded: true }));
+        setStage("app");
+        openAgent(data.id, "chat");
+        return;
+      }
+      if (data.type === "superagent:use-library-agent" && data.key) {
+        setSetup((s) => (s.onboarded ? s : { ...s, onboarded: true }));
+        setStage("app");
+        useLibAgent(data.key);
+        return;
+      }
       if (data.type !== "superagent:navigate" || !data.key) return;
       setSetup((s) => (s.onboarded ? s : { ...s, onboarded: true }));
       setStage("app");
@@ -9312,7 +9021,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-canvas">
+    <div className={`flex h-screen w-full overflow-hidden ${EMBED_CANVAS_CLASS}`}>
       {!EMBED_NO_CHROME && <SideNav app={app} />}
 
       <main className="flex min-w-0 flex-1 flex-col">
@@ -9327,7 +9036,7 @@ function App() {
                   {nav === "agents" && <AgentsScreen app={app} />}
                   {nav === "market" && <LibraryScreen app={app} />}
                   {nav === "connections" && (
-                    <div className="mx-auto flex w-full max-w-[1080px] flex-col px-6 py-9">
+                    <div className={`${EMBED_ALIGN_CLASS} flex w-full max-w-[1080px] flex-col px-6 py-9`}>
                       <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">Connections</h1>
                       <p className="mt-1 text-[13px] text-ink-2">What your agents can read from and act on.</p>
                       <ConnectionsTab app={app} />

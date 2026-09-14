@@ -1314,6 +1314,15 @@ export default function AgentBuilder({
   externalFocusNonce = 0,
   /** Opens the workflow coach tour on mount (Response agents coach cue nav). */
   autoOpenCoachTour = false,
+  /**
+   * Bottom-left toolbar layout override — zoom collapses to a "100% ▾" dropdown
+   * with the undo/redo + orientation + help pills anchored beside it, instead
+   * of spread left/center/top-right. Defaults to `sep1Chrome` (which already
+   * implies this layout) so existing callers are unaffected; set explicitly
+   * when a caller wants this toolbar without sep1Chrome's other side effects
+   * (labelled LHS stack, errors chip style, etc.) — e.g. an isolated embed.
+   */
+  combineControlsLeft: combineControlsLeftProp = null,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -1797,7 +1806,7 @@ export default function AgentBuilder({
   const isReviewGenerationAgent = /review generation/i.test(entryAgentName) || /review generation/i.test(agentName);
   const isReviewsAiAgent = isReviewResponseAgent || isReviewGenerationAgent;
   // All exploration-family canvases (Sep 1 + exploration) — grouped bottom-left controls.
-  const combineControlsLeft = sep1Chrome;
+  const combineControlsLeft = combineControlsLeftProp ?? sep1Chrome;
   const hideProceduresFloater =
     isReviewsAiAgent || isWaitlistAgent || isPreVisitAgent || isReminderAgent;
   // Procedures floater: Front desk family only — not Reviews AI, Waitlist, Pre-visit, or Reminder.

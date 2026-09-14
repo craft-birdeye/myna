@@ -5,20 +5,63 @@ export interface SuperAgentEnterCommand {
   /** true = the Website gate's "New user" choice — a genuine "sign up from
    *  scratch" (mirrors the prototype's own replayOnboarding(): auth sign-up
    *  then the full onboarding question flow, resetting any prior setup).
-   *  false/undefined = re-entry via the TopBar AppSwitcher or the L1 rail
-   *  item (mirrors the prototype's own openSuper(): skip straight to a
+   *  false/undefined = re-entry via the TopBar AppSwitcher or the embedded L1
+   *  module (mirrors the prototype's own openSuper(): skip straight to a
    *  short onboarding the first time, or straight to the workspace after). */
   isNewUser?: boolean
 }
 
+export interface SuperAgentNavigateCommand {
+  /** the prototype's own nav key: 'create' | 'agents' | 'market' | 'connections' */
+  key: string
+  /** a new value on every click, even for a repeat of the same key, so the
+   *  postMessage effect fires again instead of bailing on an unchanged dep */
+  ts: number
+}
+
+export interface SuperAgentOpenAgentCommand {
+  /** an id already in the prototype's `app.agents` list (e.g. 'review-response') */
+  id: string
+  ts: number
+}
+
+export interface SuperAgentUseLibraryCommand {
+  /** a key from the prototype's own LIB_AGENTS (e.g. 'front-desk') */
+  key: string
+  ts: number
+}
+
 export interface SuperAgentAppProps {
-  /** true renders this as a full-viewport fixed overlay on top of everything else;
-   *  false keeps the iframe mounted but hidden, so it only boots once */
+  /** false keeps the iframe mounted but hidden, so it only boots once */
   active: boolean
   title?: string
-  /** bumped once every time the host opens the overlay — see SuperAgentEnterCommand */
+  /** 'overlay' (default) = full-viewport fixed layer with the prototype's own left
+   *  nav visible, independent of the dashboard's L1/L2 — used by the Website gate
+   *  and the TopBar AppSwitcher for the "standalone app" experience.
+   *  'embedded' = sized to fill its container with the prototype's own left nav
+   *  hidden (`?chrome=none`) — used by the L1 rail item, which draws its own L2
+   *  SideNav and behaves like any other module. */
+  mode?: 'overlay' | 'embedded'
+  /** bumped once every time the host opens/enters Super agent — see SuperAgentEnterCommand */
   enter?: SuperAgentEnterCommand | null
+  /** set by the embedded module's L2 to force the iframe into the workspace at a
+   *  given nav key, regardless of what it's currently showing */
+  navigate?: SuperAgentNavigateCommand | null
+  /** set by the native My agents screen's "Open agent" button — opens an already-
+   *  active agent's full AgentScreen (Chat/Workflow/Approvals/... tabs) inside the
+   *  iframe. Only meaningful in 'embedded' mode. */
+  openAgentCmd?: SuperAgentOpenAgentCommand | null
+  /** set by the native Library screen's "Use agent" button — drafts (or reopens) an
+   *  agent from the prototype's own library and opens its AgentScreen. Only
+   *  meaningful in 'embedded' mode. */
+  useLibraryCmd?: SuperAgentUseLibraryCommand | null
   /** called when the person clicks the prototype's own "Back to Birdeye" switcher
-   *  inside the iframe — the host closes the overlay to reveal its real Dashboard. */
+   *  inside the iframe — the host closes the overlay to reveal its real Dashboard.
+   *  Only meaningful in 'overlay' mode. */
   onBackToBirdeye?: () => void
+  /** called when the person clicks the back chevron the prototype's AgentScreen
+   *  shows only in embedded mode (see app.jsx's `EMBED_NO_CHROME` branch) — the host
+   *  hides the iframe and reveals the native My agents/Library screen underneath.
+   *  Only meaningful in 'embedded' mode. */
+  onCloseAgent?: () => void
 }

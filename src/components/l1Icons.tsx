@@ -207,16 +207,16 @@ export function FigmaIconSettings({ size = 20, className, ...props }: FigmaIconP
 }
 
 /**
- * Super agent — origami/paper-bird glyph (the product's own mark). Single folded
- * silhouette (tail, ridge fold, head, beak) plus one interior crease line for the
- * wing, drawn with the same stroke contract as the other outline L1 icons.
+ * Super agent — two overlapping 4-point sparkles (the AI-generated/agentic mark
+ * used elsewhere in the product), one large + one small trailing it, drawn with
+ * the same stroke contract as the other outline L1 icons.
  */
 export function FigmaIconSuperAgent({ size = 20, className, ...props }: FigmaIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none"
       xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden {...props}>
-      <path d="M2 15L7 6L13 4L18 7.5L13 8.5L7 16L2 15Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M7 6L10.5 12.5L13 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M8.5 2.5C8.5 5.53757 10.9624 8 14 8C10.9624 8 8.5 10.4624 8.5 13.5C8.5 10.4624 6.03757 8 3 8C6.03757 8 8.5 5.53757 8.5 2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M15.5 11.5C15.5 13.1569 16.8431 14.5 18.5 14.5C16.8431 14.5 15.5 15.8431 15.5 17.5C15.5 15.8431 14.1569 14.5 12.5 14.5C14.1569 14.5 15.5 13.1569 15.5 11.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 }
@@ -435,7 +435,8 @@ export function FigmaIconSuperAgentActive({ size = 20, className, ...props }: Fi
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none"
       xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden {...props}>
-      <path d="M2 15L7 6L13 4L18 7.5L13 8.5L7 16L2 15Z" fill="currentColor"/>
+      <path d="M8.5 2.5C8.5 5.53757 10.9624 8 14 8C10.9624 8 8.5 10.4624 8.5 13.5C8.5 10.4624 6.03757 8 3 8C6.03757 8 8.5 5.53757 8.5 2.5Z" fill="currentColor"/>
+      <path d="M15.5 11.5C15.5 13.1569 16.8431 14.5 18.5 14.5C16.8431 14.5 15.5 15.8431 15.5 17.5C15.5 15.8431 14.1569 14.5 12.5 14.5C14.1569 14.5 15.5 13.1569 15.5 11.5Z" fill="currentColor"/>
     </svg>
   );
 }

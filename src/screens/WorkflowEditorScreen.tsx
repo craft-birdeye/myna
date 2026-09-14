@@ -119,6 +119,8 @@ interface WorkflowEditorScreenProps {
   explorationChrome?: boolean
   /** Sep 1 chrome — red "N Errors" chip after the run-test icon (both Sep 1 agents). */
   sep1Chrome?: boolean
+  /** Overrides AgentBuilder's bottom-left toolbar grouping independent of sep1Chrome — see AgentBuilder's own prop doc. */
+  combineControlsLeft?: boolean
   /**
    * Action RHS Option 1/2 + R1–R4 layout picker (Response / Front desk exploration only —
    * not Sep 1). Independent of sep1Chrome, which is true for all exploration-family navs.
@@ -167,6 +169,7 @@ export function WorkflowEditorScreen({
   inlineRhsFooter = false,
   onOpenProductResearchSettings,
   autoOpenCoachTour = false,
+  combineControlsLeft,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -360,6 +363,7 @@ export function WorkflowEditorScreen({
             explorationChrome={explorationChrome}
             inlineRhsFooter={inlineRhsFooter}
             sep1Chrome={sep1Chrome}
+            combineControlsLeft={combineControlsLeft}
             llmTaskExplorationLayout={llmTaskExplorationLayout}
             identityLocationChrome={identityLocationChrome}
             onOpenProductResearchSettings={onOpenProductResearchSettings}

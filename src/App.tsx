@@ -15,8 +15,11 @@ import {
   isResponseAgentsExplorationNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
-import { AiAssistPanel, AppSwitcher, Icon, IconRail, Link, RecordDetailScreen, SideNav, SuperAgentApp, Toast, TopNav, type NavSection, type RailGroup, type Product, type SuperAgentEnterCommand } from './components'
+import { AiAssistPanel, AppSwitcher, Icon, IconRail, Link, RecordDetailScreen, SideNav, SuperAgentApp, Toast, TopNav, type NavSection, type RailGroup, type Product, type SuperAgentEnterCommand, type SuperAgentNavigateCommand, type SuperAgentOpenAgentCommand, type SuperAgentUseLibraryCommand } from './components'
 import { WebsiteGateScreen } from './screens/WebsiteGateScreen'
+import { SuperAgentMyAgentsScreen } from './screens/superAgent/SuperAgentMyAgentsScreen'
+import { SuperAgentLibraryScreen } from './screens/superAgent/SuperAgentLibraryScreen'
+import { SuperAgentConnectionsScreen } from './screens/superAgent/SuperAgentConnectionsScreen'
 import { AiCoachSparkleIcon } from './assets/AiCoachSparkleIcon'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
@@ -359,6 +362,26 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
   },
 ]
 
+// Super agent's embedded-in-L1 module (distinct from the standalone overlay): the L2
+// mirrors the prototype's own left nav exactly — four flat rows, no accordion/chevron
+// — with "Super agent" as a plain, non-collapsible module title above them (SideNav's
+// `showTitle`, opted into only here so every other SideNav consumer's layout is
+// untouched). Each row's onSelect posts a `navigate` command into the iframe (mapped
+// via SUPER_AGENT_NAV_TO_IFRAME_KEY).
+const SUPER_AGENT_DEFAULT_NAV = 'sa-create'
+const SUPER_AGENT_NAV_SECTIONS: NavSection[] = [
+  { id: 'sa-create',      label: 'Create agent' },
+  { id: 'sa-agents',      label: 'My agents' },
+  { id: 'sa-library',     label: 'Library' },
+  { id: 'sa-connections', label: 'Connections' },
+]
+const SUPER_AGENT_NAV_TO_IFRAME_KEY: Record<string, string> = {
+  'sa-create':      'create',
+  'sa-agents':      'agents',
+  'sa-library':     'market',
+  'sa-connections': 'connections',
+}
+
 const REVIEWS_AGENT_NAV_IDS = new Set([
   'response-agents',
   'response-agents-sep-1',
@@ -609,17 +632,21 @@ export function App() {
     return parseAppRoute()?.navId ?? 'frontdesk-agent'
   })
   const [deepRoute, setDeepRoute] = useState<DeepRoute>(() => parseAppRoute()?.deep ?? {})
-  // Super agent is a full-page layer independent of the dashboard's own L1/L2 nav —
-  // it draws its own chrome, so it's rendered as a fixed overlay on top of everything
-  // rather than as one more railActive destination. `superAgentOverlayOpen` toggles
-  // that overlay; `superAgentEnter` is bumped every time it opens (Website gate's "new
-  // user" choice, or the TopBar AppSwitcher) — see openSuperAgent()/closeSuperAgent() below.
+  // Super agent is shown two different ways side by side, for two different demo
+  // stories — "standalone app" (this overlay, independent of the dashboard's own
+  // L1/L2, its own chrome) vs. "just another module" (the L1 rail item further
+  // below, which draws its own L2 and behaves like Front desk/Reviews). Both mount
+  // their own SuperAgentApp instance.
+  //
+  // `superAgentOverlayOpen` toggles the standalone overlay; `superAgentEnter` is
+  // bumped every time it opens (Website gate's "new user" choice, or the TopBar
+  // AppSwitcher) — see openSuperAgent()/closeSuperAgent() below.
   const [superAgentOverlayOpen, setSuperAgentOverlayOpen] = useState(false)
   const [superAgentEnter, setSuperAgentEnter] = useState<SuperAgentEnterCommand | null>(null)
   // isNewUser=true (Website gate's "New user") mirrors the prototype's own
   // replayOnboarding() — a genuine sign-up from scratch. false/default (TopBar
-  // AppSwitcher, L1 rail item) mirrors its openSuper() — a quick re-entry that
-  // skips straight to a short onboarding or straight to the workspace.
+  // AppSwitcher) mirrors its openSuper() — a quick re-entry that skips straight to
+  // a short onboarding or straight to the workspace.
   function openSuperAgent(isNewUser = false) {
     setSuperAgentOverlayOpen(true)
     setSuperAgentEnter({ ts: Date.now(), isNewUser })
@@ -627,6 +654,28 @@ export function App() {
   function closeSuperAgent() {
     setSuperAgentOverlayOpen(false)
   }
+  // The embedded L1 module's own SuperAgentApp instance. Unlike the standalone
+  // overlay, this module never shows onboarding/sign-up — `superAgentEmbeddedNav`
+  // is bumped both on first entry (forced to the default row) and by its L2 SideNav
+  // (see SUPER_AGENT_NAV_TO_IFRAME_KEY below); the iframe's own `navigate` handler
+  // always forces `stage: "app"` + `onboarded: true`, skipping onboarding entirely.
+  const [superAgentEmbeddedNav, setSuperAgentEmbeddedNav] = useState<SuperAgentNavigateCommand | null>(null)
+  // Set by native My agents/Library "Open agent"/"Use agent" — while non-null, the
+  // embedded iframe (showing the prototype's own full-page AgentScreen) covers the
+  // native list screen underneath. Cleared when the iframe's own back chevron posts
+  // `superagent:close-agent` (see SuperAgentApp's onCloseAgent).
+  const [superAgentViewingAgent, setSuperAgentViewingAgent] = useState(false)
+  const [superAgentOpenAgentCmd, setSuperAgentOpenAgentCmd] = useState<SuperAgentOpenAgentCommand | null>(null)
+  const [superAgentUseLibraryCmd, setSuperAgentUseLibraryCmd] = useState<SuperAgentUseLibraryCommand | null>(null)
+  function openSuperAgentEmbeddedAgent(id: string) {
+    setSuperAgentViewingAgent(true)
+    setSuperAgentOpenAgentCmd({ id, ts: Date.now() })
+  }
+  function useSuperAgentEmbeddedLibraryAgent(key: string) {
+    setSuperAgentViewingAgent(true)
+    setSuperAgentUseLibraryCmd({ key, ts: Date.now() })
+  }
+  const prevRailActiveRef = useRef<string | null>(null)
   // Website gate — shown before Overview on every fresh load. "Current user" drops
   // straight into the dashboard; "New user" additionally opens the Super agent overlay,
   // which carries the iframe straight into its own sign-up/onboarding stage.
@@ -690,6 +739,19 @@ export function App() {
       window.removeEventListener('hashchange', applyLocation)
     }
   }, [])
+
+  // Force the embedded module straight to its default row every time railActive
+  // transitions *into* 'super-agent' (the L1 rail item) — a `navigate` command (not
+  // `enter`) so the iframe skips onboarding/sign-up entirely and lands directly in
+  // the workspace, per this module's "no onboarding" requirement.
+  useEffect(() => {
+    if (railActive === 'super-agent' && prevRailActiveRef.current !== 'super-agent') {
+      const iframeKey = SUPER_AGENT_NAV_TO_IFRAME_KEY[SUPER_AGENT_DEFAULT_NAV]
+      if (iframeKey) setSuperAgentEmbeddedNav({ key: iframeKey, ts: Date.now() })
+      setSuperAgentViewingAgent(false)
+    }
+    prevRailActiveRef.current = railActive
+  }, [railActive])
 
   // Keep the address bar in sync: `/overview`, `/front-desk/<nav>`, `/reviews/<nav>`, etc.
   useEffect(() => {
@@ -861,17 +923,14 @@ export function App() {
                     : g,
                 )
           }
-          activeId={superAgentOverlayOpen ? 'super-agent' : railActive}
+          activeId={railActive}
           onSelect={(id) => {
-            if (id === 'super-agent') {
-              openSuperAgent()
-              return
-            }
             setRailActive(id)
             setDeepRoute({})
             setIsAgentSetupActive(false)
             if (id === 'frontdesk') setNavActive('manage-appointments')
             if (id === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
+            if (id === 'super-agent') setNavActive(SUPER_AGENT_DEFAULT_NAV)
           }}
           products={PRODUCTS}
           activeProduct={activeProduct}
@@ -962,6 +1021,33 @@ export function App() {
                       setNavActive(id)
                     }}
                   />
+                ) : railActive === 'super-agent' ? (
+                  // Collapsed (returns null) while an agent is open — the AgentScreen
+                  // (Chat/Workflow/Approvals/...) is a full-page experience with its own
+                  // back chevron, not something the L2 list should flank.
+                  superAgentViewingAgent ? null : (
+                  <SideNav
+                    key="super-agent"
+                    title="Super agent"
+                    showTitle
+                    sections={SUPER_AGENT_NAV_SECTIONS}
+                    activeId={navActive}
+                    onSelect={(id) => {
+                      setDeepRoute({})
+                      setNavActive(id)
+                      // Clicking any L2 row exits an open agent view and returns to that
+                      // row's own screen (native list, or the Create agent iframe).
+                      setSuperAgentViewingAgent(false)
+                      // Only "Create agent" is still the prototype iframe — My agents/
+                      // Library/Connections are native screens now, so there's no iframe
+                      // to message when navigating to them.
+                      if (id === 'sa-create') {
+                        const iframeKey = SUPER_AGENT_NAV_TO_IFRAME_KEY[id]
+                        if (iframeKey) setSuperAgentEmbeddedNav({ key: iframeKey, ts: Date.now() })
+                      }
+                    }}
+                  />
+                  )
                 ) : (
                   <SideNav
                     key="frontdesk"
@@ -1025,8 +1111,22 @@ export function App() {
               )}
 
               {/* Main content */}
-              <main className="flex flex-1 flex-col min-w-0 overflow-hidden bg-background">
-                {railActive === 'search' ? (
+              <main className={`flex flex-1 flex-col min-w-0 overflow-hidden ${railActive === 'super-agent' ? 'bg-surface' : 'bg-background'}`}>
+                {railActive === 'super-agent' ? (
+                  // "Create agent", and any agent opened from My agents/Library, use the
+                  // prototype iframe (rendered as a sibling at the bottom of <main>,
+                  // mode="embedded") — while `superAgentViewingAgent` is true the iframe
+                  // covers this area instead, so the native list screen underneath is
+                  // suppressed. The other three L2 rows are native screens reusing myna's
+                  // own header/Tabs/InfoCard/button chrome.
+                  superAgentViewingAgent ? null : navActive === 'sa-agents' ? (
+                    <SuperAgentMyAgentsScreen onOpenAgent={openSuperAgentEmbeddedAgent} />
+                  ) : navActive === 'sa-library' ? (
+                    <SuperAgentLibraryScreen onUseAgent={useSuperAgentEmbeddedLibraryAgent} />
+                  ) : navActive === 'sa-connections' ? (
+                    <SuperAgentConnectionsScreen />
+                  ) : null
+                ) : railActive === 'search' ? (
                   <SearchAIView l2ActiveItem={searchAIL2Active} />
                 ) : railActive === 'social' ? (
                   <SocialView activeItem={socialL2Active} onActiveItemChange={setSocialL2Active} />
@@ -1414,6 +1514,19 @@ export function App() {
                 ) : (
                   <ManageAppointmentsScreen product={activeProduct} onViewDetail={(args) => openDetailInNewTab('appointment', args)} />
                 )}
+                {/* Super agent's embedded-in-L1 module — sized to fill this <main>, own left
+                    nav hidden (?chrome=none) since the L2 SideNav above already provides
+                    navigation. Separate mount/state from the standalone overlay below.
+                    No `enter` prop: this module only ever gets `navigate` commands, which
+                    force stage="app" + onboarded=true, so it never shows onboarding. */}
+                <SuperAgentApp
+                  mode="embedded"
+                  active={railActive === 'super-agent' && (navActive === 'sa-create' || superAgentViewingAgent)}
+                  navigate={superAgentEmbeddedNav}
+                  openAgentCmd={superAgentOpenAgentCmd}
+                  useLibraryCmd={superAgentUseLibraryCmd}
+                  onCloseAgent={() => setSuperAgentViewingAgent(false)}
+                />
               </main>
 
             </div>{/* end white card */}

@@ -18,6 +18,7 @@ import {
   PromptComposer,
   RefChip,
   ReviewResponseOutcomesCharts,
+  SuperAgentApp,
   Tabs,
   Toast,
   Tooltip,
@@ -32,6 +33,7 @@ import {
   type LibraryCardGlyph,
   type LibraryCardTone,
   type RowMenuItem,
+  type SuperAgentNavigateCommand,
   type Tab,
 } from '../components'
 import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
@@ -7469,6 +7471,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }, [pendingInstanceView])
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
+  // Stable for as long as this embed stays mounted — a fresh object on every
+  // render would re-fire SuperAgentApp's postMessage effect every render
+  // instead of once per "Create agent" click (see the frontdesk-agent-sep-1
+  // branch below).
+  const superAgentCreateNav: SuperAgentNavigateCommand = useMemo(() => ({ key: 'create', ts: Date.now() }), [])
   const [libraryPreview, setLibraryPreview] = useState<AgentLibraryPreviewData | null>(null)
   const [showSetupWizard, setShowSetupWizard] = useState(false)
   const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false)
@@ -8229,6 +8236,41 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             setShowCreateFlow(false)
             onEditAgent?.(name)
           }}
+        />
+      </div>
+    )
+  }
+
+  // Front desk's production sep-1 nav swaps the scripted "Build your agent"
+  // landing for Super Agent's own create flow — the composer/chat that talks
+  // you through building an agent, landing on its own full AgentScreen (Chat/
+  // Workflow/Approvals/Activity/Reports/Knowledge/Connections/Settings tabs)
+  // once it's built. Scoped to this one nav id only, so every other frontdesk
+  // (dental/automotive/exploration) and reminder/review create flow below is
+  // untouched. Embeds the same self-contained prototype (public/super-agent-
+  // prototype.html) SuperAgentApp already mounts for the standalone overlay
+  // and the separate "Super agent" L1 module — `mode="embedded"` hides its own
+  // left nav (`?chrome=none`) so it drops into this content area instead of
+  // taking over the viewport, keeping this app's own L1 rail/TopBar visible.
+  if (showCreateFlow && navId === 'frontdesk-agent-sep-1' && isFrontdesk && product === 'healthcare') {
+    return (
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+        <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+          <button
+            type="button"
+            onClick={() => setShowCreateFlow(false)}
+            className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+            aria-label="Back"
+          >
+            <Icon name="arrow_back" size={20} />
+          </button>
+          <h1 className="text-h3 text-text-primary text-left">Back</h1>
+        </div>
+        <SuperAgentApp
+          mode="embedded"
+          active
+          navigate={superAgentCreateNav}
+          onCloseAgent={() => setShowCreateFlow(false)}
         />
       </div>
     )

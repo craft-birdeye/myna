@@ -39,4 +39,11 @@ export interface SideNavProps {
    * When false (default), expanding/selecting a section collapses the others.
    */
   multiExpand?: boolean
+  /**
+   * When true, renders `title` as a plain, non-interactive module-name label above
+   * the sections (not a collapsible group/chevron). Defaults to false so existing
+   * consumers (Front desk, Reviews, etc.) render exactly as before — opt in per call
+   * site rather than changing every SideNav's layout at once.
+   */
+  showTitle?: boolean
 }
