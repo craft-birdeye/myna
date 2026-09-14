@@ -3383,11 +3383,11 @@ const AGENT_TABS = [
   /* second, right after Chat — an agent's workflow is the thing
      people want to see straight after what it said */
   { key: "workflow", label: "Workflow", icon: "route" },
-  { key: "approvals", label: "Approvals", icon: "check" },
-  { key: "activity", label: "Activity", icon: "clock" },
   { key: "reports", label: "Reports", icon: "chart" },
+  { key: "approvals", label: "Approvals", icon: "check" },
   { key: "knowledge", label: "Knowledge", icon: "file" },
   { key: "connections", label: "Connections", icon: "link" },
+  { key: "activity", label: "Activity", icon: "clock" },
   { key: "settings", label: "Settings", icon: "settings" },
 ];
 
@@ -4148,6 +4148,8 @@ const REPORTS = {
     ],
     breakdown: [["Reviews answered", "148"], ["Escalated to you", "12"], ["Follow-up tasks opened", "9"], ["Auto-published", "136"]],
     credits: 612,
+    creditsPrev: 540,
+    unit: "review answered",
   },
   frontdesk: {
     headline: [["Calls answered", "214", "+38"], ["Appointments booked", "87", "+19"], ["Hours saved", "9.1", "+2.4"]],
@@ -4160,6 +4162,8 @@ const REPORTS = {
     ],
     breakdown: [["Calls answered", "214"], ["Booked", "87"], ["Transferred", "23"], ["Summaries sent", "214"]],
     credits: 908,
+    creditsPrev: 760,
+    unit: "call answered",
   },
   "review-response": {
     headline: [["Reviews answered", "148", "+22%"], ["Hours saved", "11.4", "+3.1"], ["Approved as-is", "92%", "+6"]],
@@ -4172,6 +4176,8 @@ const REPORTS = {
     ],
     breakdown: [["Reviews answered", "148"], ["Held for approval", "6"], ["Auto-published", "142"]],
     credits: 540,
+    creditsPrev: 460,
+    unit: "review answered",
   },
   "review-generation": {
     headline: [["Requests sent", "312", "+18%"], ["New reviews", "84", "+27"], ["Hours saved", "4.8", "+1.1"]],
@@ -4184,6 +4190,8 @@ const REPORTS = {
     ],
     breakdown: [["Requests sent", "312"], ["Reviews received", "84"], ["Reminders sent", "58"]],
     credits: 310,
+    creditsPrev: 260,
+    unit: "request sent",
   },
   "listings-health": {
     headline: [["Listings checked", "46", "+0"], ["Issues fixed", "13", "+5"], ["Hours saved", "3.6", "+0.9"]],
@@ -4196,6 +4204,8 @@ const REPORTS = {
     ],
     breakdown: [["Listings checked", "46"], ["Issues found", "13"], ["Auto-corrected", "11"], ["Escalated", "2"]],
     credits: 190,
+    creditsPrev: 215,
+    unit: "listing checked",
   },
   "appointment-booking": {
     headline: [["Bookings handled", "87", "+19"], ["Hours saved", "9.1", "+2.4"], ["No-shows prevented", "11", "+4"]],
@@ -4208,6 +4218,8 @@ const REPORTS = {
     ],
     breakdown: [["Bookings scheduled", "87"], ["Rescheduled", "14"], ["Cancelled", "6"], ["Held for approval", "6"]],
     credits: 420,
+    creditsPrev: 350,
+    unit: "booking handled",
   },
   "social-publishing": {
     headline: [["Posts published", "36", "+9"], ["Engagement", "+31%", "+31%"], ["Hours saved", "5.4", "+1.3"]],
@@ -4220,6 +4232,8 @@ const REPORTS = {
     ],
     breakdown: [["Posts published", "36"], ["Held for approval", "1"], ["Scheduled ahead", "12"]],
     credits: 265,
+    creditsPrev: 230,
+    unit: "post published",
   },
   "treatment-followup": {
     headline: [["Follow-ups sent", "164", "+24%"], ["Patients re-engaged", "58", "+13"], ["Hours saved", "7.7", "+2.0"]],
@@ -4232,6 +4246,8 @@ const REPORTS = {
     ],
     breakdown: [["Follow-ups sent", "164"], ["Patients responded", "58"], ["Escalated to care team", "3"]],
     credits: 380,
+    creditsPrev: 310,
+    unit: "follow-up sent",
   },
   DEFAULT: {
     headline: [["Work handled", "96", "+14%"], ["Hours saved", "6.2", "+1.4"], ["Approved as-is", "89%", "+6"]],
@@ -4243,6 +4259,8 @@ const REPORTS = {
     ],
     breakdown: [["Handled", "96"], ["Waiting on you", "3"], ["Escalated", "5"]],
     credits: 240,
+    creditsPrev: 210,
+    unit: "item handled",
   },
 };
 const reportFor = (id) => REPORTS[id] || REPORTS.DEFAULT;
@@ -4282,6 +4300,19 @@ function AgentReports({ agent, app }) {
   const [scheduled, setScheduled] = useState(false);
   const r = reportFor(agent.id);
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  // Cost & efficiency derivations — kept out of the static REPORTS table since
+  // they're all computed from numbers already there (credits, the primary
+  // headline count, and the daily work series), so there's nothing to keep in
+  // sync by hand when those change.
+  const primaryCount = parseFloat(String(r.headline[0][1]).replace(/[^0-9.]/g, "")) || 1;
+  const costPerUnit = r.credits / primaryCount;
+  const creditsDeltaPct = r.creditsPrev ? Math.round(((r.credits - r.creditsPrev) / r.creditsPrev) * 100) : null;
+  const seriesTotal = r.series.reduce((a, b) => a + b, 0) || 1;
+  const creditSeries = r.series.map((v) => Math.max(1, Math.round((v / seriesTotal) * r.credits)));
+  const creditSeriesMax = Math.max(...creditSeries, 1);
+  const budgetPct = Math.min(100, (r.credits / 1500) * 100);
+  const budgetTone = budgetPct >= 90 ? "red" : budgetPct >= 70 ? "orange" : "green";
 
   return (
     <div className="flex flex-col gap-4">
@@ -4370,20 +4401,49 @@ function AgentReports({ agent, app }) {
         <Card>
           <CardBar>
             <span className="text-ink-2"><Icon name="arrowUp" size={14} sw={1.9} /></span>
-            <span className="text-[13px] font-medium text-ink">What it cost</span>
+            <span className="text-[13px] font-medium text-ink">Cost &amp; efficiency</span>
           </CardBar>
           <div className="primitive-card-pad">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[26px] font-semibold tracking-[-0.02em] text-ink">{r.credits.toLocaleString()}</span>
-              <span className="text-[12.5px] text-ink-3">credits this period</span>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[26px] font-semibold tracking-[-0.02em] text-ink">{r.credits.toLocaleString()}</span>
+                <span className="text-[12.5px] text-ink-3">credits this period</span>
+              </div>
+              {creditsDeltaPct !== null && (
+                <span className="text-[12px] font-medium text-ink-3">
+                  {creditsDeltaPct >= 0 ? "+" : ""}{creditsDeltaPct}% vs last period
+                </span>
+              )}
             </div>
-            <p className="mt-2 text-[12.5px] leading-[1.55] text-ink-2">
+
+            <div className="mt-3 flex items-center justify-between rounded-card bg-inset p-2.5 shadow-hairline">
+              <span className="text-[12.5px] text-ink-2">Cost per {r.unit}</span>
+              <span className="text-[13px] font-semibold text-ink">{costPerUnit.toFixed(1)} credits</span>
+            </div>
+
+            <div className="mt-4">
+              <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-ink-3">Credits per day</div>
+              <div className="flex h-12 items-end gap-1.5">
+                {creditSeries.map((v, i) => (
+                  <span key={i} className="min-w-0 flex-1 rounded-t-[3px] bg-line-strong transition-[height] duration-500"
+                    style={{ height: `${Math.max(10, (v / creditSeriesMax) * 100)}%` }} />
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-4 text-[12.5px] leading-[1.55] text-ink-2">
               Against {r.headline[1][1]} hours of work you did not have to do. Answers and status checks are free — only work draws credits.
             </p>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line">
-              <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (r.credits / 1500) * 100)}%` }} />
+              <span className={`block h-full rounded-full ${budgetTone === "red" ? "bg-red" : budgetTone === "orange" ? "bg-orange" : "bg-green"}`}
+                style={{ width: `${budgetPct}%` }} />
             </div>
-            <div className="mt-1.5 text-[11.5px] text-ink-3">{r.credits} of 1,500 budgeted</div>
+            <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-ink-3">
+              <span>{r.credits.toLocaleString()} of 1,500 budgeted</span>
+              <span className={budgetTone === "red" ? "text-red" : budgetTone === "orange" ? "text-orange" : "text-ink-3"}>
+                {Math.round(budgetPct)}% used
+              </span>
+            </div>
           </div>
         </Card>
       </div>
@@ -4512,6 +4572,12 @@ function AgentThread({ agent, app }) {
   const [openHistory, setOpenHistory] = useState(false);
   const before = sealAt >= 0 ? msgs.slice(0, sealAt) : [];
   const after = sealAt >= 0 ? msgs.slice(sealAt + 1) : msgs;
+  /* This thread renders inside AgentScreen's own overflow-y-auto pane, a
+   * different scroll container than the top-level `scrollRef` the rest of
+   * the app auto-scrolls (that ref isn't even mounted while nav === "agent").
+   * Follow it here too, the same sentinel-ref pattern WorkflowChat uses. */
+  const endRef = useRef(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [msgs]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -4545,6 +4611,7 @@ function AgentThread({ agent, app }) {
       )}
 
       {after.map((m) => <Message key={m.id} m={m} app={app} />)}
+      <div ref={endRef} />
     </div>
   );
 }
