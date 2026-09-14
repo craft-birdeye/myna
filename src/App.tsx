@@ -15,7 +15,8 @@ import {
   isResponseAgentsExplorationNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
-import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
+import { AiAssistPanel, AppSwitcher, Icon, IconRail, Link, RecordDetailScreen, SideNav, SuperAgentApp, Toast, TopNav, type NavSection, type RailGroup, type Product, type SuperAgentEnterCommand } from './components'
+import { WebsiteGateScreen } from './screens/WebsiteGateScreen'
 import { AiCoachSparkleIcon } from './assets/AiCoachSparkleIcon'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
@@ -89,6 +90,7 @@ import {
   FigmaIconReports,
   FigmaIconContacts,
   FigmaIconRecommendations,
+  FigmaIconSuperAgent,
 } from './components/l1Icons'
 
 function EmptyResourceScreen({ label, title }: { label: string; title?: string }) {
@@ -108,6 +110,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview-v2-1', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
+      { id: 'super-agent',   label: 'Super agent', icon: <FigmaIconSuperAgent size={ICON_SIZE} />, kind: 'element' },
     ],
   },
   {
@@ -606,6 +609,28 @@ export function App() {
     return parseAppRoute()?.navId ?? 'frontdesk-agent'
   })
   const [deepRoute, setDeepRoute] = useState<DeepRoute>(() => parseAppRoute()?.deep ?? {})
+  // Super agent is a full-page layer independent of the dashboard's own L1/L2 nav —
+  // it draws its own chrome, so it's rendered as a fixed overlay on top of everything
+  // rather than as one more railActive destination. `superAgentOverlayOpen` toggles
+  // that overlay; `superAgentEnter` is bumped every time it opens (Website gate's "new
+  // user" choice, or the TopBar AppSwitcher) — see openSuperAgent()/closeSuperAgent() below.
+  const [superAgentOverlayOpen, setSuperAgentOverlayOpen] = useState(false)
+  const [superAgentEnter, setSuperAgentEnter] = useState<SuperAgentEnterCommand | null>(null)
+  // isNewUser=true (Website gate's "New user") mirrors the prototype's own
+  // replayOnboarding() — a genuine sign-up from scratch. false/default (TopBar
+  // AppSwitcher, L1 rail item) mirrors its openSuper() — a quick re-entry that
+  // skips straight to a short onboarding or straight to the workspace.
+  function openSuperAgent(isNewUser = false) {
+    setSuperAgentOverlayOpen(true)
+    setSuperAgentEnter({ ts: Date.now(), isNewUser })
+  }
+  function closeSuperAgent() {
+    setSuperAgentOverlayOpen(false)
+  }
+  // Website gate — shown before Overview on every fresh load. "Current user" drops
+  // straight into the dashboard; "New user" additionally opens the Super agent overlay,
+  // which carries the iframe straight into its own sign-up/onboarding stage.
+  const [hasEnteredApp, setHasEnteredApp] = useState(false)
   const applyingRoute = useRef(false)
   const didCanonicalizeUrl = useRef(false)
   const [expandOnHover, setExpandOnHover] = useState(true)
@@ -773,8 +798,6 @@ export function App() {
     leadDetail !== null ||
     serviceRequestDetail !== null
 
-  const moduleTitle = RAIL_TITLE[railActive] ?? 'Front desk'
-
   const showL2 =
     !isEditingWorkflow &&
     !isViewingDetail &&
@@ -790,6 +813,18 @@ export function App() {
     railActive !== 'content-hub' &&
     railActive !== 'search' &&
     railActive !== 'social'
+
+  if (!hasEnteredApp) {
+    return (
+      <WebsiteGateScreen
+        onCurrentUser={() => setHasEnteredApp(true)}
+        onNewUser={() => {
+          setHasEnteredApp(true)
+          openSuperAgent(true)
+        }}
+      />
+    )
+  }
 
   return (
     <ProcedureStoreProvider>
@@ -807,7 +842,11 @@ export function App() {
       */}
       <FeedbackRecommendationsStoreProvider>
       <RecommendationOverridesStoreProvider>
-      <div className="h-screen w-screen flex overflow-hidden bg-surface-shell text-text-primary">
+      {/* Hidden outright (not just covered) while the Super agent overlay is open —
+          avoids any z-index/stacking edge case letting the L1 rail or TopBar bleed
+          through the overlay. Stays mounted so state (open panels, scroll, etc.)
+          survives the round trip. */}
+      <div className={superAgentOverlayOpen ? 'hidden' : 'h-screen w-screen flex overflow-hidden bg-surface-shell text-text-primary'}>
 
         {/* ── L1 Icon rail ── */}
         <IconRail
@@ -822,8 +861,12 @@ export function App() {
                     : g,
                 )
           }
-          activeId={railActive}
+          activeId={superAgentOverlayOpen ? 'super-agent' : railActive}
           onSelect={(id) => {
+            if (id === 'super-agent') {
+              openSuperAgent()
+              return
+            }
             setRailActive(id)
             setDeepRoute({})
             setIsAgentSetupActive(false)
@@ -848,9 +891,14 @@ export function App() {
 
           {/* ── Global TopBar ── same bg as L1 rail so they look merged */}
           <header className="flex h-[48px] shrink-0 items-center justify-between px-4 bg-surface-shell rounded-tr-lg">
-            <span className="text-base text-text-primary" style={{ fontWeight: 400 }}>
-              {moduleTitle}
-            </span>
+            <AppSwitcher
+              onSuperAgent={false}
+              onSelectBirdeye={() => {
+                setRailActive('overview-v2-1')
+                setDeepRoute({})
+              }}
+              onSelectSuperAgent={openSuperAgent}
+            />
             <div className="flex items-center gap-[6px]">
               {/* + button — matches contenthub 2.0 QuickCreateLauncher trigger */}
               <button
@@ -1378,6 +1426,18 @@ export function App() {
           />
         </div>{/* end right column */}
       </div>
+
+      {/* Super agent — a full-page layer independent of the dashboard's own L1/L2 nav
+          (it draws its own chrome entirely), stacked on top of the Birdeye Dashboard
+          rather than living inside it. Kept mounted once opened (hidden via CSS, not
+          unmounted) because the prototype compiles its own JSX on load — remounting it
+          every time would cost a 1-3s blank frame. Its own "Back to Birdeye" switcher
+          posts a message back here to close the layer and reveal the Dashboard again. */}
+      <SuperAgentApp
+        active={superAgentOverlayOpen}
+        enter={superAgentEnter}
+        onBackToBirdeye={closeSuperAgent}
+      />
       </RecommendationOverridesStoreProvider>
       </FeedbackRecommendationsStoreProvider>
       </AgentSystemPromptStoreProvider>

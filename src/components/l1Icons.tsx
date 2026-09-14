@@ -206,6 +206,21 @@ export function FigmaIconSettings({ size = 20, className, ...props }: FigmaIconP
   );
 }
 
+/**
+ * Super agent — origami/paper-bird glyph (the product's own mark). Single folded
+ * silhouette (tail, ridge fold, head, beak) plus one interior crease line for the
+ * wing, drawn with the same stroke contract as the other outline L1 icons.
+ */
+export function FigmaIconSuperAgent({ size = 20, className, ...props }: FigmaIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none"
+      xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden {...props}>
+      <path d="M2 15L7 6L13 4L18 7.5L13 8.5L7 16L2 15Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M7 6L10.5 12.5L13 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 // ─── Active (filled) variants ───
 
 export function FigmaIconBirdAIActive({ size = 20, className, ...props }: FigmaIconProps) {
@@ -412,6 +427,15 @@ export function FigmaIconSettingsActive({ size = 20, className, ...props }: Figm
       xmlns="http://www.w3.org/2000/svg" className={className} {...props}>
       <path d="M7.74129 16.1426L8.22833 17.238C8.37314 17.564 8.60939 17.8411 8.90848 18.0355C9.20764 18.2299 9.55673 18.3334 9.91348 18.3334C10.2703 18.3334 10.6194 18.2299 10.9185 18.0355C11.2176 17.8411 11.4539 17.564 11.5987 17.238L12.0857 16.1426C12.2591 15.7539 12.5507 15.4299 12.9191 15.2167C13.2897 15.0029 13.7185 14.9118 14.1441 14.9565L15.3357 15.0834C15.6905 15.1209 16.0485 15.0547 16.3663 14.8928C16.6841 14.7309 16.9482 14.4803 17.1265 14.1714C17.305 13.8625 17.39 13.5086 17.3712 13.1524C17.3525 12.7963 17.2308 12.4532 17.0209 12.1649L16.3154 11.1954C16.0641 10.8476 15.9299 10.429 15.9321 10C15.932 9.57219 16.0675 9.15535 16.3191 8.80927L17.0246 7.83984C17.2345 7.55148 17.3562 7.20841 17.375 6.85224C17.3937 6.49609 17.3086 6.14214 17.1301 5.83335C16.9519 5.52438 16.6879 5.27376 16.37 5.11188C16.0521 4.94999 15.6941 4.88379 15.3395 4.92132L14.1478 5.04817C13.7222 5.09286 13.2934 5.00179 12.9228 4.78799C12.5537 4.57356 12.262 4.24782 12.0895 3.85743L11.5987 2.76205C11.4539 2.436 11.2176 2.15895 10.9185 1.96452C10.6194 1.77009 10.2703 1.66663 9.91348 1.66669C9.55673 1.66663 9.20764 1.77009 8.90848 1.96452C8.60939 2.15895 8.37314 2.436 8.22833 2.76205L7.74129 3.85743C7.56873 4.24782 7.27702 4.57356 6.90795 4.78799C6.5373 5.00179 6.10851 5.09286 5.68295 5.04817L4.48759 4.92132C4.13286 4.88379 3.77487 4.94999 3.45701 5.11188C3.13916 5.27376 2.8751 5.52438 2.69685 5.83335C2.51836 6.14214 2.43333 6.49609 2.45207 6.85224C2.4708 7.20841 2.5925 7.55148 2.8024 7.83984L3.50795 8.80927C3.75957 9.15535 3.89507 9.57219 3.89499 10C3.89507 10.4279 3.75957 10.8448 3.50795 11.1908L2.8024 12.1602C2.5925 12.4485 2.4708 12.7916 2.45207 13.1478C2.43333 13.5039 2.51836 13.8579 2.69685 14.1667C2.87528 14.4755 3.13937 14.726 3.45718 14.8879C3.77499 15.0497 4.13289 15.116 4.48759 15.0787L5.67925 14.9519C6.10481 14.9072 6.53359 14.9983 6.90425 15.212C7.27469 15.4259 7.56776 15.7517 7.74129 16.1426Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M10.0004 12.5C11.3811 12.5 12.5004 11.3807 12.5004 10C12.5004 8.61925 11.3811 7.5 10.0004 7.5C8.61969 7.5 7.50043 8.61925 7.50043 10C7.50043 11.3807 8.61969 12.5 10.0004 12.5Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+export function FigmaIconSuperAgentActive({ size = 20, className, ...props }: FigmaIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none"
+      xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden {...props}>
+      <path d="M2 15L7 6L13 4L18 7.5L13 8.5L7 16L2 15Z" fill="currentColor"/>
     </svg>
   );
 }
