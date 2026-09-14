@@ -549,11 +549,16 @@ const { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } = R
 const EMBED = (() => {
   try {
     const q = new URLSearchParams(window.location.search);
-    return { stage: q.get("stage"), chrome: q.get("chrome") };
-  } catch (e) { return { stage: null, chrome: null }; }
+    return { stage: q.get("stage"), chrome: q.get("chrome"), context: q.get("context") };
+  } catch (e) { return { stage: null, chrome: null, context: null }; }
 })();
 const EMBED_IN_APP = EMBED.stage === "app";
 const EMBED_NO_CHROME = EMBED.chrome === "none";
+// Lets a host surface tailor copy to itself — e.g. the Front Desk product's own
+// create-agent flow (?context=frontdesk) shows its own agent family names on the
+// Create-agent recommendation cards instead of the generic library ones the
+// standalone app and the separate "Super agent" L1 module both keep showing.
+const EMBED_CONTEXT = EMBED.context;
 // Embedded (chrome=none, inside the myna L1 module): no left rail of its own, so
 // pages sit flush-left on a white canvas instead of centered on the gray one used
 // by the standalone app/overlay — scoped entirely to this flag, never touching the
@@ -722,6 +727,7 @@ const GLYPH = {
   chevronDown: <path d="M6 9l6 6 6-6" />,
   chevronRight: <path d="M9 6l6 6-6 6" />,
   chevronLeft: <path d="M15 6l-6 6 6 6" />,
+  arrowBack: <path fillRule="evenodd" clipRule="evenodd" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />,
   x: <path d="M18 6L6 18M6 6l12 12" />,
   star: <path d="M12 3.5l2.6 5.3 5.9.86-4.25 4.14 1 5.86L12 16.9l-5.25 2.76 1-5.86L3.5 9.66l5.9-.86z" />,
   phone: <path d="M21.5 16.9v2.6a2 2 0 0 1-2.2 2 19.6 19.6 0 0 1-8.5-3 19.3 19.3 0 0 1-6-6 19.6 19.6 0 0 1-3-8.6A2 2 0 0 1 3.8 2h2.6a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L7.6 9.7a16 16 0 0 0 6 6l1.1-1.05a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7a2 2 0 0 1 1.9 2z" />,
@@ -4659,10 +4665,12 @@ function AgentScreen({ app, renderWorkflowTab, hideIdentity = false }) {
           {!hideIdentity && (
           <div className="flex items-center gap-3">
             {EMBED_NO_CHROME && (
+              // Matches myna's own shared back-arrow chrome (e.g. AgentDetailScreen's
+              // header): a plain size-7 rounded-sm icon button, not a circular chip.
               <button type="button" aria-label="Back" title="Back"
-                onClick={() => { try { window.parent.postMessage({ type: "superagent:close-agent" }, "*"); } catch (e) {} }}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink">
-                <Icon name="chevronLeft" size={18} sw={1.9} />
+                onClick={() => app.closeAgent()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink">
+                <Icon name="arrowBack" size={20} sw={0} fill="currentColor" />
               </button>
             )}
             <AgentAvatarImg akey={agent.akey} size={34} />
@@ -4811,8 +4819,21 @@ function DailyBrief({ app }) {
 /* Home — the four cards are the output of onboarding, not a
  * fixed list: problems pick them, tools filter them, the
  * outcome breaks ties. See recommendAgents. */
+// Front Desk's own agent family (Front desk/Waitlist/Pre-visit/Reminder) has no
+// dedicated entries in this prototype's own agent library — so rather than
+// swapping in unrelated agents with mismatched descriptions, ?context=frontdesk
+// just relabels whichever of these four generic library agents show up in the
+// recommendations, using the Front Desk product's own family names.
+const FRONTDESK_HOME_CARD_NAMES = {
+  "front-desk": "Front desk",
+  "negative-review-recovery": "Waitlist",
+  "missed-call-recovery": "Pre-visit",
+  "review-response": "Reminder",
+};
+
 function HomeCard({ rec, done, onPick, index }) {
   const a = rec.agent;
+  const displayName = (EMBED_CONTEXT === "frontdesk" && FRONTDESK_HOME_CARD_NAMES[a.key]) || a.name;
   return (
     <button type="button" onClick={onPick} disabled={done}
       className={`group flex flex-col items-start rounded-window bg-surface p-5 text-left shadow-card transition-[transform,box-shadow,background-color] duration-200
@@ -4824,7 +4845,7 @@ function HomeCard({ rec, done, onPick, index }) {
           {["google", "facebook"].map((k) => <SourceMark key={k} kind={k} size={15} />)}
         </span>
       </div>
-      <span className="mt-4 text-[15px] font-semibold tracking-[-0.01em] text-ink">{a.name}</span>
+      <span className="mt-4 text-[15px] font-semibold tracking-[-0.01em] text-ink">{displayName}</span>
       <span className="mt-1.5 text-[13px] leading-[1.55] text-ink-2">{a.desc}</span>
       <span className={`mt-4 flex items-center gap-1 text-[13px] font-medium ${done ? "text-ink-3" : "text-accent-ink"}`}>
         {done ? "Already running" : "Set up"}
@@ -8871,6 +8892,17 @@ function App() {
     toast("Prototype restarted");
   };
 
+  const closeAgent = () => {
+    // Embedded: tell the host to stop treating this as a full-page agent view
+    // (same message the host already listens for), and reset our own nav back to
+    // Create agent's landing screen. Unlike My agents/Library, the Create-agent
+    // iframe stays mounted+active the whole time it's selected, so without
+    // resetting `nav` here the next time the host reveals it again it would still
+    // be showing this agent's chat instead of the "Good morning" recommendations.
+    try { window.parent.postMessage({ type: "superagent:close-agent" }, "*"); } catch (e) {}
+    setNav("create");
+  };
+
   const openAgent = (id, tab = "chat") => {
     curRef.current = id;
     setOpenAgentId(id);
@@ -8878,6 +8910,15 @@ function App() {
     setInfoOpen(false);
     setChannelsForId(null);
     setNav("agent");
+    // Embedded (chrome=none, inside the myna L1 module): tell the host an agent view
+    // just opened, regardless of whether the host itself asked for it (open-agent/
+    // use-library-agent) or the user reached it via the iframe's own internal
+    // navigation (e.g. "Set up" on a Create-agent recommendation card) — the host
+    // uses this to hide its L2 SideNav so the AgentScreen reads as full-page, same
+    // as it already does for agents opened from My agents/Library.
+    if (EMBED_NO_CHROME) {
+      try { window.parent.postMessage({ type: "superagent:agent-opened" }, "*"); } catch (e) {}
+    }
   };
 
   /* a proposal is a real agent in draft — same screen, same tabs,
@@ -8987,7 +9028,7 @@ function App() {
 
   const app = {
     nav, go, agents, activity, approvals, msgs, thinking, toast, dark, toggleTheme: () => setDark((d) => !d),
-    panelOpen, setPanelOpen, journeyLabel, focusTick, restart, jumpTo, openAgent,
+    panelOpen, setPanelOpen, journeyLabel, focusTick, restart, jumpTo, openAgent, closeAgent,
     startFromCard, startFromChip, sendPrompt, onChip, runAction,
     repCreate, repAdjust, repAdjustContinue, repRunTest, repApprove, onTestProgress,
     useLibraryAgent, showLibraryDetail, fdConfigAnswer, fdStartCall, onCallProgress, startFd,

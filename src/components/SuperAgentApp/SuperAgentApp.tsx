@@ -37,12 +37,14 @@ export function SuperAgentApp({
   active,
   title = 'Super agent',
   mode = 'overlay',
+  context,
   enter,
   navigate,
   openAgentCmd,
   useLibraryCmd,
   onBackToBirdeye,
   onCloseAgent,
+  onOpenAgent,
 }: SuperAgentAppProps) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const loadedRef = useRef(false)
@@ -88,17 +90,21 @@ export function SuperAgentApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useLibraryCmd])
 
-  // The prototype's own "Back to Birdeye" action (overlay) and the embedded
-  // AgentScreen's back chevron (embedded, see app.jsx's EMBED_NO_CHROME branch)
-  // both post a message back here rather than trying to navigate the host directly.
+  // The prototype's own "Back to Birdeye" action (overlay), the embedded
+  // AgentScreen's back chevron (embedded, see app.jsx's EMBED_NO_CHROME branch), and
+  // its `openAgent()` (fired whenever the iframe navigates itself into an agent view —
+  // including entry points the host never itself commanded, like Create agent's own
+  // "Set up") all post a message back here rather than trying to navigate/inspect the
+  // host directly.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === 'superagent:back-to-birdeye') onBackToBirdeye?.()
       if (e.data?.type === 'superagent:close-agent') onCloseAgent?.()
+      if (e.data?.type === 'superagent:agent-opened') onOpenAgent?.()
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [onBackToBirdeye, onCloseAgent])
+  }, [onBackToBirdeye, onCloseAgent, onOpenAgent])
 
   const containerClass = active
     ? mode === 'overlay'
@@ -114,7 +120,7 @@ export function SuperAgentApp({
       <iframe
         ref={frameRef}
         onLoad={handleLoad}
-        src={`${import.meta.env.BASE_URL}super-agent-prototype.html${mode === 'embedded' ? '?chrome=none' : ''}`}
+        src={`${import.meta.env.BASE_URL}super-agent-prototype.html${mode === 'embedded' ? `?chrome=none${context ? `&context=${context}` : ''}` : ''}`}
         title={title}
         className="h-full w-full border-0"
       />

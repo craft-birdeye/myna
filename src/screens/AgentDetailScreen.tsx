@@ -7471,6 +7471,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }, [pendingInstanceView])
   const [showCreateFlow, setShowCreateFlow] = useState(false)
   const [createFlowKey, setCreateFlowKey] = useState(0)
+  // frontdesk-agent-sep-1's embedded Super Agent create flow: true once the
+  // iframe drills into an individual agent's own AgentScreen (which has its own
+  // back chevron) — hides this wrapper's native back button so the two don't
+  // stack; the landing "Good morning" recommendations screen has no back
+  // control of its own, so that's the only state where ours should show.
+  const [superAgentCreateViewingAgent, setSuperAgentCreateViewingAgent] = useState(false)
   // Stable for as long as this embed stays mounted — a fresh object on every
   // render would re-fire SuperAgentApp's postMessage effect every render
   // instead of once per "Create agent" click (see the frontdesk-agent-sep-1
@@ -7513,6 +7519,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
+    setSuperAgentCreateViewingAgent(false)
     setShowCreateFlow(true)
   }
 
@@ -8255,22 +8262,30 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   if (showCreateFlow && navId === 'frontdesk-agent-sep-1' && isFrontdesk && product === 'healthcare') {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-        <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
-          <button
-            type="button"
-            onClick={() => setShowCreateFlow(false)}
-            className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-            aria-label="Back"
-          >
-            <Icon name="arrow_back" size={20} />
-          </button>
-          <h1 className="text-h3 text-text-primary text-left">Back</h1>
-        </div>
+        {!superAgentCreateViewingAgent && (
+          <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+            <button
+              type="button"
+              onClick={() => setShowCreateFlow(false)}
+              className="flex size-7 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+              aria-label="Back"
+            >
+              <Icon name="arrow_back" size={20} />
+            </button>
+          </div>
+        )}
         <SuperAgentApp
           mode="embedded"
+          context="frontdesk"
           active
           navigate={superAgentCreateNav}
-          onCloseAgent={() => setShowCreateFlow(false)}
+          onOpenAgent={() => setSuperAgentCreateViewingAgent(true)}
+          // Only clears the "viewing an agent" flag (revealing our own back
+          // button again, over the "create" recommendations the iframe's
+          // closeAgent() already navigated back to internally) — it does not
+          // exit this whole create flow. That only happens via our own back
+          // button above, from the landing screen.
+          onCloseAgent={() => setSuperAgentCreateViewingAgent(false)}
         />
       </div>
     )

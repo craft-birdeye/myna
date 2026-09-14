@@ -70,6 +70,7 @@ export function SearchAIL2NavPanel({ activeItem, onActiveItemChange }: SearchAIL
   return (
     <SideNav
       title="AI Search"
+      showTitle
       sections={SECTIONS}
       activeId={fromL2Key(activeItem)}
       onSelect={(id) => onActiveItemChange(toL2Key(id))}

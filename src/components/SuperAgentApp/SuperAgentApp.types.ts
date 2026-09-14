@@ -42,6 +42,11 @@ export interface SuperAgentAppProps {
    *  hidden (`?chrome=none`) — used by the L1 rail item, which draws its own L2
    *  SideNav and behaves like any other module. */
   mode?: 'overlay' | 'embedded'
+  /** passed through as `?context=` on the iframe URL (embedded mode only) — lets the
+   *  prototype tailor copy to whichever host surface it's dropped into (e.g.
+   *  `'frontdesk'` for the Front Desk product's own create-agent flow, which shows
+   *  Front Desk's own agent family names instead of the generic library ones). */
+  context?: string
   /** bumped once every time the host opens/enters Super agent — see SuperAgentEnterCommand */
   enter?: SuperAgentEnterCommand | null
   /** set by the embedded module's L2 to force the iframe into the workspace at a
@@ -64,4 +69,11 @@ export interface SuperAgentAppProps {
    *  hides the iframe and reveals the native My agents/Library screen underneath.
    *  Only meaningful in 'embedded' mode. */
   onCloseAgent?: () => void
+  /** called whenever the iframe navigates itself into an agent's AgentScreen while
+   *  embedded — including entry points the host never itself commanded (e.g.
+   *  Create agent's own "Set up"/"describe a workflow" flows), not just the
+   *  `openAgentCmd`/`useLibraryCmd` the host issues. The host uses this to hide its
+   *  L2 SideNav so the AgentScreen reads as a full-page experience, same as agents
+   *  opened from My agents/Library. Only meaningful in 'embedded' mode. */
+  onOpenAgent?: () => void
 }

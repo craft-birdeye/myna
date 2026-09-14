@@ -1009,6 +1009,7 @@ export function App() {
                   <SideNav
                     key="reviews"
                     title="Reviews AI"
+                    showTitle
                     sections={REVIEWS_NAV_SECTIONS}
                     activeId={navActive}
                     ctaLabel="Send review request"
@@ -1052,6 +1053,7 @@ export function App() {
                   <SideNav
                     key="frontdesk"
                     title="Front desk"
+                    showTitle
                     sections={NAV_SECTIONS_BY_PRODUCT[activeProduct] ?? AUTOMOTIVE_NAV_SECTIONS}
                     activeId={navActive}
                     onSelect={(id) => {
@@ -1526,6 +1528,7 @@ export function App() {
                   openAgentCmd={superAgentOpenAgentCmd}
                   useLibraryCmd={superAgentUseLibraryCmd}
                   onCloseAgent={() => setSuperAgentViewingAgent(false)}
+                  onOpenAgent={() => setSuperAgentViewingAgent(true)}
                 />
               </main>
 
