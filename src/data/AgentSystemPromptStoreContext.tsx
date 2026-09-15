@@ -1,12 +1,20 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 
 /**
  * Default Instructions for the Procedures RHS (and Settings system prompt).
- * Procedure names use `{{…}}` chip markup so SystemPromptInput can render them.
+ * Plain text only — this field has no procedure-insert control, so names
+ * must not use `{{…}}` chip markup.
  */
 export const DEFAULT_AGENT_SYSTEM_PROMPT =
-  'Use {{General inquiry}} when patient asks a general question about the practice, or anything that should come from the knowledge base: website, FAQs, hours, location, insurance, services, or doctors\n\n'
-  + 'Use {{Talk to human}} when patient explicitly asks to speak with a person, real agent, receptionist, or human — or expresses frustration with the AI.'
+  'Use General inquiry when patient asks a general question about the practice, or anything that should come from the knowledge base: website, FAQs, hours, location, insurance, services, or doctors\n\n'
+  + 'Use Talk to human when patient explicitly asks to speak with a person, real agent, receptionist, or human — or expresses frustration with the AI.'
+
+/** Drop legacy procedure-chip wrappers from older defaults (field chips stay). */
+function plainProcedureNames(text: string) {
+  return text
+    .replace(/\{\{General inquiry\}\}/g, 'General inquiry')
+    .replace(/\{\{Talk to human\}\}/g, 'Talk to human')
+}
 
 interface AgentSystemPromptStore {
   systemPrompt: string
@@ -16,7 +24,13 @@ interface AgentSystemPromptStore {
 const AgentSystemPromptStoreContext = createContext<AgentSystemPromptStore | null>(null)
 
 export function AgentSystemPromptStoreProvider({ children }: { children: React.ReactNode }) {
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_AGENT_SYSTEM_PROMPT)
+  const [systemPrompt, setSystemPromptState] = useState(() => plainProcedureNames(DEFAULT_AGENT_SYSTEM_PROMPT))
+
+  useEffect(() => {
+    setSystemPromptState((prev) => plainProcedureNames(prev))
+  }, [])
+
+  const setSystemPrompt = (value: string) => setSystemPromptState(plainProcedureNames(value))
 
   return (
     <AgentSystemPromptStoreContext.Provider value={{ systemPrompt, setSystemPrompt }}>

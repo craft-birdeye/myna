@@ -15,12 +15,6 @@ import styles from './ProcedureTaskBody.module.css';
 
 const UPDATE_STATE_TOOL_ID = 'update-state';
 
-/** Chip types for procedure names embedded in Instructions. */
-function resolveInstructionChipType(label) {
-  if (label === 'General inquiry' || label === 'Talk to human') return 'product';
-  return 'variable';
-}
-
 const OPTION2_TABS = [
   { id: 'basic', label: 'Basic' },
   { id: 'advanced', label: 'Advanced settings' },
@@ -144,7 +138,6 @@ export default function ProcedureTaskBody({
           showTriggerFields={false}
           label="Instructions"
           placeholder="Enter instructions on how to run these procedures"
-          resolveType={resolveInstructionChipType}
         />
       )}
     </div>
