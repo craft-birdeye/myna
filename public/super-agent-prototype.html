@@ -4377,6 +4377,7 @@ window.addEventListener("message", (e) => {
  * above the canvas. */
 function WfHeaderActions({ agent, app }) {
   const [open, setOpen] = useState(false);
+  const [activateHover, setActivateHover] = useState(false);
   useEffect(() => {
     if (!open) return;
     const close = (e) => { if (!e.target.closest("[data-wf-activate]")) setOpen(false); };
@@ -4419,13 +4420,14 @@ function WfHeaderActions({ agent, app }) {
         </span>
       )}
       <span className="relative" data-wf-activate>
-        <span className="flex h-[27px] overflow-hidden bg-accent" style={{ borderRadius: 6 }}>
+        <span className="flex h-[27px] overflow-hidden" style={{ borderRadius: 6, backgroundColor: activateHover ? '#1565C0' : '#1976D2' }}
+          onMouseEnter={() => setActivateHover(true)} onMouseLeave={() => setActivateHover(false)}>
           <button type="button" onClick={() => app.toast("Agent activated")}
-            className="flex items-center px-3 text-[13px] font-medium leading-none text-white transition-colors hover:bg-accent-ink">
+            className="flex items-center px-3 text-[13px] font-medium leading-none text-white transition-colors">
             Activate
           </button>
           <button type="button" aria-label="Activation options" onClick={() => setOpen((o) => !o)}
-            className="flex w-7 items-center justify-center text-white transition-colors hover:bg-accent-ink"
+            className="flex w-7 items-center justify-center text-white transition-colors"
             style={{ boxShadow: "inset 1px 0 0 rgba(255,255,255,0.28)" }}>
             <Icon name="chevronDown" size={12} sw={2.2} />
           </button>
