@@ -1663,6 +1663,34 @@ function Toasts({ items, onDismiss }) {
 }
 
 /* ── Inline notices ───────────────────────────────────── */
+/* HIPAA governance — dummy, UI-only. There is no real backend here, so
+ * this is a static illustration of what a compliance layer would surface
+ * in the chat, not an actual audit/consent/redaction system. Shown once
+ * per PHI-adjacent journey (front desk calls, patient reviews, treatment
+ * plans), right where the agent starts working with patient information. */
+function ComplianceCard() {
+  return (
+    <div className="w-full max-w-110 rounded-card p-3"
+      style={{ background: "var(--green-tint)", boxShadow: "0 0 0 1px color-mix(in oklch, var(--green) 26%, transparent)", animation: "fade-up 380ms cubic-bezier(0.23,1,0.32,1) both" }}>
+      <div className="flex gap-2.5">
+        <span className="mt-px text-green"><Icon name="shield" size={16} sw={1.9} /></span>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div>
+            <div className="text-[13px] font-medium text-green">HIPAA governance check</div>
+            <p className="mt-0.5 text-[12.5px] leading-[1.5] text-ink-2">Any step below that touches patient information is logged and reviewable.</p>
+          </div>
+          <PanelList tone="green" items={[
+            "Patient data access logged for this conversation",
+            "Only the minimum information needed for the task is used",
+            "Anything sent to a patient waits for your approval first",
+          ]} />
+          <p className="text-[11px] leading-[1.4] text-ink-3">Illustrative only — not a real compliance or audit system.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Notice({ tone = "orange", title, body, actions }) {
   const ring = tone === "red" ? "var(--red)" : "var(--orange)";
   return (
@@ -2791,6 +2819,7 @@ function Message({ m, app }) {
         actions={m.actions && m.actions.map((a) => (
           <Button key={a.label} variant={a.variant || "secondary"} size="sm" disabled={m.done} onClick={() => app.runAction(a.action, m.id)}>{a.label}</Button>
         ))} />;
+      case "compliance": return <ComplianceCard />;
       case "chips": return <SuggestionChips chips={m.chips} disabled={m.done} onPick={(c) => app.onChip(c, m.id)} />;
       case "connect": return <ConnectRequestCard keys={m.keys} connected={app.connected} agentName={m.agentName}
         onConnect={(k) => app.connectSource(k, m.id, m.next)} />;
@@ -4745,6 +4774,20 @@ function WfHeaderActions({ agent, app }) {
   );
 }
 
+/* Dummy, UI-only — a persistent reminder that this conversation is
+ * treated as HIPAA-governed, alongside the one-time `ComplianceCard`
+ * that appears in the PHI-adjacent journeys. No real access control or
+ * audit trail behind it. */
+function HipaaBadge() {
+  return (
+    <span title="Illustrative only — patient data in this conversation is treated as HIPAA-governed"
+      className="flex h-6 shrink-0 items-center gap-1 rounded-full bg-green-tint px-2 text-[11px] font-medium text-green">
+      <Icon name="shield" size={11} sw={2.2} />
+      HIPAA
+    </span>
+  );
+}
+
 function AgentScreen({ app, renderWorkflowTab, hideIdentity = false }) {
   const agent = app.agents.find((a) => a.id === app.openAgentId);
   const tab = app.agentTab;
@@ -4784,6 +4827,7 @@ function AgentScreen({ app, renderWorkflowTab, hideIdentity = false }) {
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink">
                 <Icon name="info" size={16} sw={1.9} />
               </button>
+              <HipaaBadge />
             </div>
             {isWorkflow && !isBuilding && <WfHeaderActions agent={agent} app={app} />}
           </div>
@@ -7006,7 +7050,7 @@ function WorkflowBuildingShimmer() {
                 <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-line-strong" />
               </div>
             )}
-            <div className="flex w-[300px] items-center gap-3.5 rounded-window bg-surface px-5 py-4 shadow-card">
+            <div className="flex items-center gap-3.5 rounded-window bg-surface px-5 py-4 shadow-card" style={{ width: 300 }}>
               <div className="h-10 w-10 shrink-0 rounded-xl" style={shimmerBlockStyle(i * 140)} />
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <div className="h-2.5 rounded-full" style={{ width: n.titleW, ...shimmerBlockStyle(i * 140 + 70) }} />
@@ -7789,6 +7833,8 @@ const DEFAULT_SETUP = {
   bizName: "Chen Family Dental",
   bizType: "dental",
   owner: "Dr. Maria Chen",
+  phone: "(614) 555-0142",
+  email: "maria@chenfamilydental.com",
   problems: ["calls", "reviews"],
   tools: ["google", "facebook", "phone"],
   outcomes: ["booked"],
@@ -8080,6 +8126,10 @@ function OnboardingFlow({ onFinish, onSkipAll, short = false }) {
                     <input value={d.bizName} onChange={(e) => patch({ bizName: e.target.value })}
                       className="h-12 w-full rounded-control bg-surface px-3.5 text-[15px] text-ink shadow-btn outline-none transition-shadow duration-150 focus:shadow-[0_0_0_2px_var(--accent-tint)]" />
                     <input value={d.owner} onChange={(e) => patch({ owner: e.target.value })} placeholder="Your name"
+                      className="mt-2 h-11 w-full rounded-control bg-surface px-3.5 text-[13.5px] text-ink shadow-btn outline-none transition-shadow duration-150 focus:shadow-[0_0_0_2px_var(--accent-tint)]" />
+                    <input type="tel" value={d.phone} onChange={(e) => patch({ phone: e.target.value })} placeholder="Phone number"
+                      className="mt-2 h-11 w-full rounded-control bg-surface px-3.5 text-[13.5px] text-ink shadow-btn outline-none transition-shadow duration-150 focus:shadow-[0_0_0_2px_var(--accent-tint)]" />
+                    <input type="email" value={d.email} onChange={(e) => patch({ email: e.target.value })} placeholder="Email address"
                       className="mt-2 h-11 w-full rounded-control bg-surface px-3.5 text-[13.5px] text-ink shadow-btn outline-none transition-shadow duration-150 focus:shadow-[0_0_0_2px_var(--accent-tint)]" />
                   </div>
                   <div className="mt-6 rounded-card bg-surface p-3.5 shadow-hairline" style={{ animation: "fade-up 400ms cubic-bezier(0.23,1,0.32,1) both" }}>
@@ -8443,6 +8493,7 @@ function App() {
 
   const repProposal = () => {
     setPanelView("proposal");
+    push({ kind: "compliance" });
     push({ kind: "text", stream: true, text: "I can create a Reputation Agent that monitors new reviews across all four locations, identifies urgent patient complaints, drafts a personalized response, and alerts the right team member for follow-up." });
     afterBeat(() => {
       push({ kind: "proposal" });
@@ -8585,6 +8636,7 @@ function App() {
        moment either way: `fdAfterConfig` asks for the calendar right
        before testing, on both the library path and the build-your-own
        path. */
+    push({ kind: "compliance" });
     push({
       kind: "text",
       text: "Your practice missed 38 calls last month, and 14 of them came in during opening hours. [[cite]] There is a prebuilt AI Front Desk Agent that can answer calls, handle common questions, qualify new patients, and book appointments — or I can build one with you from scratch.",
@@ -8928,6 +8980,7 @@ function App() {
 
   const txIntro = () => {
     setPanelView("business");
+    push({ kind: "compliance" });
     push({
       kind: "text", stream: true,
       text: "You are right that it is real money. There is $46,200 in treatment presented in the last 90 days that was never booked — 38 patients, and the oldest has been sitting since June. Nothing in the library does this, so I would build it with you. It is about four questions.",
