@@ -791,6 +791,10 @@ export function App() {
     railActive !== 'search' &&
     railActive !== 'social'
 
+  /** Response agents (exploration) create — full-bleed, no L1 rail or global TopBar. */
+  const hideAppChromeForExplorationCreate =
+    isAgentSetupActive && isResponseAgentsExplorationNav(navActive)
+
   return (
     <ProcedureStoreProvider>
       <AgentSystemPromptStoreProvider>
@@ -810,6 +814,7 @@ export function App() {
       <div className="h-screen w-screen flex overflow-hidden bg-surface-shell text-text-primary">
 
         {/* ── L1 Icon rail ── */}
+        {!hideAppChromeForExplorationCreate && (
         <IconRail
           logoSrc={logoSrc}
           brand={PRODUCT_BRAND[activeProduct]}
@@ -842,11 +847,13 @@ export function App() {
             if (action === 'settings') setRailActive('settings')
           }}
         />
+        )}
 
         {/* ── Right column ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* ── Global TopBar ── same bg as L1 rail so they look merged */}
+          {!hideAppChromeForExplorationCreate && (
           <header className="flex h-[48px] shrink-0 items-center justify-between px-4 bg-surface-shell rounded-tr-lg">
             <span className="text-base text-text-primary" style={{ fontWeight: 400 }}>
               {moduleTitle}
@@ -889,12 +896,25 @@ export function App() {
               </button>
             </div>
           </header>
+          )}
 
           {/* ── Gutter row — gray bg, padding exposes the rounded card ── */}
-          <div className="flex-1 flex min-h-0 overflow-hidden pr-[10px] pb-[10px] bg-surface-shell">
+          <div
+            className={
+              hideAppChromeForExplorationCreate
+                ? 'flex min-h-0 flex-1 overflow-hidden bg-surface'
+                : 'flex-1 flex min-h-0 overflow-hidden pr-[10px] pb-[10px] bg-surface-shell'
+            }
+          >
 
             {/* ── White rounded card (L2 nav + main content) ── */}
-            <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden rounded-lg border border-border">
+            <div
+              className={
+                hideAppChromeForExplorationCreate
+                  ? 'flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-surface'
+                  : 'flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden rounded-lg border border-border'
+              }
+            >
 
               {/* L2 SideNav — frontdesk modules, or Reviews AI's own section list */}
               {showL2 && (
@@ -1139,6 +1159,25 @@ export function App() {
                               setPendingAgentInstanceView(editorReturnView)
                               setEditorReturnView(null)
                             }
+                            setWizardAgentDraft(null)
+                            setWorkflowAiAssistOpen(false)
+                            setWorkflowAiCreateFullscreen(false)
+                            setWorkflowAiBuilderPanelOpen(false)
+                            setWorkflowLhsPreferAiTab(false)
+                          }}
+                          onSaveAgent={(published, payload) => {
+                            if (!published) return
+                            const name =
+                              (typeof payload?.name === 'string' && payload.name.trim())
+                              || editingAgentName
+                              || 'Agent'
+                            setAgentToastMessage(`"${name}" has been activated successfully.`)
+                            setAgentToastVisible(true)
+                            // Land on the agents card list (not the instance return view).
+                            setEditingAgentName(null)
+                            setEditingAgentStatus(null)
+                            setEditorReturnView(null)
+                            setPendingAgentInstanceView(null)
                             setWizardAgentDraft(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)

@@ -1,15 +1,12 @@
 import React, { createContext, useContext, useState } from 'react'
 
-/** Default Front desk system prompt — shared by Settings and procedure detail RHS. */
-export const DEFAULT_AGENT_SYSTEM_PROMPT = `# Personality
-You are Myna, the elegant and attentive reservations specialist at the Grand Hotel. You make every caller feel like a VIP — refined, warm, and effortlessly capable. You handle reservation requests with the calm efficiency of someone who has booked thousands of stays.
-
-# Environment
-You handle inbound calls for hotel reservations: new bookings, modifications, cancellations, and general questions about the property. Callers may be planning a special trip, calling on behalf of a guest, or checking on a stay they've already booked. Booking system, room types, and rate plans are managed by the workspace owner — only quote details that are explicitly available to you in this conversation.
-
-# Tone
-- Warm and refined hospitality — never stuffy.
-- Attentive to details: dates, room preferences, special requests (anniversary, accessibility, dietary).`
+/**
+ * Default Instructions for the Procedures RHS (and Settings system prompt).
+ * Procedure names use `{{…}}` chip markup so SystemPromptInput can render them.
+ */
+export const DEFAULT_AGENT_SYSTEM_PROMPT =
+  'Use {{General inquiry}} when patient asks a general question about the practice, or anything that should come from the knowledge base: website, FAQs, hours, location, insurance, services, or doctors\n\n'
+  + 'Use {{Talk to human}} when patient explicitly asks to speak with a person, real agent, receptionist, or human — or expresses frustration with the AI.'
 
 interface AgentSystemPromptStore {
   systemPrompt: string

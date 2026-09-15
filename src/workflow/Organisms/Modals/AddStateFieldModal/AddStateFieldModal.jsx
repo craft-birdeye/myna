@@ -4,6 +4,7 @@ import { AeroFormModal } from '../../../../components/AeroFormModal/AeroFormModa
 import { Icon } from '../../../../components/Icon/Icon';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
 import FieldPickerModal from '../FieldPickerModal/FieldPickerModal.jsx';
+import { UPDATE_STATE_FIELD_CATEGORIES } from '../FieldPickerModal/fieldPickerData.js';
 
 const STATE_FIELD_MODAL_SUBTITLE =
   'Define how this field\'s state should be updated.';
@@ -13,6 +14,18 @@ const FIELD_TYPE_OPTIONS = [
   'URL', 'Object', 'Date and time', 'Time',
   'Category - Multi select', 'Category - Single select',
 ];
+
+function mapValueTypeToFieldType(valueType) {
+  switch (valueType) {
+    case 'number':
+      return 'Number';
+    case 'boolean':
+      return 'Boolean';
+    case 'string':
+    default:
+      return 'Text';
+  }
+}
 
 function FieldLabel({ children, required = false }) {
   return (
@@ -143,19 +156,27 @@ function FieldTypeDropdown({ value, onChange, menuZIndex = 2200 }) {
 /**
  * Add / edit a dynamic field for the Update state action.
  * Matches the Add output field modal chrome (AeroFormModal).
+ * Typing a brand-new field (not picked from the catalog) shows a checkbox
+ * to make it globally available.
  */
 export default function AddStateFieldModal({
   onClose,
   onAdd,
-  zIndex = 2100,
+  /** Above CustomToolViewer / NativeDrawer (9999) so the form isn't trapped behind the drawer. */
+  zIndex = 10050,
   initialValues = null,
 }) {
   const isEdit = Boolean(initialValues?.variable);
   const [fieldName, setFieldName] = useState(initialValues?.variable ?? '');
   const [fieldType, setFieldType] = useState(initialValues?.fieldType ?? '');
   const [instructions, setInstructions] = useState(initialValues?.instructions ?? '');
+  const [makeGlobal, setMakeGlobal] = useState(Boolean(initialValues?.global));
   const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
+  /** True when the current name came from the variable picker (existing field). */
+  const [pickedFromPicker, setPickedFromPicker] = useState(false);
   const fieldBoxRef = useRef(null);
+
+  const showGlobalCheckbox = !isEdit && !pickedFromPicker && Boolean(fieldName.trim());
 
   function handleAdd() {
     if (!fieldName.trim() || !fieldType || !instructions.trim()) return;
@@ -163,6 +184,7 @@ export default function AddStateFieldModal({
       fieldName: fieldName.trim(),
       fieldType,
       description: instructions.trim(),
+      global: showGlobalCheckbox ? makeGlobal : Boolean(initialValues?.global),
     });
     onClose();
   }
@@ -182,24 +204,28 @@ export default function AddStateFieldModal({
       >
         <div className="flex flex-col gap-lg pb-md">
           <div className="flex flex-col gap-xs">
-            <FieldLabel required>Select field</FieldLabel>
+            <FieldLabel required>Add field</FieldLabel>
             <div
               ref={fieldBoxRef}
               className={`relative flex h-9 items-center rounded-sm border bg-surface pl-md pr-10 ${
                 fieldPickerOpen ? 'border-primary' : 'border-border-input'
               }`}
             >
-              <span
-                className={`min-w-0 flex-1 truncate text-body ${
-                  fieldName ? 'text-text-primary' : 'text-text-tertiary'
-                }`}
-              >
-                {fieldName || 'Variable to update'}
-              </span>
+              <input
+                type="text"
+                value={fieldName}
+                onChange={(e) => {
+                  setFieldName(e.target.value);
+                  setPickedFromPicker(false);
+                }}
+                placeholder="Enter a new field or select a variable"
+                className="min-w-0 flex-1 bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
+                aria-label="Add field"
+              />
               <button
                 type="button"
                 className="absolute right-sm top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-sm text-text-primary hover:bg-surface-hover"
-                aria-label="Select field"
+                aria-label="Select variable"
                 aria-expanded={fieldPickerOpen}
                 onClick={() => setFieldPickerOpen((o) => !o)}
               >
@@ -223,19 +249,40 @@ export default function AddStateFieldModal({
               className="w-full resize-none rounded-sm border border-border-input bg-surface px-md py-sm text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
             />
           </label>
+
+          {/* Reserve the Aero checkbox row height so fitContent modal doesn't jump
+              when a newly typed field reveals the control (matches AddOutputFieldModal). */}
+          <div className="flex min-h-[18px] items-center">
+            {showGlobalCheckbox ? (
+              <label className="flex cursor-pointer items-center gap-sm">
+                <input
+                  type="checkbox"
+                  checked={makeGlobal}
+                  onChange={(e) => setMakeGlobal(e.target.checked)}
+                  className="size-[18px] shrink-0 rounded-sm border border-control-border accent-primary"
+                />
+                <span className="text-body text-text-primary">Make this field globally available</span>
+              </label>
+            ) : null}
+          </div>
         </div>
       </AeroFormModal>
 
       {fieldPickerOpen && (
         <FieldPickerModal
           onClose={() => setFieldPickerOpen(false)}
-          onSelectField={(value, name) => {
-            setFieldName(name || value);
+          onSelectField={(_value, name, field) => {
+            setFieldName(name || _value || '');
+            setPickedFromPicker(true);
+            setMakeGlobal(false);
+            if (field?.valueType) {
+              setFieldType(mapValueTypeToFieldType(field.valueType));
+            }
             setFieldPickerOpen(false);
           }}
           anchorEl={fieldBoxRef.current}
           placement="dropdown"
-          showTriggerFields
+          categories={UPDATE_STATE_FIELD_CATEGORIES}
           overlayZIndex={zIndex + 200}
           insertedText={fieldName ? `{{${fieldName}}}` : ''}
         />

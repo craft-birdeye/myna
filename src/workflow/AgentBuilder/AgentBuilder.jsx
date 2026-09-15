@@ -17,8 +17,9 @@ import ScheduleBased from '../Molecules/RHS/Trigger/ScheduleBased/ScheduleBased'
 import ShareModal from '../Organisms/Modals/ShareModal/ShareModal';
 import EmptyStates from '../Patterns/EmptyStates/EmptyStates';
 import { Button } from '../elemental-stubs';
-import { saveAgent, deleteAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools } from '../services/agentService';
+import { saveAgent, deleteAgent, getAgentBySlug, getCachedAgent, saveCustomTool, getCustomTools, getCustomToolsByIds, getSeedTools, resolveToolForViewer } from '../services/agentService';
 import CustomToolViewer from '../Organisms/Drawers/CustomToolViewer/CustomToolViewer';
+import { SLASH_TOOLS } from '../Molecules/Inputs/ToolSlashMenu/ToolSlashMenu';
 import PreviewPanel from '../Molecules/PreviewPanel/PreviewPanel';
 import { BookTestAppointmentModal } from '../../components/BookTestAppointmentModal/BookTestAppointmentModal';
 import { formatSelectByCanvasSubtitle } from '../RHSDrawer/LocationsDrawer.jsx';
@@ -1214,11 +1215,19 @@ function cloneSubtreeForPaste(nodeEntry, detailsSnapshot, extraOut) {
   return clonedEntry;
 }
 
-function publishBlockedCopy(count) {
+function publishBlockedCopy(reason, count) {
+  if (reason === 'locations') {
+    return {
+      title: 'Add locations to activate',
+      body: 'You must select at least one location for this agent to be activated.',
+      primaryLabel: 'Add location',
+    };
+  }
   const label = count === 1 ? 'error' : 'errors';
   return {
     title: 'Resolve errors to activate',
     body: `Fix ${count} ${label} in your workflow before activating.`,
+    primaryLabel: 'View errors',
   };
 }
 
@@ -1355,6 +1364,8 @@ export default function AgentBuilder({
   const [llmTaskLayoutOption, setLlmTaskLayoutOption] = useState('option1');
   /** Exploration only: Option 1 / Option 2 layouts for tool-based Action RHS. */
   const [entityTaskLayoutOption, setEntityTaskLayoutOption] = useState('option1');
+  /** Exploration Procedures RHS: Option 1 = flat list; Option 2 = Basic / Advanced tabs. */
+  const [procedureLayoutOption, setProcedureLayoutOption] = useState('option1');
   /** R1 only: true while a required field inside an accordion is empty — disables
    *  the RHS footer's Save and shows the "Mandatory fields missing" warning. */
   const [llmTaskSaveBlocked, setLlmTaskSaveBlocked] = useState(false);
@@ -1662,16 +1673,56 @@ export default function AgentBuilder({
 
   /* ─── Open a tool viewer by tool name or id (used when clicking a tool chip in prompts) ─── */
   const openToolByName = useCallback((nameOrId) => {
-    const all = getSeedTools();
-    const found = all.find(t => t.id === nameOrId || t.name === nameOrId || t.id === nameOrId.toLowerCase().replace(/\s+/g, '-'));
-    if (found) {
-      setViewingTool(found);
-      // Look up saved field values for the filled state
-      const savedValues = selectedNodeId
-        ? (nodeDetails[selectedNodeId]?.toolFieldValues?.[found.id] ?? {})
-        : {};
-      setViewingToolValues(savedValues);
+    if (!nameOrId) return;
+    const raw = String(nameOrId).trim();
+    const norm = (s) => String(s || '').toLowerCase().replace(/[_\s-]+/g, '');
+    const key = norm(raw);
+
+    // Dedicated drawers for known conversation tools.
+    if (key === 'initiatevoicecall' || raw === 'initiate-voice-call') {
+      setVoiceCallToolOpen(true);
+      return;
     }
+    if (key === 'transfercall' || key === 'transfer' || raw === 'transfer-call' || raw === 'transfer') {
+      setTransferToolOpen(true);
+      return;
+    }
+    if (key === 'remindertool' || raw === 'reminder-tool') {
+      setReminderToolOpen(true);
+      return;
+    }
+
+    const all = getSeedTools();
+    let found = all.find(
+      (t) => t.id === raw
+        || t.name === raw
+        || t.id === raw.toLowerCase().replace(/\s+/g, '-')
+        || norm(t.id) === key
+        || norm(t.name) === key,
+    );
+
+    // Slash-menu tools (e.g. Intent identifier) may not be in the seed catalog yet.
+    if (!found) {
+      const slash = SLASH_TOOLS.find((t) => t.id === raw || t.name === raw || norm(t.id) === key || norm(t.name) === key);
+      if (slash) {
+        found = {
+          id: slash.id,
+          name: slash.name,
+          icon: slash.icon || 'build',
+          description: slash.desc,
+          fields: [],
+        };
+      }
+    }
+
+    if (!found) return;
+
+    const viewerTool = resolveToolForViewer(found.id) || found;
+    setViewingTool(viewerTool);
+    const savedValues = selectedNodeId
+      ? (nodeDetails[selectedNodeId]?.toolFieldValues?.[found.id] ?? {})
+      : {};
+    setViewingToolValues(savedValues);
   }, [selectedNodeId, nodeDetails]);
 
   /* ─── Load agent from URL slugs — re-runs whenever the URL params change ─── */
@@ -1744,6 +1795,8 @@ export default function AgentBuilder({
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
   const [publishBlockedModalOpen, setPublishBlockedModalOpen] = useState(false);
+  /** 'errors' | 'locations' — which Activate gate opened the blocked modal. */
+  const [publishBlockedReason, setPublishBlockedReason] = useState('errors');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [resolveIssuesOpen, setResolveIssuesOpen] = useState(false);
   const headerMenuRef = useRef(null);
@@ -2015,18 +2068,37 @@ export default function AgentBuilder({
   }, [buildAgentPayload, onSaveAgent]);
 
   const handlePublishAttempt = useCallback(() => {
+    // Response agents require at least one location before Activate.
+    if (identityLocationChrome) {
+      const start = latestRef.current.nodeDetails?.[START_NODE_ID] || {};
+      const locs = start.locations || [];
+      const selectBy = start.locationsSelectBy || null;
+      if (locs.length === 0 && !selectBy) {
+        setPublishMenuOpen(false);
+        setPublishBlockedReason('locations');
+        setPublishBlockedModalOpen(true);
+        return;
+      }
+    }
     if (issueCount > 0) {
       setPublishMenuOpen(false);
+      setPublishBlockedReason('errors');
       setPublishBlockedModalOpen(true);
       return;
     }
     handlePublish();
-  }, [issueCount, handlePublish]);
+  }, [identityLocationChrome, issueCount, handlePublish]);
 
   const handleViewPublishErrors = useCallback(() => {
     setPublishBlockedModalOpen(false);
+    if (publishBlockedReason === 'locations') {
+      setSelectedNodeId(START_NODE_ID);
+      setDrawerOpen(true);
+      setStartLocationsOpenToken((t) => t + 1);
+      return;
+    }
     setResolveIssuesOpen(true);
-  }, []);
+  }, [publishBlockedReason]);
 
   const handleSaveAsDraft = useCallback(async () => {
     setPublishMenuOpen(false);
@@ -3333,6 +3405,7 @@ export default function AgentBuilder({
             initialValues: mergedProc,
             onFieldChange: () => {},
             onOpenToolDrawer: () => setToolPickerOpen(true),
+            onOpenTool: openToolByName,
           }}
           onClose={closeLhsPreview}
           onSave={closeLhsPreview}
@@ -3638,6 +3711,7 @@ export default function AgentBuilder({
                 activeFieldChange('procedureOverrides', overridesNext);
               },
               onOpenToolDrawer: () => setToolPickerOpen(true),
+              onOpenTool: openToolByName,
             }}
             onClose={handleCloseDrawer}
             onSave={() => setActiveProcedureId(null)}
@@ -3648,15 +3722,24 @@ export default function AgentBuilder({
         <RHS
           key="proc-list"
           variant="procedureTask"
-          title="Procedures"
+          title={data?.title || 'Follow procedures'}
           viewOnly={rhsViewOnly}
           {...rhsDraftProps}
           inlineFooter={inlineRhsFooter}
           product={product}
+          titleLayoutMenu={llmTaskExplorationLayout ? {
+            value: procedureLayoutOption,
+            options: [
+              { value: 'option1', label: 'Option 1' },
+              { value: 'option2', label: 'Option 2' },
+            ],
+            onChange: setProcedureLayoutOption,
+          } : null}
           bodyProps={{
             initialValues: currentDetails,
             onFieldChange: activeFieldChange,
             onSelectProcedure: (id) => setActiveProcedureId(id),
+            layoutOption: llmTaskExplorationLayout ? procedureLayoutOption : 'option1',
           }}
           onClose={handleCloseDrawer}
           onSave={handleCloseDrawer}
@@ -4706,7 +4789,7 @@ export default function AgentBuilder({
               >
                 <div className="ab-publish-blocked-dialog__header">
                   <h2 id="ab-publish-blocked-title" className="ab-publish-blocked-dialog__title">
-                    {publishBlockedCopy(issueCount).title}
+                    {publishBlockedCopy(publishBlockedReason, issueCount).title}
                   </h2>
                   <button
                     type="button"
@@ -4718,7 +4801,7 @@ export default function AgentBuilder({
                   </button>
                 </div>
                 <p className="ab-publish-blocked-dialog__body">
-                  {publishBlockedCopy(issueCount).body}
+                  {publishBlockedCopy(publishBlockedReason, issueCount).body}
                 </p>
                 <div className="ab-publish-blocked-dialog__footer">
                   <button
@@ -4733,7 +4816,7 @@ export default function AgentBuilder({
                     className="ab-publish-blocked-dialog__primary"
                     onClick={handleViewPublishErrors}
                   >
-                    View errors
+                    {publishBlockedCopy(publishBlockedReason, issueCount).primaryLabel}
                   </button>
                 </div>
               </div>

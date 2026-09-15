@@ -14,7 +14,13 @@ import styles from './StepsEditorToolbar.module.css';
  * list/indent commands update step bullet data attributes instead of native lists.
  * The Tools slash menu is owned by the parent (EditableStepsRenderer).
  */
-export default function StepsEditorToolbar({ getActiveEditable, onAfterInsert, onOpenToolSlash, hasContent = false }) {
+export default function StepsEditorToolbar({
+  getActiveEditable,
+  onAfterInsert,
+  onOpenToolSlash,
+  toolSlashOpen = false,
+  hasContent = false,
+}) {
   const fieldsBtnRef = useRef(null);
   const savedRangeRef = useRef(null);
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
@@ -83,7 +89,8 @@ export default function StepsEditorToolbar({ getActiveEditable, onAfterInsert, o
         <ToolbarButton
           icon={<BuildIcon />}
           tooltip="Tools"
-          onClick={onOpenToolSlash}
+          active={Boolean(toolSlashOpen)}
+          onClick={(e) => onOpenToolSlash?.(e.currentTarget)}
         />
         <ToolbarButton
           icon={<ProcedureIcon />}

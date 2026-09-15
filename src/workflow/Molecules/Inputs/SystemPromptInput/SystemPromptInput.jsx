@@ -29,6 +29,8 @@ export default function SystemPromptInput({
   disabled = false,
   label = 'System prompt',
   placeholder = 'Describe the persona of this agent',
+  /** Optional chip-type resolver for `{{token}}` names (tool / product / variable…). */
+  resolveType = null,
 }) {
   const locked = readOnly || disabled;
   const editorRef = useRef(null);
@@ -95,8 +97,8 @@ export default function SystemPromptInput({
       setIsEmpty(!s.trim());
       onChangeRef.current?.(s);
       requestAnimationFrame(checkNeedsExpand);
-    });
-  }, [value, checkNeedsExpand]);
+    }, resolveType || undefined);
+  }, [value, checkNeedsExpand, resolveType]);
 
   useEffect(() => {
     const el = editorRef.current;
@@ -116,7 +118,7 @@ export default function SystemPromptInput({
         lastEmittedRef.current = s;
         setIsEmpty(!s.trim());
         onChangeRef.current?.(s);
-      });
+      }, resolveType || undefined);
     }
     const onKeyDown = (e) => {
       if (e.key === 'Escape') setExpanded(false);
@@ -128,7 +130,7 @@ export default function SystemPromptInput({
       window.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = prevOverflow;
     };
-  }, [expanded, value]);
+  }, [expanded, value, resolveType]);
 
   const saveRange = useCallback(() => {
     const el = activeEditorRef.current;

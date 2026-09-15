@@ -49,6 +49,7 @@ import {
   isFrontdeskExplorationChrome,
   isLlmTaskExplorationLayout,
   isResponseAgentsExplorationChrome,
+  isResponseAgentsExplorationNav,
   isResponseAgentsSep1StyleNav,
   isSep1StyleAgentListNav,
 } from '../data/agentNavIds'
@@ -962,6 +963,10 @@ const REVIEW_RESPONSE_PLACEHOLDERS = [
   'Flag spam and alert the team…',
 ] as const
 
+/** Response agents (exploration) landing — Option 2 composer seed. */
+const REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2 =
+  'Hey, I want you to respond to my reviews.'
+
 const FRONTDESK_PLACEHOLDERS = [
   'Route urgent calls to the right team…',
   'Create a front desk agent that handles intake, verifies insurance, and books the right visit…',
@@ -1589,6 +1594,40 @@ Open questions before I draft the workflow:
 const REVIEW_RESPONSE_INTRO_PARAGRAPHS = [
   "You're getting about 120 new reviews a week and 2,400 are still unanswered. I'll build an agent that triages every review, writes an on-brand reply, and publishes it — let me get a few details right.",
   'First: which review sources should it watch — Google, Facebook, Yelp, or all of them?',
+]
+
+/** Response agents (exploration) Ghostwriter — first question after landing SEND. */
+const REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS = [
+  "A review response agent — I can do that. Almost everything I need is already sitting in your account, so I'm only going to ask you the one thing I can't work out on my own.",
+  'It changes the whole shape of the build:',
+]
+
+const REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS = [
+  {
+    id: 'live',
+    title: 'Respond as reviews come in',
+    description: 'A live agent that watches your sources and replies within minutes, indefinitely.',
+    recommended: true,
+  },
+  {
+    id: 'backlog',
+    title: 'Clear my backlog once',
+    description: 'A single pass over everything currently unanswered, then it stops.',
+    recommended: false,
+  },
+] as const
+
+const REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS = [
+  'Got it.',
+  'First: which review sources should it watch — Google, Facebook, Yelp, or all of them?',
+]
+
+const GHOSTWRITER_SHELL_TABS: Tab[] = [
+  { id: 'ghostwriter', label: 'Ghostwriter' },
+  { id: 'workflow', label: 'Workflow' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'knowledge', label: 'Knowledge' },
+  { id: 'simulation', label: 'Simulation' },
 ]
 
 const REVIEW_RESPONSE_AFTER_SOURCES_THOUGHTS = `Sources: all of them. Trigger becomes every new or updated review across the full source set — no per-site filters to maintain.
@@ -2526,6 +2565,31 @@ function ReviewChoicePills({
   )
 }
 
+function ReviewModeChoiceCards({
+  onPick,
+}: {
+  onPick: (title: string) => void
+}) {
+  return (
+    <div className="agent-build-fade ml-3xl mt-sm flex w-full max-w-full flex-col gap-sm">
+      {REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onPick(option.title)}
+          className="flex flex-col items-start gap-xs rounded-lg border border-border bg-surface px-lg py-md text-left transition-colors hover:bg-surface-hover"
+        >
+          <span className="flex flex-wrap items-center gap-sm">
+            <span className="text-body text-text-primary">{option.title}</span>
+            {option.recommended ? <Chip label="Recommended" variant="info" /> : null}
+          </span>
+          <span className="text-small text-text-secondary">{option.description}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function ReviewBuildingCard({
   onDone,
   persisted = false,
@@ -2634,6 +2698,7 @@ function ReviewResponseThread({
   onViewWorkflow,
   onMakeChanges,
   workflowVisible = false,
+  explorationModeChoice = false,
   suppressAutoScrollBriefly,
   pendingAnswer,
   onPendingAnswerConsumed,
@@ -2646,6 +2711,8 @@ function ReviewResponseThread({
   onViewWorkflow?: () => void
   onMakeChanges?: () => void
   workflowVisible?: boolean
+  /** Response agents (exploration): live-vs-backlog cards before the sources script. */
+  explorationModeChoice?: boolean
   suppressAutoScrollBriefly: () => void
   /** Answer submitted from the bottom composer (click-to-fill → send). */
   pendingAnswer?: string
@@ -2657,6 +2724,9 @@ function ReviewResponseThread({
   onTrailChange?: (trail: CreateChatTurn[]) => void
 }) {
   const [introDone, setIntroDone] = useState(false)
+  const [modeAnswer, setModeAnswer] = useState('')
+  const [modeFollowReady, setModeFollowReady] = useState(false)
+  const [modeFollowDone, setModeFollowDone] = useState(false)
   const [sourcesAnswer, setSourcesAnswer] = useState('')
   /** none → happy path; attempting/failed → Facebook-only stream-fail demo; ok → recovered via Retry. */
   const [sourcesStreamPhase, setSourcesStreamPhase] = useState<'none' | 'attempting' | 'failed' | 'ok'>('none')
@@ -2703,7 +2773,11 @@ function ReviewResponseThread({
   const [postDraftAnswer, setPostDraftAnswer] = useState('')
 
   const awaitingStep =
-    introDone && !sourcesAnswer
+    explorationModeChoice && introDone && !modeAnswer
+      ? null
+      : explorationModeChoice && modeAnswer && !modeFollowDone
+        ? null
+        : introDone && (!explorationModeChoice || modeFollowDone) && !sourcesAnswer
       ? 'sources'
       : sourcesReplyDone && !locationsAnswer
         ? 'locations'
@@ -2830,6 +2904,8 @@ function ReviewResponseThread({
 
   const busy =
     !introDone ||
+    (explorationModeChoice && !modeAnswer) ||
+    (explorationModeChoice && Boolean(modeAnswer) && !modeFollowDone) ||
     sourcesAwaitingReply ||
     (Boolean(locationsAnswer) && !locationsReplyDone) ||
     (Boolean(spamOkAnswer) && !spamAlertDone) ||
@@ -2858,7 +2934,17 @@ function ReviewResponseThread({
     }
 
     // Intro is on screen as soon as this thread mounts (typed reply).
-    pushAgent(REVIEW_RESPONSE_INTRO_PARAGRAPHS)
+    pushAgent(
+      explorationModeChoice
+        ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
+        : REVIEW_RESPONSE_INTRO_PARAGRAPHS,
+    )
+    if (explorationModeChoice && modeAnswer) {
+      trail.push({ kind: 'user', text: modeAnswer })
+      if (modeFollowReady || modeFollowDone) {
+        pushAgent([...REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS])
+      }
+    }
 
     if (sourcesAnswer) {
       trail.push({ kind: 'user', text: sourcesAnswer })
@@ -2925,6 +3011,10 @@ function ReviewResponseThread({
     onTrailChange(trail)
   }, [
     onTrailChange,
+    explorationModeChoice,
+    modeAnswer,
+    modeFollowReady,
+    modeFollowDone,
     sourcesAnswer,
     sourcesStreamPhase,
     sourcesReplyReady,
@@ -2975,9 +3065,43 @@ function ReviewResponseThread({
 
   return (
     <>
-      <ReviewAgentReply paragraphs={REVIEW_RESPONSE_INTRO_PARAGRAPHS} onComplete={() => setIntroDone(true)} />
+      <ReviewAgentReply
+        paragraphs={
+          explorationModeChoice
+            ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
+            : REVIEW_RESPONSE_INTRO_PARAGRAPHS
+        }
+        onComplete={() => setIntroDone(true)}
+      />
       {introDone && (
-        <MessageActions copyText={REVIEW_RESPONSE_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />
+        <MessageActions
+          copyText={
+            (explorationModeChoice
+              ? REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS
+              : REVIEW_RESPONSE_INTRO_PARAGRAPHS
+            ).join('\n\n')
+          }
+          className="ml-3xl"
+        />
+      )}
+      {explorationModeChoice && introDone && !modeAnswer && (
+        <ReviewModeChoiceCards onPick={setModeAnswer} />
+      )}
+      {explorationModeChoice && modeAnswer && <UserBubble>{modeAnswer}</UserBubble>}
+      {explorationModeChoice && modeAnswer && (
+        <ReviewAgentReply
+          paragraphs={[...REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS]}
+          onComplete={() => {
+            setModeFollowReady(true)
+            setModeFollowDone(true)
+          }}
+        />
+      )}
+      {explorationModeChoice && modeFollowDone && (
+        <MessageActions
+          copyText={REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS.join('\n\n')}
+          className="ml-3xl"
+        />
       )}
       {choice && awaitingStep === 'sources' && (
         <ReviewChoicePills primary={choice.primary} onPick={applyAnswer} />
@@ -4528,6 +4652,45 @@ export function CreateAiGhostwriterShellHeader({
   )
 }
 
+/** Response agents (exploration): full-page Ghostwriter shell with centered section tabs. */
+export function CreateAiGhostwriterTabbedShell({
+  title,
+  onBack,
+  activeTab,
+  onTabChange,
+}: {
+  title: string
+  onBack: () => void
+  activeTab: string
+  onTabChange: (tabId: string) => void
+}) {
+  return (
+    <div className="relative flex h-16 shrink-0 items-center bg-surface px-2xl">
+      <div className="z-10 flex min-w-0 max-w-[40%] items-center gap-xs">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          aria-label="Back"
+        >
+          <Icon name="arrow_back" size={20} />
+        </button>
+        <h1 className="min-w-0 truncate text-body text-text-primary">{title}</h1>
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+        <div className="pointer-events-auto">
+          <Tabs
+            tabs={GHOSTWRITER_SHELL_TABS}
+            activeTab={activeTab}
+            onChange={onTabChange}
+            showBaseline={false}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /** Fullscreen existing-agent Create with AI — shares trail with docked AI Builder panel. */
 function ExistingAgentCompactHelp({
   agentKey,
@@ -4633,11 +4796,13 @@ function CreateFlowPageHeader({
   title,
   centered = false,
   inlineProcedureOpen = false,
+  right,
 }: {
   onBack: () => void
   title: string
   centered?: boolean
   inlineProcedureOpen?: boolean
+  right?: ReactNode
 }) {
   const row = (
     <div className="flex w-full min-w-0 max-w-[720px] items-center gap-xs">
@@ -4670,8 +4835,63 @@ function CreateFlowPageHeader({
   }
 
   return (
-    <div className="flex h-16 shrink-0 items-center gap-sm bg-surface px-2xl">
+    <div className="flex h-16 shrink-0 items-center justify-between gap-sm bg-surface px-2xl">
       {row}
+      {right ? <div className="shrink-0">{right}</div> : null}
+    </div>
+  )
+}
+
+/** Exploration create landing — switches composer seed text (Option 1 vs Option 2). */
+function ExplorationLandingOptionDropdown({
+  value,
+  onChange,
+}: {
+  value: '1' | '2'
+  onChange: (next: '1' | '2') => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        Option {value}
+        <Icon name={open ? 'expand_less' : 'expand_more'} size={18} className="text-text-icon" />
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-[105]"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div
+            role="listbox"
+            className="absolute right-0 top-full z-[110] mt-xs min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown"
+          >
+            {(['1', '2'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={value === option}
+                className="block w-full px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                onClick={() => {
+                  onChange(option)
+                  setOpen(false)
+                }}
+              >
+                Option {option}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -4695,6 +4915,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   workflowVisible = false,
   compactGreeting = false,
   existingAgent = false,
+  explorationModeChoice = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -4724,6 +4945,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   compactGreeting?: boolean
   /** Already-built agent — help-oriented greeting + contextual follow-ups. */
   existingAgent?: boolean
+  /** Response agents (exploration): live-vs-backlog cards after Ghostwriter SEND. */
+  explorationModeChoice?: boolean
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
   /** When the workflow canvas is open, procedure clicks open the canvas RHS instead of an inline preview. */
@@ -4777,6 +5000,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
       workflowVisible={workflowVisible}
       compactGreeting={compactGreeting}
       existingAgent={existingAgent}
+      explorationModeChoice={explorationModeChoice}
       onDraftReady={onDraftReady}
       onCanvasProcedureChange={onCanvasProcedureChange}
       onInlineProcedureOpenChange={onInlineProcedureOpenChange}
@@ -4802,6 +5026,7 @@ function HealthcareFrontdeskCreateAgentLive({
   workflowVisible = false,
   compactGreeting = false,
   existingAgent = false,
+  explorationModeChoice = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -4823,6 +5048,7 @@ function HealthcareFrontdeskCreateAgentLive({
   workflowVisible?: boolean
   compactGreeting?: boolean
   existingAgent?: boolean
+  explorationModeChoice?: boolean
   onDraftReady?: (name: string | null) => void
   onCanvasProcedureChange?: (name: string | null) => void
   onInlineProcedureOpenChange?: (open: boolean) => void
@@ -4832,13 +5058,17 @@ function HealthcareFrontdeskCreateAgentLive({
   const isReviewFlow = variant === 'review-response'
   const isReviewGenFlow = variant === 'review-generation'
   const [prompt, setPrompt] = useState('')
+  /** Exploration landing only — Option 1 = rotating placeholders; Option 2 = short seed prompt. */
+  const [landingPromptOption, setLandingPromptOption] = useState<'1' | '2'>('1')
   const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
   const [filesModalOpen, setFilesModalOpen] = useState(false)
   const landingImageInputRef = useRef<HTMLInputElement | null>(null)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const rotatingPlaceholders = isReviewFlow
-    ? REVIEW_RESPONSE_PLACEHOLDERS
+    ? explorationModeChoice && landingPromptOption === '2'
+      ? null
+      : REVIEW_RESPONSE_PLACEHOLDERS
     : isReminderFlow
       ? REMINDER_PLACEHOLDERS
       : variant === 'frontdesk'
@@ -4851,6 +5081,15 @@ function HealthcareFrontdeskCreateAgentLive({
     rotatingPlaceholders ? landingPlaceholder : '',
     { charsPerTick: 1, intervalMs: 28 },
   )
+
+  useEffect(() => {
+    if (!explorationModeChoice) return
+    if (landingPromptOption === '2') {
+      setPrompt(REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2)
+    } else {
+      setPrompt('')
+    }
+  }, [explorationModeChoice, landingPromptOption])
   const [submitted, setSubmitted] = useState(false)
   const [phase, setPhase] = useState<CreatePhase>('ask-docs')
   const [docsAnswer, setDocsAnswer] = useState('')
@@ -4984,7 +5223,9 @@ function HealthcareFrontdeskCreateAgentLive({
       (Boolean(rescheduleAnswer) && !handoffFollowDone) ||
       (connectAnswerContinues && !reminderBuildDone))
   const reviewGenerating =
-    isReviewFlow && (introThinking || !introReplyReady || reviewThreadBusy)
+    isReviewFlow &&
+    !explorationModeChoice &&
+    (introThinking || !introReplyReady || reviewThreadBusy)
   const composerLocked = building || stepThinking || previewLocksComposer || reminderGenerating || reviewGenerating
   const composerPlaceholder = previewLocksComposer
     ? previewActive
@@ -5397,7 +5638,12 @@ function HealthcareFrontdeskCreateAgentLive({
     setSubmitted(true)
     onSubmittedChange?.(true)
     setPhase('ask-docs')
-    setIntroThinking(true)
+    if (explorationModeChoice) {
+      setIntroThinking(false)
+      setIntroReplyReady(true)
+    } else {
+      setIntroThinking(true)
+    }
   }
 
   const handleSend = () => startConversation(prompt)
@@ -5565,7 +5811,11 @@ function HealthcareFrontdeskCreateAgentLive({
           <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
         )}
 
-        <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
+        <div
+          className={`flex h-full min-h-0 w-full min-w-0 flex-col ${
+            explorationModeChoice ? 'max-w-[56rem]' : 'max-w-[720px]'
+          }`}
+        >
         <div
           ref={threadScrollRef}
           className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
@@ -5593,31 +5843,33 @@ function HealthcareFrontdeskCreateAgentLive({
           <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">{prompt.trim()}</span>
         </div>
 
-        {introThinking ? (
+        {introThinking && !explorationModeChoice ? (
           <IntroThinkingLoaderRow />
         ) : (
           <>
-            <CreateAgentThinkingPanel
-              open={thinkingOpen}
-              onToggle={() => {
-                suppressAutoScrollBriefly()
-                setThinkingOpen((prev) => !prev)
-              }}
-              onComplete={() => {
-                setThinkingOpen(false)
-                setIntroReplyReady(true)
-              }}
-              text={
-                isReviewFlow
-                  ? REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT
-                  : isReminderFlow
-                    ? REMINDER_CREATE_THOUGHTS_TEXT
-                    : CREATE_AGENT_THOUGHTS_TEXT
-              }
-              fast
-            />
+            {!explorationModeChoice && (
+              <CreateAgentThinkingPanel
+                open={thinkingOpen}
+                onToggle={() => {
+                  suppressAutoScrollBriefly()
+                  setThinkingOpen((prev) => !prev)
+                }}
+                onComplete={() => {
+                  setThinkingOpen(false)
+                  setIntroReplyReady(true)
+                }}
+                text={
+                  isReviewFlow
+                    ? REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT
+                    : isReminderFlow
+                      ? REMINDER_CREATE_THOUGHTS_TEXT
+                      : CREATE_AGENT_THOUGHTS_TEXT
+                }
+                fast
+              />
+            )}
 
-            {introReplyReady && (
+            {(introReplyReady || explorationModeChoice) && (
               isReviewFlow ? (
                 <ReviewResponseThread
                   onDraftReady={(name) => {
@@ -5628,6 +5880,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   onViewWorkflow={onViewWorkflow}
                   onMakeChanges={resetCreateFlow}
                   workflowVisible={workflowVisible}
+                  explorationModeChoice={explorationModeChoice}
                   suppressAutoScrollBriefly={suppressAutoScrollBriefly}
                   pendingAnswer={reviewPendingAnswer}
                   onPendingAnswerConsumed={() => setReviewPendingAnswer('')}
@@ -6681,6 +6934,14 @@ function HealthcareFrontdeskCreateAgentLive({
 
   return (
     <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${landingShellClass}`}>
+      {explorationModeChoice && !submitted && (
+        <div className="fixed right-2xl top-[14px] z-30">
+          <ExplorationLandingOptionDropdown
+            value={landingPromptOption}
+            onChange={setLandingPromptOption}
+          />
+        </div>
+      )}
       {pageTitle && (
         <div className="flex h-16 w-full shrink-0 items-center gap-sm">
           {!hideHeaderBack && (
@@ -6730,7 +6991,12 @@ function HealthcareFrontdeskCreateAgentLive({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onFocus={() => {
-              if (!prompt.trim()) setPrompt(initialPrompt ?? JOHN_CREATE_PROMPT)
+              if (prompt.trim()) return
+              if (explorationModeChoice && landingPromptOption === '2') {
+                setPrompt(REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2)
+                return
+              }
+              setPrompt(initialPrompt ?? JOHN_CREATE_PROMPT)
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -6739,7 +7005,13 @@ function HealthcareFrontdeskCreateAgentLive({
               }
             }}
             rows={3}
-            placeholder={rotatingPlaceholders ? typedPlaceholder : DEFAULT_CREATE_PLACEHOLDER}
+            placeholder={
+              explorationModeChoice && landingPromptOption === '2'
+                ? REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2
+                : rotatingPlaceholders
+                  ? typedPlaceholder
+                  : DEFAULT_CREATE_PLACEHOLDER
+            }
             className="scrollbar-light min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
           />
           <div className="flex items-center justify-between">
@@ -7460,6 +7732,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [createSideTab, setCreateSideTab] = useState<'ai' | 'manual'>('ai')
   /** After prompt send — chat header aligns to content; landing keeps page-left header. */
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
+  /** Response agents (exploration) full-page Ghostwriter shell tab. */
+  const [createGhostwriterTab, setCreateGhostwriterTab] = useState('ghostwriter')
   const [createDraftAgentName, setCreateDraftAgentName] = useState<string | null>(null)
   const [canvasProcedureId, setCanvasProcedureId] = useState<string | null>(null)
   const [, setInlineProcedureOpen] = useState(false)
@@ -7483,6 +7757,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateFlowSubmitted(false)
+    setCreateGhostwriterTab('ghostwriter')
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
@@ -7520,6 +7795,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateAiBuilderPanelOpen(false)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
+    setCreateGhostwriterTab('ghostwriter')
   }
 
   const expandCreateAiFullscreen = () => {
@@ -8244,16 +8520,30 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       isReviewsCreateFlow && (createFlowSubmitted || createWorkflowOpen)
     const showGhostwriterShellHeader =
       (createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen
+    const isExplorationGhostwriterShell =
+      isResponseAgentsExplorationNav(navId) && isReviewResponse && showGhostwriterShellHeader
+    /** Full-bleed exploration create — no in-card Reviews AI TopNav either. */
+    const hideExplorationCreateTopNav =
+      isResponseAgentsExplorationNav(navId) && isReviewResponse
     const ghostwriterShellTitle = isReviewsCreateFlow
       ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
       : createWorkflowAgentName
     // Canvas uses floating chrome — hide the legacy create-flow LHS when the workflow is open.
     const hideCreateLeftFloater = createWorkflowOpen
 
+    const handleExplorationShellTabChange = (tabId: string) => {
+      if (tabId === 'workflow') {
+        setCreateGhostwriterTab('workflow')
+        openCreateWorkflow()
+        return
+      }
+      setCreateGhostwriterTab(tabId)
+    }
+
     return (
       <div className="flex h-full">
         <div className="flex h-full min-w-0 flex-1 flex-col">
-        <TopNav title={chatHistoryTitle} initials="S" />
+        {!hideExplorationCreateTopNav && <TopNav title={chatHistoryTitle} initials="S" />}
         <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
           <section
             className={`z-10 shrink-0 transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
@@ -8312,6 +8602,16 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   </button>
                 </div>
               </div>
+            ) : isExplorationGhostwriterShell ? (
+              <CreateAiGhostwriterTabbedShell
+                title={ghostwriterShellTitle}
+                activeTab={createGhostwriterTab}
+                onTabChange={handleExplorationShellTabChange}
+                onBack={() => {
+                  if (chatHistorySelectedId) selectAllChats()
+                  else setShowCreateFlow(false)
+                }}
+              />
             ) : showGhostwriterShellHeader ? (
               <CreateAiGhostwriterShellHeader
                 title={ghostwriterShellTitle}
@@ -8377,7 +8677,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   className={
                     createWorkflowOpen && createSideTab === 'manual'
                       ? 'hidden'
-                      : 'flex h-full min-h-0 w-full min-w-0 justify-center'
+                      : isExplorationGhostwriterShell && createGhostwriterTab !== 'ghostwriter'
+                        ? 'hidden'
+                        : 'flex h-full min-h-0 w-full min-w-0 justify-center'
                   }
                 >
                   <HealthcareFrontdeskCreateAgentScreen
@@ -8386,7 +8688,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       if (chatHistorySelectedId) selectAllChats()
                       else setShowCreateFlow(false)
                     }}
-                    onSubmittedChange={setCreateFlowSubmitted}
+                    onSubmittedChange={(submitted) => {
+                      setCreateFlowSubmitted(submitted)
+                      if (submitted) setCreateGhostwriterTab('ghostwriter')
+                    }}
                     pageTitle={
                       showGhostwriterShellHeader
                         ? undefined
@@ -8395,6 +8700,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                           : undefined
                     }
                     hideHeaderBack={showGhostwriterShellHeader || isReviewsCreateFlow}
+                    explorationModeChoice={isResponseAgentsExplorationNav(navId) && isReviewResponse}
                     onCreateFromScratch={() => {
                       if (isReviewResponse) {
                         setShowCreateFlow(false)
@@ -8475,6 +8781,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
                 />
               )}
+              {isExplorationGhostwriterShell &&
+                createGhostwriterTab !== 'ghostwriter' &&
+                createGhostwriterTab !== 'workflow' && (
+                  <div className="min-h-0 flex-1 w-full bg-surface" aria-hidden />
+                )}
             </div>
           </section>
 

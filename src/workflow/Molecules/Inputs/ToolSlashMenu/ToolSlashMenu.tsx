@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../../../../components/Icon/Icon'
+import { MENU_Z_INDEX } from '../../../menuPlacement'
 import styles from './ToolSlashMenu.module.css'
 
 /** Frontdesk agent tools for the slash `/` picker. */
@@ -30,6 +31,12 @@ export const SLASH_TOOLS = [
     icon: 'build',
   },
   {
+    id: 'update-state',
+    name: 'Update state',
+    desc: 'Updates one or more dynamic variables when this step runs — literal values, references, or LLM-evaluated instructions.',
+    icon: 'build',
+  },
+  {
     id: 'end-conversation',
     name: 'End_conversation',
     desc: 'Ends the active conversation cleanly when the request is complete, the caller asks to hang up, or no further help is needed.',
@@ -44,12 +51,50 @@ export interface ToolSlashMenuTool {
   icon: string
 }
 
+/** Fixed-position anchor for the portaled menu. Prefer `top` (below) or `bottom` (above). */
+export interface ToolSlashAnchor {
+  left: number
+  top?: number
+  bottom?: number
+  maxHeight?: number
+}
+
 interface ToolSlashMenuProps {
   open: boolean
-  anchor: { top: number; left: number } | null
+  anchor: ToolSlashAnchor | null
   onClose: () => void
   onSelect: (tool: ToolSlashMenuTool) => void
   tools?: ToolSlashMenuTool[]
+}
+
+const MENU_WIDTH = 360
+const MENU_EST_HEIGHT = 420
+/** Prefer opening below the trigger when at least this much room is available. */
+const MIN_SPACE_BELOW = 200
+
+function sameAnchor(a: ToolSlashAnchor | null, b: ToolSlashAnchor | null) {
+  if (!a || !b) return a === b
+  return (
+    a.left === b.left
+    && a.top === b.top
+    && a.bottom === b.bottom
+    && a.maxHeight === b.maxHeight
+  )
+}
+
+function toMenuStyle(pos: ToolSlashAnchor): CSSProperties {
+  const style: CSSProperties = {
+    left: pos.left,
+    zIndex: MENU_Z_INDEX,
+  }
+  if (pos.maxHeight != null) style.maxHeight = pos.maxHeight
+  if (pos.bottom != null) {
+    style.bottom = pos.bottom
+    style.top = 'auto'
+  } else if (pos.top != null) {
+    style.top = pos.top
+  }
+  return style
 }
 
 export function ToolSlashMenu({
@@ -61,6 +106,7 @@ export function ToolSlashMenu({
 }: ToolSlashMenuProps) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const [pos, setPos] = useState<ToolSlashAnchor | null>(anchor)
   const rootRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -81,8 +127,26 @@ export function ToolSlashMenu({
   }, [open])
 
   useEffect(() => {
+    if (open && anchor) setPos(anchor)
+  }, [open, anchor])
+
+  useEffect(() => {
     setActiveIndex(0)
   }, [query])
+
+  // Horizontally clamp only — vertical placement is owned by the anchor
+  // (top below / bottom above) so we don't pull a dropdown off its trigger.
+  useLayoutEffect(() => {
+    if (!open || !anchor || !rootRef.current) return
+    const rect = rootRef.current.getBoundingClientRect()
+    const margin = 8
+    const vw = window.innerWidth
+    let left = anchor.left
+    if (left + rect.width > vw - margin) left = Math.max(margin, vw - rect.width - margin)
+    if (left < margin) left = margin
+    const next = { ...anchor, left }
+    setPos((prev) => (sameAnchor(prev, next) ? prev : next))
+  }, [open, anchor, filtered.length])
 
   useEffect(() => {
     if (!open) return
@@ -103,7 +167,7 @@ export function ToolSlashMenu({
     }
   }, [open, onClose])
 
-  if (!open || !anchor) return null
+  if (!open || !anchor || !pos) return null
 
   const handleKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -123,7 +187,7 @@ export function ToolSlashMenu({
     <div
       ref={rootRef}
       className={styles.menu}
-      style={{ top: anchor.top, left: anchor.left }}
+      style={toMenuStyle(pos)}
       role="listbox"
       aria-label="Tool"
       onKeyDown={handleKeyDown}
@@ -173,8 +237,54 @@ export function ToolSlashMenu({
   )
 }
 
+/**
+ * Anchor the menu to a toolbar trigger like a dropdown: prefer below the
+ * button; if there isn't enough room, open above with `bottom` so it stays
+ * flush to the trigger. Always constrains maxHeight to available space.
+ */
+export function getTriggerAnchor(
+  triggerEl: HTMLElement | null,
+  opts: { menuWidth?: number; estimatedHeight?: number; gap?: number } = {},
+): ToolSlashAnchor | null {
+  if (!triggerEl) return null
+  const {
+    menuWidth = MENU_WIDTH,
+    estimatedHeight = MENU_EST_HEIGHT,
+    gap = 4,
+  } = opts
+  const margin = 8
+  const rect = triggerEl.getBoundingClientRect()
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+
+  let left = rect.left
+  if (left + menuWidth > vw - margin) {
+    left = Math.max(margin, vw - menuWidth - margin)
+  }
+  left = Math.max(margin, left)
+
+  const spaceBelow = Math.max(0, vh - rect.bottom - margin)
+  const spaceAbove = Math.max(0, rect.top - margin)
+  const openBelow = spaceBelow >= MIN_SPACE_BELOW && spaceBelow >= Math.min(spaceAbove, estimatedHeight * 0.5)
+
+  if (openBelow) {
+    return {
+      top: rect.bottom + gap,
+      left,
+      maxHeight: Math.min(estimatedHeight, spaceBelow),
+    }
+  }
+
+  // Open upward — pin the bottom edge just above the trigger.
+  return {
+    bottom: vh - rect.top + gap,
+    left,
+    maxHeight: Math.min(estimatedHeight, spaceAbove),
+  }
+}
+
 /** Measure caret position for anchoring the slash menu. */
-export function getCaretAnchor(editorEl: HTMLElement | null): { top: number; left: number } | null {
+export function getCaretAnchor(editorEl: HTMLElement | null): ToolSlashAnchor | null {
   if (!editorEl) return null
   const sel = window.getSelection()
   if (!sel || sel.rangeCount === 0) {

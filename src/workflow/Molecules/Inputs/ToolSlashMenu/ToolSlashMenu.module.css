@@ -1,6 +1,6 @@
 .menu {
   position: fixed;
-  z-index: 200;
+  z-index: 5200;
   width: 360px;
   max-width: calc(100vw - 24px);
   max-height: min(420px, calc(100vh - 24px));

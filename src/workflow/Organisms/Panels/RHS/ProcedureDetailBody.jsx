@@ -5,7 +5,7 @@ import { Icon } from '../../../../components/Icon/Icon';
 import { serializeRichFrom, deserializeRichInto, insertChipAt } from '../../../Molecules/Inputs/promptChipHelpers.js';
 import '../../../Molecules/Inputs/prompt-chip.css';
 import StepsEditorToolbar from '../../../Molecules/Inputs/StepsEditorToolbar/StepsEditorToolbar.jsx';
-import { ToolSlashMenu, getCaretAnchor } from '../../../Molecules/Inputs/ToolSlashMenu/ToolSlashMenu';
+import { ToolSlashMenu, getCaretAnchor, getTriggerAnchor } from '../../../Molecules/Inputs/ToolSlashMenu/ToolSlashMenu';
 import UserPromptInput from '../../../Molecules/Inputs/UserPromptInput/UserPromptInput.jsx';
 import VariableChip, { CHIP_TYPES, DataTypeIcon, ProcedureBookIcon } from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import chipStyles from '../../../Molecules/Inputs/VariableChip/VariableChip.module.css';
@@ -28,6 +28,7 @@ const KNOWN_TOKENS = {
   'Intent identifier':           'tool',
   'Transfer_call':               'tool',
   'Initiate voice call':         'tool',
+  'Update state':                'tool',
   'End_conversation':            'tool',
   'Escalate_to_staff':           'tool',
   'escalate_to_staff':           'tool',
@@ -35,6 +36,8 @@ const KNOWN_TOKENS = {
   'Close_session':               'product',   // procedure
   'close_session':               'product',
   'Talk to Human':               'product',   // procedure
+  'Talk to human':               'product',
+  'General inquiry':             'product',
   'Appointment_Management_agent':'address',   // subagent
   'appointment_management_agent':'address',
 };
@@ -206,7 +209,7 @@ function bulletMarkers(bullets) {
 }
 
 /* ── Single contenteditable line with inline {{chip}} rendering ── */
-function EditableLine({ text, className, onInput, onFocusLine, onSlash }) {
+function EditableLine({ text, className, onInput, onFocusLine, onSlash, onOpenTool }) {
   const ref = useRef(null);
   const lastSynced = useRef(null);
 
@@ -234,6 +237,15 @@ function EditableLine({ text, className, onInput, onFocusLine, onSlash }) {
           e.preventDefault();
           onSlash();
         }
+      } : undefined}
+      onClick={onOpenTool ? (e) => {
+        const chip = e.target.closest('.prompt-chip--tool, [data-chip-type="tool"]');
+        if (!chip || !ref.current?.contains(chip)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const label = chip.dataset.chip
+          || chip.querySelector('.prompt-chip-label')?.textContent?.trim();
+        if (label) onOpenTool(label);
       } : undefined}
       onInput={() => {
         const s = serializeRichFrom(ref.current);
@@ -286,7 +298,7 @@ function serializeStepsList(rootEl) {
 }
 
 /* ── Create-mode steps: freeform paragraph field (matches ProcedureDetailScreen) ── */
-function CreateStepsField({ text, onChange, onOpenToolDrawer }) {
+function CreateStepsField({ text, onChange, onOpenToolDrawer, onOpenTool }) {
   const [isFocused, setIsFocused] = useState(false);
   const shellRef = useRef(null);
 
@@ -311,6 +323,7 @@ function CreateStepsField({ text, onChange, onOpenToolDrawer }) {
           minEditorHeight={STEPS_CREATE_MIN_HEIGHT}
           placeholder={STEPS_CREATE_PLACEHOLDER}
           onOpenToolDrawer={onOpenToolDrawer}
+          onOpenTool={onOpenTool}
           showProcedureButton
         />
       </div>
@@ -319,7 +332,7 @@ function CreateStepsField({ text, onChange, onOpenToolDrawer }) {
 }
 
 /* ── Editable steps — identical layout to StepsRenderer ── */
-function EditableStepsRenderer({ text, onChange }) {
+function EditableStepsRenderer({ text, onChange, onOpenTool }) {
   const rootRef = useRef(null);
   const shellRef = useRef(null);
   const activeEditableRef = useRef(null);
@@ -328,11 +341,17 @@ function EditableStepsRenderer({ text, onChange }) {
   const [isFocused, setIsFocused] = useState(false);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashAnchor, setSlashAnchor] = useState(null);
+  const slashOpenRef = useRef(false);
   const steps = parseStepsText(text);
 
   useEffect(() => {
     lastEmitted.current = text;
   }, [text]);
+
+  useEffect(() => {
+    slashOpenRef.current = slashOpen;
+    if (slashOpen) setIsFocused(true);
+  }, [slashOpen]);
 
   const getActiveEditable = useCallback(() => {
     const active = document.activeElement;
@@ -345,6 +364,36 @@ function EditableStepsRenderer({ text, onChange }) {
     }
     return activeEditableRef.current;
   }, []);
+
+  /** Focus a steps line (last-active, else first) and park the caret for chip insert. */
+  const ensureStepsFocus = useCallback(() => {
+    let el = getActiveEditable();
+    if (!el || !rootRef.current?.contains(el)) {
+      el = rootRef.current?.querySelector('[contenteditable="true"]') || null;
+    }
+    if (!el) return null;
+
+    activeEditableRef.current = el;
+    setIsFocused(true);
+    el.focus();
+
+    const sel = window.getSelection();
+    const hasCaretInEl = Boolean(
+      sel?.rangeCount
+      && el.contains(sel.getRangeAt(0).commonAncestorContainer),
+    );
+    if (!hasCaretInEl) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+    if (sel?.rangeCount) {
+      slashRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+    return el;
+  }, [getActiveEditable]);
 
   const emitChange = useCallback(() => {
     let next = text;
@@ -363,27 +412,54 @@ function EditableStepsRenderer({ text, onChange }) {
   // Opens the same tool search whether triggered from the bottom toolbar's
   // Tools button or by typing "/" in a step title/bullet — saves the live
   // selection first since the slash menu's own search input steals focus.
-  const openToolSlash = useCallback(() => {
-    const el = getActiveEditable();
-    if (!el) return;
-    const sel = window.getSelection();
-    if (sel?.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
-      slashRangeRef.current = sel.getRangeAt(0).cloneRange();
+  // Toolbar clicks focus the steps field first, then open as a dropdown
+  // under the Tools button; "/" keeps caret anchoring.
+  const openToolSlash = useCallback((triggerEl) => {
+    if (slashOpen && triggerEl instanceof HTMLElement) {
+      setSlashOpen(false);
+      setSlashAnchor(null);
+      requestAnimationFrame(() => ensureStepsFocus());
+      return;
     }
-    const anchor = getCaretAnchor(el);
+
+    const fromToolbar = triggerEl instanceof HTMLElement;
+    const el = fromToolbar ? ensureStepsFocus() : getActiveEditable();
+    if (!el) return;
+
+    if (!fromToolbar) {
+      const sel = window.getSelection();
+      if (sel?.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+        slashRangeRef.current = sel.getRangeAt(0).cloneRange();
+      }
+    }
+
+    const anchor = fromToolbar
+      ? getTriggerAnchor(triggerEl)
+      : getCaretAnchor(el);
     if (!anchor) return;
+    setIsFocused(true);
     setSlashAnchor(anchor);
     setSlashOpen(true);
-  }, [getActiveEditable]);
+  }, [getActiveEditable, ensureStepsFocus, slashOpen]);
+
+  const closeToolSlash = useCallback(() => {
+    setSlashOpen(false);
+    setSlashAnchor(null);
+    requestAnimationFrame(() => ensureStepsFocus());
+  }, [ensureStepsFocus]);
 
   const handleToolSelect = useCallback((tool) => {
     setSlashOpen(false);
     setSlashAnchor(null);
-    const el = getActiveEditable();
+    const el = getActiveEditable() || activeEditableRef.current;
     if (!el) return;
     insertChipAt(el, slashRangeRef.current, () => {
       slashRangeRef.current = null;
       emitChange();
+      requestAnimationFrame(() => {
+        el.focus();
+        setIsFocused(true);
+      });
     }, 'tool', tool.name);
   }, [getActiveEditable, emitChange]);
 
@@ -398,6 +474,9 @@ function EditableStepsRenderer({ text, onChange }) {
 
   const handleShellBlur = useCallback(() => {
     requestAnimationFrame(() => {
+      // Keep the steps shell focused while the Tools dropdown (portaled to
+      // body) owns keyboard focus for search.
+      if (slashOpenRef.current) return;
       if (!shellRef.current?.contains(document.activeElement)) {
         setIsFocused(false);
       }
@@ -438,6 +517,7 @@ function EditableStepsRenderer({ text, onChange }) {
         className={styles.stepsEmptyEditable}
         onFocusLine={handleFocusLine}
         onSlash={openToolSlash}
+        onOpenTool={onOpenTool}
         onInput={(lineText) => {
           lastEmitted.current = lineText;
           onChange(lineText);
@@ -462,6 +542,7 @@ function EditableStepsRenderer({ text, onChange }) {
               className={styles.stepTitleText}
               onFocusLine={handleFocusLine}
               onSlash={openToolSlash}
+              onOpenTool={onOpenTool}
               onInput={emitChange}
             />
           </div>
@@ -484,6 +565,7 @@ function EditableStepsRenderer({ text, onChange }) {
                       className={styles.stepBulletText}
                       onFocusLine={handleFocusLine}
                       onSlash={openToolSlash}
+                      onOpenTool={onOpenTool}
                       onInput={emitChange}
                     />
                   </div>
@@ -514,12 +596,13 @@ function EditableStepsRenderer({ text, onChange }) {
         getActiveEditable={getActiveEditable}
         onAfterInsert={emitChange}
         onOpenToolSlash={openToolSlash}
+        toolSlashOpen={slashOpen}
         hasContent={Boolean(text?.trim())}
       />
       <ToolSlashMenu
         open={slashOpen}
         anchor={slashAnchor}
-        onClose={() => { setSlashOpen(false); setSlashAnchor(null); }}
+        onClose={closeToolSlash}
         onSelect={handleToolSelect}
       />
     </div>
@@ -831,6 +914,7 @@ export default function ProcedureDetailBody({
   showTypeField = false,
   whenToUseLabel = 'When to use this procedure',
   onOpenToolDrawer = undefined,
+  onOpenTool = undefined,
   onAddContext,
   hideContext = false,
   isNewProcedure = false,
@@ -904,12 +988,14 @@ export default function ProcedureDetailBody({
     <CreateStepsField
       text={stepsText}
       onOpenToolDrawer={onOpenToolDrawer}
+      onOpenTool={onOpenTool}
       onChange={handleStepsChange}
     />
   ) : (
     <EditableStepsRenderer
       text={stepsText}
       onChange={handleStepsChange}
+      onOpenTool={onOpenTool}
     />
   );
 

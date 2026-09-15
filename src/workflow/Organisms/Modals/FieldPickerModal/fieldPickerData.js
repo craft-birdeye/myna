@@ -202,6 +202,45 @@ export const WORKFLOW_CATEGORIES = [
   },
 ];
 
+/**
+ * Categories for Update-state "Add field" — only Conversation trigger + Follow
+ * procedures (no Business / Location / Contact).
+ */
+export const UPDATE_STATE_FIELD_CATEGORIES = [
+  {
+    id: 'conv-trigger',
+    label: '1. Conversation trigger',
+    description: 'Outputs available from the conversation trigger that started this run.',
+    trees: [
+      group('conv-trigger-output', '1. Conversation trigger', [
+        leaf('Source', 'Trigger.source', 'Voice call'),
+        leaf('Comments', 'Trigger.comments', 'Patient called reporting tooth pain'),
+        objectNode('Reviewer', 'Trigger.reviewer', [
+          leaf('Name', 'Trigger.reviewer.name', 'Sarah Jones'),
+        ]),
+        leaf('Source type', 'Trigger.sourceType', 'Voice call'),
+        leaf('Has comment', 'Trigger.hasComment', 'true', 'boolean'),
+      ]),
+    ],
+  },
+  {
+    id: 'follow-procedures',
+    label: '2. Follow procedures',
+    description: 'Outputs from the Follow procedures step.',
+    trees: [
+      group('follow-procedures-output', '2. Follow procedures', [
+        leaf('Source', 'Procedures.source', 'Voice call'),
+        leaf('Procedure triggered', 'Procedures.procedureTriggered', 'Emergency or urgent concern'),
+        leaf(
+          'Summary',
+          'Procedures.summary',
+          'Patient reported tooth-origin pain with mild swelling. Myna screened symptoms and offered an urgent appointment.',
+        ),
+      ]),
+    ],
+  },
+];
+
 export function countLeaves(nodes = []) {
   return nodes.reduce((sum, node) => {
     if (node.type === 'field') return sum + 1;

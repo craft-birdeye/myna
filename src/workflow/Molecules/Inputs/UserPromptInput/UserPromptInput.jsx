@@ -5,7 +5,7 @@ import { VariableIcon, BuildIcon, ProcedureIcon, ExpandIcon } from '../PromptToo
 import FieldPickerModal from '../../../Organisms/Modals/FieldPickerModal/FieldPickerModal.jsx';
 import ToolbarButton from '../ToolbarButton.jsx';
 import PromptFormatControl from '../PromptFormatControl/PromptFormatControl.jsx';
-import { ToolSlashMenu, getCaretAnchor } from '../ToolSlashMenu/ToolSlashMenu';
+import { ToolSlashMenu, getCaretAnchor, getTriggerAnchor } from '../ToolSlashMenu/ToolSlashMenu';
 import styles from './UserPromptInput.module.css';
 
 /** Nearest scrollable ancestor (e.g. the drawer's own scroll container), or null. */
@@ -163,7 +163,12 @@ export default function UserPromptInput({
       if (!initialAnchor) return;
       const currentTop = parent ? parent.scrollTop : (window.scrollY || window.pageYOffset || 0);
       const delta = currentTop - initialTop;
-      setSlashAnchor({ top: initialAnchor.top - delta, left: initialAnchor.left });
+      setSlashAnchor({
+        ...initialAnchor,
+        left: initialAnchor.left,
+        ...(initialAnchor.top != null ? { top: initialAnchor.top - delta } : {}),
+        ...(initialAnchor.bottom != null ? { bottom: initialAnchor.bottom + delta } : {}),
+      });
     };
     document.addEventListener('scroll', reposition, true);
     window.addEventListener('resize', reposition);
@@ -224,7 +229,8 @@ export default function UserPromptInput({
             onClick={onOpenTool ? (e) => {
               const chip = e.target.closest('[data-chip-type="tool"], .prompt-chip--tool');
               if (chip) {
-                const label = chip.querySelector('.prompt-chip-label')?.textContent?.trim();
+                const label = chip.dataset.chip
+                  || chip.querySelector('.prompt-chip-label')?.textContent?.trim();
                 if (label) onOpenTool(label);
               }
             } : undefined}
@@ -243,12 +249,14 @@ export default function UserPromptInput({
               <ToolbarButton
                 icon={<BuildIcon />}
                 tooltip="Tools"
-                onClick={() => {
+                active={slashOpen}
+                onClick={(e) => {
                   if (enableToolSlash) {
-                    openSlashMenu(() => {
-                      const rect = editorRef.current?.getBoundingClientRect();
-                      return rect ? { top: rect.bottom - 8, left: rect.left + 12 } : null;
-                    });
+                    if (slashOpen) {
+                      closeSlashMenu();
+                      return;
+                    }
+                    openSlashMenu(() => getTriggerAnchor(e.currentTarget));
                     return;
                   }
                   onOpenToolDrawer?.();
