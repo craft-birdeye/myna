@@ -197,7 +197,7 @@ export function SideNav({
     <aside className="flex h-full w-[222px] flex-col border-r border-border bg-surface-l2">
       <nav className="flex flex-1 flex-col gap-xs overflow-y-auto px-lg py-sm pt-lg">
         {showTitle && (
-          <div className="px-sm pb-sm text-h3 text-text-primary">{title}</div>
+          <div className="px-sm pb-sm text-small uppercase tracking-wide text-text-tertiary">{title}</div>
         )}
         {ctaLabel && (
           <button

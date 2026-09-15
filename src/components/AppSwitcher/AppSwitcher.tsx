@@ -35,11 +35,6 @@ export function AppSwitcher({ onSuperAgent, onSelectBirdeye, onSelectSuperAgent 
         onClick={() => setOpen((v) => !v)}
         className={`flex h-9 items-center gap-xs rounded-md px-sm text-left transition-colors hover:bg-surface-l2 ${open ? 'bg-surface-l2' : ''}`}
       >
-        {onSuperAgent ? (
-          <FigmaIconSuperAgent size={20} className="shrink-0 text-text-primary" />
-        ) : (
-          <img src={birdeyeLogo} alt="" width={20} height={20} className="shrink-0" />
-        )}
         <span className="truncate text-base text-text-primary">{onSuperAgent ? 'Super agent' : 'Birdeye'}</span>
         {onSuperAgent && (
           <span className="text-small uppercase tracking-wide text-text-tertiary">Birdeye</span>

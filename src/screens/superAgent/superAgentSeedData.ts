@@ -377,6 +377,75 @@ export const SUPER_AGENT_REACH_APPS: SuperAgentConnectionApp[] = [
   },
 ]
 
+// Ported 1:1 from the prototype's own CHANNEL_SETUP (public/super-agent-prototype.html)
+// — steps, pairing blurb, CTA label, and the two-line sample thread shown in the
+// connect modal's preview, all exactly as written there. Used by ChannelConnectModal
+// and the mobile chat preview.
+export interface SuperAgentChannelSetup {
+  name: string
+  /** brand band color behind the QR/preview hero */
+  band: string
+  handle: string
+  blurb: string
+  /** [title, description] pairs, in order */
+  steps: [string, string][]
+  cta: string
+  /** [outgoing sample message, agent's reply] */
+  sample: [string, string]
+}
+
+export const SUPER_AGENT_CHANNEL_SETUP: Record<string, SuperAgentChannelSetup> = {
+  whatsapp: {
+    name: 'WhatsApp',
+    band: '#128C7E',
+    handle: '+1 (555) 0142',
+    blurb:
+      'Ask for a status, approve a draft, or start a task from the thread your patients already message you in.',
+    steps: [
+      ['Scan the code, or open WhatsApp', 'Point your phone at the code, or tap the button to open the conversation directly.'],
+      ['Send the pairing phrase', 'Send the code below in that chat and every agent in this workspace becomes reachable there.'],
+    ],
+    cta: 'Open WhatsApp',
+    sample: ['Send me a morning briefing at 7am with anything urgent.', 'Done. Your 7:00 AM briefing is set.'],
+  },
+  slack: {
+    name: 'Slack',
+    band: '#3F0E40',
+    handle: 'birdeye-super-agents',
+    blurb: 'Put the agents in a channel your team already watches, so anyone can see the work and approve it.',
+    steps: [
+      ['Add the app to your workspace', 'Approve the Birdeye Super Agents app and pick the channel it should post in.'],
+      ['Send the pairing phrase', 'Post the code in that channel to finish pairing.'],
+    ],
+    cta: 'Open Slack',
+    sample: ['Post the weekly summary here every Monday.', "Set. I'll post Mondays at 9am."],
+  },
+  imessage: {
+    name: 'iMessage',
+    band: '#0b8a34',
+    handle: '+1 (555) 0142',
+    blurb: 'A normal text thread — useful when you are away from a laptop and just want an answer.',
+    steps: [
+      ['Save the number, or scan the code', 'Add the number to your contacts, or scan to open the thread on your phone.'],
+      ['Send the pairing phrase', 'Text the code and the thread is linked to this workspace.'],
+    ],
+    cta: 'Open Messages',
+    sample: ['Any missed calls while I was in surgery?', 'Four. I answered all of them — one needs you.'],
+  },
+  telegram: {
+    name: 'Telegram',
+    band: '#1c93d2',
+    handle: '@birdeye_superagents',
+    blurb: 'Runs as a bot, so approvals arrive as buttons rather than free text.',
+    steps: [
+      ['Open the bot', 'Scan the code or tap the button to start a chat with the Birdeye bot.'],
+      ['Send the pairing phrase', 'Send the code to the bot to link it to this workspace.'],
+    ],
+    cta: 'Open Telegram',
+    sample: ['Anything urgent today?', 'One. A 1-star review at Downtown, 20 minutes ago.'],
+  },
+}
+
 export interface SuperAgentDataSource {
   id: string
   logoSrc?: string
