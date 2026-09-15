@@ -4408,7 +4408,7 @@ function WfHeaderActions({ agent, app }) {
 
   return (
     <span className="flex shrink-0 items-center gap-2">
-      <Button variant="secondary" size="sm" onClick={openWorkflowPreview}>
+      <Button variant="secondary" size="sm" onClick={openWorkflowPreview} style={{ borderRadius: 6 }}>
         <Icon name="play" size={12} sw={2} />
         {isFrontDesk ? "Preview" : "Run test"}
       </Button>
@@ -4419,7 +4419,7 @@ function WfHeaderActions({ agent, app }) {
         </span>
       )}
       <span className="relative" data-wf-activate>
-        <span className="flex h-[27px] overflow-hidden rounded-full bg-accent">
+        <span className="flex h-[27px] overflow-hidden bg-accent" style={{ borderRadius: 6 }}>
           <button type="button" onClick={() => app.toast("Agent activated")}
             className="flex items-center px-3 text-[13px] font-medium leading-none text-white transition-colors hover:bg-accent-ink">
             Activate
