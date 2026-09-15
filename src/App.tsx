@@ -1529,6 +1529,10 @@ export function App() {
                   useLibraryCmd={superAgentUseLibraryCmd}
                   onCloseAgent={() => setSuperAgentViewingAgent(false)}
                   onOpenAgent={() => setSuperAgentViewingAgent(true)}
+                  onGoConnections={() => {
+                    setSuperAgentViewingAgent(false)
+                    setNavActive('sa-connections')
+                  }}
                 />
               </main>
 

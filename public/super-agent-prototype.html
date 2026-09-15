@@ -3611,7 +3611,13 @@ function AgentConnections({ agent, app }) {
           ))}
         </div>
         <div className="primitive-card-footer flex justify-end border-t border-line">
-          <Button variant="secondary" size="sm" onClick={() => app.go("connections")}>Browse connections</Button>
+          <Button variant="secondary" size="sm" onClick={() => {
+            if (EMBED_NO_CHROME) {
+              try { window.parent.postMessage({ type: "superagent:go-connections" }, "*"); } catch (e) {}
+              return;
+            }
+            app.go("connections");
+          }}>Browse connections</Button>
         </div>
       </Card>
     </div>

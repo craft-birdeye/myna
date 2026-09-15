@@ -76,4 +76,11 @@ export interface SuperAgentAppProps {
    *  L2 SideNav so the AgentScreen reads as a full-page experience, same as agents
    *  opened from My agents/Library. Only meaningful in 'embedded' mode. */
   onOpenAgent?: () => void
+  /** called when the person clicks the prototype's own AgentScreen "Browse
+   *  connections" button (Connections tab) while embedded — the host closes the
+   *  iframe's agent view and switches its own L2 to the native Connections screen,
+   *  instead of the iframe silently swapping to its own internal connections page
+   *  underneath a host chrome that still thinks an agent is open. Only meaningful
+   *  in 'embedded' mode. */
+  onGoConnections?: () => void
 }

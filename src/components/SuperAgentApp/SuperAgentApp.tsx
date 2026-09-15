@@ -46,6 +46,7 @@ export function SuperAgentApp({
   onBackToBirdeye,
   onCloseAgent,
   onOpenAgent,
+  onGoConnections,
 }: SuperAgentAppProps) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const loadedRef = useRef(false)
@@ -111,6 +112,7 @@ export function SuperAgentApp({
       if (e.data?.type === 'superagent:back-to-birdeye') onBackToBirdeye?.()
       if (e.data?.type === 'superagent:close-agent') onCloseAgent?.()
       if (e.data?.type === 'superagent:agent-opened') onOpenAgent?.()
+      if (e.data?.type === 'superagent:go-connections') onGoConnections?.()
       if (e.data?.type === 'superagent:overlay-open') {
         overlayCountRef.current += 1
         setOverlayOpen(true)
@@ -122,7 +124,7 @@ export function SuperAgentApp({
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [onBackToBirdeye, onCloseAgent, onOpenAgent])
+  }, [onBackToBirdeye, onCloseAgent, onOpenAgent, onGoConnections])
 
   const containerClass = active
     ? mode === 'overlay'
