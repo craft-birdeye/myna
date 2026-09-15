@@ -3838,7 +3838,6 @@ const AGENT_ROUTES = [
     task: "Follow up on calls",
     info: () => "Checking the call log now — I'll flag anything that needs you." },
 ];
-const AGENT_META = Object.fromEntries(AGENT_ROUTES.map((r) => [r.id, r]));
 
 function routeMessage(text) {
   const q = text.toLowerCase();
@@ -3850,408 +3849,6 @@ function routeMessage(text) {
   return best;
 }
 
-/* the thread as it exists before you ever type anything — a real
- * mix, because that is the whole point of one inbox for every agent */
-const UNIFIED_SEED = [
-  { from: "them", text: "How did Westside do this week?" },
-  { from: "agent", agentId: "review-response", text: "Westside pulled up to 4.3 from 4.1. I answered 14 reviews and booked 6 appointments straight from replies. Two reviews still need your call — both mention wait time." },
-  { from: "them", text: "Any missed calls while I was in surgery?" },
-  { from: "agent", agentId: "frontdesk", text: "Four. I answered all of them — two were hours questions, one rescheduled, and one is a new implant enquiry worth following up." },
-  { from: "them", text: "How's the new patient pipeline looking this month?" },
-  { from: "agent", agentId: "appointment-booking", text: "22 new patients booked so far, up from 15 last month. 9 came straight from missed-call follow-ups and 4 from review replies." },
-  { from: "them", text: "Are we still showing the old holiday hours anywhere?" },
-  { from: "agent", agentId: "listings-health", text: "Three listings still do. I can fix Google and Facebook now — Yelp needs a manual update on their side.", quote: { label: "Fix hours on 3 listings", credits: 9 } },
-  { from: "them", text: "Can you get us more reviews from last week's patients?" },
-  { from: "agent", agentId: "review-generation", text: "38 patients seen last week haven't left one yet. I can text and email them a request now.", quote: { label: "Send 38 review requests", credits: 12 } },
-];
-
-function CostChip({ credits, tone = "light" }) {
-  return (
-    <span className={`ml-1 inline-flex items-center gap-1 rounded-full px-1.5 py-[1px] align-middle text-[10.5px] font-medium
-      ${tone === "dark" ? "bg-white/20 text-white/90" : "bg-black/[0.06] text-black/55"}`}>
-      <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7z" /></svg>
-      {credits}
-    </span>
-  );
-}
-
-/* an approval prompt inside a plain messaging app: the cost has
- * to be stated in words, because there is no chrome to put it in */
-function QuoteBlock({ quote, sent, onRun, style, accent }) {
-  return (
-    <span className="mt-1.5 block rounded-[10px] p-2" style={style}>
-      <span className="block text-[12px] font-semibold">{quote.label}</span>
-      <span className="mt-0.5 block text-[11.5px] opacity-80">Uses {quote.credits} credits · you have 3,760 left</span>
-      {!sent && (
-        <span className="mt-1.5 flex gap-1.5">
-          <button type="button" onClick={onRun}
-            className="rounded-full px-2.5 py-1 text-[11.5px] font-semibold text-white" style={{ background: accent }}>Run it</button>
-          <button type="button" className="rounded-full bg-black/[0.06] px-2.5 py-1 text-[11.5px] font-medium">Not now</button>
-        </span>
-      )}
-    </span>
-  );
-}
-
-/* an iPhone 17 Pro–style mock — brushed titanium edge, a wider
- * Dynamic Island, and the camera-control / action-button hints on
- * the sides. Purely cosmetic, drawn with inline styles so it never
- * depends on a Tailwind class that wasn't already compiled. */
-function PhoneFrame({ children, statusTone = "dark" }) {
-  return (
-    <div className="relative mx-auto w-[390px] shrink-0 overflow-hidden shadow-overlay"
-      style={{ borderRadius: 40, padding: 4, background: "linear-gradient(155deg, #9a9a9d 0%, #ececed 22%, #6f6f73 48%, #d7d7da 74%, #86868a 100%)" }}>
-      <span className="absolute left-0 block" style={{ top: 118, width: 3, height: 28, borderRadius: "2px 0 0 2px", background: "#57575a" }} />
-      <span className="absolute left-0 block" style={{ top: 156, width: 3, height: 46, borderRadius: "2px 0 0 2px", background: "#57575a" }} />
-      <span className="absolute left-0 block" style={{ top: 212, width: 3, height: 46, borderRadius: "2px 0 0 2px", background: "#57575a" }} />
-      <span className="absolute right-0 block" style={{ top: 172, width: 3, height: 64, borderRadius: "0 2px 2px 0", background: "#57575a" }} />
-      <div className="relative overflow-hidden bg-white" style={{ borderRadius: 36 }}>
-        {/* status bar */}
-        <div className={`relative z-10 flex items-end justify-between px-7 pb-1.5 text-[11px] font-semibold ${statusTone === "light" ? "text-white" : "text-black"}`}
-          style={{ height: 42 }}>
-          <span>9:41</span>
-          <span className="absolute left-1/2 -translate-x-1/2 rounded-full bg-black" style={{ top: 10, height: 30, width: 100 }} />
-          <span className="flex items-center gap-1">
-            <svg width="15" height="10" viewBox="0 0 18 12" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="3" height="5" rx="1" /><rect x="4.5" y="5" width="3" height="7" rx="1" /><rect x="9" y="2.5" width="3" height="9.5" rx="1" /><rect x="13.5" y="0" width="3" height="12" rx="1" /></svg>
-            <svg width="16" height="10" viewBox="0 0 20 12" fill="none" aria-hidden="true"><rect x="0.6" y="0.6" width="15.5" height="10.8" rx="3" stroke="currentColor" strokeOpacity="0.5" /><rect x="2" y="2" width="12" height="8" rx="2" fill="currentColor" /><path d="M17.5 4.2v3.6c1-.3 1.4-.9 1.4-1.8s-.4-1.5-1.4-1.8z" fill="currentColor" fillOpacity="0.5" /></svg>
-          </span>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ChannelComposerBar({ placeholder, right, bg = "#F6F6F6", radius = 18, border = "#E3E3E6", value, onChange, onSubmit }) {
-  return (
-    <div className="flex items-center gap-2 px-3 py-2.5" style={{ background: bg }}>
-      <span className="flex h-8 w-8 items-center justify-center rounded-full text-[20px] leading-none text-[#8E8E93]">+</span>
-      <input value={value} onChange={(e) => onChange && onChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" && onSubmit) { e.preventDefault(); onSubmit(); } }}
-        placeholder={placeholder} aria-label={placeholder}
-        className="flex h-9 flex-1 items-center rounded-full bg-white px-3 text-[13px] text-[#111] outline-none placeholder:text-ink-3"
-        style={{ borderRadius: radius, border: `1px solid ${border}` }} />
-      {right}
-    </div>
-  );
-}
-
-/* ── WhatsApp ─────────────────────────────────────────────── */
-function WhatsAppMock({ thread, draft, onDraftChange, onSend, onRun }) {
-  return (
-    <PhoneFrame statusTone="light">
-      <div className="flex items-center gap-2.5 px-3 pb-2 pt-1" style={{ background: "#075E54" }}>
-        <span className="text-white/90"><Icon name="chevronLeft" size={18} sw={2.4} /></span>
-        <BirdeyeMark size={30} className="rounded-full bg-white/15" />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-semibold text-white">Birdeye Agents</span>
-          <span className="block text-[11px] text-white/70">online</span>
-        </span>
-        <span className="flex gap-3 text-white/90">
-          <Icon name="phone" size={16} sw={2} /><Icon name="volume" size={16} sw={2} />
-        </span>
-      </div>
-      <div className="quiet-scroll h-[650px] overflow-y-auto px-3.5 py-3.5"
-        style={{ background: "#E5DDD5", backgroundImage: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35) 0 2px, transparent 2px), radial-gradient(circle at 70% 60%, rgba(0,0,0,0.03) 0 3px, transparent 3px)", backgroundSize: "42px 42px, 58px 58px" }}>
-        {thread.map((m, i) => {
-          const mine = m.from === "them";
-          const meta = !mine ? AGENT_META[m.agentId] : null;
-          const showLabel = !mine && (i === 0 || thread[i - 1].agentId !== m.agentId);
-          return (
-            <div key={i} className={`mb-1.5 flex ${mine ? "justify-end" : "justify-start"}`}
-              style={{ animation: "fade-up 260ms cubic-bezier(0.23,1,0.32,1) both" }}>
-              <div className="max-w-[80%]">
-                {showLabel && (
-                  <div className="mb-1.5 flex items-center gap-1.5">
-                    <AgentAvatarImg akey={meta.akey} size={14} className="rounded-full" />
-                    <span className="text-[10.5px] font-semibold" style={{ color: "#075E54" }}>{meta.name}</span>
-                  </div>
-                )}
-                <div className="rounded-[8px] px-2 py-1.5 text-[14px] leading-[1.42] text-[#111]"
-                  style={{ background: mine ? "#DCF8C6" : "#fff", boxShadow: "0 1px 0.5px rgba(0,0,0,0.13)" }}>
-                  {m.text}
-                  {m.cost != null && <CostChip credits={m.cost} />}
-                  {m.quote && <QuoteBlock quote={m.quote} sent={!!m.sent} onRun={onRun} accent="#25D366" style={{ background: "#F0F7EC", border: "1px solid #D6E8CB" }} />}
-                  <span className="mt-0.5 block text-right text-[10px] text-black/40">
-                    9:41 {mine && <span style={{ color: "#4FC3F7" }}>✓✓</span>}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <ChannelComposerBar placeholder="Message" bg="#F0F0F0" value={draft} onChange={onDraftChange} onSubmit={onSend}
-        right={draft && draft.trim()
-          ? <button type="button" onClick={onSend} className="flex h-9 w-9 items-center justify-center rounded-full text-white" style={{ background: "#25D366" }}><Icon name="arrowUp" size={16} sw={2.4} /></button>
-          : <span className="flex h-9 w-9 items-center justify-center rounded-full text-white" style={{ background: "#25D366" }}><Icon name="mic" size={16} sw={2} /></span>} />
-    </PhoneFrame>
-  );
-}
-
-/* ── Telegram ─────────────────────────────────────────────── */
-function TelegramMock({ thread, draft, onDraftChange, onSend, onRun }) {
-  return (
-    <PhoneFrame statusTone="light">
-      <div className="flex items-center gap-2.5 px-3 pb-2 pt-1" style={{ background: "#527DA3" }}>
-        <span className="text-white/90"><Icon name="chevronLeft" size={18} sw={2.4} /></span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-semibold text-white">Birdeye Agents</span>
-          <span className="block text-[11px] text-white/70">bot</span>
-        </span>
-        <BirdeyeMark size={30} className="rounded-full bg-white/15" />
-      </div>
-      <div className="quiet-scroll h-[650px] overflow-y-auto px-3.5 py-3.5" style={{ background: "#AFC7DC" }}>
-        {thread.map((m, i) => {
-          const mine = m.from === "them";
-          const meta = !mine ? AGENT_META[m.agentId] : null;
-          const showLabel = !mine && (i === 0 || thread[i - 1].agentId !== m.agentId);
-          return (
-            <div key={i} className={`mb-1.5 flex ${mine ? "justify-end" : "justify-start"}`}
-              style={{ animation: "fade-up 260ms cubic-bezier(0.23,1,0.32,1) both" }}>
-              <div className="max-w-[80%]">
-                {showLabel && (
-                  <div className="mb-1.5 flex items-center gap-1.5">
-                    <AgentAvatarImg akey={meta.akey} size={14} className="rounded-full" />
-                    <span className="text-[10.5px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{meta.name}</span>
-                  </div>
-                )}
-                <div className="px-2.5 py-1.5 text-[14px] leading-[1.42] text-[#111]"
-                  style={{ background: mine ? "#EEFFDE" : "#fff", borderRadius: 12,
-                    borderBottomRightRadius: mine ? 4 : 12, borderBottomLeftRadius: mine ? 12 : 4,
-                    boxShadow: "0 1px 1px rgba(0,0,0,0.1)" }}>
-                  {m.text}
-                  {m.cost != null && <CostChip credits={m.cost} />}
-                  {m.quote && <QuoteBlock quote={m.quote} sent={!!m.sent} onRun={onRun} accent="#2AABEE" style={{ background: "#F1F8FD", border: "1px solid #CFE7F7" }} />}
-                  <span className="mt-0.5 block text-right text-[10px] text-black/35">
-                    9:41 {mine && <span style={{ color: "#5DC452" }}>✓✓</span>}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <ChannelComposerBar placeholder="Message" bg="#fff" border="#E7E7E7" value={draft} onChange={onDraftChange} onSubmit={onSend}
-        right={draft && draft.trim()
-          ? <button type="button" onClick={onSend} className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ background: "#2AABEE" }}><Icon name="arrowUp" size={15} sw={2.4} /></button>
-          : <span className="flex h-8 w-8 items-center justify-center text-[#8E8E93]"><Icon name="mic" size={17} sw={2} /></span>} />
-    </PhoneFrame>
-  );
-}
-
-/* ── iMessage ─────────────────────────────────────────────── */
-function IMessageMock({ thread, draft, onDraftChange, onSend, onRun }) {
-  return (
-    <PhoneFrame>
-      <div className="flex flex-col items-center gap-1 border-b border-black/10 px-3 pb-2 pt-1" style={{ background: "rgba(249,249,249,0.94)" }}>
-        <div className="flex w-full items-center">
-          <span className="flex items-center text-[#007AFF]"><Icon name="chevronLeft" size={19} sw={2.6} /></span>
-          <span className="flex flex-1 flex-col items-center">
-            <BirdeyeMark size={30} />
-            <span className="mt-0.5 flex items-center gap-0.5 text-[11px] text-black/80">
-              Birdeye Agents<Icon name="chevronRight" size={10} sw={2.4} />
-            </span>
-          </span>
-          <span className="w-5" />
-        </div>
-      </div>
-      <div className="quiet-scroll h-[644px] overflow-y-auto bg-white px-3.5 py-3.5">
-        {thread.map((m, i) => {
-          const mine = m.from === "them";
-          const meta = !mine ? AGENT_META[m.agentId] : null;
-          const showLabel = !mine && (i === 0 || thread[i - 1].agentId !== m.agentId);
-          return (
-            <div key={i} className={`mb-1.5 flex ${mine ? "justify-end" : "justify-start"}`}
-              style={{ animation: "fade-up 260ms cubic-bezier(0.23,1,0.32,1) both" }}>
-              <div className="max-w-[78%]">
-                {showLabel && (
-                  <div className="mb-1.5 flex items-center gap-1.5">
-                    <AgentAvatarImg akey={meta.akey} size={14} className="rounded-full" />
-                    <span className="text-[10.5px] font-semibold" style={{ color: "rgba(0,0,0,0.55)" }}>{meta.name}</span>
-                  </div>
-                )}
-                <div className="px-3 py-1.5 text-[14.5px] leading-[1.38]"
-                  style={{ background: mine ? "#007AFF" : "#E9E9EB", color: mine ? "#fff" : "#000", borderRadius: 18 }}>
-                  {m.text}
-                  {m.cost != null && <CostChip credits={m.cost} tone={mine ? "dark" : "light"} />}
-                  {m.quote && <QuoteBlock quote={m.quote} sent={!!m.sent} onRun={onRun} accent="#007AFF" style={{ background: "rgba(0,0,0,0.05)" }} />}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex items-center gap-2 border-t border-black/10 bg-[rgba(249,249,249,0.94)] px-3 py-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E9E9EB] text-[18px] leading-none text-[#8E8E93]">+</span>
-        <input value={draft} onChange={(e) => onDraftChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSend(); } }}
-          placeholder="iMessage" aria-label="iMessage"
-          className="flex h-8 flex-1 items-center rounded-full border border-black/15 px-3 text-[13px] text-black outline-none placeholder:text-ink-3" />
-        <button type="button" onClick={onSend} className="flex h-7 w-7 items-center justify-center rounded-full bg-[#007AFF] text-white"><Icon name="arrowUp" size={14} sw={2.6} /></button>
-      </div>
-    </PhoneFrame>
-  );
-}
-
-/* ── Slack ────────────────────────────────────────────────── */
-function SlackMock({ thread, draft, onDraftChange, onSend, onRun }) {
-  return (
-    <PhoneFrame statusTone="light">
-      <div className="flex items-center gap-2 px-3 pb-2 pt-1" style={{ background: "#3F0E40" }}>
-        <span className="text-white/80"><Icon name="chevronLeft" size={18} sw={2.4} /></span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-semibold text-white">#birdeye-agents</span>
-          <span className="block text-[11px] text-white/60">Chen Family Dental</span>
-        </span>
-        <span className="text-white/80"><Icon name="search" size={16} sw={2} /></span>
-      </div>
-      <div className="quiet-scroll h-[560px] overflow-y-auto bg-white px-3.5 py-3.5">
-        {thread.map((m, i) => {
-          const mine = m.from === "them";
-          const meta = !mine ? AGENT_META[m.agentId] : null;
-          return (
-            <div key={i} className="mb-3 flex gap-2" style={{ animation: "fade-up 260ms cubic-bezier(0.23,1,0.32,1) both" }}>
-              {!mine
-                ? <AgentAvatarImg akey={meta.akey} size={30} className="mt-0.5 shrink-0 rounded-[7px]" />
-                : <span className="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[7px] bg-[#4A154B] text-[11px] font-semibold text-white">MC</span>}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[13px] font-black text-[#1D1C1D]">{mine ? "Maria Chen" : meta.name}</span>
-                  {!mine && <span className="rounded-[3px] bg-[#E8E8E8] px-1 text-[9px] font-bold uppercase text-[#616061]">App</span>}
-                  <span className="text-[10.5px] text-[#616061]">9:41 AM</span>
-                </div>
-                <div className="mt-0.5 text-[14px] leading-[1.46] text-[#1D1C1D]">
-                  {m.text}
-                  {m.cost != null && <CostChip credits={m.cost} />}
-                </div>
-                {m.quote && (
-                  <div className="mt-1.5 rounded-[6px] border-l-4 border-[#4A154B] bg-[#F8F8F8] p-2">
-                    <div className="text-[12.5px] font-bold text-[#1D1C1D]">{m.quote.label}</div>
-                    <div className="mt-0.5 text-[11.5px] text-[#616061]">Uses {m.quote.credits} credits · 3,760 left this month</div>
-                    {!m.sent && (
-                      <div className="mt-2 flex gap-1.5">
-                        <button type="button" onClick={onRun} className="rounded-[4px] bg-[#007A5A] px-2.5 py-1 text-[12px] font-bold text-white">Run it</button>
-                        <button type="button" className="rounded-[4px] border border-[#DDD] bg-white px-2.5 py-1 text-[12px] font-bold text-[#1D1C1D]">Not now</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex items-center gap-2 border-t border-black/10 bg-white px-3 py-2">
-        <input value={draft} onChange={(e) => onDraftChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSend(); } }}
-          placeholder="Message #birdeye-agents" aria-label="Message #birdeye-agents"
-          className="flex h-9 flex-1 items-center rounded-[8px] border border-[#DDD] px-3 text-[13px] text-[#1D1C1D] outline-none placeholder:text-ink-3" />
-        <button type="button" onClick={onSend} className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-[#007A5A] text-white"><Icon name="arrowUp" size={15} sw={2.4} /></button>
-      </div>
-    </PhoneFrame>
-  );
-}
-
-const CH_MOCK = { whatsapp: WhatsAppMock, telegram: TelegramMock, imessage: IMessageMock, slack: SlackMock };
-
-/* full-page, not a modal — this is a place people come back to,
- * not a dialog to dismiss. One merged thread across every agent;
- * type anything and it is routed to whichever agent handles it,
- * with the reply attributed back to that agent. */
-function ChannelPreview({ app, onClose }) {
-  const [tab, setTab] = useState(app.channelTab || "whatsapp");
-  const [thread, setThread] = useState(UNIFIED_SEED);
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => { notifyOverlay(true); return () => notifyOverlay(false); }, []);
-
-  useEffect(() => {
-    const esc = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", esc);
-    return () => document.removeEventListener("keydown", esc);
-  }, [onClose]);
-  /* picking a different channel from the banner while this is open */
-  useEffect(() => { if (app.channelTab) setTab(app.channelTab); }, [app.channelTab]);
-
-  const send = () => {
-    const text = draft.trim();
-    if (!text || busy) return;
-    setDraft("");
-    setThread((t) => [...t, { from: "them", text }]);
-    setBusy(true);
-    const route = routeMessage(text);
-    const actionable = /\b(send|draft|book|post|fix|reply|schedule|request|run|call|answer)\b/i.test(text);
-    setTimeout(() => {
-      setThread((t) => [...t, {
-        from: "agent", agentId: route.id, text: route.info(text),
-        quote: actionable ? { label: route.task, credits: 6 + (text.length % 12) } : undefined,
-      }]);
-      setBusy(false);
-    }, 950);
-  };
-
-  const runQuote = () => {
-    setThread((t) => {
-      const last = t[t.length - 1];
-      if (!last || !last.quote) return t;
-      const agentId = last.agentId;
-      const credits = last.quote.credits;
-      setTimeout(() => {
-        setThread((t2) => [...t2, { from: "agent", agentId, text: "Done — I'll let you know once it's finished.", cost: credits }]);
-      }, 700);
-      return t.map((m, i) => (i === t.length - 1 ? { ...m, sent: true } : m));
-    });
-  };
-
-  const Mock = CH_MOCK[tab];
-
-  return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-canvas" style={{ animation: "fade-in 180ms ease-out both" }}>
-      <div className="flex shrink-0 items-center gap-3 border-b border-line-soft bg-surface px-6 py-4 shadow-hairline">
-        <BirdeyeMark size={22} />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-[14.5px] font-semibold text-ink">Your agents, in the apps you already use</h2>
-          <p className="mt-0.5 text-[12.5px] leading-[1.5] text-ink-2">A preview — every task says what it costs before it runs.</p>
-        </div>
-        <div className="hidden items-center gap-1 rounded-full bg-inset p-1 sm:flex">
-          {CHANNELS.map((c) => {
-            const active = tab === c.key;
-            return (
-              <button key={c.key} type="button" onClick={() => setTab(c.key)}
-                className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors duration-150
-                  ${active ? "bg-surface text-ink shadow-hairline" : "text-ink-3 hover:text-ink-2"}`}>
-                <ChannelGlyph kind={c.key} size={14} />
-                <span className="hidden lg:inline">{c.name}</span>
-              </button>
-            );
-          })}
-        </div>
-        <button type="button" aria-label="Close" onClick={onClose}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink">
-          <Icon name="x" size={16} sw={2} />
-        </button>
-      </div>
-
-      <div className="flex gap-1 border-b border-line-soft bg-surface px-4 py-2 sm:hidden">
-        {CHANNELS.map((c) => {
-          const active = tab === c.key;
-          return (
-            <button key={c.key} type="button" onClick={() => setTab(c.key)}
-              className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full text-[12px] font-medium ${active ? "bg-inset text-ink" : "text-ink-3"}`}>
-              <ChannelGlyph kind={c.key} size={13} />
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="quiet-scroll flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-8">
-        <Mock thread={thread} draft={draft} onDraftChange={setDraft} onSend={send} onRun={runQuote} />
-      </div>
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════════════════
  * REPORTS
@@ -5544,11 +5141,11 @@ function ConnectRequestCard({ keys, connected, onConnect, agentName }) {
  * ───────────────────────────────────────────────────────── */
 const CHANNEL_SETUP = {
   whatsapp: {
-    name: "WhatsApp", band: "#128C7E", accent: "#25D366", handle: "+1 (555) 0142",
-    blurb: "Ask for a status, approve a draft, or start a task from the thread your patients already message you in.",
+    name: "WhatsApp", band: "#128C7E", accent: "#25D366", handle: "Front Desk Team",
+    blurb: "Add it to a group your team already messages in — it posts updates and takes requests right there, like any other member.",
     steps: [
-      ["Scan the code, or open WhatsApp", "Point your phone at the code, or tap the button to open the conversation directly."],
-      ["Send the pairing phrase", "Send the code below in that chat and every agent in this workspace becomes reachable there."],
+      ["Add the number to your group", "Open the group's participants, or scan the code from your phone, to add the Birdeye number below."],
+      ["Send the pairing phrase", "Send the code below in that group and every agent in this workspace becomes reachable there."],
     ],
     cta: "Open WhatsApp",
     sample: ["Send me a morning briefing at 7am with anything urgent.", "Done. Your 7:00 AM briefing is set."],
@@ -8390,8 +7987,6 @@ function App() {
   /* messaging channels are paired at the workspace level */
   const [channelsOn, setChannelsOn] = useState([]);
   const [channelSetup, setChannelSetup] = useState(null);
-  const [channelsFor, setChannelsForId] = useState(null);
-  const [channelTab, setChannelTab] = useState("whatsapp");
   const [stage, setStage] = useState(EMBED_IN_APP ? "app" : "web");
   /* self-serve: on for the whole workspace unless an owner turns it off */
   const [superAvailable, setSuperAvailable] = useState(true);
@@ -9356,7 +8951,6 @@ function App() {
     setOpenAgentId(id);
     setAgentTab(tab);
     setInfoOpen(false);
-    setChannelsForId(null);
     setNav("agent");
     // Embedded (chrome=none, inside the myna L1 module): tell the host an agent view
     // just opened, regardless of whether the host itself asked for it (open-agent/
@@ -9412,12 +9006,15 @@ function App() {
     if (on) { setChannelSetup(null); showChannelPreview(k); }
   };
 
-  /* full-page, workspace-level — not tied to whichever agent
-   * happened to trigger it, so it opens the same way from an
-   * agent's chat or straight from Connections. */
+  /* full-page, workspace-level — not tied to whichever agent happened to
+   * trigger it, so it opens the same way from an agent's chat or straight
+   * from Connections. The mobile preview itself now lives host-side (see
+   * ChannelPreviewModal in src/screens/superAgent/) so there is exactly one
+   * implementation regardless of which surface (native or this iframe)
+   * opened it — this just hands off to the host instead of rendering its
+   * own copy. */
   const showChannelPreview = (k) => {
-    setChannelTab(k);
-    setChannelsForId("unified");
+    try { window.parent.postMessage({ type: "superagent:show-channel-preview", channel: k }, "*"); } catch (e) {}
   };
 
   const openDraft = (id, seed) => {
@@ -9481,11 +9078,11 @@ function App() {
     repCreate, repAdjust, repAdjustContinue, repRunTest, repApprove, onTestProgress,
     useLibraryAgent, showLibraryDetail, fdConfigAnswer, fdStartCall, onCallProgress, startFd,
     useLibAgent, openAgentId, agentTab, setAgentTab, agentExpanded, setAgentExpanded, marketTab, setMarketTab, usage, setup, replayOnboarding,
-    infoOpen, setInfoOpen, channelsFor, channelTab, connected, connectSource,
+    infoOpen, setInfoOpen, connected, connectSource,
     channelsOn, openChannelSetup, setChannelOn, backToBirdeye,
     superAvailable, setSuperAvailable,
     txAnswer, txApprove,
-    setChannelsFor: (id, tab) => { if (tab) setChannelTab(tab); setChannelsForId(id); },
+    setChannelsFor: (id, tab) => { if (tab) showChannelPreview(tab); },
     pendingFor, togglePause, repairAgent, renameAgent, setAgentAvatar, toggleAgentLocation, addAgentForLocation,
     resolveApproval, startFinding, solved, acceptRule: (id) => {
       markDone(id);
@@ -9650,8 +9247,6 @@ function App() {
           onConnect={setChannelOn}
           onPreview={(k) => { setChannelSetup(null); showChannelPreview(k); }} />
       )}
-
-      {channelsFor && <ChannelPreview app={app} onClose={() => setChannelsForId(null)} />}
 
       <Toasts items={toasts} onDismiss={dismissToast} />
     </div>

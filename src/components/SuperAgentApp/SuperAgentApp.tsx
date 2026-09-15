@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { SuperAgentAppProps } from './SuperAgentApp.types'
+import { ChannelPreviewModal } from '../../screens/superAgent/ChannelPreviewModal'
+import { type ChannelKey } from '../../screens/superAgent/ChannelGlyph'
 
 // Embeds the self-contained Super Agent prototype (public/super-agent-prototype.html).
 // Two independent mounts of this component exist side by side, for two different demo
@@ -60,6 +62,14 @@ export function SuperAgentApp({
   // the whole app. A count (not a flag) survives overlays opening on top of each other.
   const overlayCountRef = useRef(0)
   const [overlayOpen, setOverlayOpen] = useState(false)
+  // The channel preview ("Your agents, in the apps you already use") used to be a
+  // second, independently-drifting implementation baked into the prototype itself
+  // (its own ChannelPreview + per-app mocks). Every trigger inside the iframe — the
+  // Connections tab, the agent chat tab's channel banner, the prototype's own
+  // internal Connections page — now posts this message instead of rendering its own
+  // copy, so there is exactly one implementation (this one, also used directly by
+  // the native SuperAgentConnectionsScreen) regardless of which surface opened it.
+  const [channelPreview, setChannelPreview] = useState<ChannelKey | null>(null)
 
   function send(message: Record<string, unknown>) {
     if (loadedRef.current) {
@@ -113,6 +123,9 @@ export function SuperAgentApp({
       if (e.data?.type === 'superagent:close-agent') onCloseAgent?.()
       if (e.data?.type === 'superagent:agent-opened') onOpenAgent?.()
       if (e.data?.type === 'superagent:go-connections') onGoConnections?.()
+      if (e.data?.type === 'superagent:show-channel-preview' && e.data.channel) {
+        setChannelPreview(e.data.channel as ChannelKey)
+      }
       if (e.data?.type === 'superagent:overlay-open') {
         overlayCountRef.current += 1
         setOverlayOpen(true)
@@ -149,6 +162,9 @@ export function SuperAgentApp({
         title={title}
         className="h-full w-full border-0"
       />
+      {active && channelPreview && (
+        <ChannelPreviewModal channel={channelPreview} onClose={() => setChannelPreview(null)} />
+      )}
     </div>
   )
 }

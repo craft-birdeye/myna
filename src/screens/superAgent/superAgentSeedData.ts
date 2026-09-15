@@ -352,7 +352,7 @@ export const SUPER_AGENT_REACH_APPS: SuperAgentConnectionApp[] = [
     iconClassName: 'bg-chip-success-bg',
     name: 'WhatsApp',
     description:
-      'Ask for a status, approve a draft, or start a task from the thread your patients already message you in.',
+      'Add it to a group your team already messages in — it posts updates and takes requests right there, like any other member.',
   },
   {
     id: 'slack',
@@ -398,12 +398,12 @@ export const SUPER_AGENT_CHANNEL_SETUP: Record<string, SuperAgentChannelSetup> =
   whatsapp: {
     name: 'WhatsApp',
     band: '#128C7E',
-    handle: '+1 (555) 0142',
+    handle: 'Front Desk Team',
     blurb:
-      'Ask for a status, approve a draft, or start a task from the thread your patients already message you in.',
+      'Add it to a group your team already messages in — it posts updates and takes requests right there, like any other member.',
     steps: [
-      ['Scan the code, or open WhatsApp', 'Point your phone at the code, or tap the button to open the conversation directly.'],
-      ['Send the pairing phrase', 'Send the code below in that chat and every agent in this workspace becomes reachable there.'],
+      ['Add the number to your group', 'Open the group’s participants, or scan the code from your phone, to add the Birdeye number below.'],
+      ['Send the pairing phrase', 'Send the code below in that group and every agent in this workspace becomes reachable there.'],
     ],
     cta: 'Open WhatsApp',
     sample: ['Send me a morning briefing at 7am with anything urgent.', 'Done. Your 7:00 AM briefing is set.'],

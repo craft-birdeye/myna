@@ -13,8 +13,13 @@ import { SUPER_AGENT_CONNECTION_LOGOS } from './superAgentConnectionLogos'
 // a composer whose send button swaps to a mic icon when empty — exactly like the
 // prototype. Shown after "Open <App>" (connects) or "See how it reads" (preview only).
 interface ThreadMessage {
-  from: 'them' | 'agent'
+  /** 'them' = the person previewing this screen (right-aligned, green/blue).
+   *  'agent' = one of the workspace's agents. 'human' = another teammate in a
+   *  shared group thread — same bubble side/style as 'agent', own name label. */
+  from: 'them' | 'agent' | 'human'
   agentId?: string
+  /** Display name for a 'human' sender, e.g. a teammate in the WhatsApp group. */
+  senderName?: string
   text: string
 }
 
@@ -25,6 +30,54 @@ const AGENT_META: Record<string, { name: string; color: string; initial: string 
   'listings-health': { name: 'Listings Health Agent', color: '#12B76A', initial: 'L' },
   'review-generation': { name: 'Review Generation Agent', color: '#F79009', initial: 'G' },
 }
+
+const HUMAN_COLORS = ['#F79009', '#12B76A', '#4F86F7', '#F97066', '#7A5AF8']
+
+function humanColor(name: string) {
+  const hash = name.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
+  return HUMAN_COLORS[hash % HUMAN_COLORS.length]
+}
+
+/** A group's own use case: several teammates asking their agents things in one
+ * shared WhatsApp thread — the agent replies like any other member of the group. */
+const GROUP_SEED: ThreadMessage[] = [
+  { from: 'human', senderName: 'Maria', text: 'Can someone check if the 2pm at Downtown is confirmed?' },
+  {
+    from: 'agent',
+    agentId: 'appointment-booking',
+    text: 'Confirmed — the patient replied yes this morning.',
+  },
+  { from: 'human', senderName: 'Diego', text: 'Any reviews need a response today?' },
+  {
+    from: 'agent',
+    agentId: 'review-response',
+    text: "One 1-star at Westside, 20 minutes ago. Drafting a reply now — I'll post it here once it's ready.",
+  },
+  { from: 'human', senderName: 'Priya', text: 'Front desk missed a couple calls this morning.' },
+  {
+    from: 'agent',
+    agentId: 'frontdesk',
+    text: 'Two — both handled. One rescheduled, one was a billing question I answered directly.',
+  },
+  { from: 'human', senderName: 'Maria', text: 'Did the reminder texts go out for tomorrow’s appointments?' },
+  {
+    from: 'agent',
+    agentId: 'frontdesk',
+    text: 'Yes — 18 sent. 2 patients already confirmed, and one asked to reschedule, which I’ve started.',
+  },
+  { from: 'human', senderName: 'Diego', text: 'Can we get more reviews from this week’s patients?' },
+  {
+    from: 'agent',
+    agentId: 'review-generation',
+    text: "12 patients seen this week haven't left one yet. I can send requests now if you want.",
+  },
+  { from: 'human', senderName: 'Priya', text: 'Are we still showing the old holiday hours anywhere?' },
+  {
+    from: 'agent',
+    agentId: 'listings-health',
+    text: 'Just Yelp now — Google and Facebook are fixed. Yelp needs a manual update on their side.',
+  },
+]
 
 const UNIFIED_SEED: ThreadMessage[] = [
   { from: 'them', text: 'How did Westside do this week?' },
@@ -65,13 +118,25 @@ function AgentAvatar({ agentId, size = 22 }: { agentId?: string; size?: number }
   )
 }
 
+function HumanAvatar({ name, size = 22 }: { name: string; size?: number }) {
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full text-white"
+      style={{ width: size, height: size, background: humanColor(name), fontSize: size * 0.42 }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
 // iPhone-style frame (brushed-titanium edge + status bar) — purely cosmetic, ported
 // from the prototype's own `PhoneFrame`.
 function PhoneFrame({ children, statusLight = true }: { children: React.ReactNode; statusLight?: boolean }) {
   return (
     <div
-      className="relative mx-auto w-[390px] shrink-0 overflow-hidden shadow-modal"
+      className="relative mx-auto w-full shrink-0 overflow-hidden shadow-modal"
       style={{
+        maxWidth: 390,
         borderRadius: 36,
         padding: 4,
         background: 'linear-gradient(155deg, #9a9a9d 0%, #ececed 22%, #6f6f73 48%, #d7d7da 74%, #86868a 100%)',
@@ -134,16 +199,23 @@ function ComposerBar({
   )
 }
 
+function senderKey(m: ThreadMessage) {
+  if (m.from === 'agent') return `agent:${m.agentId}`
+  if (m.from === 'human') return `human:${m.senderName}`
+  return 'them'
+}
+
 function ThreadBubble({ m, mine, showLabel, style, textColor }: { m: ThreadMessage; mine: boolean; showLabel: boolean; style: React.CSSProperties; textColor: string }) {
   const meta = m.agentId ? AGENT_META[m.agentId] : undefined
+  const displayName = m.from === 'agent' ? meta?.name : m.senderName
   return (
     <div className={`mb-sm flex ${mine ? 'justify-end' : 'justify-start'}`}>
       <div className="max-w-[80%]">
         {showLabel && (
           <div className="mb-xs flex items-center gap-xs">
-            <AgentAvatar agentId={m.agentId} size={16} />
+            {m.from === 'agent' ? <AgentAvatar agentId={m.agentId} size={16} /> : <HumanAvatar name={m.senderName ?? ''} size={16} />}
             <span className="text-small" style={{ color: style.background === '#fff' ? '#666' : undefined }}>
-              {meta?.name}
+              {displayName}
             </span>
           </div>
         )}
@@ -166,7 +238,7 @@ function ChannelThread({ channel, thread }: { channel: ChannelKey; thread: Threa
     <div className="quiet-scroll h-[600px] overflow-y-auto px-md py-md" style={{ background: bgByChannel[channel] }}>
       {thread.map((m, i) => {
         const mine = m.from === 'them'
-        const showLabel = !mine && (i === 0 || thread[i - 1].agentId !== m.agentId)
+        const showLabel = !mine && (i === 0 || senderKey(thread[i - 1]) !== senderKey(m))
         const bubbleStyle: React.CSSProperties =
           channel === 'whatsapp'
             ? { background: mine ? '#DCF8C6' : '#fff' }
@@ -189,10 +261,36 @@ const PREVIEW_CHANNELS: { key: ChannelKey; name: string }[] = [
   { key: 'slack', name: 'Slack' },
 ]
 
+type PreviewMode = 'personal' | 'group'
+
+/** A quick keyword router so a typed message gets a reply tied to what was
+ * actually asked, instead of one generic "Done" line regardless of input. */
+function routeReply(text: string): { agentId: string; text: string } {
+  const q = text.toLowerCase()
+  if (/review|rating|star/.test(q)) {
+    return { agentId: 'review-response', text: "On it — pulling the latest reviews now and I'll draft replies to anything that needs one." }
+  }
+  if (/call|phone|missed|voicemail/.test(q)) {
+    return { agentId: 'frontdesk', text: "Checking the call log now — I'll flag anything that needs you." }
+  }
+  if (/book|appointment|schedule|reschedule|calendar/.test(q)) {
+    return { agentId: 'appointment-booking', text: 'I can check real availability and get that on the calendar — which location?' }
+  }
+  if (/listing|hours|address|google|facebook|yelp/.test(q)) {
+    return { agentId: 'listings-health', text: "Checking your listings now — I'll flag anything showing the wrong hours or address." }
+  }
+  return { agentId: 'frontdesk', text: "Got it — I'll look into that and post an update here once I have something." }
+}
+
 export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey; onClose: () => void }) {
   const [activeChannel, setActiveChannel] = useState(channel)
+  // Every channel is modeled both ways: a personal 1:1 thread, or the agent
+  // added into an existing group/channel like any other member — default to
+  // the group use case since that's the primary pitch on the Connections card.
+  const [mode, setMode] = useState<PreviewMode>('group')
   const setup = SUPER_AGENT_CHANNEL_SETUP[activeChannel]
-  const [thread, setThread] = useState<ThreadMessage[]>(UNIFIED_SEED)
+  const isGroup = mode === 'group'
+  const [thread, setThread] = useState<ThreadMessage[]>(isGroup ? GROUP_SEED : UNIFIED_SEED)
   const [draft, setDraft] = useState('')
 
   useEffect(() => {
@@ -203,6 +301,11 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
     return () => document.removeEventListener('keydown', onEsc)
   }, [onClose])
 
+  useEffect(() => {
+    setThread(isGroup ? GROUP_SEED : UNIFIED_SEED)
+    setDraft('')
+  }, [activeChannel, mode])
+
   if (!setup) return null
 
   const send = () => {
@@ -210,16 +313,41 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
     if (!text) return
     setDraft('')
     setThread((t) => [...t, { from: 'them', text }])
+    const reply = routeReply(text)
     setTimeout(() => {
-      setThread((t) => [...t, { from: 'agent', agentId: 'frontdesk', text: "Done — I'll let you know once it's finished." }])
+      setThread((t) => [...t, { from: 'agent', agentId: reply.agentId, text: reply.text }])
     }, 700)
   }
 
   const header = {
-    whatsapp: { bg: '#075E54', accent: '#25D366', title: 'Birdeye Agents', subtitle: 'online', textLight: true },
-    telegram: { bg: '#527DA3', accent: '#2AABEE', title: 'Birdeye Agents', subtitle: 'bot', textLight: true },
-    imessage: { bg: '#F9F9F9', accent: '#007AFF', title: 'Birdeye Agents', subtitle: '', textLight: false },
-    slack: { bg: '#3F0E40', accent: '#007A5A', title: '#birdeye-agents', subtitle: 'Chen Family Dental', textLight: true },
+    whatsapp: {
+      bg: '#075E54',
+      accent: '#25D366',
+      title: isGroup ? 'Front Desk Team' : 'Birdeye Agents',
+      subtitle: isGroup ? 'Maria, Diego, Priya + agents' : 'online',
+      textLight: true,
+    },
+    telegram: {
+      bg: '#527DA3',
+      accent: '#2AABEE',
+      title: isGroup ? 'Front Desk Team' : 'Birdeye Agents',
+      subtitle: isGroup ? 'group · Maria, Diego, Priya' : 'bot',
+      textLight: true,
+    },
+    imessage: {
+      bg: '#F9F9F9',
+      accent: '#007AFF',
+      title: isGroup ? 'Front Desk Team' : 'Birdeye Agents',
+      subtitle: isGroup ? 'Maria, Diego, Priya' : '',
+      textLight: false,
+    },
+    slack: {
+      bg: '#3F0E40',
+      accent: '#007A5A',
+      title: isGroup ? '#front-desk-team' : 'Birdeye Agents',
+      subtitle: isGroup ? 'Chen Family Dental' : 'Direct message',
+      textLight: true,
+    },
   }[activeChannel]
 
   return (
@@ -258,12 +386,30 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-lg py-2xl">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-md overflow-y-auto px-lg py-2xl">
+        <div className="flex items-center gap-xs rounded-full bg-surface-selected p-xs">
+          {(['personal', 'group'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`flex h-8 items-center rounded-full px-md text-small transition-colors ${
+                mode === m ? 'bg-surface text-text-primary shadow-card' : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {m === 'personal' ? 'Personal' : 'Group chat'}
+            </button>
+          ))}
+        </div>
         <PhoneFrame statusLight={header.textLight}>
           <div className={`flex items-center gap-sm px-md pb-sm pt-xs ${header.textLight ? 'text-white' : 'text-text-primary'}`} style={{ background: header.bg }}>
             <Icon name="chevron_left" size={18} />
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/90">
-              <img src={SUPER_AGENT_CONNECTION_LOGOS.birdeye} alt="" className="size-4" aria-hidden />
+              {isGroup ? (
+                <Icon name="groups" size={16} className="text-text-secondary" />
+              ) : (
+                <img src={SUPER_AGENT_CONNECTION_LOGOS.birdeye} alt="" className="size-4" aria-hidden />
+              )}
             </span>
             <div className="min-w-0 flex-1">
               <div className={`truncate text-small ${header.textLight ? 'text-white' : 'text-text-primary'}`}>{header.title}</div>
