@@ -41,6 +41,7 @@ type AgentOpenTarget = { railId: string; navId?: string }
 const REVIEWS_AGENT_NAV_IDS = new Set([
   'response-agents',
   'response-agents-sep-1',
+  'response-agents-full-canvas',
   'generation-agents',
   'review-response-agents',
 ])

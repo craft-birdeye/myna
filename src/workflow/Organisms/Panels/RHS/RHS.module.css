@@ -35,6 +35,12 @@
   flex: 0 1 auto;
 }
 
+/* Full canvas: the header now ends in a separator rule, so the body needs its own top
+   padding — without it the first field/tab row sits right on the line. */
+.rhs-panel__body--badge-header {
+  padding-top: 20px;
+}
+
 .rhs-panel__body--draft-disabled {
   position: relative;
 }

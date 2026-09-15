@@ -4,6 +4,7 @@ import { Button } from '../../../elemental-stubs';
 import { AiSparkleGlyphIcon } from '../../../../assets/AiSparkleGlyphIcon';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import { DraftBlockedGuard } from '../../../components/DraftBlockedTooltip';
+import { useCardBadge } from '../CardBadgeContext';
 /* Same assets as the left floater (Trigger / Task / Controls). */
 import iconRrTrigger from '../../../../assets/rr-chrome/icon-trigger.svg';
 import iconRrTasks from '../../../../assets/rr-chrome/icon-tasks.svg';
@@ -56,6 +57,9 @@ const ICON_CONFIG = {
   procedures: { Component: ProcedureIcon },
 };
 
+/** Node types whose icon+label move out to a CanvasNodeBadge above the card (Full canvas). */
+const BADGE_LAYOUT_TYPES = new Set(Object.keys(ICON_CONFIG));
+
 export default function CanvasNodeHeader({
   nodeType = 'task',
   label,
@@ -91,6 +95,8 @@ export default function CanvasNodeHeader({
 }) {
   const config = ICON_CONFIG[nodeType] || ICON_CONFIG.task;
   const NodeSvg = config.Component || null;
+  /** Badge mode: the type icon+label move out to CanvasNodeBadge, above the card. */
+  const showBadgeLayout = useCardBadge() && Boolean(BADGE_LAYOUT_TYPES.has(nodeType));
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -142,21 +148,25 @@ export default function CanvasNodeHeader({
   }, [menuOpen]);
 
   return (
-    <div className="cnh">
-      <div className="cnh__left">
-        <span className={`cnh__node-icon${['subagent', 'delay'].includes(nodeType) ? ` cnh__node-icon--${nodeType}` : ''}`}>
-          {runStatus === 'running' ? (
-            <RunSpinnerIcon />
-          ) : runStatus === 'done' ? (
-            <RunDoneIcon />
-          ) : NodeSvg ? (
-            <NodeSvg />
-          ) : (
-            <span className="material-symbols-outlined">{config.icon}</span>
-          )}
-        </span>
-        <span className="cnh__label">{label}</span>
-      </div>
+    <div className={`cnh${showBadgeLayout ? ' cnh--badge' : ''}`}>
+      {/* Badge mode moves the type icon+label out of the card entirely — see CanvasNodeBadge,
+          rendered by the card itself so it can sit above the card's top edge. */}
+      {!showBadgeLayout && (
+        <div className="cnh__left">
+          <span className={`cnh__node-icon${['subagent', 'delay'].includes(nodeType) ? ` cnh__node-icon--${nodeType}` : ''}`}>
+            {runStatus === 'running' ? (
+              <RunSpinnerIcon />
+            ) : runStatus === 'done' ? (
+              <RunDoneIcon />
+            ) : NodeSvg ? (
+              <NodeSvg />
+            ) : (
+              <span className="material-symbols-outlined">{config.icon}</span>
+            )}
+          </span>
+          <span className="cnh__label">{label}</span>
+        </div>
+      )}
       <div className="cnh__right">
         {hasAiIcon && (
           <div className="cnh__ai-icon">

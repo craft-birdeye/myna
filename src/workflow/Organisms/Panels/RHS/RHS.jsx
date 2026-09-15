@@ -19,6 +19,8 @@ import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
 import SendResponseTaskBody from './SendResponseTaskBody';
 import { DraftBlockedOverlay } from '../../../components/DraftBlockedTooltip';
+import { useCardBadge } from '../../../Molecules/Canvas/CardBadgeContext';
+import { getBadgeForVariant } from '../../../Molecules/Canvas/nodeTypeBadges';
 import '../../../styles/aero-disabled.css';
 import styles from './RHS.module.css';
 
@@ -145,6 +147,10 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
     onSave?.();
   };
 
+  /** Full canvas: header wears this panel's node-type icon, matching the card's badge. */
+  const showTypeBadge = useCardBadge();
+  const typeBadge = showTypeBadge ? getBadgeForVariant(variant) : null;
+
   return (
       <div className={styles['rhs-panel']} style={{ width: panelWidth }}>
         <RHSSidePanelHeader
@@ -156,13 +162,14 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
           showMoreMenu={false}
           titleLayoutMenu={titleLayoutMenu}
           titleTabMenu={titleTabMenu}
+          typeBadge={typeBadge}
         />
 
         {/* `inlineFooter`: body shrinks-to-fit instead of stretching, so a short panel lets
             the Save button sit right under the content. Once the content is tall enough to
             scroll the body fills the space again and the footer lands at the bottom as usual. */}
         <div
-          className={`${styles['rhs-panel__body']}${inlineFooter ? ` ${styles['rhs-panel__body--inline']}` : ''}${draftBlocked ? ` ${styles['rhs-panel__body--draft-disabled']}` : ''}`}
+          className={`${styles['rhs-panel__body']}${inlineFooter ? ` ${styles['rhs-panel__body--inline']}` : ''}${draftBlocked ? ` ${styles['rhs-panel__body--draft-disabled']}` : ''}${typeBadge ? ` ${styles['rhs-panel__body--badge-header']}` : ''}`}
         >
           {/* Read-only mode uses a disabled <fieldset>, not just pointer-events: that natively
               disables every nested control so Tab-and-type can't edit the panel either. The

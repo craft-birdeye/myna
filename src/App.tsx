@@ -13,6 +13,7 @@ import {
   isAgentCoachCueNav,
   isResponseAgentsSep1StyleNav,
   isResponseAgentsExplorationNav,
+  RESPONSE_AGENTS_FULL_CANVAS_NAV_ID,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
@@ -321,6 +322,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'response-agents-sep-1',        label: 'Response agents (Sep 1)' },
+      { id: 'response-agents-full-canvas',  label: 'Response agents (Full canvas)' },
       { id: 'response-agents',              label: 'Response agents (coach cue)' },
       { id: 'response-agents-exploration',  label: 'Response agents (exploration)' },
       { id: 'generation-agents',       label: 'Generation agents' },
@@ -359,6 +361,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
 const REVIEWS_AGENT_NAV_IDS = new Set([
   'response-agents',
   'response-agents-sep-1',
+  'response-agents-full-canvas',
   'generation-agents',
   'review-response-agents',
 ])
@@ -409,6 +412,7 @@ const AGENT_NAMES: Record<string, string> = {
   'treatment-plan-agent':      'Treatment plan agent',
   'review-response-agents':    'Review response agents',
   'response-agents':           'Review response agents',
+  'response-agents-full-canvas': 'Review response agents',
   'response-agents-sep-1':     'Review response agents',
   'response-agents-exploration': 'Review response agents (exploration)',
   'generation-agents':         'Review generation agents',
@@ -764,6 +768,9 @@ export function App() {
   )
 
   const isEditingWorkflow = editingAgentName !== null
+  /** Full canvas is a sandbox for new designs — its workflow editor goes true full-screen,
+   *  every other agent's editor (Sep 1, coach cue, exploration, front desk, etc.) is untouched. */
+  const isFullCanvasWorkflowEdit = isEditingWorkflow && navActive === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
   const isViewingDetail =
     intakeDetail !== null ||
     appointmentDetail !== null ||
@@ -807,92 +814,96 @@ export function App() {
       <RecommendationOverridesStoreProvider>
       <div className="h-screen w-screen flex overflow-hidden bg-surface-shell text-text-primary">
 
-        {/* ── L1 Icon rail ── */}
-        <IconRail
-          logoSrc={logoSrc}
-          brand={PRODUCT_BRAND[activeProduct]}
-          groups={
-            activeProduct === 'healthcare'
-              ? RAIL_GROUPS
-              : RAIL_GROUPS.map((g) =>
-                  g.id === 'main'
-                    ? { ...g, items: g.items.map((i) => (i.id === 'agents' ? { ...i, label: 'Agents' } : i)) }
-                    : g,
-                )
-          }
-          activeId={railActive}
-          onSelect={(id) => {
-            setRailActive(id)
-            setDeepRoute({})
-            setIsAgentSetupActive(false)
-            if (id === 'frontdesk') setNavActive('manage-appointments')
-            if (id === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
-          }}
-          products={PRODUCTS}
-          activeProduct={activeProduct}
-          onProductChange={handleProductChange}
-          initials="HR"
-          userName="Haresh Rajamannar"
-          userEmail="haresh.rajamannar@birdeye.com"
-          expandOnHover={expandOnHover}
-          onExpandOnHoverChange={setExpandOnHover}
-          onProfileAction={(action) => {
-            if (action === 'settings') setRailActive('settings')
-          }}
-        />
+        {/* ── L1 Icon rail — omitted while editing the Full canvas workflow ── */}
+        {!isFullCanvasWorkflowEdit && (
+          <IconRail
+            logoSrc={logoSrc}
+            brand={PRODUCT_BRAND[activeProduct]}
+            groups={
+              activeProduct === 'healthcare'
+                ? RAIL_GROUPS
+                : RAIL_GROUPS.map((g) =>
+                    g.id === 'main'
+                      ? { ...g, items: g.items.map((i) => (i.id === 'agents' ? { ...i, label: 'Agents' } : i)) }
+                      : g,
+                  )
+            }
+            activeId={railActive}
+            onSelect={(id) => {
+              setRailActive(id)
+              setDeepRoute({})
+              setIsAgentSetupActive(false)
+              if (id === 'frontdesk') setNavActive('manage-appointments')
+              if (id === 'reviews') setNavActive(REVIEWS_DEFAULT_NAV)
+            }}
+            products={PRODUCTS}
+            activeProduct={activeProduct}
+            onProductChange={handleProductChange}
+            initials="HR"
+            userName="Haresh Rajamannar"
+            userEmail="haresh.rajamannar@birdeye.com"
+            expandOnHover={expandOnHover}
+            onExpandOnHoverChange={setExpandOnHover}
+            onProfileAction={(action) => {
+              if (action === 'settings') setRailActive('settings')
+            }}
+          />
+        )}
 
         {/* ── Right column ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* ── Global TopBar ── same bg as L1 rail so they look merged */}
-          <header className="flex h-[48px] shrink-0 items-center justify-between px-4 bg-surface-shell rounded-tr-lg">
-            <span className="text-base text-text-primary" style={{ fontWeight: 400 }}>
-              {moduleTitle}
-            </span>
-            <div className="flex items-center gap-[6px]">
-              {/* + button — matches contenthub 2.0 QuickCreateLauncher trigger */}
-              <button
-                type="button"
-                aria-label="Create new"
-                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-surface-l2 transition-colors hover:bg-surface-selected"
-              >
-                <Icon name="add" size={18} className="text-text-primary" />
-              </button>
-
-              {/* Ask BirdGPT — matches contenthub 2.0 Button style */}
-              <button
-                type="button"
-                className="group flex h-[30px] items-center gap-[5px] rounded-md bg-surface-l2 px-[10px] transition-colors hover:bg-surface-selected"
-              >
-                <span
-                  className="shrink-0 text-[#9970D7] group-hover:[animation:myna-cta-icon-tilt_360ms_ease-out_1]"
-                  aria-hidden
+          {/* ── Global TopBar — omitted while editing the Full canvas workflow ── */}
+          {!isFullCanvasWorkflowEdit && (
+            <header className="flex h-[48px] shrink-0 items-center justify-between px-4 bg-surface-shell rounded-tr-lg">
+              <span className="text-base text-text-primary" style={{ fontWeight: 400 }}>
+                {moduleTitle}
+              </span>
+              <div className="flex items-center gap-[6px]">
+                {/* + button — matches contenthub 2.0 QuickCreateLauncher trigger */}
+                <button
+                  type="button"
+                  aria-label="Create new"
+                  className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-surface-l2 transition-colors hover:bg-surface-selected"
                 >
-                  <AiCoachSparkleIcon size={14} />
-                </span>
-                <span
-                  className="text-[12px] leading-none bg-gradient-to-r from-[#9970D7] via-[#7f87e8] to-[#2552ED] bg-[length:220%_100%] bg-clip-text text-transparent"
-                  style={{ animation: 'l2-nav-shimmer 2.2s linear infinite' }}
+                  <Icon name="add" size={18} className="text-text-primary" />
+                </button>
+
+                {/* Ask BirdGPT — matches contenthub 2.0 Button style */}
+                <button
+                  type="button"
+                  className="group flex h-[30px] items-center gap-[5px] rounded-md bg-surface-l2 px-[10px] transition-colors hover:bg-surface-selected"
                 >
-                  Ask BirdGPT
-                </span>
-              </button>
+                  <span
+                    className="shrink-0 text-[#9970D7] group-hover:[animation:myna-cta-icon-tilt_360ms_ease-out_1]"
+                    aria-hidden
+                  >
+                    <AiCoachSparkleIcon size={14} />
+                  </span>
+                  <span
+                    className="text-[12px] leading-none bg-gradient-to-r from-[#9970D7] via-[#7f87e8] to-[#2552ED] bg-[length:220%_100%] bg-clip-text text-transparent"
+                    style={{ animation: 'l2-nav-shimmer 2.2s linear infinite' }}
+                  >
+                    Ask BirdGPT
+                  </span>
+                </button>
 
-              <button
-                type="button"
-                aria-label="Menu"
-                className="flex size-[30px] items-center justify-center rounded-md bg-surface-l2 transition-colors hover:bg-surface-selected"
-              >
-                <Icon name="menu" size={18} className="text-text-icon" />
-              </button>
-            </div>
-          </header>
+                <button
+                  type="button"
+                  aria-label="Menu"
+                  className="flex size-[30px] items-center justify-center rounded-md bg-surface-l2 transition-colors hover:bg-surface-selected"
+                >
+                  <Icon name="menu" size={18} className="text-text-icon" />
+                </button>
+              </div>
+            </header>
+          )}
 
-          {/* ── Gutter row — gray bg, padding exposes the rounded card ── */}
-          <div className="flex-1 flex min-h-0 overflow-hidden pr-[10px] pb-[10px] bg-surface-shell">
+          {/* ── Gutter row — gray bg, padding exposes the rounded card (dropped for Full canvas edge-to-edge) ── */}
+          <div className={`flex-1 flex min-h-0 overflow-hidden bg-surface-shell ${isFullCanvasWorkflowEdit ? '' : 'pr-[10px] pb-[10px]'}`}>
 
-            {/* ── White rounded card (L2 nav + main content) ── */}
-            <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden rounded-lg border border-border">
+            {/* ── White rounded card (L2 nav + main content) — square/borderless for Full canvas edge-to-edge ── */}
+            <div className={`flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden ${isFullCanvasWorkflowEdit ? '' : 'rounded-lg border border-border'}`}>
 
               {/* L2 SideNav — frontdesk modules, or Reviews AI's own section list */}
               {showL2 && (
@@ -1177,6 +1188,7 @@ export function App() {
                           hideCanvasStartNode={isExplorationHideCanvasStartNode(navActive)}
                           explorationChrome={isAgentExplorationChrome(navActive)}
                           sep1Chrome={isSep1Chrome(navActive)}
+                          cardBadgeChrome={navActive === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID}
                           llmTaskExplorationLayout={isLlmTaskExplorationLayout(navActive)}
                           identityLocationChrome={isResponseAgentsExplorationNav(navActive)}
                           inlineRhsFooter={isResponseAgentsSep1StyleNav(navActive)}

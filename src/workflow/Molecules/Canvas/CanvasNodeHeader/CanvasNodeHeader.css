@@ -136,6 +136,28 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  /* Stays pinned to the row's end whether or not `.cnh__left` is rendered — the badge
+     treatment (`.cnh__type-badge`) replaces `.cnh__left` entirely, so nothing else is
+     left to push this via flex:1. */
+  margin-left: auto;
+}
+
+/* ── Badge mode (Full canvas) ──
+   The icon+label row is gone (it lives in CanvasNodeBadge above the card), so this row
+   takes no vertical space at all and the title starts at the card's top padding. The
+   controls are lifted out of flow and centred on the title's first line — `.cnh` is a
+   zero-height box at the card's content top, the body follows after the card's 4px gap,
+   and the title's line-height is 24px, so its centre sits 16px below this row's top. */
+.cnh--badge {
+  min-height: 0;
+}
+
+.cnh--badge .cnh__right {
+  position: absolute;
+  top: 16px;
+  right: 0;
+  margin-left: 0;
+  transform: translateY(-50%);
 }
 
 .cnh__toggle {

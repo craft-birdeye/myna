@@ -3,6 +3,8 @@ export const RESPONSE_AGENTS_EXPLORATION_NAV_ID = 'response-agents-exploration'
 export const RESPONSE_AGENTS_SEP1_NAV_ID = 'response-agents-sep-1'
 /** Production side-nav id — shares Sep 1 list/card chrome with `RESPONSE_AGENTS_SEP1_NAV_ID`. */
 export const RESPONSE_AGENTS_NAV_ID = 'response-agents'
+/** Duplicate of Sep 1 — same agent, same chrome, its own nav slot. */
+export const RESPONSE_AGENTS_FULL_CANVAS_NAV_ID = 'response-agents-full-canvas'
 
 /** Coach-cue prototype nav — auto-opens the workflow builder tour on canvas land. */
 export function isResponseAgentsCoachCueNav(navId?: string | null) {
@@ -27,11 +29,18 @@ export const REMINDER_SEP1_NAV_ID = 'reminder-agent-sep-1'
 const EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS = new Set([
   RESPONSE_AGENTS_EXPLORATION_NAV_ID,
   FRONTDESK_EXPLORATION_NAV_ID,
+  // Full canvas keeps the start node on canvas (unlike exploration) — see
+  // isResponseAgentsExplorationNav / isLlmTaskExplorationLayout below for the other
+  // exploration-style behaviors it does mirror.
 ])
 
 /** Production + Sep 1 response-agent navs — same agent-list card chrome (not the exploration variant). */
 export function isResponseAgentsSep1StyleNav(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_SEP1_NAV_ID || navId === RESPONSE_AGENTS_NAV_ID
+  return (
+    navId === RESPONSE_AGENTS_SEP1_NAV_ID ||
+    navId === RESPONSE_AGENTS_NAV_ID ||
+    navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
+  )
 }
 
 export function isResponseAgentsExplorationChrome(navId?: string | null) {
@@ -39,12 +48,14 @@ export function isResponseAgentsExplorationChrome(navId?: string | null) {
 }
 
 /**
- * Response agents (exploration) *only* — not Sep 1, not the coach-cue nav, which
+ * Response agents (exploration) — not Sep 1, not the coach-cue nav, which
  * share both the agent name and `explorationChrome` with it. Gates the
  * location-aware identity header (Add location CTA, name truncation, hover card).
+ * Full canvas mirrors this too — its own design sandbox for iterating on exploration's
+ * ideas without touching Sep 1/coach-cue.
  */
 export function isResponseAgentsExplorationNav(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID
+  return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
 }
 
 /** Production + Sep 1 front desk navs — same agent-list card chrome (not the exploration variant). */
@@ -73,7 +84,10 @@ export function isSep1Chrome(navId?: string | null) {
   return isAgentExplorationChrome(navId)
 }
 
-/** LLM task Setup/Configure layout (body tabs, Continue footer) — exploration nav ids only, not Sep 1. Chip two-line collapse applies to all exploration chrome incl. Sep 1. */
+/** LLM task Setup/Configure layout (body tabs, Continue footer) — exploration nav ids only, not
+ *  Sep 1. Full canvas follows Sep 1 here (segmented Basic/Prompts/Fields/Context tabs, no layout
+ *  picker), so it is deliberately absent. Chip two-line collapse applies to all exploration
+ *  chrome incl. Sep 1. */
 export function isLlmTaskExplorationLayout(navId?: string | null) {
   return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || navId === FRONTDESK_EXPLORATION_NAV_ID
 }

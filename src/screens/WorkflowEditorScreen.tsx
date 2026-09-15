@@ -5,6 +5,7 @@ import {
   DENTAL_AGENT_WORKFLOWS,
   REVIEW_RESPONSE_WORKFLOW,
 } from '../data/agentWorkflows'
+import CardBadgeContext from '../workflow/Molecules/Canvas/CardBadgeContext'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { getLastSavedCreateChat, createChatVariantForAgent, getRetainedCreateAiChat } from '../data/createAgentChatStore'
@@ -119,6 +120,8 @@ interface WorkflowEditorScreenProps {
   explorationChrome?: boolean
   /** Sep 1 chrome — red "N Errors" chip after the run-test icon (both Sep 1 agents). */
   sep1Chrome?: boolean
+  /** Full canvas design sandbox: floating type badge above each card, no inline icon/label. */
+  cardBadgeChrome?: boolean
   /**
    * Action RHS Option 1/2 + R1–R4 layout picker (Response / Front desk exploration only —
    * not Sep 1). Independent of sep1Chrome, which is true for all exploration-family navs.
@@ -162,6 +165,7 @@ export function WorkflowEditorScreen({
   hideCanvasStartNode = hideTopIdentity,
   explorationChrome = hideTopIdentity,
   sep1Chrome = false,
+  cardBadgeChrome = false,
   llmTaskExplorationLayout = false,
   identityLocationChrome = false,
   inlineRhsFooter = false,
@@ -316,6 +320,10 @@ export function WorkflowEditorScreen({
   const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${RR_COPY_REV}::${FD_COPY_REV}::${copyFingerprint}`
 
   return (
+    /* Provided here rather than inside AgentBuilder/FlowCanvas so it reaches both the canvas
+       cards and the RHS panels (siblings in AgentBuilder's tree) without threading a prop
+       through every node wrapper and every <RHS> call site. */
+    <CardBadgeContext.Provider value={cardBadgeChrome}>
     <div className="flex h-full w-full overflow-hidden">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Suspense fallback={<div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>}>
@@ -360,6 +368,7 @@ export function WorkflowEditorScreen({
             explorationChrome={explorationChrome}
             inlineRhsFooter={inlineRhsFooter}
             sep1Chrome={sep1Chrome}
+            cardBadgeChrome={cardBadgeChrome}
             llmTaskExplorationLayout={llmTaskExplorationLayout}
             identityLocationChrome={identityLocationChrome}
             onOpenProductResearchSettings={onOpenProductResearchSettings}
@@ -368,5 +377,6 @@ export function WorkflowEditorScreen({
         </Suspense>
       </div>
     </div>
+    </CardBadgeContext.Provider>
   )
 }

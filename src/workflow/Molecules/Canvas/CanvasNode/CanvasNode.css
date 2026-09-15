@@ -1,4 +1,6 @@
 .canvas-node {
+  /* Anchors CanvasNodeBadge to the card's own top-left corner, outside its padding. */
+  position: relative;
   width: 400px;
   padding: 8px 12px 16px;
   background: #fff;
@@ -83,6 +85,27 @@
 .canvas-node__hover-action--delete:hover {
   color: #d32f2f;
   background: #fdecea;
+}
+
+/* ── Full canvas: actions move into the gap above the card, mirroring the badge ──
+   The badge's centre line sits 22px above the card's top edge (8px gap + half its 28px
+   height). The 8px bottom padding is a transparent bridge so hover survives the trip from
+   the card up to the buttons; `bottom: calc(100% - 2px)` compensates for it so the 32px
+   buttons still land centred on that same 22px line. */
+.canvas-node__hover-actions--above {
+  top: auto;
+  left: auto;
+  right: 0;
+  bottom: calc(100% - 2px);
+  flex-direction: row;
+  padding: 0 0 8px;
+}
+
+/* Copy tints blue the way delete tints red — Full canvas only, so Sep 1 keeps its
+   neutral hover. */
+.canvas-node__hover-actions--above .canvas-node__hover-action--copy:hover {
+  color: #1976d2;
+  background: #e8f1fb;
 }
 
 .canvas-node__hover-action .material-symbols-outlined {

@@ -71,6 +71,9 @@ interface AgentInstanceScreenProps {
   workflowButtonOpensEditor?: boolean
   /** Sep 1 review response flow hides Recommendation. */
   hideRecommendationTab?: boolean
+  /** Full canvas: log view puts the Outcome/Log panel on the left and lets cards open a
+   *  read-only config panel on the right. */
+  fullCanvasChrome?: boolean
   initialLogSlug?: string
   initialPanel?: string
   initialRecommendationIdFromRoute?: string
@@ -437,6 +440,7 @@ export function AgentInstanceScreen({
   initialFeedbackPrefill,
   workflowButtonOpensEditor = false,
   hideRecommendationTab = false,
+  fullCanvasChrome = false,
   initialLogSlug,
   initialPanel,
   initialRecommendationIdFromRoute,
@@ -662,6 +666,7 @@ export function AgentInstanceScreen({
           <RunDetailView
             row={selectedRun}
             instanceName={instanceName}
+            fullCanvasChrome={fullCanvasChrome}
             runs={navigableRuns}
             onSelectRun={(row) => {
               setSelectedRun(row)

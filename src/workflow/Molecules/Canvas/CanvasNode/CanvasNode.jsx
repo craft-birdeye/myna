@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import CanvasNodeHeader from '../CanvasNodeHeader/CanvasNodeHeader';
+import CanvasNodeBadge from '../CanvasNodeBadge/CanvasNodeBadge';
 import CanvasNodeBody from '../CanvasNodeBody/CanvasNodeBody';
+import { useCardBadge } from '../CardBadgeContext';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import './CanvasNode.css';
 
@@ -65,10 +67,13 @@ export default function CanvasNode({
   const isOff = hasToggle && !on;
   const stateClass = `${state !== 'default' ? ` canvas-node--${state}` : ''}${hasError ? ' canvas-node--error' : ''}`;
   const showHeaderAdd = hasAddButton && !viewOnly && nodeType !== 'branch';
+  /** Full canvas: actions sit in the gap above the card, on the badge's centre line. */
+  const badgeLayout = useCardBadge();
 
   return (
     <div className="canvas-node-wrap">
       <div className={`canvas-node${stateClass}`}>
+        <CanvasNodeBadge nodeType={nodeType} label={label} runStatus={runStatus} />
         <CanvasNodeHeader
           nodeType={nodeType}
           label={label}
@@ -114,12 +119,12 @@ export default function CanvasNode({
         )}
       </div>
       {!viewOnly && !draftBlocked && (onDelete || onCopy) ? (
-        <div className="canvas-node__hover-actions">
+        <div className={`canvas-node__hover-actions${badgeLayout ? ' canvas-node__hover-actions--above' : ''}`}>
           {nodeType !== 'trigger' && onCopy ? (
-            <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief" side="right">
+            <Tooltip content={copied ? 'Copied' : 'Copy'} variant="brief" side={badgeLayout ? 'top' : 'right'}>
               <button
                 type="button"
-                className="canvas-node__hover-action"
+                className="canvas-node__hover-action canvas-node__hover-action--copy"
                 aria-label={copied ? 'Copied' : 'Copy'}
                 onClick={handleCopyClick}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -131,7 +136,7 @@ export default function CanvasNode({
             </Tooltip>
           ) : null}
           {onDelete ? (
-            <Tooltip content="Delete" variant="brief" side="right">
+            <Tooltip content="Delete" variant="brief" side={badgeLayout ? 'top' : 'right'}>
               <button
                 type="button"
                 className="canvas-node__hover-action canvas-node__hover-action--delete"

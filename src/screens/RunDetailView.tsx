@@ -17,6 +17,7 @@ import {
   HEALTHCARE_AGENT_WORKFLOWS,
   HEALTHCARE_REMINDER_NORTH_WORKFLOW,
 } from '../data/agentWorkflows'
+import CardBadgeContext from '../workflow/Molecules/Canvas/CardBadgeContext'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
 import { REMINDER_CONVERSATION_AI_SUMMARY } from '../data/reminderInboxConversation'
 // @ts-ignore
@@ -47,6 +48,9 @@ interface RunDetailViewProps {
   explorationFrontDeskStatus?: boolean
   initialPanel?: string
   onPanelChange?: (panel: string) => void
+  /** Full canvas: Outcome/Log panel docks left, cards open a read-only config RHS on the
+   *  right, and canvas cards wear the floating type badges. */
+  fullCanvasChrome?: boolean
 }
 
 function sameLogRow(a: HealthcareLogRow, b: HealthcareLogRow) {
@@ -609,6 +613,7 @@ function AgentWorkflowRunCanvas({
   product,
   focusNodeId = null,
   focusNonce = 0,
+  fullCanvasChrome = false,
 }: {
   instanceName: string
   workflow: { nodes: WorkflowNodeSeed[]; nodeDetails: Record<string, unknown> }
@@ -616,6 +621,7 @@ function AgentWorkflowRunCanvas({
   product?: string
   focusNodeId?: string | null
   focusNonce?: number
+  fullCanvasChrome?: boolean
 }) {
   const { procedures } = useProcedureStore()
   const filteredProcedures = procedures.filter((p) => p.category === 'Healthcare Frontdesk')
@@ -641,6 +647,8 @@ function AgentWorkflowRunCanvas({
         /* Canvas stays clear of the overlaid details panel — must match the 480px float wrap
            in PreviewPanel.css (this previously reserved 600px against a 550px wrap). */
         .run-wf-viewer { height: 100%; width: calc(100% - 480px); }
+        /* Full canvas: the details panel docks left, so reserve the space on that side. */
+        .run-wf-viewer--panel-left { margin-left: 480px; }
         .run-wf-viewer .agent-builder__lhs    { display: none !important; }
         .run-wf-viewer .faq-ab-header         { display: none !important; }
         .run-wf-viewer .faq-ab-embedded       { height: 100% !important; }
@@ -665,7 +673,7 @@ function AgentWorkflowRunCanvas({
         ${executedCss}
         ${focusCss}
       `}</style>
-      <div className="run-wf-viewer">
+      <div className={`run-wf-viewer${fullCanvasChrome ? ' run-wf-viewer--panel-left' : ''}`}>
         <AgentBuilder
           key={instanceName}
           pageTitle={instanceName}
@@ -681,7 +689,7 @@ function AgentWorkflowRunCanvas({
           procedures={filteredProcedures}
           defaultOpenSection="Tasks"
           initialZoom={LOG_VIEW_DEFAULT_ZOOM / 100}
-          nodesInteractive={false}
+          nodesInteractive={fullCanvasChrome}
           logDoneNodeIds={executedIds}
           externalFocusNodeId={focusNodeId}
           externalFocusNonce={focusNonce}
@@ -836,6 +844,7 @@ export function RunDetailView({
   explorationFrontDeskStatus = false,
   initialPanel,
   onPanelChange,
+  fullCanvasChrome = false,
 }: RunDetailViewProps) {
   const canvasInstanceName = instanceName.replace(' - ', ' ')
   const agentName = instanceName.replace(/ - .+$/, '')
@@ -900,7 +909,10 @@ export function RunDetailView({
   const canGoNext = hasRunNav && runIndex < runs.length - 1
 
   return (
-    <div className="log-detail-view relative flex h-full flex-col bg-surface">
+    /* Full canvas: the canvas cards (and any RHS opened from them) wear the floating type
+       badges — the provider has to sit above both, like it does in WorkflowEditorScreen. */
+    <CardBadgeContext.Provider value={fullCanvasChrome}>
+    <div className={`log-detail-view relative flex h-full flex-col bg-surface${fullCanvasChrome ? ' log-detail-view--panel-left' : ''}`}>
       {/* Visual chrome shared by both canvas paths (AgentBuilder run canvas and the plain
           WorkflowCanvas) so every agent's log view looks identical, whatever data it shows.
           Scoped to .log-detail-view — .flow-canvas is shared with the workflow editor. */}
@@ -927,7 +939,8 @@ export function RunDetailView({
         }
 
         /* Node cards are a read-only record here — fully inert: no pointer, no hover
-           affordances, no selection ring. Clicks are already a no-op via nodesInteractive. */
+           affordances, no selection ring. Clicks are a no-op via nodesInteractive, except
+           on Full canvas where they open the read-only config panel (rules relaxed below). */
         .log-detail-view .canvas-node-wrap,
         .log-detail-view .canvas-node,
         .log-detail-view .react-flow__node { cursor: default !important; }
@@ -935,6 +948,22 @@ export function RunDetailView({
         .log-detail-view .cnh__more-wrapper { display: none !important; }
         .log-detail-view .canvas-node--hover,
         .log-detail-view .canvas-node--selected { border-color: transparent !important; }
+
+        /* ── Full canvas: cards are clickable, and the selected one needs to read as such.
+           The executed-node rules set an !important border, so selection uses an outline
+           instead of fighting them. ── */
+        .log-detail-view--panel-left .canvas-node-wrap,
+        .log-detail-view--panel-left .canvas-node,
+        .log-detail-view--panel-left .react-flow__node { cursor: pointer !important; }
+        .log-detail-view--panel-left .canvas-node--selected {
+          outline: 2px solid #1976d2;
+          outline-offset: -1px;
+        }
+        /* Details panel docks left instead of right. */
+        .log-detail-view--panel-left .preview-panel-float-wrap--log-details {
+          right: auto;
+          left: 0;
+        }
       `}</style>
 
       {/* Header — title + status on line 1, instance name on line 2 */}
@@ -997,6 +1026,7 @@ export function RunDetailView({
             row={row}
             focusNodeId={focusNodeId}
             focusNonce={focusNonce}
+            fullCanvasChrome={fullCanvasChrome}
           />
         ) : (
           <WorkflowCanvas
@@ -1066,5 +1096,6 @@ export function RunDetailView({
         </div>
       </div>
     </div>
+    </CardBadgeContext.Provider>
   )
 }

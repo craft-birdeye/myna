@@ -51,6 +51,7 @@ import {
   isResponseAgentsExplorationChrome,
   isResponseAgentsSep1StyleNav,
   isSep1StyleAgentListNav,
+  RESPONSE_AGENTS_FULL_CANVAS_NAV_ID,
 } from '../data/agentNavIds'
 import { instanceSlugFromName, type DeepRoute } from '../appRoutes'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
@@ -125,6 +126,7 @@ interface AgentDetailScreenProps {
 /** Nav ids that open Create agent as illustration + library cards only (no Ghostwriter chat). */
 const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
   'response-agents-sep-1',
+  'response-agents-full-canvas',
   'response-agents',
   'reminder-agent-sep-1',
 ])
@@ -7413,6 +7415,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isExplorationAgents = isAgentExplorationChrome(navId)
   /** Sep 1 side-nav ids + production front desk / response agents share the same card grid chrome. */
   const isSep1Agents = isSep1StyleAgentListNav(navId)
+  /** Full canvas is a duplicate of Sep 1 under its own nav slot — same data, its own page title. */
+  const pageTitle = navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ? `${agentName} (Full canvas)` : agentName
   const useExplorationOutcomesTab = false
   const [activeTab, setActiveTab] = useState('agents')
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
@@ -7438,10 +7442,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }, [cardLayoutMenuOpen])
   const showExplorationAgentsToggle =
     isExplorationAgents && activeTab === 'agents'
+  /** Full canvas mirrors exploration's card-layout picker — its own design sandbox, not shared
+   *  with Sep 1/coach-cue, which stay locked to the Default layout below. */
+  const isFullCanvasAgents = navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
   const useExplorationGrid =
-    isExplorationAgents && !isSep1Agents && agentsViewMode === 'grid'
-  /** Sep 1 side-nav agents: same card/table toggle; card view locks to exploration Default layout. */
-  const useSep1AgentGrid = isSep1Agents && activeTab === 'agents' && agentsViewMode === 'grid'
+    ((isExplorationAgents && !isSep1Agents) || isFullCanvasAgents) && agentsViewMode === 'grid'
+  /** Sep 1 side-nav agents (not Full canvas): same card/table toggle; card view locks to exploration Default layout. */
+  const useSep1AgentGrid =
+    isSep1Agents && !isFullCanvasAgents && activeTab === 'agents' && agentsViewMode === 'grid'
   const useAgentCardGrid = useExplorationGrid || useSep1AgentGrid
   const useDefaultAgentCardGrid =
     useSep1AgentGrid || (useExplorationGrid && cardLayoutOption === 'default')
@@ -8606,6 +8614,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           product={product}
           workflowButtonOpensEditor={isExplorationAgents}
           hideRecommendationTab={isResponseAgentsSep1StyleNav(navId)}
+          fullCanvasChrome={navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID}
         />
         <Toast
           message={toastMessage}
@@ -8624,7 +8633,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
         <div className="flex flex-1 flex-col overflow-auto">
           {/* Header */}
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
-            <h1 className="text-h3 text-text-primary">{agentName}</h1>
+            <h1 className="text-h3 text-text-primary">{pageTitle}</h1>
             {!isReviewTaggingFirstTime && (
               <div className="flex items-center gap-sm">
                 <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
