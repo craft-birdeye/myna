@@ -771,6 +771,8 @@ const GLYPH = {
   volume: <g><path d="M11 5 6.5 9H3v6h3.5L11 19z" /><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18.3 6.5a8 8 0 0 1 0 11" /></g>,
   tag: <g><path d="M3.5 11.2V4.5a1 1 0 0 1 1-1h6.7a2 2 0 0 1 1.4.6l7.3 7.3a2 2 0 0 1 0 2.8l-6.7 6.7a2 2 0 0 1-2.8 0L4.1 13.6a2 2 0 0 1-.6-1.4z" /><circle cx="8" cy="8" r="1.2" /></g>,
   link: <g><path d="M10 13a5 5 0 0 0 7.5.5l2-2A5 5 0 0 0 12.4 4.5l-1.1 1.1" /><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2A5 5 0 0 0 11.6 19.5l1.1-1.1" /></g>,
+  expand: <g><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M16 3h3a2 2 0 0 1 2 2v3" /><path d="M21 16v3a2 2 0 0 1-2 2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /></g>,
+  collapse: <g><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M16 3v3a2 2 0 0 0 2 2h3" /><path d="M21 16h-3a2 2 0 0 0-2 2v3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /></g>,
 };
 function Icon({ name, size = 16, sw = 1.7, className, fill = "none", style }) {
   return (
@@ -2503,6 +2505,46 @@ function ConfigQuestionCard({ q, options, preselected, single, note, cta, onSubm
   );
 }
 
+/* ── Front Desk draft review ───────────────────────────────
+ * A single consolidated recap shown once, right after the three
+ * setup questions and before anything gets built — what it does,
+ * what it can decide on its own, what it hands off, and which
+ * tools it uses. Assembled from the answers just given (same
+ * pattern as TreatmentPlanCard below), not from a fixed script. */
+function FrontDeskDraftReviewCard({ coverage = [], booking = [], handoff = [] }) {
+  const rows = [
+    ["Answers calls", (coverage.length ? coverage : ["When no one answers", "After business hours"]).join(", ").toLowerCase()],
+    ["Can do on its own", (booking.length ? booking : ["Book new patient consultations"]).join(", ").toLowerCase()],
+    ["Hands off to your team", (handoff.length ? handoff : ["Patient asks for a person"]).join(", ").toLowerCase()],
+  ];
+  return (
+    <Card className="max-w-110">
+      <CardBar>
+        <span className="text-accent-ink"><Sparkle size={14} /></span>
+        <span className="text-[13px] font-medium text-ink">Front Desk Agent — draft review</span>
+        <span className="ml-auto"><Badge tone="neutral">Draft</Badge></span>
+      </CardBar>
+      <div className="flex flex-col divide-y divide-line">
+        {rows.map(([label, value]) => (
+          <div key={label} className="px-3.5 py-2.5">
+            <div className="text-[10.5px] font-medium uppercase tracking-[0.05em] text-ink-3">{label}</div>
+            <div className="mt-0.5 text-[12.5px] leading-[1.5] text-ink">{value}</div>
+          </div>
+        ))}
+        <div className="px-3.5 py-2.5">
+          <div className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.05em] text-ink-3">Tools it can use</div>
+          <PanelList tone="green" items={["Appointment scheduler", "Patient records (EHR)", "Insurance verification", "Human handoff"]} />
+        </div>
+      </div>
+      <div className="primitive-card-footer border-t border-line">
+        <p className="text-[11.5px] leading-[1.5] text-ink-3">
+          Greeting, voice, and language are left on their defaults for now — you can change any of this later. Nothing goes live until you activate it.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 /* ── Treatment Follow-Up: built from nothing ──────────────
  * The only agent in the prototype with no library entry behind
  * it. The recap below is assembled from the answers the user
@@ -2806,6 +2848,7 @@ function Message({ m, app }) {
       case "config": return <ConfigQuestionCard {...m.cfg} done={m.done}
         onSubmit={(sel) => (m.cfg.flow === "tx" ? app.txAnswer(m.id, m.cfg.step, sel) : app.fdConfigAnswer(m.id, m.cfg.step, sel))} />;
       case "txPlan": return <TreatmentPlanCard cfg={m.cfg} done={m.done} />;
+      case "fdDraftReview": return <FrontDeskDraftReviewCard coverage={m.coverage} booking={m.booking} handoff={m.handoff} />;
       case "txTest": return <TreatmentTestCard approved={m.approved} done={m.done}
         onApprove={() => app.txApprove(m.id)} onRegenerate={() => app.toast("Rewritten — same offer, softer tone")} />;
       case "callSetup": return <TestCallSetupCard done={m.done} onStart={() => app.fdStartCall(m.id)} />;
@@ -4736,7 +4779,7 @@ function WfHeaderActions({ agent, app }) {
   };
 
   return (
-    <span className="ml-auto flex shrink-0 items-center gap-2">
+    <span className="flex shrink-0 items-center gap-2">
       <Button variant="secondary" size="sm" onClick={openWorkflowPreview}>
         <Icon name="play" size={12} sw={2} />
         {isFrontDesk ? "Preview" : "Run test"}
@@ -4777,13 +4820,15 @@ function WfHeaderActions({ agent, app }) {
 /* Dummy, UI-only — a persistent reminder that this conversation is
  * treated as HIPAA-governed, alongside the one-time `ComplianceCard`
  * that appears in the PHI-adjacent journeys. No real access control or
- * audit trail behind it. */
+ * audit trail behind it. Reuses `StatusPill` (neutral/gray) rather than
+ * a bespoke look, same component the agent list already uses for status. */
 function HipaaBadge() {
   return (
-    <span title="Illustrative only — patient data in this conversation is treated as HIPAA-governed"
-      className="flex h-6 shrink-0 items-center gap-1 rounded-full bg-green-tint px-2 text-[11px] font-medium text-green">
-      <Icon name="shield" size={11} sw={2.2} />
-      HIPAA
+    <span title="Illustrative only — patient data in this conversation is treated as HIPAA-governed">
+      <StatusPill tone="neutral" dot={false}>
+        <Icon name="shield" size={11} sw={2.2} />
+        HIPAA
+      </StatusPill>
     </span>
   );
 }
@@ -4827,9 +4872,25 @@ function AgentScreen({ app, renderWorkflowTab, hideIdentity = false }) {
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink">
                 <Icon name="info" size={16} sw={1.9} />
               </button>
+              {agent.status === "active" && <StatusPill tone="green">Active</StatusPill>}
               <HipaaBadge />
             </div>
-            {isWorkflow && !isBuilding && <WfHeaderActions agent={agent} app={app} />}
+            <span className="ml-auto flex shrink-0 items-center gap-2">
+              {/* Expand/collapse only makes sense in the standalone overlay
+                  prototype, which draws its own SideNav to collapse — the
+                  L1 rail's embedded mode (EMBED_NO_CHROME) never renders
+                  that SideNav itself, so there'd be nothing to collapse. */}
+              {!EMBED_NO_CHROME && (
+                <button type="button"
+                  aria-label={app.agentExpanded ? "Collapse agent view" : "Expand agent view"}
+                  title={app.agentExpanded ? "Collapse" : "Expand"}
+                  onClick={() => app.setAgentExpanded((x) => !x)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink">
+                  <Icon name={app.agentExpanded ? "collapse" : "expand"} size={15} sw={1.9} />
+                </button>
+              )}
+              {isWorkflow && !isBuilding && <WfHeaderActions agent={agent} app={app} />}
+            </span>
           </div>
           )}
 
@@ -8211,6 +8272,17 @@ function App() {
    * a live count of beats still pending, so `thinking` stays true across
    * that gap too. */
   const pendingBeatRef = useRef(0);
+  /* Guards the front-desk build journey (startFd → activity → fdRecommend)
+   * against running twice for the same draft. `agents.some(...)` below
+   * closes over render-scoped state, so two startFd calls arriving before
+   * a re-render (e.g. two chip/nav triggers landing back-to-back) both see
+   * "no frontdesk agent yet" and both schedule the activity card, which
+   * each independently finish into their own fdRecommend() call — the
+   * compliance card + recommendation text land twice. This ref is
+   * synchronous, so the second call is turned away immediately; it's
+   * cleared in resetAgentThread so leaving/restarting the journey can
+   * run it again. */
+  const fdStartedRef = useRef(false);
   /* Bumped every time the person leaves an agent's chat (back arrow, host
    * nav to My agents/Library, picking another demo scenario, ...). A
    * scripted journey is just a chain of `afterBeat` calls closing over
@@ -8236,6 +8308,7 @@ function App() {
     // Always invalidate any afterBeat step still ticking down for the
     // thread being left, whether or not it gets cleared below.
     sessionRef.current += 1;
+    fdStartedRef.current = false;
     const current = agents.find((a) => a.id === curRef.current);
     // Draft/in-progress builds are throwaway scripts — clear them so the
     // next visit starts fresh. An already-active agent's thread is its
@@ -8253,6 +8326,7 @@ function App() {
    * and seeing two steps land out of order. */
   const thinking = WORKING_MSG_KINDS.has((msgs[msgs.length - 1] || {}).kind) || pendingBeatRef.current > 0;
   const [agentTab, setAgentTab] = useState("chat");
+  const [agentExpanded, setAgentExpanded] = useState(false);
   const [approvals, setApprovals] = useState(DEMO_APPROVALS);
   const [solved, setSolved] = useState([]);
   const [editStreak, setEditStreak] = useState(0);
@@ -8615,6 +8689,8 @@ function App() {
   /* ── JOURNEY 2 — install a prebuilt AI Front Desk Agent ── */
   const startFd = (opts) => {
     if (agents.some((a) => a.id === "frontdesk")) { openAgent("frontdesk", "chat"); return; }
+    if (fdStartedRef.current) return;
+    fdStartedRef.current = true;
     openDraft("frontdesk", { ...AGENT_SEED.frontdesk, status: "draft", metrics: [], lastRun: "not run yet" });
     afterBeat(() => {
       /* opts.prompt lets a host screen open the thread with what the person
@@ -8717,10 +8793,38 @@ function App() {
       setPanelData((d) => ({ ...d, booking: sel }));
       afterBeat(() => push({ kind: "config", cfg: CONFIGS[3] }), 500);
     } else {
-      setPanelData((d) => ({ ...d, handoff: sel }));
+      const merged = { ...panelData, handoff: sel };
+      setPanelData(merged);
       toast("Changes saved");
-      afterBeat(fdAfterConfig, 500);
+      afterBeat(() => fdReviewDraft(merged), 500);
     }
+  };
+
+  /* Consolidated recap of everything just answered, shown once before
+     anything gets built — the thing the front-desk journey was missing
+     compared to the ghostwriter's own draft-review step. */
+  const fdReviewDraft = (data) => {
+    push({ kind: "text", text: "That's everything I need. Here's what I'll build before we test it." });
+    afterBeat(() => {
+      push({ kind: "fdDraftReview", coverage: data.coverage, booking: data.booking, handoff: data.handoff });
+      push({ kind: "chips", bare: true, chips: ["Build it", "Adjust my answers"] });
+    }, 500);
+  };
+
+  const fdRestartConfig = () => {
+    push({ kind: "text", text: "No problem — same three questions, from the top." });
+    afterBeat(() => push({ kind: "config", cfg: CONFIGS[1] }), 450);
+  };
+
+  const fdBuildProgress = () => {
+    push({
+      kind: "progress",
+      title: "Configuring your Front Desk Agent",
+      doneTitle: "Front Desk Agent configured",
+      steps: ["Applying your call coverage rules", "Setting booking permissions", "Wiring up escalation rules", "Connecting tools", "Finalizing the draft"],
+      activity: ["Covering after-hours and no-answer calls", "Allowing the booking actions you selected", "Routing what you flagged to your team", "Confirmed scheduler, EHR, and insurance access", "Draft ready for testing"],
+      next: fdAfterConfig,
+    });
   };
 
   const fdAfterConfig = () => {
@@ -8736,7 +8840,7 @@ function App() {
   };
 
   const fdTestSetup = () => {
-    push({ kind: "text", text: "Your front desk agent is ready for a test call. Let's see how it handles a potential implant patient." });
+    push({ kind: "text", text: "Your front desk agent is ready for a test call. Let's see how it handles a potential implant patient — this runs in test mode with simulated tools, so nothing real gets booked or sent." });
     afterBeat(() => push({ kind: "callSetup" }), 450);
   };
 
@@ -8762,8 +8866,8 @@ function App() {
     toast("Appointment booked");
     push({ kind: "callResult", bare: true });
     afterBeat(() => {
-      push({ kind: "text", text: "Everything worked as expected. The agent is ready to handle missed and after-hours calls." });
-      push({ kind: "chips", bare: true, chips: ["Activate agent", "Change coverage", "Run another test"] });
+      push({ kind: "text", text: "Everything worked as expected in that simulated run. How did that look — anything you'd like to change before activating?" });
+      push({ kind: "chips", bare: true, chips: ["Activate agent", "Adjust my answers", "Run another test"] });
     }, 700);
   };
 
@@ -8827,8 +8931,8 @@ function App() {
         break;
       case "Review settings": setPanelView("setup"); setPanelOpen(true); toast("Setup opened");
         push({ kind: "chips", bare: true, chips: ["Activate agent", "Run another test"] }); break;
-      case "Change coverage": setPanelView("fdConfig"); setPanelOpen(true); toast("Setup opened");
-        push({ kind: "chips", bare: true, chips: ["Activate agent", "Run another test"] }); break;
+      case "Build it": push({ kind: "user", text: c }); afterBeat(fdBuildProgress, 300); break;
+      case "Adjust my answers": push({ kind: "user", text: c }); afterBeat(fdRestartConfig, 300); break;
       case "Run another test":
         push({ kind: "user", text: c });
         if (curRef.current === "frontdesk") afterBeat(fdTestSetup, 300);
@@ -9204,6 +9308,7 @@ function App() {
     // picking up mid-script or having stale cards land after the fact.
     resetAgentThread();
     setNav("create");
+    setAgentExpanded(false);
   };
 
   const openAgent = (id, tab = "chat") => {
@@ -9335,7 +9440,7 @@ function App() {
     startFromCard, startFromChip, sendPrompt, onChip, runAction,
     repCreate, repAdjust, repAdjustContinue, repRunTest, repApprove, onTestProgress,
     useLibraryAgent, showLibraryDetail, fdConfigAnswer, fdStartCall, onCallProgress, startFd,
-    useLibAgent, openAgentId, agentTab, setAgentTab, marketTab, setMarketTab, usage, setup, replayOnboarding,
+    useLibAgent, openAgentId, agentTab, setAgentTab, agentExpanded, setAgentExpanded, marketTab, setMarketTab, usage, setup, replayOnboarding,
     infoOpen, setInfoOpen, channelsFor, channelTab, connected, connectSource,
     channelsOn, openChannelSetup, setChannelOn, backToBirdeye,
     superAvailable, setSuperAvailable,
@@ -9412,7 +9517,7 @@ function App() {
 
   return (
     <div className={`flex h-screen w-full overflow-hidden ${EMBED_CANVAS_CLASS}`}>
-      {!EMBED_NO_CHROME && <SideNav app={app} />}
+      {!EMBED_NO_CHROME && !(nav === "agent" && agentExpanded) && <SideNav app={app} />}
 
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1">
