@@ -292,12 +292,14 @@ function routeReply(text: string): { agentId: string; text: string } {
 
 export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey; onClose: () => void }) {
   const [activeChannel, setActiveChannel] = useState(channel)
-  // Every channel is modeled both ways: a personal 1:1 thread, or the agent
-  // added into an existing group/channel like any other member — default to
-  // the group use case since that's the primary pitch on the Connections card.
+  // Telegram, iMessage and Slack are modeled both ways: a personal 1:1 thread,
+  // or the agent added into an existing group/channel like any other member —
+  // default to the group use case since that's the primary pitch for those
+  // channels. WhatsApp's real Business API doesn't support a bot joining an
+  // existing group at all, so it stays personal-only regardless of `mode`.
   const [mode, setMode] = useState<PreviewMode>('group')
   const setup = SUPER_AGENT_CHANNEL_SETUP[activeChannel]
-  const isGroup = mode === 'group'
+  const isGroup = mode === 'group' && activeChannel !== 'whatsapp'
   const [thread, setThread] = useState<ThreadMessage[]>(isGroup ? GROUP_SEED : UNIFIED_SEED)
   const [draft, setDraft] = useState('')
 
@@ -331,8 +333,8 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
     whatsapp: {
       bg: '#075E54',
       accent: '#25D366',
-      title: isGroup ? 'Front Desk Team' : 'Birdeye Agents',
-      subtitle: isGroup ? 'Maria, Diego, Sarah + agents' : 'online',
+      title: 'Birdeye Agents',
+      subtitle: 'online',
       textLight: true,
     },
     telegram: {
@@ -395,20 +397,22 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-md overflow-y-auto px-lg py-2xl">
-        <div className="flex items-center gap-xs rounded-full bg-surface-selected p-xs">
-          {(['personal', 'group'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`flex h-8 items-center rounded-full px-md text-small transition-colors ${
-                mode === m ? 'bg-surface text-text-primary shadow-card' : 'text-text-tertiary hover:text-text-secondary'
-              }`}
-            >
-              {m === 'personal' ? 'Personal' : 'Group chat'}
-            </button>
-          ))}
-        </div>
+        {activeChannel !== 'whatsapp' && (
+          <div className="flex items-center gap-xs rounded-full bg-surface-selected p-xs">
+            {(['personal', 'group'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`flex h-8 items-center rounded-full px-md text-small transition-colors ${
+                  mode === m ? 'bg-surface text-text-primary shadow-card' : 'text-text-tertiary hover:text-text-secondary'
+                }`}
+              >
+                {m === 'personal' ? 'Personal' : 'Group chat'}
+              </button>
+            ))}
+          </div>
+        )}
         <PhoneFrame statusLight={header.textLight}>
           <div className={`flex items-center gap-sm px-md pb-sm pt-xs ${header.textLight ? 'text-white' : 'text-text-primary'}`} style={{ background: header.bg }}>
             <Icon name="chevron_left" size={18} />
