@@ -27,9 +27,9 @@ export interface PersonaGroup {
 // Mirrors the L1 icon-rail persona segregation in App.tsx RAIL_GROUPS:
 // Jay (marketing) / Myna (operations) / Robin (customer experience).
 export const PERSONA_GROUPS: PersonaGroup[] = [
-  { id: 'marketing', label: 'Marketing', categories: ['AI Search', 'Listings AI', 'Reviews AI', 'Social AI', 'Referral', 'Marketing Automation AI'] },
-  { id: 'operations', label: 'Operations', categories: ['Inbox', 'Front desk'] },
-  { id: 'cx', label: 'Customer experience', categories: ['Surveys AI', 'Ticketing', 'Insights AI'] },
+  { id: 'marketing', label: 'Jay • Marketing', categories: ['AI Search', 'Listings', 'Reviews', 'Social', 'Content hub', 'Marketing Automation', 'Referrals'] },
+  { id: 'operations', label: 'Myna • Operations', categories: ['Inbox', 'Front desk'] },
+  { id: 'cx', label: 'Robin • Customer experience', categories: ['Surveys', 'Ticketing', 'Insights', 'Competitors', 'Reports', 'Patients'] },
 ]
 
 // Product-agnostic Marketing/Inbox agents — same set shown for every product,

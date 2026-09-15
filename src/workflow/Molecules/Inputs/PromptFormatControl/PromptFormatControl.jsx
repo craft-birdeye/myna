@@ -13,9 +13,9 @@ function FormatIcon({ name }) {
 }
 
 /**
- * Format toolbar control for System / User prompt editors.
+ * Format toolbar control for System / User prompts and procedure Steps.
  * Toggle via Format icon; also closes when focusing another prompt or switching tabs.
- * Options open to the right of Format (stretch to input end); Format button stays put.
+ * Options: Bold / Italic / Underline | Bulleted list / Numbered list / Outdent / Indent.
  */
 export default function PromptFormatControl({
   getEditor,
@@ -23,6 +23,11 @@ export default function PromptFormatControl({
   disabled = false,
   /** Persist open/closed across remounts for this editor instance. */
   persistKey = 'prompt-format',
+  /**
+   * Optional override for list/indent actions (used by procedure steps, which
+   * store bullet state on data attributes rather than native contentEditable lists).
+   */
+  onListCommand,
 }) {
   const triggerRef = useRef(null);
   const savedRangeRef = useRef(null);
@@ -65,7 +70,10 @@ export default function PromptFormatControl({
     const rect = trigger.getBoundingClientRect();
     const inputBox =
       trigger.closest('[class*="inputBox"]')
-      || trigger.closest('[class*="input_box"]');
+      || trigger.closest('[class*="input_box"]')
+      || trigger.closest('[class*="stepsEditorShell"]')
+      || trigger.closest('[class*="toolbar"]')
+      || trigger.parentElement;
     const boxRect = inputBox?.getBoundingClientRect();
     const endPad = 12;
     const edgeRight = (boxRect?.right ?? window.innerWidth) - endPad;
@@ -182,13 +190,23 @@ export default function PromptFormatControl({
   }, [runCommand]);
 
   const applyListCommand = useCallback((cmd) => {
+    if (onListCommand) {
+      const el = getEditor?.();
+      if (!el) return;
+      el.focus();
+      restoreSavedRange();
+      onListCommand(cmd);
+      saveActiveRange();
+      onAfterFormat?.();
+      return;
+    }
     runCommand(() => {
       if (cmd === 'bullet') document.execCommand('insertUnorderedList', false, null);
       else if (cmd === 'number') document.execCommand('insertOrderedList', false, null);
       else if (cmd === 'outdent') document.execCommand('outdent', false, null);
       else if (cmd === 'indent') document.execCommand('indent', false, null);
     });
-  }, [runCommand]);
+  }, [onListCommand, getEditor, restoreSavedRange, saveActiveRange, onAfterFormat, runCommand]);
 
   return (
     <div className={styles.anchor} ref={triggerRef}>

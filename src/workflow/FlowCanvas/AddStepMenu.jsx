@@ -12,6 +12,7 @@ const ITEM_DESCRIPTIONS = {
   'Send text during call': 'Sends a text message to the caller during an active call',
   'In-call SMS': 'Sends a text message to the caller during an active call',
   'Send response': 'Sends the drafted response to the contact',
+  'Update state': 'Update dynamic variables when this step runs',
   'In call text': 'Send a text message during the active call',
   'Schedule appointment': 'Books a new appointment for the patient',
   'Book new appointment': 'Books a new appointment for the patient',
@@ -31,7 +32,7 @@ const ITEM_DESCRIPTIONS = {
   'Fetch data from external app': 'Retrieve data from a connected external application',
   'Trigger external webhook': 'Fire a webhook to an external system',
   Branch: 'Split the flow based on conditions',
-  Delay: 'Wait for a specific time or event',
+  Delay: 'Waits until a specific time or event',
 };
 
 const AI_ITEMS = new Set(['Triage review', 'Review responder']);

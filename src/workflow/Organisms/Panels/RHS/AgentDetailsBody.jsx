@@ -21,7 +21,7 @@ const DEFAULT_LOCATIONS = [
   { id: '1012', name: '1012 - Phoenix, AZ' },
 ];
 
-const VISIBLE_COUNT = 4;
+const VISIBLE_COUNT = 10;
 
 export default function AgentDetailsBody({
   values: externalValues,
@@ -55,7 +55,6 @@ export default function AgentDetailsBody({
     locationsSelectBy: null,
   });
   const [showLocations, setShowLocations] = useState(false);
-  const [showAllChips, setShowAllChips] = useState(false);
 
   useEffect(() => {
     if (autoOpenLocationsToken && !fieldsLocked) setShowLocations(true);
@@ -95,7 +94,6 @@ export default function AgentDetailsBody({
     ).filter((id) => id !== entityId);
     if (nextIds.length === 0) {
       updateLocations([], null);
-      setShowAllChips(false);
       return;
     }
     const nextEntities = resolveEntitiesForSelectBy(locationsSelectBy.value, nextIds);
@@ -132,7 +130,6 @@ export default function AgentDetailsBody({
       ? (selected && !Array.isArray(selected) ? selected.selectBy : null)
       : selectByMeta;
     updateLocations(list, meta || null);
-    setShowAllChips(false);
     setShowLocations(false);
   };
 
@@ -151,9 +148,7 @@ export default function AgentDetailsBody({
   }
 
   const chipSource = locationsSelectBy ? selectByEntities : locations;
-  const visibleChips = showAllChips
-    ? chipSource
-    : chipSource.slice(0, VISIBLE_COUNT);
+  const visibleChips = chipSource.slice(0, VISIBLE_COUNT);
   const overflowCount = chipSource.length - VISIBLE_COUNT;
 
   const locationsField = (
@@ -217,9 +212,13 @@ export default function AgentDetailsBody({
               </span>
             ))}
           </div>
-
-          {!showAllChips && overflowCount > 0 && (
-            <button className={styles.moreLink} type="button" onClick={() => setShowAllChips(true)}>
+          {overflowCount > 0 && (
+            <button
+              className={styles.moreLink}
+              type="button"
+              onClick={() => !fieldsLocked && setShowLocations(true)}
+              disabled={fieldsLocked}
+            >
               + {overflowCount} more
             </button>
           )}

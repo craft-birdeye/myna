@@ -70,9 +70,9 @@ import { OverviewV2Screen } from './screens/OverviewV2Screen'
 import { OverviewV2_1Screen } from './screens/OverviewV2_1Screen'
 import { OverviewV3Screen } from './screens/OverviewV3Screen'
 import logoSrc from './assets/birdeye-logo.svg'
-import jayIcon from './assets/icon-jay.svg'
-import mynaIcon from './assets/icon-myna.svg'
-import robinIcon from './assets/icon-robin.svg'
+import jayIcon from '@icons/Jay.svg'
+import mynaIcon from '@icons/Myna.svg'
+import robinIcon from '@icons/Robin.svg'
 import {
   FigmaIconOverview,
   FigmaIconInbox,
@@ -86,6 +86,7 @@ import {
   FigmaIconSurveys,
   FigmaIconTicketing,
   FigmaIconInsights,
+  FigmaIconCompetitors,
   FigmaIconReports,
   FigmaIconContacts,
   FigmaIconRecommendations,
@@ -112,20 +113,22 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'marketing',
-    header: 'Marketing',
+    header: 'Jay • Marketing',
+    headerIcon: jayIcon,
     items: [
-      { id: 'search',               label: 'AI Search',               icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
-      { id: 'listings',             label: 'Listings AI',             icon: <FigmaIconListings size={ICON_SIZE} />,        kind: 'element' },
-      { id: 'reviews',              label: 'Reviews AI',              icon: <FigmaIconReviews size={ICON_SIZE} />,         kind: 'element' },
-      { id: 'social',               label: 'Social AI',               icon: <FigmaIconSocial size={ICON_SIZE} />,          kind: 'element' },
-      { id: 'content-hub',          label: 'Content Hub',             icon: <FigmaIconContentHub size={ICON_SIZE} />,      kind: 'element' },
-      { id: 'referral',             label: 'Referral',                icon: <FigmaIconReferrals size={ICON_SIZE} />,       kind: 'element' },
-      { id: 'marketing-automation', label: 'Marketing Automation AI', icon: <FigmaIconCampaigns size={ICON_SIZE} />,       kind: 'element' },
+      { id: 'search',               label: 'AI Search',              icon: <FigmaIconRecommendations size={ICON_SIZE + 2} />, kind: 'element' },
+      { id: 'listings',             label: 'Listings',               icon: <FigmaIconListings size={ICON_SIZE} />,           kind: 'element' },
+      { id: 'reviews',              label: 'Reviews',                icon: <FigmaIconReviews size={ICON_SIZE} />,            kind: 'element' },
+      { id: 'social',               label: 'Social',                 icon: <FigmaIconSocial size={ICON_SIZE} />,             kind: 'element' },
+      { id: 'content-hub',          label: 'Content hub',            icon: <FigmaIconContentHub size={ICON_SIZE} />,         kind: 'element' },
+      { id: 'marketing-automation', label: 'Marketing Automation',   icon: <FigmaIconCampaigns size={ICON_SIZE} />,          kind: 'element' },
+      { id: 'referral',             label: 'Referrals',              icon: <FigmaIconReferrals size={ICON_SIZE} />,          kind: 'element' },
     ],
   },
   {
     id: 'operations',
-    header: 'Operations',
+    header: 'Myna • Operations',
+    headerIcon: mynaIcon,
     items: [
       { id: 'inbox',     label: 'Inbox',      icon: <FigmaIconInbox size={ICON_SIZE} />,        kind: 'element' },
       { id: 'frontdesk', label: 'Front desk', icon: <FigmaIconFrontDesk size={ICON_SIZE} />, kind: 'element' },
@@ -133,18 +136,15 @@ const RAIL_GROUPS: RailGroup[] = [
   },
   {
     id: 'cx',
-    header: 'Customer experience',
+    header: 'Robin • Customer experience',
+    headerIcon: robinIcon,
     items: [
-      { id: 'surveys',   label: 'Surveys AI',  icon: <FigmaIconSurveys size={ICON_SIZE} />,   kind: 'element' },
-      { id: 'ticketing', label: 'Ticketing',   icon: <FigmaIconTicketing size={ICON_SIZE} />, kind: 'element' },
-      { id: 'insights',  label: 'Insights AI', icon: <FigmaIconInsights size={ICON_SIZE} />,  kind: 'element' },
-    ],
-  },
-  {
-    id: 'footer',
-    items: [
-      { id: 'reports',  label: 'Reports',  icon: <FigmaIconReports size={ICON_SIZE} />,  kind: 'element' },
-      { id: 'patients', label: 'Patients', icon: <FigmaIconContacts size={ICON_SIZE} />, kind: 'element' },
+      { id: 'surveys',     label: 'Surveys',     icon: <FigmaIconSurveys size={ICON_SIZE} />,     kind: 'element' },
+      { id: 'ticketing',   label: 'Ticketing',   icon: <FigmaIconTicketing size={ICON_SIZE} />,   kind: 'element' },
+      { id: 'insights',    label: 'Insights',    icon: <FigmaIconInsights size={ICON_SIZE} />,    kind: 'element' },
+      { id: 'competitors', label: 'Competitors', icon: <FigmaIconCompetitors size={ICON_SIZE} />, kind: 'element' },
+      { id: 'reports',     label: 'Reports',     icon: <FigmaIconReports size={ICON_SIZE} />,     kind: 'element' },
+      { id: 'patients',    label: 'Patients',    icon: <FigmaIconContacts size={ICON_SIZE} />,    kind: 'element' },
     ],
   },
 ]
@@ -439,15 +439,16 @@ const RAIL_TITLE: Record<string, string> = {
   'overview-v3':         'Overview v3',
   agents:                'Co-workers',
   search:                'AI Search',
-  listings:              'Listings AI',
-  reviews:               'Reviews AI',
-  social:                'Social AI',
-  'content-hub':         'Content Hub',
-  referral:              'Referral',
-  'marketing-automation':'Marketing Automation AI',
-  surveys:               'Surveys AI',
+  listings:              'Listings',
+  reviews:               'Reviews',
+  social:                'Social',
+  'content-hub':         'Content hub',
+  referral:              'Referrals',
+  'marketing-automation':'Marketing Automation',
+  surveys:               'Surveys',
   ticketing:             'Ticketing',
-  insights:              'Insights AI',
+  insights:              'Insights',
+  competitors:           'Competitors',
   reports:               'Reports',
   patients:              'Patients',
 }
@@ -506,6 +507,7 @@ const RAIL_ID_TO_SLUG: Record<string, string> = {
   surveys: 'surveys',
   ticketing: 'ticketing',
   insights: 'insights',
+  competitors: 'competitors',
   reports: 'reports',
   patients: 'patients',
   settings: 'settings',
@@ -796,6 +798,13 @@ export function App() {
     railActive !== 'search' &&
     railActive !== 'social'
 
+  /** Response agents (exploration) create — full-bleed, no L1 rail or global TopBar. */
+  const hideAppChromeForExplorationCreate =
+    isAgentSetupActive && isResponseAgentsExplorationNav(navActive)
+  /** Both full-bleed shells drop the L1 rail + global TopBar: the exploration create flow
+   *  and the Full canvas workflow editor. They differ only in the gutter/card backgrounds. */
+  const hideAppChrome = hideAppChromeForExplorationCreate || isFullCanvasWorkflowEdit
+
   return (
     <ProcedureStoreProvider>
       <AgentSystemPromptStoreProvider>
@@ -814,8 +823,8 @@ export function App() {
       <RecommendationOverridesStoreProvider>
       <div className="h-screen w-screen flex overflow-hidden bg-surface-shell text-text-primary">
 
-        {/* ── L1 Icon rail — omitted while editing the Full canvas workflow ── */}
-        {!isFullCanvasWorkflowEdit && (
+        {/* ── L1 Icon rail — omitted by both full-bleed shells ── */}
+        {!hideAppChrome && (
           <IconRail
             logoSrc={logoSrc}
             brand={PRODUCT_BRAND[activeProduct]}
@@ -853,8 +862,8 @@ export function App() {
         {/* ── Right column ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* ── Global TopBar — omitted while editing the Full canvas workflow ── */}
-          {!isFullCanvasWorkflowEdit && (
+          {/* ── Global TopBar ── same bg as L1 rail so they look merged; omitted by both full-bleed shells */}
+          {!hideAppChrome && (
             <header className="flex h-[48px] shrink-0 items-center justify-between px-4 bg-surface-shell rounded-tr-lg">
               <span className="text-base text-text-primary" style={{ fontWeight: 400 }}>
                 {moduleTitle}
@@ -899,11 +908,24 @@ export function App() {
             </header>
           )}
 
-          {/* ── Gutter row — gray bg, padding exposes the rounded card (dropped for Full canvas edge-to-edge) ── */}
-          <div className={`flex-1 flex min-h-0 overflow-hidden bg-surface-shell ${isFullCanvasWorkflowEdit ? '' : 'pr-[10px] pb-[10px]'}`}>
+          {/* ── Gutter row — gray bg, padding exposes the rounded card.
+              Exploration create goes white + flush; Full canvas keeps the shell bg but drops the padding. ── */}
+          <div
+            className={
+              hideAppChromeForExplorationCreate
+                ? 'flex min-h-0 flex-1 overflow-hidden bg-surface'
+                : `flex-1 flex min-h-0 overflow-hidden bg-surface-shell${isFullCanvasWorkflowEdit ? '' : ' pr-[10px] pb-[10px]'}`
+            }
+          >
 
-            {/* ── White rounded card (L2 nav + main content) — square/borderless for Full canvas edge-to-edge ── */}
-            <div className={`flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden ${isFullCanvasWorkflowEdit ? '' : 'rounded-lg border border-border'}`}>
+            {/* ── White rounded card (L2 nav + main content) — square/borderless for both full-bleed shells ── */}
+            <div
+              className={
+                hideAppChromeForExplorationCreate
+                  ? 'flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-surface'
+                  : `flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden${isFullCanvasWorkflowEdit ? '' : ' rounded-lg border border-border'}`
+              }
+            >
 
               {/* L2 SideNav — frontdesk modules, or Reviews AI's own section list */}
               {showL2 && (
@@ -1148,6 +1170,25 @@ export function App() {
                               setPendingAgentInstanceView(editorReturnView)
                               setEditorReturnView(null)
                             }
+                            setWizardAgentDraft(null)
+                            setWorkflowAiAssistOpen(false)
+                            setWorkflowAiCreateFullscreen(false)
+                            setWorkflowAiBuilderPanelOpen(false)
+                            setWorkflowLhsPreferAiTab(false)
+                          }}
+                          onSaveAgent={(published, payload) => {
+                            if (!published) return
+                            const name =
+                              (typeof payload?.name === 'string' && payload.name.trim())
+                              || editingAgentName
+                              || 'Agent'
+                            setAgentToastMessage(`"${name}" has been activated successfully.`)
+                            setAgentToastVisible(true)
+                            // Land on the agents card list (not the instance return view).
+                            setEditingAgentName(null)
+                            setEditingAgentStatus(null)
+                            setEditorReturnView(null)
+                            setPendingAgentInstanceView(null)
                             setWizardAgentDraft(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)

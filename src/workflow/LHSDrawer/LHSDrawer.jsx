@@ -328,6 +328,7 @@ export const HEALTHCARE_TASK_SUB_ITEMS = {
       'Initiate voice call',
       'Send text during call',
       'Send response',
+      'Update state',
     ],
   },
   Appointment: {
@@ -827,14 +828,14 @@ export const BRANCH_VARIANT_ITEMS = [
 ];
 
 export const DELAY_VARIANT_ITEMS = [
-  { label: 'Set amount of time', description: 'Pause the workflow for a fixed duration before continuing.' },
-  { label: 'Calendar date', description: 'Wait until a specific calendar date to continue.' },
-  { label: 'Update in the date field', description: 'Wait until a date stored on the contact or record.' },
-  { label: 'Day of the week', description: 'Wait until a specific day of the week to continue.' },
-  { label: 'Specific time of the day', description: 'Wait until a set time of day before continuing.' },
-  { label: 'Optimal send time and day', description: 'Wait until the best predicted send time and day for this contact.' },
-  { label: 'Event occurs', description: 'Wait until a specific event happens on the contact or record.' },
-  { label: 'DND window ends', description: "Wait until the contact's do-not-disturb window ends before continuing." },
+  { label: 'Set amount of time', description: 'Pauses the workflow for a fixed duration before continuing' },
+  { label: 'Calendar date', description: 'Waits until a specific calendar date to continue' },
+  { label: 'Update in the date field', description: 'Waits until a date stored on the contact or record' },
+  { label: 'Day of the week', description: 'Waits until a specific day of the week to continue' },
+  { label: 'Specific time of the day', description: 'Waits until a set time of day before continuing' },
+  { label: 'Best date and time to send', description: 'Waits until the best predicted send time and day for this contact' },
+  { label: 'Event occurs', description: 'Waits until a specific event happens on the contact or record' },
+  { label: 'DND ends', description: "Waits until the contact's do-not-disturb window ends before continuing" },
 ];
 
 /** Compact card variants (label only) used by the tabbed accordion's `TriggerGroup` rows. */
@@ -854,10 +855,31 @@ export const DELAY_VARIANT_PRESETS = {
   'Update in the date field': 'date-property',
   'Day of the week': 'day-of-week',
   'Specific time of the day': 'time-of-day',
-  'Optimal send time and day': 'optimal-send-time',
+  'Best date and time to send': 'optimal-send-time',
   'Event occurs': 'event-occurs',
-  'DND window ends': 'dnd-window-end',
+  'DND ends': 'dnd-window-end',
 };
+
+const DELAY_VARIANT_DESCRIPTION_BY_OPTION = Object.fromEntries(
+  DELAY_VARIANT_ITEMS.map((it) => [DELAY_VARIANT_PRESETS[it.label], it.description]),
+);
+const DELAY_VARIANT_DESCRIPTION_BY_LABEL = Object.fromEntries(
+  DELAY_VARIANT_ITEMS.map((it) => [it.label, it.description]),
+);
+
+/** Palette blurb for a delay variant — used on the canvas card so it matches the LHS. */
+export function delayVariantDescription({ delayOption, variantLabel } = {}) {
+  if (delayOption && DELAY_VARIANT_DESCRIPTION_BY_OPTION[delayOption]) {
+    return DELAY_VARIANT_DESCRIPTION_BY_OPTION[delayOption];
+  }
+  if (variantLabel && DELAY_VARIANT_DESCRIPTION_BY_LABEL[variantLabel]) {
+    return DELAY_VARIANT_DESCRIPTION_BY_LABEL[variantLabel];
+  }
+  return '';
+}
+
+export const DELAY_GENERIC_DESCRIPTION = 'Waits until a specific time or event';
+
 
 /** Controls list rendered in the LHS drawer's "Controls" accordion — Branch/Delay expand
  *  inline (via `TriggerGroup`) to their variant cards above; everything else in

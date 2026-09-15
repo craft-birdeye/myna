@@ -498,6 +498,11 @@
   border-radius: 4px 0 0 4px;
 }
 
+.ab-publish-split__main--solo {
+  border-radius: 4px;
+  padding: 0 16px;
+}
+
 .ab-publish-split__chevron {
   width: 32px;
   padding: 0;

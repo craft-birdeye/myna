@@ -83,7 +83,7 @@
 .prompt-chip--link       { border-color: #f48fb1; }
 .prompt-chip--address    { border-color: #9fa8da; }
 .prompt-chip--product    { border-color: #c8e6c9; }
-.prompt-chip--tool       { border-color: #cccccc; background: #fafafa; }
+.prompt-chip--tool       { border-color: #cccccc; background: #fafafa; cursor: pointer; }
 
 .prompt-chip-swatch--attachment { background: #e8f5e9; border-right-color: #c8e6c9; }
 .prompt-chip-swatch--link       { background: #fce4ec; border-right-color: #f48fb1; }

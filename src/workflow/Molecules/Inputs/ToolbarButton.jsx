@@ -18,7 +18,13 @@ export default function ToolbarButton({ icon, tooltip, active, disabled, onClick
       <button
         type="button"
         className={`${toolbarStyles.toolbarBtn} ${active ? toolbarStyles.toolbarBtnActive : ''} ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => {
+          // Keep the contenteditable selection, and stop the event so a
+          // body-portaled dropdown's outside-mousedown listener doesn't close
+          // the menu on the same click that toggles it open.
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         onClick={disabled ? undefined : onClick}
         disabled={disabled}
         aria-label={tooltip}

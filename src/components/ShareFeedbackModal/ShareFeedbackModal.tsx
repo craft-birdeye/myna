@@ -31,12 +31,12 @@ export function ShareFeedbackModal({
   onSubmit,
   initialDetails = '',
   variant = 'coaching',
-  onOpenProductResearchSettings,
+  onOpenProductResearchSettings: _onOpenProductResearchSettings,
 }: ShareFeedbackModalProps) {
   const [details, setDetails] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [canReplyToFeedback, setCanReplyToFeedback] = useState(false)
-  const [wantsProductResearch, setWantsProductResearch] = useState(false)
+  const [canReplyToFeedback, setCanReplyToFeedback] = useState(true)
+  const [wantsProductResearch, setWantsProductResearch] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const nextAttachmentId = useRef(0)
   const attachmentsRef = useRef<Attachment[]>([])
@@ -45,16 +45,16 @@ export function ShareFeedbackModal({
   useEffect(() => {
     if (open) {
       setDetails(initialDetails)
-      setCanReplyToFeedback(false)
-      setWantsProductResearch(false)
+      setCanReplyToFeedback(true)
+      setWantsProductResearch(true)
       setAttachments((prev) => {
         prev.forEach((a) => URL.revokeObjectURL(a.url))
         return []
       })
     } else {
       setDetails('')
-      setCanReplyToFeedback(false)
-      setWantsProductResearch(false)
+      setCanReplyToFeedback(true)
+      setWantsProductResearch(true)
       setAttachments((prev) => {
         prev.forEach((a) => URL.revokeObjectURL(a.url))
         return []
@@ -238,14 +238,7 @@ export function ShareFeedbackModal({
                 className="mt-0.5 size-4 shrink-0 rounded border-border"
               />
               <label htmlFor="share-feedback-product-research" className="cursor-pointer text-body text-text-secondary">
-                I&apos;d like to participate in product research.{' '}
-                <button
-                  type="button"
-                  onClick={() => onOpenProductResearchSettings?.()}
-                  className="text-text-action hover:underline"
-                >
-                  Learn more
-                </button>
+                I&apos;d like to participate in product research.
               </label>
             </div>
           </div>

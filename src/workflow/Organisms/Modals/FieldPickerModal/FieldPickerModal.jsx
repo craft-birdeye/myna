@@ -34,7 +34,7 @@ function firstFieldOnlyCategory(cat) {
 }
 
 const FIELDS_LEARN_MORE_HREF =
-  'https://help.birdeye.com/hc/en-us/articles/fields-in-workflows';
+  'https://support.birdeye.com/en/articles/16880538-ai-agent-variables-glossary'
 
 const WORKFLOW_SECTION_HEADING = 'Output fields from previous steps';
 
@@ -145,7 +145,7 @@ function FieldLeaf({ field, onSelect, insertedText = '' }) {
     <button
       type="button"
       className={`${styles.fieldRow}${showCheck ? ` ${styles.fieldRowAdded}` : ''}`}
-      onClick={() => onSelect?.(field.value, field.name)}
+      onClick={() => onSelect?.(field.value, field.name, field)}
       aria-label={showCheck ? `${field.name} added` : `Add ${field.name}`}
     >
       <FieldChip name={field.name} />
@@ -391,9 +391,16 @@ export default function FieldPickerModal({
   placement = 'dock',
   /** Current prompt text — a field's + shows as a check for as long as its token is in here. */
   insertedText = '',
+  /**
+   * Optional full category list override (e.g. Update-state Add field). When set,
+   * BASE/WORKFLOW catalogs are ignored and only these categories appear.
+   */
+  categories: categoriesProp = null,
 }) {
   const [search, setSearch] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('business');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    () => (Array.isArray(categoriesProp) && categoriesProp[0]?.id) || 'business',
+  );
   const [searchSelectedId, setSearchSelectedId] = useState(null);
   const [pos, setPos] = useState(() => computePosition(anchorEl, placement));
   const [userMoved, setUserMoved] = useState(false);
@@ -403,7 +410,12 @@ export default function FieldPickerModal({
   const rootRef = useRef(null);
   const dragRef = useRef(null);
 
+  const hasCustomCategories = Array.isArray(categoriesProp) && categoriesProp.length > 0;
+
   const categories = useMemo(() => {
+    if (hasCustomCategories) {
+      return categoriesProp.map(normalizeCategory);
+    }
     const base = BASE_CATEGORIES.map(normalizeCategory);
     const all = showTriggerFields ? [...base, ...WORKFLOW_CATEGORIES.map(normalizeCategory)] : base;
     if (!showTriggerFields || completeness !== 'partial') return all;
@@ -413,7 +425,7 @@ export default function FieldPickerModal({
       .map((id) => all.find((cat) => cat.id === id))
       .filter(Boolean)
       .map(firstFieldOnlyCategory);
-  }, [showTriggerFields, completeness]);
+  }, [showTriggerFields, completeness, hasCustomCategories, categoriesProp]);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) ?? categories[0];
   const query = search.trim();
@@ -517,15 +529,15 @@ export default function FieldPickerModal({
     setSearchSelectedId(null);
   };
 
-  const handleSelect = (value, name) => {
-    onSelectField?.(value, name);
+  const handleSelect = (value, name, field) => {
+    onSelectField?.(value, name, field);
   };
 
   useEffect(() => {
-    if (!showTriggerFields && WORKFLOW_CATEGORIES.some((c) => c.id === selectedCategoryId)) {
-      setSelectedCategoryId('business');
+    if (categories.length && !categories.some((c) => c.id === selectedCategoryId)) {
+      setSelectedCategoryId(categories[0].id);
     }
-  }, [showTriggerFields, selectedCategoryId]);
+  }, [categories, selectedCategoryId]);
 
   useLayoutEffect(() => {
     if (userMoved) return;
@@ -707,9 +719,11 @@ export default function FieldPickerModal({
           {baseSidebarCategories.map(renderCategoryButton)}
           {workflowSidebarCategories.length > 0 && (
             <>
-              <div className={styles.sidebarSectionHeading}>
-                {WORKFLOW_SECTION_HEADING}
-              </div>
+              {!hasCustomCategories && (
+                <div className={styles.sidebarSectionHeading}>
+                  {WORKFLOW_SECTION_HEADING}
+                </div>
+              )}
               {workflowSidebarCategories.map(renderCategoryButton)}
             </>
           )}

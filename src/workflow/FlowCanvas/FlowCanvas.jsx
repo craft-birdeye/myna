@@ -5,6 +5,7 @@ import {
   Handle,
   Position,
   BaseEdge,
+  EdgeLabelRenderer,
   getStraightPath,
   useReactFlow,
 } from '@xyflow/react';
@@ -540,46 +541,61 @@ function AddButtonEdge({ id, source, target, sourceX, sourceY, targetX, targetY,
     data?.onDropOnEdge?.(type, label, description);
   }, [data]);
 
+  // Identity → first step: line only (no insert). End owns its own HTML connector.
+  // Every other spine gap gets the same line + add control as EndNode.
   const showAddButton = source !== '__start__' && target !== '__end__' && !data?.hideAddButton;
 
   const isEndEdge = target === '__end__';
+  // Draw the HTML spine connector for every non-end edge so gaps match EndNode
+  // even when the + is suppressed (start edge / after procedures / placeholder).
+  const showMidConnector = !isEndEdge && !viewOnly;
 
   // Grow the connector's drop hit-area whenever a compatible drag is active OR
   // this connector is currently hovered as a drop target. The latter avoids the
   // "Drop here" label being clipped if drag metadata doesn't mark the drag as
   // coming from the LHS.
-  const shouldExpandDropZone = isDraggingFromLHS || isDragOver;
-  const foW = shouldExpandDropZone ? 320 : 56;
-  const foH = shouldExpandDropZone ? 64 : 56;
+  const shouldExpandDropZone = showAddButton && (isDraggingFromLHS || isDragOver);
 
   return (
     <>
       {!isEndEdge && <BaseEdge id={id} path={edgePath} style={style} />}
-      {showAddButton && !viewOnly && (
-        <foreignObject width={foW} height={foH} x={labelX - foW / 2} y={labelY - foH / 2} className="flow-canvas__edge-fo">
+      {showMidConnector && (
+        // HTML overlay (not SVG foreignObject) so the connector sits above the
+        // node layer and matches EndNode — foreignObject was clipped / buried
+        // under cards so mid-flow connectors disappeared.
+        <EdgeLabelRenderer>
           <div
-            className="flow-canvas__edge-add-wrapper"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            className={`flow-canvas__edge-add-wrapper${shouldExpandDropZone ? ' flow-canvas__edge-add-wrapper--drop-expanded' : ''}${!showAddButton ? ' flow-canvas__edge-add-wrapper--line-only' : ''}`}
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              pointerEvents: showAddButton ? 'all' : 'none',
+              zIndex: 1001,
+            }}
+            onDragOver={showAddButton ? handleDragOver : undefined}
+            onDragLeave={showAddButton ? handleDragLeave : undefined}
+            onDrop={showAddButton ? handleDrop : undefined}
           >
-            <AddStepButton
-              isDraggingFromLHS={isDraggingFromLHS}
-              isDragOver={isDragOver}
-              product={data?.product}
-              agentName={data?.agentName}
-              onSelect={handleSelect}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              singleSearch={!!data?.singleAddStepSearch}
-              showPasteOption={!!data?.hasClipboard && !!data?.betweenCards}
-              onPaste={data?.onPasteAtEdge}
-              draftBlocked={!!data?.draftBlocked}
-              onEditDraft={data?.onEditDraft}
-            />
+            <div className="flow-canvas__edge-connector-line" aria-hidden />
+            {showAddButton && (
+              <AddStepButton
+                isDraggingFromLHS={isDraggingFromLHS}
+                isDragOver={isDragOver}
+                product={data?.product}
+                agentName={data?.agentName}
+                onSelect={handleSelect}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                singleSearch={!!data?.singleAddStepSearch}
+                showPasteOption={!!data?.hasClipboard && !!data?.betweenCards}
+                onPaste={data?.onPasteAtEdge}
+                draftBlocked={!!data?.draftBlocked}
+                onEditDraft={data?.onEditDraft}
+              />
+            )}
           </div>
-        </foreignObject>
+        </EdgeLabelRenderer>
       )}
     </>
   );
@@ -959,11 +975,13 @@ function FlowCanvasInner({
     event.dataTransfer.dropEffect = 'copy';
   }, [getNodes, isDraggingFromLHS, draggingLhsKind]);
 
-  // Canvas-wide drop — skip if landed inside a foreignObject (edge buttons handle their own drops)
+  // Canvas-wide drop — skip if landed on an edge/end connector (they handle their own drops)
   const handleDrop = useCallback(
     (event) => {
       event.preventDefault();
       if (event.target.closest('foreignObject')) return;
+      if (event.target.closest('.flow-canvas__edge-add-wrapper')) return;
+      if (event.target.closest('.end-node__add-slot')) return;
       // Dropped on the dedicated trigger placeholder — it handles its own drop.
       if (event.target.closest('.trigger-placeholder')) return;
 

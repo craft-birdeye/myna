@@ -18,6 +18,7 @@ import ProcedureTaskBody from './ProcedureTaskBody';
 import ProcedureDetailBody from './ProcedureDetailBody';
 import VoiceCallTaskBody from './VoiceCallTaskBody';
 import SendResponseTaskBody from './SendResponseTaskBody';
+import UpdateStateTaskBody from './UpdateStateTaskBody';
 import { DraftBlockedOverlay } from '../../../components/DraftBlockedTooltip';
 import { useCardBadge } from '../../../Molecules/Canvas/CardBadgeContext';
 import { getBadgeForVariant } from '../../../Molecules/Canvas/nodeTypeBadges';
@@ -52,6 +53,11 @@ const VARIANTS = {
   },
   sendResponseTask: {
     body: SendResponseTaskBody,
+    showActions: true,
+    showPromptStrength: false,
+  },
+  updateStateTask: {
+    body: UpdateStateTaskBody,
     showActions: true,
     showPromptStrength: false,
   },

@@ -91,6 +91,8 @@ interface WorkflowEditorScreenProps {
    * instance screen must not be restored — the caller should land on the agent list.
    */
   onDeleted?: () => void
+  /** Called after Activate / Save as draft — `published` is true when status becomes Active. */
+  onSaveAgent?: (published: boolean, payload?: Record<string, unknown>) => void
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
@@ -145,6 +147,7 @@ export function WorkflowEditorScreen({
   displayName,
   onClose,
   onDeleted,
+  onSaveAgent,
   product = 'automotive',
   agentStatus = 'Active',
   wizardDraft = null,
@@ -333,6 +336,7 @@ export function WorkflowEditorScreen({
             appTitle={shownName}
             onClose={onClose}
             onDeleted={onDeleted}
+            onSaveAgent={onSaveAgent}
             product={product}
             activeNavId={activeNavId}
             moduleSlug="myna"

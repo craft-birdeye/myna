@@ -37,6 +37,8 @@ import DataType from '../../../Molecules/DataType/DataType';
 import { Tooltip } from '../../../../components/Tooltip/Tooltip';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { getTags, createTag, updateTag, findTagByName } from '../../../services/tagService';
+import { UpdateStateToolDetails } from '../../Panels/RHS/UpdateStateTaskBody';
+import usStyles from '../../Panels/RHS/UpdateStateTaskBody.module.css';
 import {
   getSentiments,
   createSentiment,
@@ -2733,24 +2735,44 @@ export function ToolViewerContent({
   /** Live field-value updates (used with embedded mode). */
   onFieldValuesChange,
 }) {
-  const [fieldSnapshot, setFieldSnapshot] = useState(() =>
-    initialValues && Object.keys(initialValues).length > 0
+  const isUpdateStateTool = tool?.id === 'update-state' || tool?.name === 'Update state';
+
+  const buildUpdateStateSnapshot = useCallback((vals) => {
+    const base = vals && typeof vals === 'object' ? vals : {};
+    return {
+      toolName: base.toolName ?? base.taskName ?? tool?.name ?? 'Update state',
+      description:
+        base.description
+        ?? tool?.description
+        ?? 'Updates one or more dynamic variables when this step runs — literal values, references, or LLM-evaluated instructions.',
+      stateUpdates: Array.isArray(base.stateUpdates) ? base.stateUpdates : [],
+    };
+  }, [tool?.name, tool?.description]);
+
+  const [fieldSnapshot, setFieldSnapshot] = useState(() => {
+    if (isUpdateStateTool) return buildUpdateStateSnapshot(initialValues);
+    return initialValues && Object.keys(initialValues).length > 0
       ? { ...initialValues }
-      : buildInitialSnapshot(tool?.fields)
-  );
+      : buildInitialSnapshot(tool?.fields);
+  });
 
   useEffect(() => {
+    if (isUpdateStateTool) {
+      setFieldSnapshot(buildUpdateStateSnapshot(initialValues));
+      return;
+    }
     setFieldSnapshot(
       initialValues && Object.keys(initialValues).length > 0
         ? { ...initialValues }
         : buildInitialSnapshot(tool?.fields)
     );
-  }, [tool?.id]);
+  }, [tool?.id, isUpdateStateTool, buildUpdateStateSnapshot]);
 
   const effectiveSnapshot = useMemo(() => {
+    if (isUpdateStateTool) return buildUpdateStateSnapshot(fieldSnapshot);
     if (Object.keys(fieldSnapshot).length > 0) return fieldSnapshot;
     return buildInitialSnapshot(tool?.fields);
-  }, [fieldSnapshot, tool?.fields]);
+  }, [fieldSnapshot, tool?.fields, isUpdateStateTool, buildUpdateStateSnapshot]);
 
   // Mirror of the latest snapshot so the next value can be derived without a
   // state updater. React may run an updater during the render phase, and
@@ -2769,13 +2791,42 @@ export function ToolViewerContent({
   if (!tool) return null;
 
   const handleSave = () => {
-    if (onSave) onSave(tool, fieldSnapshot);
+    if (onSave) onSave(tool, isUpdateStateTool ? effectiveSnapshot : fieldSnapshot);
     else onClose?.();
   };
 
   const hasFields = Array.isArray(tool.fields) && tool.fields.length > 0;
 
-  const fieldsBody = (
+  const updateStateBody = (
+    <div className={`${embedded ? styles.embeddedBody : styles.body} ${usStyles.tabContent}`}>
+      <FormInput
+        name="toolName"
+        type="text"
+        label="Tool name"
+        placeholder="Enter name"
+        value={effectiveSnapshot.toolName ?? ''}
+        onChange={(e) => handleValueChange('toolName', e.target.value)}
+        required
+      />
+      <TextArea
+        name="description"
+        label="Description"
+        placeholder="Enter"
+        value={effectiveSnapshot.description ?? ''}
+        onChange={(e) => handleValueChange('description', e.target.value)}
+        required
+        noFloatingLabel
+      />
+      <UpdateStateToolDetails
+        showToolCard={false}
+        stateUpdates={effectiveSnapshot.stateUpdates ?? []}
+        onStateUpdatesChange={(next) => handleValueChange('stateUpdates', next)}
+        toolName={effectiveSnapshot.toolName}
+      />
+    </div>
+  );
+
+  const fieldsBody = isUpdateStateTool ? updateStateBody : (
     <div className={embedded ? styles.embeddedBody : styles.body}>
       {hasFields ? (
         tool.fields

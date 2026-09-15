@@ -8,6 +8,28 @@ import type { IconRailProps, RailGroup, RailNavItem } from './IconRail.types'
 // Centering: (52 - 24) / 2 = 14px padding on each side.
 const RAIL_ICON_PX = 14
 
+function GroupHeader({
+  header,
+  headerIcon,
+}: {
+  header: string
+  headerIcon?: string
+}) {
+  return (
+    <div
+      className="flex h-5 w-full min-h-0 items-center gap-sm overflow-hidden"
+      style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
+    >
+      {headerIcon ? (
+        <img src={headerIcon} alt="" className="size-5 shrink-0 rounded-full" aria-hidden />
+      ) : null}
+      <span className="min-w-0 flex-1 truncate text-left text-[11px] uppercase tracking-wide text-text-tertiary">
+        {header}
+      </span>
+    </div>
+  )
+}
+
 // ─── Overflow layout computation ─────────────────────────────────────────────
 
 interface OverflowEntry {
@@ -84,7 +106,7 @@ function NavTab({
       aria-label={item.label}
       onClick={() => onSelect?.(item.id)}
       style={{ paddingLeft: grouped ? 12 : RAIL_ICON_PX, paddingRight: grouped ? 12 : RAIL_ICON_PX }}
-      className="group/navtab relative flex h-9 w-full items-center rounded-sm"
+      className="group/navtab relative flex h-7 w-full items-center rounded-md"
     >
       {/* Row highlight — inset 8px each side so hover and selected share the same gutter. */}
       <span
@@ -139,7 +161,7 @@ function BottomIconButton({
       aria-label={label}
       onClick={onClick}
       style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
-      className={`flex h-9 w-full items-center rounded-sm transition-colors ${
+      className={`flex h-7 w-full items-center rounded-md transition-colors ${
         active ? '' : 'hover:bg-black/[0.04]'
       }`}
     >
@@ -435,7 +457,7 @@ export function IconRail({
     <div className={`icon-rail-outer ${isExpanding ? 'group' : ''} relative h-full w-[52px] shrink-0 overflow-visible`}>
       <nav
         className={`absolute inset-y-0 left-0 z-[70] flex flex-col overflow-hidden bg-surface-shell transition-[left,width,background-color,box-shadow] duration-200 ${
-          isExpanding ? 'w-[52px] hover:left-2 hover:w-[260px] hover:rounded-lg hover:bg-surface hover:shadow-dropdown' : 'w-[52px]'
+          isExpanding ? 'w-[52px] hover:left-2 hover:w-[262px] hover:rounded-lg hover:bg-surface hover:shadow-dropdown' : 'w-[52px]'
         }`}
       >
         {/* ── Logo / product switcher ── */}
@@ -447,9 +469,8 @@ export function IconRail({
             className="flex h-full w-full items-center gap-md px-[12px] transition-colors hover:bg-black/5"
           >
             <img src={logoSrc} alt="" className="size-7 shrink-0" />
-            {/* No chevron — dropdown is hidden until clicked, giving no visual cue */}
             <span className="flex min-w-0 flex-1 items-center opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-              <span className="truncate text-h3 text-text-primary">Birdeye</span>
+              <span className="truncate text-h3 text-text-primary">{brand}</span>
             </span>
           </button>
 
@@ -486,16 +507,12 @@ export function IconRail({
             <div key={group.id} className="flex flex-col gap-[6px]">
               {group.header && (
                 <div className="grid grid-rows-[0fr] opacity-0 transition-all duration-200 group-hover:grid-rows-[1fr] group-hover:opacity-100">
-                  <div
-                    className="flex min-h-0 items-center overflow-hidden"
-                    style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
-                  >
-                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-muted">
-                      {group.header}
-                    </p>
+                  <div className="min-h-0 overflow-hidden">
+                    <GroupHeader header={group.header} headerIcon={group.headerIcon} />
                   </div>
                 </div>
               )}
+              {/* Narrow rail always shows icons (section headers are hidden). */}
               {group.items.map((item) => (
                 <NavTab key={item.id} item={item} active={item.id === activeId} onSelect={onSelect} />
               ))}
@@ -519,30 +536,23 @@ export function IconRail({
         </div>
 
         {/* ── EXPANDED: all groups, scrollable, no More button (shown only when hovered-open) ── */}
-        <div className="l1-rail-nav hidden flex-1 flex-col gap-[6px] overflow-y-auto py-[6px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden group-hover:flex">
+        <div className="l1-rail-nav hidden flex-1 flex-col gap-md overflow-y-auto py-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden group-hover:flex">
           {groups.map((group) => (
-            <div key={group.id} className="flex flex-col gap-[6px]">
-              {group.header && (
-                <div className="grid grid-rows-[1fr]">
-                  <div
-                    className="flex min-h-0 items-center overflow-hidden"
-                    style={{ paddingLeft: RAIL_ICON_PX, paddingRight: RAIL_ICON_PX }}
-                  >
-                    <p className="min-w-0 truncate text-[10px] font-normal uppercase tracking-widest text-text-muted">
-                      {group.header}
-                    </p>
+              <div key={group.id} className="flex flex-col gap-sm">
+                {group.header && (
+                  <div className="grid grid-rows-[1fr]">
+                    <GroupHeader header={group.header} headerIcon={group.headerIcon} />
                   </div>
-                </div>
-              )}
-              {group.items.map((item) => (
-                <NavTab key={item.id} item={item} active={item.id === activeId} onSelect={onSelect} />
-              ))}
-            </div>
+                )}
+                {group.items.map((item) => (
+                  <NavTab key={item.id} item={item} active={item.id === activeId} onSelect={onSelect} />
+                ))}
+              </div>
           ))}
         </div>
 
         {/* ── Bottom — Settings, Help, Profile ── */}
-        <div className="l1-rail-nav flex shrink-0 flex-col gap-[6px] py-[6px]">
+        <div className="l1-rail-nav flex shrink-0 flex-col gap-sm border-t border-border py-md">
           <BottomIconButton
             label="Settings"
             active={activeId === 'settings'}
