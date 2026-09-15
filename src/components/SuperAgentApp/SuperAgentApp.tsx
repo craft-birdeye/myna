@@ -10,10 +10,11 @@ import { SuperAgentAppProps } from './SuperAgentApp.types'
 //     user" choice or the TopBar AppSwitcher — the "standalone app" story. Left via the
 //     prototype's own "Back to Birdeye" action, which posts a message back here (see
 //     onBackToBirdeye).
-//   - `mode="embedded"` — sized to fill its container (`?chrome=none` hides the
-//     prototype's own left nav), used by the L1 rail item, which draws its own L2
-//     SideNav and behaves like any other module — the "Super agent as one more module"
-//     story. Its L2 drives the iframe via `navigate`.
+//   - `mode="embedded"` — sized to fill its container (`?stage=app` skips straight to
+//     the workspace instead of the prototype's own marketing-site boot screen;
+//     `?chrome=none` hides the prototype's own left nav), used by the L1 rail item,
+//     which draws its own L2 SideNav and behaves like any other module — the "Super
+//     agent as one more module" story. Its L2 drives the iframe via `navigate`.
 //
 // `enter` fires once each time the host opens/enters Super agent, and its `isNewUser`
 // flag picks which of the prototype's own two entry functions to mirror:
@@ -142,7 +143,7 @@ export function SuperAgentApp({
       <iframe
         ref={frameRef}
         onLoad={handleLoad}
-        src={`${import.meta.env.BASE_URL}super-agent-prototype.html${mode === 'embedded' ? `?chrome=none${context ? `&context=${context}` : ''}` : ''}`}
+        src={`${import.meta.env.BASE_URL}super-agent-prototype.html${mode === 'embedded' ? `?stage=app&chrome=none${context ? `&context=${context}` : ''}` : ''}`}
         title={title}
         className="h-full w-full border-0"
       />
