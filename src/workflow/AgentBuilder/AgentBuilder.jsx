@@ -59,6 +59,8 @@ import {
   FLOW_TRIGGER_PLACEHOLDER_HEIGHT,
 } from '../flowLayoutConstants';
 import { computeLoopCanvasHeight, computeLoopBodyHeight } from '../Molecules/Canvas/LoopNode/LoopNode';
+import { useCardBadge } from '../Molecules/Canvas/CardBadgeContext';
+import { getBadgeForSection } from '../Molecules/Canvas/nodeTypeBadges';
 import iconRrTrigger from '../../assets/rr-chrome/icon-trigger.svg';
 import iconRrTasks from '../../assets/rr-chrome/icon-tasks.svg';
 import iconRrProcedures from '../../assets/rr-chrome/icon-procedures.svg';
@@ -1326,6 +1328,9 @@ export default function AgentBuilder({
   /** Opens the workflow coach tour on mount (Response agents coach cue nav). */
   autoOpenCoachTour = false,
 }) {
+  /** Full canvas: the floater rail buttons wear the canvas node-badge colours. */
+  const fullCanvasChrome = useCardBadge();
+
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
   const urlAgentSlug = propAgentSlug || '';
@@ -4543,6 +4548,18 @@ export default function AgentBuilder({
                             <span className="rr-chrome-left-floater__icon" style={{ color: item.color }} aria-hidden>
                               <Icon name={item.icon} size={20} fill />
                             </span>
+                          ) : fullCanvasChrome && getBadgeForSection(item.id) ? (
+                            /* Full canvas: same asset, but masked so it takes the node badge's
+                               accent instead of the colour baked into the file. */
+                            <span
+                              className="rr-chrome-left-floater__icon rr-chrome-left-floater__icon--mask"
+                              style={{
+                                color: getBadgeForSection(item.id).color,
+                                WebkitMaskImage: `url("${item.src}")`,
+                                maskImage: `url("${item.src}")`,
+                              }}
+                              aria-hidden
+                            />
                           ) : (
                             <img src={item.src} alt="" width={20} height={20} className="rr-chrome-left-floater__icon" />
                           )}

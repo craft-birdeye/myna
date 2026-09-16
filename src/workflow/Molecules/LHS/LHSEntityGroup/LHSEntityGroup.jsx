@@ -212,7 +212,13 @@ export default function LHSEntityGroup({
             onDragStart={(e) => !viewOnly && !isDisabled && !dragBlocked && (readOnly || editingIdx !== idx) && handleDragStart(e, item)}
             aria-disabled={isDisabled || undefined}
           >
-            {icon ? (
+            {/* `Glyph` (a stroked SVG component) wins over the Material ligature, so a card
+                can carry either. Full canvas uses it for the Sub-agent bot icon. */}
+            {item?.Glyph ? (
+              <span className="lhs-entity-group__item-icon lhs-entity-group__item-icon--svg" aria-hidden>
+                <item.Glyph size={18} />
+              </span>
+            ) : icon ? (
               <span className="material-symbols-outlined lhs-entity-group__item-icon" aria-hidden>
                 {icon}
               </span>

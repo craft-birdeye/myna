@@ -116,6 +116,15 @@
   pointer-events: none;
 }
 
+/* Matches the Material glyph's box above, so swapping one for the other doesn't shift the
+   button's centring. `display: block` drops the inline baseline gap an <svg> would add. */
+.canvas-node__hover-action .canvas-node__hover-action-svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
 .canvas-node--hover {
   border-color: #ccd5e4;
   box-shadow: 0px 4px 16px 0px rgba(33, 33, 33, 0.12);
