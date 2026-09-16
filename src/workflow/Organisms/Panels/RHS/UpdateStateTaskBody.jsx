@@ -4,6 +4,7 @@ import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
 import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import { subscribeToCustomTools } from '../../../services/agentService';
+import { Checkbox } from '../../Drawers/shared/DrawerShared';
 import AddStateFieldModal from '../../Modals/AddStateFieldModal/AddStateFieldModal.jsx';
 import styles from './UpdateStateTaskBody.module.css';
 
@@ -33,7 +34,7 @@ export function createEmptyStateUpdate(overrides = {}) {
     variable: '',
     fieldType: '',
     instructions: '',
-    global: false,
+    fieldValue: '',
     ...overrides,
   };
 }
@@ -44,6 +45,7 @@ export function defaultUpdateStateDetails() {
     description: 'Update dynamic variables when this step runs',
     selectedTools: [UPDATE_STATE_TOOL_ID],
     stateUpdates: [],
+    fieldsGlobal: false,
   };
 }
 
@@ -54,6 +56,8 @@ export function defaultUpdateStateDetails() {
 export function UpdateStateToolDetails({
   stateUpdates = [],
   onStateUpdatesChange,
+  fieldsGlobal = false,
+  onFieldsGlobalChange,
   toolName = 'Update state',
   viewOnly = false,
   onRemoveTool,
@@ -93,11 +97,17 @@ export function UpdateStateToolDetails({
     setEditingUpdate(null);
   };
 
-  const handleModalAdd = ({ fieldName, fieldType, description: instructions, global: isGlobal }) => {
+  const handleModalAdd = ({ fieldName, fieldType, description: instructions, fieldValue }) => {
     if (editingUpdate) {
       persistUpdates(stateUpdates.map((u) => (
         u.id === editingUpdate.id
-          ? { ...u, variable: fieldName, fieldType, instructions, global: Boolean(isGlobal) }
+          ? {
+            ...u,
+            variable: fieldName,
+            fieldType,
+            instructions: instructions || '',
+            fieldValue: fieldValue || '',
+          }
           : u
       )));
       return;
@@ -107,8 +117,8 @@ export function UpdateStateToolDetails({
       createEmptyStateUpdate({
         variable: fieldName,
         fieldType,
-        instructions,
-        global: Boolean(isGlobal),
+        instructions: instructions || '',
+        fieldValue: fieldValue || '',
       }),
     ]);
   };
@@ -180,6 +190,16 @@ export function UpdateStateToolDetails({
             ))}
           </div>
         )}
+
+        {!viewOnly && (
+          <div className={styles.globalCheckWrap}>
+            <Checkbox
+              checked={Boolean(fieldsGlobal)}
+              onChange={(next) => onFieldsGlobalChange?.(next)}
+              label="Make these fields globally available"
+            />
+          </div>
+        )}
       </div>
 
       {modalOpen && (
@@ -206,11 +226,13 @@ export default function UpdateStateTaskBody({
       ? initialValues.stateUpdates
       : defaults.stateUpdates),
   );
+  const [fieldsGlobal, setFieldsGlobal] = useState(Boolean(initialValues.fieldsGlobal));
   const [activeTab, setActiveTab] = useState('toolDetails');
 
   useEffect(() => {
     setTaskName(initialValues.taskName ?? defaults.taskName);
     setDescription(initialValues.description ?? defaults.description);
+    setFieldsGlobal(Boolean(initialValues.fieldsGlobal));
     if (Array.isArray(initialValues.stateUpdates) && initialValues.stateUpdates.length) {
       setStateUpdates(initialValues.stateUpdates);
     }
@@ -220,6 +242,11 @@ export default function UpdateStateTaskBody({
   const persistUpdates = (next) => {
     setStateUpdates(next);
     onFieldChange?.('stateUpdates', next);
+  };
+
+  const handleFieldsGlobal = (next) => {
+    setFieldsGlobal(next);
+    onFieldChange?.('fieldsGlobal', next);
   };
 
   const handleTaskName = (e) => {
@@ -264,6 +291,8 @@ export default function UpdateStateTaskBody({
       <UpdateStateToolDetails
         stateUpdates={stateUpdates}
         onStateUpdatesChange={persistUpdates}
+        fieldsGlobal={fieldsGlobal}
+        onFieldsGlobalChange={handleFieldsGlobal}
         viewOnly={viewOnly}
       />
     </div>

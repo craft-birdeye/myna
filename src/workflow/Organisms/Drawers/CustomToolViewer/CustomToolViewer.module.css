@@ -15,7 +15,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  gap: 12px; /* spacing/md */
+  padding: 24px 24px 16px; /* Aero drawer header */
   flex-shrink: 0;
   background: #fff;
   position: sticky;
@@ -26,27 +27,27 @@
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px; /* spacing/sm */
   min-width: 0;
 }
 
 .backBtn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px; /* Corner Radius/sm */
   cursor: pointer;
-  color: #555;
+  color: #303030; /* text/icon */
   padding: 0;
   flex-shrink: 0;
 }
 
 .backBtn:hover {
-  background: #f5f5f5;
+  background: #f2f4f7; /* surface/hover */
 }
 
 .backBtn .material-symbols-outlined {
@@ -54,10 +55,10 @@
 }
 
 .headerTitle {
-  font-size: 18px;
+  font-size: 18px; /* Heading 3 */
   font-weight: 400;
-  color: #212121;
-  line-height: 24px;
+  color: #0d0d12; /* text/primary */
+  line-height: 26px;
   letter-spacing: -0.36px;
   white-space: nowrap;
   overflow: hidden;
@@ -67,12 +68,14 @@
 
 .saveBtn {
   height: 36px;
-  padding: 0 20px;
-  background: #1976d2;
+  padding: 0 16px; /* spacing/lg */
+  background: #1976d2; /* primary */
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 4px; /* Corner Radius/sm */
+  font-size: 14px; /* Body 2 */
+  line-height: 20px;
+  letter-spacing: -0.28px;
   font-weight: 400;
   font-family: 'Roboto', sans-serif;
   cursor: pointer;
@@ -81,7 +84,7 @@
 }
 
 .saveBtn:hover {
-  background: #1565c0;
+  background: #1565c0; /* primary/hover */
 }
 
 .headerRight {
@@ -151,13 +154,13 @@
   color: #666;
 }
 
-/* ─── Body: free-flowing fields, 20px between each ─── */
+/* ─── Body: free-flowing fields, Aero 24px stack ─── */
 
 .body {
-  padding: 24px;
+  padding: 0 24px 32px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px; /* spacing/2xl */
 }
 
 /* Inline embed inside Action RHS (Option 2 Tool details) */
@@ -172,7 +175,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px; /* spacing/2xl */
 }
 
 /* Compact 12px fields when embedded in Action RHS Tool details */

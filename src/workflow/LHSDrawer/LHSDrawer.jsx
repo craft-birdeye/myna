@@ -328,7 +328,6 @@ export const HEALTHCARE_TASK_SUB_ITEMS = {
       'Initiate voice call',
       'Send text during call',
       'Send response',
-      'Update state',
     ],
   },
   Appointment: {
