@@ -20,6 +20,7 @@ import { WebsiteGateScreen } from './screens/WebsiteGateScreen'
 import { SuperAgentMyAgentsScreen } from './screens/superAgent/SuperAgentMyAgentsScreen'
 import { SuperAgentLibraryScreen } from './screens/superAgent/SuperAgentLibraryScreen'
 import { SuperAgentConnectionsScreen } from './screens/superAgent/SuperAgentConnectionsScreen'
+import { SuperAgentKnowledgeScreen } from './screens/superAgent/SuperAgentKnowledgeScreen'
 import { AiCoachSparkleIcon } from './assets/AiCoachSparkleIcon'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
@@ -363,16 +364,18 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
 ]
 
 // Super agent's embedded-in-L1 module (distinct from the standalone overlay): the L2
-// mirrors the prototype's own left nav exactly — four flat rows, no accordion/chevron
+// mirrors the prototype's own left nav exactly — five flat rows, no accordion/chevron
 // — with "Super agent" as a plain, non-collapsible module title above them (SideNav's
 // `showTitle`, opted into only here so every other SideNav consumer's layout is
-// untouched). Each row's onSelect posts a `navigate` command into the iframe (mapped
-// via SUPER_AGENT_NAV_TO_IFRAME_KEY).
+// untouched). Only "Create agent" still posts a `navigate` command into the iframe
+// (mapped via SUPER_AGENT_NAV_TO_IFRAME_KEY) — My agents/Library/Knowledge/Connections
+// are all native screens.
 const SUPER_AGENT_DEFAULT_NAV = 'sa-create'
 const SUPER_AGENT_NAV_SECTIONS: NavSection[] = [
   { id: 'sa-create',      label: 'Create agent' },
   { id: 'sa-agents',      label: 'My agents' },
   { id: 'sa-library',     label: 'Library' },
+  { id: 'sa-knowledge',   label: 'Knowledge' },
   { id: 'sa-connections', label: 'Connections' },
 ]
 const SUPER_AGENT_NAV_TO_IFRAME_KEY: Record<string, string> = {
@@ -1125,6 +1128,8 @@ export function App() {
                     <SuperAgentMyAgentsScreen onOpenAgent={openSuperAgentEmbeddedAgent} />
                   ) : navActive === 'sa-library' ? (
                     <SuperAgentLibraryScreen onUseAgent={useSuperAgentEmbeddedLibraryAgent} />
+                  ) : navActive === 'sa-knowledge' ? (
+                    <SuperAgentKnowledgeScreen />
                   ) : navActive === 'sa-connections' ? (
                     <SuperAgentConnectionsScreen />
                   ) : null

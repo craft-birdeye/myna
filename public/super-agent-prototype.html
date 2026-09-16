@@ -764,6 +764,7 @@ const GLYPH = {
   panel: <g><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M15 4v16" /></g>,
   search: <g><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></g>,
   file: <g><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></g>,
+  image: <g><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="M21 16.5 16 11l-4.5 5M11 15.5 9 13.5l-6 6" /></g>,
   route: <g><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M15.5 5H10a4 4 0 0 0 0 8h4a4 4 0 0 1 0 8H8.5" /></g>,
   sun: <g><circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" /></g>,
   moon: <path d="M20.5 14.3A8.6 8.6 0 0 1 9.7 3.5a8.7 8.7 0 1 0 10.8 10.8z" />,
@@ -3579,27 +3580,37 @@ function AgentOverview({ agent, app }) {
   );
 }
 
+const KNOWLEDGE_ICON = { file: "file", image: "image", link: "link", note: "info" };
+
 function AgentKnowledge({ agent, app }) {
+  const items = agent.knowledge || [];
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12.5px] leading-[1.55] text-ink-2">
         What this agent knows about your practice. Practice-wide by default, with per-location overrides where they exist.
       </p>
       <Card>
-        <div className="flex flex-col divide-y divide-line">
-          {agent.knowledge.map((k) => (
-            <div key={k.title} className="flex items-start gap-3 px-3.5 py-3 transition-colors duration-150 hover:bg-hover">
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-inset text-ink-2 shadow-hairline">
-                <Icon name="file" size={13} sw={1.8} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12.5px] font-medium text-ink">{k.title}</div>
-                <div className="text-[12px] leading-[1.5] text-ink-3">{k.detail}</div>
-              </div>
-              <Button variant="quiet" size="sm" onClick={() => app.toast("Changes saved")}>Edit</Button>
-            </div>
-          ))}
-        </div>
+        {items.length ? (
+          <div className="flex flex-col divide-y divide-line">
+            {items.map((k) => {
+              const title = k.title || k.name;
+              return (
+                <div key={title} className="flex items-start gap-3 px-3.5 py-3 transition-colors duration-150 hover:bg-hover">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-inset text-ink-2 shadow-hairline">
+                    <Icon name={KNOWLEDGE_ICON[k.kind] || "file"} size={13} sw={1.8} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-medium text-ink">{title}</div>
+                    <div className="text-[12px] leading-[1.5] text-ink-3">{k.detail}</div>
+                  </div>
+                  <Button variant="quiet" size="sm" onClick={() => app.toast("Changes saved")}>Edit</Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-3.5 py-6 text-center text-[12.5px] text-ink-3">No knowledge sources added yet.</div>
+        )}
         <div className="primitive-card-footer flex justify-end border-t border-line">
           <Button variant="secondary" size="sm" onClick={() => app.toast("Knowledge source added")}>
             <Icon name="plus" size={13} sw={2.2} />Add knowledge
@@ -5382,6 +5393,167 @@ function ConnectionsTab({ app }) {
   );
 }
 
+const KNOWLEDGE_KIND_LABEL = { file: "File", image: "Image", link: "Link", note: "Note" };
+const KNOWLEDGE_FILTERS = [["all", "All types"], ["file", "Files"], ["image", "Images"], ["link", "Links"], ["note", "Notes"]];
+const KNOWLEDGE_SORTS = [
+  { key: "title", label: "Name (A–Z)" },
+  { key: "source", label: "Source agent" },
+  { key: "kind", label: "Type" },
+];
+
+/* Every agent's own `knowledge` array, flattened into one list — this screen is a
+ * hub of all sources across agents, not grouped by agent. Uploads from "Add
+ * knowledge" are layered on top via local state (see uploaded below). */
+function flattenKnowledge(agents) {
+  return agents.flatMap((a) =>
+    (a.knowledge || []).map((k, i) => ({
+      id: `${a.id}-${i}`,
+      title: k.title || k.name,
+      kind: k.kind || "file",
+      detail: k.detail,
+      source: a.name,
+      akey: a.akey,
+    })));
+}
+
+function KnowledgeScreen({ app }) {
+  const [query, setQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortKey, setSortKey] = useState("title");
+  const [sortOpen, setSortOpen] = useState(false);
+  const [uploaded, setUploaded] = useState([]);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const close = (e) => { if (!e.target.closest("[data-knowledge-filter]")) setFilterOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [filterOpen]);
+  useEffect(() => {
+    if (!sortOpen) return;
+    const close = (e) => { if (!e.target.closest("[data-knowledge-sort]")) setSortOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [sortOpen]);
+
+  const library = useMemo(() => [...uploaded, ...flattenKnowledge(app.agents)], [app.agents, uploaded]);
+
+  const q = query.trim().toLowerCase();
+  const rows = library
+    .filter((k) => kindFilter === "all" || k.kind === kindFilter)
+    .filter((k) => !q || k.title.toLowerCase().includes(q) || k.source.toLowerCase().includes(q) || k.detail.toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (sortKey === "source") return a.source.localeCompare(b.source) || a.title.localeCompare(b.title);
+      if (sortKey === "kind") return a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title);
+      return a.title.localeCompare(b.title);
+    });
+
+  const addKnowledge = () => {
+    setUploaded((list) => [
+      { id: `upload-${Date.now()}`, title: `New document ${list.length + 1}.pdf`, kind: "file", detail: "Uploaded just now", source: "You", akey: null },
+      ...list,
+    ]);
+    app.toast("Knowledge source added");
+  };
+
+  return (
+    <div className={`${EMBED_ALIGN_CLASS} flex w-full max-w-[1080px] flex-col px-6 py-9`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">Knowledge</h1>
+          <p className="mt-1 text-[13px] text-ink-2">Every document, template, and policy your agents can reference — {library.length} sources.</p>
+        </div>
+        <Button variant="accent" size="sm" onClick={addKnowledge}>
+          <Icon name="plus" size={13} sw={2.2} />Add knowledge
+        </Button>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="flex h-9 min-w-[200px] flex-1 items-center gap-2 rounded-control border border-line bg-surface px-3 shadow-hairline
+            transition-colors duration-150 focus-within:border-line-strong sm:max-w-[300px]">
+          <Icon name="search" size={14} sw={1.9} className="shrink-0 text-ink-3" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search knowledge"
+            aria-label="Search knowledge" className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-3" />
+          {query && (
+            <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="shrink-0 text-ink-3 hover:text-ink">
+              <Icon name="x" size={13} sw={2} />
+            </button>
+          )}
+        </div>
+
+        <span className="relative" data-knowledge-filter>
+          <Button variant="secondary" size="sm" aria-expanded={filterOpen} onClick={() => setFilterOpen((o) => !o)}>
+            <Icon name="panel" size={13} sw={1.9} />{kindFilter === "all" ? "All types" : KNOWLEDGE_KIND_LABEL[kindFilter]}
+            <Icon name="chevronDown" size={13} sw={2} />
+          </Button>
+          {filterOpen && (
+            <div className="absolute left-0 top-[calc(100%+7px)] z-40 w-[180px] rounded-window bg-surface p-1.5 shadow-overlay"
+              style={{ animation: "pop-in 170ms cubic-bezier(0.23,1,0.32,1) both", transformOrigin: "top left" }}>
+              <GlideMenu className="flex flex-col gap-px" highlightClassName="inset-x-0 rounded-[8px] bg-hover-2">
+                {KNOWLEDGE_FILTERS.map(([k, label]) => (
+                  <button key={k} data-menu-row type="button" onClick={() => { setKindFilter(k); setFilterOpen(false); }}
+                    className="relative z-10 flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-[12.5px] text-ink">
+                    {label}
+                    {kindFilter === k && <Icon name="check" size={13} sw={2.2} className="ml-auto text-accent-ink" />}
+                  </button>
+                ))}
+              </GlideMenu>
+            </div>
+          )}
+        </span>
+
+        <span className="relative" data-knowledge-sort>
+          <Button variant="secondary" size="sm" aria-expanded={sortOpen} onClick={() => setSortOpen((o) => !o)}>
+            <Icon name="route" size={13} sw={1.9} />Sort: {KNOWLEDGE_SORTS.find((s) => s.key === sortKey)?.label}
+            <Icon name="chevronDown" size={13} sw={2} />
+          </Button>
+          {sortOpen && (
+            <div className="absolute left-0 top-[calc(100%+7px)] z-40 w-[190px] rounded-window bg-surface p-1.5 shadow-overlay"
+              style={{ animation: "pop-in 170ms cubic-bezier(0.23,1,0.32,1) both", transformOrigin: "top left" }}>
+              <GlideMenu className="flex flex-col gap-px" highlightClassName="inset-x-0 rounded-[8px] bg-hover-2">
+                {KNOWLEDGE_SORTS.map((s) => (
+                  <button key={s.key} data-menu-row type="button" onClick={() => { setSortKey(s.key); setSortOpen(false); }}
+                    className="relative z-10 flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-[12.5px] text-ink">
+                    {s.label}
+                    {sortKey === s.key && <Icon name="check" size={13} sw={2.2} className="ml-auto text-accent-ink" />}
+                  </button>
+                ))}
+              </GlideMenu>
+            </div>
+          )}
+        </span>
+      </div>
+
+      <Card className="mt-4">
+        {rows.length === 0 ? (
+          <div className="px-3.5 py-6 text-center text-[12.5px] text-ink-3">No knowledge sources match your search.</div>
+        ) : (
+          <div className="flex flex-col divide-y divide-line">
+            {rows.map((k) => (
+              <div key={k.id} className="flex items-center gap-3 px-3.5 py-3 transition-colors duration-150 hover:bg-hover">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-inset text-ink-2 shadow-hairline">
+                  <Icon name={KNOWLEDGE_ICON[k.kind] || "file"} size={13} sw={1.8} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12.5px] font-medium text-ink">{k.title}</div>
+                  <div className="text-[12px] leading-[1.5] text-ink-3">{k.detail}</div>
+                </div>
+                <StatusPill tone="neutral" dot={false}>{KNOWLEDGE_KIND_LABEL[k.kind] || "File"}</StatusPill>
+                <span className="hidden w-[168px] shrink-0 items-center gap-1.5 text-[12px] text-ink-3 sm:flex">
+                  {k.akey && <AgentAvatarImg akey={k.akey} size={16} />}
+                  <span className="truncate">{k.source}</span>
+                </span>
+                <Button variant="quiet" size="sm" onClick={() => app.toast("Changes saved")}>Edit</Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 function LibraryScreen({ app }) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("recommended");
@@ -5471,6 +5643,7 @@ const NAV = [
   { key: "create", label: "Create agent", icon: "plus", primary: true },
   { key: "agents", label: "My agents", icon: "agents" },
   { key: "market", label: "Library", icon: "library" },
+  { key: "knowledge", label: "Knowledge", icon: "file" },
   { key: "connections", label: "Connections", icon: "link" },
 ];
 
@@ -6125,7 +6298,12 @@ const DEMO_AGENTS = [
     can: ["Monitor new reviews as they arrive", "Draft a response in your brand voice", "Route anything unusual for a second look"],
     cannot: ["Publish to a 1 or 2 star review without you", "Offer refunds or discounts"],
     connections: [{ name: "Google Business Profile", kind: "google", status: "ok", detail: "Connected" }],
-    knowledge: [{ name: "Brand voice guide", kind: "file", detail: "Updated last week" }],
+    knowledge: [
+      { title: "Brand voice guide", kind: "file", detail: "Updated last week" },
+      { title: "Review response templates", kind: "file", detail: "Updated 3 weeks ago" },
+      { title: "Escalation & refund policy", kind: "file", detail: "Updated 2 months ago" },
+      { title: "Competitor comparison sheet", kind: "link", detail: "Google Doc · shared" },
+    ],
   },
   {
     id: "review-generation", akey: "review-generation", name: "Review Generation Agent", origin: "From the library",
@@ -6136,7 +6314,11 @@ const DEMO_AGENTS = [
     can: ["Send a request after a completed visit", "Follow up once if there is no reply", "Stop asking anyone who opts out"],
     cannot: ["Offer anything in exchange for a review", "Message the same patient twice in 90 days"],
     connections: [{ name: "Birdeye surveys", kind: "birdeye", status: "ok", detail: "Connected" }],
-    knowledge: [],
+    knowledge: [
+      { title: "Review request script", kind: "file", detail: "Updated 2 weeks ago" },
+      { title: "Opt-out & compliance policy", kind: "file", detail: "Updated last month" },
+      { title: "Visit types eligible for a request", kind: "file", detail: "Updated 3 months ago" },
+    ],
   },
   {
     id: "listings-health", akey: "listings-health", name: "Listings Health Agent", origin: "From the library",
@@ -6148,7 +6330,11 @@ const DEMO_AGENTS = [
     can: ["Scan listings across directories", "Fix hours and contact details", "Flag duplicates for review"],
     cannot: ["Change your business name or category", "Remove a listing"],
     connections: [{ name: "Google Business Profile", kind: "google", status: "ok", detail: "Connected" }],
-    knowledge: [],
+    knowledge: [
+      { title: "Directory list & priorities", kind: "file", detail: "Updated last month" },
+      { title: "Business hours by location", kind: "file", detail: "Updated 2 weeks ago" },
+      { title: "Brand name, address & phone guidelines", kind: "link", detail: "Google Doc · shared" },
+    ],
   },
   {
     id: "appointment-booking", akey: "appointment-booking", name: "Appointment Booking Agent", origin: "From the library",
@@ -6159,7 +6345,11 @@ const DEMO_AGENTS = [
     can: ["Check real availability", "Book and send confirmations", "Send a reminder the day before"],
     cannot: ["Cancel an appointment without asking", "Double-book a provider"],
     connections: [{ name: "Appointment calendar", kind: "calendar", status: "ok", detail: "Connected" }],
-    knowledge: [],
+    knowledge: [
+      { title: "Appointment types & durations", kind: "file", detail: "Updated 3 weeks ago" },
+      { title: "Provider availability rules", kind: "file", detail: "Updated last month" },
+      { title: "Cancellation & no-show policy", kind: "file", detail: "Updated 2 months ago" },
+    ],
   },
   {
     id: "social-publishing", akey: "social-publishing", name: "Social Publishing Agent", origin: "From the library",
@@ -6173,7 +6363,11 @@ const DEMO_AGENTS = [
       { name: "Facebook Pages", kind: "facebook", status: "ok", detail: "Connected" },
       { name: "Canva", kind: "canva", status: "ok", detail: "Templates and brand kit synced" },
     ],
-    knowledge: [],
+    knowledge: [
+      { title: "Brand kit & templates", kind: "image", detail: "Canva · synced" },
+      { title: "Content calendar guidelines", kind: "file", detail: "Updated last month" },
+      { title: "Approved photo library", kind: "image", detail: "24 images · updated last week" },
+    ],
   },
 ];
 
@@ -6199,10 +6393,11 @@ const AGENT_SEED = {
       { name: "HubSpot CRM", kind: "hubspot", status: "ok", detail: "Follow-up tasks synced" },
     ],
     knowledge: [
-      { title: "Brand voice", detail: "Warm, plain-spoken, never defensive. Apologize once, then offer a next step." },
-      { title: "Services", detail: "General dentistry, implants, Invisalign, cosmetic, paediatric" },
-      { title: "Escalation policy", detail: "Pain, safety, billing, discrimination, legal action, or intent not to return" },
-      { title: "Approver", detail: "Dr. Maria Chen approves all urgent responses" },
+      { title: "Brand voice", kind: "note", detail: "Warm, plain-spoken, never defensive. Apologize once, then offer a next step." },
+      { title: "Services", kind: "note", detail: "General dentistry, implants, Invisalign, cosmetic, paediatric" },
+      { title: "Escalation policy", kind: "file", detail: "Updated last month" },
+      { title: "Approver", kind: "note", detail: "Dr. Maria Chen approves all urgent responses" },
+      { title: "Response templates by rating", kind: "file", detail: "Updated 3 weeks ago" },
     ],
   },
   frontdesk: {
@@ -6222,10 +6417,11 @@ family: "frontdesk", scope: "all", locations: ["Downtown", "Westside", "North Pa
       { name: "HubSpot CRM", kind: "hubspot", status: "ok", detail: "New patients logged automatically" },
     ],
     knowledge: [
-      { title: "Office hours", detail: "Mon–Thu 8:00–17:00, Fri 8:00–14:00. Lakeside closed Fridays." },
-      { title: "High-value services", detail: "Dental implants, Invisalign, cosmetic dentistry" },
-      { title: "Insurance accepted", detail: "Delta Dental, Cigna, MetLife, Aetna, Guardian" },
-      { title: "Emergency script", detail: "Transfer immediately to the on-call number, never triage over the phone" },
+      { title: "Office hours", kind: "note", detail: "Mon–Thu 8:00–17:00, Fri 8:00–14:00. Lakeside closed Fridays." },
+      { title: "High-value services", kind: "note", detail: "Dental implants, Invisalign, cosmetic dentistry" },
+      { title: "Insurance accepted", kind: "note", detail: "Delta Dental, Cigna, MetLife, Aetna, Guardian" },
+      { title: "Emergency script", kind: "file", detail: "Updated 2 months ago" },
+      { title: "Services and FAQs", kind: "file", detail: "Imported 2 days ago" },
     ],
   },
 };
@@ -6318,10 +6514,11 @@ const TX_SEED = {
     { name: "Phone number", kind: "phone", status: "ok", detail: "(555) 0100 — texts from here" },
   ],
   knowledge: [
-    { title: "Unscheduled treatment", detail: "$46,200 across 38 patients, presented in the last 90 days" },
-    { title: "Escalation rule", detail: "Anything over $2,000 goes to Dr. Chen to call personally" },
-    { title: "Payment plans", detail: "Three and six month options through the practice, no third party" },
-    { title: "Tone", detail: "Warm, factual about consequences, never pressuring or clinical" },
+    { title: "Unscheduled treatment", kind: "note", detail: "$46,200 across 38 patients, presented in the last 90 days" },
+    { title: "Escalation rule", kind: "note", detail: "Anything over $2,000 goes to Dr. Chen to call personally" },
+    { title: "Payment plans", kind: "note", detail: "Three and six month options through the practice, no third party" },
+    { title: "Tone", kind: "note", detail: "Warm, factual about consequences, never pressuring or clinical" },
+    { title: "Treatment plan price list", kind: "file", detail: "Updated last month" },
   ],
 };
 
@@ -7237,10 +7434,34 @@ function WorkflowReports() {
   );
 }
 
+const WORKFLOW_KNOWLEDGE = [
+  { title: "Brand voice guide", kind: "file", detail: "Updated last week" },
+  { title: "Review response templates", kind: "file", detail: "Updated 3 weeks ago" },
+  { title: "Escalation & refund policy", kind: "file", detail: "Updated 2 months ago" },
+  { title: "Competitor comparison sheet", kind: "link", detail: "Google Doc · shared" },
+];
+
 function WorkflowKnowledge() {
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col items-start gap-1 px-6 py-8">
-      <p className="text-[13.5px] text-ink-2">No files added yet. Add response templates or brand guidelines for this agent to reference when it replies.</p>
+    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 px-6 py-8">
+      <p className="text-[12.5px] leading-[1.55] text-ink-2">
+        What this agent knows about your practice. Practice-wide by default, with per-location overrides where they exist.
+      </p>
+      <Card>
+        <div className="flex flex-col divide-y divide-line">
+          {WORKFLOW_KNOWLEDGE.map((k) => (
+            <div key={k.title} className="flex items-start gap-3 px-3.5 py-3 transition-colors duration-150 hover:bg-hover">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-inset text-ink-2 shadow-hairline">
+                <Icon name={KNOWLEDGE_ICON[k.kind] || "file"} size={13} sw={1.8} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12.5px] font-medium text-ink">{k.title}</div>
+                <div className="text-[12px] leading-[1.5] text-ink-3">{k.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
@@ -9169,6 +9390,7 @@ function App() {
                   {nav === "create" && <CreateAgentScreen app={app} />}
                   {nav === "agents" && <AgentsScreen app={app} />}
                   {nav === "market" && <LibraryScreen app={app} />}
+                  {nav === "knowledge" && <KnowledgeScreen app={app} />}
                   {nav === "connections" && (
                     <div className={`${EMBED_ALIGN_CLASS} flex w-full max-w-[1080px] flex-col px-6 py-9`}>
                       <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">Connections</h1>

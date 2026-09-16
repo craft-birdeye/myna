@@ -14,6 +14,12 @@ export interface SuperAgentMetric {
   label: string
 }
 
+export interface SuperAgentKnowledgeItem {
+  title: string
+  kind: 'file' | 'image' | 'link' | 'note'
+  detail: string
+}
+
 export interface SuperAgentMyAgent {
   id: string
   glyph: SuperAgentLibraryGlyph
@@ -26,6 +32,7 @@ export interface SuperAgentMyAgent {
   alert?: string
   metrics: SuperAgentMetric[]
   lastRun: string
+  knowledge: SuperAgentKnowledgeItem[]
 }
 
 export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
@@ -46,6 +53,12 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
       { id: 'hours-saved', value: '11.4', label: 'Hours saved' },
     ],
     lastRun: '12 minutes ago',
+    knowledge: [
+      { title: 'Brand voice guide', kind: 'file', detail: 'Updated last week' },
+      { title: 'Review response templates', kind: 'file', detail: 'Updated 3 weeks ago' },
+      { title: 'Escalation & refund policy', kind: 'file', detail: 'Updated 2 months ago' },
+      { title: 'Competitor comparison sheet', kind: 'link', detail: 'Google Doc · shared' },
+    ],
   },
   {
     id: 'review-generation',
@@ -63,6 +76,11 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
       { id: 'rating-change', value: '+0.2', label: 'Rating change' },
     ],
     lastRun: 'an hour ago',
+    knowledge: [
+      { title: 'Review request script', kind: 'file', detail: 'Updated 2 weeks ago' },
+      { title: 'Opt-out & compliance policy', kind: 'file', detail: 'Updated last month' },
+      { title: 'Visit types eligible for a request', kind: 'file', detail: 'Updated 3 months ago' },
+    ],
   },
   {
     id: 'listings-health',
@@ -81,6 +99,11 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
       { id: 'accuracy', value: '94%', label: 'Accuracy' },
     ],
     lastRun: 'yesterday',
+    knowledge: [
+      { title: 'Directory list & priorities', kind: 'file', detail: 'Updated last month' },
+      { title: 'Business hours by location', kind: 'file', detail: 'Updated 2 weeks ago' },
+      { title: 'Brand name, address & phone guidelines', kind: 'link', detail: 'Google Doc · shared' },
+    ],
   },
   {
     id: 'appointment-booking',
@@ -98,6 +121,11 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
       { id: 'hours-saved', value: '9.1', label: 'Hours saved' },
     ],
     lastRun: '26 minutes ago',
+    knowledge: [
+      { title: 'Appointment types & durations', kind: 'file', detail: 'Updated 3 weeks ago' },
+      { title: 'Provider availability rules', kind: 'file', detail: 'Updated last month' },
+      { title: 'Cancellation & no-show policy', kind: 'file', detail: 'Updated 2 months ago' },
+    ],
   },
 ]
 
@@ -118,6 +146,11 @@ export const SUPER_AGENT_PAUSED_AGENTS: SuperAgentMyAgent[] = [
       { id: 'hours-saved', value: '5.2', label: 'Hours saved' },
     ],
     lastRun: '3 days ago',
+    knowledge: [
+      { title: 'Brand kit & templates', kind: 'image', detail: 'Canva · synced' },
+      { title: 'Content calendar guidelines', kind: 'file', detail: 'Updated last month' },
+      { title: 'Approved photo library', kind: 'image', detail: '24 images · updated last week' },
+    ],
   },
 ]
 
