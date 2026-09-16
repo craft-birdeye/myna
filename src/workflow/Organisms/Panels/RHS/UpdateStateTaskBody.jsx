@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
+import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import { subscribeToCustomTools } from '../../../services/agentService';
 import AddStateFieldModal from '../../Modals/AddStateFieldModal/AddStateFieldModal.jsx';
 import styles from './UpdateStateTaskBody.module.css';
@@ -56,7 +57,7 @@ export function UpdateStateToolDetails({
   toolName = 'Update state',
   viewOnly = false,
   onRemoveTool,
-  /** When false, only Select fields is shown (drawer already has Tool name / Description). */
+  /** When false, only Select fields is shown (drawer already has Description). */
   showToolCard = true,
 }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -167,33 +168,15 @@ export function UpdateStateToolDetails({
             )}
           </div>
         ) : (
-          <div className={styles.updateList}>
+          <div className={`${styles.chipContainer} ${styles.chipContainerFilled}`}>
             {stateUpdates.map((update) => (
-              <div
+              <VariableChip
                 key={update.id}
-                className={styles.updateCard}
-              >
-                <button
-                  type="button"
-                  className={styles.updateSummary}
-                  onClick={() => openEditModal(update)}
-                >
-                  <span className={styles.braceGlyph} aria-hidden>{'{}'}</span>
-                  <span className={styles.summaryVar}>{update.variable}</span>
-                </button>
-                {!viewOnly && (
-                  <div className={styles.updateActions}>
-                    <button
-                      type="button"
-                      className={styles.iconBtn}
-                      aria-label="Delete update"
-                      onClick={() => handleRemove(update.id)}
-                    >
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                value={update.variable}
+                type="variable"
+                onSwatchClick={viewOnly ? undefined : () => openEditModal(update)}
+                onDelete={viewOnly ? undefined : () => handleRemove(update.id)}
+              />
             ))}
           </div>
         )}

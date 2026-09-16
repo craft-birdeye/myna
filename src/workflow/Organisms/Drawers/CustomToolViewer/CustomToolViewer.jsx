@@ -2799,15 +2799,6 @@ export function ToolViewerContent({
 
   const updateStateBody = (
     <div className={`${embedded ? styles.embeddedBody : styles.body} ${usStyles.tabContent}`}>
-      <FormInput
-        name="toolName"
-        type="text"
-        label="Tool name"
-        placeholder="Enter name"
-        value={effectiveSnapshot.toolName ?? ''}
-        onChange={(e) => handleValueChange('toolName', e.target.value)}
-        required
-      />
       <TextArea
         name="description"
         label="Description"
