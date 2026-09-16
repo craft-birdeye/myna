@@ -153,9 +153,13 @@ export default function RHS({ variant = 'agentDetails', title, bodyProps, onClos
     onSave?.();
   };
 
-  /** Full canvas: header wears this panel's node-type icon, matching the card's badge. */
+  /** Full canvas: header wears this panel's node-type icon (matching the card's badge) plus a
+   *  separator rule above the body. Parked for now at the user's request — the plumbing stays
+   *  in place (RHSHeader's `typeBadge`, `.headerWithBadge`, `.rhs-panel__body--badge-header`),
+   *  so flipping this flag to `true` brings the whole treatment back. */
+  const RHS_TYPE_BADGE_HEADER = false;
   const showTypeBadge = useCardBadge();
-  const typeBadge = showTypeBadge ? getBadgeForVariant(variant) : null;
+  const typeBadge = RHS_TYPE_BADGE_HEADER && showTypeBadge ? getBadgeForVariant(variant) : null;
 
   return (
       <div className={styles['rhs-panel']} style={{ width: panelWidth }}>

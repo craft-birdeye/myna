@@ -918,6 +918,21 @@
   height: 14px;
 }
 
+/* Full canvas paints the section icon with the node badge's accent via a mask, since the
+   asset files carry a baked stroke colour. Background + `color` come from the badge inline. */
+.lhs-drawer__section-header-icon-mask {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
 .lhs-drawer__section-header-icon--trigger {
   background: #fef3d6;
   color: #c69204;
@@ -1030,6 +1045,14 @@
   height: 14px;
   display: block;
   object-fit: contain;
+}
+
+/* Stroked-SVG category icon. Keeps the base 18px box — unlike `--svg`, which is sized down
+   for the padded asset files — so it matches the Material glyphs on the cards below it. */
+.lhs-drawer__palette-category-icon--glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lhs-drawer__palette-category-label {

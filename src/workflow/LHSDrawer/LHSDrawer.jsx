@@ -9,6 +9,8 @@ import {
   getCreateAiDraftSession,
 } from '../../data/createAgentChatStore';
 import { RR_TRIGGER_DESC, RR_TRIAGE_DESC } from '../../data/reviewResponseCopy';
+import { useCardBadge } from '../Molecules/Canvas/CardBadgeContext';
+import { BotOutlineIcon, GitBranchOutlineIcon, getBadgeForSection } from '../Molecules/Canvas/nodeTypeBadges';
 
 // Uploaded procedure.svg icon — used for all procedure category cards
 const ProcedureSvgIcon = () => (
@@ -850,6 +852,9 @@ export const DELAY_VARIANT_CARDS = DELAY_VARIANT_ITEMS.map((it) => ({
  *  Branch variants are seeded by AgentBuilder's branch scaffold, which owns the path structure. */
 export const DELAY_VARIANT_PRESETS = {
   'Set amount of time': 'set-time',
+  // Full canvas drops a single "Add a delay" card instead of the 8 variants, so land on the
+  // commonest option and let the Delay RHS switch type from there.
+  'Add a delay': 'set-time',
   'Calendar date': 'calendar-date',
   'Update in the date field': 'date-property',
   'Day of the week': 'day-of-week',
@@ -902,6 +907,52 @@ const CONTROL_SECTION_CATEGORIES = [
     iconSrc: iconRrControls,
     nodeType: 'branch',
     items: BRANCH_VARIANT_ITEMS,
+  },
+];
+
+/* ─── Full canvas Controls palette ───
+ * Restructured layout: Delay / Loop / Parallel tasks as plain cards, a rule, Branch as the
+ * only accordion, another rule, then the disabled Sub-agent card. Kept separate from the
+ * shared CONTROL_* lists above so Sep 1's palette and the canvas "+" add-step menu are
+ * untouched. */
+const FULL_CANVAS_BRANCH_VARIANT_ITEMS = [
+  { label: 'Based on condition', description: 'Sends the workflow down different paths based on your conditions' },
+  { label: 'Based on percentage', description: 'Splits traffic across paths by percentage, useful for testing variations' },
+  { label: 'Always run', description: 'Always runs this path regardless of other conditions' },
+];
+
+/** Cards above the Branch accordion, in this order. */
+const FULL_CANVAS_CONTROL_PRIMARY = [
+  {
+    label: 'Add a delay',
+    dragLabel: 'Delay',
+    icon: 'schedule',
+    nodeType: 'delay',
+    description: 'Pauses a workflow for a set time before continuing.',
+  },
+  {
+    label: 'Loop',
+    icon: 'all_inclusive',
+    nodeType: 'loop',
+    description: 'Repeats a set of steps for each item or until a condition is met',
+  },
+  {
+    label: 'Parallel tasks',
+    icon: 'splitscreen_add',
+    nodeType: 'parallel',
+    description: 'Runs several tasks at the same time, then continues once they all finish',
+  },
+];
+
+/** Cards below the Branch accordion. */
+const FULL_CANVAS_CONTROL_TRAILING = [
+  {
+    label: 'Sub-agent (TBD)',
+    dragLabel: 'Sub-agent',
+    Glyph: BotOutlineIcon,
+    nodeType: 'subagent',
+    disabled: true,
+    description: "Calls another agent's workflow as a step. Coming soon",
   },
 ];
 
@@ -1315,6 +1366,9 @@ export default function LHSDrawer({
         : 'Reviews',
   );
   const [dropdownTop, setDropdownTop] = useState(0);
+  /** Full canvas gets the restructured Controls palette (see FULL_CANVAS_CONTROL_*) and
+   *  takes its section colours straight from the canvas node badges. */
+  const fullCanvasChrome = useCardBadge();
   const [subItems, setSubItems] = useState(() => buildInitialSubItems(isHC, isReviewsAgent));
   const allSubItems = { ...subItems, ...procedureSubItems };
   const panelRef = useRef(null);
@@ -1708,6 +1762,95 @@ export default function LHSDrawer({
       const q = search.trim().toLowerCase();
       const matches = (text) => !q || String(text).toLowerCase().includes(q);
 
+      // Full canvas: Delay / Loop / Parallel tasks as plain cards, a rule, Branch as the
+      // only accordion, another rule, then Sub-agent. The two rules come from the existing
+      // `--top` (border below) and base (border above) standalone modifiers.
+      if (fullCanvasChrome) {
+        const cardMatches = (c) => matches(c.label) || matches(c.description);
+        const primary = FULL_CANVAS_CONTROL_PRIMARY.filter(cardMatches);
+        const trailing = FULL_CANVAS_CONTROL_TRAILING.filter(cardMatches);
+        const branchItems = FULL_CANVAS_BRANCH_VARIANT_ITEMS.filter(
+          (it) => matches('Branch') || matches(it.label) || matches(it.description),
+        );
+        const showBranch = branchItems.length > 0 || matches('Branch');
+        const branchOpen =
+          paletteCategoryId === 'Branch' || (q.length > 0 && branchItems.length > 0);
+
+        if (primary.length === 0 && trailing.length === 0 && !showBranch) {
+          return <p className="lhs-drawer__section-empty">No controls match your search</p>;
+        }
+
+        const renderControlCard = (card) => (
+          <LHSEntityGroup
+            key={card.label}
+            items={[{
+              label: card.label,
+              description: card.description,
+              icon: card.icon,
+              Glyph: card.Glyph,
+            }]}
+            nodeType={card.nodeType}
+            parentLabel={card.dragLabel || card.label}
+            viewOnly={viewOnly}
+            {...lhsDraftProps}
+            readOnly
+            inline
+            showTitle={false}
+            disabledItems={card.disabled ? [card.label] : null}
+          />
+        );
+
+        return (
+          <div className="lhs-drawer__palette-categories">
+            {primary.length > 0 && (
+              <div className="lhs-drawer__palette-standalone lhs-drawer__palette-standalone--top">
+                {primary.map(renderControlCard)}
+              </div>
+            )}
+            {showBranch && (
+              <div className={`lhs-drawer__palette-category${branchOpen ? ' lhs-drawer__palette-category--open' : ''}`}>
+                <button
+                  type="button"
+                  className="lhs-drawer__palette-category-header"
+                  onClick={() => setPaletteCategoryId((id) => (id === 'Branch' ? null : 'Branch'))}
+                  aria-expanded={branchOpen}
+                >
+                  <span
+                    className="lhs-drawer__palette-category-icon lhs-drawer__palette-category-icon--glyph"
+                    aria-hidden
+                  >
+                    <GitBranchOutlineIcon size={18} />
+                  </span>
+                  <span className="lhs-drawer__palette-category-label">Branch</span>
+                  <span className="material-symbols-outlined lhs-drawer__palette-category-chevron" aria-hidden>
+                    expand_more
+                  </span>
+                </button>
+                {branchOpen && (
+                  <div className="lhs-drawer__palette-category-body">
+                    <LHSEntityGroup
+                      items={branchItems}
+                      nodeType="branch"
+                      parentLabel="Branch"
+                      viewOnly={viewOnly}
+                      {...lhsDraftProps}
+                      readOnly
+                      inline
+                      showTitle={false}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+            {trailing.length > 0 && (
+              <div className="lhs-drawer__palette-standalone">
+                {trailing.map(renderControlCard)}
+              </div>
+            )}
+          </div>
+        );
+      }
+
       const categories = CONTROL_SECTION_CATEGORIES
         .map((cat) => ({
           ...cat,
@@ -1959,12 +2102,29 @@ export default function LHSDrawer({
       },
     };
     const sectionMeta = SECTION_META[forceOpenSection] || SECTION_META.Trigger;
+    /** Full canvas: header icon wears this section's canvas-badge colours exactly. The asset
+     *  carries a baked stroke colour, so it's masked rather than drawn as an <img>. */
+    const sectionBadge = fullCanvasChrome ? getBadgeForSection(forceOpenSection) : null;
 
     return (
       <div className="lhs-drawer lhs-drawer--section-only">
         <div className="lhs-drawer__section-header">
-          <span className={`lhs-drawer__section-header-icon lhs-drawer__section-header-icon--${sectionMeta.tone}`}>
-            <img src={sectionMeta.iconSrc} alt="" width={14} height={14} />
+          <span
+            className={`lhs-drawer__section-header-icon lhs-drawer__section-header-icon--${sectionMeta.tone}`}
+            style={sectionBadge ? { background: sectionBadge.bg, color: sectionBadge.color } : undefined}
+          >
+            {sectionBadge ? (
+              <span
+                className="lhs-drawer__section-header-icon-mask"
+                style={{
+                  WebkitMaskImage: `url("${sectionMeta.iconSrc}")`,
+                  maskImage: `url("${sectionMeta.iconSrc}")`,
+                }}
+                aria-hidden
+              />
+            ) : (
+              <img src={sectionMeta.iconSrc} alt="" width={14} height={14} />
+            )}
           </span>
           <span className="lhs-drawer__section-header-title">{sectionMeta.title}</span>
           {onCollapse && (
