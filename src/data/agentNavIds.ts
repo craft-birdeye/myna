@@ -5,6 +5,13 @@ export const RESPONSE_AGENTS_SEP1_NAV_ID = 'response-agents-sep-1'
 export const RESPONSE_AGENTS_NAV_ID = 'response-agents'
 /** Duplicate of Sep 1 — same agent, same chrome, its own nav slot. */
 export const RESPONSE_AGENTS_FULL_CANVAS_NAV_ID = 'response-agents-full-canvas'
+/**
+ * "Response agent (simulation)" — its own nav slot, sharing the exploration nav's Ghostwriter
+ * conversation. Ghostwriter tab starts populated as usual, but Workflow/Tools/Knowledge/
+ * Simulation start empty. Simulation instead builds up a running set of test cases (with a
+ * tab count badge) as the Ghostwriter conversation progresses. See `isResponseAgentsSimulationNav`.
+ */
+export const RESPONSE_AGENTS_SIMULATION_NAV_ID = 'response-agents-simulation'
 
 /** Coach-cue prototype nav — auto-opens the workflow builder tour on canvas land. */
 export function isResponseAgentsCoachCueNav(navId?: string | null) {
@@ -28,6 +35,7 @@ export const REMINDER_SEP1_NAV_ID = 'reminder-agent-sep-1'
 
 const EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS = new Set([
   RESPONSE_AGENTS_EXPLORATION_NAV_ID,
+  RESPONSE_AGENTS_SIMULATION_NAV_ID,
   FRONTDESK_EXPLORATION_NAV_ID,
   // Full canvas keeps the start node on canvas (unlike exploration) — see
   // isResponseAgentsExplorationNav / isLlmTaskExplorationLayout below for the other
@@ -44,7 +52,11 @@ export function isResponseAgentsSep1StyleNav(navId?: string | null) {
 }
 
 export function isResponseAgentsExplorationChrome(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || isResponseAgentsSep1StyleNav(navId)
+  return (
+    navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID ||
+    navId === RESPONSE_AGENTS_SIMULATION_NAV_ID ||
+    isResponseAgentsSep1StyleNav(navId)
+  )
 }
 
 /**
@@ -52,10 +64,24 @@ export function isResponseAgentsExplorationChrome(navId?: string | null) {
  * share both the agent name and `explorationChrome` with it. Gates the
  * location-aware identity header (Add location CTA, name truncation, hover card).
  * Full canvas mirrors this too — its own design sandbox for iterating on exploration's
- * ideas without touching Sep 1/coach-cue.
+ * ideas without touching Sep 1/coach-cue. Response agent (simulation) mirrors it as well —
+ * see `isResponseAgentsSimulationNav` for the tab-shell differences specific to it.
  */
 export function isResponseAgentsExplorationNav(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
+  return (
+    navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID ||
+    navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ||
+    navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
+  )
+}
+
+/**
+ * Response agent (simulation) only — gates the tab-shell differences from the original
+ * exploration: Workflow starts (and stays) empty like Tools/Knowledge instead of opening
+ * the canvas, and Simulation builds up test cases as the Ghostwriter conversation progresses.
+ */
+export function isResponseAgentsSimulationNav(navId?: string | null) {
+  return navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
 }
 
 /** Production + Sep 1 front desk navs — same agent-list card chrome (not the exploration variant). */
@@ -89,7 +115,11 @@ export function isSep1Chrome(navId?: string | null) {
  *  picker), so it is deliberately absent. Chip two-line collapse applies to all exploration
  *  chrome incl. Sep 1. */
 export function isLlmTaskExplorationLayout(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID || navId === FRONTDESK_EXPLORATION_NAV_ID
+  return (
+    navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID ||
+    navId === RESPONSE_AGENTS_SIMULATION_NAV_ID ||
+    navId === FRONTDESK_EXPLORATION_NAV_ID
+  )
 }
 
 /** Sep 1 side-nav ids (response / front desk / reminder). */

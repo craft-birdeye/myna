@@ -1325,6 +1325,9 @@ export default function AgentBuilder({
   externalFocusNonce = 0,
   /** Opens the workflow coach tour on mount (Response agents coach cue nav). */
   autoOpenCoachTour = false,
+  /** Suppresses the floating back-cluster + run-test/Activate chrome — for embedding the
+   *  canvas under a caller-owned header (e.g. Response agent (simulation)'s Workflow tab). */
+  hideTopBar = false,
 }) {
   /* ─── Prop-based slug params (no React Router) ─── */
   const urlModuleSlug = propModuleSlug || moduleContext || 'search';
@@ -4278,7 +4281,7 @@ export default function AgentBuilder({
         <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
-              {(onClose || explorationChrome) && (
+              {!hideTopBar && (onClose || explorationChrome) && (
                 <div className={`rr-chrome-back-cluster${explorationChrome ? ' rr-chrome-back-cluster--identity' : ''}`}>
                   {onClose && (
                     <button
@@ -4422,7 +4425,7 @@ export default function AgentBuilder({
 
               {/* Version history on the live version has no actions — skip the pill entirely
                   so an empty white chip doesn't float over the canvas. */}
-              {!(versionHistoryMode && !headerActions) && (
+              {!hideTopBar && !(versionHistoryMode && !headerActions) && (
               <div
                 className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
                   explorationChrome ? ' rr-chrome-top--right' : ''

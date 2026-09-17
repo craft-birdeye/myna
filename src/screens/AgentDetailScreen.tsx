@@ -6,6 +6,7 @@ import {
   Chip,
   CustomizeColumnsDrawer,
   DataTable,
+  EmptyState,
   FilesModal,
   FilterPanel,
   HeaderSearchField,
@@ -17,6 +18,7 @@ import {
   MediaLibraryModal,
   PromptComposer,
   RefChip,
+  ReviewCardBody,
   ReviewResponseOutcomesCharts,
   Tabs,
   Toast,
@@ -31,6 +33,7 @@ import {
   type FilterField,
   type LibraryCardGlyph,
   type LibraryCardTone,
+  type ReviewCardData,
   type RowMenuItem,
   type Tab,
 } from '../components'
@@ -51,9 +54,18 @@ import {
   isResponseAgentsExplorationChrome,
   isResponseAgentsExplorationNav,
   isResponseAgentsSep1StyleNav,
+  isResponseAgentsSimulationNav,
   isSep1StyleAgentListNav,
   RESPONSE_AGENTS_FULL_CANVAS_NAV_ID,
 } from '../data/agentNavIds'
+import {
+  getExpectedBehaviorBullets,
+  getPlatform,
+  getUserInstructions,
+  REVIEW_RESPONSE_TEST_CASES,
+  REVIEW_RESPONSE_TEST_CASE_TOTAL,
+  type ReviewResponseTestCase,
+} from '../data/reviewResponseTestCases'
 import { instanceSlugFromName, type DeepRoute } from '../appRoutes'
 import type { WizardAgentDraft } from '../data/wizardAgentConfig.types'
 import type { Procedure, RefKind, Token } from '../data/procedureData'
@@ -1735,7 +1747,12 @@ const REVIEW_RESPONSE_BUILD_CARD = {
 const REVIEW_RESPONSE_POST_DRAFT_REPLY =
   'Now that I have created the new review response agent, what would you like me to do?'
 
-const REVIEW_RESPONSE_POST_DRAFT_PILLS = ['Make changes', 'Save agent', 'View in agent builder'] as const
+const REVIEW_RESPONSE_POST_DRAFT_PILLS = [
+  'Make changes',
+  'Save agent',
+  'View in agent builder',
+  'Simulate test cases',
+] as const
 
 const REVIEW_RESPONSE_DESIGN_STEPS = [
   { id: 'trigger', label: 'Wiring review triggers across sources' },
@@ -2514,8 +2531,8 @@ const REVIEW_RESPONSE_CHOICES = {
     primary: ['All 4 locations', 'Just a few to start', 'Select locations'],
   },
   spamOk: {
-    composerFill: 'ok',
-    primary: ['ok', 'Sounds good'],
+    composerFill: 'Sounds good.',
+    primary: ['Sounds good'],
   },
   spamAlert: {
     composerFill: 'Yes, email me the spam alerts.',
@@ -2694,6 +2711,190 @@ function ReviewBuildingCard({
   )
 }
 
+/** Stable empty-set default so `fixedTestCaseIds ?? EMPTY_FIXED_IDS` doesn't create a new
+ *  Set identity every render. */
+const EMPTY_FIXED_IDS: Set<number> = new Set()
+
+/** Cumulative test-case count revealed at each animation step — each step after the first
+ *  three lands exactly on (or just past) the next failing case's id, so failed tiles append
+ *  one at a time rather than all appearing together. Failing ids: 15, 20, 26, 58, 67, 73, 86, 94.
+ *  11 transitions at ~900ms each — roughly the "give it 10 seconds to count" the count should take. */
+const SIMULATION_REVEAL_SCHEDULE = [1, 2, 5, 16, 21, 27, 59, 68, 74, 87, 95, 100] as const
+const SIMULATION_REVEAL_STEP_MS = 900
+
+/** "Fix" walks through a short investigation before committing — shown one line at a time on
+ *  the failed-case tile, each with its own spinner-then-check, before the tile flips to Fixed. */
+const FIX_STEPS = ['Identifying the case', 'Searching for resolutions', 'Fixing the problem'] as const
+const FIX_STEP_MS = 700
+
+/** A test case's full result — scenario, summary, expected behavior, the actual review +
+ *  actual reply preview, and (when failing) what went wrong plus either a Fix button, an
+ *  in-progress "Identifying → Searching → Fixing" trail, or the final Fixed banner. Shared
+ *  verbatim between the Ghostwriter chat's failed-case tiles and the Simulation tab's detail
+ *  pane, so both surfaces show the identical card and the identical Fix experience. */
+function TestCaseResultCard({
+  tc,
+  fixedIds,
+  onFix,
+  onSuppressAutoScroll,
+}: {
+  tc: ReviewResponseTestCase
+  fixedIds: Set<number>
+  onFix?: (id: number) => void
+  /** Chat usage only: briefly disables the thread's "pin to bottom while content grows"
+   *  auto-scroll, since each Fix step changes this card's height without the user asking to
+   *  jump anywhere — their scroll position should hold. */
+  onSuppressAutoScroll?: () => void
+}) {
+  const passing = isTestCasePassing(tc, fixedIds)
+  const fixed = !tc.passed && fixedIds.has(tc.id)
+  const [fixingStep, setFixingStep] = useState<number | null>(null)
+  const isFixing = fixingStep !== null && !fixed
+
+  useEffect(() => {
+    if (fixingStep === null) return
+    if (fixingStep >= FIX_STEPS.length) {
+      onSuppressAutoScroll?.()
+      onFix?.(tc.id)
+      return
+    }
+    const timer = setTimeout(() => {
+      // Suppress right before the state update that grows this card, not after — the
+      // ResizeObserver-driven auto-scroll can otherwise fire first.
+      onSuppressAutoScroll?.()
+      setFixingStep((s) => (s ?? 0) + 1)
+    }, FIX_STEP_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixingStep])
+
+  return (
+    <div className="agent-build-fade flex flex-col gap-sm rounded-md border border-border bg-surface p-lg">
+      <div className="flex items-start justify-between gap-sm">
+        <div className="flex flex-col gap-2xs">
+          <span className="text-body-strong text-text-primary">{tc.scenario}</span>
+          <span className="text-small text-text-tertiary">{tc.category}</span>
+        </div>
+        <Chip label={fixed ? 'Fixed' : passing ? 'Passed' : 'Failed'} variant={passing ? 'success' : 'danger'} />
+      </div>
+      <p className="text-body text-text-secondary">{getUserInstructions(tc)}</p>
+      <ul className="list-disc space-y-1 pl-lg text-body text-text-secondary">
+        {getExpectedBehaviorBullets(tc).map((bullet, i) => (
+          <li key={i}>{bullet}</li>
+        ))}
+      </ul>
+      <div className="rounded-md border border-border p-lg">
+        <ReviewCardBody review={buildSimulationReviewCard(tc)} />
+        {!tc.reply && (
+          <div className="mt-lg flex items-center gap-xs text-small text-text-tertiary">
+            <Icon name="pause_circle" size={16} className="shrink-0" />
+            No public reply — held for human review per the expected behavior above.
+          </div>
+        )}
+      </div>
+      {!tc.passed &&
+        (fixed ? (
+          <div className="rounded-md bg-chip-success-bg p-md text-body text-chip-success-text">
+            Fixed — this test case now passes.
+          </div>
+        ) : isFixing ? (
+          <div className="flex flex-col gap-xs rounded-md bg-surface-l2 p-md text-body text-text-secondary">
+            {FIX_STEPS.map((label, i) => {
+              if (i > fixingStep!) return null
+              const done = i < fixingStep!
+              return (
+                <span key={label} className="flex items-center gap-xs">
+                  {done ? (
+                    <Icon name="check_circle" size={16} className="shrink-0 text-accent-positive" />
+                  ) : (
+                    <Icon name="progress_activity" size={16} className="shrink-0 animate-spin text-text-tertiary" />
+                  )}
+                  {label}
+                </span>
+              )
+            })}
+          </div>
+        ) : (
+          <>
+            <div className="rounded-md bg-chip-danger-bg p-md text-body text-chip-danger-text">
+              <span className="text-body-strong">What happened: </span>
+              {tc.failureReason}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onSuppressAutoScroll?.()
+                setFixingStep(0)
+              }}
+              className="flex h-9 w-fit items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+            >
+              Fix
+            </button>
+          </>
+        ))}
+    </div>
+  )
+}
+
+/** Post-draft "Simulate test cases" results — runs in a staggered animation (1, 2, 5, … up to
+ *  all 100), with the pass/fail counters ticking up live and each failed case's end-to-end tile
+ *  (scenario, expected behavior, what actually happened, and a Fix action) appearing one at a
+ *  time as the run reaches it. Shares `fixedIds` with the Simulation tab so both surfaces agree
+ *  on pass/fail. */
+function SimulateTestCasesResults({
+  fixedIds,
+  onFix,
+  revealedCount,
+  running,
+  onSuppressAutoScroll,
+}: {
+  fixedIds: Set<number>
+  onFix?: (id: number) => void
+  /** Driven by the parent (shared with the Simulation tab's count badge) rather than owning its
+   *  own timer, so both surfaces animate in lockstep. */
+  revealedCount: number
+  running: boolean
+  onSuppressAutoScroll?: () => void
+}) {
+  const failedRevealed = REVIEW_RESPONSE_TEST_CASES.filter((tc) => tc.id <= revealedCount && !tc.passed)
+  const stillFailing = failedRevealed.filter((tc) => !fixedIds.has(tc.id))
+  const passedCount = revealedCount - stillFailing.length
+
+  return (
+    <div className="ml-3xl mt-lg flex max-w-[640px] flex-col gap-md">
+      <p className="text-body text-text-primary">
+        {running
+          ? `Running test cases against the agent… ${revealedCount} of ${REVIEW_RESPONSE_TEST_CASE_TOTAL} so far.`
+          : `I ran all ${REVIEW_RESPONSE_TEST_CASE_TOTAL} test cases against the agent:`}
+      </p>
+      <div className="flex items-center gap-sm">
+        <Chip label={`${passedCount} passed`} variant="success" />
+        <Chip label={`${stillFailing.length} failed`} variant="danger" />
+        {running && <Icon name="progress_activity" size={16} className="animate-spin text-text-tertiary" />}
+      </div>
+      {failedRevealed.map((tc) => (
+        <TestCaseResultCard
+          key={tc.id}
+          tc={tc}
+          fixedIds={fixedIds}
+          onFix={onFix}
+          onSuppressAutoScroll={onSuppressAutoScroll}
+        />
+      ))}
+      {!running && failedRevealed.length > 0 && stillFailing.length === 0 && (
+        <div className="agent-build-fade flex gap-sm">
+          <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+            <SparkleLoader size={14} spinning={false} />
+          </span>
+          <p className="flex-1 text-body leading-6 text-text-primary">
+            All {REVIEW_RESPONSE_TEST_CASE_TOTAL} test cases now pass — the agent should be running perfectly.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ReviewResponseThread({
   onDraftReady,
   onCreateAgent,
@@ -2707,6 +2908,11 @@ function ReviewResponseThread({
   onComposerFillChange,
   onBusyChange,
   onTrailChange,
+  fixedTestCaseIds,
+  onSimulateTestCases,
+  onFixTestCase,
+  simulationRevealedCount,
+  simulationRunning,
 }: {
   onDraftReady?: (name: string | null) => void
   onCreateAgent?: (options?: { publish?: boolean }) => void
@@ -2724,6 +2930,17 @@ function ReviewResponseThread({
   onBusyChange?: (busy: boolean) => void
   /** Emits the visible create-thread turns for the shared AI Builder draft store. */
   onTrailChange?: (trail: CreateChatTurn[]) => void
+  /** Exploration copy: ids the user has "fixed" from a failed simulation run — shared with the
+   *  Simulation tab so both surfaces agree on pass/fail state. */
+  fixedTestCaseIds?: Set<number>
+  /** Exploration copy: fires when "Simulate test cases" is picked — tells the parent the
+   *  Simulation tab should now show results instead of its empty state. */
+  onSimulateTestCases?: () => void
+  onFixTestCase?: (id: number) => void
+  /** Exploration copy: driven by the parent so the Simulation tab's count animates in lockstep
+   *  with this chat's counters instead of jumping straight to 100. */
+  simulationRevealedCount?: number
+  simulationRunning?: boolean
 }) {
   const [introDone, setIntroDone] = useState(false)
   const [modeAnswer, setModeAnswer] = useState('')
@@ -2839,7 +3056,7 @@ function ReviewResponseThread({
         )
         break
       case 'spamOk':
-        setSpamOkAnswer(text === 'ok' || text === fill ? fill : text)
+        setSpamOkAnswer(text === 'Sounds good' || text === fill ? fill : text)
         break
       case 'spamAlert':
         setSpamAlertAnswer(
@@ -3058,6 +3275,7 @@ function ReviewResponseThread({
     setPostDraftAnswer(label)
     if (label === 'Save agent') onCreateAgent?.()
     else if (label === 'Make changes') onMakeChanges?.()
+    else if (label === 'Simulate test cases') onSimulateTestCases?.()
   }
 
   const choice = awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep] : null
@@ -3427,6 +3645,15 @@ function ReviewResponseThread({
                 </div>
               )}
               {postDraftAnswer && <UserBubble>{postDraftAnswer}</UserBubble>}
+              {postDraftAnswer === 'Simulate test cases' && (
+                <SimulateTestCasesResults
+                  fixedIds={fixedTestCaseIds ?? EMPTY_FIXED_IDS}
+                  onFix={onFixTestCase}
+                  revealedCount={simulationRevealedCount ?? REVIEW_RESPONSE_TEST_CASE_TOTAL}
+                  running={simulationRunning ?? false}
+                  onSuppressAutoScroll={suppressAutoScrollBriefly}
+                />
+              )}
             </>
           )}
         </>
@@ -4660,11 +4887,14 @@ export function CreateAiGhostwriterTabbedShell({
   onBack,
   activeTab,
   onTabChange,
+  tabs = GHOSTWRITER_SHELL_TABS,
 }: {
   title: string
   onBack: () => void
   activeTab: string
   onTabChange: (tabId: string) => void
+  /** Defaults to the static tab set — pass to inject e.g. a Simulation count badge. */
+  tabs?: Tab[]
 }) {
   return (
     <div className="relative flex h-16 shrink-0 items-center bg-surface px-2xl">
@@ -4682,12 +4912,184 @@ export function CreateAiGhostwriterTabbedShell({
       <div className="pointer-events-none absolute inset-x-0 flex justify-center">
         <div className="pointer-events-auto">
           <Tabs
-            tabs={GHOSTWRITER_SHELL_TABS}
+            tabs={tabs}
             activeTab={activeTab}
             onChange={onTabChange}
             showBaseline={false}
           />
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** Exploration copy: static "nothing here yet" content for Workflow/Tools/Knowledge, and the
+ *  Simulation tab before Ghostwriter has locked in enough to generate a first test case. */
+const GHOSTWRITER_EMPTY_TAB_COPY: Record<string, { title: string; description: string }> = {
+  workflow: {
+    title: 'No workflow yet',
+    description: 'Keep going in Ghostwriter — the workflow will take shape here as decisions lock in.',
+  },
+  tools: {
+    title: 'No tools yet',
+    description: 'Tools the agent can call will show up here once Ghostwriter wires them in.',
+  },
+  knowledge: {
+    title: 'No knowledge yet',
+    description: 'Documents and FAQs the agent can reference will appear here.',
+  },
+  simulation: {
+    title: 'Nothing to simulate yet',
+    description: 'Build your agent first to simulate test cases — pick "Simulate test cases" from Ghostwriter once your agent is ready.',
+  },
+}
+
+function GhostwriterEmptyTabState({ tabId }: { tabId: string }) {
+  const copy = GHOSTWRITER_EMPTY_TAB_COPY[tabId] ?? GHOSTWRITER_EMPTY_TAB_COPY.tools
+  return (
+    <div className="flex min-h-0 flex-1 w-full items-center justify-center bg-surface">
+      <EmptyState title={copy.title} description={copy.description} className="max-w-[320px] text-center" />
+    </div>
+  )
+}
+
+/** Whether a test case should read as passing right now — either it passed outright, or the
+ *  user has since fixed it from a failed simulation run. */
+function isTestCasePassing(tc: ReviewResponseTestCase, fixedIds: Set<number>): boolean {
+  return tc.passed || fixedIds.has(tc.id)
+}
+
+/** Simulations panel left rail: toolbar + a flat list of selectable test-case rows. */
+function SimulationsList({
+  testCases,
+  selectedId,
+  onSelect,
+  fixedIds,
+}: {
+  testCases: ReviewResponseTestCase[]
+  selectedId: number | null
+  onSelect: (id: number) => void
+  fixedIds: Set<number>
+}) {
+  return (
+    <div className="flex w-[300px] shrink-0 flex-col border-r border-border">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-sm px-lg">
+        <h2 className="text-body-strong text-text-primary">Test cases</h2>
+        <div className="flex items-center gap-2xs">
+          <button
+            type="button"
+            aria-label="Search test cases"
+            className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          >
+            <Icon name="search" size={18} />
+          </button>
+        </div>
+      </div>
+      <div className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-2xs overflow-auto px-sm pb-md">
+        {testCases.map((tc) => {
+          const active = tc.id === selectedId
+          const passing = isTestCasePassing(tc, fixedIds)
+          return (
+            <button
+              key={tc.id}
+              type="button"
+              onClick={() => onSelect(tc.id)}
+              aria-current={active}
+              className={`flex w-full items-center gap-xs rounded-md px-sm py-sm text-left text-body text-text-primary transition-colors ${
+                active ? 'bg-surface-selected' : 'hover:bg-surface-hover'
+              }`}
+            >
+              <span className="min-w-0 flex-1 truncate">{tc.scenario}</span>
+              <Icon
+                name={passing ? 'check_circle' : 'cancel'}
+                size={16}
+                className={`shrink-0 ${passing ? 'text-accent-positive' : 'text-chip-danger-text'}`}
+              />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** The 4 regions this simulated agent was scoped to earlier in the Ghostwriter conversation
+ *  ("Scoped to all 4 locations") — reused here so the preview's location tag stays grounded
+ *  in that decision instead of naming a business that doesn't exist. */
+const SIMULATION_REGIONS = ['North Region', 'East Region', 'South Region', 'West Region']
+
+/** Builds the same `ReviewCardData` shape the "All reviews" list renders, straight from the
+ *  test case's existing fields, so the simulation preview matches that card pixel-for-pixel. */
+function buildSimulationReviewCard(tc: ReviewResponseTestCase): ReviewCardData {
+  const platform = getPlatform(tc)
+  return {
+    reviewerName: 'Simulated reviewer',
+    rating: tc.rating ?? 0,
+    date: `Test case #${tc.id}`,
+    reviewId: `TC-${tc.id}`,
+    location: SIMULATION_REGIONS[tc.id % SIMULATION_REGIONS.length],
+    text: tc.reviewText ?? '',
+    reply: tc.reply
+      ? {
+          channel: platform.label,
+          agentName: 'Review response agent',
+          postedAt: 'Simulated response',
+          text: tc.reply,
+        }
+      : undefined,
+  }
+}
+
+/** Simulations panel right rail: instructions, platform, expected behavior, and a preview that
+ *  reuses the exact "All reviews" review-card format (`ReviewCardBody`). */
+/** Simulation tab detail pane — renders the exact same card as the Ghostwriter chat's
+ *  failed-case tiles (`TestCaseResultCard`), so both surfaces agree pixel-for-pixel and Fix
+ *  runs through the same "Identifying → Searching → Fixing" trail on either side. */
+function SimulationDetail({
+  testCase,
+  fixedIds,
+  onFixTestCase,
+}: {
+  testCase: ReviewResponseTestCase
+  fixedIds: Set<number>
+  onFixTestCase?: (id: number) => void
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[720px]">
+      <TestCaseResultCard tc={testCase} fixedIds={fixedIds} onFix={onFixTestCase} />
+    </div>
+  )
+}
+
+/** Response agent (simulation) Simulation tab — empty until "Simulate test cases" has been run
+ *  from the Ghostwriter, then a left rail of all test cases plus a right rail showing the
+ *  selected case's detail + preview. `fixedIds` keeps this in sync with the chat's fix tiles. */
+function GhostwriterSimulationTab({
+  testCases,
+  fixedIds,
+  onFixTestCase,
+}: {
+  testCases: ReviewResponseTestCase[]
+  fixedIds: Set<number>
+  onFixTestCase?: (id: number) => void
+}) {
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (testCases.length === 0) return
+    if (!testCases.some((tc) => tc.id === selectedId)) setSelectedId(testCases[0].id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testCases])
+
+  if (testCases.length === 0) return <GhostwriterEmptyTabState tabId="simulation" />
+
+  const selected = testCases.find((tc) => tc.id === selectedId) ?? testCases[0]
+
+  return (
+    <div className="flex min-h-0 flex-1 w-full bg-surface">
+      <SimulationsList testCases={testCases} selectedId={selected.id} onSelect={setSelectedId} fixedIds={fixedIds} />
+      <div className="scrollbar-subtle min-h-0 flex-1 overflow-auto px-2xl py-xl">
+        <SimulationDetail testCase={selected} fixedIds={fixedIds} onFixTestCase={onFixTestCase} />
       </div>
     </div>
   )
@@ -4922,6 +5324,11 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
   canvasProcedureId = null,
+  fixedTestCaseIds,
+  onSimulateTestCases,
+  onFixTestCase,
+  simulationRevealedCount,
+  simulationRunning,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -4943,6 +5350,12 @@ export function HealthcareFrontdeskCreateAgentScreen({
   fromScratchLabel?: string
   variant?: 'frontdesk' | 'reminder' | 'review-response' | 'review-generation'
   workflowVisible?: boolean
+  /** Exploration copy: shared with the Simulation tab — see `ReviewResponseThread`'s matching props. */
+  fixedTestCaseIds?: Set<number>
+  onSimulateTestCases?: () => void
+  onFixTestCase?: (id: number) => void
+  simulationRevealedCount?: number
+  simulationRunning?: boolean
   /** Docked panel / pre-submit fullscreen — greeting + quick-start pills instead of library landing. */
   compactGreeting?: boolean
   /** Already-built agent — help-oriented greeting + contextual follow-ups. */
@@ -5007,6 +5420,11 @@ export function HealthcareFrontdeskCreateAgentScreen({
       onCanvasProcedureChange={onCanvasProcedureChange}
       onInlineProcedureOpenChange={onInlineProcedureOpenChange}
       canvasProcedureId={canvasProcedureId}
+      fixedTestCaseIds={fixedTestCaseIds}
+      onSimulateTestCases={onSimulateTestCases}
+      onFixTestCase={onFixTestCase}
+      simulationRevealedCount={simulationRevealedCount}
+      simulationRunning={simulationRunning}
     />
   )
 }
@@ -5033,6 +5451,11 @@ function HealthcareFrontdeskCreateAgentLive({
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
   canvasProcedureId = null,
+  fixedTestCaseIds,
+  onSimulateTestCases,
+  onFixTestCase,
+  simulationRevealedCount,
+  simulationRunning,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -5055,6 +5478,12 @@ function HealthcareFrontdeskCreateAgentLive({
   onCanvasProcedureChange?: (name: string | null) => void
   onInlineProcedureOpenChange?: (open: boolean) => void
   canvasProcedureId?: string | null
+  /** Exploration copy: shared with the Simulation tab — see `ReviewResponseThread`'s matching props. */
+  fixedTestCaseIds?: Set<number>
+  onSimulateTestCases?: () => void
+  onFixTestCase?: (id: number) => void
+  simulationRevealedCount?: number
+  simulationRunning?: boolean
 }) {
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
@@ -5889,6 +6318,11 @@ function HealthcareFrontdeskCreateAgentLive({
                   onComposerFillChange={setReviewComposerFill}
                   onBusyChange={setReviewThreadBusy}
                   onTrailChange={setReviewThreadTrail}
+                  fixedTestCaseIds={fixedTestCaseIds}
+                  onSimulateTestCases={onSimulateTestCases}
+                  onFixTestCase={onFixTestCase}
+                  simulationRevealedCount={simulationRevealedCount}
+                  simulationRunning={simulationRunning}
                 />
               ) : isReminderFlow ? (
                 <>
@@ -7742,6 +8176,24 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [createFlowSubmitted, setCreateFlowSubmitted] = useState(false)
   /** Response agents (exploration) full-page Ghostwriter shell tab. */
   const [createGhostwriterTab, setCreateGhostwriterTab] = useState('ghostwriter')
+  /** Exploration copy: whether "Simulate test cases" has been run yet — gates the Simulation
+   *  tab's empty state vs. showing results. */
+  const [testCasesSimulated, setTestCasesSimulated] = useState(false)
+  /** Exploration copy: which step of `SIMULATION_REVEAL_SCHEDULE` the run has reached — shared
+   *  by the Ghostwriter chat's counters and the Simulation tab's list/count badge, so both
+   *  animate in lockstep instead of the tab jumping straight to 100. */
+  const [simulationStepIndex, setSimulationStepIndex] = useState(0)
+  /** Exploration copy: test-case ids the user has "fixed" from a failed run — shared between
+   *  the Ghostwriter chat tiles and the Simulation tab. */
+  const [fixedTestCaseIds, setFixedTestCaseIds] = useState<Set<number>>(new Set())
+  const simulationRevealedCount = SIMULATION_REVEAL_SCHEDULE[simulationStepIndex]
+  const simulationRunning = testCasesSimulated && simulationStepIndex < SIMULATION_REVEAL_SCHEDULE.length - 1
+
+  useEffect(() => {
+    if (!simulationRunning) return
+    const timer = setTimeout(() => setSimulationStepIndex((i) => i + 1), SIMULATION_REVEAL_STEP_MS)
+    return () => clearTimeout(timer)
+  }, [simulationRunning, simulationStepIndex])
   const [createDraftAgentName, setCreateDraftAgentName] = useState<string | null>(null)
   const [canvasProcedureId, setCanvasProcedureId] = useState<string | null>(null)
   const [, setInlineProcedureOpen] = useState(false)
@@ -7766,6 +8218,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateSideTab('ai')
     setCreateFlowSubmitted(false)
     setCreateGhostwriterTab('ghostwriter')
+    setTestCasesSimulated(false)
+    setSimulationStepIndex(0)
+    setFixedTestCaseIds(new Set())
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
@@ -8530,6 +8985,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       (createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen
     const isExplorationGhostwriterShell =
       isResponseAgentsExplorationNav(navId) && isReviewResponse && showGhostwriterShellHeader
+    /** Response agent (simulation): Workflow/Tools/Knowledge start empty (no auto-opening the
+     *  canvas), and Simulation builds up test cases as Ghostwriter progresses. */
+    const isSimulationNav = isResponseAgentsSimulationNav(navId)
     /** Full-bleed exploration create — no in-card Reviews AI TopNav either. */
     const hideExplorationCreateTopNav =
       isResponseAgentsExplorationNav(navId) && isReviewResponse
@@ -8538,9 +8996,20 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       : createWorkflowAgentName
     // Canvas uses floating chrome — hide the legacy create-flow LHS when the workflow is open.
     const hideCreateLeftFloater = createWorkflowOpen
+    const simulationTestCases =
+      isSimulationNav && testCasesSimulated
+        ? REVIEW_RESPONSE_TEST_CASES.filter((tc) => tc.id <= simulationRevealedCount)
+        : []
+    const ghostwriterShellTabs = isSimulationNav
+      ? GHOSTWRITER_SHELL_TABS.map((tab) =>
+          tab.id === 'simulation' && simulationTestCases.length > 0
+            ? { ...tab, count: simulationTestCases.length }
+            : tab,
+        )
+      : GHOSTWRITER_SHELL_TABS
 
     const handleExplorationShellTabChange = (tabId: string) => {
-      if (tabId === 'workflow') {
+      if (tabId === 'workflow' && !isSimulationNav) {
         setCreateGhostwriterTab('workflow')
         openCreateWorkflow()
         return
@@ -8615,6 +9084,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 title={ghostwriterShellTitle}
                 activeTab={createGhostwriterTab}
                 onTabChange={handleExplorationShellTabChange}
+                tabs={ghostwriterShellTabs}
                 onBack={() => {
                   if (chatHistorySelectedId) selectAllChats()
                   else setShowCreateFlow(false)
@@ -8778,6 +9248,15 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     onCanvasProcedureChange={isReminder ? setCanvasProcedureId : undefined}
                     onInlineProcedureOpenChange={setInlineProcedureOpen}
                     canvasProcedureId={isReminder ? canvasProcedureId : undefined}
+                    fixedTestCaseIds={isSimulationNav ? fixedTestCaseIds : undefined}
+                    onSimulateTestCases={isSimulationNav ? () => setTestCasesSimulated(true) : undefined}
+                    onFixTestCase={
+                      isSimulationNav
+                        ? (id) => setFixedTestCaseIds((prev) => new Set(prev).add(id))
+                        : undefined
+                    }
+                    simulationRevealedCount={isSimulationNav ? simulationRevealedCount : undefined}
+                    simulationRunning={isSimulationNav ? simulationRunning : undefined}
                   />
                 </div>
               ) : (
@@ -8791,9 +9270,47 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               )}
               {isExplorationGhostwriterShell &&
                 createGhostwriterTab !== 'ghostwriter' &&
-                createGhostwriterTab !== 'workflow' && (
-                  <div className="min-h-0 flex-1 w-full bg-surface" aria-hidden />
-                )}
+                (isSimulationNav ? (
+                  createGhostwriterTab === 'simulation' ? (
+                    <GhostwriterSimulationTab
+                      testCases={simulationTestCases}
+                      fixedIds={fixedTestCaseIds}
+                      onFixTestCase={(id) => setFixedTestCaseIds((prev) => new Set(prev).add(id))}
+                    />
+                  ) : createGhostwriterTab === 'workflow' ? (
+                    createDraftAgentName ? (
+                      <div className="flex min-h-0 flex-1 w-full">
+                        <WorkflowEditorScreen
+                          agentName="Review response agent - North Region"
+                          displayName={createWorkflowAgentName}
+                          agentStatus="Draft"
+                          product={product ?? 'healthcare'}
+                          onClose={() => setCreateGhostwriterTab('ghostwriter')}
+                          hideLhs
+                          hideTopBar
+                          existingAgent={false}
+                          hideTopIdentity={isExplorationAgents}
+                          hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
+                          explorationChrome={isExplorationAgents}
+                          sep1Chrome={isExplorationAgents}
+                          llmTaskExplorationLayout={isLlmTaskExplorationLayout(navId)}
+                          createAiPanelOpen={false}
+                          onOpenAiFullscreen={expandCreateAiFullscreen}
+                          aiBuilderPanelOpen={createAiBuilderPanelOpen}
+                          onAiBuilderPanelOpenChange={setCreateAiBuilderPanelOpen}
+                        />
+                      </div>
+                    ) : (
+                      <GhostwriterEmptyTabState tabId="workflow" />
+                    )
+                  ) : (
+                    <GhostwriterEmptyTabState tabId={createGhostwriterTab} />
+                  )
+                ) : (
+                  createGhostwriterTab !== 'workflow' && (
+                    <div className="min-h-0 flex-1 w-full bg-surface" aria-hidden />
+                  )
+                ))}
             </div>
           </section>
 

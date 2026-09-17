@@ -140,6 +140,9 @@ interface WorkflowEditorScreenProps {
   onOpenProductResearchSettings?: () => void
   /** Opens the Agent builder basics coach tour on mount (Response agents coach cue nav). */
   autoOpenCoachTour?: boolean
+  /** Hides the floating back-cluster + run-test/Activate chrome — for embedding the canvas
+   *  under a caller-owned header (e.g. Response agent (simulation)'s Workflow tab). */
+  hideTopBar?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -174,6 +177,7 @@ export function WorkflowEditorScreen({
   inlineRhsFooter = false,
   onOpenProductResearchSettings,
   autoOpenCoachTour = false,
+  hideTopBar = false,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -377,6 +381,7 @@ export function WorkflowEditorScreen({
             identityLocationChrome={identityLocationChrome}
             onOpenProductResearchSettings={onOpenProductResearchSettings}
             autoOpenCoachTour={autoOpenCoachTour}
+            hideTopBar={hideTopBar}
           />
         </Suspense>
       </div>
