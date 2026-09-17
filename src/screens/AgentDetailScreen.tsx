@@ -57,6 +57,7 @@ import {
   isResponseAgentsSimulationNav,
   isSep1StyleAgentListNav,
   RESPONSE_AGENTS_FULL_CANVAS_NAV_ID,
+  RESPONSE_AGENTS_SIMULATION_NAV_ID,
 } from '../data/agentNavIds'
 import {
   getExpectedBehaviorBullets,
@@ -8115,7 +8116,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   /** Sep 1 side-nav ids + production front desk / response agents share the same card grid chrome. */
   const isSep1Agents = isSep1StyleAgentListNav(navId)
   /** Full canvas is a duplicate of Sep 1 under its own nav slot — same data, its own page title. */
-  const pageTitle = navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ? `${agentName} (Full canvas)` : agentName
+  const pageTitle =
+    navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
+      ? `${agentName} (Full canvas)`
+      : navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
+        ? 'Review response agents (simulation)'
+        : agentName
   const useExplorationOutcomesTab = false
   const [activeTab, setActiveTab] = useState('agents')
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
