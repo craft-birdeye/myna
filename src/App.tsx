@@ -372,7 +372,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
 // are all native screens.
 const SUPER_AGENT_DEFAULT_NAV = 'sa-create'
 const SUPER_AGENT_NAV_SECTIONS: NavSection[] = [
-  { id: 'sa-create',      label: 'Create agent' },
+  { id: 'sa-create',      label: 'Create agent', plusIcon: true },
   { id: 'sa-agents',      label: 'My agents' },
   { id: 'sa-library',     label: 'Library' },
   { id: 'sa-knowledge',   label: 'Knowledge' },

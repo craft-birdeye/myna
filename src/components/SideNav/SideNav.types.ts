@@ -24,6 +24,8 @@ export interface NavSection {
   external?: boolean
   /** When set, shows the animated AI agents icon next to the section label. */
   badge?: string
+  /** For flat leaf sections (no items): show a trailing circular "+" button instead of the external-link icon. */
+  plusIcon?: boolean
 }
 
 export interface SideNavProps {

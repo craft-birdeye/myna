@@ -77,7 +77,13 @@ function FlatLeaf({
       }`}
     >
       <span className="min-w-0 flex-1 truncate text-body text-text-primary">{section.label}</span>
-      {section.external && <ExternalLink className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />}
+      {section.plusIcon ? (
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+          <Plus size={14} className="text-white" />
+        </span>
+      ) : (
+        section.external && <ExternalLink className="size-4 shrink-0 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
+      )}
     </button>
   )
 }
