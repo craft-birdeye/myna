@@ -1,18 +1,23 @@
-import { useMemo, useState } from 'react'
-import { HeaderSearchField, InfoCard } from '../../components'
+import { useEffect, useMemo, useState } from 'react'
+import { HeaderSearchField, InfoCard, Tabs, type Tab } from '../../components'
 import {
   isLibraryAgentVisibleForRole,
   SUPER_AGENT_LIBRARY_AGENTS,
-  SUPER_AGENT_LIBRARY_CATEGORIES,
+  type SuperAgentPillar,
   type SuperAgentRole,
 } from './superAgentSeedData'
+import jayIcon from '@icons/Jay.svg'
+import mynaIcon from '@icons/Myna.svg'
+import robinIcon from '@icons/Robin.svg'
 
 // Native "Library" screen for the Super agent L1 module — same sticky
 // `bg-surface px-2xl py-xl` header as My agents/AgentDetailScreen, full-width grid
-// (no `mx-auto`/`max-w` cap like the prototype's own version), left-aligned category
-// pills, and `InfoCard` (the shared library-grid card) instead of the prototype's own
-// card markup. All 19 of the prototype's own library agents are here (ported from
-// LIB_AGENTS), grouped into its 7 real categories — not a hand-picked subset.
+// (no `mx-auto`/`max-w` cap like the prototype's own version), and `InfoCard` (the
+// shared library-grid card) instead of the prototype's own card markup. All 19 of the
+// prototype's own library agents are here (ported from LIB_AGENTS). The pillar tab bar
+// (All/Jay/Myna/Robin) is the only categorization dimension now — the old
+// "Recommended for you / Get found / ..." category chip row was dropped in favor of it,
+// so a `recommended` agent just sorts first within whichever tab it's in.
 export interface SuperAgentLibraryScreenProps {
   /** Hands off to the prototype's own `app.useLibAgent(key)` — drafts (or reopens)
    *  the agent and opens its full AgentScreen. */
@@ -21,24 +26,64 @@ export interface SuperAgentLibraryScreenProps {
   activeRole: SuperAgentRole
 }
 
+// Same pillar tab bar as My agents (SuperAgentMyAgentsScreen) — same `Tabs` usage, same
+// jay/myna/robin icons — but keyed by `SuperAgentLibraryAgent`'s own `pillar` field
+// (this screen still sources from SUPER_AGENT_LIBRARY_AGENTS, not agentDirectoryData's
+// persona model), so no My-agents-style persona mapping is needed.
+type PillarTabId = SuperAgentPillar | 'all'
+
+const PILLAR_TAB_ORDER: PillarTabId[] = ['all', 'jay', 'myna', 'robin']
+const PILLAR_NAME: Record<SuperAgentPillar, string> = { jay: 'Jay', myna: 'Myna', robin: 'Robin' }
+const PILLAR_ICON: Record<SuperAgentPillar, string> = { jay: jayIcon, myna: mynaIcon, robin: robinIcon }
+
 export function SuperAgentLibraryScreen({ onUseAgent, activeRole }: SuperAgentLibraryScreenProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<(typeof SUPER_AGENT_LIBRARY_CATEGORIES)[number]['key']>('recommended')
 
-  const visibleAgents = useMemo(
+  // Executive (all 3 pillars) keeps the "All" tab and an actual tab bar; Manager/IC
+  // roles (a single pillar) skip straight to their one pillar with no tab bar at all —
+  // a one-item tab bar is redundant chrome (same rule as My agents).
+  const isExecutive = activeRole.pillars.length > 1
+  const defaultTab: PillarTabId = isExecutive ? 'all' : (activeRole.pillars[0] ?? 'all')
+  const [activeTab, setActiveTab] = useState<PillarTabId>(defaultTab)
+
+  useEffect(() => {
+    if (activeTab !== 'all' && !activeRole.pillars.includes(activeTab as SuperAgentPillar)) {
+      setActiveTab(defaultTab)
+    } else if (activeTab === 'all' && !isExecutive) {
+      setActiveTab(defaultTab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRole])
+
+  const roleVisibleAgents = useMemo(
     () => SUPER_AGENT_LIBRARY_AGENTS.filter((a) => isLibraryAgentVisibleForRole(a, activeRole)),
     [activeRole],
   )
+  const visibleAgents = useMemo(
+    () => (activeTab === 'all' ? roleVisibleAgents : roleVisibleAgents.filter((a) => a.pillar === activeTab)),
+    [roleVisibleAgents, activeTab],
+  )
+
+  const tabs: Tab[] = (isExecutive
+    ? PILLAR_TAB_ORDER
+    : PILLAR_TAB_ORDER.filter((id): id is SuperAgentPillar => id !== 'all' && activeRole.pillars.includes(id))
+  ).map((id) => ({
+    id,
+    label: id === 'all' ? 'All' : PILLAR_NAME[id],
+    icon: id === 'all' ? undefined : <img src={PILLAR_ICON[id]} alt="" className="size-4 shrink-0 rounded-full" />,
+  }))
 
   const q = query.trim().toLowerCase()
+  const sortedAgents = useMemo(
+    () => [...visibleAgents].sort((a, b) => Number(Boolean(b.recommended)) - Number(Boolean(a.recommended))),
+    [visibleAgents],
+  )
   const results = q
-    ? visibleAgents.filter(
+    ? sortedAgents.filter(
         (a) => a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)
       )
-    : category === 'recommended'
-      ? visibleAgents.filter((a) => a.recommended)
-      : visibleAgents.filter((a) => a.category === category)
+    : sortedAgents
 
   return (
     <div className="flex h-full flex-col overflow-auto bg-white">
@@ -52,22 +97,9 @@ export function SuperAgentLibraryScreen({ onUseAgent, activeRole }: SuperAgentLi
         <HeaderSearchField open={searchOpen} value={query} onOpenChange={setSearchOpen} onChange={setQuery} />
       </div>
 
-      {!q && (
-        <div className="quiet-scroll flex gap-sm overflow-x-auto px-2xl pt-lg">
-          {SUPER_AGENT_LIBRARY_CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              onClick={() => setCategory(c.key)}
-              className={`flex h-9 shrink-0 items-center whitespace-nowrap rounded-sm px-lg text-body transition-colors ${
-                category === c.key
-                  ? 'bg-surface-selected text-text-primary'
-                  : 'border border-border-selected bg-surface text-text-secondary hover:bg-surface-l2'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
+      {isExecutive && (
+        <div className="px-2xl pt-lg">
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as PillarTabId)} showBaseline={false} />
         </div>
       )}
 

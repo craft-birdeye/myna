@@ -71,6 +71,7 @@ export function SuperAgentCreateScreen({ activeRole, onBack, onEditAgent, onCrea
       <div className="flex min-h-0 flex-1 justify-center overflow-auto">
         <HealthcareFrontdeskCreateAgentScreen
           key={activeRole.id}
+          activeRole={activeRole}
           hideHeaderBack
           onBack={onBack}
           onCreateFromScratch={() => onEditAgent('', draftWorkflowForEditor(''))}

@@ -2857,7 +2857,7 @@ function Message({ m, app }) {
       case "text":
         return (m.sources || m.followUps)
           ? <StreamingAnswer text={m.text} sources={m.sources || []} followUps={m.followUps || []}
-              onFollowUp={(t) => app.sendPrompt(t)} onFeedback={(k) => app.toast(k === "up" ? "Thanks — noted" : k === "down" ? "Thanks — I'll adjust" : k === "copy" ? "Copied" : "Regenerating")} />
+              onFollowUp={(t) => app.promptOrToast(t)} onFeedback={(k) => app.toast(k === "up" ? "Thanks — noted" : k === "down" ? "Thanks — I'll adjust" : k === "copy" ? "Copied" : "Regenerating")} />
           : <AgentText text={m.text} stream={m.stream} />;
       case "activity": return <ActivityBlock lines={m.lines} onDone={m.next} label={m.label} />;
       case "progress": return <ProgressCard title={m.title} doneTitle={m.doneTitle} steps={m.steps} activity={m.activity} onDone={m.next} />;
@@ -3480,8 +3480,8 @@ function LocationComparison({ app }) {
               Westside is your only location trending down, and wait time appears in 9 of its last 14 reviews. Downtown takes the most calls but also misses the most — 17 last month.
             </p>
             <div className="mt-2.5 flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={() => app.sendPrompt("Help me fix wait times at Westside")}>Look into Westside</Button>
-              <Button variant="secondary" size="sm" onClick={() => app.sendPrompt("Reduce missed calls at Downtown")}>Reduce Downtown missed calls</Button>
+              <Button variant="secondary" size="sm" onClick={() => app.promptOrToast("Help me fix wait times at Westside")}>Look into Westside</Button>
+              <Button variant="secondary" size="sm" onClick={() => app.promptOrToast("Reduce missed calls at Downtown")}>Reduce Downtown missed calls</Button>
             </div>
           </div>
         </div>
@@ -4325,7 +4325,7 @@ function AgentThread({ agent, app }) {
           <p className="max-w-[52ch] text-[13px] leading-[1.6] text-ink-2">
             Ask {agent.name} to change how it works, run a test, or explain something it did. Changes here update its setup.
           </p>
-          <SuggestionChips chips={["Run a test", "Change what needs my approval", "Explain the last escalation"]} onPick={(c) => app.sendPrompt(c)} />
+          <SuggestionChips chips={["Run a test", "Change what needs my approval", "Explain the last escalation"]} onPick={(c) => app.promptOrToast(c)} />
         </div>
       )}
 
@@ -4587,7 +4587,7 @@ function AgentScreen({ app, renderWorkflowTab, hideIdentity = false }) {
                   <p className="max-w-[52ch] text-[13px] leading-[1.6] text-ink-2">
                     Ask {agent.name} to change how it works, run a test, or explain something it did. Changes here update its setup.
                   </p>
-                  <SuggestionChips chips={["Run a test", "Change what needs my approval", "Explain the last escalation"]} onPick={(c) => app.sendPrompt(c)} />
+                  <SuggestionChips chips={["Run a test", "Change what needs my approval", "Explain the last escalation"]} onPick={(c) => app.promptOrToast(c)} />
                 </div>
               )}
               {app.msgs.map((m) => <Message key={m.id} m={m} app={app} />)}
@@ -4709,7 +4709,19 @@ function HomeCard({ rec, done, onPick, index }) {
 function CreateAgentScreen({ app }) {
   const ws = app.setup || DEFAULT_SETUP;
   const firstName = (ws.owner || "").replace(/^(Dr\.|Mr\.|Ms\.|Mrs\.)\s*/, "").split(" ")[0] || "there";
-  const recs = useMemo(() => recommendAgents(ws, 4), [ws]);
+  const recs = useMemo(() => {
+    const base = recommendAgents(ws, 4);
+    const pillar = app.roleScope;
+    if (!pillar || pillar === "all") return base;
+    // A role scoped to one pillar must never see an out-of-scope agent recommended,
+    // not even as filler — no "rest" fallback. If there aren't 4 in-pillar agents,
+    // fewer cards show; nothing outside the role's scope is padded in.
+    const matches = base.filter((r) => LIB_PILLAR_BY_KEY[r.agent.key] === pillar);
+    const extra = LIB_AGENTS
+      .filter((a) => LIB_PILLAR_BY_KEY[a.key] === pillar && !matches.some((m) => m.agent.key === a.key))
+      .map((a) => ({ agent: a, why: null }));
+    return [...matches, ...extra].slice(0, 4);
+  }, [ws, app.roleScope]);
   /* say plainly what the recommendations came from */
   const basis = (ws.problems || []).map((p) => (PROBLEM_BY_KEY[p] || {}).label).filter(Boolean).slice(0, 2).map((l) => l.toLowerCase());
   const solvedKey = { "negative-review-recovery": "rep", "front-desk": "fd" };
@@ -4729,7 +4741,7 @@ function CreateAgentScreen({ app }) {
 
         <div className="mt-7 w-full" style={{ animation: "fade-up 460ms cubic-bezier(0.23,1,0.32,1) 140ms both" }}>
           {/* clicking the empty box types the demo prompt — no pasting on stage */}
-          <Composer app={app} glow="always" tall showUsage={false} autofill={TX_PROMPT} autofillAttachment
+          <Composer app={app} glow="always" tall showUsage={false} autofill={PILLAR_PROMPTS[app.roleScope] || TX_PROMPT} autofillAttachment
             placeholder="Describe tasks or workflows that need automation" />
         </div>
       </div>
@@ -4748,7 +4760,7 @@ function CreateAgentScreen({ app }) {
         ))}
       </div>
 
-      <button type="button" onClick={() => app.sendPrompt("I want to create a custom agent")}
+      <button type="button" onClick={() => app.promptOrToast("I want to create a custom agent")}
         className="mt-5 self-start text-[12.5px] font-medium text-accent-ink transition-colors hover:text-ink">
         Or describe a workflow and I will build it
       </button>
@@ -5917,6 +5929,7 @@ function Composer({ app, placeholder = "Tell Super Agent what you need help with
   const [modelOpen, setModelOpen] = useState(false);
   const [model, setModel] = useState(MODELS[0]);
   const [dismissed, setDismissed] = useState(false);
+  const [composerErr, setComposerErr] = useState(null);
   const [active, setActive] = useState(0);
   const [rowBox, setRowBox] = useState(null);
   const [engaged, setEngaged] = useState(false);
@@ -6009,11 +6022,19 @@ function Composer({ app, placeholder = "Tell Super Agent what you need help with
   const send = () => {
     if (!canSend) return;
     const text = draft.trim();
-    setDraft(""); setAttachments([]); setLightbox(null); closeMenus();
     /* onSend lets a host screen take the prompt somewhere other than the
        default router — the Birdeye front desk build screen uses it to start
-       that journey and change stage in one go */
-    (onSend || app.sendPrompt)(text);
+       that journey and change stage in one go. A role-gate denial (see
+       `sendPrompt`'s return value) is handled entirely here, inline — the
+       draft is kept so the person can edit it, and nothing navigates or
+       opens a chat thread for a message that was never allowed to send. */
+    const result = (onSend || app.sendPrompt)(text);
+    if (result && result.denied) {
+      setComposerErr(result.message);
+      return;
+    }
+    setComposerErr(null);
+    setDraft(""); setAttachments([]); setLightbox(null); closeMenus();
   };
 
   const anchorStyle = tall
@@ -6115,7 +6136,7 @@ function Composer({ app, placeholder = "Tell Super Agent what you need help with
 
         <textarea ref={inputRef} rows={tall ? 3 : 1} value={draft}
           onClick={autofillOnClick} onFocus={autofillOnClick}
-          onChange={(e) => { setDraft(e.target.value); setDismissed(false); setPlusOpen(false); }}
+          onChange={(e) => { setDraft(e.target.value); setDismissed(false); setPlusOpen(false); setComposerErr(null); }}
           onKeyDown={(e) => {
             if (menu && rows.length > 0) {
               if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -6170,6 +6191,16 @@ function Composer({ app, placeholder = "Tell Super Agent what you need help with
           </button>
         </div>
       </div>
+
+      {/* Role-gate denial (see Composer's `send`/`sendPrompt`) — shown inline right
+          under the composer, not as a chat reply, so a blocked message never
+          navigates anywhere; it just tells the person why and lets them edit. */}
+      {composerErr && (
+        <div className="mt-1.5 flex items-start gap-1.5 px-1 text-[12.5px] text-[#b3261e]" role="alert">
+          <Icon name="alert" size={14} sw={2} className="mt-[1px] shrink-0" />
+          <span>{composerErr}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -6488,6 +6519,46 @@ const AGENT_EVENTS = {
  * presented in the chair, the patient says they'll think about
  * it, and nobody ever calls them back. */
 const TX_PROMPT = "We miss calls every day when the front desk is slammed, and half those people never call back — that's real business walking away.\nI want an agent that can pick up when we can't, answer the basics, and get the person booked or pointed to the right place.\nI sketched out roughly how I picture it working, step by step — attached that workflow so you can see what I'm imagining.";
+
+// Same pillar split as the myna host's superAgentSeedData.ts (jay=Marketing,
+// myna=Operations, robin=Customer experience) — keyed by this file's own LIB_AGENTS
+// `key`, so CreateAgentScreen's "Recommended for you" cards can bias toward
+// whichever pillar the host's active role is scoped to. Kept local to this file
+// rather than imported, since the iframe has no access to the host's own modules.
+const LIB_PILLAR_BY_KEY = {
+  "front-desk": "myna",
+  "negative-review-recovery": "jay",
+  "review-generation": "jay",
+  "listings-health": "jay",
+  "location-performance": "myna",
+  "local-content": "jay",
+  "business-info": "jay",
+  "review-response": "jay",
+  "missed-call-recovery": "myna",
+  "appointment-booking": "myna",
+  "lead-qualification": "myna",
+  "social-publishing": "jay",
+  "social-engagement": "jay",
+  "local-social-content": "jay",
+  "executive-summary": "myna",
+  "performance-alert": "myna",
+  "marketing-content": "jay",
+  "blog-seo": "jay",
+  "content-repurposing": "jay",
+  "survey-followup": "robin",
+  "ticket-triage": "robin",
+  "contact-health": "robin",
+};
+
+// Per-pillar default prompt for the Create-agent composer — a shortcut standing in
+// for the native ghostwriter's own role-aware behavior, not full parity. 'all'
+// (Executive-tier roles) keeps the original TX_PROMPT demo script.
+const PILLAR_PROMPTS = {
+  jay: "Build me an agent that watches my reviews and listings, and keeps my online presence accurate and on-brand.",
+  myna: "I want a front desk agent for our clinic. It should answer inbound calls, book and reschedule appointments, and only escalate to a human when it's something it can't handle.",
+  robin: "Build me an agent that follows up on surveys and routes urgent tickets to the right person.",
+  all: TX_PROMPT,
+};
 
 const TX_SEED = {
   id: "treatment-followup", akey: "lead-qualification", name: "Treatment Follow-Up Agent",
@@ -8113,6 +8184,27 @@ const WORKING_MSG_KINDS = new Set(["activity", "progress", "testActivity", "tran
 
 function App() {
   const [nav, setNav] = useState("create");
+  // The host posts "superagent:set-role" whenever its active role changes. Besides
+  // biasing CreateAgentScreen's recommended cards + default prompt, `roleScope` also
+  // gates every entry point that creates/opens a NOT-YET-existing agent tied to a
+  // pillar-specific journey (see `isPillarAllowed`/`denyPillar` just below, and their
+  // call sites in `sendPrompt`, `startRep`, `startFd`, `useLibAgent`) — a role scoped
+  // to one pillar ('jay'/'myna'/'robin') can't build an agent outside it. An
+  // already-existing agent can still be opened/viewed regardless of the active role —
+  // only *creating a new one* outside scope is blocked. 'all' (Executive-tier roles)
+  // is never restricted.
+  const [roleScope, setRoleScope] = useState("all");
+  const ROLE_PILLAR_LABEL = { jay: "Reviews & Marketing", myna: "Front Desk", robin: "Customer Experience" };
+  const isPillarAllowed = (pillar) => roleScope === "all" || roleScope === pillar;
+  // Denies building a specific pillar's agent from a non-composer entry point (a
+  // "Set up"/"Use agent" card or library click — see `startRep`/`startFd`/
+  // `useLibAgent`). A toast, not a chat reply: the click never opens or navigates
+  // into any agent thread for a build that was never allowed to start. (The
+  // composer's own denial path is separate — see `sendPrompt`'s `{ denied }`
+  // return, shown inline under the composer by `Composer.send`.)
+  const denyPillar = (pillar) => {
+    toast(`You don't have access to build ${ROLE_PILLAR_LABEL[pillar]} agents — your role is scoped to ${ROLE_PILLAR_LABEL[roleScope]} only.`);
+  };
   /* every conversation belongs to an agent — creating one is just
    * opening a draft and talking to it, so there is no separate
    * "creation" screen to jump out of when it goes live */
@@ -8273,6 +8365,10 @@ function App() {
         useLibAgent(data.key);
         return;
       }
+      if (data.type === "superagent:set-role" && data.pillar) {
+        setRoleScope(data.pillar);
+        return;
+      }
       if (data.type !== "superagent:navigate" || !data.key) return;
       setSetup((s) => (s.onboarded ? s : { ...s, onboarded: true }));
       setStage("app");
@@ -8412,6 +8508,7 @@ function App() {
   /* ── JOURNEY 1 — custom Reputation Agent ────────────── */
   const startRep = (opts) => {
     if (agents.some((a) => a.id === "reputation")) { openAgent("reputation", "chat"); return; }
+    if (!isPillarAllowed("jay")) { denyPillar("jay"); return; }
     openDraft("reputation", { ...AGENT_SEED.reputation, status: "draft", metrics: [], lastRun: "not run yet" });
     afterBeat(() => {
       if (!(opts && opts.quiet)) push({ kind: "user", text: "I need help staying on top of negative patient reviews across our locations." });
@@ -8547,6 +8644,7 @@ function App() {
   /* ── JOURNEY 2 — install a prebuilt AI Front Desk Agent ── */
   const startFd = (opts) => {
     if (agents.some((a) => a.id === "frontdesk")) { openAgent("frontdesk", "chat"); return; }
+    if (!isPillarAllowed("myna")) { denyPillar("myna"); return; }
     if (fdStartedRef.current) return;
     fdStartedRef.current = true;
     openDraft("frontdesk", { ...AGENT_SEED.frontdesk, status: "draft", metrics: [], lastRun: "not run yet" });
@@ -8862,7 +8960,7 @@ function App() {
           push({ kind: "chips", bare: true, chips: ["Use this agent", "Show a sample call"] });
         }, 450);
         break;
-      default: sendPrompt(c);
+      default: promptOrToast(c);
     }
   };
 
@@ -8876,7 +8974,7 @@ function App() {
   const startFromChip = (c) => {
     if (c === "Respond to negative reviews") return startRep();
     if (c === "Recover missed calls") return startFd();
-    return sendPrompt(c);
+    return promptOrToast(c);
   };
 
   const startRecall = () => {
@@ -9082,6 +9180,27 @@ function App() {
        (an autofill chip, a keyboard shortcut) gets the same guard. */
     if (thinking) return;
     const t = text.toLowerCase();
+    /* Role gate (see `isPillarAllowed`/`ROLE_PILLAR_LABEL` above) — `app.sendPrompt`
+     * is the one place both the create-agent landing composer and an already-open
+     * agent's own follow-up composer funnel through (see `onFollowUp` on the agent
+     * Chat tab), so checking here covers every typed message, not just the first.
+     * Checked before the usage counter updates and before either journey below, so
+     * a blocked message never consumes usage or opens/navigates anywhere — it
+     * returns a `{ denied, message }` result instead, which `Composer.send` shows
+     * inline under the composer itself rather than as a chat reply. Only the two
+     * pillar-specific journeys below (front desk = myna, reviews = jay) are gated
+     * by keyword; anything else (treatment plans, custom agents) is left open
+     * rather than guessed at. */
+    const blockedPillar =
+      !isPillarAllowed("jay") && /review|reputation|rating|star/.test(t) ? "jay"
+      : !isPillarAllowed("myna") && /call|phone|front ?desk|missed|book|appointment/.test(t) ? "myna"
+      : null;
+    if (blockedPillar) {
+      return {
+        denied: true,
+        message: `You don't have access to build ${ROLE_PILLAR_LABEL[blockedPillar]} agents — your role is scoped to ${ROLE_PILLAR_LABEL[roleScope]} only.`,
+      };
+    }
     setUsage((u) => ({ ...u, used: Math.min(u.limit, u.used + 8 + Math.round(text.length / 6)) }));
     /* checked before reviews and calls — "never scheduled" and
      * "treatment plan" would otherwise get pulled into booking */
@@ -9116,6 +9235,14 @@ function App() {
         afterBeat(() => push({ kind: "chips", bare: true, chips: ["Respond to negative reviews", "Recover missed calls", "Route urgent patient messages"] }), 700);
       },
     });
+  };
+
+  // Fire-and-forget UI entry points (suggestion chips, follow-up buttons) that call
+  // `sendPrompt` directly without a place of their own to show an inline error like
+  // the Composer has — toast a role-gate denial instead of silently doing nothing.
+  const promptOrToast = (text) => {
+    const result = sendPrompt(text);
+    if (result && result.denied) toast(result.message);
   };
 
   const jumpTo = (key) => {
@@ -9273,6 +9400,10 @@ function App() {
       openAgent(key === "front-desk" ? "frontdesk" : key === "negative-review-recovery" ? "reputation" : key, "chat");
       return;
     }
+    // Covers every other library key (not just the two special-cased above) via the
+    // same pillar map CreateAgentScreen already uses to bias its recommendations.
+    const libPillar = LIB_PILLAR_BY_KEY[key];
+    if (libPillar && !isPillarAllowed(libPillar)) { denyPillar(libPillar); return; }
     const id = key === "front-desk" ? "frontdesk" : key === "negative-review-recovery" ? "reputation" : key;
     const seed = id === "frontdesk" ? { ...AGENT_SEED.frontdesk, status: "draft", metrics: [], lastRun: "not run yet" }
       : id === "reputation" ? { ...AGENT_SEED.reputation, status: "draft", metrics: [], lastRun: "not run yet" }
@@ -9296,8 +9427,9 @@ function App() {
 
   const app = {
     nav, go, agents, activity, approvals, msgs, thinking, toast, dark, toggleTheme: () => setDark((d) => !d),
+    roleScope,
     panelOpen, setPanelOpen, journeyLabel, focusTick, restart, jumpTo, openAgent, closeAgent,
-    startFromCard, startFromChip, sendPrompt, onChip, runAction,
+    startFromCard, startFromChip, sendPrompt, promptOrToast, onChip, runAction,
     repCreate, repAdjust, repAdjustContinue, repRunTest, repApprove, onTestProgress,
     useLibraryAgent, showLibraryDetail, fdConfigAnswer, fdStartCall, onCallProgress, startFd,
     useLibAgent, openAgentId, agentTab, setAgentTab, agentExpanded, setAgentExpanded, marketTab, setMarketTab, usage, setup, replayOnboarding,

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Icon, MetricTiles, Tabs, type Metric, type Tab } from '../../components'
 import { getAgentDirectory, type AgentDirectoryEntry, type AgentPersonaId } from '../../data/agentDirectoryData'
-import { AgentDetailScreen } from '../AgentDetailScreen'
+import { AgentDetailScreen, getAgentInstanceStatusCounts } from '../AgentDetailScreen'
 import { isDirectoryAgentVisibleForRole, PILLAR_TO_PERSONA, type SuperAgentRole } from './superAgentSeedData'
 import jayIcon from '@icons/Jay.svg'
 import mynaIcon from '@icons/Myna.svg'
@@ -52,9 +52,23 @@ function AgentMetric({ value, label }: { value: string; label: string }) {
 // badge, active/inactive chip, description, 3-metric row) — kept as an independent copy rather
 // than a cross-import, per that file's own fork-don't-import convention. Drag-reorder/editing is
 // dropped since this grid isn't customizable.
-function MyAgentsGroupCard({ agent, onOpen }: { agent: AgentDirectoryEntry; onOpen?: () => void }) {
+function MyAgentsGroupCard({
+  agent,
+  displayName,
+  onOpen,
+}: {
+  agent: AgentDirectoryEntry
+  /** Exact display name `AgentDetailScreen`'s drill-in resolves for this agent (falls back
+   *  to `agent.name` when there's no navId — see `SuperAgentMyAgentsScreenProps.agentNames`). */
+  displayName: string
+  onOpen?: () => void
+}) {
   const issueCount = agent.alert ? parseInt(agent.alert.message, 10) : undefined
   const clickable = Boolean(onOpen)
+  // Derive the badge from the same region data the drill-in view renders, rather than
+  // trusting `agent.running` to independently agree with it. Agents with no navId have no
+  // drill-in to match against, so `running` is the only number available for those.
+  const activeCount = agent.navId ? getAgentInstanceStatusCounts(displayName, agent.navId).active : agent.running
 
   return (
     <div
@@ -84,9 +98,9 @@ function MyAgentsGroupCard({ agent, onOpen }: { agent: AgentDirectoryEntry; onOp
               {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
             </span>
           )}
-          {agent.running > 0 ? (
+          {activeCount > 0 ? (
             <span className="rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
-              {agent.running} active
+              {activeCount} active
             </span>
           ) : (
             <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Inactive</span>
@@ -173,13 +187,29 @@ export function SuperAgentMyAgentsScreen({ product, agentNames, activeRole }: Su
 
   const filteredAgents = activeTab === 'all' ? agentDirectory : agentDirectory.filter((a) => a.persona === activeTab)
 
-  const runningCount = filteredAgents.filter((a) => a.running > 0).length
+  // Each card is a *group* — e.g. "Review response agent" fans out into several per-region
+  // instances underneath it (the same drill-in list `MyAgentsGroupCard`'s badge counts from).
+  // The top tiles must count those individual instances, not the group cards themselves, so
+  // they line up with what the badges below add up to.
+  const instanceCounts = filteredAgents.map((agent) => {
+    const displayName = (agent.navId && agentNames[agent.navId]) || agent.name
+    // No navId means no drill-in instance list exists for this group — treat the card as a
+    // single instance (active if `running > 0`, otherwise the one paused/inactive instance).
+    if (!agent.navId) return { total: 1, active: agent.running > 0 ? 1 : 0 }
+    return getAgentInstanceStatusCounts(displayName, agent.navId)
+  })
+
+  // Tile 1 = total individual agent instances visible in the current tab/filter, regardless
+  // of status. Tile 2 = the subset of those instances currently active — a genuinely
+  // different, smaller count, not a relabeled duplicate of Tile 1.
+  const totalAgentsCount = instanceCounts.reduce((sum, c) => sum + c.total, 0)
+  const runningCount = instanceCounts.reduce((sum, c) => sum + c.active, 0)
   const totalHours = filteredAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
   const totalCostK = filteredAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
 
   const summaryMetrics: Metric[] = [
+    { id: 'total-agents', value: String(totalAgentsCount), label: 'Total agents' },
     { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
-    { id: 'agents', value: String(filteredAgents.length), label: 'Agents' },
     { id: 'time-saved', value: `${totalHours.toFixed(1)}h`, label: 'Time saved' },
     { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
   ]
@@ -194,7 +224,9 @@ export function SuperAgentMyAgentsScreen({ product, agentNames, activeRole }: Su
       </div>
 
       <div className="flex flex-col gap-xl px-2xl py-lg">
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as PillarTabId)} showBaseline={false} />
+        {isExecutive && (
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as PillarTabId)} showBaseline={false} />
+        )}
 
         <MetricTiles metrics={summaryMetrics} />
 
@@ -208,6 +240,7 @@ export function SuperAgentMyAgentsScreen({ product, agentNames, activeRole }: Su
               <MyAgentsGroupCard
                 key={agent.id}
                 agent={agent}
+                displayName={(agent.navId && agentNames[agent.navId]) || agent.name}
                 onOpen={agent.navId ? () => setSelectedAgentNavId(agent.navId!) : undefined}
               />
             ))}

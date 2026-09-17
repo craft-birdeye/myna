@@ -1,28 +1,13 @@
 import { useMemo, useState } from 'react'
 import {
-  isLibraryAgentVisibleForRole,
+  getChannelPreviewVisibleAgentIds,
   SUPER_AGENT_REACH_APPS,
-  type SuperAgentLibraryAgent,
   type SuperAgentRole,
 } from './superAgentSeedData'
 import { ChannelGlyph, type ChannelKey } from './ChannelGlyph'
 import { ChannelConnectModal } from './ChannelConnectModal'
 import { ChannelPreviewModal } from './ChannelPreviewModal'
 import { ConnectorBrowser } from './ConnectorBrowser'
-
-// The 5 agents `ChannelPreviewModal`'s own `AGENT_META` knows about (the fixed cast of
-// agents that can show up in a channel preview thread), each tagged with the pillar +
-// library category it corresponds to in `superAgentSeedData.ts`'s `SUPER_AGENT_LIBRARY_AGENTS`
-// (review-response/review-generation/listings-health -> jay; appointment-booking/frontdesk
-// (the "AI Front Desk Agent", library key `front-desk`) -> myna), so
-// `isLibraryAgentVisibleForRole` can gate them the same way it gates the Library grid.
-const CONNECTIONS_PREVIEW_AGENTS: Pick<SuperAgentLibraryAgent, 'key' | 'pillar' | 'category'>[] = [
-  { key: 'review-response', pillar: 'jay', category: 'build-trust' },
-  { key: 'frontdesk', pillar: 'myna', category: 'convert-leads' },
-  { key: 'appointment-booking', pillar: 'myna', category: 'convert-leads' },
-  { key: 'listings-health', pillar: 'jay', category: 'get-found' },
-  { key: 'review-generation', pillar: 'jay', category: 'build-trust' },
-]
 
 // Native "Connections" screen for the Super agent L1 module — same sticky header as
 // My agents/Library; full-width, left-aligned card grids in place of the prototype's
@@ -58,13 +43,7 @@ export function SuperAgentConnectionsScreen({ activeRole, activeRoleId, onRoleCh
 
   // Executive sees all 5 unfiltered; IC/Manager roles only see the agents their pillar
   // (and, for IC, library category) grants them.
-  const visibleAgentIds = useMemo(
-    () =>
-      CONNECTIONS_PREVIEW_AGENTS.filter((agent) => isLibraryAgentVisibleForRole(agent as SuperAgentLibraryAgent, activeRole)).map(
-        (agent) => agent.key,
-      ),
-    [activeRole],
-  )
+  const visibleAgentIds = useMemo(() => getChannelPreviewVisibleAgentIds(activeRole), [activeRole])
 
   const connectChannel = (channel: ChannelKey) => {
     setConnectedChannels((list) => (list.includes(channel) ? list : [...list, channel]))

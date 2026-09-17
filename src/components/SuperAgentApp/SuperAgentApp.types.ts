@@ -31,6 +31,15 @@ export interface SuperAgentUseLibraryCommand {
   ts: number
 }
 
+export interface SuperAgentRoleCommand {
+  /** the pillar the active role is scoped to, or 'all' for an Executive-tier role —
+   *  see superAgentSeedData.ts's SuperAgentRole.pillars */
+  pillar: 'jay' | 'myna' | 'robin' | 'all'
+  /** a new value on every role switch, even a repeat, so the postMessage effect
+   *  fires again instead of bailing on an unchanged dep */
+  ts: number
+}
+
 export interface SuperAgentAppProps {
   /** false keeps the iframe mounted but hidden, so it only boots once */
   active: boolean
@@ -60,6 +69,12 @@ export interface SuperAgentAppProps {
    *  agent from the prototype's own library and opens its AgentScreen. Only
    *  meaningful in 'embedded' mode. */
   useLibraryCmd?: SuperAgentUseLibraryCommand | null
+  /** set whenever the host's active role changes — lets the iframe's Create agent
+   *  landing bias its "Recommended for you" cards and default prompt toward that
+   *  role's pillar. Only meaningful in 'embedded' mode. Shortcut, not full role
+   *  parity: every other iframe surface (Library, Knowledge, Connections, channel
+   *  previews) is unaffected. */
+  role?: SuperAgentRoleCommand | null
   /** called when the person clicks the prototype's own "Back to Birdeye" switcher
    *  inside the iframe — the host closes the overlay to reveal its real Dashboard.
    *  Only meaningful in 'overlay' mode. */
@@ -83,4 +98,10 @@ export interface SuperAgentAppProps {
    *  underneath a host chrome that still thinks an agent is open. Only meaningful
    *  in 'embedded' mode. */
   onGoConnections?: () => void
+  /** Gates which agents' messages appear in a channel preview thread opened from
+   *  inside the iframe (e.g. an agent's own Chat tab "chat from another app" bottom
+   *  sheet) — the same role-based filtering `SuperAgentConnectionsScreen` applies,
+   *  computed by the host via `getChannelPreviewVisibleAgentIds` so both entry points
+   *  stay in sync. Undefined means no filtering (Executive). */
+  visibleAgentIds?: string[]
 }

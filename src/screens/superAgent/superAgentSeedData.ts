@@ -56,6 +56,10 @@ export interface SuperAgentRole {
   reportsTo?: string
   /** Dummy person filling this role, shown alongside the title in the org chart. */
   personName: string
+  /** Real (Pexels, free-to-use) stand-in photo for this fictional role — never a
+   *  real employee's headshot. Used directly as an <img src> everywhere this role's
+   *  avatar is shown (org chart, TopBar role switcher). */
+  photoUrl: string
   pillars: SuperAgentPillar[]
   /** IC-only: narrows Library/Knowledge/Connections (this file's own category enum). */
   libraryCategories?: SuperAgentLibraryCategory[]
@@ -71,6 +75,7 @@ export const SUPER_AGENT_ROLES: SuperAgentRole[] = [
     tier: 'ic',
     reportsTo: 'mgr-jay',
     personName: 'Jordan Kim',
+    photoUrl: 'https://images.pexels.com/photos/18032391/pexels-photo-18032391.jpeg',
     pillars: ['jay'],
     libraryCategories: ['build-trust'],
     directoryCategories: ['Reviews AI'],
@@ -82,9 +87,10 @@ export const SUPER_AGENT_ROLES: SuperAgentRole[] = [
     tier: 'ic',
     reportsTo: 'mgr-myna',
     personName: 'Sam Patel',
+    photoUrl: 'https://images.pexels.com/photos/14589344/pexels-photo-14589344.jpeg',
     pillars: ['myna'],
     libraryCategories: ['convert-leads'],
-    directoryCategories: ['Front desk'],
+    directoryCategories: ['Front desk', 'Inbox'],
   },
   {
     id: 'mgr-jay',
@@ -93,6 +99,7 @@ export const SUPER_AGENT_ROLES: SuperAgentRole[] = [
     tier: 'manager',
     reportsTo: 'exec-owner',
     personName: 'Renee Alvarez',
+    photoUrl: 'https://images.pexels.com/photos/8171180/pexels-photo-8171180.jpeg',
     pillars: ['jay'],
   },
   {
@@ -102,6 +109,7 @@ export const SUPER_AGENT_ROLES: SuperAgentRole[] = [
     tier: 'manager',
     reportsTo: 'exec-owner',
     personName: 'Tom Okafor',
+    photoUrl: 'https://images.pexels.com/photos/37148308/pexels-photo-37148308.jpeg',
     pillars: ['myna'],
   },
   {
@@ -111,6 +119,7 @@ export const SUPER_AGENT_ROLES: SuperAgentRole[] = [
     tier: 'manager',
     reportsTo: 'exec-owner',
     personName: 'Priya Nair',
+    photoUrl: 'https://images.pexels.com/photos/30479371/pexels-photo-30479371.jpeg',
     pillars: ['robin'],
   },
   {
@@ -119,6 +128,7 @@ export const SUPER_AGENT_ROLES: SuperAgentRole[] = [
     org: 'Aspen Dental',
     tier: 'executive',
     personName: 'Dr. Maria Chen',
+    photoUrl: 'https://images.pexels.com/photos/21316048/pexels-photo-21316048.jpeg',
     pillars: ['jay', 'myna', 'robin'],
   },
 ]
@@ -140,6 +150,104 @@ export function isDirectoryAgentVisibleForRole(agent: AgentDirectoryEntry, role:
   if (!role.pillars.includes(PERSONA_TO_PILLAR[agent.persona])) return false
   if (role.directoryCategories && !role.directoryCategories.includes(agent.category)) return false
   return true
+}
+
+// Human-readable label per pillar, used to explain a role's scope in denial copy
+// (e.g. the create-agent chat's out-of-scope block message below).
+export const SUPER_AGENT_PILLAR_LABELS: Record<SuperAgentPillar, string> = {
+  myna: 'Front desk & operations',
+  jay: 'Reviews & marketing',
+  robin: 'Customer experience',
+}
+
+// Human-readable label for an IC role's access scope, keyed by either the
+// `libraryCategories` enum value or the equivalent `directoryCategories` free-text
+// value — used by the org chart's access line so it never interpolates the raw
+// category string directly. Only covers categories actually used by a role above;
+// 'convert-leads' is a fixed combined phrase since Front Desk Associate now spans
+// both the Front desk and Inbox directory categories.
+export const CATEGORY_DISPLAY_LABEL: Record<string, string> = {
+  'build-trust': 'Review agents',
+  'Reviews AI': 'Review agents',
+  'convert-leads': 'Frontdesk and inbox agents',
+}
+
+export function describeRoleScope(role: SuperAgentRole): string {
+  const pillarText = role.pillars.map((pillar) => SUPER_AGENT_PILLAR_LABELS[pillar]).join(' and ')
+  const categoryText = role.libraryCategories
+    ?.map((cat) => SUPER_AGENT_LIBRARY_CATEGORIES.find((c) => c.key === cat)?.label)
+    .filter((label): label is string => Boolean(label))
+    .join(', ')
+  return categoryText ? `${pillarText} (${categoryText})` : pillarText
+}
+
+// Simple keyword → family classification for gating the create-agent chat by role.
+// Not exhaustive — an unrecognized prompt is left unclassified and allowed through
+// rather than guessed at.
+const ROLE_GATE_RULES: {
+  keywords: string[]
+  pillar: SuperAgentPillar
+  category?: SuperAgentLibraryCategory
+  label: string
+}[] = [
+  {
+    keywords: ['front desk', 'call', 'phone', 'appointment', 'booking', 'book an appointment', 'reschedule'],
+    pillar: 'myna',
+    category: 'convert-leads',
+    label: 'Front Desk',
+  },
+  {
+    keywords: ['review', 'reputation', 'rating'],
+    pillar: 'jay',
+    category: 'build-trust',
+    label: 'Reviews',
+  },
+  {
+    keywords: ['social', 'instagram', 'content'],
+    pillar: 'jay',
+    category: 'grow-audience',
+    label: 'Social',
+  },
+  {
+    keywords: ['survey', 'ticket'],
+    pillar: 'robin',
+    label: 'Surveys & tickets',
+  },
+]
+
+interface RoleGateClassification {
+  pillar: SuperAgentPillar
+  category?: SuperAgentLibraryCategory
+  label: string
+}
+
+function classifyPromptForRoleGate(text: string): RoleGateClassification | null {
+  const lower = text.toLowerCase()
+  for (const rule of ROLE_GATE_RULES) {
+    if (rule.keywords.some((keyword) => lower.includes(keyword))) {
+      return { pillar: rule.pillar, category: rule.category, label: rule.label }
+    }
+  }
+  return null
+}
+
+// Reuses the real `isLibraryAgentVisibleForRole` gate (rather than a parallel
+// pillar/category comparison) by building a minimal fake library-agent shape from the
+// classified family and running it through the same visibility check used everywhere
+// else in the module.
+export function isPromptAllowedForRole(text: string, role: SuperAgentRole): { allowed: boolean; label?: string } {
+  const classification = classifyPromptForRoleGate(text)
+  if (!classification) return { allowed: true }
+  const fakeAgent = (
+    classification.category
+      ? { pillar: classification.pillar, category: classification.category }
+      : { pillar: classification.pillar }
+  ) as unknown as SuperAgentLibraryAgent
+  return { allowed: isLibraryAgentVisibleForRole(fakeAgent, role), label: classification.label }
+}
+
+export function buildRoleGateDenialMessage(role: SuperAgentRole, label: string): string {
+  return `You don't have access to build ${label} agents — your role, ${role.title}, is scoped to ${describeRoleScope(role)} only.`
 }
 
 export interface SuperAgentMyAgent {
@@ -566,6 +674,32 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     category: 'understand-performance',
   },
 ]
+
+// The 5 agents `ChannelPreviewModal`'s own `AGENT_META` knows about (the fixed cast of
+// agents that can show up in a channel preview thread), each tagged with the pillar +
+// library category it corresponds to in `SUPER_AGENT_LIBRARY_AGENTS` (review-response/
+// review-generation/listings-health -> jay; appointment-booking/frontdesk (the "AI Front
+// Desk Agent", library key `front-desk`) -> myna), so `isLibraryAgentVisibleForRole` can
+// gate them the same way it gates the Library grid. Shared by `SuperAgentConnectionsScreen`
+// and `App.tsx` (via `getChannelPreviewVisibleAgentIds`) so a channel preview opened from
+// either surface — Connections, or a channel icon inside an agent's own Chat tab bottom
+// sheet (relayed through `SuperAgentApp`'s `superagent:show-channel-preview` handler) —
+// filters the same thread the same way for the current role.
+export const CONNECTIONS_PREVIEW_AGENTS: Pick<SuperAgentLibraryAgent, 'key' | 'pillar' | 'category'>[] = [
+  { key: 'review-response', pillar: 'jay', category: 'build-trust' },
+  { key: 'frontdesk', pillar: 'myna', category: 'convert-leads' },
+  { key: 'appointment-booking', pillar: 'myna', category: 'convert-leads' },
+  { key: 'listings-health', pillar: 'jay', category: 'get-found' },
+  { key: 'review-generation', pillar: 'jay', category: 'build-trust' },
+]
+
+// Executive sees all 5 unfiltered; IC/Manager roles only see the agents their pillar
+// (and, for IC, library category) grants them.
+export function getChannelPreviewVisibleAgentIds(role: SuperAgentRole): string[] {
+  return CONNECTIONS_PREVIEW_AGENTS.filter((agent) => isLibraryAgentVisibleForRole(agent as SuperAgentLibraryAgent, role)).map(
+    (agent) => agent.key,
+  )
+}
 
 export interface SuperAgentConnectionApp {
   id: string

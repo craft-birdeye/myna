@@ -45,10 +45,12 @@ export function SuperAgentApp({
   navigate,
   openAgentCmd,
   useLibraryCmd,
+  role,
   onBackToBirdeye,
   onCloseAgent,
   onOpenAgent,
   onGoConnections,
+  visibleAgentIds,
 }: SuperAgentAppProps) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const loadedRef = useRef(false)
@@ -111,6 +113,12 @@ export function SuperAgentApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useLibraryCmd])
 
+  useEffect(() => {
+    if (!role) return
+    send({ type: 'superagent:set-role', pillar: role.pillar })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role])
+
   // The prototype's own "Back to Birdeye" action (overlay), the embedded
   // AgentScreen's back chevron (embedded, see app.jsx's EMBED_NO_CHROME branch), and
   // its `openAgent()` (fired whenever the iframe navigates itself into an agent view —
@@ -163,7 +171,11 @@ export function SuperAgentApp({
         className="h-full w-full border-0"
       />
       {active && channelPreview && (
-        <ChannelPreviewModal channel={channelPreview} onClose={() => setChannelPreview(null)} />
+        <ChannelPreviewModal
+          channel={channelPreview}
+          onClose={() => setChannelPreview(null)}
+          visibleAgentIds={visibleAgentIds}
+        />
       )}
     </div>
   )

@@ -43,6 +43,7 @@ import {
   type AgentCreateScript,
   type Family,
 } from '../data/agentCreateFamilyScripts'
+import { buildRoleGateDenialMessage, isPromptAllowedForRole, type SuperAgentRole } from './superAgent/superAgentSeedData'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import { GreyTriggerIcon } from '../workflow/Molecules/Canvas/CanvasNodeIcons'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
@@ -635,6 +636,22 @@ const REGIONS_BY_AGENT: Record<string, RegionRow[]> = {
 }
 
 const DEFAULT_REGIONS: RegionRow[] = REGIONS_BY_AGENT['Front desk agent']
+
+/** Same region-source resolution as the Agents tab's own `data` build (line ~7712) —
+ *  exported so callers outside this screen (e.g. `SuperAgentMyAgentsScreen`'s "N active"
+ *  card badge) derive instance counts from this same source instead of a separately
+ *  hand-authored number that can drift out of sync. */
+export function getAgentInstanceStatusCounts(agentName: string, navId?: string | null) {
+  const regionSourceKey =
+    isSep1StyleAgentListNav(navId) && isReviewResponseAgentName(agentName)
+      ? REVIEW_RESPONSE_EXPLORATION_AGENT_NAME
+      : agentName
+  const regions = REGIONS_BY_AGENT[regionSourceKey] ?? DEFAULT_REGIONS
+  return {
+    total: regions.length,
+    active: regions.filter((r) => r.status === 'Active').length,
+  }
+}
 
 const opts = (...labels: string[]) => labels.map((l) => ({ value: l, label: l }))
 
@@ -2370,6 +2387,19 @@ function CreateAgentIntroReply({
           paragraphs={paragraphs}
           onDone={onComplete}
         />
+      </div>
+    </div>
+  )
+}
+
+// Role-gate out-of-scope reply — shown instead of the normal building narrative when
+// `isPromptAllowedForRole` blocks a message (see `checkRoleGate` in the live component).
+function RoleGateDenialReply({ message }: { message: string }) {
+  return (
+    <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+      <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+      <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
+        <p>{message}</p>
       </div>
     </div>
   )
@@ -4736,6 +4766,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   canvasProcedureId = null,
   createScript,
   onCreateScriptChange,
+  activeRole,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -4776,6 +4807,11 @@ export function HealthcareFrontdeskCreateAgentScreen({
   /** Re-classifies the family on every submitted message (see `classifyPrompt`) — the caller
    *  swaps `createScript` in response. Ignored when `createScript` is undefined. */
   onCreateScriptChange?: (family: Family) => void
+  /** Only the Agents-module `SuperAgentCreateScreen` passes this — when set, every submitted
+   *  message (first message and follow-ups) is checked against the role's actual pillar/library
+   *  scope (`isPromptAllowedForRole`, reusing the same gate as Library/My agents/Knowledge) before
+   *  any scripted building narrative runs. Out-of-scope prompts render a denial reply instead. */
+  activeRole?: SuperAgentRole
 }) {
   const isReminderFlow = variant === 'reminder'
   const resolvedHistoryChat =
@@ -4827,6 +4863,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
       canvasProcedureId={canvasProcedureId}
       createScript={createScript}
       onCreateScriptChange={onCreateScriptChange}
+      activeRole={activeRole}
     />
   )
 }
@@ -4854,6 +4891,7 @@ function HealthcareFrontdeskCreateAgentLive({
   canvasProcedureId = null,
   createScript,
   onCreateScriptChange,
+  activeRole,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -4877,6 +4915,7 @@ function HealthcareFrontdeskCreateAgentLive({
   canvasProcedureId?: string | null
   createScript?: AgentCreateScript
   onCreateScriptChange?: (family: Family) => void
+  activeRole?: SuperAgentRole
 }) {
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
@@ -4950,6 +4989,18 @@ function HealthcareFrontdeskCreateAgentLive({
   const [testThoughtsOpen, setTestThoughtsOpen] = useState(true)
   const [testReplyReady, setTestReplyReady] = useState(false)
   const [testReplyDone, setTestReplyDone] = useState(false)
+  // Role-based access gate (Agents-module create flow only — `activeRole` is undefined for
+  // every other caller). `firstMessageDenied` blocks the very first message before any
+  // scripted building narrative starts; `roleDeniedTurns` also collects any later follow-up
+  // message that gets blocked, rendered as its own exchange at the end of the thread.
+  const [firstMessageDenied, setFirstMessageDenied] = useState(false)
+  const [roleDeniedTurns, setRoleDeniedTurns] = useState<{ text: string; message: string }[]>([])
+  const checkRoleGate = (text: string): string | null => {
+    if (!activeRole) return null
+    const { allowed, label } = isPromptAllowedForRole(text, activeRole)
+    if (allowed) return null
+    return buildRoleGateDenialMessage(activeRole, label ?? 'this')
+  }
   const [stepThinkingPhase, setStepThinkingPhase] = useState<CreatePhase | null>(null)
   const [stepThinkingIndex, setStepThinkingIndex] = useState(0)
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([])
@@ -5446,6 +5497,15 @@ function HealthcareFrontdeskCreateAgentLive({
       onCreateFromScratch()
       return
     }
+    const denialMessage = checkRoleGate(text)
+    if (denialMessage) {
+      setPrompt(text)
+      setSubmitted(true)
+      onSubmittedChange?.(true)
+      setFirstMessageDenied(true)
+      setRoleDeniedTurns([{ text, message: denialMessage }])
+      return
+    }
     if (createScript && onCreateScriptChange) {
       const nextFamily = classifyPrompt(text, createScript.family)
       if (nextFamily !== createScript.family) onCreateScriptChange(nextFamily)
@@ -5532,6 +5592,14 @@ function HealthcareFrontdeskCreateAgentLive({
 
   const handleFollowUpSend = () => {
     if (!canSendFollowUp || building || introThinking || stepThinking || previewLocksComposer || reminderGenerating) return
+    if (followUp.trim()) {
+      const denialMessage = checkRoleGate(followUp)
+      if (denialMessage) {
+        setRoleDeniedTurns((prev) => [...prev, { text: followUp.trim(), message: denialMessage }])
+        setFollowUp('')
+        return
+      }
+    }
     // Re-classify the agent family on every submitted message (not just the first) so a
     // conversation that drifts toward another kind of agent switches its narrative copy.
     if (createScript && onCreateScriptChange && followUp.trim()) {
@@ -5656,7 +5724,9 @@ function HealthcareFrontdeskCreateAgentLive({
           <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">{prompt.trim()}</span>
         </div>
 
-        {introThinking ? (
+        {firstMessageDenied ? (
+          <RoleGateDenialReply message={roleDeniedTurns[0]?.message ?? ''} />
+        ) : introThinking ? (
           <IntroThinkingLoaderRow />
         ) : (
           <>
@@ -6351,6 +6421,13 @@ function HealthcareFrontdeskCreateAgentLive({
             )}
           </>
         )}
+
+        {roleDeniedTurns.slice(firstMessageDenied ? 1 : 0).map((turn, i) => (
+          <div key={`role-gate-denial-${i}`} className="flex flex-col">
+            <UserBubble>{turn.text}</UserBubble>
+            <RoleGateDenialReply message={turn.message} />
+          </div>
+        ))}
 
         </div>
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FRONT_DESK_INBOX_CONVERSATION_ID } from './data/frontDeskCallConversation'
 import { ProcedureStoreProvider } from './data/ProcedureStoreContext'
 import { AgentSystemPromptStoreProvider } from './data/AgentSystemPromptStoreContext'
@@ -16,15 +16,14 @@ import {
   isResponseAgentsExplorationNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
-import { AiAssistPanel, AppSwitcher, Icon, IconRail, Link, RecordDetailScreen, SideNav, SuperAgentApp, Toast, TopNav, type NavSection, type RailGroup, type Product, type SuperAgentEnterCommand, type SuperAgentNavigateCommand, type SuperAgentOpenAgentCommand, type SuperAgentUseLibraryCommand } from './components'
+import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, SuperAgentApp, Toast, TopNav, type NavSection, type RailGroup, type Product, type SuperAgentEnterCommand, type SuperAgentNavigateCommand, type SuperAgentOpenAgentCommand, type SuperAgentUseLibraryCommand, type SuperAgentRoleCommand } from './components'
 import { WebsiteGateScreen } from './screens/WebsiteGateScreen'
 import { SuperAgentMyAgentsScreen } from './screens/superAgent/SuperAgentMyAgentsScreen'
 import { SuperAgentLibraryScreen } from './screens/superAgent/SuperAgentLibraryScreen'
 import { SuperAgentConnectionsScreen } from './screens/superAgent/SuperAgentConnectionsScreen'
 import { SuperAgentKnowledgeScreen } from './screens/superAgent/SuperAgentKnowledgeScreen'
-import { SuperAgentCreateScreen } from './screens/superAgent/SuperAgentCreateScreen'
 import { SuperAgentRoleSwitcher } from './screens/superAgent/SuperAgentRoleSwitcher'
-import { SUPER_AGENT_ROLES } from './screens/superAgent/superAgentSeedData'
+import { SUPER_AGENT_ROLES, getChannelPreviewVisibleAgentIds, type SuperAgentPillar } from './screens/superAgent/superAgentSeedData'
 import { usePersistedState } from './hooks/usePersistedState'
 import { AiCoachSparkleIcon } from './assets/AiCoachSparkleIcon'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
@@ -159,6 +158,15 @@ const RAIL_GROUPS: RailGroup[] = [
     ],
   },
 ]
+
+// Maps an IC role's `directoryCategories` (agentDirectoryData.ts's free-text category
+// field) to the L1 rail item id it corresponds to, so the rail can narrow a visible
+// pillar group down to just that role's own function(s) — see `visibleRailGroups`.
+const DIRECTORY_CATEGORY_TO_RAIL_ITEM: Record<string, string> = {
+  'Reviews AI': 'reviews',
+  'Front desk': 'frontdesk',
+  'Inbox': 'inbox',
+}
 
 // ─── L2 nav sections ────────────────────────────────────────────────────────
 
@@ -373,9 +381,11 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
 // — with "Super agent" as a plain, non-collapsible module title above them (SideNav's
 // `showTitle`, opted into only here so every other SideNav consumer's layout is
 // untouched). All 5 rows (including Create agent) are native screens now — the iframe
-// only still renders when `superAgentViewingAgent` is true (an agent opened from My
-// agents/Library, which is its own full-page AgentScreen experience).
-const SUPER_AGENT_DEFAULT_NAV = 'sa-agents'
+// renders natively when `superAgentViewingAgent` is false — except "Create agent",
+// which (on this branch) is the prototype iframe itself, shown alongside the L2
+// SideNav (not full-width) so the iframe's own `?chrome=none` embedded mode can rely
+// on this SideNav for navigation.
+const SUPER_AGENT_DEFAULT_NAV = 'sa-create'
 // "Create agent" is surfaced as the SideNav's own `ctaLabel` row (label + circular blue plus
 // icon, matching the Social module's "Create post" affordance) instead of a plain list item —
 // see the `super-agent` SideNav render site.
@@ -386,6 +396,7 @@ const SUPER_AGENT_NAV_SECTIONS: NavSection[] = [
   { id: 'sa-connections', label: 'Connections' },
 ]
 const SUPER_AGENT_NAV_TO_IFRAME_KEY: Record<string, string> = {
+  'sa-create':      'create',
   'sa-agents':      'agents',
   'sa-library':     'market',
   'sa-connections': 'connections',
@@ -459,7 +470,10 @@ function isExplorationAgentNav(navId: string) {
   return EXPLORATION_AGENT_NAV_IDS.has(navId) || isAgentExplorationChrome(navId)
 }
 
-// Map railActive → module title shown in the global TopBar
+// Map railActive → module title shown in the global TopBar as plain text — matches the
+// display name each module's own L2 SideNav already uses (`title`/`showTitle` prop),
+// e.g. 'reviews' -> "Reviews AI" (SideNav title="Reviews AI"), 'super-agent' -> "Agents"
+// (SideNav title="Agents", now shown here instead of on the SideNav itself).
 const RAIL_TITLE: Record<string, string> = {
   frontdesk:             'Front desk',
   inbox:                 'Inbox',
@@ -469,9 +483,10 @@ const RAIL_TITLE: Record<string, string> = {
   'overview-v2-1':       'Overview',
   'overview-v3':         'Overview v3',
   agents:                'Co-workers',
+  'super-agent':         'Agents',
   search:                'AI Search',
   listings:              'Listings',
-  reviews:               'Reviews',
+  reviews:               'Reviews AI',
   social:                'Social',
   'content-hub':         'Content hub',
   referral:              'Referrals',
@@ -633,12 +648,14 @@ export function App() {
   const [railActive, setRailActive] = useState(() => {
     const detailNav = DETAIL_VIEW_NAV[parseInitialDetailView()?.view ?? '']
     if (detailNav) return NAV_IDS_BY_RAIL.reviews.has(detailNav) ? 'reviews' : 'frontdesk'
-    return parseAppRoute()?.railId ?? 'overview-v2-1'
+    return parseAppRoute()?.railId ?? 'super-agent'
   })
   const [navActive, setNavActive] = useState(() => {
     const fromDetail = DETAIL_VIEW_NAV[initialDetailView?.view ?? '']
     if (fromDetail) return fromDetail
-    return parseAppRoute()?.navId ?? 'frontdesk-agent'
+    const routeNav = parseAppRoute()?.navId
+    if (routeNav) return routeNav
+    return railActive === 'super-agent' ? SUPER_AGENT_DEFAULT_NAV : 'frontdesk-agent'
   })
   const [deepRoute, setDeepRoute] = useState<DeepRoute>(() => parseAppRoute()?.deep ?? {})
   // Super agent is shown two different ways side by side, for two different demo
@@ -648,14 +665,15 @@ export function App() {
   // their own SuperAgentApp instance.
   //
   // `superAgentOverlayOpen` toggles the standalone overlay; `superAgentEnter` is
-  // bumped every time it opens (Website gate's "new user" choice, or the TopBar
-  // AppSwitcher) — see openSuperAgent()/closeSuperAgent() below.
+  // bumped every time it opens (currently only the Website gate's "new user" choice,
+  // since the TopBar no longer has an app switcher) — see
+  // openSuperAgent()/closeSuperAgent() below.
   const [superAgentOverlayOpen, setSuperAgentOverlayOpen] = useState(false)
   const [superAgentEnter, setSuperAgentEnter] = useState<SuperAgentEnterCommand | null>(null)
   // isNewUser=true (Website gate's "New user") mirrors the prototype's own
-  // replayOnboarding() — a genuine sign-up from scratch. false/default (TopBar
-  // AppSwitcher) mirrors its openSuper() — a quick re-entry that skips straight to
-  // a short onboarding or straight to the workspace.
+  // replayOnboarding() — a genuine sign-up from scratch. false/default mirrors its
+  // openSuper() — a quick re-entry that skips straight to a short onboarding or
+  // straight to the workspace.
   function openSuperAgent(isNewUser = false) {
     setSuperAgentOverlayOpen(true)
     setSuperAgentEnter({ ts: Date.now(), isNewUser })
@@ -721,6 +739,56 @@ export function App() {
   const [activeProduct, setActiveProduct] = useState('healthcare')
   const [activeRoleId, setActiveRoleId] = usePersistedState('superAgentRole', 'exec-owner')
   const activeRole = SUPER_AGENT_ROLES.find((r) => r.id === activeRoleId) ?? SUPER_AGENT_ROLES[0]
+  // Gates which agents' messages appear in a channel preview thread opened from inside
+  // the Super agent iframe (e.g. an agent's own Chat tab "chat from another app" bottom
+  // sheet) — same filtering `SuperAgentConnectionsScreen` applies, so a preview opened
+  // from either surface shows the same thread for the current role.
+  const superAgentChannelPreviewVisibleIds = useMemo(() => getChannelPreviewVisibleAgentIds(activeRole), [activeRole])
+  // Tells the Create-agent iframe which pillar the active role is scoped to, so it can
+  // bias its "Recommended for you" cards and default prompt — see SuperAgentApp's
+  // `role` prop. A role scoped to one pillar sends that pillar (same derivation
+  // `isLibraryAgentVisibleForRole` uses); the Executive role (all 3 pillars) sends 'all'.
+  const [superAgentRoleCmd, setSuperAgentRoleCmd] = useState<SuperAgentRoleCommand | null>(null)
+  // Drives which L1 pillar groups (Jay/Myna/Robin) render — a role scoped to fewer
+  // pillars sees fewer groups. Lags one role switch behind `activeRoleId`, settling
+  // only once the brief shimmer below has played, so the rail doesn't pop groups in/out
+  // instantly. See `visibleRailGroups`/`railShimmer` just below.
+  const [displayedRoleId, setDisplayedRoleId] = useState(activeRoleId)
+  const [railShimmer, setRailShimmer] = useState(false)
+  const railShimmerTimeoutRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (activeRoleId === displayedRoleId) return
+    setRailShimmer(true)
+    if (railShimmerTimeoutRef.current !== null) window.clearTimeout(railShimmerTimeoutRef.current)
+    railShimmerTimeoutRef.current = window.setTimeout(() => {
+      setDisplayedRoleId(activeRoleId)
+      setRailShimmer(false)
+    }, 380)
+    return () => {
+      if (railShimmerTimeoutRef.current !== null) window.clearTimeout(railShimmerTimeoutRef.current)
+    }
+  }, [activeRoleId, displayedRoleId])
+  const displayedRole = SUPER_AGENT_ROLES.find((r) => r.id === displayedRoleId) ?? activeRole
+  const visibleRailGroups = useMemo(() => {
+    const pillarGroupId: Record<SuperAgentPillar, string> = {
+      jay: 'marketing',
+      myna: 'operations',
+      robin: 'cx',
+    }
+    const allowedGroupIds = new Set(['main', ...displayedRole.pillars.map((p) => pillarGroupId[p])])
+    const groups = RAIL_GROUPS.filter((g) => allowedGroupIds.has(g.id))
+    // IC roles (directoryCategories set) narrow an included group down to just their
+    // own function's item(s) — e.g. Reviews Coordinator sees only "Reviews" inside the
+    // Jay group, not the whole pillar's item list. Managers/Executive have no
+    // directoryCategories, so their groups render every item unchanged.
+    if (!displayedRole.directoryCategories) return groups
+    const allowedItemIds = new Set(
+      displayedRole.directoryCategories.map((cat) => DIRECTORY_CATEGORY_TO_RAIL_ITEM[cat]).filter(Boolean),
+    )
+    return groups.map((g) =>
+      g.id === 'main' ? g : { ...g, items: g.items.filter((item) => allowedItemIds.has(item.id)) },
+    )
+  }, [displayedRole])
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
   const [settingsSubScreen, setSettingsSubScreen] = useState<string | null>(null)
   // Content Hub sub-navigation state
@@ -768,6 +836,14 @@ export function App() {
     }
     prevRailActiveRef.current = railActive
   }, [railActive])
+
+  // Tell the Create-agent iframe about the active role any time it changes, so its
+  // "Recommended for you" cards and default prompt can bias toward that role's pillar.
+  useEffect(() => {
+    const pillar = activeRole.pillars.length === 1 ? activeRole.pillars[0] : 'all'
+    setSuperAgentRoleCmd({ pillar, ts: Date.now() })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRoleId])
 
   // Keep the address bar in sync: `/overview`, `/front-desk/<nav>`, `/reviews/<nav>`, etc.
   useEffect(() => {
@@ -878,6 +954,8 @@ export function App() {
     () => (initialDetailView?.view === 'service-request' ? (initialDetailView.data as ServiceRequestDetailArgs) : null),
   )
 
+  const moduleTitle = RAIL_TITLE[railActive] ?? ''
+
   const isEditingWorkflow = editingAgentName !== null
   const isViewingDetail =
     intakeDetail !== null ||
@@ -891,11 +969,6 @@ export function App() {
     !isViewingDetail &&
     !isAgentSetupActive &&
     !isViewingFullBleedDetail &&
-    // Create agent (Agents module) takes over the full content area for its whole
-    // suggest -> jobs -> docs -> connections -> confirm -> build -> test flow, mirroring
-    // Front Desk's own create-agent flow above — kept as its own condition rather than
-    // reusing `isAgentSetupActive` so the two flows' state stay independent.
-    !(railActive === 'super-agent' && navActive === 'sa-create') &&
     railActive !== 'settings' &&
     railActive !== 'inbox' &&
     railActive !== 'agents' &&
@@ -941,14 +1014,16 @@ export function App() {
           survives the round trip. */}
       <div className={superAgentOverlayOpen ? 'hidden' : 'h-screen w-screen flex overflow-hidden bg-surface-shell text-text-primary'}>
 
-        {/* ── L1 Icon rail ── */}
+        {/* ── L1 Icon rail ── wrapped so a brief shimmer can play over it while
+            `visibleRailGroups` settles into the newly-selected role's pillar groups. */}
+        <div className="relative shrink-0">
         <IconRail
           logoSrc={logoSrc}
           brand={PRODUCT_BRAND[activeProduct]}
           groups={
             activeProduct === 'healthcare'
-              ? RAIL_GROUPS
-              : RAIL_GROUPS.map((g) =>
+              ? visibleRailGroups
+              : visibleRailGroups.map((g) =>
                   g.id === 'main'
                     ? { ...g, items: g.items.map((i) => (i.id === 'agents' ? { ...i, label: 'Agents' } : i)) }
                     : g,
@@ -975,21 +1050,30 @@ export function App() {
             if (action === 'settings') setRailActive('settings')
           }}
         />
+        {railShimmer && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-[75] bg-gradient-to-r from-transparent via-white/50 to-transparent bg-[length:200%_100%]"
+            style={{ animation: 'l2-nav-shimmer 0.6s linear infinite' }}
+          />
+        )}
+        </div>
 
         {/* ── Right column ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* ── Global TopBar ── same bg as L1 rail so they look merged */}
           <header className="flex h-[48px] shrink-0 items-center justify-between px-4 bg-surface-shell rounded-tr-lg">
-            <AppSwitcher
-              onSuperAgent={false}
-              onSelectBirdeye={() => {
-                setRailActive('overview-v2-1')
-                setDeepRoute({})
-              }}
-              onSelectSuperAgent={openSuperAgent}
-            />
+            <span className="truncate px-sm text-base text-text-primary">{moduleTitle}</span>
             <div className="flex items-center gap-[6px]">
+              {/* Role switcher — only meaningful in the Agents module today, so it's
+                  gated to that rail rather than shown globally. Drives the same global
+                  `activeRoleId` state and opens the same shared org-chart modal
+                  regardless of where it's rendered from. */}
+              {railActive === 'super-agent' && (
+                <SuperAgentRoleSwitcher value={activeRoleId} onChange={setActiveRoleId} />
+              )}
+
               {/* + button — matches contenthub 2.0 QuickCreateLauncher trigger */}
               <button
                 type="button"
@@ -1061,7 +1145,6 @@ export function App() {
                   <SideNav
                     key="super-agent"
                     title="Agents"
-                    showTitle
                     sections={SUPER_AGENT_NAV_SECTIONS}
                     activeId={navActive}
                     ctaLabel="Create agent"
@@ -1069,6 +1152,8 @@ export function App() {
                       setDeepRoute({})
                       setNavActive('sa-create')
                       setSuperAgentViewingAgent(false)
+                      const iframeKey = SUPER_AGENT_NAV_TO_IFRAME_KEY['sa-create']
+                      if (iframeKey) setSuperAgentEmbeddedNav({ key: iframeKey, ts: Date.now() })
                     }}
                     onSelect={(id) => {
                       setDeepRoute({})
@@ -1077,9 +1162,6 @@ export function App() {
                       // row's own native screen.
                       setSuperAgentViewingAgent(false)
                     }}
-                    footerSlot={
-                      <SuperAgentRoleSwitcher value={activeRoleId} onChange={setActiveRoleId} />
-                    }
                   />
                   )
                 ) : (
@@ -1148,13 +1230,14 @@ export function App() {
               {/* Main content */}
               <main className={`flex flex-1 flex-col min-w-0 overflow-hidden ${railActive === 'super-agent' ? 'bg-surface' : 'bg-background'}`}>
                 {railActive === 'super-agent' && !isEditingWorkflow ? (
-                  // Any agent opened from My agents/Library uses the prototype iframe
-                  // (rendered as a sibling at the bottom of <main>, mode="embedded") —
-                  // while `superAgentViewingAgent` is true the iframe covers this area
-                  // instead, so the native list screen underneath is suppressed. All 5
-                  // L2 rows (including Create agent) are now native screens reusing
-                  // myna's own header/Tabs/InfoCard/button chrome.
-                  superAgentViewingAgent ? null : navActive === 'sa-agents' ? (
+                  // "Create agent" (this branch's own iframe-based demo variant), and any
+                  // agent opened from My agents/Library, use the prototype iframe
+                  // (rendered as a sibling at the bottom of <main>, mode="embedded") — it
+                  // renders null here and the persistent iframe sibling below (kept active
+                  // for both cases) shows through instead. My agents/Library/Knowledge/
+                  // Connections stay native screens reusing myna's own header/Tabs/
+                  // InfoCard/button chrome.
+                  superAgentViewingAgent || navActive === 'sa-create' ? null : navActive === 'sa-agents' ? (
                     <SuperAgentMyAgentsScreen product={activeProduct} agentNames={AGENT_NAMES} activeRole={activeRole} />
                   ) : navActive === 'sa-library' ? (
                     <SuperAgentLibraryScreen onUseAgent={useSuperAgentEmbeddedLibraryAgent} activeRole={activeRole} />
@@ -1165,13 +1248,6 @@ export function App() {
                       activeRole={activeRole}
                       activeRoleId={activeRoleId}
                       onRoleChange={setActiveRoleId}
-                    />
-                  ) : navActive === 'sa-create' ? (
-                    <SuperAgentCreateScreen
-                      activeRole={activeRole}
-                      onBack={() => setNavActive('sa-agents')}
-                      onEditAgent={handleSuperAgentCreateEditAgent}
-                      onCreated={() => setNavActive('sa-agents')}
                     />
                   ) : null
                 ) : railActive === 'search' ? (
@@ -1580,16 +1656,18 @@ export function App() {
                     force stage="app" + onboarded=true, so it never shows onboarding. */}
                 <SuperAgentApp
                   mode="embedded"
-                  active={railActive === 'super-agent' && superAgentViewingAgent}
+                  active={railActive === 'super-agent' && (navActive === 'sa-create' || superAgentViewingAgent)}
                   navigate={superAgentEmbeddedNav}
                   openAgentCmd={superAgentOpenAgentCmd}
                   useLibraryCmd={superAgentUseLibraryCmd}
+                  role={superAgentRoleCmd}
                   onCloseAgent={() => setSuperAgentViewingAgent(false)}
                   onOpenAgent={() => setSuperAgentViewingAgent(true)}
                   onGoConnections={() => {
                     setSuperAgentViewingAgent(false)
                     setNavActive('sa-connections')
                   }}
+                  visibleAgentIds={superAgentChannelPreviewVisibleIds}
                 />
               </main>
 
@@ -1614,6 +1692,7 @@ export function App() {
         active={superAgentOverlayOpen}
         enter={superAgentEnter}
         onBackToBirdeye={closeSuperAgent}
+        visibleAgentIds={superAgentChannelPreviewVisibleIds}
       />
       </RecommendationOverridesStoreProvider>
       </FeedbackRecommendationsStoreProvider>
