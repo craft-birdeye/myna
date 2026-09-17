@@ -1,322 +1,219 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutGrid, LayoutList, ChevronDown } from 'lucide-react'
-import { Icon, Chip, LibraryCardIcon, HeaderSearchField, DataTable } from '../../components'
-import type { Column } from '../../components/DataTable/DataTable.types'
-import { SUPER_AGENT_ACTIVE_AGENTS, SUPER_AGENT_PAUSED_AGENTS, type SuperAgentMyAgent } from './superAgentSeedData'
+import { useEffect, useMemo, useState } from 'react'
+import { Icon, MetricTiles, Tabs, type Metric, type Tab } from '../../components'
+import { getAgentDirectory, type AgentDirectoryEntry, type AgentPersonaId } from '../../data/agentDirectoryData'
+import { AgentDetailScreen } from '../AgentDetailScreen'
+import { isDirectoryAgentVisibleForRole, PILLAR_TO_PERSONA, type SuperAgentRole } from './superAgentSeedData'
+import jayIcon from '@icons/Jay.svg'
+import mynaIcon from '@icons/Myna.svg'
+import robinIcon from '@icons/Robin.svg'
 
-// Native "My agents" screen for the Super agent L1 module — reuses the exact header
-// chrome from AgentDetailScreen (sticky `bg-surface px-2xl py-xl` header, CLAUDE.md
-// §6.7 primary/secondary button classes). Full width, `px-2xl` on both sides. Only
-// this module's L2 pages are native — "Create agent" still opens the prototype
-// iframe. No Activity/Reports tabs — a single list is the whole screen.
+// "My agents" — now the single landing screen for the Agents (formerly Super agent) module.
+// Sources from `agentDirectoryData.ts` instead of `superAgentSeedData.ts`: that data already
+// carries real persona tagging (Jay/Myna/Robin), running-instance counts, alerts, and outcome
+// metrics, and is the same data already powering `OverviewV2_1Screen`'s "Purchased co-worker"
+// grid and `AgentDetailScreen`. Library/Knowledge/Connections are untouched and still use
+// `superAgentSeedData.ts`.
+type PillarTabId = AgentPersonaId | 'all'
+
+const PILLAR_TAB_ORDER: PillarTabId[] = ['all', 'marketing', 'operations', 'cx']
+const PILLAR_NAME: Record<AgentPersonaId, string> = { marketing: 'Jay', operations: 'Myna', cx: 'Robin' }
+const PILLAR_ICON: Record<AgentPersonaId, string> = { marketing: jayIcon, operations: mynaIcon, cx: robinIcon }
+
 export interface SuperAgentMyAgentsScreenProps {
-  /** Opens the agent's full AgentScreen (Chat/Workflow/Approvals/...) inside the
-   *  prototype iframe — `id` must be one of the prototype's own `app.agents` ids. */
-  onOpenAgent: (id: string) => void
+  /** Current dashboard product — same as `AgentDirectoryScreen`'s own `product` prop. */
+  product: string
+  /** navId -> full display name (App.tsx's own `AGENT_NAMES`), used so the embedded
+   *  `AgentDetailScreen` gets the exact display name its internal logic branches on
+   *  instead of `agentDirectoryData`'s shorter directory-card name. Falls back to the
+   *  directory entry's own `name` when a navId has no bespoke mapping. */
+  agentNames: Record<string, string>
+  /** Gates which pillar tabs and agent cards are visible for the current user. */
+  activeRole: SuperAgentRole
 }
 
-type ViewMode = 'grid' | 'list'
-type StatusFilter = 'all' | 'running' | 'paused' | 'attention'
-type SortOption = 'last-updated' | 'name' | 'status'
-
-const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'All agents' },
-  { value: 'running', label: 'Running' },
-  { value: 'paused', label: 'Paused' },
-  { value: 'attention', label: 'Needs attention' },
-]
-
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'last-updated', label: 'Last updated' },
-  { value: 'name', label: 'Name (A-Z)' },
-  { value: 'status', label: 'Status' },
-]
-
-function statusChip(agent: SuperAgentMyAgent) {
-  if (agent.alert) return <Chip label="Needs attention" variant="warning" showDot />
-  if (agent.status === 'running') return <Chip label="Running" variant="success" showDot />
-  return <Chip label="Paused" variant="neutral" showDot />
+// 16,230 -> "16.2K"; short values pass through untouched. Copied from AgentDirectoryScreen /
+// OverviewV2_1Screen's own `formatAgentOutcome`.
+function formatAgentOutcome(raw: string): string {
+  const numeric = parseFloat(raw.replace(/,/g, ''))
+  if (!isNaN(numeric) && numeric >= 1000) return `${parseFloat((numeric / 1000).toFixed(1))}K`
+  return raw
 }
 
-// Generic anchored dropdown trigger reused for Status + Sort — matches the shared
-// menu chrome from CLAUDE.md §6.7 (min-w rounded-sm border bg-surface shadow-dropdown).
-function HeaderDropdown<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (value: T) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [open])
-
-  const activeLabel = options.find((o) => o.value === value)?.label ?? label
-
+function AgentMetric({ value, label }: { value: string; label: string }) {
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-sm rounded-sm border border-border-selected bg-surface px-md text-body text-text-primary hover:bg-surface-l2"
-      >
-        {activeLabel}
-        <ChevronDown className="size-4 text-text-icon" strokeWidth={1.6} absoluteStrokeWidth />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+4px)] z-20 min-w-[168px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
-          {options.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => {
-                onChange(o.value)
-                setOpen(false)
-              }}
-              className={`block w-full px-md py-sm text-left text-body hover:bg-surface-hover ${
-                o.value === value ? 'text-text-primary' : 'text-text-secondary'
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="min-w-0">
+      <div className="truncate text-h3 text-text-primary">{value}</div>
+      <div className="truncate text-small text-text-tertiary">{label}</div>
     </div>
   )
 }
 
-// Compact card — mirrors AgentDetailScreen's "default" instance card exactly:
-// icon + title + status chip top row, a small meta line, a 2-line description,
-// then a footer that shows last-activity text and reveals actions on hover.
-function AgentCard({ agent, onOpenAgent }: { agent: SuperAgentMyAgent; onOpenAgent: (id: string) => void }) {
+// Forked from `OverviewV2_1Screen`'s `AgentPerformanceCard` (same card shape: name, issue-count
+// badge, active/inactive chip, description, 3-metric row) — kept as an independent copy rather
+// than a cross-import, per that file's own fork-don't-import convention. Drag-reorder/editing is
+// dropped since this grid isn't customizable.
+function MyAgentsGroupCard({ agent, onOpen }: { agent: AgentDirectoryEntry; onOpen?: () => void }) {
+  const issueCount = agent.alert ? parseInt(agent.alert.message, 10) : undefined
+  const clickable = Boolean(onOpen)
+
   return (
     <div
-      role="presentation"
-      onClick={() => onOpenAgent(agent.id)}
-      className="group relative flex h-full min-w-0 cursor-pointer flex-col gap-md overflow-hidden rounded-md border border-border bg-surface p-lg transition-colors hover:bg-surface-hover"
+      className={`flex flex-col rounded-md border border-border bg-surface p-xl transition-colors ${
+        clickable ? 'cursor-pointer hover:border-border-selected hover:bg-surface-hover' : ''
+      }`}
+      onClick={clickable ? onOpen : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onOpen?.()
+              }
+            }
+          : undefined
+      }
     >
-      <div className="flex min-w-0 items-start gap-sm">
-        <LibraryCardIcon glyph={agent.glyph} size="sm" />
-        <div className="flex min-w-0 flex-1 items-start justify-between gap-sm">
-          <h3 title={agent.name} className="line-clamp-2 min-w-0 flex-1 text-body leading-[22px] tracking-[-0.28px] text-text-primary">
-            {agent.name}
-          </h3>
-          {statusChip(agent)}
+      <div className="mb-xs flex items-center justify-between gap-sm">
+        <h4 className="m-0 min-w-0 truncate text-body text-text-primary">{agent.name}</h4>
+        <div className="flex shrink-0 items-center gap-xs">
+          {issueCount && (
+            <span className="flex items-center gap-xs text-small text-text-secondary">
+              <Icon name="error" size={14} className="text-chip-danger-text" />
+              {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
+            </span>
+          )}
+          {agent.running > 0 ? (
+            <span className="rounded-sm bg-chip-success-bg px-sm py-xs text-small text-chip-success-text">
+              {agent.running} active
+            </span>
+          ) : (
+            <span className="rounded-sm bg-chip-neutral-bg px-sm py-xs text-small text-chip-neutral-text">Inactive</span>
+          )}
         </div>
       </div>
-
-      <p title={agent.description} className="line-clamp-2 text-[13px] leading-[20px] text-text-secondary">
-        {agent.description}
-      </p>
-
-      {agent.alert && (
-        <div className="flex items-center gap-xs text-small text-chip-warning-text">
-          <Icon name="warning" size={16} />
-          <span className="min-w-0 truncate">{agent.alert}</span>
-        </div>
-      )}
-
-      {/* Compact 2x2 metric grid — MetricTiles' boxed row is sized for a full-width
-          dashboard, not a 3-up card; a light unboxed panel reads better here. */}
-      <div className="grid grid-cols-2 gap-x-lg gap-y-md rounded-sm bg-surface-muted p-md">
-        {agent.metrics.map((metric) => (
-          <div key={metric.id} className="min-w-0">
-            <div className="text-lg text-text-primary">{metric.value}</div>
-            <div className="truncate text-small text-text-secondary">{metric.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-auto flex min-w-0 items-center gap-sm">
-        <div className="flex min-w-0 flex-1 overflow-hidden">
-          <span className="min-w-0 truncate text-small text-text-tertiary">Last run {agent.lastRun}</span>
-        </div>
-        <div
-          className="pointer-events-none flex shrink-0 items-center gap-sm opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary hover:bg-surface-l2"
-          >
-            {agent.status === 'running' ? 'Pause' : 'Resume'}
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenAgent(agent.id)}
-            className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-          >
-            Open agent
-          </button>
-        </div>
+      <p className="m-0 mb-lg line-clamp-2 min-h-[36px] text-small text-text-tertiary">{agent.description}</p>
+      <div className="mt-auto grid grid-cols-3 gap-md">
+        <AgentMetric value={formatAgentOutcome(agent.outcome.value)} label={agent.outcome.label} />
+        <AgentMetric value={agent.timeSaved} label="Time saved" />
+        <AgentMetric value={agent.costSaved} label="Cost saved" />
       </div>
     </div>
   )
 }
 
-function agentSection(agent: SuperAgentMyAgent): StatusFilter {
-  if (agent.alert) return 'attention'
-  return agent.status
-}
+export function SuperAgentMyAgentsScreen({ product, agentNames, activeRole }: SuperAgentMyAgentsScreenProps) {
+  const visiblePersonas = useMemo(
+    () => activeRole.pillars.map((pillar) => PILLAR_TO_PERSONA[pillar]),
+    [activeRole],
+  )
+  // Executive (all 3 pillars) keeps the "All" tab; IC/Manager roles only see their own
+  // pillar tab(s), so default straight into the one visible pillar instead of "All".
+  const isExecutive = visiblePersonas.length > 1
+  const defaultTab: PillarTabId = isExecutive ? 'all' : (visiblePersonas[0] ?? 'all')
 
-export function SuperAgentMyAgentsScreen({ onOpenAgent }: SuperAgentMyAgentsScreenProps) {
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [view, setView] = useState<ViewMode>('grid')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [sortBy, setSortBy] = useState<SortOption>('last-updated')
+  const [activeTab, setActiveTab] = useState<PillarTabId>(defaultTab)
+  const [selectedAgentNavId, setSelectedAgentNavId] = useState<string | null>(null)
 
-  const allAgents = useMemo(
-    () => [...SUPER_AGENT_ACTIVE_AGENTS, ...SUPER_AGENT_PAUSED_AGENTS],
-    [],
+  // Reset the active tab whenever the role changes to a set of pillars that no longer
+  // includes the currently-selected tab (e.g. switching from Executive to an IC role).
+  useEffect(() => {
+    if (activeTab !== 'all' && !visiblePersonas.includes(activeTab as AgentPersonaId)) {
+      setActiveTab(defaultTab)
+    } else if (activeTab === 'all' && !isExecutive) {
+      setActiveTab(defaultTab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRole])
+
+  const agentDirectory = useMemo(
+    () => getAgentDirectory(product).filter((a) => isDirectoryAgentVisibleForRole(a, activeRole)),
+    [product, activeRole],
   )
 
-  const filteredAgents = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    let list = allAgents.filter((agent) => {
-      if (statusFilter !== 'all' && agentSection(agent) !== statusFilter) return false
-      if (!q) return true
-      return agent.name.toLowerCase().includes(q) || agent.description.toLowerCase().includes(q)
-    })
-
-    list = list.slice()
-    if (sortBy === 'name') {
-      list.sort((a, b) => a.name.localeCompare(b.name))
-    } else if (sortBy === 'status') {
-      const order: Record<StatusFilter, number> = { attention: 0, running: 1, paused: 2, all: 3 }
-      list.sort((a, b) => order[agentSection(a)] - order[agentSection(b)])
+  // Defensive: if a role switch makes the currently drilled-in agent invisible, fall
+  // back to the grid rather than rendering a drill-in the role shouldn't see.
+  useEffect(() => {
+    if (selectedAgentNavId && !agentDirectory.some((a) => a.navId === selectedAgentNavId)) {
+      setSelectedAgentNavId(null)
     }
-    // 'last-updated' keeps the seed data's own recency-ordered sequence.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentDirectory])
 
-    return list
-  }, [allAgents, searchQuery, statusFilter, sortBy])
+  if (selectedAgentNavId) {
+    const agent = agentDirectory.find((a) => a.navId === selectedAgentNavId)
+    const displayName = agentNames[selectedAgentNavId] ?? agent?.name ?? selectedAgentNavId
 
-  const columns: Column<SuperAgentMyAgent>[] = [
-    {
-      key: 'name',
-      label: 'Agent',
-      minWidth: 240,
-      render: (_v, agent) => (
-        <div className="flex items-center gap-sm">
-          <LibraryCardIcon glyph={agent.glyph} size="sm" />
-          <span className="text-text-primary">{agent.name}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      width: 160,
-      truncate: false,
-      render: (_v, agent) => statusChip(agent),
-    },
-    {
-      key: 'description',
-      label: 'Description',
-      minWidth: 320,
-    },
-    {
-      key: 'lastActivity',
-      label: 'Last activity',
-      width: 160,
-    },
+    return (
+      <div className="flex h-full flex-col overflow-hidden bg-white">
+        <AgentDetailScreen
+          key={selectedAgentNavId}
+          agentName={displayName}
+          titleOverride={displayName.endsWith('s') ? displayName : `${displayName}s`}
+          navId={selectedAgentNavId}
+          product={product}
+          onBack={() => setSelectedAgentNavId(null)}
+          hideTabsRow
+          hideCreateButton
+        />
+      </div>
+    )
+  }
+
+  const visibleTabOrder: PillarTabId[] = isExecutive
+    ? PILLAR_TAB_ORDER
+    : PILLAR_TAB_ORDER.filter((id): id is AgentPersonaId => id !== 'all' && visiblePersonas.includes(id))
+
+  const tabs: Tab[] = visibleTabOrder.map((id) => ({
+    id,
+    label: id === 'all' ? 'All' : PILLAR_NAME[id],
+    icon: id === 'all' ? undefined : <img src={PILLAR_ICON[id]} alt="" className="size-4 shrink-0 rounded-full" />,
+  }))
+
+  const filteredAgents = activeTab === 'all' ? agentDirectory : agentDirectory.filter((a) => a.persona === activeTab)
+
+  const runningCount = filteredAgents.filter((a) => a.running > 0).length
+  const totalHours = filteredAgents.reduce((sum, a) => sum + parseFloat(a.timeSaved), 0)
+  const totalCostK = filteredAgents.reduce((sum, a) => sum + parseFloat(a.costSaved.replace(/[$K]/g, '')), 0)
+
+  const summaryMetrics: Metric[] = [
+    { id: 'agents-running', value: String(runningCount), label: 'Agents running' },
+    { id: 'agents', value: String(filteredAgents.length), label: 'Agents' },
+    { id: 'time-saved', value: `${totalHours.toFixed(1)}h`, label: 'Time saved' },
+    { id: 'cost-saved', value: `$${totalCostK.toFixed(1)}K`, label: 'Cost saved' },
   ]
 
   return (
     <div className="flex h-full flex-col overflow-auto bg-white">
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
-        <div>
-          <h1 className="text-h3 text-text-primary">My agents</h1>
-          <p className="mt-xs text-body text-text-secondary">
-            See what your AI team is handling and where your attention is needed.
-          </p>
-        </div>
-        <div className="flex items-center gap-sm">
-          <HeaderSearchField
-            open={searchOpen}
-            value={searchQuery}
-            onOpenChange={setSearchOpen}
-            onChange={setSearchQuery}
-            placeholder="Search agents..."
-          />
-
-          <HeaderDropdown
-            label="Status"
-            options={STATUS_FILTER_OPTIONS}
-            value={statusFilter}
-            onChange={setStatusFilter}
-          />
-
-          <HeaderDropdown label="Sort by" options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} />
-
-          <div className="flex h-9 items-center gap-xs rounded-sm border border-border-selected bg-surface px-sm">
-            <button
-              type="button"
-              aria-label="Grid view"
-              onClick={() => setView('grid')}
-              className={`flex size-6 items-center justify-center rounded-sm transition-colors ${
-                view === 'grid' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
-              }`}
-            >
-              <LayoutGrid className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
-            </button>
-            <button
-              type="button"
-              aria-label="List view"
-              onClick={() => setView('list')}
-              className={`flex size-6 items-center justify-center rounded-sm transition-colors ${
-                view === 'list' ? 'bg-surface-selected text-text-primary' : 'text-text-icon'
-              }`}
-            >
-              <LayoutList className="size-4" strokeWidth={1.6} absoluteStrokeWidth />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="flex h-9 items-center gap-xs rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-          >
-            <Icon name="add" size={18} />
-            Add an agent
-          </button>
-        </div>
+      <div className="sticky top-0 z-10 bg-surface px-2xl py-xl">
+        <h1 className="text-h3 text-text-primary">My agents</h1>
+        <p className="mt-xs text-body text-text-secondary">
+          See what your AI team is handling and where your attention is needed.
+        </p>
       </div>
 
-      {filteredAgents.length === 0 ? (
-        <div className="flex h-48 items-center justify-center text-body text-text-tertiary">
-          No agents match your search.
-        </div>
-      ) : view === 'grid' ? (
-        <div className="px-2xl py-lg">
-          <div className="grid grid-cols-1 items-stretch gap-lg sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-xl px-2xl py-lg">
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as PillarTabId)} showBaseline={false} />
+
+        <MetricTiles metrics={summaryMetrics} />
+
+        {filteredAgents.length === 0 ? (
+          <div className="flex h-48 items-center justify-center text-body text-text-tertiary">
+            No agents in this pillar yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-lg sm:grid-cols-2 lg:grid-cols-3">
             {filteredAgents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} onOpenAgent={onOpenAgent} />
+              <MyAgentsGroupCard
+                key={agent.id}
+                agent={agent}
+                onOpen={agent.navId ? () => setSelectedAgentNavId(agent.navId!) : undefined}
+              />
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="px-2xl py-lg">
-          <DataTable
-            columns={columns}
-            data={filteredAgents}
-            onRowClick={(agent) => onOpenAgent(agent.id)}
-            rowAction={{ label: 'Open agent', onClick: (agent) => onOpenAgent(agent.id) }}
-          />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

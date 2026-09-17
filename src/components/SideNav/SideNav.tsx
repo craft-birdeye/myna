@@ -144,6 +144,7 @@ export function SideNav({
   onCtaClick,
   multiExpand = false,
   showTitle = false,
+  footerSlot,
 }: SideNavProps) {
   const [expandedIds, setExpandedIds] = useState(() => initialExpanded(sections, activeId, multiExpand))
 
@@ -222,6 +223,7 @@ export function SideNav({
           />
         ))}
       </nav>
+      {footerSlot && <div className="shrink-0 p-2">{footerSlot}</div>}
     </aside>
   )
 }

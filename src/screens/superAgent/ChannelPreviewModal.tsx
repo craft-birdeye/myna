@@ -3,6 +3,7 @@ import { Icon } from '../../components'
 import { ChannelGlyph, type ChannelKey } from './ChannelGlyph'
 import { SUPER_AGENT_CHANNEL_SETUP } from './superAgentSeedData'
 import { SUPER_AGENT_CONNECTION_LOGOS } from './superAgentConnectionLogos'
+import { SuperAgentRoleSwitcher } from './SuperAgentRoleSwitcher'
 
 // Ported from the prototype's own `ChannelPreview` + per-channel mocks
 // (WhatsAppMock/TelegramMock/IMessageMock/SlackMock in public/super-agent-prototype.html)
@@ -290,7 +291,32 @@ function routeReply(text: string): { agentId: string; text: string } {
   return { agentId: 'frontdesk', text: "Got it — I'll look into that and post an update here once I have something." }
 }
 
-export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey; onClose: () => void }) {
+/** Drops any 'agent' message whose agentId isn't role-visible; keeps 'them'/'human'
+ *  messages regardless. Undefined `visibleAgentIds` means no filtering (Executive). */
+function filterThreadByRole(thread: ThreadMessage[], visibleAgentIds?: string[]): ThreadMessage[] {
+  if (!visibleAgentIds) return thread
+  return thread.filter((m) => m.from !== 'agent' || (m.agentId !== undefined && visibleAgentIds.includes(m.agentId)))
+}
+
+export function ChannelPreviewModal({
+  channel,
+  onClose,
+  visibleAgentIds,
+  roleId,
+  onRoleChange,
+}: {
+  channel: ChannelKey
+  onClose: () => void
+  /** Restricts which agents' messages appear in the preview thread, based on the
+   *  active role. Omit to show every agent (Executive). */
+  visibleAgentIds?: string[]
+  /** Shared global role state (App.tsx's `activeRoleId`/`setActiveRoleId`) — drives the
+   *  role switcher in this modal's header, kept in sync with the Agents L2 footer switcher
+   *  and everywhere else that reads the same state. Optional so the modal still renders
+   *  without a switcher if a future caller doesn't have role state to hand. */
+  roleId?: string
+  onRoleChange?: (roleId: string) => void
+}) {
   const [activeChannel, setActiveChannel] = useState(channel)
   // Telegram, iMessage and Slack are modeled both ways: a personal 1:1 thread,
   // or the agent added into an existing group/channel like any other member —
@@ -300,7 +326,9 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
   const [mode, setMode] = useState<PreviewMode>('group')
   const setup = SUPER_AGENT_CHANNEL_SETUP[activeChannel]
   const isGroup = mode === 'group' && activeChannel !== 'whatsapp'
-  const [thread, setThread] = useState<ThreadMessage[]>(isGroup ? GROUP_SEED : UNIFIED_SEED)
+  const [thread, setThread] = useState<ThreadMessage[]>(
+    filterThreadByRole(isGroup ? GROUP_SEED : UNIFIED_SEED, visibleAgentIds),
+  )
   const [draft, setDraft] = useState('')
 
   useEffect(() => {
@@ -312,9 +340,9 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
   }, [onClose])
 
   useEffect(() => {
-    setThread(isGroup ? GROUP_SEED : UNIFIED_SEED)
+    setThread(filterThreadByRole(isGroup ? GROUP_SEED : UNIFIED_SEED, visibleAgentIds))
     setDraft('')
-  }, [activeChannel, mode])
+  }, [activeChannel, mode, visibleAgentIds])
 
   if (!setup) return null
 
@@ -386,6 +414,11 @@ export function ChannelPreviewModal({ channel, onClose }: { channel: ChannelKey;
             )
           })}
         </div>
+        {roleId && onRoleChange && (
+          <div className="hidden w-[220px] shrink-0 sm:block">
+            <SuperAgentRoleSwitcher value={roleId} onChange={onRoleChange} />
+          </div>
+        )}
         <button
           type="button"
           aria-label="Close"

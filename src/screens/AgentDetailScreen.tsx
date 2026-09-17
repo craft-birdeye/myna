@@ -122,6 +122,19 @@ interface AgentDetailScreenProps {
   /** Address-bar deep link: instance, tab, log row, panel. */
   routeDeep?: DeepRoute
   onDeepRouteChange?: (deep: DeepRoute) => void
+  /** Set when embedded under a host screen that supplies its own "back" affordance (e.g. the
+   *  Agents module's My agents drill-down) — renders a back arrow before the title instead of
+   *  the host having to draw its own breadcrumb bar above this screen. */
+  onBack?: () => void
+  /** Overrides the header `<h1>` text (e.g. a pluralized "Front desk agents") without touching
+   *  `agentName`, which the rest of this screen's logic branches on. */
+  titleOverride?: string
+  /** Hides the Agents/Library tab row entirely — set when the host only ever shows the
+   *  agents table (e.g. the Agents module's My agents drill-down). */
+  hideTabsRow?: boolean
+  /** Hides the "Create agent" header button — set when the host's own SideNav already
+   *  exposes a "Create agent" affordance (e.g. the Agents module's My agents drill-down). */
+  hideCreateButton?: boolean
 }
 
 /** Nav ids that open Create agent as illustration + library cards only (no Ghostwriter chat). */
@@ -7409,7 +7422,7 @@ function HistoryChatReplay({
   )
 }
 
-export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed, routeDeep, onDeepRouteChange }: AgentDetailScreenProps) {
+export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupActiveChange, onNavigateToInbox, onOpenIntegrationSettings, product, pendingInstanceView, onPendingInstanceViewConsumed, onFullBleedDetailActiveChange, initialRecommendationFocus, onInitialRecommendationFocusConsumed, autoOpenCreateFlow, onAutoOpenCreateFlowConsumed, routeDeep, onDeepRouteChange, onBack, titleOverride, hideTabsRow, hideCreateButton }: AgentDetailScreenProps) {
   const isExplorationResponseAgents = isResponseAgentsExplorationChrome(navId)
   const isExplorationFrontDeskAgents = isFrontdeskExplorationChrome(navId)
   const isExplorationAgents = isAgentExplorationChrome(navId)
@@ -8681,7 +8694,19 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
         <div className="flex flex-1 flex-col overflow-auto">
           {/* Header */}
           <div className="sticky top-0 z-10 flex items-center justify-between bg-surface px-2xl py-xl">
-            <h1 className="text-h3 text-text-primary">{agentName}</h1>
+            <div className="flex items-center gap-sm">
+              {onBack && (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  aria-label="Back"
+                  className="flex size-8 items-center justify-center rounded-sm text-text-icon hover:bg-surface-l2"
+                >
+                  <ArrowLeft className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
+                </button>
+              )}
+              <h1 className="text-h3 text-text-primary">{titleOverride ?? agentName}</h1>
+            </div>
             {!isReviewTaggingFirstTime && (
               <div className="flex items-center gap-sm">
                 <HeaderSearchField open={searchOpen} value={searchQuery} onOpenChange={setSearchOpen} onChange={setSearchQuery} />
@@ -8749,17 +8774,19 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         )}
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
-                          ? openCreateFlow()
-                          : onEditAgent?.('')
-                      }
-                      className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                    >
-                      Create agent
-                    </button>
+                    {!hideCreateButton && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          (isFrontdesk || isReminder || isWaitlist || isPreVisit || isReviewResponse || isReviewGeneration)
+                            ? openCreateFlow()
+                            : onEditAgent?.('')
+                        }
+                        className="flex h-[34px] items-center rounded-md bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+                      >
+                        Create agent
+                      </button>
+                    )}
                     {(!isExplorationAgents || !useAgentCardGrid) && (
                       <button type="button" aria-label="Customize columns" onClick={() => setCustomizeOpen(true)} className="flex size-[34px] items-center justify-center rounded-md border border-border-selected bg-surface text-text-icon hover:bg-surface-l2">
                         <Columns3 className="size-5" strokeWidth={1.6} absoluteStrokeWidth />
@@ -8792,17 +8819,19 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           ) : (
             <>
               {/* Tabs */}
-              <div className="px-2xl">
-                <Tabs
-                  tabs={TABS}
-                  activeTab={activeTab}
-                  showBaseline={false}
-                  onChange={(tabId) => {
-                    setActiveTab(tabId)
-                    onDeepRouteChange?.({ listTab: tabId })
-                  }}
-                />
-              </div>
+              {!hideTabsRow && (
+                <div className="px-2xl">
+                  <Tabs
+                    tabs={TABS}
+                    activeTab={activeTab}
+                    showBaseline={false}
+                    onChange={(tabId) => {
+                      setActiveTab(tabId)
+                      onDeepRouteChange?.({ listTab: tabId })
+                    }}
+                  />
+                </div>
+              )}
 
               {activeTab === 'outcomes' && useExplorationOutcomesTab ? (
                 <>

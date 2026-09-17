@@ -21,6 +21,10 @@ import { SuperAgentMyAgentsScreen } from './screens/superAgent/SuperAgentMyAgent
 import { SuperAgentLibraryScreen } from './screens/superAgent/SuperAgentLibraryScreen'
 import { SuperAgentConnectionsScreen } from './screens/superAgent/SuperAgentConnectionsScreen'
 import { SuperAgentKnowledgeScreen } from './screens/superAgent/SuperAgentKnowledgeScreen'
+import { SuperAgentCreateScreen } from './screens/superAgent/SuperAgentCreateScreen'
+import { SuperAgentRoleSwitcher } from './screens/superAgent/SuperAgentRoleSwitcher'
+import { SUPER_AGENT_ROLES } from './screens/superAgent/superAgentSeedData'
+import { usePersistedState } from './hooks/usePersistedState'
 import { AiCoachSparkleIcon } from './assets/AiCoachSparkleIcon'
 import { ContentHubL2NavPanel, type ContentHubSubView } from './content-hub/ContentHubL2NavPanel'
 import { SearchAIView } from './search-ai/SearchAIView'
@@ -114,7 +118,7 @@ const RAIL_GROUPS: RailGroup[] = [
     id: 'main',
     items: [
       { id: 'overview-v2-1', label: 'Overview', icon: <FigmaIconOverview size={ICON_SIZE} />, kind: 'element' },
-      { id: 'super-agent',   label: 'Super agent', icon: <FigmaIconSuperAgent size={ICON_SIZE} />, kind: 'element' },
+      { id: 'super-agent',   label: 'Agents', icon: <FigmaIconSuperAgent size={ICON_SIZE} />, kind: 'element' },
     ],
   },
   {
@@ -367,19 +371,20 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
 // mirrors the prototype's own left nav exactly — five flat rows, no accordion/chevron
 // — with "Super agent" as a plain, non-collapsible module title above them (SideNav's
 // `showTitle`, opted into only here so every other SideNav consumer's layout is
-// untouched). Only "Create agent" still posts a `navigate` command into the iframe
-// (mapped via SUPER_AGENT_NAV_TO_IFRAME_KEY) — My agents/Library/Knowledge/Connections
-// are all native screens.
-const SUPER_AGENT_DEFAULT_NAV = 'sa-create'
+// untouched). All 5 rows (including Create agent) are native screens now — the iframe
+// only still renders when `superAgentViewingAgent` is true (an agent opened from My
+// agents/Library, which is its own full-page AgentScreen experience).
+const SUPER_AGENT_DEFAULT_NAV = 'sa-agents'
+// "Create agent" is surfaced as the SideNav's own `ctaLabel` row (label + circular blue plus
+// icon, matching the Social module's "Create post" affordance) instead of a plain list item —
+// see the `super-agent` SideNav render site.
 const SUPER_AGENT_NAV_SECTIONS: NavSection[] = [
-  { id: 'sa-create',      label: 'Create agent' },
   { id: 'sa-agents',      label: 'My agents' },
   { id: 'sa-library',     label: 'Library' },
   { id: 'sa-knowledge',   label: 'Knowledge' },
   { id: 'sa-connections', label: 'Connections' },
 ]
 const SUPER_AGENT_NAV_TO_IFRAME_KEY: Record<string, string> = {
-  'sa-create':      'create',
   'sa-agents':      'agents',
   'sa-library':     'market',
   'sa-connections': 'connections',
@@ -663,17 +668,14 @@ export function App() {
   // (see SUPER_AGENT_NAV_TO_IFRAME_KEY below); the iframe's own `navigate` handler
   // always forces `stage: "app"` + `onboarded: true`, skipping onboarding entirely.
   const [superAgentEmbeddedNav, setSuperAgentEmbeddedNav] = useState<SuperAgentNavigateCommand | null>(null)
-  // Set by native My agents/Library "Open agent"/"Use agent" — while non-null, the
-  // embedded iframe (showing the prototype's own full-page AgentScreen) covers the
-  // native list screen underneath. Cleared when the iframe's own back chevron posts
-  // `superagent:close-agent` (see SuperAgentApp's onCloseAgent).
+  // Set by native Library "Use agent" — while non-null, the embedded iframe (showing the
+  // prototype's own full-page AgentScreen) covers the native list screen underneath. My
+  // agents no longer opens the iframe (it drills into the native `AgentDetailScreen`
+  // instead). Cleared when the iframe's own back chevron posts `superagent:close-agent`
+  // (see SuperAgentApp's onCloseAgent).
   const [superAgentViewingAgent, setSuperAgentViewingAgent] = useState(false)
   const [superAgentOpenAgentCmd, setSuperAgentOpenAgentCmd] = useState<SuperAgentOpenAgentCommand | null>(null)
   const [superAgentUseLibraryCmd, setSuperAgentUseLibraryCmd] = useState<SuperAgentUseLibraryCommand | null>(null)
-  function openSuperAgentEmbeddedAgent(id: string) {
-    setSuperAgentViewingAgent(true)
-    setSuperAgentOpenAgentCmd({ id, ts: Date.now() })
-  }
   function useSuperAgentEmbeddedLibraryAgent(key: string) {
     setSuperAgentViewingAgent(true)
     setSuperAgentUseLibraryCmd({ key, ts: Date.now() })
@@ -696,6 +698,10 @@ export function App() {
   // closing the editor) knows which instance + tab to land on instead of its own defaults.
   const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
   const [editorReturnView, setEditorReturnView] = useState<{ instanceName: string; tab: string } | null>(null)
+  // Set when the editor is opened from the Agents module's own "Create agent" screen, so
+  // closing it returns to that module's My agents instead of wherever `railActive` was left —
+  // mirrors `editorReturnView`/`pendingAgentInstanceView` above, but for the Super agent module.
+  const [superAgentCreateEditorReturn, setSuperAgentCreateEditorReturn] = useState(false)
   // Set by the Agent directory "Create agent" CTA so the freshly-mounted AgentDetailScreen
   // lands directly in its create-agent flow instead of the default Agents-tab table.
   const [autoOpenAgentCreateFlow, setAutoOpenAgentCreateFlow] = useState(false)
@@ -708,6 +714,8 @@ export function App() {
   const [isAgentSetupActive, setIsAgentSetupActive] = useState(false)
   const [isViewingFullBleedDetail, setIsViewingFullBleedDetail] = useState(false)
   const [activeProduct, setActiveProduct] = useState('healthcare')
+  const [activeRoleId, setActiveRoleId] = usePersistedState('superAgentRole', 'exec-owner')
+  const activeRole = SUPER_AGENT_ROLES.find((r) => r.id === activeRoleId) ?? SUPER_AGENT_ROLES[0]
   const [settingsTab, setSettingsTab] = useState<string | null>(null)
   const [settingsSubScreen, setSettingsSubScreen] = useState<string | null>(null)
   // Content Hub sub-navigation state
@@ -839,6 +847,14 @@ export function App() {
     }
   }
 
+  // Used by the Super agent module's own "Create agent" screen (SuperAgentCreateScreen) to
+  // open the real workflow editor via the same `handleEditAgent`/`isEditingWorkflow` hand-off
+  // Front Desk's create flow uses, while remembering to come back to this module's My agents.
+  function handleSuperAgentCreateEditAgent(name: string) {
+    setSuperAgentCreateEditorReturn(true)
+    handleEditAgent(name)
+  }
+
   const [intakeDetail, setIntakeDetail] = useState<IntakeDetailArgs | null>(
     () => (initialDetailView?.view === 'intake' ? (initialDetailView.data as IntakeDetailArgs) : null),
   )
@@ -868,6 +884,11 @@ export function App() {
     !isViewingDetail &&
     !isAgentSetupActive &&
     !isViewingFullBleedDetail &&
+    // Create agent (Agents module) takes over the full content area for its whole
+    // suggest -> jobs -> docs -> connections -> confirm -> build -> test flow, mirroring
+    // Front Desk's own create-agent flow above — kept as its own condition rather than
+    // reusing `isAgentSetupActive` so the two flows' state stay independent.
+    !(railActive === 'super-agent' && navActive === 'sa-create') &&
     railActive !== 'settings' &&
     railActive !== 'inbox' &&
     railActive !== 'agents' &&
@@ -1032,24 +1053,26 @@ export function App() {
                   superAgentViewingAgent ? null : (
                   <SideNav
                     key="super-agent"
-                    title="Super agent"
+                    title="Agents"
                     showTitle
                     sections={SUPER_AGENT_NAV_SECTIONS}
                     activeId={navActive}
+                    ctaLabel="Create agent"
+                    onCtaClick={() => {
+                      setDeepRoute({})
+                      setNavActive('sa-create')
+                      setSuperAgentViewingAgent(false)
+                    }}
                     onSelect={(id) => {
                       setDeepRoute({})
                       setNavActive(id)
                       // Clicking any L2 row exits an open agent view and returns to that
-                      // row's own screen (native list, or the Create agent iframe).
+                      // row's own native screen.
                       setSuperAgentViewingAgent(false)
-                      // Only "Create agent" is still the prototype iframe — My agents/
-                      // Library/Connections are native screens now, so there's no iframe
-                      // to message when navigating to them.
-                      if (id === 'sa-create') {
-                        const iframeKey = SUPER_AGENT_NAV_TO_IFRAME_KEY[id]
-                        if (iframeKey) setSuperAgentEmbeddedNav({ key: iframeKey, ts: Date.now() })
-                      }
                     }}
+                    footerSlot={
+                      <SuperAgentRoleSwitcher value={activeRoleId} onChange={setActiveRoleId} />
+                    }
                   />
                   )
                 ) : (
@@ -1117,21 +1140,32 @@ export function App() {
 
               {/* Main content */}
               <main className={`flex flex-1 flex-col min-w-0 overflow-hidden ${railActive === 'super-agent' ? 'bg-surface' : 'bg-background'}`}>
-                {railActive === 'super-agent' ? (
-                  // "Create agent", and any agent opened from My agents/Library, use the
-                  // prototype iframe (rendered as a sibling at the bottom of <main>,
-                  // mode="embedded") — while `superAgentViewingAgent` is true the iframe
-                  // covers this area instead, so the native list screen underneath is
-                  // suppressed. The other three L2 rows are native screens reusing myna's
-                  // own header/Tabs/InfoCard/button chrome.
+                {railActive === 'super-agent' && !isEditingWorkflow ? (
+                  // Any agent opened from My agents/Library uses the prototype iframe
+                  // (rendered as a sibling at the bottom of <main>, mode="embedded") —
+                  // while `superAgentViewingAgent` is true the iframe covers this area
+                  // instead, so the native list screen underneath is suppressed. All 5
+                  // L2 rows (including Create agent) are now native screens reusing
+                  // myna's own header/Tabs/InfoCard/button chrome.
                   superAgentViewingAgent ? null : navActive === 'sa-agents' ? (
-                    <SuperAgentMyAgentsScreen onOpenAgent={openSuperAgentEmbeddedAgent} />
+                    <SuperAgentMyAgentsScreen product={activeProduct} agentNames={AGENT_NAMES} activeRole={activeRole} />
                   ) : navActive === 'sa-library' ? (
-                    <SuperAgentLibraryScreen onUseAgent={useSuperAgentEmbeddedLibraryAgent} />
+                    <SuperAgentLibraryScreen onUseAgent={useSuperAgentEmbeddedLibraryAgent} activeRole={activeRole} />
                   ) : navActive === 'sa-knowledge' ? (
-                    <SuperAgentKnowledgeScreen />
+                    <SuperAgentKnowledgeScreen activeRole={activeRole} />
                   ) : navActive === 'sa-connections' ? (
-                    <SuperAgentConnectionsScreen />
+                    <SuperAgentConnectionsScreen
+                      activeRole={activeRole}
+                      activeRoleId={activeRoleId}
+                      onRoleChange={setActiveRoleId}
+                    />
+                  ) : navActive === 'sa-create' ? (
+                    <SuperAgentCreateScreen
+                      activeRole={activeRole}
+                      onBack={() => setNavActive('sa-agents')}
+                      onEditAgent={handleSuperAgentCreateEditAgent}
+                      onCreated={() => setNavActive('sa-agents')}
+                    />
                   ) : null
                 ) : railActive === 'search' ? (
                   <SearchAIView l2ActiveItem={searchAIL2Active} />
@@ -1294,6 +1328,10 @@ export function App() {
                               setPendingAgentInstanceView(editorReturnView)
                               setEditorReturnView(null)
                             }
+                            if (superAgentCreateEditorReturn) {
+                              setSuperAgentCreateEditorReturn(false)
+                              setNavActive('sa-agents')
+                            }
                             setWizardAgentDraft(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)
@@ -1308,6 +1346,10 @@ export function App() {
                             setEditingAgentStatus(null)
                             setEditorReturnView(null)
                             setPendingAgentInstanceView(null)
+                            if (superAgentCreateEditorReturn) {
+                              setSuperAgentCreateEditorReturn(false)
+                              setNavActive('sa-agents')
+                            }
                             setWizardAgentDraft(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)
@@ -1528,7 +1570,7 @@ export function App() {
                     force stage="app" + onboarded=true, so it never shows onboarding. */}
                 <SuperAgentApp
                   mode="embedded"
-                  active={railActive === 'super-agent' && (navActive === 'sa-create' || superAgentViewingAgent)}
+                  active={railActive === 'super-agent' && superAgentViewingAgent}
                   navigate={superAgentEmbeddedNav}
                   openAgentCmd={superAgentOpenAgentCmd}
                   useLibraryCmd={superAgentUseLibraryCmd}

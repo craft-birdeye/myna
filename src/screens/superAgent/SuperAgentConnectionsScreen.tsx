@@ -1,9 +1,28 @@
-import { useState } from 'react'
-import { SUPER_AGENT_REACH_APPS } from './superAgentSeedData'
+import { useMemo, useState } from 'react'
+import {
+  isLibraryAgentVisibleForRole,
+  SUPER_AGENT_REACH_APPS,
+  type SuperAgentLibraryAgent,
+  type SuperAgentRole,
+} from './superAgentSeedData'
 import { ChannelGlyph, type ChannelKey } from './ChannelGlyph'
 import { ChannelConnectModal } from './ChannelConnectModal'
 import { ChannelPreviewModal } from './ChannelPreviewModal'
 import { ConnectorBrowser } from './ConnectorBrowser'
+
+// The 5 agents `ChannelPreviewModal`'s own `AGENT_META` knows about (the fixed cast of
+// agents that can show up in a channel preview thread), each tagged with the pillar +
+// library category it corresponds to in `superAgentSeedData.ts`'s `SUPER_AGENT_LIBRARY_AGENTS`
+// (review-response/review-generation/listings-health -> jay; appointment-booking/frontdesk
+// (the "AI Front Desk Agent", library key `front-desk`) -> myna), so
+// `isLibraryAgentVisibleForRole` can gate them the same way it gates the Library grid.
+const CONNECTIONS_PREVIEW_AGENTS: Pick<SuperAgentLibraryAgent, 'key' | 'pillar' | 'category'>[] = [
+  { key: 'review-response', pillar: 'jay', category: 'build-trust' },
+  { key: 'frontdesk', pillar: 'myna', category: 'convert-leads' },
+  { key: 'appointment-booking', pillar: 'myna', category: 'convert-leads' },
+  { key: 'listings-health', pillar: 'jay', category: 'get-found' },
+  { key: 'review-generation', pillar: 'jay', category: 'build-trust' },
+]
 
 // Native "Connections" screen for the Super agent L1 module — same sticky header as
 // My agents/Library; full-width, left-aligned card grids in place of the prototype's
@@ -22,10 +41,30 @@ import { ConnectorBrowser } from './ConnectorBrowser'
 // (superAgentConnectorCatalog.ts) instead of a flat list — connecting one of the 4
 // messaging brands from inside the browser opens the same channel modal as the cards
 // above, since it's the same underlying connection.
-export function SuperAgentConnectionsScreen() {
+export interface SuperAgentConnectionsScreenProps {
+  /** Gates which agents' messages appear in a channel preview thread. */
+  activeRole: SuperAgentRole
+  /** Shared global role id/setter (App.tsx's `activeRoleId`/`setActiveRoleId`) — threaded
+   *  into `ChannelPreviewModal` so its own role switcher drives the same state as the
+   *  Agents L2 footer switcher, instead of a modal-local copy. */
+  activeRoleId: string
+  onRoleChange: (roleId: string) => void
+}
+
+export function SuperAgentConnectionsScreen({ activeRole, activeRoleId, onRoleChange }: SuperAgentConnectionsScreenProps) {
   const [openChannel, setOpenChannel] = useState<ChannelKey | null>(null)
   const [previewChannel, setPreviewChannel] = useState<ChannelKey | null>(null)
   const [connectedChannels, setConnectedChannels] = useState<ChannelKey[]>([])
+
+  // Executive sees all 5 unfiltered; IC/Manager roles only see the agents their pillar
+  // (and, for IC, library category) grants them.
+  const visibleAgentIds = useMemo(
+    () =>
+      CONNECTIONS_PREVIEW_AGENTS.filter((agent) => isLibraryAgentVisibleForRole(agent as SuperAgentLibraryAgent, activeRole)).map(
+        (agent) => agent.key,
+      ),
+    [activeRole],
+  )
 
   const connectChannel = (channel: ChannelKey) => {
     setConnectedChannels((list) => (list.includes(channel) ? list : [...list, channel]))
@@ -107,7 +146,15 @@ export function SuperAgentConnectionsScreen() {
         />
       )}
 
-      {previewChannel && <ChannelPreviewModal channel={previewChannel} onClose={() => setPreviewChannel(null)} />}
+      {previewChannel && (
+        <ChannelPreviewModal
+          channel={previewChannel}
+          onClose={() => setPreviewChannel(null)}
+          visibleAgentIds={visibleAgentIds}
+          roleId={activeRoleId}
+          onRoleChange={onRoleChange}
+        />
+      )}
     </div>
   )
 }

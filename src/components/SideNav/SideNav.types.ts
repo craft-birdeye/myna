@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export interface NavLeaf {
   id: string
   label: string
@@ -46,4 +48,6 @@ export interface SideNavProps {
    * site rather than changing every SideNav's layout at once.
    */
   showTitle?: boolean
+  /** Optional content pinned below the scrollable section list (e.g. a role switcher). */
+  footerSlot?: ReactNode
 }

@@ -38,7 +38,7 @@ import { type ChannelKey } from '../../screens/superAgent/ChannelGlyph'
 // cost a 1-3s blank frame.
 export function SuperAgentApp({
   active,
-  title = 'Super agent',
+  title = 'Agents',
   mode = 'overlay',
   context,
   enter,

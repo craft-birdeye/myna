@@ -10,7 +10,13 @@ import {
   type FilesModalFile,
   type FilterField,
 } from '../../components'
-import { SUPER_AGENT_ACTIVE_AGENTS, SUPER_AGENT_PAUSED_AGENTS, type SuperAgentKnowledgeItem } from './superAgentSeedData'
+import {
+  isLibraryAgentVisibleForRole,
+  SUPER_AGENT_ACTIVE_AGENTS,
+  SUPER_AGENT_PAUSED_AGENTS,
+  type SuperAgentKnowledgeItem,
+  type SuperAgentRole,
+} from './superAgentSeedData'
 
 // Native "Knowledge" screen for the Super agent L1 module — a flat hub of every file,
 // link, and note across all agents (not grouped by agent), with search/filter/sort and
@@ -22,8 +28,13 @@ interface KnowledgeRow {
   detail: string
   source: string
   addedByUser?: boolean
+  /** Source agent's id, for role-based visibility. Absent for user-added rows, which
+   *  are always visible regardless of role. */
+  agentId?: string
   [key: string]: unknown
 }
+
+const ALL_KNOWLEDGE_AGENTS = [...SUPER_AGENT_ACTIVE_AGENTS, ...SUPER_AGENT_PAUSED_AGENTS]
 
 const KIND_LABEL: Record<SuperAgentKnowledgeItem['kind'], string> = {
   file: 'File',
@@ -47,19 +58,24 @@ const KIND_CHIP_VARIANT: Record<SuperAgentKnowledgeItem['kind'], 'neutral' | 'in
 }
 
 function buildInitialRows(): KnowledgeRow[] {
-  const agents = [...SUPER_AGENT_ACTIVE_AGENTS, ...SUPER_AGENT_PAUSED_AGENTS]
-  return agents.flatMap((agent) =>
+  return ALL_KNOWLEDGE_AGENTS.flatMap((agent) =>
     agent.knowledge.map((item, index) => ({
       id: `${agent.id}-${index}`,
       title: item.title,
       kind: item.kind,
       detail: item.detail,
       source: agent.name,
+      agentId: agent.id,
     })),
   )
 }
 
-export function SuperAgentKnowledgeScreen() {
+export interface SuperAgentKnowledgeScreenProps {
+  /** Gates which rows (by source agent) are visible for the current user. */
+  activeRole: SuperAgentRole
+}
+
+export function SuperAgentKnowledgeScreen({ activeRole }: SuperAgentKnowledgeScreenProps) {
   const [rows, setRows] = useState<KnowledgeRow[]>(buildInitialRows)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -67,9 +83,18 @@ export function SuperAgentKnowledgeScreen() {
   const [selections, setSelections] = useState<Record<string, string[]>>({})
   const [addFilesOpen, setAddFilesOpen] = useState(false)
 
+  const roleVisibleRows = useMemo(() => {
+    const agentById = new Map(ALL_KNOWLEDGE_AGENTS.map((a) => [a.id, a]))
+    return rows.filter((r) => {
+      if (!r.agentId) return true
+      const agent = agentById.get(r.agentId)
+      return agent ? isLibraryAgentVisibleForRole(agent, activeRole) : true
+    })
+  }, [rows, activeRole])
+
   const sourceOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.source))).sort().map((s) => ({ value: s, label: s })),
-    [rows],
+    () => Array.from(new Set(roleVisibleRows.map((r) => r.source))).sort().map((s) => ({ value: s, label: s })),
+    [roleVisibleRows],
   )
 
   const filterFields: FilterField[] = useMemo(
@@ -91,7 +116,7 @@ export function SuperAgentKnowledgeScreen() {
     const q = searchQuery.trim().toLowerCase()
     const kindFilter = selections.kind ?? []
     const sourceFilter = selections.source ?? []
-    return rows.filter((r) => {
+    return roleVisibleRows.filter((r) => {
       if (kindFilter.length > 0 && !kindFilter.includes(r.kind)) return false
       if (sourceFilter.length > 0 && !sourceFilter.includes(r.source)) return false
       if (!q) return true
@@ -101,7 +126,7 @@ export function SuperAgentKnowledgeScreen() {
         r.detail.toLowerCase().includes(q)
       )
     })
-  }, [rows, searchQuery, selections])
+  }, [roleVisibleRows, searchQuery, selections])
 
   function removeRow(id: string) {
     setRows((list) => list.filter((r) => r.id !== id))
@@ -165,7 +190,7 @@ export function SuperAgentKnowledgeScreen() {
         <div>
           <h1 className="text-h3 text-text-primary">Knowledge</h1>
           <p className="mt-xs text-body text-text-secondary">
-            Every document, template, and policy your agents can reference — {rows.length} sources.
+            Every document, template, and policy your agents can reference — {roleVisibleRows.length} sources.
           </p>
         </div>
         <div className="flex items-center gap-sm">

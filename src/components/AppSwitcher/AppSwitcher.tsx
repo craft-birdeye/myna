@@ -35,7 +35,7 @@ export function AppSwitcher({ onSuperAgent, onSelectBirdeye, onSelectSuperAgent 
         onClick={() => setOpen((v) => !v)}
         className={`flex h-9 items-center gap-xs rounded-md px-sm text-left transition-colors hover:bg-surface-l2 ${open ? 'bg-surface-l2' : ''}`}
       >
-        <span className="truncate text-base text-text-primary">{onSuperAgent ? 'Super agent' : 'Birdeye'}</span>
+        <span className="truncate text-base text-text-primary">{onSuperAgent ? 'Agents' : 'Birdeye'}</span>
         {onSuperAgent && (
           <span className="text-small uppercase tracking-wide text-text-tertiary">Birdeye</span>
         )}
@@ -76,7 +76,7 @@ export function AppSwitcher({ onSuperAgent, onSelectBirdeye, onSelectSuperAgent 
               <FigmaIconSuperAgent size={30} className="shrink-0 text-text-primary" />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-xs">
-                  <span className="text-body text-text-primary">Super agent</span>
+                  <span className="text-body text-text-primary">Agents</span>
                   <span className="rounded-full bg-surface-selected px-xs py-0.5 text-small text-text-action">New</span>
                 </span>
                 <span className="mt-xs block text-small text-text-secondary">
@@ -96,7 +96,7 @@ export function AppSwitcher({ onSuperAgent, onSelectBirdeye, onSelectSuperAgent 
               <img src={birdeyeLogo} alt="" width={18} height={18} className="shrink-0" />
             )}
             <span className="text-small text-text-secondary">
-              {onSuperAgent ? 'You are in Super agent' : 'You are on Birdeye'}
+              {onSuperAgent ? 'You are in Agents' : 'You are on Birdeye'}
             </span>
             <span className="ml-auto text-small text-text-tertiary">Current</span>
           </div>

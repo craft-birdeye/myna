@@ -8,6 +8,8 @@
 // `app.useLibAgent(key)` expect, so the "Open agent"/"Use agent" buttons can hand off
 // to the iframe via postMessage (see SuperAgentApp's `openAgentCmd`/`useLibraryCmd`).
 
+import type { AgentDirectoryEntry, AgentPersonaId } from '../../data/agentDirectoryData'
+
 export interface SuperAgentMetric {
   id: string
   value: string
@@ -20,10 +22,131 @@ export interface SuperAgentKnowledgeItem {
   detail: string
 }
 
+// The three product pillars established in App.tsx's RAIL_GROUPS: Jay = Marketing,
+// Myna = Operations, Robin = Customer experience.
+export type SuperAgentPillar = 'jay' | 'myna' | 'robin'
+
+// Maps a pillar to agentDirectoryData.ts's own persona id, so role definitions here
+// (which only speak in pillars) can also gate `AgentDirectoryEntry`-shaped data (My
+// agents / drill-in) without agentDirectoryData.ts having to know about pillars.
+export const PILLAR_TO_PERSONA: Record<SuperAgentPillar, AgentPersonaId> = {
+  jay: 'marketing',
+  myna: 'operations',
+  robin: 'cx',
+}
+
+export const PERSONA_TO_PILLAR: Record<AgentPersonaId, SuperAgentPillar> = {
+  marketing: 'jay',
+  operations: 'myna',
+  cx: 'robin',
+}
+
+/**
+ * Role-based access model, modeled on a sample org (Aspen Dental) with three tiers:
+ * IC (scoped to one function within one pillar), Manager (full pillar), Executive
+ * (all three pillars). Drives visibility across My agents (+ drill-in), Library,
+ * Knowledge, and Connections in the Agents module.
+ */
+export interface SuperAgentRole {
+  id: string
+  title: string
+  org: string
+  tier: 'ic' | 'manager' | 'executive'
+  /** Role id of who this role reports to — omitted for the top-of-org role. */
+  reportsTo?: string
+  /** Dummy person filling this role, shown alongside the title in the org chart. */
+  personName: string
+  pillars: SuperAgentPillar[]
+  /** IC-only: narrows Library/Knowledge/Connections (this file's own category enum). */
+  libraryCategories?: SuperAgentLibraryCategory[]
+  /** IC-only: narrows My agents/drill-in (agentDirectoryData.ts's free-text `category` field). */
+  directoryCategories?: string[]
+}
+
+export const SUPER_AGENT_ROLES: SuperAgentRole[] = [
+  {
+    id: 'ic-reviews',
+    title: 'Reviews Coordinator',
+    org: 'Aspen Dental',
+    tier: 'ic',
+    reportsTo: 'mgr-jay',
+    personName: 'Jordan Kim',
+    pillars: ['jay'],
+    libraryCategories: ['build-trust'],
+    directoryCategories: ['Reviews AI'],
+  },
+  {
+    id: 'ic-frontdesk',
+    title: 'Front Desk Associate',
+    org: 'Aspen Dental',
+    tier: 'ic',
+    reportsTo: 'mgr-myna',
+    personName: 'Sam Patel',
+    pillars: ['myna'],
+    libraryCategories: ['convert-leads'],
+    directoryCategories: ['Front desk'],
+  },
+  {
+    id: 'mgr-jay',
+    title: 'Marketing Manager',
+    org: 'Aspen Dental',
+    tier: 'manager',
+    reportsTo: 'exec-owner',
+    personName: 'Renee Alvarez',
+    pillars: ['jay'],
+  },
+  {
+    id: 'mgr-myna',
+    title: 'Operations Manager',
+    org: 'Aspen Dental',
+    tier: 'manager',
+    reportsTo: 'exec-owner',
+    personName: 'Tom Okafor',
+    pillars: ['myna'],
+  },
+  {
+    id: 'mgr-robin',
+    title: 'Patient Experience Manager',
+    org: 'Aspen Dental',
+    tier: 'manager',
+    reportsTo: 'exec-owner',
+    personName: 'Priya Nair',
+    pillars: ['robin'],
+  },
+  {
+    id: 'exec-owner',
+    title: 'Practice Owner (CEO)',
+    org: 'Aspen Dental',
+    tier: 'executive',
+    personName: 'Dr. Maria Chen',
+    pillars: ['jay', 'myna', 'robin'],
+  },
+]
+
+// For Library/Knowledge/Connections (this file's own SuperAgentMyAgent/SuperAgentLibraryAgent model)
+export function isLibraryAgentVisibleForRole(
+  agent: SuperAgentMyAgent | SuperAgentLibraryAgent,
+  role: SuperAgentRole,
+): boolean {
+  if (!role.pillars.includes(agent.pillar)) return false
+  if ('category' in agent && role.libraryCategories && !role.libraryCategories.includes(agent.category)) {
+    return false
+  }
+  return true
+}
+
+// For My agents / drill-in (agentDirectoryData.ts's AgentDirectoryEntry model)
+export function isDirectoryAgentVisibleForRole(agent: AgentDirectoryEntry, role: SuperAgentRole): boolean {
+  if (!role.pillars.includes(PERSONA_TO_PILLAR[agent.persona])) return false
+  if (role.directoryCategories && !role.directoryCategories.includes(agent.category)) return false
+  return true
+}
+
 export interface SuperAgentMyAgent {
   id: string
   glyph: SuperAgentLibraryGlyph
   name: string
+  pillar: SuperAgentPillar
   fromLibrary?: boolean
   waitingOnYou?: string
   description: string
@@ -40,6 +163,7 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
     id: 'review-response',
     glyph: 'review-agents-3',
     name: 'Review Response Agent',
+    pillar: 'jay',
     fromLibrary: true,
     waitingOnYou: '1 waiting on you',
     description:
@@ -64,6 +188,7 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
     id: 'review-generation',
     glyph: 'review-agents-2',
     name: 'Review Generation Agent',
+    pillar: 'jay',
     fromLibrary: true,
     description:
       "Asks a real customer for a review right after a good visit, so your rating reflects the work you're actually doing. Works for patient visits, service calls, in-store purchases, or a completed job.",
@@ -86,6 +211,7 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
     id: 'listings-health',
     glyph: 'ticketing-agents',
     name: 'Listings Health Agent',
+    pillar: 'jay',
     fromLibrary: true,
     description:
       "Finds wrong hours, addresses, and duplicate listings before a customer shows up to a closed door. Runs the same checks whether you're a single storefront or a chain of fifty locations.",
@@ -109,6 +235,7 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
     id: 'appointment-booking',
     glyph: 'frontdesk-agents',
     name: 'Appointment Booking Agent',
+    pillar: 'myna',
     fromLibrary: true,
     description:
       'Checks real availability and books straight into your calendar, then handles reminders and reschedules on its own. Built for any appointment-based business — medical, dental, salons, home services.',
@@ -127,6 +254,31 @@ export const SUPER_AGENT_ACTIVE_AGENTS: SuperAgentMyAgent[] = [
       { title: 'Cancellation & no-show policy', kind: 'file', detail: 'Updated 2 months ago' },
     ],
   },
+  {
+    id: 'contact-health',
+    glyph: 'ticketing-agents-3',
+    name: 'Patient/Contact Health Agent',
+    pillar: 'robin',
+    fromLibrary: true,
+    waitingOnYou: '2 waiting on you',
+    description:
+      'Watches sentiment, response rates, and engagement trends per contact and flags who is drifting before they churn or leave a bad review. Works for patient panels, member rosters, or any recurring customer base.',
+    status: 'running',
+    lastActivity: '38 minutes ago',
+    alert: '2 accounts flagged as at-risk this week',
+    metrics: [
+      { id: 'contacts-monitored', value: '1,204', label: 'Contacts monitored' },
+      { id: 'at-risk-flagged', value: '9', label: 'At-risk flagged' },
+      { id: 'saved-this-month', value: '5', label: 'Saved this month' },
+      { id: 'hours-saved', value: '6.8', label: 'Hours saved' },
+    ],
+    lastRun: '38 minutes ago',
+    knowledge: [
+      { title: 'At-risk scoring rules', kind: 'file', detail: 'Updated 2 weeks ago' },
+      { title: 'Outreach playbook', kind: 'file', detail: 'Updated last month' },
+      { title: 'Sentiment sources & weighting', kind: 'link', detail: 'Google Doc · shared' },
+    ],
+  },
 ]
 
 export const SUPER_AGENT_PAUSED_AGENTS: SuperAgentMyAgent[] = [
@@ -134,6 +286,7 @@ export const SUPER_AGENT_PAUSED_AGENTS: SuperAgentMyAgent[] = [
     id: 'social-publishing',
     glyph: 'social-agents',
     name: 'Social Publishing Agent',
+    pillar: 'jay',
     fromLibrary: true,
     description:
       'Plans, drafts, and publishes social content on a schedule, and queues anything unusual for your review first. Works across any industry that needs a steady social presence.',
@@ -185,6 +338,7 @@ export interface SuperAgentLibraryAgent {
   key: string
   glyph: SuperAgentLibraryGlyph
   name: string
+  pillar: SuperAgentPillar
   description: string
   category: SuperAgentLibraryCategory
   /** Shows under the "Recommended for you" tab in addition to its own category tab —
@@ -211,6 +365,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'front-desk',
     glyph: 'frontdesk-agents',
     name: 'AI Front Desk Agent',
+    pillar: 'myna',
     description:
       'Never miss a lead — answers calls and chats, answers common questions, qualifies the visitor, and books the appointment. Works the same way for dental patients, auto service requests, salon bookings, or home service calls.',
     category: 'convert-leads',
@@ -220,6 +375,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'negative-review-recovery',
     glyph: 'review-agents',
     name: 'Negative Review Recovery Agent',
+    pillar: 'jay',
     description:
       'Catches an urgent complaint the moment it posts, drafts a response, and loops in your team before it turns into a bigger problem. Built for any business that gets reviewed — healthcare, home services, restaurants, auto, retail.',
     category: 'build-trust',
@@ -229,6 +385,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'review-generation',
     glyph: 'review-agents-2',
     name: 'Review Generation Agent',
+    pillar: 'jay',
     description:
       "Asks a real customer for a review right after a good visit, so your rating reflects the work you're actually doing. Works for patient visits, service calls, in-store purchases, or a completed job — whatever closing the loop looks like for you.",
     category: 'build-trust',
@@ -238,6 +395,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'listings-health',
     glyph: 'ticketing-agents',
     name: 'Listings Health Agent',
+    pillar: 'jay',
     description:
       "Finds wrong hours, addresses, and duplicate listings before a customer shows up to a closed door. Runs the same checks whether you're a single storefront or a chain of fifty locations.",
     category: 'get-found',
@@ -247,6 +405,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'location-performance',
     glyph: 'survey-agents',
     name: 'Location Performance Agent',
+    pillar: 'myna',
     description:
       'Compares reviews, calls, and traffic across every location so you know which one needs attention and why. Useful for any multi-location business, from clinics and salons to restaurants and retail chains.',
     category: 'understand-performance',
@@ -256,6 +415,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'local-content',
     glyph: 'ticketing-agents-3',
     name: 'Local Content Agent',
+    pillar: 'jay',
     description:
       'Writes location-specific pages and posts that reflect each neighborhood and service mix, instead of one generic template repeated everywhere. Scales from a handful of locations to hundreds, in any industry.',
     category: 'create-content',
@@ -265,6 +425,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'business-info',
     glyph: 'ticketing-agents-2',
     name: 'Business Information Update Agent',
+    pillar: 'jay',
     description:
       'Keeps hours, services, and contact details correct across every directory, and pushes seasonal or holiday changes out in bulk. Works for any business with more than one location to keep in sync.',
     category: 'get-found',
@@ -273,6 +434,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'review-response',
     glyph: 'review-agents-3',
     name: 'Review Response Agent',
+    pillar: 'jay',
     description:
       "Drafts a reply to every new review in your brand voice, publishes the safe ones, and holds anything sensitive for you. Adapts its tone whether you're a clinic, a restaurant, or a home services company.",
     category: 'build-trust',
@@ -281,6 +443,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'missed-call-recovery',
     glyph: 'frontdesk-agents-2',
     name: 'Missed Call Recovery Agent',
+    pillar: 'myna',
     description:
       "Texts back within seconds of a missed call so the lead doesn't go to a competitor, and offers to book or answer a quick question. Works for any business that loses money to a ringing phone.",
     category: 'convert-leads',
@@ -289,6 +452,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'appointment-booking',
     glyph: 'frontdesk-agents',
     name: 'Appointment Booking Agent',
+    pillar: 'myna',
     description:
       'Checks real availability and books straight into your calendar, then handles reminders and reschedules on its own. Built for any appointment-based business — medical, dental, salons, home services.',
     category: 'convert-leads',
@@ -297,6 +461,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'lead-qualification',
     glyph: 'frontdesk-agents-2',
     name: 'Lead Qualification Agent',
+    pillar: 'myna',
     description:
       'Scores every inbound enquiry by intent and value, so your team spends time on the leads worth chasing. Flags whatever counts as high-value for your business, from implants to premium repairs to enterprise deals.',
     category: 'convert-leads',
@@ -305,6 +470,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'social-publishing',
     glyph: 'social-agents',
     name: 'Social Publishing Agent',
+    pillar: 'jay',
     description:
       'Plans, drafts, and publishes social content on a schedule, and queues anything unusual for your review first. Works across any industry that needs a steady social presence.',
     category: 'grow-audience',
@@ -313,6 +479,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'social-engagement',
     glyph: 'social-agents-2',
     name: 'Social Engagement Agent',
+    pillar: 'jay',
     description:
       'Reads and replies to comments, messages, and mentions automatically, and flags anything sensitive for a person. Adapts its playbook whether the questions are about appointments, pricing, or product availability.',
     category: 'grow-audience',
@@ -321,6 +488,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'local-social-content',
     glyph: 'social-agents-3',
     name: 'Local Social Content Agent',
+    pillar: 'jay',
     description:
       "Writes a distinct social post for every location instead of the same copy pasted everywhere, and varies the imagery so locations don't look duplicated. Built for any multi-location brand.",
     category: 'grow-audience',
@@ -329,6 +497,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'executive-summary',
     glyph: 'survey-agents-2',
     name: 'Executive Summary Agent',
+    pillar: 'myna',
     description:
       'Rolls up reviews, calls, and bookings into one plain-language summary delivered on your schedule. Useful for any owner tracking performance across locations or business types.',
     category: 'understand-performance',
@@ -337,6 +506,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'performance-alert',
     glyph: 'survey-agents-3',
     name: 'Performance Alert Agent',
+    pillar: 'myna',
     description:
       'Watches for a sudden rating drop, review pattern, or traffic dip and flags it before it becomes a real problem. Works the same way whether the risk shows up in reviews, calls, or foot traffic.',
     category: 'understand-performance',
@@ -345,6 +515,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'marketing-content',
     glyph: 'ticketing-agents',
     name: 'Marketing Content Agent',
+    pillar: 'jay',
     description:
       "Drafts on-brand campaign copy for email, social, and print from a single idea, so you're not starting from a blank page every time. Adapts to any brand voice and industry.",
     category: 'create-content',
@@ -353,6 +524,7 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'blog-seo',
     glyph: 'ticketing-agents-2',
     name: 'Blog and SEO Agent',
+    pillar: 'jay',
     description:
       'Researches what your customers are actually searching for, then writes and optimizes a full article around it. Works for any business trying to show up in local search.',
     category: 'create-content',
@@ -361,9 +533,37 @@ export const SUPER_AGENT_LIBRARY_AGENTS: SuperAgentLibraryAgent[] = [
     key: 'content-repurposing',
     glyph: 'ticketing-agents-3',
     name: 'Content Repurposing Agent',
+    pillar: 'jay',
     description:
       'Takes one article, video, or post and adapts it into social captions, emails, and snippets without losing the original point. Useful for any business that already publishes long-form content.',
     category: 'create-content',
+  },
+  {
+    key: 'survey-followup',
+    glyph: 'survey-agents',
+    name: 'Survey Follow-up Agent',
+    pillar: 'robin',
+    description:
+      'Chases down incomplete surveys and reaches back out to low-score responses before the feedback goes cold. Works for patient satisfaction, post-visit, or post-purchase surveys alike.',
+    category: 'understand-performance',
+  },
+  {
+    key: 'ticket-triage',
+    glyph: 'ticketing-agents',
+    name: 'Ticket Triage Agent',
+    pillar: 'robin',
+    description:
+      'Reads every incoming support ticket, routes it to the right queue, and prioritizes it by urgency so nothing sits unassigned. Works the same way for a help desk, a clinic front office, or a service department.',
+    category: 'understand-performance',
+  },
+  {
+    key: 'contact-health',
+    glyph: 'ticketing-agents-3',
+    name: 'Patient/Contact Health Agent',
+    pillar: 'robin',
+    description:
+      'Watches sentiment, response rates, and engagement trends per contact and flags who is drifting before they churn or leave a bad review. Works for patient panels, member rosters, or any recurring customer base.',
+    category: 'understand-performance',
   },
 ]
 

@@ -1,6 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { HeaderSearchField, InfoCard } from '../../components'
-import { SUPER_AGENT_LIBRARY_AGENTS, SUPER_AGENT_LIBRARY_CATEGORIES } from './superAgentSeedData'
+import {
+  isLibraryAgentVisibleForRole,
+  SUPER_AGENT_LIBRARY_AGENTS,
+  SUPER_AGENT_LIBRARY_CATEGORIES,
+  type SuperAgentRole,
+} from './superAgentSeedData'
 
 // Native "Library" screen for the Super agent L1 module — same sticky
 // `bg-surface px-2xl py-xl` header as My agents/AgentDetailScreen, full-width grid
@@ -12,21 +17,28 @@ export interface SuperAgentLibraryScreenProps {
   /** Hands off to the prototype's own `app.useLibAgent(key)` — drafts (or reopens)
    *  the agent and opens its full AgentScreen. */
   onUseAgent: (key: string) => void
+  /** Gates which library agents are visible for the current user. */
+  activeRole: SuperAgentRole
 }
 
-export function SuperAgentLibraryScreen({ onUseAgent }: SuperAgentLibraryScreenProps) {
+export function SuperAgentLibraryScreen({ onUseAgent, activeRole }: SuperAgentLibraryScreenProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<(typeof SUPER_AGENT_LIBRARY_CATEGORIES)[number]['key']>('recommended')
 
+  const visibleAgents = useMemo(
+    () => SUPER_AGENT_LIBRARY_AGENTS.filter((a) => isLibraryAgentVisibleForRole(a, activeRole)),
+    [activeRole],
+  )
+
   const q = query.trim().toLowerCase()
   const results = q
-    ? SUPER_AGENT_LIBRARY_AGENTS.filter(
+    ? visibleAgents.filter(
         (a) => a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)
       )
     : category === 'recommended'
-      ? SUPER_AGENT_LIBRARY_AGENTS.filter((a) => a.recommended)
-      : SUPER_AGENT_LIBRARY_AGENTS.filter((a) => a.category === category)
+      ? visibleAgents.filter((a) => a.recommended)
+      : visibleAgents.filter((a) => a.category === category)
 
   return (
     <div className="flex h-full flex-col overflow-auto bg-white">
