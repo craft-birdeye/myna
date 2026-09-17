@@ -37,6 +37,12 @@ import {
   type Tab,
 } from '../components'
 import { ArrowLeft, Columns3, ListFilter } from 'lucide-react'
+import {
+  buildIntroParagraphs,
+  classifyPrompt,
+  type AgentCreateScript,
+  type Family,
+} from '../data/agentCreateFamilyScripts'
 import PreviewPanel from '../workflow/Molecules/PreviewPanel/PreviewPanel'
 import { GreyTriggerIcon } from '../workflow/Molecules/Canvas/CanvasNodeIcons'
 import '../workflow/Molecules/PreviewPanel/PreviewPanel.css'
@@ -2345,7 +2351,14 @@ const CREATE_AGENT_INTRO_PARAGRAPHS = [
   'You can drop in as many as you have.',
 ]
 
-function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
+function CreateAgentIntroReply({
+  onComplete,
+  paragraphs = CREATE_AGENT_INTRO_PARAGRAPHS,
+}: {
+  onComplete?: () => void
+  /** Overrides the default Front-Desk-only jobs/docs-ask copy — see `buildIntroParagraphs`. */
+  paragraphs?: string[]
+}) {
   return (
     <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
       {/* Sparkle avatar, left-aligned to sit in the same column as the Thoughts icon.
@@ -2354,7 +2367,7 @@ function CreateAgentIntroReply({ onComplete }: { onComplete?: () => void }) {
       <div className="flex flex-1 flex-col gap-md text-body leading-6 text-text-primary">
         <TypedParagraphs
           fast
-          paragraphs={CREATE_AGENT_INTRO_PARAGRAPHS}
+          paragraphs={paragraphs}
           onDone={onComplete}
         />
       </div>
@@ -4721,6 +4734,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
   canvasProcedureId = null,
+  createScript,
+  onCreateScriptChange,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -4754,6 +4769,13 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onInlineProcedureOpenChange?: (open: boolean) => void
   /** Mirrors the canvas RHS procedure so closing the panel clears the chat pressed state. */
   canvasProcedureId?: string | null
+  /** Family-aware jobs/docs-ask/summary/completion copy (src/data/agentCreateFamilyScripts.ts).
+   *  Only the Agents-module `SuperAgentCreateScreen` passes this — every other caller (real
+   *  Front Desk/Reminder/Review flows) leaves it undefined and keeps today's hardcoded copy. */
+  createScript?: AgentCreateScript
+  /** Re-classifies the family on every submitted message (see `classifyPrompt`) — the caller
+   *  swaps `createScript` in response. Ignored when `createScript` is undefined. */
+  onCreateScriptChange?: (family: Family) => void
 }) {
   const isReminderFlow = variant === 'reminder'
   const resolvedHistoryChat =
@@ -4803,6 +4825,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
       onCanvasProcedureChange={onCanvasProcedureChange}
       onInlineProcedureOpenChange={onInlineProcedureOpenChange}
       canvasProcedureId={canvasProcedureId}
+      createScript={createScript}
+      onCreateScriptChange={onCreateScriptChange}
     />
   )
 }
@@ -4828,6 +4852,8 @@ function HealthcareFrontdeskCreateAgentLive({
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
   canvasProcedureId = null,
+  createScript,
+  onCreateScriptChange,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -4849,10 +4875,15 @@ function HealthcareFrontdeskCreateAgentLive({
   onCanvasProcedureChange?: (name: string | null) => void
   onInlineProcedureOpenChange?: (open: boolean) => void
   canvasProcedureId?: string | null
+  createScript?: AgentCreateScript
+  onCreateScriptChange?: (family: Family) => void
 }) {
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
   const isReviewGenFlow = variant === 'review-generation'
+  // Family-aware copy for the generic (non review/reminder) fallthrough narrative below —
+  // undefined for every real caller, so their behavior is untouched.
+  const introParagraphsForScript = createScript ? buildIntroParagraphs(createScript) : CREATE_AGENT_INTRO_PARAGRAPHS
   const [prompt, setPrompt] = useState('')
   const [landingAttachments, setLandingAttachments] = useState<AttachItem[]>([])
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
@@ -5415,6 +5446,10 @@ function HealthcareFrontdeskCreateAgentLive({
       onCreateFromScratch()
       return
     }
+    if (createScript && onCreateScriptChange) {
+      const nextFamily = classifyPrompt(text, createScript.family)
+      if (nextFamily !== createScript.family) onCreateScriptChange(nextFamily)
+    }
     setPrompt(text)
     setSubmitted(true)
     onSubmittedChange?.(true)
@@ -5497,6 +5532,12 @@ function HealthcareFrontdeskCreateAgentLive({
 
   const handleFollowUpSend = () => {
     if (!canSendFollowUp || building || introThinking || stepThinking || previewLocksComposer || reminderGenerating) return
+    // Re-classify the agent family on every submitted message (not just the first) so a
+    // conversation that drifts toward another kind of agent switches its narrative copy.
+    if (createScript && onCreateScriptChange && followUp.trim()) {
+      const nextFamily = classifyPrompt(followUp, createScript.family)
+      if (nextFamily !== createScript.family) onCreateScriptChange(nextFamily)
+    }
     // Reminder create flow: capture scripted replies as chat bubbles, then continue.
     if (isReminderFlow) {
       if (introReplyDone && !timingAnswer && followUp.trim()) {
@@ -5753,8 +5794,11 @@ function HealthcareFrontdeskCreateAgentLive({
                 </>
               ) : (
                 <>
-                  <CreateAgentIntroReply onComplete={() => setIntroReplyDone(true)} />
-                  {introReplyDone && <MessageActions copyText={CREATE_AGENT_INTRO_PARAGRAPHS.join('\n\n')} className="ml-3xl" />}
+                  <CreateAgentIntroReply
+                    onComplete={() => setIntroReplyDone(true)}
+                    paragraphs={introParagraphsForScript}
+                  />
+                  {introReplyDone && <MessageActions copyText={introParagraphsForScript.join('\n\n')} className="ml-3xl" />}
                 </>
               )
             )}
@@ -5963,7 +6007,9 @@ function HealthcareFrontdeskCreateAgentLive({
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
                               <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
-                                {FRONTDESK_POST_DRAFT_REPLY}
+                                {createScript?.completionParagraphs
+                                  ? createScript.completionParagraphs.join(' ')
+                                  : FRONTDESK_POST_DRAFT_REPLY}
                               </p>
                             </div>
                             <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap items-center gap-sm">
@@ -6224,10 +6270,14 @@ function HealthcareFrontdeskCreateAgentLive({
 
                 <p className="mt-md text-body leading-6 text-text-primary">Here's how I'm going to work for you:</p>
                 <ul className="flex list-disc flex-col gap-xs pl-lg text-body leading-6 text-text-secondary">
-                  <li>I'll respond to inbound calls, texts, and web chats from patients</li>
-                  <li>I can look up answers from your knowledge base and FAQs</li>
-                  <li>I can check availability, book, confirm, and reschedule appointments</li>
-                  <li>I'll escalate urgent symptoms straight to your front desk team</li>
+                  {(createScript?.summaryBullets ?? [
+                    "I'll respond to inbound calls, texts, and web chats from patients",
+                    'I can look up answers from your knowledge base and FAQs',
+                    'I can check availability, book, confirm, and reschedule appointments',
+                    "I'll escalate urgent symptoms straight to your front desk team",
+                  ]).map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
                 </ul>
 
                 <div className="mt-sm flex items-center gap-sm">

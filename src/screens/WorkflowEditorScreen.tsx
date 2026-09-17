@@ -4,6 +4,7 @@ import {
   HEALTHCARE_AGENT_WORKFLOWS,
   DENTAL_AGENT_WORKFLOWS,
   REVIEW_RESPONSE_WORKFLOW,
+  type AgentWorkflow,
 } from '../data/agentWorkflows'
 import { buildWizardAgentWorkflow } from '../data/buildWizardAgentWorkflow'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
@@ -93,6 +94,13 @@ interface WorkflowEditorScreenProps {
   product?: string
   agentStatus?: string
   wizardDraft?: WizardAgentDraft | null
+  /**
+   * Pre-seeded nodes/nodeDetails for a not-yet-created agent (e.g. the Agents module's
+   * "Create agent" ghostwriter chat hand-off via `buildDraftWorkflow`) — additive-only,
+   * separate from `agentWorkflows.ts`'s own maps which back real, already-created agents.
+   * Takes priority over both `wizardDraft` and the `agentWorkflows.ts` lookup when set.
+   */
+  initialWorkflow?: AgentWorkflow | null
   aiAssistOpen?: boolean
   onAiAssistOpenChange?: (open: boolean) => void
   hideLhs?: boolean
@@ -147,6 +155,7 @@ export function WorkflowEditorScreen({
   product = 'automotive',
   agentStatus = 'Active',
   wizardDraft = null,
+  initialWorkflow = null,
   aiAssistOpen,
   onAiAssistOpenChange,
   hideLhs = false,
@@ -204,10 +213,12 @@ export function WorkflowEditorScreen({
   const baseWorkflow = /review response/i.test(agentBaseName)
     ? REVIEW_RESPONSE_WORKFLOW
     : workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
-  const isReviewScratchCreate = !wizardDraft && isReviewsScratchCreateName(shownName)
+  const isReviewScratchCreate = !wizardDraft && !initialWorkflow && isReviewsScratchCreateName(shownName)
   const isEmptyScratch =
-    isReviewScratchCreate || (!wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0)
-  const resolvedExistingAgent = existingAgent ?? (!isEmptyScratch && !wizardDraft)
+    isReviewScratchCreate || (!wizardDraft && !initialWorkflow && (baseWorkflow.nodes?.length ?? 0) === 0)
+  // A seeded draft workflow is still an uncommitted draft (same "Draft" status treatment
+  // as isEmptyScratch/wizardDraft below), it just isn't literally an empty canvas.
+  const resolvedExistingAgent = existingAgent ?? (!isEmptyScratch && !wizardDraft && !initialWorkflow)
   const reviewScratchStart = /review response/i.test(shownName)
     ? REVIEW_RESPONSE_SCRATCH_START
     : /review generation/i.test(shownName)
@@ -260,7 +271,9 @@ export function WorkflowEditorScreen({
     })
   }
 
-  const rawWorkflow = wizardDraft
+  const rawWorkflow = initialWorkflow
+    ? initialWorkflow
+    : wizardDraft
     ? buildWizardAgentWorkflow(wizardDraft)
     : isEmptyScratch && reviewScratchStart
       ? {
@@ -294,7 +307,7 @@ export function WorkflowEditorScreen({
   )
 
   // Create-from-scratch opens an empty canvas — never show "Active".
-  const resolvedStatus = wizardDraft || isEmptyScratch ? 'Draft' : agentStatus
+  const resolvedStatus = wizardDraft || initialWorkflow || isEmptyScratch ? 'Draft' : agentStatus
   const hasUnpublishedDraft =
     resolvedStatus === 'Active' && instanceHasUnpublishedDraft(agentName)
   const issueCount = AGENT_INSTANCE_ISSUE_COUNTS[agentName] ?? 0

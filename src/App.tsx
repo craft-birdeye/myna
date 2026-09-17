@@ -5,6 +5,7 @@ import { AgentSystemPromptStoreProvider } from './data/AgentSystemPromptStoreCon
 import { FeedbackRecommendationsStoreProvider } from './data/FeedbackRecommendationsStoreContext'
 import { RecommendationOverridesStoreProvider } from './data/RecommendationOverridesStoreContext'
 import type { WizardAgentDraft } from './data/wizardAgentConfig.types'
+import type { AgentWorkflow } from './data/agentWorkflows'
 import {
   isAgentExplorationChrome,
   isExplorationHideCanvasStartNode,
@@ -694,6 +695,10 @@ export function App() {
   /** Instance status when opening the editor (e.g. Draft with a live version). */
   const [editingAgentStatus, setEditingAgentStatus] = useState<string | null>(null)
   const [wizardAgentDraft, setWizardAgentDraft] = useState<WizardAgentDraft | null>(null)
+  // Seeded nodes/nodeDetails for a not-yet-created agent, built by `buildDraftWorkflow` from
+  // the Agents module's "Create agent" chat script — see `handleSuperAgentCreateEditAgent`.
+  // Additive/separate from `wizardAgentDraft` above (different shape, different source flow).
+  const [superAgentDraftWorkflow, setSuperAgentDraftWorkflow] = useState<AgentWorkflow | null>(null)
   // Set when the canvas eye icon is clicked, so the agent detail screen (remounted after
   // closing the editor) knows which instance + tab to land on instead of its own defaults.
   const [pendingAgentInstanceView, setPendingAgentInstanceView] = useState<{ instanceName: string; tab: string } | null>(null)
@@ -824,11 +829,13 @@ export function App() {
     draft?: WizardAgentDraft,
     returnTo?: { instanceName: string; tab: string },
     status?: string,
+    initialWorkflow?: AgentWorkflow,
   ) {
     // Remembered so closing the editor lands back where editing started (e.g. the instance's
     // Workflow tab) instead of dropping to the agent list.
     setEditorReturnView(returnTo ?? null)
     setWizardAgentDraft(draft ?? null)
+    setSuperAgentDraftWorkflow(initialWorkflow ?? null)
     setEditingAgentName(name)
     const inferredDraft =
       name?.includes('Schedule based') || name?.includes('Event trigger based')
@@ -850,9 +857,9 @@ export function App() {
   // Used by the Super agent module's own "Create agent" screen (SuperAgentCreateScreen) to
   // open the real workflow editor via the same `handleEditAgent`/`isEditingWorkflow` hand-off
   // Front Desk's create flow uses, while remembering to come back to this module's My agents.
-  function handleSuperAgentCreateEditAgent(name: string) {
+  function handleSuperAgentCreateEditAgent(name: string, initialWorkflow?: AgentWorkflow) {
     setSuperAgentCreateEditorReturn(true)
-    handleEditAgent(name)
+    handleEditAgent(name, undefined, undefined, undefined, initialWorkflow)
   }
 
   const [intakeDetail, setIntakeDetail] = useState<IntakeDetailArgs | null>(
@@ -1333,6 +1340,7 @@ export function App() {
                               setNavActive('sa-agents')
                             }
                             setWizardAgentDraft(null)
+                            setSuperAgentDraftWorkflow(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)
                             setWorkflowAiBuilderPanelOpen(false)
@@ -1351,6 +1359,7 @@ export function App() {
                               setNavActive('sa-agents')
                             }
                             setWizardAgentDraft(null)
+                            setSuperAgentDraftWorkflow(null)
                             setWorkflowAiAssistOpen(false)
                             setWorkflowAiCreateFullscreen(false)
                             setWorkflowAiBuilderPanelOpen(false)
@@ -1358,6 +1367,7 @@ export function App() {
                           }}
                           product={activeProduct}
                           wizardDraft={wizardAgentDraft}
+                          initialWorkflow={superAgentDraftWorkflow}
                           agentStatus={
                             isExplorationAgentNav(navActive)
                               ? (editingAgentStatus ?? undefined)
