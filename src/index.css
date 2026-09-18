@@ -105,6 +105,56 @@
   }
 }
 
+/*
+ * Ghostwriter create landing — soft mesh wash + faint graph grid.
+ * Alphas are deliberately low (blooms ~0.10–0.14, grid 0.04): the reference this came from
+ * was far more saturated and read as heavy behind white cards. Keep it barely-there.
+ */
+.ghostwriter-create-bg {
+  background-color: #fcfcfd;
+  background-image:
+    /* graph grid */
+    linear-gradient(to right, rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+    /* colour blooms, clockwise from top-left */
+    radial-gradient(52rem 38rem at 6% 2%, rgba(244, 114, 182, 0.13), transparent 62%),
+    radial-gradient(46rem 34rem at 97% 0%, rgba(96, 165, 250, 0.14), transparent 62%),
+    radial-gradient(42rem 34rem at 99% 62%, rgba(129, 230, 217, 0.1), transparent 62%),
+    radial-gradient(40rem 32rem at 10% 99%, rgba(252, 211, 77, 0.1), transparent 62%),
+    radial-gradient(44rem 36rem at 1% 46%, rgba(167, 139, 250, 0.12), transparent 62%);
+  background-size:
+    48px 48px,
+    48px 48px,
+    auto, auto, auto, auto, auto;
+  background-attachment: local, local, fixed, fixed, fixed, fixed, fixed;
+}
+
+/*
+ * Ghostwriter top-bar CTAs. Reuses the canvas's `ab-header-*` markup, so these overrides are
+ * scoped under `.gw-top-actions` — the shared classes are on every other agent's canvas
+ * chrome and must keep their 4px radius / existing blue.
+ */
+.gw-top-actions .ab-header-runtest-btn,
+.gw-top-actions .ab-header-more-btn {
+  border-radius: 8px;
+}
+.gw-top-actions .ab-publish-split__main {
+  border-radius: 8px 0 0 8px;
+  background: #2563eb;
+}
+.gw-top-actions .ab-publish-split__chevron {
+  border-radius: 0 8px 8px 0;
+  background: #2563eb;
+}
+.gw-top-actions .ab-publish-split__main:hover,
+.gw-top-actions .ab-publish-split__chevron:hover {
+  background: #1d4ed8;
+}
+/* The split's divider is a white hairline, as in the reference. */
+.gw-top-actions .ab-publish-split__chevron {
+  border-left: 1px solid rgba(255, 255, 255, 0.55);
+}
+
 /* Animated pink/purple/violet gradient border — AI prompt composers */
 .ai-gradient-border {
   position: relative;
@@ -324,4 +374,221 @@ body {
   word-wrap: normal;
   direction: ltr;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Ghostwriter "Edit with AI" scripted run (GhostwriterSpamAlertFlow).
+ * ───────────────────────────────────────────────────────────────────────────── */
+@keyframes gw-flow-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.gw-flow__in {
+  animation: gw-flow-in 180ms ease-out both;
+}
+
+/* Rotates in place — centred at 8,8 of a 16×16 box. */
+@keyframes gw-flow-spin {
+  to { transform: rotate(360deg); }
+}
+.gw-flow__spinner {
+  animation: gw-flow-spin 900ms linear infinite;
+  transform-origin: 50% 50%;
+}
+
+/* The tick pops as a step lands. */
+@keyframes gw-flow-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.gw-flow__check {
+  animation: gw-flow-pop 160ms ease-out both;
+}
+
+/* "Working…" breathes while the run is in flight. */
+@keyframes gw-flow-breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+.gw-flow__working {
+  animation: gw-flow-breathe 1.6s ease-in-out infinite;
+}
+
+/* Hairline wipes left → right before the verdict. */
+@keyframes gw-flow-wipe {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.gw-flow__rule {
+  transform-origin: left center;
+  animation: gw-flow-wipe 240ms ease-out both;
+}
+
+.gw-flow__option:hover {
+  border-color: #ccd5e4;
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
+  transform: translateY(-1px);
+}
+
+/* The composer's gradient border breathes while the run is working. */
+@keyframes gw-flow-composer-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.gw-flow-composer-busy {
+  animation: gw-flow-composer-breathe 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gw-flow__in,
+  .gw-flow__check,
+  .gw-flow__rule {
+    animation-duration: 1ms;
+  }
+  .gw-flow__working,
+  .gw-flow-composer-busy {
+    animation: none;
+  }
+  .gw-flow__option:hover {
+    transform: none;
+  }
+}
+
+/* Option cards leaving after a pick — the echoed user turn takes their place. */
+@keyframes gw-flow-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-4px); }
+}
+.gw-flow__out {
+  animation: gw-flow-out 180ms ease-in both;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gw-flow__out { animation-duration: 1ms; }
+}
+
+/* ─── Ghostwriter "Agent activity" thoughts block ───────────────────────────── */
+
+/* 3×3 dot grid that ripples diagonally while a step is in flight. */
+.gw-dots {
+  display: grid;
+  grid-template-columns: repeat(3, 3px);
+  grid-auto-rows: 3px;
+  gap: 2px;
+}
+.gw-dots span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #c8cdd8;
+  animation: gw-dots-pulse 1.4s ease-in-out infinite;
+}
+/* Diagonal stagger — the wave reads as travelling across the grid. */
+.gw-dots span:nth-child(1) { animation-delay: 0ms; }
+.gw-dots span:nth-child(2),
+.gw-dots span:nth-child(4) { animation-delay: 120ms; }
+.gw-dots span:nth-child(3),
+.gw-dots span:nth-child(5),
+.gw-dots span:nth-child(7) { animation-delay: 240ms; }
+.gw-dots span:nth-child(6),
+.gw-dots span:nth-child(8) { animation-delay: 360ms; }
+.gw-dots span:nth-child(9) { animation-delay: 480ms; }
+
+@keyframes gw-dots-pulse {
+  0%, 100% { background: #dfe3ea; transform: scale(0.85); }
+  50%      { background: #6b7280; transform: scale(1); }
+}
+
+/* Loading label — light sweeps across the word while work is in flight. */
+.gw-shimmer {
+  background: linear-gradient(90deg, #9ca3af 20%, #0d0d12 50%, #9ca3af 80%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gw-shimmer-sweep 1.8s linear infinite;
+}
+@keyframes gw-shimmer-sweep {
+  from { background-position: 120% 0; }
+  to   { background-position: -120% 0; }
+}
+
+/* Header settles into a grey pill once every step has landed. */
+.gw-activity-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 220ms ease-out;
+}
+.gw-activity-head--done {
+  background: #f1f2f5;
+}
+
+.gw-activity-chevron {
+  display: inline-flex;
+  transition: transform 200ms ease-out;
+}
+.gw-activity-chevron--collapsed {
+  transform: rotate(180deg);
+}
+
+/* Steps hang off a hairline rule, as in the reference. */
+.gw-activity-steps {
+  margin-left: 14px;
+  padding-left: 18px;
+  border-left: 1px solid #e5e9f0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gw-dots span,
+  .gw-shimmer {
+    animation: none;
+  }
+  .gw-shimmer {
+    color: #0d0d12;
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+  }
+  .gw-activity-head,
+  .gw-activity-chevron {
+    transition: none;
+  }
+}
+
+/* Flush variant — no pill background here, so the 10px inset just knocks the header out of
+   alignment with the step rows below it. */
+.gw-activity-head--flush {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Connected review-source rows lift slightly on hover. */
+.gw-source-row {
+  transition: border-color 160ms ease-out, box-shadow 160ms ease-out, transform 160ms ease-out;
+}
+.gw-source-row:hover {
+  border-color: #ccd5e4;
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.06);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gw-source-row:hover { transform: none; }
+}
+
+/* Plan lines are annotatable — hint that on hover without shouting. */
+/* Only an un-annotated line takes the grey hover — a tinted one keeps its amber/green. */
+.gw-plan-line:not(.gw-plan-line--tinted):hover {
+  background: #f7f8fa;
+}
+.gw-plan-line::selection,
+.gw-plan-line *::selection {
+  background: #fdf0c8;
 }

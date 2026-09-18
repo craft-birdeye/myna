@@ -7,6 +7,8 @@ import { FrontDeskDraftReviewContent } from '../AgentDraftReview/FrontDeskDraftR
 import { GreyTriggerIcon } from '../../workflow/Molecules/Canvas/CanvasNodeIcons'
 import { AiBuilderPanelProps } from './AiBuilderPanel.types'
 import { useAiBuilderTrail } from './useAiBuilderTrail'
+import { GhostwriterSpamAlertFlow } from './GhostwriterSpamAlertFlow'
+import { SPAM_ALERT_BUSY_PLACEHOLDER } from '../../data/ghostwriterSpamAlertFlow'
 
 const DEFAULT_SUGGESTIONS = [
   'Change reply tone',
@@ -383,12 +385,21 @@ export function AiBuilderPanel({
   className = '',
   fillShell = false,
   side = 'right',
+  seedPrompt,
+  onOpenNode,
   onOpenProcedure,
   openProcedureName = null,
   onGoToKnowledge,
 }: AiBuilderPanelProps) {
   const [draft, setDraft] = useState('')
   const [composerFocused, setComposerFocused] = useState(false)
+  /** Scripted run: set to the sent text when it matches `seedPrompt`. Until it finishes the
+   *  composer is locked, and the normal trail is replaced by the scripted timeline. */
+  const [scriptedPrompt, setScriptedPrompt] = useState<string | null>(null)
+  const [scriptedDone, setScriptedDone] = useState(false)
+  /** Declared here, not next to `handleSend`: the autoscroll effect below lists it as a
+   *  dependency, and a dependency array is evaluated during render. */
+  const scriptedBusy = scriptedPrompt !== null && !scriptedDone
   const { trail, send, hasMessages } = useAiBuilderTrail(agentName)
   const scrollRef = useRef<HTMLDivElement>(null)
   const canSend = draft.trim().length > 0
@@ -404,9 +415,26 @@ export function AiBuilderPanel({
     el.scrollTop = el.scrollHeight
   }, [trail.length])
 
+  /* The scripted run reveals content on timers rather than on a state change we can depend
+     on, so poll the scroll position for its duration to keep the newest row in view. */
+  useEffect(() => {
+    if (!scriptedBusy) return undefined
+    const id = setInterval(() => {
+      const el = scrollRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    }, 200)
+    return () => clearInterval(id)
+  }, [scriptedBusy])
+
   const handleSend = (text?: string) => {
     const value = (text ?? draft).trim()
-    if (!value) return
+    if (!value || scriptedBusy) return
+    // The seeded prompt plays a scripted run instead of going through the normal trail.
+    if (seedPrompt && !scriptedPrompt && value === seedPrompt.trim()) {
+      setScriptedPrompt(value)
+      setDraft('')
+      return
+    }
     send(value)
     onSend?.(value)
     setDraft('')
@@ -434,7 +462,9 @@ export function AiBuilderPanel({
           />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="m-0 text-[13px] leading-5 text-white">Create with AI</p>
+          <p className="m-0 text-[13px] leading-5 text-white">
+            {seedPrompt ? 'Edit with AI' : 'Create with AI'}
+          </p>
         </div>
         {onExpand && (
           <button
@@ -460,8 +490,16 @@ export function AiBuilderPanel({
         ref={scrollRef}
         className="scrollbar-subtle flex min-h-0 flex-1 flex-col overflow-auto px-lg py-2xl"
       >
-        <div className={`flex w-full flex-col ${hasMessages ? '' : 'mt-auto gap-lg'}`}>
-          {!hasMessages && (
+        <div className={`flex w-full flex-col ${hasMessages || scriptedPrompt ? '' : 'mt-auto gap-lg'}`}>
+          {scriptedPrompt && (
+            <GhostwriterSpamAlertFlow
+              prompt={scriptedPrompt}
+              onDone={() => setScriptedDone(true)}
+              onOpenNode={onOpenNode}
+            />
+          )}
+
+          {!hasMessages && !scriptedPrompt && (
             <div className="flex flex-col items-center gap-xs text-center">
               <span
                 className="ai-gradient-icon size-8"
@@ -477,7 +515,7 @@ export function AiBuilderPanel({
             </div>
           )}
 
-          {hasMessages && (
+          {hasMessages && !scriptedPrompt && (
             <TrailMessages
               trail={trail}
               onOpenProcedure={onOpenProcedure}
@@ -489,7 +527,7 @@ export function AiBuilderPanel({
             />
           )}
 
-          {!hasMessages && resolvedSuggestions.length > 0 && (
+          {!hasMessages && !scriptedPrompt && resolvedSuggestions.length > 0 && (
             <div className="flex w-full flex-col items-start gap-sm">
               {resolvedSuggestions.map((suggestion) => (
                 <button
@@ -532,8 +570,14 @@ export function AiBuilderPanel({
           )}
           <textarea
             value={draft}
+            disabled={scriptedBusy}
             onChange={(e) => setDraft(e.target.value)}
-            onFocus={() => setComposerFocused(true)}
+            onFocus={() => {
+              setComposerFocused(true)
+              // Guarded on empty so it never overwrites what the user has typed, and only
+              // before the scripted run — afterwards the composer is a normal input.
+              if (seedPrompt && !scriptedPrompt && !draft.trim()) setDraft(seedPrompt)
+            }}
             onBlur={() => setComposerFocused(false)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -543,9 +587,11 @@ export function AiBuilderPanel({
             }}
             rows={composerExpanded ? 2 : 1}
             placeholder={
-              composerExpanded
-                ? 'What would you like to build? For example: Review response agent replying autonomously.'
-                : 'What would you like to build?'
+              scriptedBusy
+                ? SPAM_ALERT_BUSY_PLACEHOLDER
+                : composerExpanded
+                  ? 'What would you like to build? For example: Review response agent replying autonomously.'
+                  : 'What would you like to build?'
             }
             className={`min-h-0 flex-1 resize-none bg-transparent text-[12px] leading-6 text-text-primary outline-none placeholder:text-text-tertiary ${
               composerExpanded ? '' : 'truncate'

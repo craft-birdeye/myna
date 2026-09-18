@@ -19,6 +19,10 @@ export interface AiBuilderPanelProps {
   fillShell?: boolean
   /** Which edge the panel docks to (affects border + corner radius). */
   side?: 'left' | 'right'
+  /** Filled into the composer the first time it's focused while empty. */
+  seedPrompt?: string
+  /** Inline node link in a scripted reply — selects that node on the canvas. */
+  onOpenNode?: (label: string) => void
   /** Opens a draft procedure on the canvas RHS (procedure name / id). */
   onOpenProcedure?: (name: string) => void
   /** Currently open procedure — highlights the matching draft row. */

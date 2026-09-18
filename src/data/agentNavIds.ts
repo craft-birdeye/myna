@@ -18,6 +18,40 @@ export const RESPONSE_AGENTS_SIMULATION_NAV_ID = 'response-agents-simulation'
  * auto-runs the Fix flow on each failed case as it's revealed. See `isAutoSimulationNav`.
  */
 export const RESPONSE_AGENTS_SIMULATION_2_NAV_ID = 'response-agents-simulation-2'
+/** Copy of Full canvas — same chrome and sandbox behaviour, its own nav slot. */
+export const RESPONSE_AGENTS_GHOSTWRITER_NAV_ID = 'response-agents-ghostwriter'
+
+/**
+ * Full canvas and its copies. These share the whole sandbox treatment: full-screen workflow
+ * editor (no L1 rail / TopBar), floating card badges, stroked Lucide glyphs and the
+ * restructured Controls palette. Gate new design work on this, not on a single nav id, so
+ * every copy moves together — and so Sep 1 / coach cue / exploration stay untouched.
+ */
+export function isFullCanvasStyleNav(navId?: string | null) {
+  return (
+    navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ||
+    navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID
+  )
+}
+
+/**
+ * Ghostwriter alone — narrower than `isFullCanvasStyleNav`. Gates the polished create
+ * landing (no Option picker, larger hero, tighter card rhythm), which Full canvas and
+ * exploration must not pick up.
+ */
+export function isGhostwriterNav(navId?: string | null) {
+  return navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID
+}
+
+/** Suffix shown after the agent name in the page title, per Full canvas copy. */
+const FULL_CANVAS_VARIANT_LABELS: Record<string, string> = {
+  [RESPONSE_AGENTS_FULL_CANVAS_NAV_ID]: 'Full canvas',
+  [RESPONSE_AGENTS_GHOSTWRITER_NAV_ID]: 'Ghostwriter',
+}
+
+export function fullCanvasVariantLabel(navId?: string | null) {
+  return (navId && FULL_CANVAS_VARIANT_LABELS[navId]) || null
+}
 
 /** Coach-cue prototype nav — auto-opens the workflow builder tour on canvas land. */
 export function isResponseAgentsCoachCueNav(navId?: string | null) {
@@ -54,7 +88,7 @@ export function isResponseAgentsSep1StyleNav(navId?: string | null) {
   return (
     navId === RESPONSE_AGENTS_SEP1_NAV_ID ||
     navId === RESPONSE_AGENTS_NAV_ID ||
-    navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
+    isFullCanvasStyleNav(navId)
   )
 }
 
@@ -79,7 +113,7 @@ export function isResponseAgentsExplorationChrome(navId?: string | null) {
 export function isResponseAgentsExplorationNav(navId?: string | null) {
   return (
     navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID ||
-    navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ||
+    isFullCanvasStyleNav(navId) ||
     navId === RESPONSE_AGENTS_SIMULATION_NAV_ID ||
     navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID
   )

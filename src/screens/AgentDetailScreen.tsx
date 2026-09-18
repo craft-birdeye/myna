@@ -60,6 +60,9 @@ import {
   RESPONSE_AGENTS_FULL_CANVAS_NAV_ID,
   RESPONSE_AGENTS_SIMULATION_2_NAV_ID,
   RESPONSE_AGENTS_SIMULATION_NAV_ID,
+  isFullCanvasStyleNav,
+  fullCanvasVariantLabel,
+  isGhostwriterNav,
 } from '../data/agentNavIds'
 import {
   getExpectedBehaviorBullets,
@@ -77,6 +80,36 @@ import { SendIcon } from '../assets/SendIcon'
 import { AiAvatarChatIcon } from '../assets/AiAvatarChatIcon'
 import iconAgentsPurple from '../assets/icon-agents-purple.svg'
 import iconAgentsTwoStarSparkle from '../assets/icon-agents-two-star-sparkle.svg'
+/* Same glyph the canvas's Run test button uses, so the shell-owned CTA matches it. */
+import iconRrPreview from '../assets/rr-chrome/icon-preview.svg'
+import { AgentActivityHeader } from '../components/AgentActivityHeader/AgentActivityHeader'
+import {
+  GhostwriterDigestPrompt,
+  GhostwriterGuidelinesBlock,
+  GhostwriterPlanCard,
+  GhostwriterPlaybookBlock,
+  GhostwriterPlaybookTemplatesBlock,
+  GhostwriterReadingBlock,
+  GhostwriterTemplateDraftsBlock,
+  GhostwriterSourcesBlock,
+  GhostwriterSpamScreenBlock,
+} from '../components/AgentActivityHeader/GhostwriterReadingBlock'
+import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
+import { GhostwriterOpenQuestions } from '../components/AgentActivityHeader/GhostwriterOpenQuestions'
+import { OPEN_QUESTIONS_INTRO, OPEN_QUESTIONS_LOCKED_IN } from '../data/ghostwriterOpenQuestions'
+import {
+  PLAYBOOK_PLAN_CARD,
+  PLAYBOOK_TEMPLATE_OPTIONS,
+  PLAYBOOK_TEMPLATE_QUESTION,
+  PLAYBOOK_TRIAGE_PARAGRAPH,
+} from '../data/ghostwriterPlaybookBlock'
+import {
+  LEARNING_INTRO_PARAGRAPH,
+  READING_INTRO_PARAGRAPH,
+  PLAN_INTRO_PARAGRAPH,
+  SOURCES_NEXT_PARAGRAPH,
+  SPAM_DIGEST_QUESTION,
+} from '../data/ghostwriterReadingBlock'
 import agentEmptyState from '../assets/agent-empty-state.svg'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
 import { useProcedureStore } from '../data/ProcedureStoreContext'
@@ -143,6 +176,8 @@ interface AgentDetailScreenProps {
 const LIBRARY_ONLY_CREATE_NAV_IDS = new Set([
   'response-agents-sep-1',
   'response-agents-full-canvas',
+  // Ghostwriter is deliberately absent: its Create agent opens the same full-bleed
+  // Ghostwriter chat shell exploration uses, not the illustration + library cards.
   'response-agents',
   'reminder-agent-sep-1',
 ])
@@ -983,6 +1018,20 @@ const REVIEW_RESPONSE_PLACEHOLDERS = [
 /** Response agents (exploration) landing — Option 2 composer seed. */
 const REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2 =
   'Hey, I want you to respond to my reviews.'
+
+/**
+ * Ghostwriter landing only — picking Files from the attach menu seeds the composer with a
+ * playbook doc and the sentence that goes with it, rather than opening `FilesModal`. The
+ * demo's "I already wrote this down" entry point.
+ */
+const GHOSTWRITER_PLAYBOOK_ATTACHMENT: AttachItem = {
+  id: 'gw-playbook',
+  kind: 'file',
+  label: 'Review response playbook v3.docx',
+}
+
+const GHOSTWRITER_PLAYBOOK_PROMPT =
+  'These are our review response use cases. Build the agent from this.'
 
 const FRONTDESK_PLACEHOLDERS = [
   'Route urgent calls to the right team…',
@@ -2059,6 +2108,9 @@ const DRAFT_BUILD_STATUS_LABELS = [
   'Finalising your draft',
 ]
 
+/** Minimum time the Agent activity header stays in its running state. */
+const ACTIVITY_MIN_RUN_MS = 1400
+
 function CreateAgentThinkingPanel({
   open,
   onToggle,
@@ -2066,6 +2118,7 @@ function CreateAgentThinkingPanel({
   text = CREATE_AGENT_THOUGHTS_TEXT,
   label = 'Thoughts',
   fast = true,
+  activityChrome = false,
 }: {
   open: boolean
   onToggle: () => void
@@ -2074,8 +2127,13 @@ function CreateAgentThinkingPanel({
   label?: string
   /** Faster typewriter for create-agent thoughts (default on). */
   fast?: boolean
+  /** Ghostwriter: swap the "Thoughts" row for the shared Agent activity header — dot-grid
+   *  loader + shimmer while typing, then a grey "· N steps · 1.8s" pill. */
+  activityChrome?: boolean
 }) {
   const completedRef = useRef(false)
+  /** Live elapsed while the thought streams; frozen once it finishes. */
+  const [elapsedMs, setElapsedMs] = useState(0)
   const { typed, done } = useTypewriter(text, {
     charsPerTick: fast ? 10 : 6,
     intervalMs: fast ? 10 : 12,
@@ -2088,8 +2146,42 @@ function CreateAgentThinkingPanel({
 
   const lines = typed.split('\n')
 
+  /* The typewriter can finish in ~200ms on a short thought, which would flash the loader
+     and shimmer past too fast to read. Hold the running state for a minimum beat so the
+     interaction is actually perceptible. */
+  const [minHoldElapsed, setMinHoldElapsed] = useState(false)
+  useEffect(() => {
+    if (!activityChrome) return undefined
+    const id = window.setTimeout(() => setMinHoldElapsed(true), ACTIVITY_MIN_RUN_MS)
+    return () => window.clearTimeout(id)
+  }, [activityChrome])
+
+  const activityRunning = !done || !minHoldElapsed
+
+  useEffect(() => {
+    if (!activityChrome || !activityRunning) return undefined
+    const started = Date.now() - elapsedMs
+    const id = window.setInterval(() => setElapsedMs(Date.now() - started), 100)
+    return () => window.clearInterval(id)
+    // `elapsedMs` is seeded once per run; re-running on every tick would reset the clock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityChrome, activityRunning])
+
+  /* Each non-empty line of the thought reads as one step. */
+  const stepCount = text.split('\n').filter((l) => l.trim()).length
+
   return (
     <div className="agent-build-fade mt-3xl flex flex-col gap-sm">
+      {activityChrome ? (
+        <AgentActivityHeader
+          running={activityRunning}
+          steps={stepCount}
+          seconds={`${(elapsedMs / 1000).toFixed(1)}s`}
+          collapsed={!open}
+          onToggle={onToggle}
+          toggleDisabled={!done}
+        />
+      ) : (
       <button
         type="button"
         onClick={onToggle}
@@ -2109,6 +2201,7 @@ function CreateAgentThinkingPanel({
           className="shrink-0 text-text-icon transition-colors group-hover:text-text-primary"
         />
       </button>
+      )}
       <div
         className={`overflow-hidden transition-[max-height,opacity,margin] duration-200 ${
           open ? 'mt-sm max-h-[2400px] opacity-100' : 'mt-0 max-h-0 opacity-0'
@@ -2589,12 +2682,18 @@ function ReviewChoicePills({
 
 function ReviewModeChoiceCards({
   onPick,
+  options = REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS,
 }: {
   onPick: (title: string) => void
+  /** Defaults to the live-vs-backlog pair; the playbook flow passes its own set. */
+  options?: readonly { id: string; title: string; description: string; recommended?: boolean }[]
 }) {
+  /* No `w-full` on the wrapper: with `ml-3xl` it resolved to parent-width + 32px and
+     overflowed the scroll container, clipping the cards' right edge. In this flex column
+     the default stretch already fills the parent minus the margin. */
   return (
-    <div className="agent-build-fade ml-3xl mt-sm flex w-full max-w-full flex-col gap-sm">
-      {REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS.map((option) => (
+    <div className="agent-build-fade ml-3xl mt-sm flex max-w-full flex-col gap-sm">
+      {options.map((option) => (
         <button
           key={option.id}
           type="button"
@@ -2923,6 +3022,11 @@ function ReviewResponseThread({
   onMakeChanges,
   workflowVisible = false,
   explorationModeChoice = false,
+  ghostwriterPolish = false,
+  agentCreated = false,
+  fromPlaybook = false,
+  onOpenPlan,
+  planOpen = false,
   suppressAutoScrollBriefly,
   pendingAnswer,
   onPendingAnswerConsumed,
@@ -2943,6 +3047,18 @@ function ReviewResponseThread({
   workflowVisible?: boolean
   /** Response agents (exploration): live-vs-backlog cards before the sources script. */
   explorationModeChoice?: boolean
+  /** Ghostwriter: thoughts panels wear the Agent activity header. */
+  ghostwriterPolish?: boolean
+  /** True once Create agent has been used — retires that CTA in the plan card. */
+  agentCreated?: boolean
+  /**
+   * Ghostwriter: the opening message carried the review-response playbook, so the agent
+   * reads the document back as requirements instead of giving its usual intro.
+   */
+  fromPlaybook?: boolean
+  /** Ghostwriter plan panel — opened from the plan card, rendered by the parent. */
+  onOpenPlan?: () => void
+  planOpen?: boolean
   suppressAutoScrollBriefly: () => void
   /** Answer submitted from the bottom composer (click-to-fill → send). */
   pendingAnswer?: string
@@ -2968,9 +3084,29 @@ function ReviewResponseThread({
   autoSimulate?: boolean
 }) {
   const [introDone, setIntroDone] = useState(false)
+  /** Playbook opening: requirements → triage reply → templates check → the cadence question. */
+  const [playbookBlockDone, setPlaybookBlockDone] = useState(false)
+  const [playbookTriageDone, setPlaybookTriageDone] = useState(false)
+  const [playbookTemplatesDone, setPlaybookTemplatesDone] = useState(false)
+  const [templateQuestionDone, setTemplateQuestionDone] = useState(false)
+  const [templateAnswer, setTemplateAnswer] = useState('')
+  const [templateDraftsDone, setTemplateDraftsDone] = useState(false)
+  const [openQuestionsIntroDone, setOpenQuestionsIntroDone] = useState(false)
+  const [openQuestionsDone, setOpenQuestionsDone] = useState(false)
   const [modeAnswer, setModeAnswer] = useState('')
   const [modeFollowReady, setModeFollowReady] = useState(false)
   const [modeFollowDone, setModeFollowDone] = useState(false)
+  /** Ghostwriter's reading block: intro reply finished, then the block itself. */
+  const [readingIntroDone, setReadingIntroDone] = useState(false)
+  const [readingBlockDone, setReadingBlockDone] = useState(false)
+  const [learningIntroDone, setLearningIntroDone] = useState(false)
+  const [learningBlockDone, setLearningBlockDone] = useState(false)
+  const [sourcesBlockDone, setSourcesBlockDone] = useState(false)
+  const [sourcesTeaserDone, setSourcesTeaserDone] = useState(false)
+  const [spamScreenDone, setSpamScreenDone] = useState(false)
+  const [digestQuestionDone, setDigestQuestionDone] = useState(false)
+  const [digestEmail, setDigestEmail] = useState('')
+  const [planIntroDone, setPlanIntroDone] = useState(false)
   const [sourcesAnswer, setSourcesAnswer] = useState('')
   /** none → happy path; attempting/failed → Facebook-only stream-fail demo; ok → recovered via Retry. */
   const [sourcesStreamPhase, setSourcesStreamPhase] = useState<'none' | 'attempting' | 'failed' | 'ok'>('none')
@@ -3021,7 +3157,9 @@ function ReviewResponseThread({
       ? null
       : explorationModeChoice && modeAnswer && !modeFollowDone
         ? null
-        : introDone && (!explorationModeChoice || modeFollowDone) && !sourcesAnswer
+        : ghostwriterPolish
+          ? null /* reading block replaces the sources question */
+          : introDone && (!explorationModeChoice || modeFollowDone) && !sourcesAnswer
       ? 'sources'
       : sourcesReplyDone && !locationsAnswer
         ? 'locations'
@@ -3312,6 +3450,9 @@ function ReviewResponseThread({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSimulate, postDraftDone, postDraftAnswer])
 
+  /** Only the first template option ("draft all four") triggers the drafting beat. */
+  const templateDraftsRequested = templateAnswer === PLAYBOOK_TEMPLATE_OPTIONS[0].title
+
   const choice = awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep] : null
   const postDraftPills = workflowVisible
     ? REVIEW_RESPONSE_POST_DRAFT_PILLS.filter((label) => label !== 'View in agent builder')
@@ -3319,30 +3460,149 @@ function ReviewResponseThread({
 
   return (
     <>
-      <ReviewAgentReply
-        paragraphs={
-          explorationModeChoice
-            ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
-            : REVIEW_RESPONSE_INTRO_PARAGRAPHS
-        }
-        onComplete={() => setIntroDone(true)}
-      />
-      {introDone && (
-        <MessageActions
-          copyText={
-            (explorationModeChoice
-              ? REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS
-              : REVIEW_RESPONSE_INTRO_PARAGRAPHS
-            ).join('\n\n')
-          }
-          className="ml-3xl"
-        />
-      )}
-      {explorationModeChoice && introDone && !modeAnswer && (
-        <ReviewModeChoiceCards onPick={setModeAnswer} />
+      {/* An attached playbook answers everything the intro would have asked, so the agent
+          reads the document back as requirements instead and keeps only the cadence
+          question. Every other entry point keeps the intro paragraphs unchanged. */}
+      {fromPlaybook ? (
+        <>
+          <GhostwriterPlaybookBlock onComplete={() => setPlaybookBlockDone(true)} />
+          {playbookBlockDone && (
+            <ReviewAgentReply
+              paragraphs={[PLAYBOOK_TRIAGE_PARAGRAPH]}
+              onComplete={() => setPlaybookTriageDone(true)}
+            />
+          )}
+          {playbookTriageDone && (
+            <GhostwriterPlaybookTemplatesBlock onComplete={() => setPlaybookTemplatesDone(true)} />
+          )}
+          {playbookTemplatesDone && (
+            <ReviewAgentReply
+              paragraphs={[PLAYBOOK_TEMPLATE_QUESTION]}
+              onComplete={() => setTemplateQuestionDone(true)}
+            />
+          )}
+          {templateQuestionDone && !templateAnswer && (
+            <ReviewModeChoiceCards options={PLAYBOOK_TEMPLATE_OPTIONS} onPick={setTemplateAnswer} />
+          )}
+          {templateAnswer && <UserBubble>{templateAnswer}</UserBubble>}
+          {/* Only "draft all four" earns the drafting beat; the other two answers go
+              straight on to the next question. */}
+          {templateDraftsRequested && (
+            <GhostwriterTemplateDraftsBlock onComplete={() => setTemplateDraftsDone(true)} />
+          )}
+          {(templateDraftsRequested ? templateDraftsDone : !!templateAnswer) && (
+            <ReviewAgentReply
+              paragraphs={[OPEN_QUESTIONS_INTRO]}
+              onComplete={() => setOpenQuestionsIntroDone(true)}
+            />
+          )}
+          {openQuestionsIntroDone && (
+            <GhostwriterOpenQuestions onDone={() => setOpenQuestionsDone(true)} />
+          )}
+          {/* The playbook path lands on the same plan card the conversational path ends on,
+              rather than re-asking the sources/templates/tone questions it already answered. */}
+          {openQuestionsDone && (
+            <ReviewAgentReply
+              paragraphs={[OPEN_QUESTIONS_LOCKED_IN]}
+              onComplete={() => setPlanIntroDone(true)}
+            />
+          )}
+          {openQuestionsDone && planIntroDone && (
+            <GhostwriterPlanCard
+              onCreateAgent={() => onCreateAgent?.()}
+              onOpenPlan={onOpenPlan}
+              planOpen={planOpen}
+              agentCreated={agentCreated}
+              copy={PLAYBOOK_PLAN_CARD}
+            />
+          )}
+        </>
+      ) : (
+        <>
+          <ReviewAgentReply
+            paragraphs={
+              explorationModeChoice
+                ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
+                : REVIEW_RESPONSE_INTRO_PARAGRAPHS
+            }
+            onComplete={() => setIntroDone(true)}
+          />
+          {introDone && (
+            <MessageActions
+              copyText={
+                (explorationModeChoice
+                  ? REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS
+                  : REVIEW_RESPONSE_INTRO_PARAGRAPHS
+                ).join('\n\n')
+              }
+              className="ml-3xl"
+            />
+          )}
+          {explorationModeChoice && introDone && !modeAnswer && (
+            <ReviewModeChoiceCards onPick={setModeAnswer} />
+          )}
+        </>
       )}
       {explorationModeChoice && modeAnswer && <UserBubble>{modeAnswer}</UserBubble>}
-      {explorationModeChoice && modeAnswer && (
+      {/* Ghostwriter goes and reads the account rather than asking for sources/templates/
+          tone — so its follow-up is the reading block, not the sources question. */}
+      {explorationModeChoice && modeAnswer && ghostwriterPolish && (
+        <>
+          <ReviewAgentReply
+            paragraphs={[READING_INTRO_PARAGRAPH]}
+            onComplete={() => setReadingIntroDone(true)}
+          />
+          {readingIntroDone && (
+            <GhostwriterReadingBlock onComplete={() => setReadingBlockDone(true)} />
+          )}
+          {readingBlockDone && (
+            <ReviewAgentReply
+              paragraphs={[LEARNING_INTRO_PARAGRAPH]}
+              onComplete={() => setLearningIntroDone(true)}
+            />
+          )}
+          {learningIntroDone && (
+            <GhostwriterGuidelinesBlock onComplete={() => setLearningBlockDone(true)} />
+          )}
+          {learningBlockDone && (
+            <GhostwriterSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
+          )}
+          {sourcesBlockDone && (
+            <ReviewAgentReply
+              paragraphs={[SOURCES_NEXT_PARAGRAPH]}
+              onComplete={() => setSourcesTeaserDone(true)}
+            />
+          )}
+          {sourcesTeaserDone && (
+            <GhostwriterSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
+          )}
+          {spamScreenDone && (
+            <ReviewAgentReply
+              paragraphs={[SPAM_DIGEST_QUESTION]}
+              onComplete={() => setDigestQuestionDone(true)}
+            />
+          )}
+          {digestQuestionDone && !digestEmail && (
+            <GhostwriterDigestPrompt onSubmit={setDigestEmail} />
+          )}
+          {digestEmail && <UserBubble>{digestEmail}</UserBubble>}
+          {digestEmail && (
+            <ReviewAgentReply
+              paragraphs={[PLAN_INTRO_PARAGRAPH]}
+              onComplete={() => setPlanIntroDone(true)}
+            />
+          )}
+          {planIntroDone && (
+            <GhostwriterPlanCard
+              onCreateAgent={() => onCreateAgent?.()}
+              onOpenPlan={onOpenPlan}
+              planOpen={planOpen}
+              agentCreated={agentCreated}
+            />
+          )}
+        </>
+      )}
+      {explorationModeChoice && modeAnswer && !ghostwriterPolish && (
         <ReviewAgentReply
           paragraphs={[...REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS]}
           onComplete={() => {
@@ -3351,7 +3611,7 @@ function ReviewResponseThread({
           }}
         />
       )}
-      {explorationModeChoice && modeFollowDone && (
+      {explorationModeChoice && modeFollowDone && !ghostwriterPolish && (
         <MessageActions
           copyText={REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS.join('\n\n')}
           className="ml-3xl"
@@ -3379,6 +3639,7 @@ function ReviewResponseThread({
       {sourcesAnswer && (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={sourcesThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3409,6 +3670,7 @@ function ReviewResponseThread({
       {locationsAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={locationsThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3439,6 +3701,7 @@ function ReviewResponseThread({
       {spamOkAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={spamOkThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3469,6 +3732,7 @@ function ReviewResponseThread({
       {spamAlertAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={spamAlertThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3499,6 +3763,7 @@ function ReviewResponseThread({
       {spamEmailAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={spamEmailThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3529,6 +3794,7 @@ function ReviewResponseThread({
       {offlineAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={offlineThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3559,6 +3825,7 @@ function ReviewResponseThread({
       {writingAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={writingThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3589,6 +3856,7 @@ function ReviewResponseThread({
       {publishAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={publishThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -3619,6 +3887,7 @@ function ReviewResponseThread({
       {buildAnswer && (
         <>
           <CreateAgentThinkingPanel
+            activityChrome={ghostwriterPolish}
             open={buildThoughtsOpen}
             onToggle={() => {
               suppressAutoScrollBriefly()
@@ -4927,12 +5196,135 @@ export function CreateAiGhostwriterShellHeader({
 }
 
 /** Response agents (exploration): full-page Ghostwriter shell with centered section tabs. */
+/**
+ * Ghostwriter top-bar CTAs. Deliberately reuses the canvas's own `ab-header-*` / `ab-publish-*`
+ * classes so the cluster is pixel-identical to the one on the Workflow canvas, and fires the
+ * real handlers inside AgentBuilder via `onAction` rather than reimplementing them. No error
+ * chip here — the canvas keeps that.
+ */
+function GhostwriterTopBarActions({
+  onAction,
+}: {
+  onAction: (type: 'run-test' | 'activate' | 'save-draft' | 'delete') => void
+}) {
+  const [publishOpen, setPublishOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const publishRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!publishOpen && !menuOpen) return undefined
+    const onDown = (e: MouseEvent) => {
+      if (publishRef.current && !publishRef.current.contains(e.target as Node)) setPublishOpen(false)
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [publishOpen, menuOpen])
+
+  return (
+    <div className="ab-header-actions gw-top-actions">
+      <button
+        type="button"
+        className="ab-header-runtest-btn"
+        onClick={() => onAction('run-test')}
+        aria-label="Run test"
+      >
+        {/* Clean stroked triangle — the shared `icon-preview.svg` is a filled grey-blue
+            glyph that reads heavier than the rest of this cluster. */}
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <polygon points="6 3 20 12 6 21 6 3" />
+        </svg>
+        <span>Run test</span>
+      </button>
+      <div className="ab-publish-split" ref={publishRef}>
+        <button
+          type="button"
+          className="ab-publish-split__main"
+          aria-label="Activate"
+          onClick={() => onAction('activate')}
+        >
+          Activate
+        </button>
+        <button
+          type="button"
+          className={`ab-publish-split__chevron${publishOpen ? ' ab-publish-split__chevron--open' : ''}`}
+          aria-label="More activate options"
+          aria-haspopup="menu"
+          aria-expanded={publishOpen}
+          onClick={() => setPublishOpen((open) => !open)}
+        >
+          <span className="material-symbols-outlined">expand_more</span>
+        </button>
+        {publishOpen && (
+          <div className="ab-publish-split__menu" role="menu">
+            <button
+              type="button"
+              className="ab-publish-split__menu-item"
+              role="menuitem"
+              onClick={() => {
+                setPublishOpen(false)
+                onAction('save-draft')
+              }}
+            >
+              Save as draft
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="ab-header-more" ref={menuRef}>
+        <button
+          type="button"
+          className="ab-header-more-btn"
+          aria-label="More options"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => {
+            setPublishOpen(false)
+            setMenuOpen((open) => !open)
+          }}
+        >
+          <span className="material-symbols-outlined" aria-hidden>more_vert</span>
+        </button>
+        {menuOpen && (
+          <div className="ab-header-menu" role="menu">
+            <button
+              type="button"
+              className="ab-header-menu-item ab-header-menu-item--danger"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false)
+                onAction('delete')
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function CreateAiGhostwriterTabbedShell({
   title,
   onBack,
   activeTab,
   onTabChange,
   tabs = GHOSTWRITER_SHELL_TABS,
+  carded = false,
+  right,
+  disabledTabIds,
 }: {
   title: string
   onBack: () => void
@@ -4940,30 +5332,64 @@ export function CreateAiGhostwriterTabbedShell({
   onTabChange: (tabId: string) => void
   /** Defaults to the static tab set — pass to inject e.g. a Simulation count badge. */
   tabs?: Tab[]
+  /** Ghostwriter: single flush top bar with left/centre/right zones. */
+  carded?: boolean
+  /** Right-zone content — Ghostwriter passes the Run test / Activate / kebab cluster. */
+  right?: ReactNode
+  /** Tabs not yet reachable — e.g. before the agent has been created. */
+  disabledTabIds?: string[]
 }) {
-  return (
-    <div className="relative flex h-16 shrink-0 items-center bg-surface px-2xl">
-      <div className="z-10 flex min-w-0 max-w-[40%] items-center gap-xs">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
-          aria-label="Back"
-        >
-          <Icon name="arrow_back" size={20} />
-        </button>
-        <h1 className="min-w-0 truncate text-body text-text-primary">{title}</h1>
-      </div>
-      <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-        <div className="pointer-events-auto">
-          <Tabs
-            tabs={tabs}
-            activeTab={activeTab}
-            onChange={onTabChange}
-            showBaseline={false}
-          />
+  const nameGroup = (
+    <div className={`z-10 flex min-w-0 items-center gap-xs ${carded ? '' : 'max-w-[40%]'}`}>
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+        aria-label="Back"
+      >
+        <Icon name="arrow_back" size={20} />
+      </button>
+      {/* Ghostwriter bar only — an explicit prompt override of the regular-weight rule.
+          Medium (500). The weight scale is remapped in tailwind.config, so `font-bold` is
+          what lands on 500 — `font-medium` there resolves to 400, i.e. no change at all. */}
+      <h1
+        className={`min-w-0 truncate text-body text-text-primary ${carded ? 'font-bold' : ''}`}
+      >
+        {title}
+      </h1>
+    </div>
+  )
+
+  const tabsGroup = (
+    <Tabs
+      tabs={tabs}
+      activeTab={activeTab}
+      onChange={onTabChange}
+      showBaseline={false}
+      disabledIds={disabledTabIds}
+    />
+  )
+
+  if (!carded) {
+    return (
+      <div className="relative flex h-16 shrink-0 items-center bg-surface px-2xl">
+        {nameGroup}
+        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+          <div className="pointer-events-auto">{tabsGroup}</div>
         </div>
       </div>
+    )
+  }
+
+  /* Ghostwriter: one flush top bar — name left, tabs centred on the page (absolute, so a
+     long name can't shove them off-centre), shell-owned CTAs right. */
+  return (
+    <div className="relative flex h-14 shrink-0 items-center justify-between gap-md border-b border-border bg-surface px-lg">
+      <div className="flex min-w-0 max-w-[32%] items-center">{nameGroup}</div>
+      <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+        <div className="pointer-events-auto">{tabsGroup}</div>
+      </div>
+      {right ? <div className="z-10 flex shrink-0 items-center">{right}</div> : null}
     </div>
   )
 }
@@ -5246,14 +5672,31 @@ function CreateFlowPageHeader({
   centered = false,
   inlineProcedureOpen = false,
   right,
+  boxedBack = false,
+  transparent = false,
 }: {
   onBack: () => void
   title: string
   centered?: boolean
   inlineProcedureOpen?: boolean
   right?: ReactNode
+  /** Arrow + label collapse into one bordered button (secondary-button chrome). */
+  boxedBack?: boolean
+  /** Drops the white header fill so the page background shows through. */
+  transparent?: boolean
 }) {
-  const row = (
+  const row = boxedBack ? (
+    <div className="flex w-full min-w-0 max-w-[720px] items-center">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex h-9 shrink-0 items-center gap-sm rounded-sm bg-surface px-lg text-body text-text-primary shadow-card ring-1 ring-black/[0.04] transition-shadow hover:shadow-dropdown"
+      >
+        <Icon name="arrow_back" size={18} className="text-text-icon" />
+        {title}
+      </button>
+    </div>
+  ) : (
     <div className="flex w-full min-w-0 max-w-[720px] items-center gap-xs">
       <button
         type="button"
@@ -5284,7 +5727,11 @@ function CreateFlowPageHeader({
   }
 
   return (
-    <div className="flex h-16 shrink-0 items-center justify-between gap-sm bg-surface px-2xl">
+    <div
+      className={`flex h-16 shrink-0 items-center justify-between gap-sm px-2xl ${
+        transparent ? '' : 'bg-surface'
+      }`}
+    >
       {row}
       {right ? <div className="shrink-0">{right}</div> : null}
     </div>
@@ -5365,6 +5812,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   compactGreeting = false,
   existingAgent = false,
   explorationModeChoice = false,
+  ghostwriterPolish = false,
+  agentCreated = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -5409,6 +5858,10 @@ export function HealthcareFrontdeskCreateAgentScreen({
   existingAgent?: boolean
   /** Response agents (exploration): live-vs-backlog cards after Ghostwriter SEND. */
   explorationModeChoice?: boolean
+  /** Ghostwriter-only polished create landing (no Option picker, larger hero). */
+  ghostwriterPolish?: boolean
+  /** True once Create agent has been used, so the chat stops offering it again. */
+  agentCreated?: boolean
   /** Fires when the reminder draft card finishes building (name) or the flow resets (null). */
   onDraftReady?: (name: string | null) => void
   /** When the workflow canvas is open, procedure clicks open the canvas RHS instead of an inline preview. */
@@ -5463,6 +5916,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
       compactGreeting={compactGreeting}
       existingAgent={existingAgent}
       explorationModeChoice={explorationModeChoice}
+      ghostwriterPolish={ghostwriterPolish}
+      agentCreated={agentCreated}
       onDraftReady={onDraftReady}
       onCanvasProcedureChange={onCanvasProcedureChange}
       onInlineProcedureOpenChange={onInlineProcedureOpenChange}
@@ -5495,6 +5950,8 @@ function HealthcareFrontdeskCreateAgentLive({
   compactGreeting = false,
   existingAgent = false,
   explorationModeChoice = false,
+  ghostwriterPolish = false,
+  agentCreated = false,
   onDraftReady,
   onCanvasProcedureChange,
   onInlineProcedureOpenChange,
@@ -5523,6 +5980,10 @@ function HealthcareFrontdeskCreateAgentLive({
   compactGreeting?: boolean
   existingAgent?: boolean
   explorationModeChoice?: boolean
+  /** Ghostwriter-only polished create landing (no Option picker, larger hero). */
+  ghostwriterPolish?: boolean
+  /** True once Create agent has been used, so the chat stops offering it again. */
+  agentCreated?: boolean
   onDraftReady?: (name: string | null) => void
   onCanvasProcedureChange?: (name: string | null) => void
   onInlineProcedureOpenChange?: (open: boolean) => void
@@ -5667,6 +6128,8 @@ function HealthcareFrontdeskCreateAgentLive({
   const previewActiveRef = useRef(false)
   const [loaderIndex, setLoaderIndex] = useState<number | null>(null)
   const [followUp, setFollowUp] = useState('')
+  /** Ghostwriter: the plan review panel, opened from the plan card. */
+  const [planPanelOpen, setPlanPanelOpen] = useState(false)
   const [reviewComposerFill, setReviewComposerFill] = useState<string | null>(null)
   const [reviewPendingAnswer, setReviewPendingAnswer] = useState('')
   const [reviewThreadBusy, setReviewThreadBusy] = useState(true)
@@ -6129,6 +6592,29 @@ function HealthcareFrontdeskCreateAgentLive({
 
   const handleSend = () => startConversation(prompt)
 
+  /** The playbook chip is never cleared, so its presence marks how the thread was opened. */
+  const startedFromPlaybook =
+    ghostwriterPolish
+    && landingAttachments.some((a) => a.id === GHOSTWRITER_PLAYBOOK_ATTACHMENT.id)
+
+  /**
+   * Ghostwriter: attach the playbook and write the sentence that goes with it. Anything the
+   * user typed themselves is left alone — only an empty box or the untouched exploration seed
+   * gets overwritten.
+   */
+  const seedGhostwriterPlaybook = () => {
+    setLandingAttachments((prev) =>
+      prev.some((a) => a.id === GHOSTWRITER_PLAYBOOK_ATTACHMENT.id)
+        ? prev
+        : [...prev, GHOSTWRITER_PLAYBOOK_ATTACHMENT],
+    )
+    setPrompt((prev) =>
+      !prev.trim() || prev === REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2
+        ? GHOSTWRITER_PLAYBOOK_PROMPT
+        : prev,
+    )
+  }
+
   useEffect(() => {
     if (autoStart && initialPrompt) startConversation(initialPrompt)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -6256,6 +6742,8 @@ function HealthcareFrontdeskCreateAgentLive({
   if (submitted) {
     return (
       <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
+        {/* Rendered last in the DOM but ordered after the chat column — a flex sibling, so
+            opening it squeezes the conversation rather than covering it. */}
         <style>{`
           .agent-build-fade { animation: agent-build-fade-in 0.15s ease-out; }
           @keyframes agent-build-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
@@ -6288,6 +6776,14 @@ function HealthcareFrontdeskCreateAgentLive({
             wide screens, but collapses first (shrink-[999]) on narrow ones so the
             chat keeps its width and the panel stays pinned to the right edge.
             When the workflow canvas is open, procedures open on the canvas RHS instead. */}
+        {/* Plan review panel. `order-1` puts it visually right of the chat column (order 0)
+            without needing to sit after it in the DOM — it's a flex sibling, so opening it
+            squeezes the conversation rather than covering it. */}
+        {ghostwriterPolish && planPanelOpen && (
+          <div className="order-1 flex h-full min-h-0 shrink-0 py-lg">
+            <GhostwriterPlanPanel onClose={() => setPlanPanelOpen(false)} />
+          </div>
+        )}
         {((openProcedureName || previewOpen) && !workflowVisible) && (
           <div className="hidden w-[480px] min-w-0 shrink-[999] lg:block" aria-hidden />
         )}
@@ -6321,7 +6817,18 @@ function HealthcareFrontdeskCreateAgentLive({
           </div>
         )}
         <div className="flex justify-end pt-md">
-          <span className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">{prompt.trim()}</span>
+          <span className="flex max-w-[80%] flex-col items-end gap-sm rounded-lg bg-surface-hover px-md py-sm text-body leading-[1.5] text-text-primary">
+            {/* Ghostwriter only: anything attached on the landing rides along, so the seeded
+                playbook doesn't disappear the moment the message is sent. */}
+            {ghostwriterPolish && landingAttachments.length > 0 && (
+              <span className="flex flex-wrap justify-end gap-sm">
+                {landingAttachments.map((item) => (
+                  <RefChip key={item.id} kind={item.kind} label={item.label} />
+                ))}
+              </span>
+            )}
+            <span>{prompt.trim()}</span>
+          </span>
         </div>
 
         {introThinking && !explorationModeChoice ? (
@@ -6362,6 +6869,11 @@ function HealthcareFrontdeskCreateAgentLive({
                   onMakeChanges={resetCreateFlow}
                   workflowVisible={workflowVisible}
                   explorationModeChoice={explorationModeChoice}
+                  ghostwriterPolish={ghostwriterPolish}
+                  agentCreated={agentCreated}
+                  fromPlaybook={startedFromPlaybook}
+                  onOpenPlan={() => setPlanPanelOpen(true)}
+                  planOpen={planPanelOpen}
                   suppressAutoScrollBriefly={suppressAutoScrollBriefly}
                   pendingAnswer={reviewPendingAnswer}
                   onPendingAnswerConsumed={() => setReviewPendingAnswer('')}
@@ -7421,7 +7933,9 @@ function HealthcareFrontdeskCreateAgentLive({
 
   return (
     <div className={`-translate-y-10 mt-3xl flex w-full flex-col items-center gap-2xl self-center py-lg ${landingShellClass}`}>
-      {explorationModeChoice && !submitted && (
+      {/* `explorationModeChoice` also gates the post-send intro + mode-choice conversation,
+          so Ghostwriter keeps that and only skips this Option 1/2 seed picker. */}
+      {explorationModeChoice && !ghostwriterPolish && !submitted && (
         <div className="fixed right-2xl top-[14px] z-30">
           <ExplorationLandingOptionDropdown
             value={landingPromptOption}
@@ -7445,23 +7959,40 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-sm text-center">
+      <div className={`flex flex-col items-center text-center ${ghostwriterPolish ? 'gap-md' : 'gap-sm'}`}>
         <span
-          className="ai-gradient-icon size-10"
+          className={`ai-gradient-icon ${ghostwriterPolish ? 'size-12' : 'size-10'}`}
           style={{
             WebkitMaskImage: `url("${iconAgentsTwoStarSparkle}")`,
             maskImage: `url("${iconAgentsTwoStarSparkle}")`,
           }}
           aria-hidden
         />
-        <p className="text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary">
+        <p
+          className={
+            ghostwriterPolish
+              /* Ghostwriter only — an explicit prompt override of the regular-weight rule.
+                 The weight scale is remapped in tailwind.config (bold=500, extrabold=600,
+                 black=700), so `font-bold` would land on a barely-visible 500. */
+              ? 'text-[24px] leading-[32px] tracking-[-0.5px] font-extrabold text-text-primary'
+              : 'text-[20px] leading-[28px] tracking-[-0.4px] text-text-primary'
+          }
+        >
           Build your <span className="ai-gradient-text">agent</span>
         </p>
-        <p className="text-[16px] leading-6 tracking-[-0.32px] text-text-secondary">Hey John, add an AI agent that gets the work done for you!</p>
+        <p
+          className={
+            ghostwriterPolish
+              ? 'text-[15px] leading-[22px] tracking-[-0.3px] text-text-tertiary'
+              : 'text-[16px] leading-6 tracking-[-0.32px] text-text-secondary'
+          }
+        >
+          Hey John, add an AI agent that gets the work done for you!
+        </p>
       </div>
 
-      <div className="ai-gradient-border w-full max-w-[640px] rounded-xl p-px">
-        <div className="flex flex-col gap-md rounded-xl bg-surface px-lg py-md shadow-card">
+      <div className={`ai-gradient-border w-full rounded-xl p-px ${ghostwriterPolish ? 'max-w-[720px]' : 'max-w-[640px]'}`}>
+        <div className={`flex flex-col gap-md rounded-xl bg-surface shadow-card ${ghostwriterPolish ? 'px-xl py-lg' : 'px-lg py-md'}`}>
           {landingAttachments.length > 0 && (
             <div className="flex flex-wrap items-center gap-sm">
               {landingAttachments.map((item) => (
@@ -7479,7 +8010,8 @@ function HealthcareFrontdeskCreateAgentLive({
             onChange={(e) => setPrompt(e.target.value)}
             onFocus={() => {
               if (prompt.trim()) return
-              if (explorationModeChoice && landingPromptOption === '2') {
+              // Ghostwriter seeds the same sentence exploration's Option 2 uses.
+              if (ghostwriterPolish || (explorationModeChoice && landingPromptOption === '2')) {
                 setPrompt(REVIEW_RESPONSE_EXPLORATION_LANDING_PROMPT_OPTION_2)
                 return
               }
@@ -7499,7 +8031,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   ? typedPlaceholder
                   : DEFAULT_CREATE_PLACEHOLDER
             }
-            className="scrollbar-light min-h-16 w-full resize-none bg-transparent text-body text-text-primary outline-none placeholder:text-text-tertiary"
+            className={`scrollbar-light min-h-16 w-full resize-none bg-transparent text-text-primary outline-none placeholder:text-text-tertiary ${ghostwriterPolish ? 'text-[15px] leading-[22px]' : 'text-body'}`}
           />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-xs">
@@ -7507,7 +8039,14 @@ function HealthcareFrontdeskCreateAgentLive({
                 onSelect={(option) => {
                   if (option === 'upload-image') landingImageInputRef.current?.click()
                   else if (option === 'media-library') setMediaLibraryOpen(true)
-                  else if (option === 'files') setFilesModalOpen(true)
+                  else if (option === 'files') {
+                    // Ghostwriter skips the file picker and lands straight on the seeded state.
+                    if (ghostwriterPolish) {
+                      seedGhostwriterPlaybook()
+                      return
+                    }
+                    setFilesModalOpen(true)
+                  }
                 }}
               />
               <input
@@ -7569,7 +8108,7 @@ function HealthcareFrontdeskCreateAgentLive({
         }
       />
 
-      <p className="m-0 mt-3xl text-center text-body text-text-secondary">
+      <p className={`m-0 text-center text-body text-text-secondary ${ghostwriterPolish ? 'mt-lg mb-lg' : 'mt-3xl'}`}>
         <button
           type="button"
           onClick={onCreateFromScratch}
@@ -7586,16 +8125,47 @@ function HealthcareFrontdeskCreateAgentLive({
       <div className={`@container w-full ${landingCards.length === 1 ? 'flex justify-center' : ''}`}>
         <div className={`grid w-full gap-md ${landingGridClass}`}>
           {landingCards.map((tpl) => (
-            <div key={tpl.id} className={INFO_CARD_LAYOUT.root}>
+            <div
+              key={tpl.id}
+              className={
+                ghostwriterPolish
+                  /* Same card, 176px instead of 192px — that's exactly the content height, so
+                     the hover-revealed CTA still fits without the card jumping taller. */
+                  ? INFO_CARD_LAYOUT.root.replace('h-[192px]', 'h-[176px]')
+                  : INFO_CARD_LAYOUT.root
+              }
+            >
               {tpl.glyph && tpl.tone ? (
                 <div className="flex min-w-0 items-center gap-md">
                   <LibraryCardIcon glyph={tpl.glyph} tone={tpl.tone} />
-                  <h3 className="min-w-0 flex-1 text-body leading-[22px] tracking-[-0.28px] text-text-primary">{tpl.title}</h3>
+                  <h3
+                    className={`min-w-0 flex-1 text-text-primary ${
+                      ghostwriterPolish
+                        ? 'line-clamp-2 text-[15px] leading-[20px] tracking-[-0.3px]'
+                        : 'text-body leading-[22px] tracking-[-0.28px]'
+                    }`}
+                  >
+                    {tpl.title}
+                  </h3>
                 </div>
               ) : (
-                <h3 className="min-w-0 shrink-0 line-clamp-2 text-body text-text-primary">{tpl.title}</h3>
+                <h3
+                  className={`min-w-0 shrink-0 line-clamp-2 text-text-primary ${
+                    ghostwriterPolish ? 'text-[15px] leading-[20px] tracking-[-0.3px]' : 'text-body'
+                  }`}
+                >
+                  {tpl.title}
+                </h3>
               )}
-              <p className={INFO_CARD_LAYOUT.description}>{tpl.description}</p>
+              <p
+                className={
+                  ghostwriterPolish
+                    ? 'mt-sm min-w-0 shrink-0 line-clamp-2 text-[13px] leading-[18px] text-text-tertiary'
+                    : INFO_CARD_LAYOUT.description
+                }
+              >
+                {tpl.description}
+              </p>
               <div className={INFO_CARD_LAYOUT.bottomShell}>
                 <div className={INFO_CARD_LAYOUT.ctaShell}>
                   <div className={INFO_CARD_LAYOUT.ctaInner}>
@@ -8168,15 +8738,15 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   /** RA sim 2 only — gates the reveal-schedule timer below so failed cases are processed one at a
    *  time (reveal → fix to completion → reveal next) instead of overlapping. */
   const isAutoSimulationRun = isAutoSimulationNav(navId)
-  /** Full canvas is a duplicate of Sep 1 under its own nav slot — same data, its own page title. */
-  const pageTitle =
-    navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
-      ? `${agentName} (Full canvas)`
-      : navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
-        ? 'Review response agents (simulation)'
-        : navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID
-          ? 'RA sim 2'
-          : agentName
+  /** Full canvas (and its Ghostwriter copy) share this page-title suffix — same data, own title. */
+  const fullCanvasLabel = fullCanvasVariantLabel(navId)
+  const pageTitle = fullCanvasLabel
+    ? `${agentName} (${fullCanvasLabel})`
+    : navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
+      ? 'Review response agents (simulation)'
+      : navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID
+        ? 'RA sim 2'
+        : agentName
   const useExplorationOutcomesTab = false
   const [activeTab, setActiveTab] = useState('agents')
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
@@ -8191,7 +8761,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     isExplorationAgents && activeTab === 'agents'
   /** Full canvas mirrors exploration's card-layout picker — its own design sandbox, not shared
    *  with Sep 1/coach-cue, which stay locked to the Default layout below. */
-  const isFullCanvasAgents = navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
+  const isFullCanvasAgents = isFullCanvasStyleNav(navId)
   const useExplorationGrid =
     ((isExplorationAgents && !isSep1Agents) || isFullCanvasAgents) && agentsViewMode === 'grid'
   /** Sep 1 side-nav agents (not Full canvas): same card/table toggle; card view locks to exploration Default layout. */
@@ -8264,6 +8834,30 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     const timer = setTimeout(() => setSimulationStepIndex((i) => i + 1), SIMULATION_REVEAL_STEP_MS)
     return () => clearTimeout(timer)
   }, [simulationRunning, simulationStepIndex, isAutoSimulationRun, fixedTestCaseIds, simulationRevealedCount])
+  /**
+   * Ghostwriter entered the workflow directly, bypassing the chat — from "Create from
+   * scratch" (empty canvas), a library "Use agent", or Edit on an existing agent. Keeps the
+   * shell (top bar + tabs) and lands on the Workflow tab. Separate from `createFlowSubmitted`,
+   * which mirrors the chat child's own submitted state and would overwrite a value set here.
+   *   'scratch'  → empty canvas
+   *   'workflow' → the agent/template's prebuilt canvas
+   */
+  const [ghostwriterDirect, setGhostwriterDirect] = useState<null | 'scratch' | 'workflow'>(null)
+  /** Opens the Ghostwriter shell straight on the Workflow tab, no Create-with-AI panel. */
+  const openGhostwriterWorkflow = (name: string, mode: 'scratch' | 'workflow') => {
+    setCreateDraftAgentName(name)
+    setGhostwriterDirect(mode)
+    setCreateGhostwriterTab('workflow')
+    setShowCreateFlow(true)
+    openCreateWorkflow({ withAiPanel: false })
+  }
+
+  /** Ghostwriter: until "Create agent" is pressed the build isn't real yet, so the other
+   *  tabs stay disabled and the top bar carries no Run test / Activate / kebab. */
+  const [ghostwriterAgentCreated, setGhostwriterAgentCreated] = useState(false)
+  /** Ghostwriter top bar owns the CTAs; this hands the click to AgentBuilder's handler. */
+  const [ghostwriterHeaderAction, setGhostwriterHeaderAction] =
+    useState<{ type: string; nonce: number } | null>(null)
   const [createDraftAgentName, setCreateDraftAgentName] = useState<string | null>(null)
   const [canvasProcedureId, setCanvasProcedureId] = useState<string | null>(null)
   const [, setInlineProcedureOpen] = useState(false)
@@ -8287,6 +8881,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateFlowSubmitted(false)
+    setGhostwriterDirect(null)
     setCreateGhostwriterTab('ghostwriter')
     setTestCasesSimulated(false)
     setSimulationStepIndex(0)
@@ -8304,18 +8899,21 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateWorkflowOpen(false)
     setCreateWorkflowMounted(false)
     setCreateFlowSubmitted(false)
+    setGhostwriterDirect(null)
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
   }
 
-  const openCreateWorkflow = () => {
+  /** `withAiPanel: false` — "Create from scratch" opens a bare canvas: no Create with AI
+   *  panel, just the Trigger palette the scratch canvas auto-opens. */
+  const openCreateWorkflow = ({ withAiPanel = true }: { withAiPanel?: boolean } = {}) => {
     setCreateAiFullscreen(false)
     setCreateSideTab('ai')
     setCreateWorkflowMounted(true)
     // Floating chrome: Create with AI lives on the canvas (sparkle + LHS panel).
     setCreateLeftPaneCollapsed(true)
-    setCreateAiBuilderPanelOpen(true)
+    setCreateAiBuilderPanelOpen(withAiPanel)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
     window.requestAnimationFrame(() => setCreateWorkflowOpen(true))
@@ -8335,6 +8933,16 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateAiFullscreen(true)
     setCreateAiBuilderPanelOpen(false)
     closeCreateWorkflow()
+  }
+
+  /** Ghostwriter's "Create agent": unlock the shell and land on the Workflow tab, rather
+   *  than leaving the create flow for the agent instance screen. */
+  const handleGhostwriterCreateAgent = () => {
+    setGhostwriterAgentCreated(true)
+    setCreateGhostwriterTab('workflow')
+    openCreateWorkflow({ withAiPanel: false })
+    setToastMessage('Agent has been created')
+    setToastVisible(true)
   }
 
   const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
@@ -8467,6 +9075,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isTreatmentPlan   = agentName === 'Treatment plan agent'
   const isTaggingRouting  = agentName === 'Tagging & routing agent'
   const isReviewResponse  = isReviewResponseAgentName(agentName)
+  /** This screen is the Ghostwriter nav — Edit / Use agent open its own shell. */
+  const isGhostwriterAgent = isGhostwriterNav(navId) && isReviewResponse
   const isReviewGeneration = agentName === 'Review generation agents'
   const isReviewTagging   = agentName === 'Review tagging agents'
   const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging
@@ -8739,6 +9349,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }
 
   const openAgentInstanceEditor = (row: AgentInstance) => {
+    // Ghostwriter edits inside its own shell (top bar + tabs) on the Workflow tab.
+    if (isGhostwriterAgent) {
+      openGhostwriterWorkflow(row.name, 'workflow')
+      return
+    }
     onEditAgent?.(
       row.name,
       undefined,
@@ -8871,7 +9486,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     chipClassName: '!text-[#212121]',
     compact: Boolean(tpl.valueProp),
     actionLabel: 'Use agent' as const,
-    onAction: () => onEditAgent?.(tpl.title),
+    onAction: () =>
+      isGhostwriterAgent
+        ? openGhostwriterWorkflow(tpl.title, 'workflow')
+        : onEditAgent?.(tpl.title),
     onPreview: () => setLibraryPreview(toLibraryPreviewData(tpl, { product, agentName })),
   }))
 
@@ -9024,6 +9642,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   }
 
   if (showCreateFlow && (isFrontdesk || isReminder || isReviewResponse || isReviewGeneration)) {
+    /** Ghostwriter-only create polish: grey page, carded top bar, type scale.
+     *  Declared here because `createWorkflowAgentName` below reads it. */
+    const isGhostwriterPolish = isGhostwriterNav(navId) && isReviewResponse
     const isHealthcareFrontdesk = product === 'healthcare'
     const chatHistoryTitle = (isReviewResponse || isReviewGeneration) ? 'Reviews AI' : isReminder ? 'Reminder' : 'Front desk'
     const createVariant = isReminder ? 'reminder' : 'frontdesk'
@@ -9035,7 +9656,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     const historyChat = chatHistorySelectedId
       ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
       : null
-    const createWorkflowAgentName = createDraftAgentName
+    const createWorkflowAgentName = (isGhostwriterPolish && ghostwriterDirect === 'scratch' && isReviewResponse)
+      /* "Create from scratch" — this exact name is what makes the editor start empty
+         (isReviewsScratchCreateName in WorkflowEditorScreen) instead of loading the
+         prebuilt Review response workflow. */
+      ? 'Review response agent 1'
+      : createDraftAgentName
       ?? (isReviewResponse
         ? REVIEW_RESPONSE_BUILD_CARD.title
         : isReviewGeneration
@@ -9051,8 +9677,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
         : null
     const showReviewsCreateInnerTitle =
       isReviewsCreateFlow && (createFlowSubmitted || createWorkflowOpen)
+    /** Ghostwriter keeps its tab bar pinned on every tab — including Workflow, where the
+     *  other variants drop the header and let the canvas go full-bleed. */
+    const ghostwriterShellPinned =
+      isGhostwriterPolish && (createFlowSubmitted || createAiFullscreen || ghostwriterDirect !== null)
     const showGhostwriterShellHeader =
-      (createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen
+      ((createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen) || ghostwriterShellPinned
     const isExplorationGhostwriterShell =
       isResponseAgentsExplorationNav(navId) && isReviewResponse && showGhostwriterShellHeader
     /** Response agent (simulation): Workflow/Tools/Knowledge start empty (no auto-opening the
@@ -9064,9 +9694,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     /** Full-bleed exploration create — no in-card Reviews AI TopNav either. */
     const hideExplorationCreateTopNav =
       isResponseAgentsExplorationNav(navId) && isReviewResponse
-    const ghostwriterShellTitle = isReviewsCreateFlow
-      ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
-      : createWorkflowAgentName
+    /* Library "Use agent" / Edit carry a real agent name, so show it rather than the
+       create flow's generic "Review response agent 1". */
+    const ghostwriterShellTitle =
+      isGhostwriterPolish && ghostwriterDirect === 'workflow' && createDraftAgentName
+        ? createDraftAgentName
+        : isReviewsCreateFlow
+          ? (reviewsCreateInnerTitle ?? createWorkflowAgentName)
+          : createWorkflowAgentName
     // Canvas uses floating chrome — hide the legacy create-flow LHS when the workflow is open.
     const hideCreateLeftFloater = createWorkflowOpen
     const simulationTestCases =
@@ -9082,19 +9717,89 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       : GHOSTWRITER_SHELL_TABS
 
     const handleExplorationShellTabChange = (tabId: string) => {
+      // Belt and braces: the tab is already `disabled`, but never act on it either.
+      if (isGhostwriterPolish && !ghostwriterAgentCreated && tabId !== 'ghostwriter') return
       if (tabId === 'workflow' && !isSimulationNav) {
         setCreateGhostwriterTab('workflow')
         openCreateWorkflow()
         return
       }
       setCreateGhostwriterTab(tabId)
+      // Without this the canvas stays mounted over the tab you switched to.
+      if (createWorkflowOpen) closeCreateWorkflow()
     }
 
     return (
       <div className="flex h-full">
+        {/* This branch returns before the main render's Toast, so it needs its own —
+            otherwise Save as draft / Agent created would fire into nothing. */}
+        <Toast
+          message={toastMessage}
+          visible={toastVisible}
+          onClose={() => setToastVisible(false)}
+        />
         <div className="flex h-full min-w-0 flex-1 flex-col">
         {!hideExplorationCreateTopNav && <TopNav title={chatHistoryTitle} initials="S" />}
-        <div className="relative flex min-h-0 flex-1 overflow-hidden bg-surface">
+        <div
+          className={`relative flex min-h-0 flex-1 overflow-hidden ${
+            !isGhostwriterPolish
+              ? 'bg-surface'
+              : createFlowSubmitted || createAiFullscreen || ghostwriterDirect !== null
+                ? /* detail state — flat light grey behind the top bar + tab content */ 'bg-[#f6f7f9]'
+                : 'ghostwriter-create-bg'
+          }`}
+        >
+          {/* Pinned above both the chat pane and the canvas, so the tab bar survives a
+              switch to Workflow (the left section below collapses to 0×0 when the canvas
+              opens, which would take the header with it). */}
+          {ghostwriterShellPinned && (
+            <div className="absolute inset-x-0 top-0 z-30">
+              <CreateAiGhostwriterTabbedShell
+                carded
+                title={ghostwriterShellTitle}
+                activeTab={createGhostwriterTab}
+                onTabChange={handleExplorationShellTabChange}
+                onBack={() => {
+                  if (chatHistorySelectedId) selectAllChats()
+                  else setShowCreateFlow(false)
+                }}
+                disabledTabIds={
+                  ghostwriterAgentCreated
+                    ? undefined
+                    : ['workflow', 'tools', 'knowledge', 'simulation']
+                }
+                right={
+                  !ghostwriterAgentCreated ? (
+                    /* Nothing is built yet, so Run test / Activate would be meaningless —
+                       a single Save as draft is the only sensible action here. */
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToastMessage('Draft saved')
+                        setToastVisible(true)
+                      }}
+                      className="flex h-9 items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
+                    >
+                      Save as draft
+                    </button>
+                  ) : (
+                  <GhostwriterTopBarActions
+                    onAction={(type) => {
+                      // These act on the workflow, so surface it first — then fire the
+                      // real handler inside AgentBuilder via a fresh nonce.
+                      setCreateGhostwriterTab('workflow')
+                      openCreateWorkflow()
+                      setGhostwriterHeaderAction((prev) => ({
+                        type,
+                        nonce: (prev?.nonce ?? 0) + 1,
+                      }))
+                    }}
+                  />
+                  )
+                }
+              />
+            </div>
+          )}
           <section
             className={`z-10 shrink-0 transition-[width,top,transform,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
               hideCreateLeftFloater
@@ -9103,12 +9808,19 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 ? `lhs-drawer !absolute bottom-lg left-lg top-[calc(52px+theme(spacing.lg))] !h-auto !w-[360px] ${
                     createLeftPaneCollapsed ? 'pointer-events-none -translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'
                   }`
-                : 'relative flex h-full w-full flex-col overflow-hidden bg-surface'
+                /* Ghostwriter: stay transparent so the parent's mesh wash shows through —
+                   this pane is full-bleed and would otherwise paint white over all of it. */
+                : `relative flex h-full w-full flex-col overflow-hidden ${
+                    isGhostwriterPolish ? 'bg-transparent' : 'bg-surface'
+                  } ${ghostwriterShellPinned ? 'pt-[56px]' : ''}`
             }`}
             aria-label={createWorkflowOpen && !hideCreateLeftFloater ? 'Create with AI conversation' : undefined}
             aria-hidden={hideCreateLeftFloater || (createWorkflowOpen && createLeftPaneCollapsed)}
           >
-            {createWorkflowOpen && !hideCreateLeftFloater ? (
+            {/* Ghostwriter's pinned top bar already carries Back + name + tabs + CTAs, so the
+                whole in-section header chain below is skipped — otherwise it stacks a second
+                (and third) header under the bar and shows as a grey band. */}
+            {ghostwriterShellPinned ? null : createWorkflowOpen && !hideCreateLeftFloater ? (
               // Match agent-builder LHSDrawer tab chrome exactly.
               <div className="lhs-drawer__tabs lhs-drawer__tabs--visible">
                 <div className="lhs-drawer__tabs-list">
@@ -9152,8 +9864,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   </button>
                 </div>
               </div>
-            ) : isExplorationGhostwriterShell ? (
+            ) : isExplorationGhostwriterShell && !ghostwriterShellPinned ? (
               <CreateAiGhostwriterTabbedShell
+                carded={isGhostwriterPolish}
                 title={ghostwriterShellTitle}
                 activeTab={createGhostwriterTab}
                 onTabChange={handleExplorationShellTabChange}
@@ -9163,7 +9876,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   else setShowCreateFlow(false)
                 }}
               />
-            ) : showGhostwriterShellHeader ? (
+            ) : showGhostwriterShellHeader && !ghostwriterShellPinned ? (
               <CreateAiGhostwriterShellHeader
                 title={ghostwriterShellTitle}
                 onBack={() => {
@@ -9184,6 +9897,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               <CreateFlowPageHeader
                 onBack={() => setShowCreateFlow(false)}
                 title="Back"
+                boxedBack={isGhostwriterPolish}
+                transparent={isGhostwriterPolish}
               />
             ) : (
               // Landing view — standard flush-left page header.
@@ -9210,6 +9925,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     ? 'px-0 py-0'
                     : 'min-h-0'
                   : 'justify-center px-lg'
+              } ${
+                /* Ghostwriter / Tools / Knowledge / Simulation get a white content area;
+                   Workflow keeps the canvas. White sits here rather than on the section so
+                   the section's header inset isn't painted over. */
+                ghostwriterShellPinned && createGhostwriterTab !== 'workflow' ? 'bg-surface' : ''
               }`}
             >
               {createWorkflowOpen && createSideTab === 'manual' && (
@@ -9252,7 +9972,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     }
                     hideHeaderBack={showGhostwriterShellHeader || isReviewsCreateFlow}
                     explorationModeChoice={isResponseAgentsExplorationNav(navId) && isReviewResponse}
+                    ghostwriterPolish={isGhostwriterPolish}
                     onCreateFromScratch={() => {
+                      // Ghostwriter keeps the shell (top bar + tabs) and opens the canvas
+                      // on the Workflow tab, rather than leaving for the standalone editor.
+                      if (isGhostwriterPolish) {
+                        openGhostwriterWorkflow('Review response agent 1', 'scratch')
+                        return
+                      }
                       if (isReviewResponse) {
                         setShowCreateFlow(false)
                         onEditAgent?.('Review response agent 1')
@@ -9268,8 +9995,15 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     onSelectFromLibrary={(templateId) => {
                       if (isReviewResponse) {
                         const card = REVIEW_RESPONSE_CREATE_CARDS.find((c) => c.id === templateId)
+                        const name = card?.title ?? 'Review response agent'
+                        // Ghostwriter keeps the shell and lands on Workflow with the
+                        // template's prebuilt canvas, rather than leaving for the editor.
+                        if (isGhostwriterPolish) {
+                          openGhostwriterWorkflow(name, 'workflow')
+                          return
+                        }
                         setShowCreateFlow(false)
-                        onEditAgent?.(card?.title ?? 'Review response agent')
+                        onEditAgent?.(name)
                         return
                       }
                       if (isReviewGeneration) {
@@ -9281,7 +10015,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       setShowCreateFlow(false)
                       onEditAgent?.('')
                     }}
-                    onCreateAgent={handleCreateAgentSuccess}
+                    onCreateAgent={isGhostwriterPolish ? handleGhostwriterCreateAgent : handleCreateAgentSuccess}
+                    agentCreated={ghostwriterAgentCreated}
                     onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
                     libraryCards={
                       isReminder
@@ -9404,7 +10139,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             <section
               className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out motion-reduce:transition-none ${
                 createWorkflowOpen
-                  ? 'absolute inset-0 translate-x-0 opacity-100'
+                  ? `absolute inset-x-0 bottom-0 translate-x-0 opacity-100 ${
+                      ghostwriterShellPinned ? 'top-[56px]' : 'top-0'
+                    }`
                   : 'absolute inset-y-0 right-0 w-0 translate-x-full opacity-0 pointer-events-none'
               }`}
               aria-hidden={!createWorkflowOpen}
@@ -9426,10 +10163,19 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 hideLhs
                 existingAgent={false}
                 hideTopIdentity={isExplorationAgents}
+                /* The pinned tab shell already shows Back + the agent name, and owns the
+                   Run test / Activate / kebab cluster. */
+                hideCanvasBackCluster={ghostwriterShellPinned}
+                hideHeaderActions={ghostwriterShellPinned}
+                ghostwriterChrome={ghostwriterShellPinned}
+                externalHeaderAction={ghostwriterShellPinned ? ghostwriterHeaderAction : null}
                 hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
                 explorationChrome={isExplorationAgents}
                 sep1Chrome={isExplorationAgents}
                 llmTaskExplorationLayout={isLlmTaskExplorationLayout(navId)}
+                /* Ghostwriter's create canvas wears the Full canvas card treatment: type
+                   badge floating above each card instead of inside it. */
+                cardBadgeChrome={isGhostwriterPolish}
                 createAiPanelOpen={false}
                 onOpenAiFullscreen={expandCreateAiFullscreen}
                 aiBuilderPanelOpen={createAiBuilderPanelOpen}
@@ -9496,7 +10242,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           product={product}
           workflowButtonOpensEditor={isExplorationAgents}
           hideRecommendationTab={isResponseAgentsSep1StyleNav(navId)}
-          fullCanvasChrome={navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID}
+          fullCanvasChrome={isFullCanvasStyleNav(navId)}
         />
         <Toast
           message={toastMessage}
@@ -9979,6 +10725,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           if (!libraryPreview) return
           const name = libraryPreview.name
           setLibraryPreview(null)
+          if (isGhostwriterAgent) {
+            openGhostwriterWorkflow(name, 'workflow')
+            return
+          }
           onEditAgent?.(name)
         }}
       />

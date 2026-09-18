@@ -1995,17 +1995,24 @@
   --rr-chrome-lhs-panel-left: 104px;
 }
 
-.agent-builder--lhs-labelled .rr-chrome-palette {
-  left: 110px;
+/* Palette geometry lives in vars so the bottom-controls shift below can derive from it
+   instead of repeating the numbers. */
+.agent-builder--rr-chrome {
+  --rr-palette-left: 82px;
+  --rr-palette-width: 304px;
+}
+
+.agent-builder--lhs-labelled {
+  --rr-palette-left: 110px;
 }
 
 .rr-chrome-palette {
   position: absolute;
   top: 72px;
-  left: 82px;
+  left: var(--rr-palette-left, 82px);
   bottom: 96px;
   z-index: 56;
-  width: 304px;
+  width: var(--rr-palette-width, 304px);
   max-height: calc(100% - 168px);
   overflow: hidden;
   border: 1px solid #e5e9f0; /* border */
@@ -2190,3 +2197,37 @@
   overflow: hidden !important;
 }
 
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Ghostwriter canvas geometry (`agent-builder--gw`).
+ *
+ * The LHS panels adopt the RHS's dock pattern — 8px inset, full height,
+ * 16px radius, same elevation — so both rails read as the same kind of panel.
+ * Their default `top: 72px` cleared the canvas back/identity cluster and
+ * `bottom: 96px` cleared the bottom-left controls; on Ghostwriter the cluster is
+ * hidden and the controls move right, so neither reservation is needed.
+ * Scoped: these classes are on every other agent's canvas too.
+ * ───────────────────────────────────────────────────────────────────────────── */
+.agent-builder--gw .rr-chrome-palette,
+.agent-builder--gw .agent-builder__lhs-ai,
+.agent-builder--gw.agent-builder--lhs-ai-open .agent-builder__lhs-ai {
+  top: 8px;
+  bottom: 8px;
+  max-height: calc(100% - 16px);
+  /* Matches .agent-builder__rhs exactly. */
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 1px rgba(13, 13, 18, 0.08);
+}
+
+/*
+ * Controls stay bottom-left, but slide clear of an open LHS panel. The AI panel already
+ * drives `--rr-controls-shift` (see above); the Trigger/Actions/Controls palette had no
+ * such rule because its default `bottom: 96px` kept it above the controls — now that it
+ * runs full height here, it needs one. `:not(--lhs-ai-open)` so the wider AI offset wins
+ * when both classes are present.
+ */
+.agent-builder--gw.agent-builder--palette-open:not(.agent-builder--lhs-ai-open) {
+  --rr-controls-shift: calc(
+    var(--rr-palette-left, 82px) + var(--rr-palette-width, 304px) + 12px - 16px
+  );
+}

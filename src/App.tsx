@@ -13,7 +13,7 @@ import {
   isAgentCoachCueNav,
   isResponseAgentsSep1StyleNav,
   isResponseAgentsExplorationNav,
-  RESPONSE_AGENTS_FULL_CANVAS_NAV_ID,
+  isFullCanvasStyleNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
@@ -327,6 +327,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
       { id: 'response-agents-exploration',  label: 'Response agents (exploration)' },
       { id: 'response-agents-simulation', label: 'Response agent (simulation)' },
       { id: 'response-agents-simulation-2', label: 'RA sim 2' },
+      { id: 'response-agents-ghostwriter',  label: 'Response agents (Ghostwriter)' },
       { id: 'generation-agents',       label: 'Generation agents' },
       { id: 'review-tagging-agent',    label: 'Review tagging agents' },
     ],
@@ -364,6 +365,7 @@ const REVIEWS_AGENT_NAV_IDS = new Set([
   'response-agents',
   'response-agents-sep-1',
   'response-agents-full-canvas',
+  'response-agents-ghostwriter',
   'generation-agents',
   'review-response-agents',
 ])
@@ -415,6 +417,7 @@ const AGENT_NAMES: Record<string, string> = {
   'review-response-agents':    'Review response agents',
   'response-agents':           'Review response agents',
   'response-agents-full-canvas': 'Review response agents',
+  'response-agents-ghostwriter': 'Review response agents',
   'response-agents-sep-1':     'Review response agents',
   'response-agents-exploration': 'Review response agents (exploration)',
   'response-agents-simulation': 'Review response agents (exploration)',
@@ -778,7 +781,7 @@ export function App() {
   const isEditingWorkflow = editingAgentName !== null
   /** Full canvas is a sandbox for new designs — its workflow editor goes true full-screen,
    *  every other agent's editor (Sep 1, coach cue, exploration, front desk, etc.) is untouched. */
-  const isFullCanvasWorkflowEdit = isEditingWorkflow && navActive === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
+  const isFullCanvasWorkflowEdit = isEditingWorkflow && isFullCanvasStyleNav(navActive)
   const isViewingDetail =
     intakeDetail !== null ||
     appointmentDetail !== null ||
@@ -1235,7 +1238,7 @@ export function App() {
                           hideCanvasStartNode={isExplorationHideCanvasStartNode(navActive)}
                           explorationChrome={isAgentExplorationChrome(navActive)}
                           sep1Chrome={isSep1Chrome(navActive)}
-                          cardBadgeChrome={navActive === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID}
+                          cardBadgeChrome={isFullCanvasStyleNav(navActive)}
                           llmTaskExplorationLayout={isLlmTaskExplorationLayout(navActive)}
                           identityLocationChrome={isResponseAgentsExplorationNav(navActive)}
                           inlineRhsFooter={isResponseAgentsSep1StyleNav(navActive)}

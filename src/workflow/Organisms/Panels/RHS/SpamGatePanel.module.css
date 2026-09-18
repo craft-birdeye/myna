@@ -1,0 +1,118 @@
+/* Tool-tab field layout. The plain fields use the shared FormInput; these rules cover the
+   label row, hints and the multi-chip recipients field. */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  line-height: 20px;
+  color: #717182; /* text/secondary */
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: #9ca3af; /* text/tertiary */
+}
+
+/* ─── Multi-chip recipients field ───────────────────────────────────────────── */
+.chipField {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid #e5e9f0;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: text;
+}
+
+.chipFieldFocused {
+  border-color: #1976d2;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border-radius: 6px;
+  background: #f0f1f5; /* surface/l2 */
+  color: #0d0d12;
+  font-size: 13px;
+  line-height: 26px;
+  max-width: 100%;
+}
+
+.chipLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #717182;
+  cursor: pointer;
+}
+
+.chipRemove:hover {
+  background: #e5e9f0;
+  color: #0d0d12;
+}
+
+.chipRemove .material-symbols-outlined {
+  font-size: 14px !important;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+}
+
+.chipInput {
+  flex: 1;
+  min-width: 120px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  line-height: 24px;
+  color: #0d0d12;
+  font-family: 'Roboto', arial, sans-serif;
+}
+
+.chipInput::placeholder {
+  color: #9ca3af; /* text/tertiary */
+}
+
+.required {
+  color: #d32f2f;
+  margin-left: 2px;
+}
