@@ -12,6 +12,12 @@ export const RESPONSE_AGENTS_FULL_CANVAS_NAV_ID = 'response-agents-full-canvas'
  * tab count badge) as the Ghostwriter conversation progresses. See `isResponseAgentsSimulationNav`.
  */
 export const RESPONSE_AGENTS_SIMULATION_NAV_ID = 'response-agents-simulation'
+/**
+ * "RA sim 2" — duplicate of Response agent (simulation) that runs itself: once the Ghostwriter
+ * finishes building the agent, it auto-starts "Simulate test cases" (no pill click needed), and
+ * auto-runs the Fix flow on each failed case as it's revealed. See `isAutoSimulationNav`.
+ */
+export const RESPONSE_AGENTS_SIMULATION_2_NAV_ID = 'response-agents-simulation-2'
 
 /** Coach-cue prototype nav — auto-opens the workflow builder tour on canvas land. */
 export function isResponseAgentsCoachCueNav(navId?: string | null) {
@@ -36,6 +42,7 @@ export const REMINDER_SEP1_NAV_ID = 'reminder-agent-sep-1'
 const EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS = new Set([
   RESPONSE_AGENTS_EXPLORATION_NAV_ID,
   RESPONSE_AGENTS_SIMULATION_NAV_ID,
+  RESPONSE_AGENTS_SIMULATION_2_NAV_ID,
   FRONTDESK_EXPLORATION_NAV_ID,
   // Full canvas keeps the start node on canvas (unlike exploration) — see
   // isResponseAgentsExplorationNav / isLlmTaskExplorationLayout below for the other
@@ -55,6 +62,7 @@ export function isResponseAgentsExplorationChrome(navId?: string | null) {
   return (
     navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID ||
     navId === RESPONSE_AGENTS_SIMULATION_NAV_ID ||
+    navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID ||
     isResponseAgentsSep1StyleNav(navId)
   )
 }
@@ -64,24 +72,35 @@ export function isResponseAgentsExplorationChrome(navId?: string | null) {
  * share both the agent name and `explorationChrome` with it. Gates the
  * location-aware identity header (Add location CTA, name truncation, hover card).
  * Full canvas mirrors this too — its own design sandbox for iterating on exploration's
- * ideas without touching Sep 1/coach-cue. Response agent (simulation) mirrors it as well —
- * see `isResponseAgentsSimulationNav` for the tab-shell differences specific to it.
+ * ideas without touching Sep 1/coach-cue. Response agent (simulation) and RA sim 2 mirror it
+ * as well — see `isResponseAgentsSimulationNav` for the tab-shell differences specific to them,
+ * and `isAutoSimulationNav` for what's specific to RA sim 2 alone.
  */
 export function isResponseAgentsExplorationNav(navId?: string | null) {
   return (
     navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID ||
     navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ||
-    navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
+    navId === RESPONSE_AGENTS_SIMULATION_NAV_ID ||
+    navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID
   )
 }
 
 /**
- * Response agent (simulation) only — gates the tab-shell differences from the original
+ * Response agent (simulation) and RA sim 2 — gates the tab-shell differences from the original
  * exploration: Workflow starts (and stays) empty like Tools/Knowledge instead of opening
  * the canvas, and Simulation builds up test cases as the Ghostwriter conversation progresses.
  */
 export function isResponseAgentsSimulationNav(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
+  return navId === RESPONSE_AGENTS_SIMULATION_NAV_ID || navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID
+}
+
+/**
+ * RA sim 2 only — on top of everything `isResponseAgentsSimulationNav` gates, this nav also
+ * auto-starts "Simulate test cases" once the agent is built (no pill click) and auto-runs the
+ * Fix flow on each failed case as it's revealed (no Fix click).
+ */
+export function isAutoSimulationNav(navId?: string | null) {
+  return navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID
 }
 
 /** Production + Sep 1 front desk navs — same agent-list card chrome (not the exploration variant). */
@@ -118,6 +137,7 @@ export function isLlmTaskExplorationLayout(navId?: string | null) {
   return (
     navId === RESPONSE_AGENTS_EXPLORATION_NAV_ID ||
     navId === RESPONSE_AGENTS_SIMULATION_NAV_ID ||
+    navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID ||
     navId === FRONTDESK_EXPLORATION_NAV_ID
   )
 }

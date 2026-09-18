@@ -326,6 +326,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
       { id: 'response-agents',              label: 'Response agents (coach cue)' },
       { id: 'response-agents-exploration',  label: 'Response agents (exploration)' },
       { id: 'response-agents-simulation', label: 'Response agent (simulation)' },
+      { id: 'response-agents-simulation-2', label: 'RA sim 2' },
       { id: 'generation-agents',       label: 'Generation agents' },
       { id: 'review-tagging-agent',    label: 'Review tagging agents' },
     ],
@@ -417,6 +418,7 @@ const AGENT_NAMES: Record<string, string> = {
   'response-agents-sep-1':     'Review response agents',
   'response-agents-exploration': 'Review response agents (exploration)',
   'response-agents-simulation': 'Review response agents (exploration)',
+  'response-agents-simulation-2': 'Review response agents (exploration)',
   'generation-agents':         'Review generation agents',
   'review-tagging-agent':      'Review tagging agents',
 }
@@ -424,6 +426,7 @@ const AGENT_NAMES: Record<string, string> = {
 const EXPLORATION_AGENT_NAV_IDS = new Set([
   'response-agents-exploration',
   'response-agents-simulation',
+  'response-agents-simulation-2',
   'frontdesk-agent-exploration',
 ])
 

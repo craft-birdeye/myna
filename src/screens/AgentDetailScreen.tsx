@@ -48,6 +48,7 @@ import { AGENT_INSTANCE_ISSUE_COUNTS } from '../data/agentIssues'
 import { getAgentWorkflows } from '../data/agentWorkflows'
 import {
   isAgentExplorationChrome,
+  isAutoSimulationNav,
   isExplorationHideCanvasStartNode,
   isFrontdeskExplorationChrome,
   isLlmTaskExplorationLayout,
@@ -57,6 +58,7 @@ import {
   isResponseAgentsSimulationNav,
   isSep1StyleAgentListNav,
   RESPONSE_AGENTS_FULL_CANVAS_NAV_ID,
+  RESPONSE_AGENTS_SIMULATION_2_NAV_ID,
   RESPONSE_AGENTS_SIMULATION_NAV_ID,
 } from '../data/agentNavIds'
 import {
@@ -2738,6 +2740,7 @@ function TestCaseResultCard({
   fixedIds,
   onFix,
   onSuppressAutoScroll,
+  autoFix = false,
 }: {
   tc: ReviewResponseTestCase
   fixedIds: Set<number>
@@ -2746,6 +2749,9 @@ function TestCaseResultCard({
    *  auto-scroll, since each Fix step changes this card's height without the user asking to
    *  jump anywhere — their scroll position should hold. */
   onSuppressAutoScroll?: () => void
+  /** RA sim 2 only: starts the Fix flow itself as soon as this card appears, instead of
+   *  waiting for the "Fix" button to be clicked. */
+  autoFix?: boolean
 }) {
   const passing = isTestCasePassing(tc, fixedIds)
   const fixed = !tc.passed && fixedIds.has(tc.id)
@@ -2768,6 +2774,14 @@ function TestCaseResultCard({
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fixingStep])
+
+  useEffect(() => {
+    if (autoFix && !tc.passed && !fixed && fixingStep === null) {
+      onSuppressAutoScroll?.()
+      setFixingStep(0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFix])
 
   return (
     <div className="agent-build-fade flex flex-col gap-sm rounded-md border border-border bg-surface p-lg">
@@ -2848,6 +2862,7 @@ function SimulateTestCasesResults({
   revealedCount,
   running,
   onSuppressAutoScroll,
+  autoFix = false,
 }: {
   fixedIds: Set<number>
   onFix?: (id: number) => void
@@ -2856,6 +2871,8 @@ function SimulateTestCasesResults({
   revealedCount: number
   running: boolean
   onSuppressAutoScroll?: () => void
+  /** RA sim 2 only: each failed case auto-runs its Fix flow as soon as it's revealed. */
+  autoFix?: boolean
 }) {
   const failedRevealed = REVIEW_RESPONSE_TEST_CASES.filter((tc) => tc.id <= revealedCount && !tc.passed)
   const stillFailing = failedRevealed.filter((tc) => !fixedIds.has(tc.id))
@@ -2880,6 +2897,7 @@ function SimulateTestCasesResults({
           fixedIds={fixedIds}
           onFix={onFix}
           onSuppressAutoScroll={onSuppressAutoScroll}
+          autoFix={autoFix}
         />
       ))}
       {!running && failedRevealed.length > 0 && stillFailing.length === 0 && (
@@ -2914,6 +2932,7 @@ function ReviewResponseThread({
   onFixTestCase,
   simulationRevealedCount,
   simulationRunning,
+  autoSimulate = false,
 }: {
   onDraftReady?: (name: string | null) => void
   onCreateAgent?: (options?: { publish?: boolean }) => void
@@ -2942,6 +2961,9 @@ function ReviewResponseThread({
    *  with this chat's counters instead of jumping straight to 100. */
   simulationRevealedCount?: number
   simulationRunning?: boolean
+  /** RA sim 2 only: auto-fires "Simulate test cases" once the build finishes, and auto-runs
+   *  the Fix flow on each failed case as it's revealed — no pill/button clicks needed. */
+  autoSimulate?: boolean
 }) {
   const [introDone, setIntroDone] = useState(false)
   const [modeAnswer, setModeAnswer] = useState('')
@@ -3278,6 +3300,15 @@ function ReviewResponseThread({
     else if (label === 'Make changes') onMakeChanges?.()
     else if (label === 'Simulate test cases') onSimulateTestCases?.()
   }
+
+  // RA sim 2: skip the pill click entirely — once the agent is built, jump straight into
+  // simulating test cases on its own.
+  useEffect(() => {
+    if (autoSimulate && postDraftDone && !postDraftAnswer) {
+      handlePostDraftAnswer('Simulate test cases')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSimulate, postDraftDone, postDraftAnswer])
 
   const choice = awaitingStep ? REVIEW_RESPONSE_CHOICES[awaitingStep] : null
   const postDraftPills = workflowVisible
@@ -3653,6 +3684,7 @@ function ReviewResponseThread({
                   revealedCount={simulationRevealedCount ?? REVIEW_RESPONSE_TEST_CASE_TOTAL}
                   running={simulationRunning ?? false}
                   onSuppressAutoScroll={suppressAutoScrollBriefly}
+                  autoFix={autoSimulate}
                 />
               )}
             </>
@@ -5330,6 +5362,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onFixTestCase,
   simulationRevealedCount,
   simulationRunning,
+  autoSimulate = false,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -5356,6 +5389,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onSimulateTestCases?: () => void
   onFixTestCase?: (id: number) => void
   simulationRevealedCount?: number
+  autoSimulate?: boolean
   simulationRunning?: boolean
   /** Docked panel / pre-submit fullscreen — greeting + quick-start pills instead of library landing. */
   compactGreeting?: boolean
@@ -5426,6 +5460,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
       onFixTestCase={onFixTestCase}
       simulationRevealedCount={simulationRevealedCount}
       simulationRunning={simulationRunning}
+      autoSimulate={autoSimulate}
     />
   )
 }
@@ -5457,6 +5492,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onFixTestCase,
   simulationRevealedCount,
   simulationRunning,
+  autoSimulate = false,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -5484,6 +5520,7 @@ function HealthcareFrontdeskCreateAgentLive({
   onSimulateTestCases?: () => void
   onFixTestCase?: (id: number) => void
   simulationRevealedCount?: number
+  autoSimulate?: boolean
   simulationRunning?: boolean
 }) {
   const isReminderFlow = variant === 'reminder'
@@ -6324,6 +6361,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   onFixTestCase={onFixTestCase}
                   simulationRevealedCount={simulationRevealedCount}
                   simulationRunning={simulationRunning}
+                  autoSimulate={autoSimulate}
                 />
               ) : isReminderFlow ? (
                 <>
@@ -8115,13 +8153,18 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isExplorationAgents = isAgentExplorationChrome(navId)
   /** Sep 1 side-nav ids + production front desk / response agents share the same card grid chrome. */
   const isSep1Agents = isSep1StyleAgentListNav(navId)
+  /** RA sim 2 only — gates the reveal-schedule timer below so failed cases are processed one at a
+   *  time (reveal → fix to completion → reveal next) instead of overlapping. */
+  const isAutoSimulationRun = isAutoSimulationNav(navId)
   /** Full canvas is a duplicate of Sep 1 under its own nav slot — same data, its own page title. */
   const pageTitle =
     navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID
       ? `${agentName} (Full canvas)`
       : navId === RESPONSE_AGENTS_SIMULATION_NAV_ID
         ? 'Review response agents (simulation)'
-        : agentName
+        : navId === RESPONSE_AGENTS_SIMULATION_2_NAV_ID
+          ? 'RA sim 2'
+          : agentName
   const useExplorationOutcomesTab = false
   const [activeTab, setActiveTab] = useState('agents')
   const [agentsViewMode, setAgentsViewMode] = useState<'list' | 'grid'>('grid')
@@ -8197,9 +8240,18 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
 
   useEffect(() => {
     if (!simulationRunning) return
+    if (isAutoSimulationRun) {
+      // Hold the reveal schedule at the current step while a just-revealed failed case is still
+      // unfixed, so RA sim 2 processes failures one at a time (reveal → fix to completion →
+      // reveal the next) instead of overlapping several fixes at once.
+      const hasUnfixedFailure = REVIEW_RESPONSE_TEST_CASES.some(
+        (tc) => tc.id <= simulationRevealedCount && !tc.passed && !fixedTestCaseIds.has(tc.id),
+      )
+      if (hasUnfixedFailure) return
+    }
     const timer = setTimeout(() => setSimulationStepIndex((i) => i + 1), SIMULATION_REVEAL_STEP_MS)
     return () => clearTimeout(timer)
-  }, [simulationRunning, simulationStepIndex])
+  }, [simulationRunning, simulationStepIndex, isAutoSimulationRun, fixedTestCaseIds, simulationRevealedCount])
   const [createDraftAgentName, setCreateDraftAgentName] = useState<string | null>(null)
   const [canvasProcedureId, setCanvasProcedureId] = useState<string | null>(null)
   const [, setInlineProcedureOpen] = useState(false)
@@ -8994,6 +9046,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     /** Response agent (simulation): Workflow/Tools/Knowledge start empty (no auto-opening the
      *  canvas), and Simulation builds up test cases as Ghostwriter progresses. */
     const isSimulationNav = isResponseAgentsSimulationNav(navId)
+    /** RA sim 2 only: auto-starts "Simulate test cases" once the agent is built, and
+     *  auto-runs the Fix flow on each failed case as it's revealed — no manual clicks. */
+    const isAutoSimulation = isAutoSimulationNav(navId)
     /** Full-bleed exploration create — no in-card Reviews AI TopNav either. */
     const hideExplorationCreateTopNav =
       isResponseAgentsExplorationNav(navId) && isReviewResponse
@@ -9263,6 +9318,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     }
                     simulationRevealedCount={isSimulationNav ? simulationRevealedCount : undefined}
                     simulationRunning={isSimulationNav ? simulationRunning : undefined}
+                    autoSimulate={isAutoSimulation}
                   />
                 </div>
               ) : (
