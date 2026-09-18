@@ -2761,14 +2761,17 @@ function TestCaseResultCard({
   useEffect(() => {
     if (fixingStep === null) return
     if (fixingStep >= FIX_STEPS.length) {
-      onSuppressAutoScroll?.()
+      // Manual fix (sim 1): the user was reading somewhere specific when they clicked Fix —
+      // hold that scroll position. Auto fix (RA sim 2): nothing was manually positioned, so let
+      // the thread's normal auto-follow scroll down to keep the newly-revealed/fixing case in view.
+      if (!autoFix) onSuppressAutoScroll?.()
       onFix?.(tc.id)
       return
     }
     const timer = setTimeout(() => {
       // Suppress right before the state update that grows this card, not after — the
       // ResizeObserver-driven auto-scroll can otherwise fire first.
-      onSuppressAutoScroll?.()
+      if (!autoFix) onSuppressAutoScroll?.()
       setFixingStep((s) => (s ?? 0) + 1)
     }, FIX_STEP_MS)
     return () => clearTimeout(timer)
@@ -2777,7 +2780,6 @@ function TestCaseResultCard({
 
   useEffect(() => {
     if (autoFix && !tc.passed && !fixed && fixingStep === null) {
-      onSuppressAutoScroll?.()
       setFixingStep(0)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3676,7 +3678,17 @@ function ReviewResponseThread({
                   ))}
                 </div>
               )}
-              {postDraftAnswer && <UserBubble>{postDraftAnswer}</UserBubble>}
+              {postDraftAnswer &&
+                (autoSimulate ? (
+                  <div className="agent-build-fade ml-3xl mt-sm flex gap-sm">
+                    <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
+                      <SparkleLoader size={14} spinning={false} />
+                    </span>
+                    <p className="flex-1 text-body leading-6 text-text-primary">{postDraftAnswer}</p>
+                  </div>
+                ) : (
+                  <UserBubble>{postDraftAnswer}</UserBubble>
+                ))}
               {postDraftAnswer === 'Simulate test cases' && (
                 <SimulateTestCasesResults
                   fixedIds={fixedTestCaseIds ?? EMPTY_FIXED_IDS}
