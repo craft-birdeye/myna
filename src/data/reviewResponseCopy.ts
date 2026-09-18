@@ -82,3 +82,7 @@ export function applyReviewResponseCopy<T extends WorkflowLike>(
 
   return { ...workflow, nodes, nodeDetails }
 }
+
+/** Ghostwriter canvas "Create with AI" — seeded into the composer on first focus. */
+export const GHOSTWRITER_CANVAS_SEED_PROMPT =
+  'Change the email for spam alerts to reviews-alerts@birdeye.com'

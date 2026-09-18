@@ -60,6 +60,9 @@ import {
 } from '../flowLayoutConstants';
 import { computeLoopCanvasHeight, computeLoopBodyHeight } from '../Molecules/Canvas/LoopNode/LoopNode';
 import { useCardBadge } from '../Molecules/Canvas/CardBadgeContext';
+import { GHOSTWRITER_CANVAS_SEED_PROMPT } from '../../data/reviewResponseCopy';
+import { clearCreateAiDraftSession } from '../../data/createAgentChatStore';
+import SpamGatePanel from '../Organisms/Panels/RHS/SpamGatePanel';
 import { getBadgeForSection } from '../Molecules/Canvas/nodeTypeBadges';
 import iconRrTrigger from '../../assets/rr-chrome/icon-trigger.svg';
 import iconRrTasks from '../../assets/rr-chrome/icon-tasks.svg';
@@ -1298,6 +1301,18 @@ export default function AgentBuilder({
   showProceduresPalette = null,
   /** Hides in-canvas agent name + status (identity rendered in the header back cluster). */
   hideTopIdentity = false,
+  /** Suppresses the floating canvas back/identity cluster — for shells that already
+   *  render their own pinned header above the canvas (Ghostwriter's tabbed shell). */
+  hideCanvasBackCluster = false,
+  /** Suppresses the Run test / Activate / kebab cluster, for shells that render their own. */
+  hideHeaderActions = false,
+  /** Ghostwriter canvas geometry: LHS panels docked like the RHS (8px inset, full
+   *  height) and the bottom controls right-aligned. Adds `agent-builder--gw`. */
+  ghostwriterChrome = false,
+  /** `{ type, nonce }` — lets a shell that owns the visible CTAs fire the real handlers in
+   *  here. Bump `nonce` to re-fire the same `type`. Types: run-test | activate | save-draft |
+   *  delete. Ignored when nonce is 0 so a mount doesn't trigger anything. */
+  externalHeaderAction = null,
   /** RHS Save follows the content instead of pinning to the panel bottom (Sep 1 only). */
   inlineRhsFooter = false,
   /** Sep 1 chrome: inline RHS footer + other Sep-1-only treatments. */
@@ -1451,6 +1466,8 @@ export default function AgentBuilder({
   const [rrAiPanelOpen, setRrAiPanelOpen] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelRendered, setRrAiPanelRendered] = useState(() => !!aiBuilderPanelOpenProp);
   const [rrAiPanelClosing, setRrAiPanelClosing] = useState(false);
+  /** Opened by the "Spam and abuse gate" link in the Ghostwriter scripted reply. */
+  const [spamGateOpen, setSpamGateOpen] = useState(false);
   const [paletteInstant, setPaletteInstant] = useState(false);
   const rrAiPanelRenderedRef = useRef(!!aiBuilderPanelOpenProp);
   const rrAiPanelCloseTimeoutRef = useRef(null);
@@ -1616,12 +1633,25 @@ export default function AgentBuilder({
     if (aiBuilderPanelOpenProp) setRrAiPanelOpen(true);
   }, [aiBuilderPanelOpenProp]);
 
+  /** Trail key for the docked AI panel — must match the `agentName` passed to it below. */
+  const aiPanelAgentKey = (typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName;
+
+  /* Ghostwriter reopens the panel at its initial state. The trail is otherwise persisted in
+     createAgentChatStore (shared between the docked panel and fullscreen expand), so it
+     survives the unmount and would come back on reopen — drop it on close. */
+  const resetGhostwriterAiPanel = useCallback(() => {
+    if (!ghostwriterChrome) return;
+    clearCreateAiDraftSession(aiPanelAgentKey);
+  }, [ghostwriterChrome, aiPanelAgentKey]);
+
   const closeAiBuilderPanel = useCallback(() => {
+    resetGhostwriterAiPanel();
     setRrAiPanelOpen(false);
     onAiBuilderPanelOpenChange?.(false);
-  }, [onAiBuilderPanelOpenChange]);
+  }, [onAiBuilderPanelOpenChange, resetGhostwriterAiPanel]);
 
   const closeAiBuilderPanelInstant = useCallback(() => {
+    resetGhostwriterAiPanel();
     if (rrAiPanelCloseTimeoutRef.current) {
       clearTimeout(rrAiPanelCloseTimeoutRef.current);
       rrAiPanelCloseTimeoutRef.current = null;
@@ -1631,7 +1661,7 @@ export default function AgentBuilder({
     setRrAiPanelClosing(false);
     setRrAiPanelOpen(false);
     onAiBuilderPanelOpenChange?.(false);
-  }, [onAiBuilderPanelOpenChange]);
+  }, [onAiBuilderPanelOpenChange, resetGhostwriterAiPanel]);
 
   /* Re-enable palette position transition after an instant AI → palette swap. */
   useEffect(() => {
@@ -1907,6 +1937,20 @@ export default function AgentBuilder({
     const frame = requestAnimationFrame(() => setCanvasFocusNodeId(externalFocusNodeId));
     return () => cancelAnimationFrame(frame);
   }, [externalFocusNodeId, externalFocusNonce, nodeList, nodeDetails]);
+
+  /* Shell-owned header CTAs (Ghostwriter's top bar) call straight into these handlers, so
+     the visible buttons live outside but the behaviour stays here. */
+  const externalActionNonce = externalHeaderAction?.nonce ?? 0;
+  const externalActionType = externalHeaderAction?.type ?? null;
+  useEffect(() => {
+    if (!externalActionNonce || !externalActionType) return;
+    if (externalActionType === 'run-test') handleRunTest();
+    else if (externalActionType === 'activate') handleActivateMain();
+    else if (externalActionType === 'save-draft') handleSaveAsDraft();
+    else if (externalActionType === 'delete') handleDeleteAgent();
+    // Only react to a new nonce — the handlers are recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalActionNonce, externalActionType]);
 
   // Undo/redo history for the floating-chrome canvas toolbar.
   const [historyPast, setHistoryPast] = useState([]);
@@ -4280,10 +4324,10 @@ export default function AgentBuilder({
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}`}>
+        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}${ghostwriterChrome ? ' agent-builder--gw' : ''}${paletteSection ? ' agent-builder--palette-open' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
-              {(onClose || explorationChrome) && (
+              {!hideCanvasBackCluster && (onClose || explorationChrome) && (
                 <div className={`rr-chrome-back-cluster${explorationChrome ? ' rr-chrome-back-cluster--identity' : ''}`}>
                   {onClose && (
                     <button
@@ -4426,8 +4470,10 @@ export default function AgentBuilder({
               )}
 
               {/* Version history on the live version has no actions — skip the pill entirely
-                  so an empty white chip doesn't float over the canvas. */}
-              {!(versionHistoryMode && !headerActions) && (
+                  so an empty white chip doesn't float over the canvas. Same for a shell that
+                  owns the CTAs itself (Ghostwriter): under exploration chrome this pill holds
+                  nothing but `headerActions`, so suppressing those leaves a bare 12px shell. */}
+              {!(versionHistoryMode && !headerActions) && !(explorationChrome && hideHeaderActions) && (
               <div
                 className={`rr-chrome-top${viewOnly && viewChromeActions ? ' rr-chrome-top--actions-only' : ''}${
                   explorationChrome ? ' rr-chrome-top--right' : ''
@@ -4447,7 +4493,7 @@ export default function AgentBuilder({
                     <div className="rr-chrome-top__spacer" aria-hidden />
                   </>
                 )}
-                {headerActions}
+                {!hideHeaderActions && headerActions}
               </div>
               )}
 
@@ -4646,7 +4692,7 @@ export default function AgentBuilder({
               {rrAiPanelRendered && !viewOnly && (
                 <div className={`agent-builder__lhs-ai${rrAiPanelClosing ? ' agent-builder__lhs-ai--closing' : ' agent-builder__lhs-ai--opening'}`}>
                   <AiBuilderPanel
-                    agentName={(typeof pageTitle === 'string' && pageTitle.trim()) ? pageTitle : agentName}
+                    agentName={aiPanelAgentKey}
                     draftAgentName={agentName}
                     onClose={closeAiBuilderPanel}
                     onExpand={
@@ -4660,6 +4706,8 @@ export default function AgentBuilder({
                     className="rr-chrome-ai-panel"
                     fillShell
                     side="left"
+                    seedPrompt={ghostwriterChrome ? GHOSTWRITER_CANVAS_SEED_PROMPT : undefined}
+                    onOpenNode={ghostwriterChrome ? () => setSpamGateOpen(true) : undefined}
                     openProcedureName={lhsPreviewProcedureId}
                     onOpenProcedure={(procedureId) => {
                       setLhsPreviewProcedureId(procedureId);
@@ -4738,7 +4786,13 @@ export default function AgentBuilder({
             </>
           )}
 
-          {rhsRendered && (
+          {spamGateOpen && (
+            <div className="agent-builder__rhs agent-builder__rhs--opening">
+              <SpamGatePanel onClose={() => setSpamGateOpen(false)} />
+            </div>
+          )}
+
+          {rhsRendered && !spamGateOpen && (
             <div
               key={selectedNodeId || lhsPreviewProcedureId || 'rhs'}
               className={`agent-builder__rhs${rhsClosing ? ' agent-builder__rhs--closing' : ' agent-builder__rhs--opening'}`}

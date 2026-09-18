@@ -116,6 +116,14 @@ interface WorkflowEditorScreenProps {
   existingAgent?: boolean
   /** Hides the in-canvas title/status row (identity rendered in the header back cluster). */
   hideTopIdentity?: boolean
+  /** Hide the canvas's own back/identity cluster (shell renders its own header). */
+  hideCanvasBackCluster?: boolean
+  /** Hide the canvas's Run test / Activate / kebab cluster. */
+  hideHeaderActions?: boolean
+  /** Ghostwriter canvas geometry — RHS-style docked LHS panels, controls bottom-right. */
+  ghostwriterChrome?: boolean
+  /** Fire a canvas header action from a shell that owns the visible CTAs. */
+  externalHeaderAction?: { type: string; nonce: number } | null
   /** Hides the canvas agent-details start node. Defaults to hideTopIdentity. Sep 1 keeps the card. */
   hideCanvasStartNode?: boolean
   /** Exploration editor UX (help RHS, version history, chip collapse, etc.). Sep 1 keeps the canvas agent-details card. */
@@ -165,6 +173,10 @@ export function WorkflowEditorScreen({
   aiTranscript = null,
   existingAgent,
   hideTopIdentity = false,
+  hideCanvasBackCluster = false,
+  hideHeaderActions = false,
+  ghostwriterChrome = false,
+  externalHeaderAction = null,
   hideCanvasStartNode = hideTopIdentity,
   explorationChrome = hideTopIdentity,
   sep1Chrome = false,
@@ -335,6 +347,10 @@ export function WorkflowEditorScreen({
             pageTitle={shownName}
             appTitle={shownName}
             onClose={onClose}
+            hideCanvasBackCluster={hideCanvasBackCluster}
+            hideHeaderActions={hideHeaderActions}
+            ghostwriterChrome={ghostwriterChrome}
+            externalHeaderAction={externalHeaderAction}
             onDeleted={onDeleted}
             onSaveAgent={onSaveAgent}
             product={product}
