@@ -2746,6 +2746,7 @@ export function ToolViewerContent({
         ?? tool?.description
         ?? 'Updates one or more dynamic variables when this step runs — literal values, references, or LLM-evaluated instructions.',
       stateUpdates: Array.isArray(base.stateUpdates) ? base.stateUpdates : [],
+      fieldsGlobal: Boolean(base.fieldsGlobal),
     };
   }, [tool?.name, tool?.description]);
 
@@ -2799,15 +2800,6 @@ export function ToolViewerContent({
 
   const updateStateBody = (
     <div className={`${embedded ? styles.embeddedBody : styles.body} ${usStyles.tabContent}`}>
-      <FormInput
-        name="toolName"
-        type="text"
-        label="Tool name"
-        placeholder="Enter name"
-        value={effectiveSnapshot.toolName ?? ''}
-        onChange={(e) => handleValueChange('toolName', e.target.value)}
-        required
-      />
       <TextArea
         name="description"
         label="Description"
@@ -2821,6 +2813,8 @@ export function ToolViewerContent({
         showToolCard={false}
         stateUpdates={effectiveSnapshot.stateUpdates ?? []}
         onStateUpdatesChange={(next) => handleValueChange('stateUpdates', next)}
+        fieldsGlobal={Boolean(effectiveSnapshot.fieldsGlobal)}
+        onFieldsGlobalChange={(next) => handleValueChange('fieldsGlobal', next)}
         toolName={effectiveSnapshot.toolName}
       />
     </div>

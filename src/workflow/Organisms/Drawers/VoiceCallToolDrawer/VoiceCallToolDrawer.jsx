@@ -332,13 +332,46 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
             />
           )}
 
-          {/* Additional fields */}
+          {/* Additional fields — same Add interaction as Select fields / Input fields */}
           <div className="vctd__field">
-            <FieldLabel tooltip="Input fields add context to the call and are automatically included when the agent runs.">
-              Additional fields
-            </FieldLabel>
-            <div className="vctd__context-box">
+            <div className="vctd__fields-label-row">
+              <FieldLabel tooltip="Input fields add context to the call and are automatically included when the agent runs.">
+                Additional fields
+              </FieldLabel>
               {contextVariables.length > 0 && (
+                <button
+                  type="button"
+                  className="vctd__field-add-btn"
+                  onClick={() => setAddInputFieldOpen(true)}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 18, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
+                  >
+                    add_circle
+                  </span>
+                  <span className="vctd__field-add-btn-label">Add</span>
+                </button>
+              )}
+            </div>
+            {contextVariables.length === 0 ? (
+              <div className="vctd__context-box vctd__context-box--empty">
+                <button
+                  type="button"
+                  className="vctd__field-add-btn"
+                  onClick={() => setAddInputFieldOpen(true)}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 18, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
+                  >
+                    add_circle
+                  </span>
+                  <span className="vctd__field-add-btn-label">Add</span>
+                </button>
+              </div>
+            ) : (
+              <div className="vctd__context-box">
                 <div className="vctd__context-chips">
                   {contextVariables.map((item, i) => (
                     <VariableChip
@@ -349,23 +382,8 @@ export default function VoiceCallToolDrawer({ isOpen, onClose, initialValues = {
                     />
                   ))}
                 </div>
-              )}
-              <div className="vctd__context-footer">
-                <button
-                  type="button"
-                  className="vctd__context-add-btn"
-                  onClick={() => setAddInputFieldOpen(true)}
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: 16, fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20" }}
-                  >
-                    add_circle
-                  </span>
-                  Add
-                </button>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Retry settings + Retry attempts */}

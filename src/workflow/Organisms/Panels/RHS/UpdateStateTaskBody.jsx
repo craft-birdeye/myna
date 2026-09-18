@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { FormInput, TextArea } from '../../../elemental-stubs';
 import { InfoTooltip } from '../../../../components/InfoTooltip/InfoTooltip';
 import { VariableIcon } from '../../../Molecules/Inputs/PromptToolbarIcons.jsx';
+import VariableChip from '../../../Molecules/Inputs/VariableChip/VariableChip';
 import { subscribeToCustomTools } from '../../../services/agentService';
+import { Checkbox } from '../../Drawers/shared/DrawerShared';
 import AddStateFieldModal from '../../Modals/AddStateFieldModal/AddStateFieldModal.jsx';
 import styles from './UpdateStateTaskBody.module.css';
 
@@ -32,7 +34,7 @@ export function createEmptyStateUpdate(overrides = {}) {
     variable: '',
     fieldType: '',
     instructions: '',
-    global: false,
+    fieldValue: '',
     ...overrides,
   };
 }
@@ -43,6 +45,7 @@ export function defaultUpdateStateDetails() {
     description: 'Update dynamic variables when this step runs',
     selectedTools: [UPDATE_STATE_TOOL_ID],
     stateUpdates: [],
+    fieldsGlobal: false,
   };
 }
 
@@ -53,10 +56,12 @@ export function defaultUpdateStateDetails() {
 export function UpdateStateToolDetails({
   stateUpdates = [],
   onStateUpdatesChange,
+  fieldsGlobal = false,
+  onFieldsGlobalChange,
   toolName = 'Update state',
   viewOnly = false,
   onRemoveTool,
-  /** When false, only Select fields is shown (drawer already has Tool name / Description). */
+  /** When false, only Select fields is shown (drawer already has Description). */
   showToolCard = true,
 }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -92,11 +97,17 @@ export function UpdateStateToolDetails({
     setEditingUpdate(null);
   };
 
-  const handleModalAdd = ({ fieldName, fieldType, description: instructions, global: isGlobal }) => {
+  const handleModalAdd = ({ fieldName, fieldType, description: instructions, fieldValue }) => {
     if (editingUpdate) {
       persistUpdates(stateUpdates.map((u) => (
         u.id === editingUpdate.id
-          ? { ...u, variable: fieldName, fieldType, instructions, global: Boolean(isGlobal) }
+          ? {
+            ...u,
+            variable: fieldName,
+            fieldType,
+            instructions: instructions || '',
+            fieldValue: fieldValue || '',
+          }
           : u
       )));
       return;
@@ -106,8 +117,8 @@ export function UpdateStateToolDetails({
       createEmptyStateUpdate({
         variable: fieldName,
         fieldType,
-        instructions,
-        global: Boolean(isGlobal),
+        instructions: instructions || '',
+        fieldValue: fieldValue || '',
       }),
     ]);
   };
@@ -167,34 +178,26 @@ export function UpdateStateToolDetails({
             )}
           </div>
         ) : (
-          <div className={styles.updateList}>
+          <div className={`${styles.chipContainer} ${styles.chipContainerFilled}`}>
             {stateUpdates.map((update) => (
-              <div
+              <VariableChip
                 key={update.id}
-                className={styles.updateCard}
-              >
-                <button
-                  type="button"
-                  className={styles.updateSummary}
-                  onClick={() => openEditModal(update)}
-                >
-                  <span className={styles.braceGlyph} aria-hidden>{'{}'}</span>
-                  <span className={styles.summaryVar}>{update.variable}</span>
-                </button>
-                {!viewOnly && (
-                  <div className={styles.updateActions}>
-                    <button
-                      type="button"
-                      className={styles.iconBtn}
-                      aria-label="Delete update"
-                      onClick={() => handleRemove(update.id)}
-                    >
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                value={update.variable}
+                type="variable"
+                onSwatchClick={viewOnly ? undefined : () => openEditModal(update)}
+                onDelete={viewOnly ? undefined : () => handleRemove(update.id)}
+              />
             ))}
+          </div>
+        )}
+
+        {!viewOnly && (
+          <div className={styles.globalCheckWrap}>
+            <Checkbox
+              checked={Boolean(fieldsGlobal)}
+              onChange={(next) => onFieldsGlobalChange?.(next)}
+              label="Make these fields globally available"
+            />
           </div>
         )}
       </div>
@@ -223,11 +226,13 @@ export default function UpdateStateTaskBody({
       ? initialValues.stateUpdates
       : defaults.stateUpdates),
   );
+  const [fieldsGlobal, setFieldsGlobal] = useState(Boolean(initialValues.fieldsGlobal));
   const [activeTab, setActiveTab] = useState('toolDetails');
 
   useEffect(() => {
     setTaskName(initialValues.taskName ?? defaults.taskName);
     setDescription(initialValues.description ?? defaults.description);
+    setFieldsGlobal(Boolean(initialValues.fieldsGlobal));
     if (Array.isArray(initialValues.stateUpdates) && initialValues.stateUpdates.length) {
       setStateUpdates(initialValues.stateUpdates);
     }
@@ -237,6 +242,11 @@ export default function UpdateStateTaskBody({
   const persistUpdates = (next) => {
     setStateUpdates(next);
     onFieldChange?.('stateUpdates', next);
+  };
+
+  const handleFieldsGlobal = (next) => {
+    setFieldsGlobal(next);
+    onFieldChange?.('fieldsGlobal', next);
   };
 
   const handleTaskName = (e) => {
@@ -281,6 +291,8 @@ export default function UpdateStateTaskBody({
       <UpdateStateToolDetails
         stateUpdates={stateUpdates}
         onStateUpdatesChange={persistUpdates}
+        fieldsGlobal={fieldsGlobal}
+        onFieldsGlobalChange={handleFieldsGlobal}
         viewOnly={viewOnly}
       />
     </div>

@@ -42,6 +42,7 @@ export default function ProcedureTaskBody({
   const [stateUpdates, setStateUpdates] = useState(
     () => (Array.isArray(initialValues.stateUpdates) ? initialValues.stateUpdates : []),
   );
+  const [fieldsGlobal, setFieldsGlobal] = useState(Boolean(initialValues.fieldsGlobal));
   const [activeTab, setActiveTab] = useState('basic');
   const [addToolMenuOpen, setAddToolMenuOpen] = useState(false);
   const addToolMenuRef = useRef(null);
@@ -54,7 +55,8 @@ export default function ProcedureTaskBody({
     setProcedureIds(initialValues.procedureIds ?? []);
     setSelectedTools(initialValues.selectedTools ?? []);
     setStateUpdates(Array.isArray(initialValues.stateUpdates) ? initialValues.stateUpdates : []);
-  }, [initialValues.procedureIds, initialValues.selectedTools, initialValues.stateUpdates]);
+    setFieldsGlobal(Boolean(initialValues.fieldsGlobal));
+  }, [initialValues.procedureIds, initialValues.selectedTools, initialValues.stateUpdates, initialValues.fieldsGlobal]);
 
   useEffect(() => {
     if (layoutOption === 'option1') setActiveTab('basic');
@@ -112,6 +114,11 @@ export default function ProcedureTaskBody({
   const handleStateUpdatesChange = (next) => {
     setStateUpdates(next);
     onFieldChange?.('stateUpdates', next);
+  };
+
+  const handleFieldsGlobalChange = (next) => {
+    setFieldsGlobal(next);
+    onFieldChange?.('fieldsGlobal', next);
   };
 
   const instructionsBlock = promptStore ? (
@@ -177,6 +184,8 @@ export default function ProcedureTaskBody({
         <UpdateStateToolDetails
           stateUpdates={stateUpdates}
           onStateUpdatesChange={handleStateUpdatesChange}
+          fieldsGlobal={fieldsGlobal}
+          onFieldsGlobalChange={handleFieldsGlobalChange}
           viewOnly={viewOnly}
           onRemoveTool={() => handleRemoveTool(UPDATE_STATE_TOOL_ID)}
         />
