@@ -20,6 +20,17 @@ export type {
   RunLogStepType,
 } from './RunDetailsPanel/RunDetailsPanel.types'
 export { Chip } from './Chip/Chip'
+export { GhostwriterQuestionCard } from './GhostwriterQuestionCard/GhostwriterQuestionCard'
+export type {
+  GhostwriterQuestionCardProps,
+  QuestionCardOption,
+} from './GhostwriterQuestionCard/GhostwriterQuestionCard.types'
+export { GhostwriterSimulation } from './GhostwriterSimulation/GhostwriterSimulation'
+export type {
+  GhostwriterSimulationProps,
+  SimulationPhase,
+  SimulationRow,
+} from './GhostwriterSimulation/GhostwriterSimulation.types'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'
 export { ReviewCardBody, StarRating } from './ReviewCard/ReviewCard'

@@ -42,6 +42,13 @@ export const PLAN_SECTIONS: PlanSection[] = [
           "Nothing posts between 10pm and 7am in the location's own timezone — replies land "
           + 'when a human would plausibly have sent them.',
       },
+      {
+        id: 's1-b4',
+        kind: 'bullet',
+        text:
+          'If a reply is already posted, an edit updates that reply rather than adding a '
+          + 'second one.',
+      },
     ],
   },
   {
@@ -118,7 +125,7 @@ export const PLAN_SECTIONS: PlanSection[] = [
     lines: [
       { id: 's6-lead', kind: 'lead', text: 'Publishing anything rated 1 or 2 stars without an approval.' },
       { id: 's6-b1', kind: 'bullet', text: 'Answering a review the spam gate has held.' },
-      { id: 's6-b2', kind: 'bullet', text: 'Naming a staff member, quoting a price, or promising a refund.' },
+      { id: 's6-b2', kind: 'bullet', text: 'Naming a staff member in a public reply, quoting a price, or promising a refund.' },
       { id: 's6-b3', kind: 'bullet', text: 'Replying where safety, legal action or a billing dispute is mentioned.' },
     ],
   },

@@ -16,28 +16,14 @@ export const READING_STEPS = [
 ]
 
 export const READING_SUMMARY =
-  'Your templates are doing the heavy lifting on positive reviews, and doing it well — '
-  + '73% of all replies come from just four of them.'
+  'Four templates cover 73% of all your replies, and they do the positive reviews well — '
+  + 'the 5-star thank you alone is 62% of them.'
 
-export interface ReadingTemplateRow {
-  template: string
-  usedOn: string
-  share: string
-}
-
-export const READING_TABLE_COLUMNS = ['Template', 'Used on', 'Share of replies'] as const
-
-export const READING_TABLE_ROWS: ReadingTemplateRow[] = [
-  { template: '5-star thank you', usedOn: '4–5★', share: '62%' },
-  { template: 'Service recovery', usedOn: '3★', share: '9%' },
-  { template: 'Appointment follow-up', usedOn: 'Mixed', share: '7%' },
-  { template: 'Referral ask', usedOn: '5★', share: '4%' },
-]
-
-export const READING_CALLOUT =
-  "The negative reviews aren't using them. 31 of the 34 replies to 3★-or-less match no "
-  + 'template at all — they average 78 words against 22 for a template reply, and every one '
-  + 'of them names a specific problem. Someone on your team is writing these by hand.'
+/** The finding that matters, as prose rather than a table — the plan carries the detail. */
+export const READING_FOOTNOTE =
+  "The negative reviews aren't using them at all. 31 of the 34 replies to 3★ or less match "
+  + 'no template: they average 78 words against 22, and every one names a specific problem. '
+  + 'Someone on your team is writing those by hand.'
 
 /** Timeline, ms from mount. */
 export const READING_TIMING = {
@@ -70,26 +56,15 @@ export const LEARNING_STEPS = [
 ]
 
 export const LEARNING_SUMMARY =
-  "There's no template hiding in here — but there is a consistent method. I've written it "
-  + 'down as guidelines:'
+  "There's no template hiding in here, but there is a consistent method. Six rules, and "
+  + 'almost every reply follows them: name the specific problem in the first line, '
+  + 'acknowledge before explaining, offer exactly one next step with a named person, move '
+  + 'refunds and billing into a direct message, sign off with a real first name, and stay '
+  + 'between 60 and 90 words.'
 
-export interface LearningGuideline {
-  text: string
-  /** Support count, e.g. "29 of 31" — or a stat like "median 78". */
-  meta: string
-}
-
-export const LEARNING_GUIDELINES: LearningGuideline[] = [
-  { text: 'Name the specific problem in the first line. Never open with "Sorry for your experience".', meta: '29 of 31' },
-  { text: 'Acknowledge before explaining. Not one reply leads with a defence.', meta: '31 of 31' },
-  { text: 'Offer exactly one next step, with a named person and a channel to reach them.', meta: '27 of 31' },
-  { text: 'Move refunds, billing disputes and clinical detail out of public view and into a direct message.', meta: '31 of 31' },
-  { text: 'Sign off with a real first name, never the brand name.', meta: '30 of 31' },
-  { text: 'Stay between 60 and 90 words.', meta: 'median 78' },
-]
-
-export const LEARNING_CALLOUT =
-  "Guidelines sorted. I'll hold every reply I generate to these — not just the negative ones."
+export const LEARNING_FOOTNOTE =
+  "I'll hold every reply I generate to those — not just the negative ones. They're written "
+  + 'out in full in the plan.'
 
 /* ─── Third beat: where the reviews actually come from ───────────────────────── */
 
@@ -101,28 +76,14 @@ export const SOURCES_STEPS = [
   'Compared that against where reviews are landing',
 ]
 
+/** One paragraph, so the Configure sources link can sit last rather than mid-thought. */
 export const SOURCES_SUMMARY =
-  'Two sources are connected and will accept a reply from the agent, so those are the two '
-  + 'I will post to.'
+  'Google and Facebook are connected and will accept a reply, so those are the two I will '
+  + "post to. Google Play and ShopperApproved are collecting reviews but can't take a reply "
+  + 'yet, so the agent skips them rather than queueing replies that would never land.'
 
-export interface ReviewSourceRow {
-  name: string
-  reviews: string
-  note: string
-}
-
-export const SOURCES_CONNECTED: ReviewSourceRow[] = [
-  { name: 'Google', reviews: '650.2K reviews', note: 'Connected · replies enabled' },
-  { name: 'Facebook', reviews: '128.4K reviews', note: 'Connected · replies enabled' },
-]
-
-export const SOURCES_SKIPPED_INTRO =
-  "These are collecting reviews but can't accept a reply yet, so the agent will skip them:"
-
-export const SOURCES_SKIPPED: ReviewSourceRow[] = [
-  { name: 'Google Play', reviews: '239.9K reviews', note: 'Review volume, but not connected for replies' },
-  { name: 'ShopperApproved', reviews: '82.3K reviews', note: 'Review volume, but not connected for replies' },
-]
+/** Plain text link under the finding — the one action this beat offers. */
+export const SOURCES_CONFIGURE_CTA = 'Configure sources'
 
 /** Teases the fourth beat — sits outside the block as its own reply. */
 export const SOURCES_NEXT_PARAGRAPH =
@@ -138,10 +99,10 @@ export const SPAM_SCREEN_STEPS = [
 ]
 
 /** Leads the findings here — the risk comes before the resolution. */
-export const SPAM_SCREEN_ALERT =
-  '11 of the 1,035 are spam. Identical text posted across six unrelated locations, two '
-  + 'carrying off-topic links, and one where a competitor names their own brand. A public '
-  + 'reply to any of those makes you look automated and hands them reach.'
+export const SPAM_SCREEN_SUMMARY =
+  '11 of the 1,035 are spam — identical text posted across six unrelated locations, two '
+  + 'carrying off-topic links, and one where a competitor names their own brand. Replying '
+  + 'to any of those publicly makes you look automated and hands them reach.'
 
 export const SPAM_SCREEN_FOOTNOTE =
   'So the spam gate runs before anything else: anything scoring above 0.8 gets held, never '
@@ -151,16 +112,56 @@ export const SPAM_DIGEST_QUESTION = 'Where should the daily spam digest go?'
 export const SPAM_DIGEST_PLACEHOLDER = 'name@company.com'
 export const SPAM_DIGEST_CTA = 'Use this address'
 
+/* ─── Fifth beat: testing the draft before the plan is shown ────────────────── */
+
+export const SIMULATION_INTRO_PARAGRAPH =
+  "Before I show you the plan, I'd rather find out where it breaks myself."
+
+export const SIM_RUN_HEADER_LABEL = 'Testing the draft against its own rules'
+
+export const SIM_RUN_STEPS = [
+  'Turned each rule in the plan into a scenario it has to survive',
+  'Wrote 6 test reviews — one per branch, plus two nobody asks for',
+  'Ran all 6 against the draft',
+]
+
+export const SIM_RUN_SUMMARY =
+  'Four passed. Two did not, and both would have been visible to a customer.'
+
+export const SIM_RUN_FOOTNOTE =
+  'An edited review re-triggers the agent, and the draft had no check for a reply already '
+  + 'being there — so a customer fixing a typo in their 5-star review gets thanked twice. '
+  + 'And on a 2-star review naming a service advisor, the draft repeated that name back in '
+  + 'the public reply, which your own guidelines say never to do.'
+
+/* ─── Sixth beat: the fixes, then the same suite again ──────────────────────── */
+
+export const SIM_FIX_HEADER_LABEL = 'Fixing both, then running it again'
+
+export const SIM_FIX_STEPS = [
+  'Added a check for an existing reply before anything posts',
+  'Made the agent strip staff names out of public replies',
+  'Re-ran all 6',
+]
+
+export const SIM_FIX_SUMMARY = 'All 6 pass now.'
+
+export const SIM_FIX_FOOTNOTE =
+  'Both fixes are in the plan below — the duplicate check in step 1, the name rule in '
+  + 'step 6. The full suite lives in the Simulation tab if you want to push on it harder '
+  + 'than I did.'
+
 /* ─── Fifth beat: the drafted plan ───────────────────────────────────────────── */
 
 export const PLAN_INTRO_PARAGRAPH =
-  "That's everything — cadence, sources, routing, guidelines and a spam gate. I'd rather "
-  + 'you pull it apart before I build it than after.'
+  "That's everything — cadence, sources, routing, guidelines and a spam gate, and it has "
+  + "been through a test pass. I'd still rather you pull it apart before I build it than "
+  + 'after.'
 
 export const PLAN_CARD = {
   title: 'Review response agent',
   badge: 'Plan',
-  meta: 'Drafted from 1,035 reviews · 742 replies · 4 templates · 2 connected sources',
+  meta: 'Drafted from 1,035 reviews · 742 replies · 4 templates · 2 sources · 6 tests passing',
   description:
     'Seven sections covering when it runs, how it decides what to say, the guidelines it '
     + 'writes to, and what it will never do on its own.',

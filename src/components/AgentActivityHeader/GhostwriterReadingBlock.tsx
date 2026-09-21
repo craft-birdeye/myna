@@ -1,306 +1,63 @@
-import { useState } from 'react'
 import {
-  LEARNING_CALLOUT,
-  LEARNING_GUIDELINES,
+  LEARNING_FOOTNOTE,
   LEARNING_HEADER_LABEL,
   LEARNING_STEPS,
   LEARNING_SUMMARY,
-  READING_CALLOUT,
+  READING_FOOTNOTE,
   READING_HEADER_LABEL,
   READING_STEPS,
   READING_SUMMARY,
-  READING_TABLE_COLUMNS,
-  READING_TABLE_ROWS,
   READING_TIMING,
-  SOURCES_CONNECTED,
+  SOURCES_CONFIGURE_CTA,
   SOURCES_HEADER_LABEL,
-  SOURCES_SKIPPED,
-  SOURCES_SKIPPED_INTRO,
+  SIM_FIX_FOOTNOTE,
+  SIM_FIX_HEADER_LABEL,
+  SIM_FIX_STEPS,
+  SIM_FIX_SUMMARY,
+  SIM_RUN_FOOTNOTE,
+  SIM_RUN_HEADER_LABEL,
+  SIM_RUN_STEPS,
+  SIM_RUN_SUMMARY,
   SOURCES_STEPS,
   SOURCES_SUMMARY,
   SPAM_DIGEST_CTA,
+  SPAM_DIGEST_QUESTION,
   SPAM_DIGEST_PLACEHOLDER,
-  SPAM_SCREEN_ALERT,
   SPAM_SCREEN_FOOTNOTE,
   SPAM_SCREEN_HEADER_LABEL,
   SPAM_SCREEN_STEPS,
+  SPAM_SCREEN_SUMMARY,
   PLAN_CARD,
   PLAN_CREATE_CTA,
 } from '../../data/ghostwriterReadingBlock'
 import {
   PLAYBOOK_HEADER_LABEL,
-  PLAYBOOK_REQUIREMENTS,
   PLAYBOOK_STEPS,
   PLAYBOOK_SUMMARY,
   PLAYBOOK_TEMPLATE_DRAFTS,
-  PLAYBOOK_TEMPLATE_STATUS_LABELS,
-  PLAYBOOK_TEMPLATES,
-  PLAYBOOK_VERDICT_LABELS,
-  PlaybookTemplateStatus,
-  PlaybookVerdict,
-  TEMPLATE_DRAFT_CHIP,
-  TEMPLATE_DRAFTS_CALLOUT,
   TEMPLATE_DRAFTS_FOOTNOTE,
   TEMPLATE_DRAFTS_HEADER_LABEL,
   TEMPLATE_DRAFTS_STEPS,
   TEMPLATE_DRAFTS_SUMMARY,
-  TEMPLATES_CALLOUT,
   TEMPLATES_FOOTNOTE,
   TEMPLATES_HEADER_LABEL,
   TEMPLATES_STEPS,
   TEMPLATES_SUMMARY,
 } from '../../data/ghostwriterPlaybookBlock'
-import { REVIEW_SOURCE_LOGOS } from '../../data/reviewSourceLogos'
+import { GhostwriterQuestionCard } from '../GhostwriterQuestionCard/GhostwriterQuestionCard'
 import { ActivityFindingsBlock } from './ActivityFindingsBlock'
 import { VERDICT_TONE, VerdictTone } from './verdictTones'
 
-const REQUIREMENT_VERDICT: Record<PlaybookVerdict, { icon: string; tone: VerdictTone }> = {
-  clear: { icon: 'check_circle', tone: 'green' },
-  detail: { icon: 'help', tone: 'amber' },
-  conflict: { icon: 'error', tone: 'red' },
-  blocked: { icon: 'block', tone: 'grey' },
-  pushback: { icon: 'priority_high', tone: 'blue' },
-}
-
-const TEMPLATE_VERDICT: Record<PlaybookTemplateStatus, { icon: string; tone: VerdictTone }> = {
-  exists: { icon: 'check_circle', tone: 'green' },
-  renamed: { icon: 'change_circle', tone: 'blue' },
-  missing: { icon: 'add_circle', tone: 'red' },
-}
-
-/** One divided row of a verdict list: glyph, title (+ inline suffix), note, and a chip. */
-function VerdictRow({
-  icon,
-  tone,
-  title,
-  titleSuffix,
-  note,
-  chipLabel,
-  divided,
-  delayMs,
-}: {
-  icon: string
-  tone: VerdictTone
-  title: string
-  /** Trails the title on the same line — the page ref in the requirements list. */
-  titleSuffix?: string
-  note?: string
-  chipLabel: string
-  divided: boolean
-  delayMs: number
-}) {
-  const { color, chip } = VERDICT_TONE[tone]
+/** The one action this beat offers — a text link, not a panel. */
+function ConfigureSourcesLink({ onConfigure }: { onConfigure?: () => void }) {
   return (
-    <div
-      className={`gw-flow__in flex items-start gap-md px-lg py-md ${divided ? 'border-t border-border' : ''}`}
-      style={{ animationDelay: `${delayMs}ms` }}
+    <button
+      type="button"
+      onClick={onConfigure}
+      className="gw-flow__in w-fit text-body text-text-action transition-colors hover:underline"
     >
-      <span
-        className="mt-[2px] flex size-5 shrink-0 items-center justify-center"
-        style={{ color }}
-        aria-hidden
-      >
-        <span className="material-symbols-outlined" style={{ fontSize: 19 }}>{icon}</span>
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-xs">
-        {/* Inline so the suffix trails the last word instead of dropping below. */}
-        <p className="m-0 text-body text-text-primary">
-          {title}
-          {titleSuffix && (
-            <span className="ml-sm whitespace-nowrap text-small text-text-tertiary">{titleSuffix}</span>
-          )}
-        </p>
-        {note && <p className="m-0 text-small text-text-tertiary">{note}</p>}
-      </div>
-      <span className={`shrink-0 whitespace-nowrap rounded-sm px-sm py-[3px] text-small ${chip}`}>
-        {chipLabel}
-      </span>
-    </div>
-  )
-}
-
-/** Every requirement the playbook states, each with the agent's verdict on it. */
-function RequirementList() {
-  return (
-    <div className="gw-flow__in overflow-hidden rounded-sm border border-border">
-      {PLAYBOOK_REQUIREMENTS.map((req, i) => (
-        <VerdictRow
-          key={req.id}
-          {...REQUIREMENT_VERDICT[req.verdict]}
-          title={req.text}
-          titleSuffix={req.page}
-          note={req.note}
-          chipLabel={PLAYBOOK_VERDICT_LABELS[req.verdict]}
-          divided={i > 0}
-          delayMs={i * READING_TIMING.rowStagger}
-        />
-      ))}
-    </div>
-  )
-}
-
-/** The six templates the document names, against what the library actually holds. */
-function TemplateStatusList() {
-  return (
-    <div className="gw-flow__in overflow-hidden rounded-sm border border-border">
-      {PLAYBOOK_TEMPLATES.map((tpl, i) => (
-        <VerdictRow
-          key={tpl.id}
-          {...TEMPLATE_VERDICT[tpl.status]}
-          title={tpl.name}
-          note={tpl.note}
-          chipLabel={PLAYBOOK_TEMPLATE_STATUS_LABELS[tpl.status]}
-          divided={i > 0}
-          delayMs={i * READING_TIMING.rowStagger}
-        />
-      ))}
-    </div>
-  )
-}
-
-/** Brand logo in a soft tile, or the source's initial when we have no asset. */
-function SourceLogo({ name, muted = false }: { name: string; muted?: boolean }) {
-  const logo = REVIEW_SOURCE_LOGOS[name]
-  return (
-    <span
-      className={`flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-surface ${
-        muted ? 'opacity-55 grayscale' : ''
-      }`}
-      aria-hidden
-    >
-      {logo ? (
-        <img src={logo} alt="" className="size-[18px] object-contain" />
-      ) : (
-        <span className="text-small text-text-secondary">{name.charAt(0)}</span>
-      )}
-    </span>
-  )
-}
-
-/** Small green tick in a tinted disc — the "connected" affirmation. */
-function ConnectedTick() {
-  return (
-    <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#dcfce7]" aria-hidden>
-      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-        <path d="M2.5 6.3 4.7 8.5 9.5 3.5" stroke="#15803d" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  )
-}
-
-/** Broken-link glyph for a source that can't take replies. */
-function UnlinkedIcon() {
-  return (
-    <span className="flex size-[18px] shrink-0 items-center justify-center text-text-tertiary" aria-hidden>
-      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link_off</span>
-    </span>
-  )
-}
-
-/** Connected sources, then a muted panel for the ones that can't accept replies. */
-function SourcesPanel({ onConfigure }: { onConfigure?: () => void }) {
-  return (
-    <div className="flex flex-col gap-sm">
-      {SOURCES_CONNECTED.map((src, i) => (
-        <div
-          key={src.name}
-          className="gw-flow__in gw-source-row flex items-center justify-between gap-md rounded-sm border border-border bg-surface px-lg py-md"
-          style={{ animationDelay: `${i * 80}ms` }}
-        >
-          <span className="flex min-w-0 items-center gap-md">
-            <SourceLogo name={src.name} />
-            <span className="truncate text-body text-text-primary">{src.name}</span>
-            <span className="shrink-0 text-small text-text-tertiary">{src.reviews}</span>
-          </span>
-          <span className="flex shrink-0 items-center gap-sm">
-            <ConnectedTick />
-            <span className="text-small text-[#15803d]">{src.note}</span>
-          </span>
-        </div>
-      ))}
-
-      <div className="gw-flow__in flex flex-col gap-sm rounded-sm bg-surface-l2 p-lg" style={{ animationDelay: '200ms' }}>
-        <p className="m-0 text-small text-text-secondary">{SOURCES_SKIPPED_INTRO}</p>
-        {SOURCES_SKIPPED.map((src) => (
-          <div key={src.name} className="flex items-center justify-between gap-md">
-            <span className="flex min-w-0 items-center gap-md">
-              <UnlinkedIcon />
-              <SourceLogo name={src.name} muted />
-              <span className="truncate text-body text-text-secondary">{src.name}</span>
-              <span className="shrink-0 text-small text-text-tertiary">{src.reviews}</span>
-            </span>
-            <span className="shrink-0 text-small text-text-tertiary">{src.note}</span>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={onConfigure}
-          className="mt-xs flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
-        >
-          Configure sources
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/** Template-usage table — the only bordered box in the first beat. */
-function TemplateTable() {
-  return (
-    <div className="gw-flow__in overflow-hidden rounded-sm border border-border">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="bg-surface-l2">
-            {READING_TABLE_COLUMNS.map((col) => (
-              <th key={col} className="px-lg py-md text-small text-text-secondary">
-                {col}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {READING_TABLE_ROWS.map((row, i) => (
-            <tr
-              key={row.template}
-              className="gw-flow__in border-t border-border"
-              style={{ animationDelay: `${i * READING_TIMING.rowStagger}ms` }}
-            >
-              <td className="px-lg py-md text-body text-text-primary">{row.template}</td>
-              <td className="px-lg py-md text-body text-text-secondary">{row.usedOn}</td>
-              <td className="px-lg py-md text-body text-text-secondary">{row.share}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-/** Numbered guidelines with support counts — the bordered box in the second beat. */
-function GuidelineList() {
-  return (
-    <div className="gw-flow__in rounded-sm border border-border p-lg">
-      <ol className="m-0 flex list-none flex-col gap-md p-0">
-        {LEARNING_GUIDELINES.map((item, i) => (
-          <li
-            key={item.text}
-            className="gw-flow__in flex items-start gap-md"
-            style={{ animationDelay: `${i * READING_TIMING.rowStagger}ms` }}
-          >
-            <span className="mt-[2px] flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-l2 text-small text-text-secondary">
-              {i + 1}
-            </span>
-            {/* Inline so the count chip trails the last word rather than dropping below. */}
-            <p className="m-0 min-w-0 text-body text-text-primary">
-              {item.text}{' '}
-              <span className="ml-xs whitespace-nowrap rounded-sm bg-surface-l2 px-sm py-[2px] text-small text-text-secondary">
-                {item.meta}
-              </span>
-            </p>
-          </li>
-        ))}
-      </ol>
-    </div>
+      {SOURCES_CONFIGURE_CTA}
+    </button>
   )
 }
 
@@ -309,8 +66,9 @@ export interface GhostwriterReadingBlockProps {
 }
 
 /**
- * Beat 0 — only when the conversation opened with an attached playbook. Reads the document
- * and plays every requirement back with a verdict. Ends on its body, no callout.
+ * Beat 0 — only when the conversation opened with an attached playbook. Confirms the rules
+ * it can build in one sentence and hands straight to the templates; the per-rule verdict
+ * list this used to render was removed.
  */
 export function GhostwriterPlaybookBlock({ onComplete }: GhostwriterReadingBlockProps) {
   return (
@@ -318,34 +76,31 @@ export function GhostwriterPlaybookBlock({ onComplete }: GhostwriterReadingBlock
       label={PLAYBOOK_HEADER_LABEL}
       steps={PLAYBOOK_STEPS}
       summary={PLAYBOOK_SUMMARY}
-      body={<RequirementList />}
-      calloutExtraMs={PLAYBOOK_REQUIREMENTS.length * READING_TIMING.rowStagger}
       onComplete={onComplete}
     />
   )
 }
 
 /** One drafted template: name + Draft chip, the trigger it fires on, then the copy. */
+/**
+ * The four drafts. This copy *is* the deliverable — the user has to read it — so unlike the
+ * audit lists it can't collapse into prose. The card, the purple glyph, the Draft chip and
+ * the filled body panel all go; a single hairline rule marks the quoted copy instead.
+ */
 function TemplateDraftCards() {
   return (
-    <div className="flex flex-col gap-md">
+    <div className="flex flex-col gap-xl">
       {PLAYBOOK_TEMPLATE_DRAFTS.map((draft, i) => (
         <div
           key={draft.id}
-          className="gw-flow__in flex flex-col gap-sm rounded-sm border border-border p-lg"
+          className="gw-flow__in flex flex-col gap-xs"
           style={{ animationDelay: `${i * READING_TIMING.rowStagger}ms` }}
         >
-          <div className="flex flex-wrap items-center gap-sm">
-            <span className="flex size-5 shrink-0 items-center justify-center text-[#7c3aed]" aria-hidden>
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>description</span>
-            </span>
-            <span className="text-body text-text-primary">{draft.name}</span>
-            <span className="rounded-sm bg-surface-l2 px-sm py-[2px] text-small text-text-secondary">
-              {TEMPLATE_DRAFT_CHIP}
-            </span>
-          </div>
-          <p className="m-0 text-small text-text-tertiary">{draft.trigger}</p>
-          <p className="m-0 rounded-sm bg-surface-l2 px-lg py-md text-body text-text-secondary">
+          <p className="m-0 text-body text-text-primary">
+            {draft.name}
+            <span className="ml-sm text-small text-text-tertiary">{draft.trigger}</span>
+          </p>
+          <p className="m-0 border-l-2 border-border-strong pl-md text-body text-text-secondary">
             {draft.body}
           </p>
         </div>
@@ -365,8 +120,6 @@ export function GhostwriterTemplateDraftsBlock({ onComplete }: GhostwriterReadin
       steps={TEMPLATE_DRAFTS_STEPS}
       summary={TEMPLATE_DRAFTS_SUMMARY}
       body={<TemplateDraftCards />}
-      callout={TEMPLATE_DRAFTS_CALLOUT}
-      calloutTone="green"
       footnote={TEMPLATE_DRAFTS_FOOTNOTE}
       calloutExtraMs={PLAYBOOK_TEMPLATE_DRAFTS.length * READING_TIMING.rowStagger}
       onComplete={onComplete}
@@ -384,11 +137,7 @@ export function GhostwriterPlaybookTemplatesBlock({ onComplete }: GhostwriterRea
       label={TEMPLATES_HEADER_LABEL}
       steps={TEMPLATES_STEPS}
       summary={TEMPLATES_SUMMARY}
-      body={<TemplateStatusList />}
-      callout={TEMPLATES_CALLOUT}
-      calloutTone="amber"
       footnote={TEMPLATES_FOOTNOTE}
-      calloutExtraMs={PLAYBOOK_TEMPLATES.length * READING_TIMING.rowStagger}
       onComplete={onComplete}
     />
   )
@@ -401,10 +150,7 @@ export function GhostwriterReadingBlock({ onComplete }: GhostwriterReadingBlockP
       label={READING_HEADER_LABEL}
       steps={READING_STEPS}
       summary={READING_SUMMARY}
-      body={<TemplateTable />}
-      callout={READING_CALLOUT}
-      calloutTone="amber"
-      calloutExtraMs={READING_TABLE_ROWS.length * READING_TIMING.rowStagger}
+      footnote={READING_FOOTNOTE}
       onComplete={onComplete}
     />
   )
@@ -420,8 +166,7 @@ export function GhostwriterSourcesBlock({
       label={SOURCES_HEADER_LABEL}
       steps={SOURCES_STEPS}
       summary={SOURCES_SUMMARY}
-      body={<SourcesPanel onConfigure={onConfigure} />}
-      calloutExtraMs={300}
+      body={<ConfigureSourcesLink onConfigure={onConfigure} />}
       onComplete={onComplete}
     />
   )
@@ -433,8 +178,7 @@ export function GhostwriterSpamScreenBlock({ onComplete }: GhostwriterReadingBlo
     <ActivityFindingsBlock
       label={SPAM_SCREEN_HEADER_LABEL}
       steps={SPAM_SCREEN_STEPS}
-      callout={SPAM_SCREEN_ALERT}
-      calloutTone="red"
+      summary={SPAM_SCREEN_SUMMARY}
       footnote={SPAM_SCREEN_FOOTNOTE}
       onComplete={onComplete}
     />
@@ -442,38 +186,45 @@ export function GhostwriterSpamScreenBlock({ onComplete }: GhostwriterReadingBlo
 }
 
 /**
- * "Where should the daily spam digest go?" — email field + CTA, disabled until something is
- * typed. Submitting hands the address back so the parent can echo it as a user turn.
+ * Beat 5 — the agent tests the draft before showing the plan. Scenarios come from the
+ * plan's own rules, so a failure names the rule it broke. Text only, no panel.
+ */
+export function GhostwriterSimulationRunBlock({ onComplete }: GhostwriterReadingBlockProps) {
+  return (
+    <ActivityFindingsBlock
+      label={SIM_RUN_HEADER_LABEL}
+      steps={SIM_RUN_STEPS}
+      summary={SIM_RUN_SUMMARY}
+      footnote={SIM_RUN_FOOTNOTE}
+      onComplete={onComplete}
+    />
+  )
+}
+
+/** Beat 6 — both failures fixed, the same suite re-run, then it hands off to the plan. */
+export function GhostwriterSimulationFixBlock({ onComplete }: GhostwriterReadingBlockProps) {
+  return (
+    <ActivityFindingsBlock
+      label={SIM_FIX_HEADER_LABEL}
+      steps={SIM_FIX_STEPS}
+      summary={SIM_FIX_SUMMARY}
+      footnote={SIM_FIX_FOOTNOTE}
+      onComplete={onComplete}
+    />
+  )
+}
+
+/**
+ * "Where should the daily spam digest go?" — the free-text flavour of the shared question
+ * card. Submitting hands the address back so the parent can echo it as a user turn.
  */
 export function GhostwriterDigestPrompt({ onSubmit }: { onSubmit?: (email: string) => void }) {
-  const [email, setEmail] = useState('')
-  const canSubmit = email.trim().length > 0
-
   return (
-    <div className="gw-flow__in ml-3xl mt-sm flex flex-wrap items-center gap-sm">
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && canSubmit) onSubmit?.(email.trim())
-        }}
-        placeholder={SPAM_DIGEST_PLACEHOLDER}
-        className="h-10 w-[280px] rounded-sm border border-border bg-surface px-lg text-body text-text-primary outline-none transition-colors placeholder:text-text-tertiary focus:border-primary"
-      />
-      <button
-        type="button"
-        disabled={!canSubmit}
-        onClick={() => onSubmit?.(email.trim())}
-        className={`flex h-10 items-center rounded-sm px-lg text-body transition-colors ${
-          canSubmit
-            ? 'bg-primary text-white hover:bg-primary-hover'
-            : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-        }`}
-      >
-        {SPAM_DIGEST_CTA}
-      </button>
-    </div>
+    <GhostwriterQuestionCard
+      question={SPAM_DIGEST_QUESTION}
+      freeText={{ placeholder: SPAM_DIGEST_PLACEHOLDER, submitLabel: SPAM_DIGEST_CTA }}
+      onSubmitText={(email) => onSubmit?.(email)}
+    />
   )
 }
 
@@ -555,10 +306,7 @@ export function GhostwriterGuidelinesBlock({ onComplete }: GhostwriterReadingBlo
       label={LEARNING_HEADER_LABEL}
       steps={LEARNING_STEPS}
       summary={LEARNING_SUMMARY}
-      body={<GuidelineList />}
-      callout={LEARNING_CALLOUT}
-      calloutTone="green"
-      calloutExtraMs={LEARNING_GUIDELINES.length * READING_TIMING.rowStagger}
+      footnote={LEARNING_FOOTNOTE}
       onComplete={onComplete}
     />
   )

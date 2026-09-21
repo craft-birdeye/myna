@@ -15,7 +15,11 @@ function RingCheck() {
 export interface ActivityFindingsBlockProps {
   label: string
   steps: string[]
-  /** Grey lead-in above the body. Omit when the beat opens straight on its callout. */
+  /**
+   * The finding itself. Reads as agent speech, so it carries the same `text-text-primary`
+   * as the reply paragraphs around the block — it used to be grey when it was only a
+   * lead-in above a bordered body, but the beats now end on their prose.
+   */
   summary?: string
   /** The bordered body — a table, a guideline list, etc. Rendered once its beat arrives. */
   body?: ReactNode
@@ -23,7 +27,7 @@ export interface ActivityFindingsBlockProps {
   callout?: string
   /** `amber` = needs attention, `green` = settled, `red` = risk. */
   calloutTone?: 'amber' | 'green' | 'red'
-  /** Grey prose after the callout — the resolution following a risk. */
+  /** Prose after the callout — the resolution following a risk. Same tone as `summary`. */
   footnote?: string
   /** Extra ms before the callout, e.g. to cover a staggered body. */
   calloutExtraMs?: number
@@ -180,7 +184,7 @@ export function ActivityFindingsBlock({
             <>
               <div className="gw-flow__rule h-px bg-border" />
               {summary && (
-                <p className="gw-flow__in m-0 text-body text-text-tertiary">{summary}</p>
+                <p className="gw-flow__in m-0 text-body text-text-primary">{summary}</p>
               )}
             </>
           )}
@@ -191,7 +195,7 @@ export function ActivityFindingsBlock({
             </p>
           )}
           {calloutIn && footnote && (
-            <p className="gw-flow__in m-0 text-body text-text-tertiary">{footnote}</p>
+            <p className="gw-flow__in m-0 text-body text-text-primary">{footnote}</p>
           )}
         </div>
       )}

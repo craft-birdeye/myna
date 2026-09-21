@@ -1,7 +1,12 @@
 /**
  * Ghostwriter landing — the beat that runs when the conversation opens with an attached
- * playbook instead of a sentence. The agent reads the document and plays every requirement
- * back with a verdict, so the disagreements surface before anything is built.
+ * playbook instead of a sentence.
+ *
+ * The agent used to play all nine requirements back with a per-rule verdict
+ * (`Needs a detail` / `Conflict` / `Can't build` / `I'd push back`). That read like a lint
+ * report, so it is gone: the rules are confirmed in a sentence, and the one finding worth
+ * stopping on — the templates the playbook depends on that don't exist — gets the beat to
+ * itself.
  */
 
 export const PLAYBOOK_HEADER_LABEL = 'Reading your playbook'
@@ -13,106 +18,17 @@ export const PLAYBOOK_STEPS = [
 ]
 
 export const PLAYBOOK_SUMMARY =
-  "Before I build anything, here's the requirement as I understand it. Correct me on any "
-  + "line — I'd rather be wrong now than in production."
-
-/**
- * `clear` = buildable as written. `detail` = buildable once one blank is filled.
- * `conflict` = contradicts another rule in the same document. `blocked` = not possible on
- * this account. `pushback` = possible, but the agent thinks it's a bad idea.
- */
-export type PlaybookVerdict = 'clear' | 'detail' | 'conflict' | 'blocked' | 'pushback'
-
-export interface PlaybookRequirement {
-  id: string
-  /** The requirement in the agent's own words. */
-  text: string
-  /** Where it came from, e.g. "p.7". */
-  page: string
-  verdict: PlaybookVerdict
-  /** Why it isn't simply `clear` — omitted for the ones that are. */
-  note?: string
-}
-
-export const PLAYBOOK_VERDICT_LABELS: Record<PlaybookVerdict, string> = {
-  clear: 'Clear',
-  detail: 'Needs a detail',
-  conflict: 'Conflict',
-  blocked: "Can't build",
-  pushback: "I'd push back",
-}
-
-export const PLAYBOOK_REQUIREMENTS: PlaybookRequirement[] = [
-  {
-    id: 'pb-1',
-    text: 'Reply to every review on Google and Facebook within one hour of it landing.',
-    page: 'p.2',
-    verdict: 'clear',
-  },
-  {
-    id: 'pb-2',
-    text: 'Use the approved template library rather than free-writing, wherever a template fits.',
-    page: 'p.3',
-    verdict: 'clear',
-  },
-  {
-    id: 'pb-3',
-    text: '1-star and 2-star replies must be approved by a human before they post.',
-    page: 'p.3',
-    verdict: 'clear',
-  },
-  {
-    id: 'pb-4',
-    text: 'Never discuss billing disputes in public.',
-    page: 'p.5',
-    verdict: 'clear',
-  },
-  {
-    id: 'pb-5',
-    text: 'Escalate anything mentioning a clinical concern to the regional team member.',
-    page: 'p.7',
-    verdict: 'detail',
-    note: 'No team member is named anywhere in the document, so the agent has nowhere to send these.',
-  },
-  {
-    id: 'pb-6',
-    text: 'Respond quickly to negative reviews.',
-    page: 'p.4',
-    verdict: 'detail',
-    note: '"Quickly" is never defined. Your current median is 4h 12m.',
-  },
-  {
-    id: 'pb-7',
-    text: 'Reply to everything within the hour, including 1-star reviews.',
-    page: 'p.11',
-    verdict: 'conflict',
-    note: 'Contradicts the human-approval rule on p.3 — approval cannot be guaranteed inside an hour.',
-  },
-  {
-    id: 'pb-8',
-    text: 'Post replies on Yelp.',
-    page: 'p.9',
-    verdict: 'blocked',
-    note: "Yelp isn't connected, and agent replies aren't permitted on your current plan.",
-  },
-  {
-    id: 'pb-9',
-    text: 'The agent may offer a 10% service credit to resolve a complaint.',
-    page: 'p.12',
-    verdict: 'pushback',
-    note:
-      'Buildable, but offering compensation in public invites others to ask for the same — '
-      + 'and you cannot retract it.',
-  },
-]
+  'Nine rules, and I can build all nine as written — reply within the hour on Google and '
+  + 'Facebook (p.2), use the template library wherever one fits (p.3), hold 1- and 2-star '
+  + 'replies for a human to approve (p.3), and keep billing disputes out of public replies '
+  + '(p.5).'
 
 /* ─── Second beat: the templates the playbook leans on ───────────────────────── */
 
-/** Counts the verdicts above back to the user, then picks what to dig into first. */
+/** Hands off to the one beat that found something. */
 export const PLAYBOOK_TRIAGE_PARAGRAPH =
-  'Four of those I can build exactly as written. Four need a decision from you, and there\'s '
-  + "a fifth I'd raise even though you didn't ask. I'll come back to all of them. First the "
-  + 'templates, because the whole playbook leans on them.'
+  'One thing does stop me, though — the templates. The whole playbook leans on them, so '
+  + 'let me check those before anything else.'
 
 export const TEMPLATES_HEADER_LABEL = 'Checking the templates your playbook depends on'
 
@@ -122,7 +38,11 @@ export const TEMPLATES_STEPS = [
   'Compared language coverage against your actual review mix',
 ]
 
-export const TEMPLATES_SUMMARY = 'Your document names six templates. Here is what actually exists:'
+export const TEMPLATES_SUMMARY =
+  'Your document names six templates. Two are already in use — 5-star thank you, which is '
+  + '62% of your replies, and Service recovery at 9%. A third is effectively there under '
+  + 'another name: your "Shipping delay" is 80% the same body as the "Late delivery '
+  + 'apology" the document asks for, so I would reuse it rather than duplicate it.'
 
 /** `renamed` = the same template is already there under a different name. */
 export type PlaybookTemplateStatus = 'exists' | 'renamed' | 'missing'
@@ -170,13 +90,12 @@ export const PLAYBOOK_TEMPLATES: PlaybookTemplate[] = [
   },
 ]
 
-export const TEMPLATES_CALLOUT =
-  'Two exist, one is effectively already there under a different name, and three do not '
-  + 'exist. As written, the playbook cannot run until they do.'
-
 export const TEMPLATES_FOOTNOTE =
-  'Worth knowing why the Spanish one matters more than it looks: 8% of your reviews are '
-  + 'already in Spanish, and nothing in your library answers them.'
+  'The other three do not exist and nothing in the library is close: Billing dispute '
+  + 'holding reply, Clinical concern acknowledgement, and Spanish 5-star thank you. As '
+  + 'written the playbook cannot run until they do — and the Spanish one matters more than '
+  + 'it looks, because 8% of your reviews are already in Spanish and nothing you have '
+  + 'answers them.'
 
 /* ─── The one decision the templates beat leaves open ────────────────────────── */
 
@@ -275,13 +194,11 @@ export const PLAYBOOK_TEMPLATE_DRAFTS: PlaybookTemplateDraft[] = [
   },
 ]
 
-export const TEMPLATE_DRAFTS_CALLOUT =
-  'Four templates saved to your library as drafts. Nothing posts until you activate them, '
-  + 'and you can edit any of them without touching the agent.'
-
 export const TEMPLATE_DRAFTS_FOOTNOTE =
-  'One of them leans on {{escalation_owner}}, which nothing in your document fills in. That '
-  + 'brings us to the open questions.'
+  'All four are saved to your library as drafts — nothing posts until you activate them, '
+  + 'and you can edit any of them without touching the agent. One leans on '
+  + '{{escalation_owner}}, which nothing in your document fills in. That brings us to the '
+  + 'open questions.'
 
 /**
  * Plan-card overrides for the playbook path — it cites the document rather than the account.
@@ -289,7 +206,7 @@ export const TEMPLATE_DRAFTS_FOOTNOTE =
  * questions the user chose to answer.
  */
 export const PLAYBOOK_PLAN_CARD = {
-  meta: '14 pages · 9 stated rules · 4 templates created · 5 open questions raised',
+  meta: '14 pages · 9 stated rules · 4 templates created · 1 question raised',
   description:
     'Built from your playbook, with every line cited back to the page it came from — '
     + 'including what I left out and what still needs deciding.',
