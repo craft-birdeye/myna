@@ -9,6 +9,8 @@ import {
   EmptyState,
   FilesModal,
   FilterPanel,
+  GhostwriterQuestionCard,
+  GhostwriterSimulation,
   HeaderSearchField,
   Icon,
   INFO_CARD_LAYOUT,
@@ -91,6 +93,8 @@ import {
   GhostwriterPlaybookTemplatesBlock,
   GhostwriterReadingBlock,
   GhostwriterTemplateDraftsBlock,
+  GhostwriterSimulationFixBlock,
+  GhostwriterSimulationRunBlock,
   GhostwriterSourcesBlock,
   GhostwriterSpamScreenBlock,
 } from '../components/AgentActivityHeader/GhostwriterReadingBlock'
@@ -107,8 +111,8 @@ import {
   LEARNING_INTRO_PARAGRAPH,
   READING_INTRO_PARAGRAPH,
   PLAN_INTRO_PARAGRAPH,
+  SIMULATION_INTRO_PARAGRAPH,
   SOURCES_NEXT_PARAGRAPH,
-  SPAM_DIGEST_QUESTION,
 } from '../data/ghostwriterReadingBlock'
 import agentEmptyState from '../assets/agent-empty-state.svg'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
@@ -1668,6 +1672,10 @@ const REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS = [
   'It changes the whole shape of the build:',
 ]
 
+/** Asked by the mode card — the intro paragraphs lead into it but never state it. */
+const REVIEW_RESPONSE_MODE_QUESTION =
+  'Should it keep running as reviews come in, or clear your backlog once and stop?'
+
 const REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS = [
   {
     id: 'live',
@@ -2680,34 +2688,32 @@ function ReviewChoicePills({
   )
 }
 
+/**
+ * Any "pick one of these" moment in the Ghostwriter thread. Delegates to the shared
+ * `GhostwriterQuestionCard` so the options ask and the free-text ask look the same — these
+ * used to be loose stacked buttons with the question floating above them as a paragraph.
+ */
 function ReviewModeChoiceCards({
+  question,
   onPick,
   options = REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS,
 }: {
+  question: string
   onPick: (title: string) => void
   /** Defaults to the live-vs-backlog pair; the playbook flow passes its own set. */
   options?: readonly { id: string; title: string; description: string; recommended?: boolean }[]
 }) {
-  /* No `w-full` on the wrapper: with `ml-3xl` it resolved to parent-width + 32px and
-     overflowed the scroll container, clipping the cards' right edge. In this flex column
-     the default stretch already fills the parent minus the margin. */
   return (
-    <div className="agent-build-fade ml-3xl mt-sm flex max-w-full flex-col gap-sm">
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          onClick={() => onPick(option.title)}
-          className="flex flex-col items-start gap-xs rounded-lg border border-border bg-surface px-lg py-md text-left transition-colors hover:bg-surface-hover"
-        >
-          <span className="flex flex-wrap items-center gap-sm">
-            <span className="text-body text-text-primary">{option.title}</span>
-            {option.recommended ? <Chip label="Recommended" variant="info" /> : null}
-          </span>
-          <span className="text-small text-text-secondary">{option.description}</span>
-        </button>
-      ))}
-    </div>
+    <GhostwriterQuestionCard
+      question={question}
+      options={options.map((o) => ({
+        id: o.id,
+        label: o.title,
+        description: o.description,
+        recommended: o.recommended,
+      }))}
+      onPick={onPick}
+    />
   )
 }
 
@@ -3106,6 +3112,9 @@ function ReviewResponseThread({
   const [spamScreenDone, setSpamScreenDone] = useState(false)
   const [digestQuestionDone, setDigestQuestionDone] = useState(false)
   const [digestEmail, setDigestEmail] = useState('')
+  const [simIntroDone, setSimIntroDone] = useState(false)
+  const [simRunDone, setSimRunDone] = useState(false)
+  const [simFixDone, setSimFixDone] = useState(false)
   const [planIntroDone, setPlanIntroDone] = useState(false)
   const [sourcesAnswer, setSourcesAnswer] = useState('')
   /** none → happy path; attempting/failed → Facebook-only stream-fail demo; ok → recovered via Retry. */
@@ -3475,14 +3484,13 @@ function ReviewResponseThread({
           {playbookTriageDone && (
             <GhostwriterPlaybookTemplatesBlock onComplete={() => setPlaybookTemplatesDone(true)} />
           )}
-          {playbookTemplatesDone && (
-            <ReviewAgentReply
-              paragraphs={[PLAYBOOK_TEMPLATE_QUESTION]}
-              onComplete={() => setTemplateQuestionDone(true)}
+          {/* Question sits in the card header — a paragraph above it said it twice. */}
+          {playbookTemplatesDone && !templateAnswer && (
+            <ReviewModeChoiceCards
+              question={PLAYBOOK_TEMPLATE_QUESTION}
+              options={PLAYBOOK_TEMPLATE_OPTIONS}
+              onPick={setTemplateAnswer}
             />
-          )}
-          {templateQuestionDone && !templateAnswer && (
-            <ReviewModeChoiceCards options={PLAYBOOK_TEMPLATE_OPTIONS} onPick={setTemplateAnswer} />
           )}
           {templateAnswer && <UserBubble>{templateAnswer}</UserBubble>}
           {/* Only "draft all four" earns the drafting beat; the other two answers go
@@ -3539,7 +3547,10 @@ function ReviewResponseThread({
             />
           )}
           {explorationModeChoice && introDone && !modeAnswer && (
-            <ReviewModeChoiceCards onPick={setModeAnswer} />
+            <ReviewModeChoiceCards
+              question={REVIEW_RESPONSE_MODE_QUESTION}
+              onPick={setModeAnswer}
+            />
           )}
         </>
       )}
@@ -3576,17 +3587,26 @@ function ReviewResponseThread({
           {sourcesTeaserDone && (
             <GhostwriterSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
           )}
-          {spamScreenDone && (
-            <ReviewAgentReply
-              paragraphs={[SPAM_DIGEST_QUESTION]}
-              onComplete={() => setDigestQuestionDone(true)}
-            />
-          )}
-          {digestQuestionDone && !digestEmail && (
+          {/* The question lives in the card's header — a paragraph above it said it twice. */}
+          {spamScreenDone && !digestEmail && (
             <GhostwriterDigestPrompt onSubmit={setDigestEmail} />
           )}
           {digestEmail && <UserBubble>{digestEmail}</UserBubble>}
+          {/* The plan is only shown once the agent has tested the draft, found what breaks,
+              fixed it and re-run the suite — so what you open has already survived a pass. */}
           {digestEmail && (
+            <ReviewAgentReply
+              paragraphs={[SIMULATION_INTRO_PARAGRAPH]}
+              onComplete={() => setSimIntroDone(true)}
+            />
+          )}
+          {simIntroDone && (
+            <GhostwriterSimulationRunBlock onComplete={() => setSimRunDone(true)} />
+          )}
+          {simRunDone && (
+            <GhostwriterSimulationFixBlock onComplete={() => setSimFixDone(true)} />
+          )}
+          {simFixDone && (
             <ReviewAgentReply
               paragraphs={[PLAN_INTRO_PARAGRAPH]}
               onComplete={() => setPlanIntroDone(true)}
@@ -9724,9 +9744,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
         openCreateWorkflow()
         return
       }
-      setCreateGhostwriterTab(tabId)
-      // Without this the canvas stays mounted over the tab you switched to.
+      // Without this the canvas stays mounted over the tab you switched to. Close it *first*:
+      // closeCreateWorkflow() resets the tab to Ghostwriter, so selecting before closing
+      // would be overwritten and every Workflow → Tools/Knowledge/Simulation switch would
+      // land back on Ghostwriter.
       if (createWorkflowOpen) closeCreateWorkflow()
+      setCreateGhostwriterTab(tabId)
     }
 
     return (
@@ -9924,7 +9947,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   ? createSideTab === 'manual'
                     ? 'px-0 py-0'
                     : 'min-h-0'
-                  : 'justify-center px-lg'
+                  /* Simulation lays out its own centred column + gutter. */
+                  : createGhostwriterTab === 'simulation'
+                    ? 'px-0'
+                    : 'justify-center px-lg'
               } ${
                 /* Ghostwriter / Tools / Knowledge / Simulation get a white content area;
                    Workflow keeps the canvas. White sits here rather than on the section so
@@ -10077,6 +10103,18 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   onSelectFromLibrary={(_templateId) => { setShowCreateFlow(false); onEditAgent?.('') }}
                 />
               )}
+              {/* Simulation is built; Tools / Knowledge are still placeholders. Kept mounted
+                  across tab switches so generated tests and their results aren't thrown away
+                  by a trip to Workflow and back. */}
+              {isExplorationGhostwriterShell && (
+                <GhostwriterSimulation
+                  active={createGhostwriterTab === 'simulation'}
+                  onNotify={(message) => {
+                    setToastMessage(message)
+                    setToastVisible(true)
+                  }}
+                />
+              )}
               {isExplorationGhostwriterShell &&
                 createGhostwriterTab !== 'ghostwriter' &&
                 (isSimulationNav ? (
@@ -10116,7 +10154,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     <GhostwriterEmptyTabState tabId={createGhostwriterTab} />
                   )
                 ) : (
-                  createGhostwriterTab !== 'workflow' && (
+                  createGhostwriterTab !== 'workflow' &&
+                  createGhostwriterTab !== 'simulation' && (
                     <div className="min-h-0 flex-1 w-full bg-surface" aria-hidden />
                   )
                 ))}

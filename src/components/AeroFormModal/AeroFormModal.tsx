@@ -23,6 +23,8 @@ export function AeroFormModal({
   onLearnMore,
   learnMoreLabel = 'Learn more',
   titleAction,
+  footerLeft,
+  hideCancel = false,
   children,
 }: AeroFormModalProps) {
   return createPortal(
@@ -101,7 +103,11 @@ export function AeroFormModal({
           {children}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-md px-2xl pb-2xl pt-md">
+        <div className="flex shrink-0 items-center justify-between gap-md px-2xl pb-2xl pt-md">
+          {/* Empty span keeps the actions hard right when there's no left-hand content. */}
+          {footerLeft ? <div className="min-w-0 text-small text-text-tertiary">{footerLeft}</div> : <span />}
+          <div className="flex shrink-0 items-center gap-md">
+          {!hideCancel && (
           <button
             type="button"
             onClick={onClose}
@@ -109,6 +115,7 @@ export function AeroFormModal({
           >
             {cancelLabel}
           </button>
+          )}
           <button
             type="button"
             disabled={primaryDisabled}
@@ -121,6 +128,7 @@ export function AeroFormModal({
           >
             {primaryLabel}
           </button>
+          </div>
         </div>
       </div>
     </div>,

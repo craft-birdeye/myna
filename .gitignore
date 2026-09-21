@@ -18,3 +18,4 @@ dummy/
 
 # Local graphify knowledge graph (regenerated via `graphify update`/`cluster-only` — see CLAUDE.md §18)
 graphify-out/
+.env*

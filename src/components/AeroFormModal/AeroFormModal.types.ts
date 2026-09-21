@@ -22,4 +22,8 @@ export interface AeroFormModalProps {
   learnMoreLabel?: string
   /** Rendered next to the close button, e.g. a "Restore default" link. */
   titleAction?: ReactNode
+  /** Bottom-left of the footer, opposite the actions — e.g. a step counter or a hint. */
+  footerLeft?: ReactNode
+  /** Hide the Cancel text button when the close X is the only dismiss the design wants. */
+  hideCancel?: boolean
 }
