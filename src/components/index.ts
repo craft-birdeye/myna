@@ -31,6 +31,8 @@ export type {
   SimulationPhase,
   SimulationRow,
 } from './GhostwriterSimulation/GhostwriterSimulation.types'
+export { GhostwriterConnectionsTab } from './GhostwriterConnectionsTab/GhostwriterConnectionsTab'
+export { GhostwriterKnowledgeTab } from './GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'
 export { ReviewCardBody, StarRating } from './ReviewCard/ReviewCard'

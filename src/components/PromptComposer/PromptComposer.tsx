@@ -20,17 +20,18 @@ export function PromptComposer({
   onFocus,
   onClick,
   className = '',
+  flushTop = false,
 }: PromptComposerProps) {
   const [focused, setFocused] = useState(false)
   const canSend = value.trim().length > 0 && !sendDisabled && !disabled
 
   return (
     <div
-      className={
+      className={(
         focused
-          ? `ai-gradient-border rounded-xl p-px ${className}`.trim()
-          : `rounded-xl border border-border bg-surface p-px shadow-card ${className}`.trim()
-      }
+          ? `ai-gradient-border ${flushTop ? 'rounded-b-xl rounded-t-none' : 'rounded-xl'} p-px ${className}`
+          : `${flushTop ? 'rounded-b-xl rounded-t-none' : 'rounded-xl'} border border-border bg-surface p-px ${flushTop ? '' : 'shadow-card'} ${className}`
+      ).trim()}
       onFocus={() => setFocused(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
@@ -38,7 +39,10 @@ export function PromptComposer({
         }
       }}
     >
-      <div className="flex flex-col gap-md rounded-xl bg-surface px-lg py-md">
+      <div
+        className={`flex flex-col gap-md bg-surface px-lg py-md ${flushTop ? 'rounded-b-xl' : 'rounded-xl'}`}
+      >
+
         {attachments.length > 0 && (
           <div className="flex flex-wrap items-center gap-sm">
             {attachments.map((item) => (

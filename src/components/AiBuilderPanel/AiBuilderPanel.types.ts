@@ -1,3 +1,13 @@
+import type { ReactNode } from 'react'
+
+export interface AiBuilderPanelSession {
+  id: string
+  /** Generic chat summary — for now a canned label rather than a real recap. */
+  title: string
+  /** Already-formatted date + time (e.g. "Today, 2:41 PM"). */
+  timestamp: string
+}
+
 export interface AiBuilderPanelProps {
   onClose: () => void
   /** Opens the full-page Create with AI experience (View agent builder to return). */
@@ -29,4 +39,15 @@ export interface AiBuilderPanelProps {
   openProcedureName?: string | null
   /** Optional CTA when the knowledge-base tip banner link is clicked. */
   onGoToKnowledge?: () => void
+  /**
+   * Renders inside the panel's body (below the header, above nothing else — this fully
+   * replaces the greeting/suggestions/trail/composer) instead of the default content. Used to
+   * dock an arbitrary live conversation in the exact same panel chrome as every other workflow.
+   */
+  content?: ReactNode
+  /** Renders a "sessions" list icon to the left of expand/close — a header-anchored dropdown
+   *  of past chats (generic summary + timestamp for now, no real switching). Omit to hide it. */
+  sessions?: AiBuilderPanelSession[]
+  /** Fired when a session row is picked. Optional — the dropdown just closes without it. */
+  onSelectSession?: (id: string) => void
 }

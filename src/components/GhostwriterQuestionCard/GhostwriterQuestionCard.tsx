@@ -33,6 +33,7 @@ export function GhostwriterQuestionCard({
   skipLabel = 'Skip',
   onClose,
   className = '',
+  dividers = true,
 }: GhostwriterQuestionCardProps) {
   const [text, setText] = useState('')
   const typed = text.trim().length > 0
@@ -99,7 +100,9 @@ export function GhostwriterQuestionCard({
           key={option.id}
           type="button"
           onClick={() => onPick?.(option.label)}
-          className="flex w-full items-start gap-md border-t border-border px-lg py-md text-left transition-colors hover:bg-surface-hover"
+          className={`flex w-full items-start gap-md px-lg py-md text-left transition-colors hover:bg-surface-hover ${
+            dividers ? 'border-t border-border' : ''
+          } ${i === (options?.length ?? 0) - 1 && !freeText ? '!pb-lg' : ''}`}
         >
           <span className="mt-[1px] flex size-6 shrink-0 items-center justify-center rounded-sm bg-surface-l2 text-small text-text-secondary">
             {i + 1}
@@ -119,7 +122,7 @@ export function GhostwriterQuestionCard({
       {/* Free text — the only answer when there are no options, the escape when there are.
           The trailing button is Skip until something is typed, then the real submit. */}
       {freeText && (
-        <div className="flex items-center gap-md border-t border-border px-lg py-sm">
+        <div className={`flex items-center gap-md px-lg py-sm !pb-md ${dividers ? 'border-t border-border' : ''}`}>
           <span className="flex size-6 shrink-0 items-center justify-center rounded-sm bg-surface-l2 text-text-icon" aria-hidden>
             <Icon name="edit" size={14} />
           </span>

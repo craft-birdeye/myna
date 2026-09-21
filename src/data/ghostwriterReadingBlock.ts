@@ -110,7 +110,7 @@ export const SPAM_SCREEN_FOOTNOTE =
 
 export const SPAM_DIGEST_QUESTION = 'Where should the daily spam digest go?'
 export const SPAM_DIGEST_PLACEHOLDER = 'name@company.com'
-export const SPAM_DIGEST_CTA = 'Use this address'
+export const SPAM_DIGEST_CTA = 'Submit'
 
 /* ─── Fifth beat: testing the draft before the plan is shown ────────────────── */
 

@@ -514,10 +514,13 @@ body {
   to   { background-position: -120% 0; }
 }
 
-/* Header settles into a grey pill once every step has landed. */
+/* Header settles into a grey pill once every step has landed. flex-start (not center): a
+   label long enough to wrap keeps its icon and chevron pinned to the first line instead of
+   drifting to the middle of the whole two-line block. */
 .gw-activity-head {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
+  text-align: left;
   gap: 8px;
   padding: 4px 10px;
   border: none;

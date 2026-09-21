@@ -100,7 +100,7 @@ export function GhostwriterPlanPanel({ onClose }: GhostwriterPlanPanelProps) {
       : PLAN_PANEL_COPY.emptyNotes
 
   return (
-    <aside className="gw-flow__in relative flex h-full w-[460px] shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+    <aside className="gw-flow__in relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       {/* Header */}
       <div className="flex shrink-0 items-start gap-sm border-b border-border px-lg py-md">
         <span className="mt-[2px] flex size-5 shrink-0 items-center justify-center text-[#7c3aed]" aria-hidden>

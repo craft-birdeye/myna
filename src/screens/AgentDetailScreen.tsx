@@ -99,6 +99,8 @@ import {
   GhostwriterSpamScreenBlock,
 } from '../components/AgentActivityHeader/GhostwriterReadingBlock'
 import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
+import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsTab/GhostwriterConnectionsTab'
+import { GhostwriterKnowledgeTab } from '../components/GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 import { GhostwriterOpenQuestions } from '../components/AgentActivityHeader/GhostwriterOpenQuestions'
 import { OPEN_QUESTIONS_INTRO, OPEN_QUESTIONS_LOCKED_IN } from '../data/ghostwriterOpenQuestions'
 import {
@@ -108,11 +110,24 @@ import {
   PLAYBOOK_TRIAGE_PARAGRAPH,
 } from '../data/ghostwriterPlaybookBlock'
 import {
+  LEARNING_HEADER_LABEL,
   LEARNING_INTRO_PARAGRAPH,
-  READING_INTRO_PARAGRAPH,
+  LEARNING_SUMMARY,
+  PLAN_CARD,
   PLAN_INTRO_PARAGRAPH,
+  READING_HEADER_LABEL,
+  READING_INTRO_PARAGRAPH,
+  READING_SUMMARY,
   SIMULATION_INTRO_PARAGRAPH,
+  SIM_FIX_HEADER_LABEL,
+  SIM_FIX_SUMMARY,
+  SIM_RUN_HEADER_LABEL,
+  SIM_RUN_SUMMARY,
+  SOURCES_HEADER_LABEL,
   SOURCES_NEXT_PARAGRAPH,
+  SOURCES_SUMMARY,
+  SPAM_SCREEN_HEADER_LABEL,
+  SPAM_SCREEN_SUMMARY,
 } from '../data/ghostwriterReadingBlock'
 import agentEmptyState from '../assets/agent-empty-state.svg'
 import { useSubtleScrollbar } from '../hooks/useSubtleScrollbar'
@@ -1696,8 +1711,40 @@ const REVIEW_RESPONSE_EXPLORATION_AFTER_MODE_PARAGRAPHS = [
   'First: which review sources should it watch — Google, Facebook, Yelp, or all of them?',
 ]
 
+/** Ghostwriter: asked once "Create agent" has been used. */
+const GHOSTWRITER_POST_CREATE_QUESTION = 'What do you want to do next?'
+const GHOSTWRITER_POST_CREATE_OPTIONS = [
+  {
+    id: 'simulate',
+    title: 'Generate test cases and run it',
+    description: 'Runs the agent against 100 scripted scenarios and shows what breaks.',
+  },
+  {
+    id: 'activate',
+    title: 'Activate agent',
+    description: 'Turns it on now — you can still test cases later from the Simulation tab.',
+  },
+] as const
+
+/** Asked once every scripted test case has been revealed, before any fixing starts. */
+const GHOSTWRITER_RESOLVE_QUESTION = 'Do you want to resolve all of these test cases?'
+const GHOSTWRITER_RESOLVE_OPTIONS = [
+  { id: 'yes', title: 'Yes', description: 'Fix every failing case now.' },
+  { id: 'skip', title: 'Skip it', description: 'Leave them as-is — revisit anytime from the Simulation tab.' },
+] as const
+
 const GHOSTWRITER_SHELL_TABS: Tab[] = [
   { id: 'ghostwriter', label: 'Ghostwriter' },
+  { id: 'workflow', label: 'Workflow' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'knowledge', label: 'Knowledge' },
+  { id: 'simulation', label: 'Simulation' },
+]
+
+/** Ghostwriter (polish) nav: the chat and the canvas are combined into one "Workflow" tab
+ *  (chat runs in the docked "Edit with AI" panel next to the canvas), so there's no separate
+ *  Ghostwriter tab. */
+const GHOSTWRITER_POLISH_SHELL_TABS: Tab[] = [
   { id: 'workflow', label: 'Workflow' },
   { id: 'tools', label: 'Tools' },
   { id: 'knowledge', label: 'Knowledge' },
@@ -2697,11 +2744,15 @@ function ReviewModeChoiceCards({
   question,
   onPick,
   options = REVIEW_RESPONSE_EXPLORATION_MODE_OPTIONS,
+  className,
+  dividers,
 }: {
   question: string
   onPick: (title: string) => void
   /** Defaults to the live-vs-backlog pair; the playbook flow passes its own set. */
   options?: readonly { id: string; title: string; description: string; recommended?: boolean }[]
+  className?: string
+  dividers?: boolean
 }) {
   return (
     <GhostwriterQuestionCard
@@ -2713,6 +2764,8 @@ function ReviewModeChoiceCards({
         recommended: o.recommended,
       }))}
       onPick={onPick}
+      className={className}
+      dividers={dividers}
     />
   )
 }
@@ -2846,6 +2899,9 @@ function TestCaseResultCard({
   onFix,
   onSuppressAutoScroll,
   autoFix = false,
+  showFixButton = true,
+  typed = false,
+  startDelayMs = 0,
 }: {
   tc: ReviewResponseTestCase
   fixedIds: Set<number>
@@ -2857,11 +2913,46 @@ function TestCaseResultCard({
   /** RA sim 2 only: starts the Fix flow itself as soon as this card appears, instead of
    *  waiting for the "Fix" button to be clicked. */
   autoFix?: boolean
+  /** Ghostwriter's "resolve all?" flow fixes every case together, so a per-card Fix button
+   *  would just be a dead click while that's pending — omit it there. */
+  showFixButton?: boolean
+  /** Reveal the card's own text the same way the rest of the chat streams in — one character
+   *  at a time — instead of popping in fully-formed. Off by default for non-chat usage (the
+   *  Simulation tab's detail pane), which shows an already-decided case, not a live reveal. */
+  typed?: boolean
+  /** Chat usage only: staggers same-tick reveals (several failing cases can become visible in
+   *  one step of the reveal schedule) so they type in one after another instead of all at once. */
+  startDelayMs?: number
 }) {
   const passing = isTestCasePassing(tc, fixedIds)
   const fixed = !tc.passed && fixedIds.has(tc.id)
   const [fixingStep, setFixingStep] = useState<number | null>(null)
   const isFixing = fixingStep !== null && !fixed
+
+  const introParagraphs = useMemo(
+    () => [getUserInstructions(tc), ...getExpectedBehaviorBullets(tc).map((b) => `• ${b}`)],
+    [tc],
+  )
+  // Staggers same-tick reveals so several newly-failing cases type in one after another
+  // rather than all starting (and popping in) at once.
+  const [delayElapsed, setDelayElapsed] = useState(!typed || startDelayMs <= 0)
+  useEffect(() => {
+    if (!typed || startDelayMs <= 0) return
+    const timer = setTimeout(() => setDelayElapsed(true), startDelayMs)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const [introDone, setIntroDone] = useState(!typed)
+  const [failureTyped, setFailureTyped] = useState(!typed)
+  const { typed: typedFailureReason, done: failureReasonDone } = useTypewriter(
+    !typed || introDone ? tc.failureReason ?? '' : '',
+    { charsPerTick: 10, intervalMs: 10 },
+  )
+
+  useEffect(() => {
+    if (typed && introDone && !failureReasonDone) return
+    if (failureReasonDone) setFailureTyped(true)
+  }, [typed, introDone, failureReasonDone])
 
   useEffect(() => {
     if (fixingStep === null) return
@@ -2884,11 +2975,11 @@ function TestCaseResultCard({
   }, [fixingStep])
 
   useEffect(() => {
-    if (autoFix && !tc.passed && !fixed && fixingStep === null) {
+    if (autoFix && !tc.passed && !fixed && fixingStep === null && failureTyped) {
       setFixingStep(0)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoFix])
+  }, [autoFix, failureTyped])
 
   return (
     <div className="agent-build-fade flex flex-col gap-sm rounded-md border border-border bg-surface p-lg">
@@ -2899,28 +2990,43 @@ function TestCaseResultCard({
         </div>
         <Chip label={fixed ? 'Fixed' : passing ? 'Passed' : 'Failed'} variant={passing ? 'success' : 'danger'} />
       </div>
-      <p className="text-body text-text-secondary">{getUserInstructions(tc)}</p>
-      <ul className="list-disc space-y-1 pl-lg text-body text-text-secondary">
-        {getExpectedBehaviorBullets(tc).map((bullet, i) => (
-          <li key={i}>{bullet}</li>
-        ))}
-      </ul>
-      <div className="rounded-md border border-border p-lg">
-        <ReviewCardBody review={buildSimulationReviewCard(tc)} />
-        {!tc.reply && (
-          <div className="mt-lg flex items-center gap-xs text-small text-text-tertiary">
-            <Icon name="pause_circle" size={16} className="shrink-0" />
-            No public reply — held for human review per the expected behavior above.
-          </div>
-        )}
-      </div>
-      {!tc.passed &&
+      {typed ? (
+        delayElapsed && (
+          <TypedParagraphs
+            fast
+            paragraphs={introParagraphs}
+            className="text-body text-text-secondary"
+            onDone={() => setIntroDone(true)}
+          />
+        )
+      ) : (
+        <>
+          <p className="text-body text-text-secondary">{getUserInstructions(tc)}</p>
+          <ul className="list-disc space-y-1 pl-lg text-body text-text-secondary">
+            {getExpectedBehaviorBullets(tc).map((bullet, i) => (
+              <li key={i}>{bullet}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {introDone && (
+        <div className="agent-build-fade rounded-md border border-border p-lg">
+          <ReviewCardBody review={buildSimulationReviewCard(tc)} />
+          {!tc.reply && (
+            <div className="mt-lg flex items-center gap-xs text-small text-text-tertiary">
+              <Icon name="pause_circle" size={16} className="shrink-0" />
+              No public reply — held for human review per the expected behavior above.
+            </div>
+          )}
+        </div>
+      )}
+      {introDone && !tc.passed &&
         (fixed ? (
-          <div className="rounded-md bg-chip-success-bg p-md text-body text-chip-success-text">
+          <div className="agent-build-fade rounded-md bg-chip-success-bg p-md text-body text-chip-success-text">
             Fixed — this test case now passes.
           </div>
         ) : isFixing ? (
-          <div className="flex flex-col gap-xs rounded-md bg-surface-l2 p-md text-body text-text-secondary">
+          <div className="agent-build-fade flex flex-col gap-xs rounded-md bg-surface-l2 p-md text-body text-text-secondary">
             {FIX_STEPS.map((label, i) => {
               if (i > fixingStep!) return null
               const done = i < fixingStep!
@@ -2938,20 +3044,22 @@ function TestCaseResultCard({
           </div>
         ) : (
           <>
-            <div className="rounded-md bg-chip-danger-bg p-md text-body text-chip-danger-text">
+            <div className="agent-build-fade rounded-md bg-chip-danger-bg p-md text-body text-chip-danger-text">
               <span className="text-body-strong">What happened: </span>
-              {tc.failureReason}
+              {typed ? typedFailureReason : tc.failureReason}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                onSuppressAutoScroll?.()
-                setFixingStep(0)
-              }}
-              className="flex h-9 w-fit items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
-            >
-              Fix
-            </button>
+            {showFixButton && failureTyped && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSuppressAutoScroll?.()
+                  setFixingStep(0)
+                }}
+                className="agent-build-fade flex h-9 w-fit items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
+              >
+                Fix
+              </button>
+            )}
           </>
         ))}
     </div>
@@ -2970,6 +3078,8 @@ function SimulateTestCasesResults({
   running,
   onSuppressAutoScroll,
   autoFix = false,
+  showFixButton = true,
+  typed = false,
 }: {
   fixedIds: Set<number>
   onFix?: (id: number) => void
@@ -2980,6 +3090,11 @@ function SimulateTestCasesResults({
   onSuppressAutoScroll?: () => void
   /** RA sim 2 only: each failed case auto-runs its Fix flow as soon as it's revealed. */
   autoFix?: boolean
+  /** Ghostwriter's "resolve all?" flow fixes every case together — no per-card button there. */
+  showFixButton?: boolean
+  /** Stream each newly-revealed case's text in like the rest of the chat, staggering same-tick
+   *  batches so they type in one after another instead of popping in together. */
+  typed?: boolean
 }) {
   const failedRevealed = REVIEW_RESPONSE_TEST_CASES.filter((tc) => tc.id <= revealedCount && !tc.passed)
   const stillFailing = failedRevealed.filter((tc) => !fixedIds.has(tc.id))
@@ -2997,7 +3112,7 @@ function SimulateTestCasesResults({
         <Chip label={`${stillFailing.length} failed`} variant="danger" />
         {running && <Icon name="progress_activity" size={16} className="animate-spin text-text-tertiary" />}
       </div>
-      {failedRevealed.map((tc) => (
+      {failedRevealed.map((tc, i) => (
         <TestCaseResultCard
           key={tc.id}
           tc={tc}
@@ -3005,6 +3120,9 @@ function SimulateTestCasesResults({
           onFix={onFix}
           onSuppressAutoScroll={onSuppressAutoScroll}
           autoFix={autoFix}
+          showFixButton={showFixButton}
+          typed={typed}
+          startDelayMs={i * 350}
         />
       ))}
       {!running && failedRevealed.length > 0 && stillFailing.length === 0 && (
@@ -3045,6 +3163,7 @@ function ReviewResponseThread({
   simulationRevealedCount,
   simulationRunning,
   autoSimulate = false,
+  onAnswerCardOpenChange,
 }: {
   onDraftReady?: (name: string | null) => void
   onCreateAgent?: (options?: { publish?: boolean }) => void
@@ -3088,6 +3207,9 @@ function ReviewResponseThread({
   /** RA sim 2 only: auto-fires "Simulate test cases" once the build finishes, and auto-runs
    *  the Fix flow on each failed case as it's revealed — no pill/button clicks needed. */
   autoSimulate?: boolean
+  /** Tells the parent an answer-choice card is docked above the composer right now, so it can
+   *  collapse the padding between them into one seamless box instead of leaving a gap. */
+  onAnswerCardOpenChange?: (open: boolean) => void
 }) {
   const [introDone, setIntroDone] = useState(false)
   /** Playbook opening: requirements → triage reply → templates check → the cadence question. */
@@ -3112,10 +3234,21 @@ function ReviewResponseThread({
   const [spamScreenDone, setSpamScreenDone] = useState(false)
   const [digestQuestionDone, setDigestQuestionDone] = useState(false)
   const [digestEmail, setDigestEmail] = useState('')
+  useEffect(() => {
+    onAnswerCardOpenChange?.(
+      (explorationModeChoice && introDone && !modeAnswer) || (spamScreenDone && !digestEmail)
+    )
+    return () => onAnswerCardOpenChange?.(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [explorationModeChoice, introDone, modeAnswer, spamScreenDone, digestEmail])
   const [simIntroDone, setSimIntroDone] = useState(false)
   const [simRunDone, setSimRunDone] = useState(false)
   const [simFixDone, setSimFixDone] = useState(false)
   const [planIntroDone, setPlanIntroDone] = useState(false)
+  /** Ghostwriter: asked once "Create agent" has been used ("Generate test cases and run it"
+   *  vs "Activate agent"), then — if simulating — whether to resolve the failures it finds. */
+  const [postCreateAnswer, setPostCreateAnswer] = useState('')
+  const [resolveAnswer, setResolveAnswer] = useState('')
   const [sourcesAnswer, setSourcesAnswer] = useState('')
   /** none → happy path; attempting/failed → Facebook-only stream-fail demo; ok → recovered via Retry. */
   const [sourcesStreamPhase, setSourcesStreamPhase] = useState<'none' | 'attempting' | 'failed' | 'ok'>('none')
@@ -3337,6 +3470,28 @@ function ReviewResponseThread({
       }
     }
 
+    // Ghostwriter: the agent goes and reads the account instead of asking about sources/
+    // templates/tone, so its own beats (reading/learning/spam/simulation/plan) replace the
+    // sourcesAnswer-driven ones below — otherwise "Create agent" would hand the AI Builder
+    // panel only the first two turns and look like a brand-new chat.
+    if (explorationModeChoice && modeAnswer && ghostwriterPolish) {
+      if (readingIntroDone) pushAgent([READING_INTRO_PARAGRAPH])
+      if (readingBlockDone) trail.push({ kind: 'thoughts', label: READING_HEADER_LABEL, text: READING_SUMMARY })
+      if (learningIntroDone) pushAgent([LEARNING_INTRO_PARAGRAPH])
+      if (learningBlockDone) trail.push({ kind: 'thoughts', label: LEARNING_HEADER_LABEL, text: LEARNING_SUMMARY })
+      if (sourcesBlockDone) trail.push({ kind: 'thoughts', label: SOURCES_HEADER_LABEL, text: SOURCES_SUMMARY })
+      if (sourcesTeaserDone) pushAgent([SOURCES_NEXT_PARAGRAPH])
+      if (spamScreenDone) trail.push({ kind: 'thoughts', label: SPAM_SCREEN_HEADER_LABEL, text: SPAM_SCREEN_SUMMARY })
+      if (digestEmail) trail.push({ kind: 'user', text: digestEmail })
+      if (simIntroDone) pushAgent([SIMULATION_INTRO_PARAGRAPH])
+      if (simRunDone) trail.push({ kind: 'thoughts', label: SIM_RUN_HEADER_LABEL, text: SIM_RUN_SUMMARY })
+      if (simFixDone) trail.push({ kind: 'thoughts', label: SIM_FIX_HEADER_LABEL, text: SIM_FIX_SUMMARY })
+      if (planIntroDone) pushAgent([PLAN_INTRO_PARAGRAPH])
+      if (planIntroDone) {
+        trail.push({ kind: 'draft', title: PLAN_CARD.title, description: PLAN_CARD.description })
+      }
+    }
+
     if (sourcesAnswer) {
       trail.push({ kind: 'user', text: sourcesAnswer })
       if (sourcesStreamPhase === 'none' || sourcesStreamPhase === 'ok') {
@@ -3403,9 +3558,22 @@ function ReviewResponseThread({
   }, [
     onTrailChange,
     explorationModeChoice,
+    ghostwriterPolish,
     modeAnswer,
     modeFollowReady,
     modeFollowDone,
+    readingIntroDone,
+    readingBlockDone,
+    learningIntroDone,
+    learningBlockDone,
+    sourcesBlockDone,
+    sourcesTeaserDone,
+    spamScreenDone,
+    digestEmail,
+    simIntroDone,
+    simRunDone,
+    simFixDone,
+    planIntroDone,
     sourcesAnswer,
     sourcesStreamPhase,
     sourcesReplyReady,
@@ -3546,11 +3714,22 @@ function ReviewResponseThread({
               className="ml-3xl"
             />
           )}
+          {/* Docked to the bottom of the scroll viewport (sticky), right where the composer
+              sits below it, instead of scrolling away as a separate card in the chat history.
+              Cancels the card's own inline chat-indent margins (`ml-3xl mt-sm`). */}
           {explorationModeChoice && introDone && !modeAnswer && (
-            <ReviewModeChoiceCards
-              question={REVIEW_RESPONSE_MODE_QUESTION}
-              onPick={setModeAnswer}
-            />
+            <>
+              {/* Consumes the slack when the conversation so far is shorter than the
+                  viewport, so the card below sits flush above the composer either way —
+                  sticky alone only pins it once the thread actually overflows and scrolls. */}
+              <div className="flex-1" aria-hidden />
+              <ReviewModeChoiceCards
+                question={REVIEW_RESPONSE_MODE_QUESTION}
+                onPick={setModeAnswer}
+                className="sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card"
+                dividers={false}
+              />
+            </>
           )}
         </>
       )}
@@ -3587,9 +3766,17 @@ function ReviewResponseThread({
           {sourcesTeaserDone && (
             <GhostwriterSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
           )}
-          {/* The question lives in the card's header — a paragraph above it said it twice. */}
+          {/* The question lives in the card's header — a paragraph above it said it twice.
+              Docked above the composer the same way as the mode-choice card above. */}
           {spamScreenDone && !digestEmail && (
-            <GhostwriterDigestPrompt onSubmit={setDigestEmail} />
+            <>
+              <div className="flex-1" aria-hidden />
+              <GhostwriterDigestPrompt
+                onSubmit={setDigestEmail}
+                className="sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card"
+                dividers={false}
+              />
+            </>
           )}
           {digestEmail && <UserBubble>{digestEmail}</UserBubble>}
           {/* The plan is only shown once the agent has tested the draft, found what breaks,
@@ -3619,6 +3806,61 @@ function ReviewResponseThread({
               planOpen={planOpen}
               agentCreated={agentCreated}
             />
+          )}
+          {agentCreated && !postCreateAnswer && (
+            <>
+              <div className="flex-1" aria-hidden />
+              <ReviewModeChoiceCards
+                question={GHOSTWRITER_POST_CREATE_QUESTION}
+                onPick={(label) => {
+                  setPostCreateAnswer(label)
+                  if (label === GHOSTWRITER_POST_CREATE_OPTIONS[0].title) onSimulateTestCases?.()
+                }}
+                options={GHOSTWRITER_POST_CREATE_OPTIONS}
+                className="sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card"
+                dividers={false}
+              />
+            </>
+          )}
+          {postCreateAnswer && <UserBubble>{postCreateAnswer}</UserBubble>}
+          {postCreateAnswer === GHOSTWRITER_POST_CREATE_OPTIONS[1].title && (
+            <ReviewAgentReply
+              paragraphs={["Done — it's live now and will start replying as new reviews come in."]}
+            />
+          )}
+          {postCreateAnswer === GHOSTWRITER_POST_CREATE_OPTIONS[0].title && (
+            <>
+              <SimulateTestCasesResults
+                fixedIds={fixedTestCaseIds ?? EMPTY_FIXED_IDS}
+                onFix={onFixTestCase}
+                revealedCount={simulationRevealedCount ?? 0}
+                running={simulationRunning ?? false}
+                onSuppressAutoScroll={suppressAutoScrollBriefly}
+                autoFix={resolveAnswer === GHOSTWRITER_RESOLVE_OPTIONS[0].title}
+                showFixButton={false}
+                typed
+              />
+              {simulationRevealedCount === REVIEW_RESPONSE_TEST_CASE_TOTAL &&
+                simulationRunning === false &&
+                !resolveAnswer && (
+                  <>
+                    <div className="flex-1" aria-hidden />
+                    <ReviewModeChoiceCards
+                      question={GHOSTWRITER_RESOLVE_QUESTION}
+                      onPick={setResolveAnswer}
+                      options={GHOSTWRITER_RESOLVE_OPTIONS}
+                      className="sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card"
+                      dividers={false}
+                    />
+                  </>
+                )}
+              {resolveAnswer && <UserBubble>{resolveAnswer}</UserBubble>}
+              {resolveAnswer === GHOSTWRITER_RESOLVE_OPTIONS[1].title && (
+                <ReviewAgentReply
+                  paragraphs={['No problem — you can fix these anytime from the Simulation tab.']}
+                />
+              )}
+            </>
           )}
         </>
       )}
@@ -5844,6 +6086,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   simulationRevealedCount,
   simulationRunning,
   autoSimulate = false,
+  onGhostwriterCombinedSend,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -5890,6 +6133,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   onInlineProcedureOpenChange?: (open: boolean) => void
   /** Mirrors the canvas RHS procedure so closing the panel clears the chat pressed state. */
   canvasProcedureId?: string | null
+  /** Ghostwriter's combined flow — see `HealthcareFrontdeskCreateAgentLive`'s matching prop. */
+  onGhostwriterCombinedSend?: (text: string) => void
 }) {
   const isReminderFlow = variant === 'reminder'
   const resolvedHistoryChat =
@@ -5948,6 +6193,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
       simulationRevealedCount={simulationRevealedCount}
       simulationRunning={simulationRunning}
       autoSimulate={autoSimulate}
+      onGhostwriterCombinedSend={onGhostwriterCombinedSend}
     />
   )
 }
@@ -5982,6 +6228,7 @@ function HealthcareFrontdeskCreateAgentLive({
   simulationRevealedCount,
   simulationRunning,
   autoSimulate = false,
+  onGhostwriterCombinedSend,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -6015,6 +6262,10 @@ function HealthcareFrontdeskCreateAgentLive({
   simulationRevealedCount?: number
   autoSimulate?: boolean
   simulationRunning?: boolean
+  /** Ghostwriter's combined flow: Send hands the typed prompt to the parent (which opens the
+   *  canvas + real "Edit with AI" panel and re-mounts this same conversation inside it) instead
+   *  of continuing here — this instance is about to be replaced. */
+  onGhostwriterCombinedSend?: (text: string) => void
 }) {
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
@@ -6150,6 +6401,9 @@ function HealthcareFrontdeskCreateAgentLive({
   const [followUp, setFollowUp] = useState('')
   /** Ghostwriter: the plan review panel, opened from the plan card. */
   const [planPanelOpen, setPlanPanelOpen] = useState(false)
+  /** True while an answer-choice card is docked above the composer — collapses the padding
+   *  between the thread and the composer so the two read as one seamless box. */
+  const [answerCardOpen, setAnswerCardOpen] = useState(false)
   const [reviewComposerFill, setReviewComposerFill] = useState<string | null>(null)
   const [reviewPendingAnswer, setReviewPendingAnswer] = useState('')
   const [reviewThreadBusy, setReviewThreadBusy] = useState(true)
@@ -6598,6 +6852,13 @@ function HealthcareFrontdeskCreateAgentLive({
       onCreateFromScratch()
       return
     }
+    // Ghostwriter's combined flow: hand the prompt to the parent, which opens the canvas +
+    // real "Edit with AI" panel and re-mounts this same conversation inside it (via
+    // autoStart + initialPrompt) instead of continuing here.
+    if (ghostwriterPolish && onGhostwriterCombinedSend) {
+      onGhostwriterCombinedSend(text)
+      return
+    }
     setPrompt(text)
     setSubmitted(true)
     onSubmittedChange?.(true)
@@ -6761,7 +7022,14 @@ function HealthcareFrontdeskCreateAgentLive({
 
   if (submitted) {
     return (
-      <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
+      <div
+        className={`relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch ${
+          // The right gutter reserves room for a procedure-preview sibling panel that
+          // never opens in Ghostwriter's narrow docked "Edit with AI" panel — without this,
+          // it reads as uneven left/right padding around the composer.
+          ghostwriterPolish ? '' : 'pr-sm'
+        }`}
+      >
         {/* Rendered last in the DOM but ordered after the chat column — a flex sibling, so
             opening it squeezes the conversation rather than covering it. */}
         <style>{`
@@ -6800,7 +7068,10 @@ function HealthcareFrontdeskCreateAgentLive({
             without needing to sit after it in the DOM — it's a flex sibling, so opening it
             squeezes the conversation rather than covering it. */}
         {ghostwriterPolish && planPanelOpen && (
-          <div className="order-1 flex h-full min-h-0 shrink-0 py-lg">
+          // Docked "Edit with AI" panel: there's no room for the plan panel and the chat
+          // column side by side, so the plan panel takes the full width (the chat column
+          // below is hidden, not unmounted, so its scroll position survives closing the plan).
+          <div className="flex h-full min-h-0 w-full flex-1 py-lg">
             <GhostwriterPlanPanel onClose={() => setPlanPanelOpen(false)} />
           </div>
         )}
@@ -6811,13 +7082,17 @@ function HealthcareFrontdeskCreateAgentLive({
         <div
           className={`flex h-full min-h-0 w-full min-w-0 flex-col ${
             explorationModeChoice ? 'max-w-[56rem]' : 'max-w-[720px]'
-          }`}
+          } ${ghostwriterPolish && planPanelOpen ? 'hidden' : ''}`}
         >
         <div
           ref={threadScrollRef}
-          className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
+          className={`scrollbar-none min-h-0 flex-1 overflow-y-auto ${ghostwriterPolish ? 'px-sm' : ''}`}
         >
-        <div ref={threadRef} className="flex flex-col pb-md">
+        {/* min-h-full: sticky alone only pins the card during scroll — it won't push the card
+            down when the conversation so far is shorter than the viewport. Giving this flex
+            column a floor height equal to the scrollport lets the card's mt-auto (below)
+            consume the slack and sit flush above the composer either way. */}
+        <div ref={threadRef} className={`flex min-h-full flex-col ${answerCardOpen ? '' : 'pb-md'}`}>
         {pageTitle && !hideHeaderBack && (
           <div className="sticky top-0 z-20 mb-md flex h-16 shrink-0 items-center gap-sm bg-surface">
             {!hideHeaderBack && (
@@ -6906,6 +7181,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   simulationRevealedCount={simulationRevealedCount}
                   simulationRunning={simulationRunning}
                   autoSimulate={autoSimulate}
+                  onAnswerCardOpenChange={setAnswerCardOpen}
                 />
               ) : isReminderFlow ? (
                 <>
@@ -7555,7 +7831,11 @@ function HealthcareFrontdeskCreateAgentLive({
         </div>
         </div>
 
-        <div className="z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm pt-md">
+        <div
+          className={`z-10 flex shrink-0 flex-col gap-md bg-surface pb-sm ${answerCardOpen ? '' : 'pt-md'} ${
+            ghostwriterPolish ? 'px-sm' : ''
+          }`}
+        >
           {threadOverflowing && isScrolledUp && (
             <div className="flex justify-center">
               <button
@@ -7656,6 +7936,7 @@ function HealthcareFrontdeskCreateAgentLive({
               else if (option === 'media-library') setMediaLibraryOpen(true)
               else if (option === 'files') setFilesModalOpen(true)
             }}
+            flushTop={answerCardOpen}
           />
         </div>
         </div>
@@ -7862,7 +8143,11 @@ function HealthcareFrontdeskCreateAgentLive({
     }
 
     return (
-      <div className="relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch pr-sm">
+      <div
+        className={`relative flex h-full min-h-0 w-full flex-1 justify-center gap-xl self-stretch ${
+          ghostwriterPolish ? '' : 'pr-sm'
+        }`}
+      >
         <div className="flex h-full min-h-0 w-full min-w-0 max-w-[720px] flex-col">
           <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden pb-md">
             <div className="flex items-start gap-sm">
@@ -8863,10 +9148,18 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
    *   'workflow' → the agent/template's prebuilt canvas
    */
   const [ghostwriterDirect, setGhostwriterDirect] = useState<null | 'scratch' | 'workflow'>(null)
+  /** Ghostwriter: Send on the landing composer opens the canvas + real "Edit with AI" panel
+   *  right away instead of a full-page chat — the same scripted conversation runs docked in
+   *  that panel while the canvas builds up behind it. True from Send until the agent is created. */
+  const [ghostwriterCombinedFlow, setGhostwriterCombinedFlow] = useState(false)
+  /** The prompt captured from the landing composer's Send, replayed (via autoStart) in the
+   *  fresh conversation instance mounted inside the canvas's "Edit with AI" panel. */
+  const [ghostwriterCombinedPrompt, setGhostwriterCombinedPrompt] = useState('')
   /** Opens the Ghostwriter shell straight on the Workflow tab, no Create-with-AI panel. */
   const openGhostwriterWorkflow = (name: string, mode: 'scratch' | 'workflow') => {
     setCreateDraftAgentName(name)
     setGhostwriterDirect(mode)
+    setGhostwriterCombinedFlow(false)
     setCreateGhostwriterTab('workflow')
     setShowCreateFlow(true)
     openCreateWorkflow({ withAiPanel: false })
@@ -8875,6 +9168,31 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   /** Ghostwriter: until "Create agent" is pressed the build isn't real yet, so the other
    *  tabs stay disabled and the top bar carries no Run test / Activate / kebab. */
   const [ghostwriterAgentCreated, setGhostwriterAgentCreated] = useState(false)
+  /** Ghostwriter: covers the canvas with placeholder node shapes for a beat right after
+   *  "Create agent" — the swap from empty scratch canvas to the fully-built workflow felt
+   *  instant/jarring otherwise. */
+  const [ghostwriterCanvasSkeleton, setGhostwriterCanvasSkeleton] = useState(false)
+  const ghostwriterCanvasSkeletonTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (ghostwriterCanvasSkeletonTimerRef.current) clearTimeout(ghostwriterCanvasSkeletonTimerRef.current)
+  }, [])
+  /** Ghostwriter post-create "Generate test cases and run it" — reveals the same 100 scripted
+   *  test cases RA sim 2 uses, on the same schedule, but doesn't auto-fix; that only starts
+   *  once the user answers the "resolve all?" question. Owned here (not in `ReviewResponseThread`)
+   *  so the Simulation tab can show the identical live progress. */
+  const [ghostwriterSimStarted, setGhostwriterSimStarted] = useState(false)
+  const [ghostwriterSimStepIndex, setGhostwriterSimStepIndex] = useState(0)
+  const [ghostwriterSimFixedIds, setGhostwriterSimFixedIds] = useState<Set<number>>(new Set())
+  const ghostwriterSimRevealDone = ghostwriterSimStepIndex >= SIMULATION_REVEAL_SCHEDULE.length - 1
+  const ghostwriterSimRevealedCount = ghostwriterSimStarted
+    ? SIMULATION_REVEAL_SCHEDULE[Math.min(ghostwriterSimStepIndex, SIMULATION_REVEAL_SCHEDULE.length - 1)]
+    : 0
+  const ghostwriterSimRunning = ghostwriterSimStarted && !ghostwriterSimRevealDone
+  useEffect(() => {
+    if (!ghostwriterSimStarted || ghostwriterSimRevealDone) return
+    const timer = setTimeout(() => setGhostwriterSimStepIndex((i) => i + 1), SIMULATION_REVEAL_STEP_MS)
+    return () => clearTimeout(timer)
+  }, [ghostwriterSimStarted, ghostwriterSimStepIndex, ghostwriterSimRevealDone])
   /** Ghostwriter top bar owns the CTAs; this hands the click to AgentBuilder's handler. */
   const [ghostwriterHeaderAction, setGhostwriterHeaderAction] =
     useState<{ type: string; nonce: number } | null>(null)
@@ -8902,6 +9220,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateSideTab('ai')
     setCreateFlowSubmitted(false)
     setGhostwriterDirect(null)
+    setGhostwriterCombinedFlow(false)
     setCreateGhostwriterTab('ghostwriter')
     setTestCasesSimulated(false)
     setSimulationStepIndex(0)
@@ -8920,6 +9239,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateWorkflowMounted(false)
     setCreateFlowSubmitted(false)
     setGhostwriterDirect(null)
+    setGhostwriterCombinedFlow(false)
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
@@ -8959,10 +9279,18 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
    *  than leaving the create flow for the agent instance screen. */
   const handleGhostwriterCreateAgent = () => {
     setGhostwriterAgentCreated(true)
+    // Keep the docked AI panel on the LIVE conversation that led here (not the static trail
+    // replay) — the post-create "What do you want to do next?" question and the simulation
+    // run that follows it are interactive, and the replay has no turn kind for that.
     setCreateGhostwriterTab('workflow')
-    openCreateWorkflow({ withAiPanel: false })
+    openCreateWorkflow({ withAiPanel: true })
     setToastMessage('Agent has been created')
     setToastVisible(true)
+    // Cover the canvas with placeholder node shapes briefly before the real, fully-built
+    // workflow appears — an instant swap from the empty scratch canvas read as a glitch.
+    setGhostwriterCanvasSkeleton(true)
+    if (ghostwriterCanvasSkeletonTimerRef.current) clearTimeout(ghostwriterCanvasSkeletonTimerRef.current)
+    ghostwriterCanvasSkeletonTimerRef.current = setTimeout(() => setGhostwriterCanvasSkeleton(false), 6000)
   }
 
   const handleCreateAgentSuccess = (options?: { publish?: boolean; chat?: ChatHistoryTranscript }) => {
@@ -9676,10 +10004,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     const historyChat = chatHistorySelectedId
       ? chatHistoryItems.find((item) => item.id === chatHistorySelectedId) ?? null
       : null
-    const createWorkflowAgentName = (isGhostwriterPolish && ghostwriterDirect === 'scratch' && isReviewResponse)
+    const createWorkflowAgentName = (isGhostwriterPolish && (ghostwriterDirect === 'scratch' || ghostwriterCombinedFlow) && isReviewResponse && !ghostwriterAgentCreated)
       /* "Create from scratch" — this exact name is what makes the editor start empty
          (isReviewsScratchCreateName in WorkflowEditorScreen) instead of loading the
-         prebuilt Review response workflow. */
+         prebuilt Review response workflow. Combined-flow (Send from the landing composer)
+         starts the same way — empty canvas that fills in once the agent is actually created
+         (`!ghostwriterAgentCreated` below), at which point it should show the real, fully
+         built workflow instead of staying on the empty scratch canvas. */
       ? 'Review response agent 1'
       : createDraftAgentName
       ?? (isReviewResponse
@@ -9700,7 +10031,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     /** Ghostwriter keeps its tab bar pinned on every tab — including Workflow, where the
      *  other variants drop the header and let the canvas go full-bleed. */
     const ghostwriterShellPinned =
-      isGhostwriterPolish && (createFlowSubmitted || createAiFullscreen || ghostwriterDirect !== null)
+      isGhostwriterPolish &&
+      (createFlowSubmitted || createAiFullscreen || ghostwriterDirect !== null || ghostwriterCombinedFlow)
     const showGhostwriterShellHeader =
       ((createFlowSubmitted || createAiFullscreen) && !createWorkflowOpen) || ghostwriterShellPinned
     const isExplorationGhostwriterShell =
@@ -9728,17 +10060,21 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       isSimulationNav && testCasesSimulated
         ? REVIEW_RESPONSE_TEST_CASES.filter((tc) => tc.id <= simulationRevealedCount)
         : []
-    const ghostwriterShellTabs = isSimulationNav
-      ? GHOSTWRITER_SHELL_TABS.map((tab) =>
-          tab.id === 'simulation' && simulationTestCases.length > 0
-            ? { ...tab, count: simulationTestCases.length }
-            : tab,
-        )
-      : GHOSTWRITER_SHELL_TABS
+    const ghostwriterShellTabs = isGhostwriterPolish
+      ? GHOSTWRITER_POLISH_SHELL_TABS
+      : isSimulationNav
+        ? GHOSTWRITER_SHELL_TABS.map((tab) =>
+            tab.id === 'simulation' && simulationTestCases.length > 0
+              ? { ...tab, count: simulationTestCases.length }
+              : tab,
+          )
+        : GHOSTWRITER_SHELL_TABS
 
     const handleExplorationShellTabChange = (tabId: string) => {
-      // Belt and braces: the tab is already `disabled`, but never act on it either.
-      if (isGhostwriterPolish && !ghostwriterAgentCreated && tabId !== 'ghostwriter') return
+      // Belt and braces: the tab is already `disabled`, but never act on it either. Tools/
+      // Knowledge are answerable before the agent exists (account-level, not per-draft) —
+      // only Simulation stays gated pre-creation.
+      if (isGhostwriterPolish && !ghostwriterAgentCreated && tabId === 'simulation') return
       if (tabId === 'workflow' && !isSimulationNav) {
         setCreateGhostwriterTab('workflow')
         openCreateWorkflow()
@@ -9750,6 +10086,160 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       // land back on Ghostwriter.
       if (createWorkflowOpen) closeCreateWorkflow()
       setCreateGhostwriterTab(tabId)
+    }
+
+    /** Ghostwriter's combined flow mounts a second instance of this same conversation inside
+     *  the canvas's real "Edit with AI" panel (see the shared canvas section below) — the
+     *  landing composer's own instance hands off its typed prompt via `onGhostwriterCombinedSend`
+     *  and this second instance replays it on mount (`autoStart` + `initialPrompt`) so it picks
+     *  up exactly where Send left off. */
+    const renderGhostwriterChatPane = (options: { forCombinedPanel?: boolean } = {}) => {
+      const forCombinedPanel = options.forCombinedPanel ?? false
+      return (
+        <HealthcareFrontdeskCreateAgentScreen
+          key={forCombinedPanel ? `${createFlowKey}-gw-combined` : createFlowKey}
+          onBack={() => {
+            if (chatHistorySelectedId) selectAllChats()
+            else setShowCreateFlow(false)
+          }}
+          onSubmittedChange={(submitted) => {
+            setCreateFlowSubmitted(submitted)
+            if (submitted) setCreateGhostwriterTab('ghostwriter')
+          }}
+          onGhostwriterCombinedSend={
+            forCombinedPanel
+              ? undefined
+              : (text) => {
+                  // Ghostwriter: Send opens the canvas + real "Edit with AI" panel and
+                  // re-mounts this same conversation inside it (combined "Workflow" tab),
+                  // instead of continuing full-page.
+                  setGhostwriterCombinedPrompt(text)
+                  setCreateGhostwriterTab('workflow')
+                  setGhostwriterCombinedFlow(true)
+                  openCreateWorkflow({ withAiPanel: true })
+                }
+          }
+          pageTitle={
+            showGhostwriterShellHeader
+              ? undefined
+              : showReviewsCreateInnerTitle
+                ? reviewsCreateInnerTitle ?? undefined
+                : undefined
+          }
+          hideHeaderBack={showGhostwriterShellHeader || isReviewsCreateFlow}
+          explorationModeChoice={isResponseAgentsExplorationNav(navId) && isReviewResponse}
+          ghostwriterPolish={isGhostwriterPolish}
+          onCreateFromScratch={() => {
+            // Ghostwriter keeps the shell (top bar + tabs) and opens the canvas
+            // on the Workflow tab, rather than leaving for the standalone editor.
+            if (isGhostwriterPolish) {
+              openGhostwriterWorkflow('Review response agent 1', 'scratch')
+              return
+            }
+            if (isReviewResponse) {
+              setShowCreateFlow(false)
+              onEditAgent?.('Review response agent 1')
+              return
+            }
+            if (isReviewGeneration) {
+              setShowCreateFlow(false)
+              onEditAgent?.('Review generation agent 1')
+              return
+            }
+            setShowSetupWizard(true)
+          }}
+          onSelectFromLibrary={(templateId) => {
+            if (isReviewResponse) {
+              const card = REVIEW_RESPONSE_CREATE_CARDS.find((c) => c.id === templateId)
+              const name = card?.title ?? 'Review response agent'
+              // Ghostwriter keeps the shell and lands on Workflow with the
+              // template's prebuilt canvas, rather than leaving for the editor.
+              if (isGhostwriterPolish) {
+                openGhostwriterWorkflow(name, 'workflow')
+                return
+              }
+              setShowCreateFlow(false)
+              onEditAgent?.(name)
+              return
+            }
+            if (isReviewGeneration) {
+              const card = REVIEW_GENERATION_CREATE_CARDS.find((c) => c.id === templateId)
+              setShowCreateFlow(false)
+              onEditAgent?.(card?.title ?? 'Review generation agent')
+              return
+            }
+            setShowCreateFlow(false)
+            onEditAgent?.('')
+          }}
+          onCreateAgent={isGhostwriterPolish ? handleGhostwriterCreateAgent : handleCreateAgentSuccess}
+          agentCreated={ghostwriterAgentCreated}
+          onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
+          libraryCards={
+            isReminder
+              ? REMINDER_CREATE_CARDS
+              : isReviewResponse
+                ? REVIEW_RESPONSE_CREATE_CARDS
+                : isReviewGeneration
+                  ? REVIEW_GENERATION_CREATE_CARDS
+                  : undefined
+          }
+          initialPrompt={
+            forCombinedPanel
+              ? ghostwriterCombinedPrompt
+              : historyChat?.prompt
+                ?? (isReminder
+                  ? REMINDER_CREATE_PROMPT
+                  : isReviewResponse
+                    ? REVIEW_RESPONSE_CREATE_PROMPT
+                    : isReviewGeneration
+                      ? REVIEW_GENERATION_CREATE_PROMPT
+                      : JOHN_CREATE_PROMPT)
+          }
+          autoStart={forCombinedPanel}
+          historyChatId={forCombinedPanel ? undefined : chatHistorySelectedId}
+          historyChat={forCombinedPanel ? undefined : historyChat}
+          fromScratchLabel={(isReminder || isReviewResponse || isReviewGeneration) ? 'Create from scratch' : 'Setup manually'}
+          variant={
+            isReminder
+              ? 'reminder'
+              : isReviewResponse
+                ? 'review-response'
+                : isReviewGeneration
+                  ? 'review-generation'
+                  : 'frontdesk'
+          }
+          workflowVisible={createWorkflowOpen}
+          compactGreeting={(createWorkflowOpen || createAiFullscreen) && !createFlowSubmitted}
+          onDraftReady={setCreateDraftAgentName}
+          onCanvasProcedureChange={isReminder ? setCanvasProcedureId : undefined}
+          onInlineProcedureOpenChange={setInlineProcedureOpen}
+          canvasProcedureId={isReminder ? canvasProcedureId : undefined}
+          fixedTestCaseIds={
+            isSimulationNav ? fixedTestCaseIds : isGhostwriterPolish ? ghostwriterSimFixedIds : undefined
+          }
+          onSimulateTestCases={
+            isSimulationNav
+              ? () => setTestCasesSimulated(true)
+              : isGhostwriterPolish
+                ? () => setGhostwriterSimStarted(true)
+                : undefined
+          }
+          onFixTestCase={
+            isSimulationNav
+              ? (id) => setFixedTestCaseIds((prev) => new Set(prev).add(id))
+              : isGhostwriterPolish
+                ? (id) => setGhostwriterSimFixedIds((prev) => new Set(prev).add(id))
+                : undefined
+          }
+          simulationRevealedCount={
+            isSimulationNav ? simulationRevealedCount : isGhostwriterPolish ? ghostwriterSimRevealedCount : undefined
+          }
+          simulationRunning={
+            isSimulationNav ? simulationRunning : isGhostwriterPolish ? ghostwriterSimRunning : undefined
+          }
+          autoSimulate={isAutoSimulation}
+        />
+      )
     }
 
     return (
@@ -9780,16 +10270,25 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               <CreateAiGhostwriterTabbedShell
                 carded
                 title={ghostwriterShellTitle}
-                activeTab={createGhostwriterTab}
+                activeTab={
+                  // Ghostwriter (polish) has no "Ghostwriter" tab of its own — the chat runs
+                  // docked on Workflow, so the internal 'ghostwriter' state should still show
+                  // Workflow as selected rather than leaving every tab unhighlighted.
+                  isGhostwriterPolish && createGhostwriterTab === 'ghostwriter'
+                    ? 'workflow'
+                    : createGhostwriterTab
+                }
                 onTabChange={handleExplorationShellTabChange}
+                tabs={ghostwriterShellTabs}
                 onBack={() => {
                   if (chatHistorySelectedId) selectAllChats()
                   else setShowCreateFlow(false)
                 }}
                 disabledTabIds={
-                  ghostwriterAgentCreated
-                    ? undefined
-                    : ['workflow', 'tools', 'knowledge', 'simulation']
+                  // Tools/Knowledge are answerable before the agent exists — connections and
+                  // knowledge docs live at the account level, not on this one draft. Simulation
+                  // stays gated: there's nothing built yet to run test cases against.
+                  ghostwriterAgentCreated ? undefined : ['simulation']
                 }
                 right={
                   !ghostwriterAgentCreated ? (
@@ -9891,7 +10390,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               <CreateAiGhostwriterTabbedShell
                 carded={isGhostwriterPolish}
                 title={ghostwriterShellTitle}
-                activeTab={createGhostwriterTab}
+                activeTab={
+                  isGhostwriterPolish && createGhostwriterTab === 'ghostwriter'
+                    ? 'workflow'
+                    : createGhostwriterTab
+                }
                 onTabChange={handleExplorationShellTabChange}
                 tabs={ghostwriterShellTabs}
                 onBack={() => {
@@ -9979,120 +10482,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         : 'flex h-full min-h-0 w-full min-w-0 justify-center'
                   }
                 >
-                  <HealthcareFrontdeskCreateAgentScreen
-                    key={createFlowKey}
-                    onBack={() => {
-                      if (chatHistorySelectedId) selectAllChats()
-                      else setShowCreateFlow(false)
-                    }}
-                    onSubmittedChange={(submitted) => {
-                      setCreateFlowSubmitted(submitted)
-                      if (submitted) setCreateGhostwriterTab('ghostwriter')
-                    }}
-                    pageTitle={
-                      showGhostwriterShellHeader
-                        ? undefined
-                        : showReviewsCreateInnerTitle
-                          ? reviewsCreateInnerTitle ?? undefined
-                          : undefined
-                    }
-                    hideHeaderBack={showGhostwriterShellHeader || isReviewsCreateFlow}
-                    explorationModeChoice={isResponseAgentsExplorationNav(navId) && isReviewResponse}
-                    ghostwriterPolish={isGhostwriterPolish}
-                    onCreateFromScratch={() => {
-                      // Ghostwriter keeps the shell (top bar + tabs) and opens the canvas
-                      // on the Workflow tab, rather than leaving for the standalone editor.
-                      if (isGhostwriterPolish) {
-                        openGhostwriterWorkflow('Review response agent 1', 'scratch')
-                        return
-                      }
-                      if (isReviewResponse) {
-                        setShowCreateFlow(false)
-                        onEditAgent?.('Review response agent 1')
-                        return
-                      }
-                      if (isReviewGeneration) {
-                        setShowCreateFlow(false)
-                        onEditAgent?.('Review generation agent 1')
-                        return
-                      }
-                      setShowSetupWizard(true)
-                    }}
-                    onSelectFromLibrary={(templateId) => {
-                      if (isReviewResponse) {
-                        const card = REVIEW_RESPONSE_CREATE_CARDS.find((c) => c.id === templateId)
-                        const name = card?.title ?? 'Review response agent'
-                        // Ghostwriter keeps the shell and lands on Workflow with the
-                        // template's prebuilt canvas, rather than leaving for the editor.
-                        if (isGhostwriterPolish) {
-                          openGhostwriterWorkflow(name, 'workflow')
-                          return
-                        }
-                        setShowCreateFlow(false)
-                        onEditAgent?.(name)
-                        return
-                      }
-                      if (isReviewGeneration) {
-                        const card = REVIEW_GENERATION_CREATE_CARDS.find((c) => c.id === templateId)
-                        setShowCreateFlow(false)
-                        onEditAgent?.(card?.title ?? 'Review generation agent')
-                        return
-                      }
-                      setShowCreateFlow(false)
-                      onEditAgent?.('')
-                    }}
-                    onCreateAgent={isGhostwriterPolish ? handleGhostwriterCreateAgent : handleCreateAgentSuccess}
-                    agentCreated={ghostwriterAgentCreated}
-                    onViewWorkflow={(isReminder || isFrontdesk || isReviewResponse || isReviewGeneration) ? openCreateWorkflow : undefined}
-                    libraryCards={
-                      isReminder
-                        ? REMINDER_CREATE_CARDS
-                        : isReviewResponse
-                          ? REVIEW_RESPONSE_CREATE_CARDS
-                          : isReviewGeneration
-                            ? REVIEW_GENERATION_CREATE_CARDS
-                            : undefined
-                    }
-                    initialPrompt={
-                      historyChat?.prompt
-                      ?? (isReminder
-                        ? REMINDER_CREATE_PROMPT
-                        : isReviewResponse
-                          ? REVIEW_RESPONSE_CREATE_PROMPT
-                          : isReviewGeneration
-                            ? REVIEW_GENERATION_CREATE_PROMPT
-                            : JOHN_CREATE_PROMPT)
-                    }
-                    autoStart={false}
-                    historyChatId={chatHistorySelectedId}
-                    historyChat={historyChat}
-                    fromScratchLabel={(isReminder || isReviewResponse || isReviewGeneration) ? 'Create from scratch' : 'Setup manually'}
-                    variant={
-                      isReminder
-                        ? 'reminder'
-                        : isReviewResponse
-                          ? 'review-response'
-                          : isReviewGeneration
-                            ? 'review-generation'
-                            : 'frontdesk'
-                    }
-                    workflowVisible={createWorkflowOpen}
-                    compactGreeting={(createWorkflowOpen || createAiFullscreen) && !createFlowSubmitted}
-                    onDraftReady={setCreateDraftAgentName}
-                    onCanvasProcedureChange={isReminder ? setCanvasProcedureId : undefined}
-                    onInlineProcedureOpenChange={setInlineProcedureOpen}
-                    canvasProcedureId={isReminder ? canvasProcedureId : undefined}
-                    fixedTestCaseIds={isSimulationNav ? fixedTestCaseIds : undefined}
-                    onSimulateTestCases={isSimulationNav ? () => setTestCasesSimulated(true) : undefined}
-                    onFixTestCase={
-                      isSimulationNav
-                        ? (id) => setFixedTestCaseIds((prev) => new Set(prev).add(id))
-                        : undefined
-                    }
-                    simulationRevealedCount={isSimulationNav ? simulationRevealedCount : undefined}
-                    simulationRunning={isSimulationNav ? simulationRunning : undefined}
-                    autoSimulate={isAutoSimulation}
-                  />
+                  {renderGhostwriterChatPane()}
                 </div>
               ) : (
                 <CreateAgentEmptyState
@@ -10231,9 +10621,59 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     : null
                 }
                 onPreviewProcedureIdChange={isReminder ? setCanvasProcedureId : undefined}
+                suppressTriggerAutoOpen={isGhostwriterPolish && ghostwriterCombinedFlow}
+                aiBuilderPanelContent={
+                  isGhostwriterPolish && ghostwriterCombinedFlow
+                    ? renderGhostwriterChatPane({ forCombinedPanel: true })
+                    : undefined
+                }
+                /* The empty-scratch → fully-built workflow swap (on "Create agent") must not
+                   remount AgentBuilder here — that would blow away the docked live chat above. */
+                preserveCanvasIdentity={isGhostwriterPolish && ghostwriterCombinedFlow}
               />
+              {isGhostwriterPolish && ghostwriterCanvasSkeleton && (
+                <div
+                  className="absolute inset-0 z-20 flex items-start justify-center overflow-hidden bg-[#f6f7f9] pl-[420px] pt-3xl"
+                  aria-hidden
+                >
+                  <div className="flex w-full max-w-[380px] flex-col items-center">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="flex w-full flex-col items-center">
+                        {i > 0 && <div className="h-lg w-px bg-border" />}
+                        <div className="h-7 w-28 animate-pulse rounded-full bg-surface-selected" />
+                        <div className="mt-sm h-[72px] w-full animate-pulse rounded-lg bg-surface-selected" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
+
+          {/* Create agent CTA (agent list view) flow: Tools/Knowledge are account-level, not
+              specific to this draft, so they replace the chat+canvas full-bleed rather than
+              sharing space with either. Simulation joins them once "Generate test cases and
+              run it" has actually been picked in chat — same live test cases/preview as
+              RA sim 2's tab, not the disconnected empty-state generator. */}
+          {isGhostwriterPolish &&
+            ghostwriterShellPinned &&
+            (createGhostwriterTab === 'tools' ||
+              createGhostwriterTab === 'knowledge' ||
+              (createGhostwriterTab === 'simulation' && ghostwriterSimStarted)) && (
+              <div className="absolute inset-0 top-[56px] z-20 flex min-h-0 flex-col overflow-hidden">
+                {createGhostwriterTab === 'tools' ? (
+                  <GhostwriterConnectionsTab />
+                ) : createGhostwriterTab === 'knowledge' ? (
+                  <GhostwriterKnowledgeTab />
+                ) : (
+                  <GhostwriterSimulationTab
+                    testCases={REVIEW_RESPONSE_TEST_CASES.filter((tc) => tc.id <= ghostwriterSimRevealedCount)}
+                    fixedIds={ghostwriterSimFixedIds}
+                    onFixTestCase={(id) => setGhostwriterSimFixedIds((prev) => new Set(prev).add(id))}
+                  />
+                )}
+              </div>
+            )}
         </div>
         </div>
       </div>

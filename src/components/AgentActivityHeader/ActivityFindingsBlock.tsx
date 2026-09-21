@@ -136,14 +136,14 @@ export function ActivityFindingsBlock({
           aria-expanded={!collapsed}
           className="gw-activity-head gw-activity-head--flush self-start"
         >
-          <span className="flex size-4 shrink-0 items-center justify-center">
+          <span className="mt-[3px] flex size-4 shrink-0 items-center justify-center">
             {allStepsDone ? <RingCheck /> : <ActivityDots />}
           </span>
           <span className={`text-body ${allStepsDone ? 'text-text-primary' : 'gw-shimmer'}`}>
             {label}
           </span>
           <span
-            className={`gw-activity-chevron${collapsed ? ' gw-activity-chevron--collapsed' : ''}`}
+            className={`gw-activity-chevron mt-[3px] shrink-0${collapsed ? ' gw-activity-chevron--collapsed' : ''}`}
             aria-hidden
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

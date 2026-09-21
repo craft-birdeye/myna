@@ -218,12 +218,22 @@ export function GhostwriterSimulationFixBlock({ onComplete }: GhostwriterReading
  * "Where should the daily spam digest go?" — the free-text flavour of the shared question
  * card. Submitting hands the address back so the parent can echo it as a user turn.
  */
-export function GhostwriterDigestPrompt({ onSubmit }: { onSubmit?: (email: string) => void }) {
+export function GhostwriterDigestPrompt({
+  onSubmit,
+  className,
+  dividers,
+}: {
+  onSubmit?: (email: string) => void
+  className?: string
+  dividers?: boolean
+}) {
   return (
     <GhostwriterQuestionCard
       question={SPAM_DIGEST_QUESTION}
       freeText={{ placeholder: SPAM_DIGEST_PLACEHOLDER, submitLabel: SPAM_DIGEST_CTA }}
       onSubmitText={(email) => onSubmit?.(email)}
+      className={className}
+      dividers={dividers}
     />
   )
 }

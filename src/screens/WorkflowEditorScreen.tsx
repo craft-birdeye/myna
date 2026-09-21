@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, type ReactNode } from 'react'
 import {
   AUTOMOTIVE_AGENT_WORKFLOWS,
   HEALTHCARE_AGENT_WORKFLOWS,
@@ -151,6 +151,18 @@ interface WorkflowEditorScreenProps {
   /** Hides the floating back-cluster + run-test/Activate chrome — for embedding the canvas
    *  under a caller-owned header (e.g. Response agent (simulation)'s Workflow tab). */
   hideTopBar?: boolean
+  /** Skips the empty-scratch-canvas auto-opened Trigger palette — used when a docked
+   *  conversation (Ghostwriter's combined flow) already owns that left-hand real estate. */
+  suppressTriggerAutoOpen?: boolean
+  /** Renders inside the real "Create with AI" / "Edit with AI" panel's body instead of its
+   *  default greeting/suggestions — Ghostwriter's combined flow docks its live conversation
+   *  here so it gets the exact same panel chrome as every other workflow. */
+  aiBuilderPanelContent?: ReactNode
+  /** Ghostwriter's combined flow only: keeps the same `AgentBuilder` instance mounted (and so
+   *  the docked chat's state intact) across the empty-scratch → fully-built workflow swap that
+   *  happens when "Create agent" is pressed, instead of remounting on the normal per-agent key.
+   *  The canvas still picks up the new nodes live via `syncNodesOnSeedChange`. */
+  preserveCanvasIdentity?: boolean
 }
 
 export function WorkflowEditorScreen({
@@ -190,6 +202,9 @@ export function WorkflowEditorScreen({
   onOpenProductResearchSettings,
   autoOpenCoachTour = false,
   hideTopBar = false,
+  suppressTriggerAutoOpen = false,
+  aiBuilderPanelContent,
+  preserveCanvasIdentity = false,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -336,7 +351,9 @@ export function WorkflowEditorScreen({
       return `${id}:${n?.taskName ?? ''}:${n?.branchNodeTitle ?? ''}:${n?.triggerName ?? ''}:${n?.description ?? ''}:${n?.goals ?? ''}`
     })
     .join('|')
-  const editorSeedKey = `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${RR_COPY_REV}::${FD_COPY_REV}::${copyFingerprint}`
+  const editorSeedKey = preserveCanvasIdentity
+    ? `ghostwriter-combined::${agentName}::${product}`
+    : `${agentName}::${shownName}::${product}::${wizardDraft ? 'wizard' : 'default'}::${RR_COPY_REV}::${FD_COPY_REV}::${copyFingerprint}`
 
   return (
     /* Provided here rather than inside AgentBuilder/FlowCanvas so it reaches both the canvas
@@ -365,6 +382,7 @@ export function WorkflowEditorScreen({
             navItems={[]}
             initialNodes={workflow.nodes}
             initialNodeDetails={workflow.nodeDetails}
+            syncNodesOnSeedChange={preserveCanvasIdentity}
             procedures={filteredProcedures}
             showProceduresPalette={isFrontDeskAgent}
             onAddProcedure={addProcedure}
@@ -373,7 +391,7 @@ export function WorkflowEditorScreen({
             publishDisabled={false}
             issueCount={issueCount}
             issues={getAgentIssues(agentName)}
-            defaultOpenSection={isEmptyScratch && !autoOpenCoachTour ? 'Trigger' : 'Tasks'}
+            defaultOpenSection={isEmptyScratch && !autoOpenCoachTour && !suppressTriggerAutoOpen ? 'Trigger' : 'Tasks'}
             aiAssistOpen={aiAssistOpen}
             onAiAssistOpenChange={onAiAssistOpenChange}
             hideLhs={hideLhs}
@@ -398,6 +416,7 @@ export function WorkflowEditorScreen({
             onOpenProductResearchSettings={onOpenProductResearchSettings}
             autoOpenCoachTour={autoOpenCoachTour}
             hideTopBar={hideTopBar}
+            aiBuilderPanelContent={aiBuilderPanelContent}
           />
         </Suspense>
       </div>

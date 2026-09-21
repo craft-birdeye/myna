@@ -88,6 +88,14 @@ const END_NODE_ID = '__end__';
 // Synthetic node (not part of nodeList) that reserves step 1 for the trigger while none exists.
 const TRIGGER_PLACEHOLDER_ID = '__trigger_placeholder__';
 
+/** Ghostwriter "Edit with AI" sessions list — Create agent CTA (agent list view) flow only.
+ *  Generic summaries + timestamps for now; no real per-session chat history behind them. */
+const GHOSTWRITER_MOCK_SESSIONS = [
+  { id: 'session-1', title: 'Create a review response agent', timestamp: 'Today, 2:41 PM' },
+  { id: 'session-2', title: 'Set up a reminder follow-up agent', timestamp: 'Yesterday, 11:05 AM' },
+  { id: 'session-3', title: 'Draft a front desk intake agent', timestamp: 'Mar 3, 9:20 AM' },
+];
+
 /** RR chrome header title — ellipsizes past a fixed max width; full name on hover only when truncated. */
 function RrChromeAgentTitle({ text, onClick }) {
   const textRef = useRef(null);
@@ -1254,6 +1262,11 @@ export default function AgentBuilder({
   initialDescription = '',
   initialNodes = null,
   initialNodeDetails = null,
+  /** Ghostwriter combined-create-flow only: apply a changed `initialNodes` to the live canvas
+   *  in place (edit mode normally only re-syncs `nodeDetails`, see the seed-sync effect below) —
+   *  the empty-scratch canvas swaps to the fully-built workflow without remounting, which would
+   *  otherwise blow away the docked "Edit with AI" chat's in-progress state. */
+  syncNodesOnSeedChange = false,
   onSaveAgent,
   onSaveTemplate,
   onClose,
@@ -1345,6 +1358,9 @@ export default function AgentBuilder({
   /** Suppresses the floating back-cluster + run-test/Activate chrome — for embedding the
    *  canvas under a caller-owned header (e.g. Response agent (simulation)'s Workflow tab). */
   hideTopBar = false,
+  /** Renders inside the "Create with AI" / "Edit with AI" panel's body instead of its default
+   *  greeting/suggestions (Ghostwriter's combined flow docks its live conversation here). */
+  aiBuilderPanelContent = null,
 }) {
   /** Full canvas: the floater rail buttons wear the canvas node-badge colours. */
   const fullCanvasChrome = useCardBadge();
@@ -1681,7 +1697,7 @@ export default function AgentBuilder({
   useEffect(() => {
     if (seedFingerprint === seedFpRef.current) return;
     seedFpRef.current = seedFingerprint;
-    if (viewOnly && initialNodes) setNodeList(initialNodes);
+    if ((viewOnly || syncNodesOnSeedChange) && initialNodes) setNodeList(initialNodes);
     if (!initialNodeDetails) return;
     setNodeDetails(() => {
       const base = initialNodeDetails;
@@ -1707,7 +1723,7 @@ export default function AgentBuilder({
         ? { ...base, [START_NODE_ID]: { ...startNode, ...overlayFrontDeskGoals } }
         : base;
     });
-  }, [seedFingerprint, viewOnly, initialNodes, initialNodeDetails, pageTitle]);
+  }, [seedFingerprint, viewOnly, syncNodesOnSeedChange, initialNodes, initialNodeDetails, pageTitle]);
 
   /* ─── Open a tool viewer by tool name or id (used when clicking a tool chip in prompts) ─── */
   const openToolByName = useCallback((nameOrId) => {
@@ -4709,7 +4725,11 @@ export default function AgentBuilder({
                     className="rr-chrome-ai-panel"
                     fillShell
                     side="left"
+                    content={aiBuilderPanelContent ?? undefined}
                     seedPrompt={ghostwriterChrome ? GHOSTWRITER_CANVAS_SEED_PROMPT : undefined}
+                    // Create agent CTA (agent list → Create agent) flow only — a generic
+                    // summary + timestamp per session, no real chat history behind it yet.
+                    sessions={ghostwriterChrome ? GHOSTWRITER_MOCK_SESSIONS : undefined}
                     onOpenNode={ghostwriterChrome ? () => setSpamGateOpen(true) : undefined}
                     openProcedureName={lhsPreviewProcedureId}
                     onOpenProcedure={(procedureId) => {

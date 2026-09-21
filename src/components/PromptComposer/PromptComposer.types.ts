@@ -23,4 +23,8 @@ export interface PromptComposerProps {
   onFocus?: () => void
   onClick?: () => void
   className?: string
+  /** Squares off the top corners and drops the shadow so the composer sits flush under a
+   *  docked card immediately above it — the top border stays, reading as the one divider
+   *  between the card's content and the input. */
+  flushTop?: boolean
 }

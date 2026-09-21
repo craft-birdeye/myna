@@ -390,9 +390,14 @@ export function AiBuilderPanel({
   onOpenProcedure,
   openProcedureName = null,
   onGoToKnowledge,
+  content,
+  sessions,
+  onSelectSession,
 }: AiBuilderPanelProps) {
   const [draft, setDraft] = useState('')
   const [composerFocused, setComposerFocused] = useState(false)
+  const [sessionsOpen, setSessionsOpen] = useState(false)
+  const sessionsMenuRef = useRef<HTMLDivElement>(null)
   /** Scripted run: set to the sent text when it matches `seedPrompt`. Until it finishes the
    *  composer is locked, and the normal trail is replaced by the scripted timeline. */
   const [scriptedPrompt, setScriptedPrompt] = useState<string | null>(null)
@@ -414,6 +419,17 @@ export function AiBuilderPanel({
     if (!el) return
     el.scrollTop = el.scrollHeight
   }, [trail.length])
+
+  useEffect(() => {
+    if (!sessionsOpen) return undefined
+    const onDown = (e: MouseEvent) => {
+      if (sessionsMenuRef.current && !sessionsMenuRef.current.contains(e.target as Node)) {
+        setSessionsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [sessionsOpen])
 
   /* The scripted run reveals content on timers rather than on a state change we can depend
      on, so poll the scroll position for its duration to keep the newest row in view. */
@@ -466,6 +482,37 @@ export function AiBuilderPanel({
             {seedPrompt ? 'Edit with AI' : 'Create with AI'}
           </p>
         </div>
+        {sessions && sessions.length > 0 && (
+          <div className="relative" ref={sessionsMenuRef}>
+            <button
+              type="button"
+              aria-label="Chat sessions"
+              aria-expanded={sessionsOpen}
+              onClick={() => setSessionsOpen((v) => !v)}
+              className="flex size-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              <Icon name="list" size={18} />
+            </button>
+            {sessionsOpen && (
+              <div className="absolute right-0 top-full z-30 mt-xs min-w-[260px] rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+                {sessions.map((session) => (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectSession?.(session.id)
+                      setSessionsOpen(false)
+                    }}
+                    className="block w-full px-md py-sm text-left hover:bg-surface-hover"
+                  >
+                    <span className="block truncate text-body text-text-primary">{session.title}</span>
+                    <span className="block text-small text-text-tertiary">{session.timestamp}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {onExpand && (
           <button
             type="button"
@@ -486,6 +533,10 @@ export function AiBuilderPanel({
         </button>
       </div>
 
+      {content ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{content}</div>
+      ) : (
+      <>
       <div
         ref={scrollRef}
         className="scrollbar-subtle flex min-h-0 flex-1 flex-col overflow-auto px-lg py-2xl"
@@ -643,6 +694,8 @@ export function AiBuilderPanel({
           )}
         </div>
       </div>
+      </>
+      )}
     </aside>
   )
 }

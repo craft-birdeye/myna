@@ -33,4 +33,7 @@ export interface GhostwriterQuestionCardProps {
   /** Renders the ✕. Omit on a question that has to be answered to go on. */
   onClose?: () => void
   className?: string
+  /** Hairlines between the question and each option row, and between rows. Off when this
+   *  card is docked flush above a composer that supplies its own single divider instead. */
+  dividers?: boolean
 }
