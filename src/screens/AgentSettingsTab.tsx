@@ -37,6 +37,9 @@ interface AgentSettingsTabProps {
   product?: string
   agentName?: string
   onOpenIntegrationSettings?: (integrationId: string) => void
+  /** Drops the card chrome and centers the content — used when an outer container already
+   *  provides the page frame, e.g. the Front desk (Myna) create-flow canvas's Settings tab. */
+  flat?: boolean
 }
 
 const FRONTDESK_GREETING =
@@ -974,20 +977,26 @@ function SettingsCard({
   title,
   description,
   children,
+  flat = false,
 }: {
   title: string
   description?: string
   children: React.ReactNode
+  /** Drops the card chrome (bg/border/rounded) — used when an outer container already
+   *  provides the page frame, e.g. the Front desk (Myna) create-flow canvas's Settings tab. */
+  flat?: boolean
 }) {
   return (
-    <section className="rounded-lg border border-border bg-[var(--s-bg-secondary)]">
-      <div className="px-2xl pt-lg">
+    <section className={flat ? '' : 'rounded-lg border border-border bg-[var(--s-bg-secondary)]'}>
+      <div className={flat ? '' : 'px-2xl pt-lg'}>
         <h3 className="m-0 text-[16px] leading-6 tracking-[-0.32px] text-text-primary">{title}</h3>
         {description && (
           <p className="m-0 mt-xs text-small text-text-secondary">{description}</p>
         )}
       </div>
-      <div className="flex flex-col gap-2xl px-2xl pb-2xl pt-lg">{children}</div>
+      <div className={flat ? 'flex flex-col gap-2xl pt-lg' : 'flex flex-col gap-2xl px-2xl pb-2xl pt-lg'}>
+        {children}
+      </div>
     </section>
   )
 }
@@ -1044,7 +1053,7 @@ function SettingsOptionRow({
   )
 }
 
-function FrontDeskSettings() {
+function FrontDeskSettings({ flat = false }: { flat?: boolean }) {
   const { systemPrompt, setSystemPrompt } = useAgentSystemPromptStore()
   const [language, setLanguage] = useState<AgentLanguageId>('en')
   const [additionalLanguages, setAdditionalLanguages] = useState<AgentLanguageId[]>([])
@@ -1168,8 +1177,8 @@ function FrontDeskSettings() {
   }
 
   return (
-    <div className="flex w-full max-w-[720px] flex-col gap-2xl">
-      <SettingsCard title="General" description="Core behaviour and language for this agent">
+    <div className={`flex w-full max-w-[720px] flex-col gap-2xl ${flat ? 'mx-auto' : ''}`}>
+      <SettingsCard title="General" description="Core behaviour and language for this agent" flat={flat}>
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
         <div className="flex items-center gap-xs">
@@ -1336,7 +1345,7 @@ function FrontDeskSettings() {
 
       </SettingsCard>
 
-      <SettingsCard title="Voice call settings" description="Speech engines, voice and call behaviour">
+      <SettingsCard title="Voice call settings" description="Speech engines, voice and call behaviour" flat={flat}>
         <SettingsSubPanel title="Text-to-speech (TTS)">
         <TtsModelSettings hideHeading />
 
@@ -1693,6 +1702,7 @@ export function AgentSettingsTab({
   agentName,
   product,
   onOpenIntegrationSettings,
+  flat = false,
 }: AgentSettingsTabProps) {
   const [voice, setVoice] = useState('Andrea (warm, clear, reassuring)')
   const [greeting, setGreeting] = useState(
@@ -1719,11 +1729,12 @@ export function AgentSettingsTab({
     return (
       // White ground; cards are separated by their border + header hairline. The cards fill the
       // width left of a 350px reserved gutter, so the whitespace is constant at any viewport.
-      <div className="flex min-h-full bg-surface px-2xl pt-lg pb-2xl">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <FrontDeskSettings />
+      // `flat`: no card chrome and no reserved gutter — the column just centers in the tab.
+      <div className={`flex min-h-full bg-surface px-2xl pt-lg pb-2xl ${flat ? 'justify-center' : ''}`}>
+        <div className={flat ? 'flex min-w-0 flex-col' : 'flex min-w-0 flex-1 flex-col'}>
+          <FrontDeskSettings flat={flat} />
         </div>
-        <div className="w-[350px] shrink-0" aria-hidden />
+        {!flat && <div className="w-[350px] shrink-0" aria-hidden />}
       </div>
     )
   }

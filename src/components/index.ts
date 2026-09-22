@@ -33,6 +33,8 @@ export type {
 } from './GhostwriterSimulation/GhostwriterSimulation.types'
 export { GhostwriterConnectionsTab } from './GhostwriterConnectionsTab/GhostwriterConnectionsTab'
 export { GhostwriterKnowledgeTab } from './GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
+export { GhostwriterRunTestModal } from './GhostwriterRunTestModal/GhostwriterRunTestModal'
+export { GhostwriterTestRunPanel } from './GhostwriterTestRunPanel/GhostwriterTestRunPanel'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'
 export { ReviewCardBody, StarRating } from './ReviewCard/ReviewCard'

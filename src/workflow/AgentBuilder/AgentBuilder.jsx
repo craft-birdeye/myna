@@ -1291,6 +1291,16 @@ export default function AgentBuilder({
   aiAssistOpen: aiAssistOpenProp,
   onAiAssistOpenChange,
   hideLhs = false,
+  /** Hides the floating AI/Trigger/Actions/Controls add-node rail — a read-only preview
+   *  mount (e.g. Jay & Robin's Test tab result canvas) has nothing to add nodes with. */
+  hideLeftFloater = false,
+  /** Drives the same canvas node highlighting/checkmarks a self-triggered "Run test" does
+   *  (see `testRunOpen` below), but from outside — Jay & Robin's Test tab runs its own
+   *  `useTestRun` for its right-panel stepper and feeds the same `{ activeNodeId,
+   *  doneNodeIds }` shape in here so this second, read-only canvas mount stays in lockstep
+   *  without ever toggling its own `testRunOpen` (there's no button to do that; the top bar
+   *  Run test is hidden for that nav). */
+  externalTestRun = null,
   createAiPanelOpen = false,
   /** Opens the full-page Create with AI experience (parent-owned navigation). */
   onOpenAiFullscreen = null,
@@ -1555,11 +1565,13 @@ export default function AgentBuilder({
     [testRunOpen, nodeList, nodeDetails],
   );
   const testRun = useTestRun(testRunSteps);
-  const testRunActiveId = testRunOpen ? testRun.activeNodeId : null;
+  const testRunLive = testRunOpen || !!externalTestRun;
+  const testRunActiveId = testRunOpen ? testRun.activeNodeId : (externalTestRun?.activeNodeId ?? null);
+  const testRunDoneIds = testRunOpen ? testRun.doneNodeIds : (externalTestRun?.doneNodeIds ?? []);
   // Canvas highlighting for the executing / finished nodes, keyed by react-flow's data-id.
-  const testRunCss = testRunOpen
+  const testRunCss = testRunLive
     ? [
-        ...testRun.doneNodeIds.map(
+        ...testRunDoneIds.map(
           (id) => `.react-flow__node[data-id="${id}"] .canvas-node { border: 1px solid #4caf50 !important; box-shadow: 0 2px 12px 0 rgba(33, 33, 33, 0.06) !important; }`,
         ),
         testRunActiveId
@@ -2857,11 +2869,11 @@ export default function AgentBuilder({
       // Log run view + exploration Run test: swap the header glyph for a spinner/check.
       runStatus: logDoneNodeIds?.includes(n.id)
         ? 'done'
-        : !explorationChrome || !testRunOpen
+        : !explorationChrome || !testRunLive
           ? undefined
           : n.id === testRunActiveId
             ? 'running'
-            : testRun.doneNodeIds.includes(n.id)
+            : testRunDoneIds.includes(n.id)
               ? 'done'
               : undefined,
     };
@@ -4516,7 +4528,7 @@ export default function AgentBuilder({
               </div>
               )}
 
-              {!viewOnly && !versionHistoryMode && (
+              {!viewOnly && !versionHistoryMode && !hideLeftFloater && (
                 <div className={`rr-chrome-left-stack${sep1Chrome ? ' rr-chrome-left-stack--labelled' : ''}`}>
                   <Tooltip content="Create with AI" variant="brief" side="right">
                     <button
@@ -4764,7 +4776,7 @@ export default function AgentBuilder({
               rrChrome
               initialZoom={initialZoom}
               runDisabled={runDisabled}
-              focusNodeId={testRunOpen ? testRunActiveId : canvasFocusNodeId}
+              focusNodeId={testRunLive ? testRunActiveId : canvasFocusNodeId}
               onEdit={onEdit}
               onView={onView}
               onUndo={handleUndo}

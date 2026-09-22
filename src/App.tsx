@@ -167,6 +167,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
+      { id: 'frontdesk-agent-myna', label: 'Front desk agent (Myna)' },
       { id: 'frontdesk-agent', label: 'Front desk agent (coach)' },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
@@ -212,6 +213,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
+      { id: 'frontdesk-agent-myna', label: 'Front desk agent (Myna)' },
       { id: 'frontdesk-agent',  label: 'Front desk agent (coach)'  },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
@@ -262,6 +264,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     badge: 'New',
     items: [
       { id: 'frontdesk-agent-sep-1',       label: 'Front desk agent (Sep 1)'       },
+      { id: 'frontdesk-agent-myna',        label: 'Front desk agent (Myna)'        },
       { id: 'frontdesk-agent',             label: 'Front desk agent (coach)'             },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
@@ -328,6 +331,7 @@ const REVIEWS_NAV_SECTIONS: NavSection[] = [
       { id: 'response-agents-simulation', label: 'Response agent (simulation)' },
       { id: 'response-agents-simulation-2', label: 'RA sim 2' },
       { id: 'response-agents-ghostwriter',  label: 'Response agents (Ghostwriter)' },
+      { id: 'response-agents-jay-robin',    label: 'Response agent (Jay & Robin)' },
       { id: 'generation-agents',       label: 'Generation agents' },
       { id: 'review-tagging-agent',    label: 'Review tagging agents' },
     ],
@@ -366,6 +370,7 @@ const REVIEWS_AGENT_NAV_IDS = new Set([
   'response-agents-sep-1',
   'response-agents-full-canvas',
   'response-agents-ghostwriter',
+  'response-agents-jay-robin',
   'generation-agents',
   'review-response-agents',
 ])
@@ -406,6 +411,7 @@ const AGENT_NAMES: Record<string, string> = {
   'frontdesk-agent':           'Front desk agent',
   'frontdesk-agent-exploration': 'Front desk agent (exploration)',
   'frontdesk-agent-sep-1':     'Front desk agent',
+  'frontdesk-agent-myna':      'Front desk agent',
   'reminder-agent-sep-1':      'Reminder agent',
   'reminder-agent':            'Reminder agent',
   'outreach-agent':            'Outreach agent',
@@ -418,6 +424,7 @@ const AGENT_NAMES: Record<string, string> = {
   'response-agents':           'Review response agents',
   'response-agents-full-canvas': 'Review response agents',
   'response-agents-ghostwriter': 'Review response agents',
+  'response-agents-jay-robin': 'Review response agents',
   'response-agents-sep-1':     'Review response agents',
   'response-agents-exploration': 'Review response agents (exploration)',
   'response-agents-simulation': 'Review response agents (exploration)',

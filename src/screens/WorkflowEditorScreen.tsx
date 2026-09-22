@@ -163,6 +163,12 @@ interface WorkflowEditorScreenProps {
    *  happens when "Create agent" is pressed, instead of remounting on the normal per-agent key.
    *  The canvas still picks up the new nodes live via `syncNodesOnSeedChange`. */
   preserveCanvasIdentity?: boolean
+  /** Hides the floating AI/Trigger/Actions/Controls add-node rail — see `AgentBuilder`'s
+   *  matching prop. */
+  hideLeftFloater?: boolean
+  /** Drives canvas node highlighting/checkmarks from outside — see `AgentBuilder`'s matching
+   *  prop. */
+  externalTestRun?: { activeNodeId: string | null; doneNodeIds: string[] } | null
 }
 
 export function WorkflowEditorScreen({
@@ -205,6 +211,8 @@ export function WorkflowEditorScreen({
   suppressTriggerAutoOpen = false,
   aiBuilderPanelContent,
   preserveCanvasIdentity = false,
+  hideLeftFloater = false,
+  externalTestRun = null,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
   const agentBaseName = agentName.replace(/ - .+$/, '')
@@ -383,6 +391,8 @@ export function WorkflowEditorScreen({
             initialNodes={workflow.nodes}
             initialNodeDetails={workflow.nodeDetails}
             syncNodesOnSeedChange={preserveCanvasIdentity}
+            hideLeftFloater={hideLeftFloater}
+            externalTestRun={externalTestRun}
             procedures={filteredProcedures}
             showProceduresPalette={isFrontDeskAgent}
             onAddProcedure={addProcedure}

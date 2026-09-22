@@ -20,6 +20,9 @@ export const RESPONSE_AGENTS_SIMULATION_NAV_ID = 'response-agents-simulation'
 export const RESPONSE_AGENTS_SIMULATION_2_NAV_ID = 'response-agents-simulation-2'
 /** Copy of Full canvas — same chrome and sandbox behaviour, its own nav slot. */
 export const RESPONSE_AGENTS_GHOSTWRITER_NAV_ID = 'response-agents-ghostwriter'
+/** "Response agent (Jay & Robin)" — duplicate of Ghostwriter (same chrome, same create flow),
+ *  its own nav slot so it can be shared/tested independently of the original. */
+export const RESPONSE_AGENTS_JAY_ROBIN_NAV_ID = 'response-agents-jay-robin'
 
 /**
  * Full canvas and its copies. These share the whole sandbox treatment: full-screen workflow
@@ -30,23 +33,33 @@ export const RESPONSE_AGENTS_GHOSTWRITER_NAV_ID = 'response-agents-ghostwriter'
 export function isFullCanvasStyleNav(navId?: string | null) {
   return (
     navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ||
-    navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID
+    navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID ||
+    navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID
   )
 }
 
 /**
- * Ghostwriter alone — narrower than `isFullCanvasStyleNav`. Gates the polished create
+ * Ghostwriter and its copies — narrower than `isFullCanvasStyleNav`. Gates the polished create
  * landing (no Option picker, larger hero, tighter card rhythm), which Full canvas and
  * exploration must not pick up.
  */
 export function isGhostwriterNav(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID
+  return navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID || navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID
+}
+
+/**
+ * Jay & Robin alone — narrower still than `isGhostwriterNav`. Gates the reduced canvas tab set
+ * (Workflow + Test only, no Tools/Knowledge) that only this copy of Ghostwriter picked up.
+ */
+export function isJayRobinNav(navId?: string | null) {
+  return navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID
 }
 
 /** Suffix shown after the agent name in the page title, per Full canvas copy. */
 const FULL_CANVAS_VARIANT_LABELS: Record<string, string> = {
   [RESPONSE_AGENTS_FULL_CANVAS_NAV_ID]: 'Full canvas',
   [RESPONSE_AGENTS_GHOSTWRITER_NAV_ID]: 'Ghostwriter',
+  [RESPONSE_AGENTS_JAY_ROBIN_NAV_ID]: 'Jay & Robin',
 }
 
 export function fullCanvasVariantLabel(navId?: string | null) {
@@ -71,6 +84,8 @@ export const FRONTDESK_EXPLORATION_NAV_ID = 'frontdesk-agent-exploration'
 export const FRONTDESK_SEP1_NAV_ID = 'frontdesk-agent-sep-1'
 /** Production side-nav id — shares Sep 1 list/card chrome with `FRONTDESK_SEP1_NAV_ID`. */
 export const FRONTDESK_NAV_ID = 'frontdesk-agent'
+/** Duplicate of Sep 1 — same agent, same chrome, its own nav slot. */
+export const FRONTDESK_MYNA_NAV_ID = 'frontdesk-agent-myna'
 export const REMINDER_SEP1_NAV_ID = 'reminder-agent-sep-1'
 
 const EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS = new Set([
@@ -139,7 +154,14 @@ export function isAutoSimulationNav(navId?: string | null) {
 
 /** Production + Sep 1 front desk navs — same agent-list card chrome (not the exploration variant). */
 export function isFrontdeskSep1StyleNav(navId?: string | null) {
-  return navId === FRONTDESK_SEP1_NAV_ID || navId === FRONTDESK_NAV_ID
+  return navId === FRONTDESK_SEP1_NAV_ID || navId === FRONTDESK_NAV_ID || navId === FRONTDESK_MYNA_NAV_ID
+}
+
+/** Front desk (Myna) only — its create flow opens straight into canvas mode on first Send
+ *  (Ghostwriter/Jay & Robin's combined chat-in-canvas mechanism), instead of the other Front
+ *  desk copies' full-page scripted chat. See `isGhostwriterPolish` in AgentDetailScreen. */
+export function isFrontdeskMynaNav(navId?: string | null) {
+  return navId === FRONTDESK_MYNA_NAV_ID
 }
 
 export function isFrontdeskExplorationChrome(navId?: string | null) {

@@ -43,6 +43,7 @@ const REVIEWS_AGENT_NAV_IDS = new Set([
   'response-agents-sep-1',
   'response-agents-full-canvas',
   'response-agents-ghostwriter',
+  'response-agents-jay-robin',
   'generation-agents',
   'review-response-agents',
 ])

@@ -55,7 +55,9 @@ function StatusGlyph({ status }: { status: TestRunStepStatus }) {
   )
 }
 
-function TestRunStepRow({
+/** Exported so other surfaces can embed the same step row without the full panel's own
+ *  header/footer chrome — e.g. Jay & Robin's Test tab detail pane. */
+export function TestRunStepRow({
   step,
   status,
   isLast,

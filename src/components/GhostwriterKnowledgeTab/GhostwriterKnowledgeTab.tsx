@@ -20,9 +20,18 @@ export function GhostwriterKnowledgeTab() {
   return (
     <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto bg-surface px-2xl py-xl">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-lg">
-        <p className="m-0 text-body text-text-secondary">
-          What this agent knows about your practice. Practice-wide by default, with per-location overrides where they exist.
-        </p>
+        <div className="flex items-center justify-between gap-md">
+          <p className="m-0 text-body text-text-secondary">
+            What this agent knows about your practice. Practice-wide by default, with per-location overrides where they exist.
+          </p>
+          <button
+            type="button"
+            className="flex h-9 shrink-0 items-center gap-xs rounded-full border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
+          >
+            <Icon name="add" size={18} />
+            Add knowledge
+          </button>
+        </div>
 
         <div className="rounded-sm border border-border bg-surface">
           {KNOWLEDGE_ITEMS.map((item, i) => (
@@ -49,15 +58,6 @@ export function GhostwriterKnowledgeTab() {
               </button>
             </div>
           ))}
-          <div className="flex justify-end px-lg py-md">
-            <button
-              type="button"
-              className="flex h-9 items-center gap-xs rounded-full border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
-            >
-              <Icon name="add" size={18} />
-              Add knowledge
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -123,8 +123,8 @@ export function GhostwriterConnectionsTab() {
     <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto bg-surface px-2xl py-xl">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-2xl">
         <div>
-          <h1 className="m-0 text-display text-text-primary">Tools</h1>
-          <p className="m-0 mt-xs text-body text-text-secondary">What your agents can read from and act on.</p>
+          <h1 className="m-0 text-h3 text-text-primary">Tools</h1>
+          <p className="m-0 mt-xs text-small text-text-secondary">What your agents can read from and act on.</p>
         </div>
 
         <div className="flex flex-col gap-md">
