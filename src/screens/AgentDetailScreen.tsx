@@ -100,6 +100,12 @@ import {
   GhostwriterSimulationRunBlock,
   GhostwriterSourcesBlock,
   GhostwriterSpamScreenBlock,
+  JayRobinGuidelinesBlock,
+  JayRobinReadingBlock,
+  JayRobinSimulationFixBlock,
+  JayRobinSimulationRunBlock,
+  JayRobinSourcesBlock,
+  JayRobinSpamScreenBlock,
 } from '../components/AgentActivityHeader/GhostwriterReadingBlock'
 import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
 import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsTab/GhostwriterConnectionsTab'
@@ -1798,11 +1804,19 @@ const GHOSTWRITER_BUILD_STEP_MS = 900
 
 /** Jay & Robin only — once "Create agent" is pressed, walk through the plan's own sections
  *  one at a time (spinner while "in progress", then a check) before "What do you want to do
- *  next?" appears, instead of jumping straight to that question. */
+ *  next?" appears, instead of jumping straight to that question. These are the "specific
+ *  actions taken" beat — each row is a concrete piece of the agent actually being built, so
+ *  unlike the Thought/tool-call rows elsewhere they keep their own check-circle/spinner and
+ *  full-strength text rather than the small muted tool-row treatment. Wrapped in the same
+ *  "Worked for #s" shell as the other beats; "Your agent is ready." is the summary that
+ *  survives the collapse. */
 function GhostwriterBuildStepsBlock({ onDone }: { onDone?: () => void }) {
   const [stepIndex, setStepIndex] = useState(0)
   const allDone = stepIndex >= PLAN_SECTIONS.length
   const doneFiredRef = useRef(false)
+  const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null)
+  const [elapsedMs, setElapsedMs] = useState(0)
+  const collapsed = manualCollapsed ?? allDone
 
   useEffect(() => {
     if (allDone) return
@@ -1818,26 +1832,47 @@ function GhostwriterBuildStepsBlock({ onDone }: { onDone?: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allDone])
 
+  useEffect(() => {
+    if (allDone) return undefined
+    const started = Date.now() - elapsedMs
+    const id = setInterval(() => setElapsedMs(Date.now() - started), 100)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDone])
+
   return (
-    <div className="ml-3xl mt-lg flex max-w-[520px] flex-col gap-sm">
-      {PLAN_SECTIONS.map((section, i) => {
-        if (i > stepIndex) return null
-        const done = i < stepIndex || allDone
-        return (
-          <div key={section.n} className="agent-build-fade flex items-center gap-sm">
-            {done ? (
-              <Icon name="check_circle" size={18} className="shrink-0 text-accent-positive" />
-            ) : (
-              <Icon name="progress_activity" size={18} className="shrink-0 animate-spin text-text-tertiary" />
-            )}
-            <span className="text-body text-text-primary">
-              {PLAN_SECTION_PREFIX} {section.n} — {section.title}
-            </span>
-          </div>
-        )
-      })}
+    <div className="ml-3xl mt-sm flex max-w-[520px] flex-col">
+      <AgentActivityHeader
+        running={!allDone}
+        seconds={`${Math.round(elapsedMs / 1000)}s`}
+        collapsed={collapsed}
+        onToggle={() => setManualCollapsed(!collapsed)}
+        label="Worked for"
+        pill={false}
+        chevronStyle="rightdown"
+      />
+      {!collapsed && (
+        <div className="gw-activity-steps mt-sm flex flex-col gap-sm">
+          {PLAN_SECTIONS.map((section, i) => {
+            if (i > stepIndex) return null
+            const done = i < stepIndex || allDone
+            return (
+              <div key={section.n} className="agent-build-fade flex items-center gap-sm">
+                {done ? (
+                  <Icon name="check_circle" size={18} className="shrink-0 text-accent-positive" />
+                ) : (
+                  <Icon name="progress_activity" size={18} className="shrink-0 animate-spin text-text-tertiary" />
+                )}
+                <span className="text-body text-text-primary">
+                  {PLAN_SECTION_PREFIX} {section.n} — {section.title}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
       {allDone && (
-        <div className="agent-build-fade mt-sm flex items-center gap-sm">
+        <div className="agent-build-fade mt-md flex items-center gap-sm">
           <Icon name="check_circle" size={18} className="shrink-0 text-accent-positive" />
           <span className="text-body text-text-primary">Your agent is ready.</span>
         </div>
@@ -3813,6 +3848,8 @@ function ReviewResponseThread({
               planOpen={planOpen}
               agentCreated={agentCreated}
               copy={PLAYBOOK_PLAN_CARD}
+              openLabel={isJayRobin ? 'See plan' : undefined}
+              openIcon={isJayRobin ? 'visibility' : undefined}
             />
           )}
         </>
@@ -3863,32 +3900,50 @@ function ReviewResponseThread({
           tone — so its follow-up is the reading block, not the sources question. */}
       {explorationModeChoice && modeAnswer && ghostwriterPolish && (
         <>
-          <ReviewAgentReply
-            paragraphs={[READING_INTRO_PARAGRAPH]}
-            onComplete={() => setReadingIntroDone(true)}
-          />
-          {readingIntroDone && (
-            <GhostwriterReadingBlock onComplete={() => setReadingBlockDone(true)} />
+          {isJayRobin ? (
+            <JayRobinReadingBlock onComplete={() => setReadingBlockDone(true)} />
+          ) : (
+            <>
+              <ReviewAgentReply
+                paragraphs={[READING_INTRO_PARAGRAPH]}
+                onComplete={() => setReadingIntroDone(true)}
+              />
+              {readingIntroDone && (
+                <GhostwriterReadingBlock onComplete={() => setReadingBlockDone(true)} />
+              )}
+            </>
           )}
-          {readingBlockDone && (
+          {readingBlockDone && isJayRobin && (
+            <JayRobinGuidelinesBlock onComplete={() => setLearningBlockDone(true)} />
+          )}
+          {readingBlockDone && !isJayRobin && (
             <ReviewAgentReply
               paragraphs={[LEARNING_INTRO_PARAGRAPH]}
               onComplete={() => setLearningIntroDone(true)}
             />
           )}
-          {learningIntroDone && (
+          {learningIntroDone && !isJayRobin && (
             <GhostwriterGuidelinesBlock onComplete={() => setLearningBlockDone(true)} />
           )}
           {learningBlockDone && (
-            <GhostwriterSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
+            isJayRobin ? (
+              <JayRobinSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
+            ) : (
+              <GhostwriterSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
+            )
           )}
-          {sourcesBlockDone && (
+          {/* Jay & Robin folds `SOURCES_NEXT_PARAGRAPH` into the spam-screen block's own
+              Thought line instead of a separate reply bubble — see `JayRobinSpamScreenBlock`. */}
+          {sourcesBlockDone && isJayRobin && (
+            <JayRobinSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
+          )}
+          {sourcesBlockDone && !isJayRobin && (
             <ReviewAgentReply
               paragraphs={[SOURCES_NEXT_PARAGRAPH]}
               onComplete={() => setSourcesTeaserDone(true)}
             />
           )}
-          {sourcesTeaserDone && (
+          {sourcesTeaserDone && !isJayRobin && (
             <GhostwriterSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
           )}
           {/* The question lives in the card's header — a paragraph above it said it twice.
@@ -3905,18 +3960,27 @@ function ReviewResponseThread({
           )}
           {digestEmail && <AnsweredQuestionBlock question={SPAM_DIGEST_QUESTION} answer={digestEmail} />}
           {/* The plan is only shown once the agent has tested the draft, found what breaks,
-              fixed it and re-run the suite — so what you open has already survived a pass. */}
-          {digestEmail && (
+              fixed it and re-run the suite — so what you open has already survived a pass.
+              Jay & Robin folds `SIMULATION_INTRO_PARAGRAPH` into the run block's own Thought
+              line the same way the spam-screen beat above folds its own lead-in. */}
+          {digestEmail && isJayRobin && (
+            <JayRobinSimulationRunBlock onComplete={() => setSimRunDone(true)} />
+          )}
+          {digestEmail && !isJayRobin && (
             <ReviewAgentReply
               paragraphs={[SIMULATION_INTRO_PARAGRAPH]}
               onComplete={() => setSimIntroDone(true)}
             />
           )}
-          {simIntroDone && (
+          {simIntroDone && !isJayRobin && (
             <GhostwriterSimulationRunBlock onComplete={() => setSimRunDone(true)} />
           )}
           {simRunDone && (
-            <GhostwriterSimulationFixBlock onComplete={() => setSimFixDone(true)} />
+            isJayRobin ? (
+              <JayRobinSimulationFixBlock onComplete={() => setSimFixDone(true)} />
+            ) : (
+              <GhostwriterSimulationFixBlock onComplete={() => setSimFixDone(true)} />
+            )
           )}
           {simFixDone && (
             <ReviewAgentReply
@@ -3930,6 +3994,8 @@ function ReviewResponseThread({
               onOpenPlan={onOpenPlan}
               planOpen={planOpen}
               agentCreated={agentCreated}
+              openLabel={isJayRobin ? 'See plan' : undefined}
+              openIcon={isJayRobin ? 'visibility' : undefined}
             />
           )}
           {/* Stays mounted (not swapped out) once done — the checked-off list is part of the
@@ -9626,6 +9692,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const isReviewResponse  = isReviewResponseAgentName(agentName)
   /** This screen is the Ghostwriter nav — Edit / Use agent open its own shell. */
   const isGhostwriterAgent = isGhostwriterNav(navId) && isReviewResponse
+  /** Front desk (Myna) — Edit opens the same tabbed canvas shell the create flow uses,
+   *  instead of the plain `WorkflowEditorScreen`/`AgentBuilder` every other agent's Edit
+   *  opens. See `openAgentInstanceEditor` below. */
+  const isMynaAgent = isFrontdeskMynaNav(navId) && isFrontdesk
   const isReviewGeneration = agentName === 'Review generation agents'
   const isReviewTagging   = agentName === 'Review tagging agents'
   const hideChannels      = isTaggingRouting || isReviewResponse || isReviewGeneration || isReviewTagging
@@ -9900,6 +9970,14 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const openAgentInstanceEditor = (row: AgentInstance) => {
     // Ghostwriter edits inside its own shell (top bar + tabs) on the Workflow tab.
     if (isGhostwriterAgent) {
+      openGhostwriterWorkflow(row.name, 'workflow')
+      return
+    }
+    // Front desk (Myna): same shell reuse — Workflow/Test/Tools/Knowledge/Settings tabs
+    // over the canvas, matching the create flow. The instance already exists, so unlock
+    // Test immediately instead of gating it behind "not yet created" like a fresh draft.
+    if (isMynaAgent) {
+      setGhostwriterAgentCreated(true)
       openGhostwriterWorkflow(row.name, 'workflow')
       return
     }
@@ -10293,8 +10371,17 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     const handleExplorationShellTabChange = (tabId: string) => {
       // Belt and braces: the tab is already `disabled`, but never act on it either. Tools/
       // Knowledge are answerable before the agent exists (account-level, not per-draft) —
-      // only Simulation stays gated pre-creation.
-      if (isGhostwriterPolish && !ghostwriterAgentCreated && tabId === 'simulation') return
+      // only Simulation stays gated pre-creation. "Edit" on an existing agent
+      // (`ghostwriterDirect === 'workflow'`) lands here with `ghostwriterAgentCreated` still
+      // false — it was never (re-)created this session — even though there's a real, already
+      // built agent behind it, so that entry point counts as created too.
+      if (
+        isGhostwriterPolish &&
+        !ghostwriterAgentCreated &&
+        ghostwriterDirect !== 'workflow' &&
+        tabId === 'simulation'
+      )
+        return
       if (tabId === 'workflow' && !isSimulationNav) {
         setCreateGhostwriterTab('workflow')
         openCreateWorkflow()
@@ -10513,8 +10600,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 disabledTabIds={
                   // Tools/Knowledge are answerable before the agent exists — connections and
                   // knowledge docs live at the account level, not on this one draft. Simulation
-                  // stays gated: there's nothing built yet to run test cases against.
-                  ghostwriterAgentCreated ? undefined : ['simulation']
+                  // stays gated: there's nothing built yet to run test cases against — unless
+                  // "Edit" opened an already-built agent directly (see the tab-change handler).
+                  ghostwriterAgentCreated || ghostwriterDirect === 'workflow' ? undefined : ['simulation']
                 }
                 right={
                   !ghostwriterAgentCreated ? (
@@ -10810,7 +10898,11 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       ? 'Review generation agent - North Region'
                       : isReminder
                         ? 'Reminder agent - North region'
-                        : 'Front desk agent - North region'
+                        // Editing an existing Myna instance from the list (openAgentInstanceEditor)
+                        // sets createDraftAgentName to that instance's real name (e.g. "...West
+                        // region") — prefer it so the canvas's region-suffix patching (subagent
+                        // chip labels) matches the instance actually being edited, not North's.
+                        : createDraftAgentName ?? 'Front desk agent - North region'
                 }
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"

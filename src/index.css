@@ -540,6 +540,15 @@ body {
 .gw-activity-chevron--collapsed {
   transform: rotate(180deg);
 }
+/* Disclosure-triangle variant (Jay & Robin's "Worked for" header): down once expanded,
+   sideways once collapsed — the base path already points up, so "down" is the same 180°
+   the up/down variant uses for its collapsed state; only the naming differs. */
+.gw-activity-chevron--down {
+  transform: rotate(180deg);
+}
+.gw-activity-chevron--sideways {
+  transform: rotate(90deg);
+}
 
 /* Steps hang off a hairline rule, as in the reference. */
 .gw-activity-steps {

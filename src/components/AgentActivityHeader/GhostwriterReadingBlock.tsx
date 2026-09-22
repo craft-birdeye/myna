@@ -1,15 +1,18 @@
 import {
   LEARNING_FOOTNOTE,
   LEARNING_HEADER_LABEL,
+  LEARNING_INTRO_PARAGRAPH,
   LEARNING_STEPS,
   LEARNING_SUMMARY,
   READING_FOOTNOTE,
   READING_HEADER_LABEL,
+  READING_INTRO_PARAGRAPH,
   READING_STEPS,
   READING_SUMMARY,
   READING_TIMING,
   SOURCES_CONFIGURE_CTA,
   SOURCES_HEADER_LABEL,
+  SOURCES_NEXT_PARAGRAPH,
   SIM_FIX_FOOTNOTE,
   SIM_FIX_HEADER_LABEL,
   SIM_FIX_STEPS,
@@ -18,6 +21,7 @@ import {
   SIM_RUN_HEADER_LABEL,
   SIM_RUN_STEPS,
   SIM_RUN_SUMMARY,
+  SIMULATION_INTRO_PARAGRAPH,
   SOURCES_STEPS,
   SOURCES_SUMMARY,
   SPAM_DIGEST_CTA,
@@ -46,6 +50,7 @@ import {
 } from '../../data/ghostwriterPlaybookBlock'
 import { GhostwriterQuestionCard } from '../GhostwriterQuestionCard/GhostwriterQuestionCard'
 import { ActivityFindingsBlock } from './ActivityFindingsBlock'
+import { AgentWorkBlock } from './AgentWorkBlock'
 import { VERDICT_TONE, VerdictTone } from './verdictTones'
 
 /** The one action this beat offers — a text link, not a panel. */
@@ -156,6 +161,20 @@ export function GhostwriterReadingBlock({ onComplete }: GhostwriterReadingBlockP
   )
 }
 
+/** Jay & Robin's beat 1 — same data, the "Worked for #s" treatment instead. */
+export function JayRobinReadingBlock({ onComplete }: GhostwriterReadingBlockProps) {
+  return (
+    <AgentWorkBlock
+      thought={READING_INTRO_PARAGRAPH}
+      toolsLabel={READING_HEADER_LABEL}
+      tools={READING_STEPS}
+      summary={READING_SUMMARY}
+      footnote={READING_FOOTNOTE}
+      onComplete={onComplete}
+    />
+  )
+}
+
 /** Beat 3 — which sources can actually be replied to. Ends on its body, no callout. */
 export function GhostwriterSourcesBlock({
   onComplete,
@@ -172,12 +191,45 @@ export function GhostwriterSourcesBlock({
   )
 }
 
+/** Jay & Robin's beat 3 — no separate lead-in exists for this one, so `toolsLabel` alone
+ *  frames the tool calls. */
+export function JayRobinSourcesBlock({
+  onComplete,
+  onConfigure,
+}: GhostwriterReadingBlockProps & { onConfigure?: () => void }) {
+  return (
+    <AgentWorkBlock
+      toolsLabel={SOURCES_HEADER_LABEL}
+      tools={SOURCES_STEPS}
+      summary={SOURCES_SUMMARY}
+      body={<ConfigureSourcesLink onConfigure={onConfigure} />}
+      onComplete={onComplete}
+    />
+  )
+}
+
 /** Beat 4 — the spam gate. Opens on the risk, then explains the resolution. */
 export function GhostwriterSpamScreenBlock({ onComplete }: GhostwriterReadingBlockProps) {
   return (
     <ActivityFindingsBlock
       label={SPAM_SCREEN_HEADER_LABEL}
       steps={SPAM_SCREEN_STEPS}
+      summary={SPAM_SCREEN_SUMMARY}
+      footnote={SPAM_SCREEN_FOOTNOTE}
+      onComplete={onComplete}
+    />
+  )
+}
+
+/** Jay & Robin's beat 4 — `SOURCES_NEXT_PARAGRAPH` teases this beat in the original flow (its
+ *  own separate reply, right before this block mounts), so here it becomes the Thought line
+ *  instead of a preceding bubble. */
+export function JayRobinSpamScreenBlock({ onComplete }: GhostwriterReadingBlockProps) {
+  return (
+    <AgentWorkBlock
+      thought={SOURCES_NEXT_PARAGRAPH}
+      toolsLabel={SPAM_SCREEN_HEADER_LABEL}
+      tools={SPAM_SCREEN_STEPS}
       summary={SPAM_SCREEN_SUMMARY}
       footnote={SPAM_SCREEN_FOOTNOTE}
       onComplete={onComplete}
@@ -201,12 +253,39 @@ export function GhostwriterSimulationRunBlock({ onComplete }: GhostwriterReading
   )
 }
 
+/** Jay & Robin's beat 5. */
+export function JayRobinSimulationRunBlock({ onComplete }: GhostwriterReadingBlockProps) {
+  return (
+    <AgentWorkBlock
+      thought={SIMULATION_INTRO_PARAGRAPH}
+      toolsLabel={SIM_RUN_HEADER_LABEL}
+      tools={SIM_RUN_STEPS}
+      summary={SIM_RUN_SUMMARY}
+      footnote={SIM_RUN_FOOTNOTE}
+      onComplete={onComplete}
+    />
+  )
+}
+
 /** Beat 6 — both failures fixed, the same suite re-run, then it hands off to the plan. */
 export function GhostwriterSimulationFixBlock({ onComplete }: GhostwriterReadingBlockProps) {
   return (
     <ActivityFindingsBlock
       label={SIM_FIX_HEADER_LABEL}
       steps={SIM_FIX_STEPS}
+      summary={SIM_FIX_SUMMARY}
+      footnote={SIM_FIX_FOOTNOTE}
+      onComplete={onComplete}
+    />
+  )
+}
+
+/** Jay & Robin's beat 6 — no separate lead-in exists for this one either. */
+export function JayRobinSimulationFixBlock({ onComplete }: GhostwriterReadingBlockProps) {
+  return (
+    <AgentWorkBlock
+      toolsLabel={SIM_FIX_HEADER_LABEL}
+      tools={SIM_FIX_STEPS}
       summary={SIM_FIX_SUMMARY}
       footnote={SIM_FIX_FOOTNOTE}
       onComplete={onComplete}
@@ -250,6 +329,8 @@ export function GhostwriterPlanCard({
   planOpen = false,
   agentCreated = false,
   copy,
+  openLabel,
+  openIcon = 'open_in_new',
 }: {
   onOpenPlan?: () => void
   onCreateAgent?: () => void
@@ -262,6 +343,12 @@ export function GhostwriterPlanCard({
    * playbook path cites pages and rules rather than reviews and replies.
    */
   copy?: { meta?: string; description?: string }
+  /** Jay & Robin: "See plan" reads better than "Open plan" once the plan lives in this same
+   *  window rather than somewhere external — defaults to the original Ghostwriter wording. */
+  openLabel?: string
+  /** Paired with `openLabel` — `open_in_new` implies leaving the window, which "See plan"
+   *  no longer does. */
+  openIcon?: string
 }) {
   return (
     <div className="ml-3xl mt-sm flex max-w-full flex-col gap-md">
@@ -290,9 +377,9 @@ export function GhostwriterPlanCard({
           }`}
         >
           <span className="material-symbols-outlined" style={{ fontSize: 18 }} aria-hidden>
-            {planOpen ? 'check' : 'open_in_new'}
+            {planOpen ? 'check' : openIcon}
           </span>
-          {planOpen ? 'Plan open' : PLAN_CARD.openLabel}
+          {planOpen ? 'Plan open' : openLabel ?? PLAN_CARD.openLabel}
         </button>
       </div>
 
@@ -315,6 +402,20 @@ export function GhostwriterGuidelinesBlock({ onComplete }: GhostwriterReadingBlo
     <ActivityFindingsBlock
       label={LEARNING_HEADER_LABEL}
       steps={LEARNING_STEPS}
+      summary={LEARNING_SUMMARY}
+      footnote={LEARNING_FOOTNOTE}
+      onComplete={onComplete}
+    />
+  )
+}
+
+/** Jay & Robin's beat 2. */
+export function JayRobinGuidelinesBlock({ onComplete }: GhostwriterReadingBlockProps) {
+  return (
+    <AgentWorkBlock
+      thought={LEARNING_INTRO_PARAGRAPH}
+      toolsLabel={LEARNING_HEADER_LABEL}
+      tools={LEARNING_STEPS}
       summary={LEARNING_SUMMARY}
       footnote={LEARNING_FOOTNOTE}
       onComplete={onComplete}

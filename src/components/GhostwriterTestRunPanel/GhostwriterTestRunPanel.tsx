@@ -138,7 +138,13 @@ export function GhostwriterTestRunPanel({
         <div className="absolute inset-0">{centerContent({ activeNodeId: null, doneNodeIds: [] })}</div>
         <div className={`${FLOATING_PANEL_CLASS} left-lg flex w-[320px] flex-col p-md`}>
           <TestCasesPanelHeader showAddButton={false} />
-          <div className="flex flex-1 flex-col items-center justify-center gap-sm px-lg text-center">
+          <div className="flex flex-1 flex-col items-center justify-center gap-md px-lg text-center">
+            <span className="flex size-10 items-center justify-center rounded-full bg-surface-selected text-text-tertiary">
+              <Icon name="science" size={20} />
+            </span>
+            <p className="m-0 text-body text-text-secondary">
+              Select a variety of reviews in your test case for best results.
+            </p>
             <button
               type="button"
               onClick={onRunTest}
@@ -146,9 +152,6 @@ export function GhostwriterTestRunPanel({
             >
               Add test case
             </button>
-            <p className="m-0 text-small text-text-tertiary">
-              Select a variety of reviews in your test case for best results.
-            </p>
           </div>
         </div>
         <div className={`${FLOATING_PANEL_CLASS} right-lg flex w-[420px] flex-col p-lg`}>
