@@ -26,7 +26,7 @@ export function GhostwriterKnowledgeTab() {
           </p>
           <button
             type="button"
-            className="flex h-9 shrink-0 items-center gap-xs rounded-full border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
+            className="flex h-9 shrink-0 items-center gap-xs rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
           >
             <Icon name="add" size={18} />
             Add knowledge

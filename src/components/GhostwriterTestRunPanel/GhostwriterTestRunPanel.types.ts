@@ -8,13 +8,25 @@ export interface TestRunNodeState {
   doneNodeIds: string[]
 }
 
-export interface GhostwriterTestRunPanelProps {
+/** One "Run test" confirmation — its own reviews and its own timestamp, kept separate from
+ *  any earlier or later batch instead of being merged/replaced. */
+export interface TestRunBatch {
   reviews: Review[]
+  /** Pre-formatted — e.g. "Sep 22, 2026, 3:45 PM". */
+  testedAt: string
+}
+
+export interface GhostwriterTestRunPanelProps {
+  /** Empty before "Run test" has ever been confirmed — the floating LHS/RHS then show their
+   *  own empty state (with the "Add test case" CTA on the left) instead of a review list/
+   *  result, while the canvas underneath still renders normally. Each later confirmation adds
+   *  its own batch rather than replacing the previous one. */
+  batches: TestRunBatch[]
   /** The workflow canvas — a render prop (not a plain node) so the caller can feed the same
    *  `TestRunNodeState` this component computes for its own step list into the canvas mount's
    *  `externalTestRun`, keeping node highlighting and the stepper in lockstep. */
   centerContent: (testRun: TestRunNodeState) => ReactNode
-  /** Pre-formatted — e.g. "Sep 22, 2026, 3:45 PM". Shown next to "N reviews tested". */
-  testedAt?: string
+  /** Empty-state / header CTA — opens the review picker. */
+  onRunTest?: () => void
   className?: string
 }

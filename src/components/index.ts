@@ -35,6 +35,7 @@ export { GhostwriterConnectionsTab } from './GhostwriterConnectionsTab/Ghostwrit
 export { GhostwriterKnowledgeTab } from './GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 export { GhostwriterRunTestModal } from './GhostwriterRunTestModal/GhostwriterRunTestModal'
 export { GhostwriterTestRunPanel } from './GhostwriterTestRunPanel/GhostwriterTestRunPanel'
+export { FrontdeskTestSessionsPanel } from './FrontdeskTestSessionsPanel/FrontdeskTestSessionsPanel'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'
 export { ReviewCardBody, StarRating } from './ReviewCard/ReviewCard'

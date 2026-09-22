@@ -54,6 +54,13 @@ function isReviewsScratchCreateName(name: string) {
   return /^review (response|generation) agent 1$/i.test(name.trim())
 }
 
+/** Front desk (Myna) create-from-scratch — empty canvas, not the seeded Front desk workflow.
+ *  Mirrors `isReviewsScratchCreateName`'s magic-title trick (see AgentDetailScreen's
+ *  `createWorkflowAgentName`: forced to this name until the agent is actually created). */
+function isFrontdeskScratchCreateName(name: string) {
+  return /^front desk agent 1$/i.test(name.trim())
+}
+
 // Healthcare / Dental Frontdesk start-node details — defined inline to avoid
 // any module-cache staleness from agentWorkflows.ts.
 const HC_FRONTDESK_START = {
@@ -79,6 +86,14 @@ const HC_FRONTDESK_START = {
     '1013 - Atlanta, GA',
     '1014 - Miami, FL',
   ],
+}
+
+/** Goals / outcomes for Front desk (Myna) create-from-scratch (empty canvas). Locations stay
+ *  empty until the agent is actually created. */
+const FRONTDESK_SCRATCH_START = {
+  goals: FD_GOALS,
+  outcomes: HC_FRONTDESK_START.outcomes,
+  locations: [] as string[],
 }
 
 interface WorkflowEditorScreenProps {
@@ -248,14 +263,19 @@ export function WorkflowEditorScreen({
     ? REVIEW_RESPONSE_WORKFLOW
     : workflowMap[agentBaseName] ?? EMPTY_WORKFLOW
   const isReviewScratchCreate = !wizardDraft && isReviewsScratchCreateName(shownName)
+  const isFrontdeskScratchCreate = !wizardDraft && isFrontdeskScratchCreateName(shownName)
   const isEmptyScratch =
-    isReviewScratchCreate || (!wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0)
+    isReviewScratchCreate ||
+    isFrontdeskScratchCreate ||
+    (!wizardDraft && (baseWorkflow.nodes?.length ?? 0) === 0)
   const resolvedExistingAgent = existingAgent ?? (!isEmptyScratch && !wizardDraft)
   const reviewScratchStart = /review response/i.test(shownName)
     ? REVIEW_RESPONSE_SCRATCH_START
     : /review generation/i.test(shownName)
       ? REVIEW_GENERATION_SCRATCH_START
-      : null
+      : isFrontdeskScratchCreate
+        ? FRONTDESK_SCRATCH_START
+        : null
 
   // Extract region suffix from instance name (e.g. "Recall agent - North region" → "North region")
   const regionSuffix = agentName.includes(' - ') ? agentName.replace(/^.+ - /, '') : null

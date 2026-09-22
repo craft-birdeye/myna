@@ -9,11 +9,11 @@ function RunTestCheckmark({ checked }: { checked: boolean }) {
   return (
     <span
       aria-hidden
-      className={`mt-xs flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-        checked ? 'border-primary bg-primary' : 'border-border-selected bg-surface'
+      className={`mt-xs flex size-[18px] shrink-0 items-center justify-center rounded-[2px] border transition-colors ${
+        checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
       }`}
     >
-      {checked && <Icon name="check" size={14} className="text-white" />}
+      {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
     </span>
   )
 }
@@ -45,7 +45,7 @@ export function GhostwriterRunTestModal({
         <div className="flex shrink-0 items-start justify-between px-2xl py-lg">
           <div>
             <h2 id="run-test-modal-title" className="m-0 text-h3 text-text-primary">
-              Preview settings
+              Add test case
             </h2>
             <p className="m-0 mt-xs text-body text-text-secondary">
               Choose reviews to test your agent. Use filters to narrow your results.

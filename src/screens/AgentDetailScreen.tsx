@@ -106,7 +106,9 @@ import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsT
 import { GhostwriterKnowledgeTab } from '../components/GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 import { GhostwriterRunTestModal } from '../components/GhostwriterRunTestModal/GhostwriterRunTestModal'
 import { GhostwriterTestRunPanel } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel'
+import type { TestRunBatch } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel.types'
 import { ALL_REVIEWS } from '../data/reviewsData'
+import { FrontdeskTestSessionsPanel } from '../components/FrontdeskTestSessionsPanel/FrontdeskTestSessionsPanel'
 import { GhostwriterOpenQuestions } from '../components/AgentActivityHeader/GhostwriterOpenQuestions'
 import { OPEN_QUESTIONS_INTRO, OPEN_QUESTIONS_LOCKED_IN } from '../data/ghostwriterOpenQuestions'
 import { PLAN_SECTIONS, PLAN_SECTION_PREFIX } from '../data/ghostwriterPlan'
@@ -133,6 +135,7 @@ import {
   SOURCES_HEADER_LABEL,
   SOURCES_NEXT_PARAGRAPH,
   SOURCES_SUMMARY,
+  SPAM_DIGEST_QUESTION,
   SPAM_SCREEN_HEADER_LABEL,
   SPAM_SCREEN_SUMMARY,
 } from '../data/ghostwriterReadingBlock'
@@ -1554,6 +1557,20 @@ function UserBubble({ children }: { children: ReactNode }) {
   )
 }
 
+/** Same bubble as `UserBubble`, but keeps the question the answer was picked for — a choice
+ *  card's options disappear once picked, so without this the history just shows a bare
+ *  answer with nothing tying it back to what was asked. */
+function AnsweredQuestionBlock({ question, answer }: { question: string; answer: string }) {
+  return (
+    <div className="mt-[36px] flex justify-end">
+      <div className="max-w-[80%] rounded-lg bg-surface-hover px-md py-sm leading-[1.5] text-text-primary">
+        <p className="m-0 text-small text-text-tertiary">{question}</p>
+        <p className="m-0 mt-2xs text-body text-text-primary">{answer}</p>
+      </div>
+    </div>
+  )
+}
+
 // ChatGPT-style action row shown under every agent response: like / dislike / copy.
 function MessageActions({ copyText, className }: { copyText?: string; className?: string }) {
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null)
@@ -1771,9 +1788,9 @@ const GHOSTWRITER_JAY_ROBIN_SHELL_TABS: Tab[] = [
  *  tab-switch handler keep working unchanged. */
 const FRONTDESK_MYNA_SHELL_TABS: Tab[] = [
   { id: 'workflow', label: 'Workflow' },
+  { id: 'simulation', label: 'Test' },
   { id: 'tools', label: 'Tools' },
   { id: 'knowledge', label: 'Knowledge' },
-  { id: 'simulation', label: 'Test' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -3839,7 +3856,9 @@ function ReviewResponseThread({
           )}
         </>
       )}
-      {explorationModeChoice && modeAnswer && <UserBubble>{modeAnswer}</UserBubble>}
+      {explorationModeChoice && modeAnswer && (
+        <AnsweredQuestionBlock question={REVIEW_RESPONSE_MODE_QUESTION} answer={modeAnswer} />
+      )}
       {/* Ghostwriter goes and reads the account rather than asking for sources/templates/
           tone — so its follow-up is the reading block, not the sources question. */}
       {explorationModeChoice && modeAnswer && ghostwriterPolish && (
@@ -3884,7 +3903,7 @@ function ReviewResponseThread({
               />
             </>
           )}
-          {digestEmail && <UserBubble>{digestEmail}</UserBubble>}
+          {digestEmail && <AnsweredQuestionBlock question={SPAM_DIGEST_QUESTION} answer={digestEmail} />}
           {/* The plan is only shown once the agent has tested the draft, found what breaks,
               fixed it and re-run the suite — so what you open has already survived a pass. */}
           {digestEmail && (
@@ -3913,7 +3932,9 @@ function ReviewResponseThread({
               agentCreated={agentCreated}
             />
           )}
-          {agentCreated && isJayRobin && !buildStepsDone && (
+          {/* Stays mounted (not swapped out) once done — the checked-off list is part of the
+              permanent chat history, not a transient loading state that disappears. */}
+          {agentCreated && isJayRobin && (
             <GhostwriterBuildStepsBlock onDone={() => setBuildStepsDone(true)} />
           )}
           {/* Jay & Robin: "Generate test cases" now lives on the Test tab's own "Run test" CTA,
@@ -3935,7 +3956,9 @@ function ReviewResponseThread({
               />
             </>
           )}
-          {postCreateAnswer && <UserBubble>{postCreateAnswer}</UserBubble>}
+          {postCreateAnswer && (
+            <AnsweredQuestionBlock question={GHOSTWRITER_POST_CREATE_QUESTION} answer={postCreateAnswer} />
+          )}
           {postCreateAnswer === GHOSTWRITER_POST_CREATE_OPTIONS[1].title && (
             <ReviewAgentReply
               paragraphs={["Done — it's live now and will start replying as new reviews come in."]}
@@ -3967,7 +3990,9 @@ function ReviewResponseThread({
                     />
                   </>
                 )}
-              {resolveAnswer && <UserBubble>{resolveAnswer}</UserBubble>}
+              {resolveAnswer && (
+                <AnsweredQuestionBlock question={GHOSTWRITER_RESOLVE_QUESTION} answer={resolveAnswer} />
+              )}
               {resolveAnswer === GHOSTWRITER_RESOLVE_OPTIONS[1].title && (
                 <ReviewAgentReply
                   paragraphs={[`No problem — you can fix these anytime from the ${simulationTabLabel} tab.`]}
@@ -5582,7 +5607,8 @@ function GhostwriterTopBarActions({
   hideRunTest = false,
 }: {
   onAction: (type: 'run-test' | 'activate' | 'save-draft' | 'delete') => void
-  /** Jay & Robin only — Run test moved into the Test tab itself, so the top bar drops it. */
+  /** Jay & Robin and Front desk (Myna) only — Run test moved into the Test tab itself, so the
+   *  top bar drops it. */
   hideRunTest?: boolean
 }) {
   const [publishOpen, setPublishOpen] = useState(false)
@@ -6652,6 +6678,14 @@ function HealthcareFrontdeskCreateAgentLive({
     })
   }
 
+  // Front desk (Myna) only: the draft-review thinking panel finishing IS the creation
+  // moment — no "Yes, that's right"/"Test agent" pills to click through. Testing now lives
+  // in the canvas's own Test tab (Preview), not this chat.
+  useEffect(() => {
+    if (ghostwriterPolish && reviewThoughtsDone && !agentCreated) saveCreatedAgent()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ghostwriterPolish, reviewThoughtsDone, agentCreated])
+
   const handleStartTestAgent = (label = 'Test agent') => {
     setTestAgentAnswers((prev) => [...prev, label])
     handleOpenProcedure(null)
@@ -7628,6 +7662,18 @@ function HealthcareFrontdeskCreateAgentLive({
                           text={CREATE_AGENT_REVIEW_THOUGHTS_TEXT}
                         />
                         {reviewThoughtsDone && (
+                          ghostwriterPolish ? (
+                            // Front desk (Myna): this thinking panel finishing out is the
+                            // creation moment (see the `saveCreatedAgent` effect above) — a
+                            // plain closing line, no follow-up pills. Testing lives in the
+                            // canvas's own Test tab now.
+                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+                              <p className="flex-1 text-body leading-6 text-text-primary">
+                                The agent is created. What else do we want to do?
+                              </p>
+                            </div>
+                          ) : (
                           <>
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
                               <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
@@ -7703,6 +7749,7 @@ function HealthcareFrontdeskCreateAgentLive({
                               </>
                             )}
                           </>
+                          )
                         )}
                           </>
                         )}
@@ -9337,13 +9384,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     return () => clearTimeout(timer)
   }, [ghostwriterSimStarted, ghostwriterSimStepIndex, ghostwriterSimRevealDone])
   /** Jay & Robin only: the Test tab's own "Run test" picker + result view — independent of the
-   *  chat's post-create question above. `jayRobinTestReviews` null = the tab's empty state;
-   *  once set (from the modal's confirmed selection), the Test tab shows the list+canvas+detail
-   *  result view instead. */
+   *  chat's post-create question above. Empty array = the tab's empty state; each confirmed
+   *  selection appends its own batch (own reviews + own timestamp) rather than replacing the
+   *  last one, so re-running with more test cases keeps the earlier results in view too. */
   const [jayRobinTestModalOpen, setJayRobinTestModalOpen] = useState(false)
   const [jayRobinTestSelectedIds, setJayRobinTestSelectedIds] = useState<string[]>([])
-  const [jayRobinTestReviews, setJayRobinTestReviews] = useState<typeof ALL_REVIEWS | null>(null)
-  const [jayRobinTestRunAt, setJayRobinTestRunAt] = useState<string | null>(null)
+  const [jayRobinTestBatches, setJayRobinTestBatches] = useState<TestRunBatch[]>([])
   /** Jay & Robin only: "Open plan" opens a real canvas-docked RHS panel (below, next to the
    *  canvas section) instead of swapping the docked chat's own content — see
    *  `onOpenPlanExternal` on `HealthcareFrontdeskCreateAgentLive`. */
@@ -10176,14 +10222,20 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
          (`!ghostwriterAgentCreated` below), at which point it should show the real, fully
          built workflow instead of staying on the empty scratch canvas. */
       ? 'Review response agent 1'
-      : createDraftAgentName
-      ?? (isReviewResponse
-        ? REVIEW_RESPONSE_BUILD_CARD.title
-        : isReviewGeneration
-          ? 'Review generation agent'
-          : isReminder
-            ? REMINDER_BUILD_CARD.title
-            : FRONTDESK_BUILD_CARD.title)
+      : (isMynaCombinedNav && ghostwriterCombinedFlow && !ghostwriterAgentCreated)
+        /* Same trick for Front desk (Myna): stay on the empty scratch canvas
+           (isFrontdeskScratchCreateName in WorkflowEditorScreen) — regardless of
+           `createDraftAgentName` already being set mid-chat — until the agent is actually
+           created (`ghostwriterAgentCreated`), not merely drafted. */
+        ? 'Front desk agent 1'
+        : createDraftAgentName
+        ?? (isReviewResponse
+          ? REVIEW_RESPONSE_BUILD_CARD.title
+          : isReviewGeneration
+            ? 'Review generation agent'
+            : isReminder
+              ? REMINDER_BUILD_CARD.title
+              : FRONTDESK_BUILD_CARD.title)
     const isReviewsCreateFlow = isReviewResponse || isReviewGeneration
     const reviewsCreateInnerTitle = isReviewResponse
       ? 'Review response agent 1'
@@ -10243,16 +10295,6 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
       // Knowledge are answerable before the agent exists (account-level, not per-draft) —
       // only Simulation stays gated pre-creation.
       if (isGhostwriterPolish && !ghostwriterAgentCreated && tabId === 'simulation') return
-      // Front desk (Myna): "Test" is the same voice/chat preview as the instance-level
-      // Workflow tab's "Preview" button (AgentBuilder's `handleRunTest`, keyed off the agent
-      // name) — not a step-log run. Trigger it the same way the pinned top bar's "Run test"
-      // button does, rather than showing a disconnected tab of our own.
-      if (isMynaCombinedNav && ghostwriterAgentCreated && tabId === 'simulation') {
-        setCreateGhostwriterTab('workflow')
-        openCreateWorkflow()
-        setGhostwriterHeaderAction((prev) => ({ type: 'run-test', nonce: (prev?.nonce ?? 0) + 1 }))
-        return
-      }
       if (tabId === 'workflow' && !isSimulationNav) {
         setCreateGhostwriterTab('workflow')
         openCreateWorkflow()
@@ -10490,7 +10532,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     </button>
                   ) : (
                   <GhostwriterTopBarActions
-                    hideRunTest={isJayRobinPolish}
+                    hideRunTest={isJayRobinPolish || isMynaCombinedNav}
                     onAction={(type) => {
                       // These act on the workflow, so surface it first — then fire the
                       // real handler inside AgentBuilder via a fresh nonce.
@@ -10873,52 +10915,45 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     />
                   </div>
                 ) : isMynaCombinedNav ? (
-                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-md bg-surface">
-                    <EmptyState
-                      title="No test run yet"
-                      description="Once your agent is built, you can run test conversations here."
-                      className="max-w-[320px] text-center"
-                    />
-                  </div>
-                ) : isJayRobinPolish ? (
-                  jayRobinTestReviews ? (
-                    <GhostwriterTestRunPanel
-                      reviews={jayRobinTestReviews}
-                      testedAt={jayRobinTestRunAt ?? undefined}
-                      centerContent={(testRun) => (
-                        <WorkflowEditorScreen
-                          agentName="Review response agent - North Region"
-                          displayName={createWorkflowAgentName}
-                          agentStatus="Draft"
-                          product={product ?? 'healthcare'}
-                          onClose={() => {}}
-                          hideLhs
-                          hideTopBar
-                          existingAgent={false}
-                          hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
-                          cardBadgeChrome={isJayRobinPolish}
-                          hideLeftFloater
-                          explorationChrome={isExplorationAgents}
-                          externalTestRun={testRun}
-                        />
-                      )}
-                    />
-                  ) : (
-                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-md bg-surface">
-                      <EmptyState
-                        title="No test run yet"
-                        description="Pick a few reviews and see how the agent responds to each one."
-                        className="max-w-[320px] text-center"
+                  <FrontdeskTestSessionsPanel
+                    centerContent={
+                      <WorkflowEditorScreen
+                        agentName="Front desk agent - North region"
+                        displayName={createWorkflowAgentName}
+                        agentStatus="Draft"
+                        product={product ?? 'healthcare'}
+                        onClose={() => {}}
+                        hideLhs
+                        hideTopBar
+                        existingAgent={false}
+                        hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
+                        cardBadgeChrome={isGhostwriterPolish}
+                        hideLeftFloater
                       />
-                      <button
-                        type="button"
-                        onClick={() => setJayRobinTestModalOpen(true)}
-                        className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-                      >
-                        Run test
-                      </button>
-                    </div>
-                  )
+                    }
+                  />
+                ) : isJayRobinPolish ? (
+                  <GhostwriterTestRunPanel
+                    batches={jayRobinTestBatches}
+                    onRunTest={() => setJayRobinTestModalOpen(true)}
+                    centerContent={(testRun) => (
+                      <WorkflowEditorScreen
+                        agentName="Review response agent - North Region"
+                        displayName={createWorkflowAgentName}
+                        agentStatus="Draft"
+                        product={product ?? 'healthcare'}
+                        onClose={() => {}}
+                        hideLhs
+                        hideTopBar
+                        existingAgent={false}
+                        hideCanvasStartNode={isExplorationHideCanvasStartNode(navId)}
+                        cardBadgeChrome={isJayRobinPolish}
+                        hideLeftFloater
+                        explorationChrome={isExplorationAgents}
+                        externalTestRun={testRun}
+                      />
+                    )}
+                  />
                 ) : (
                   <GhostwriterSimulationTab
                     testCases={REVIEW_RESPONSE_TEST_CASES.filter((tc) => tc.id <= ghostwriterSimRevealedCount)}
@@ -10940,16 +10975,20 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               }
               onCancel={() => setJayRobinTestModalOpen(false)}
               onRunTest={() => {
-                setJayRobinTestReviews(ALL_REVIEWS.filter((r) => jayRobinTestSelectedIds.includes(r.id)))
-                setJayRobinTestRunAt(
-                  new Date().toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  }),
-                )
+                setJayRobinTestBatches((prev) => [
+                  ...prev,
+                  {
+                    reviews: ALL_REVIEWS.filter((r) => jayRobinTestSelectedIds.includes(r.id)),
+                    testedAt: new Date().toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    }),
+                  },
+                ])
+                setJayRobinTestSelectedIds([])
                 setJayRobinTestModalOpen(false)
               }}
             />
