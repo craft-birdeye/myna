@@ -7824,7 +7824,7 @@ function HealthcareFrontdeskCreateAgentLive({
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
                               <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
                               <p className="flex-1 text-body leading-6 text-text-primary">
-                                Now that I've created the procedure, I can go ahead and create the agent draft. Would
+                                Now that I've created the procedure, I can go ahead and create the agent plan. Would
                                 you like me to proceed?
                               </p>
                             </div>
@@ -7832,10 +7832,10 @@ function HealthcareFrontdeskCreateAgentLive({
                               <div className="agent-build-fade ml-3xl mt-sm flex flex-wrap gap-sm">
                                 <button
                                   type="button"
-                                  onClick={() => setCreateAgentAnswer('Yes, create the agent')}
+                                  onClick={() => setCreateAgentAnswer('Yes, create the plan')}
                                   className="flex h-9 items-center rounded-md border border-border bg-surface px-lg text-body text-text-primary hover:bg-surface-hover"
                                 >
-                                  Yes, create the agent
+                                  Yes, create the plan
                                 </button>
                                 <button
                                   type="button"
@@ -9073,7 +9073,7 @@ function buildCreateChatTrail(snap: SavedCreateChatSnapshot): CreateChatTurn[] {
         })
         trail.push(
           agentParagraphs([
-            "Now that I've created the procedure, I can go ahead and create the agent draft. Would you like me to proceed?",
+            "Now that I've created the procedure, I can go ahead and create the agent plan. Would you like me to proceed?",
           ]),
         )
       }
@@ -9144,7 +9144,7 @@ registerBuiltinCreateAiDraft(
     docsDraftReadyDone: true,
     refillAnswer: 'Add procedure "Handling refills"',
     refillProcedureCreated: true,
-    createAgentAnswer: 'Yes, create the agent',
+    createAgentAnswer: 'Yes, create the plan',
     draftBuildReady: true,
   }),
 )

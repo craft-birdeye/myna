@@ -14,6 +14,7 @@ import {
   isResponseAgentsSep1StyleNav,
   isResponseAgentsExplorationNav,
   isFullCanvasStyleNav,
+  isFrontdeskMynaNav,
 } from './data/agentNavIds'
 import { parseDeepSegments, serializeDeep, type DeepRoute } from './appRoutes'
 import { AiAssistPanel, Icon, IconRail, Link, RecordDetailScreen, SideNav, Toast, TopNav, type NavSection, type RailGroup, type Product } from './components'
@@ -821,9 +822,11 @@ export function App() {
     railActive !== 'search' &&
     railActive !== 'social'
 
-  /** Response agents (exploration) create — full-bleed, no L1 rail or global TopBar. */
+  /** Response agents (exploration) create — full-bleed, no L1 rail or global TopBar. Front
+   *  desk (Myna/Sep 23) shares the same combined chat-in-canvas create/edit shell, so it gets
+   *  the same full-bleed treatment (isFrontdeskMynaNav covers both navs). */
   const hideAppChromeForExplorationCreate =
-    isAgentSetupActive && isResponseAgentsExplorationNav(navActive)
+    isAgentSetupActive && (isResponseAgentsExplorationNav(navActive) || isFrontdeskMynaNav(navActive))
   /** Both full-bleed shells drop the L1 rail + global TopBar: the exploration create flow
    *  and the Full canvas workflow editor. They differ only in the gutter/card backgrounds. */
   const hideAppChrome = hideAppChromeForExplorationCreate || isFullCanvasWorkflowEdit
