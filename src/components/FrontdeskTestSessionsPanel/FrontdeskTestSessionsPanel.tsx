@@ -68,15 +68,27 @@ function TwoStarSparkleIcon({ size = 14, className = '' }: { size?: number; clas
   )
 }
 
-function SessionDetail({ session }: { session: FrontdeskTestSession }) {
+function SessionDetail({ session, onClose }: { session: FrontdeskTestSession; onClose?: () => void }) {
   return (
     <div className="flex flex-col gap-md">
       <div className="flex items-center justify-between">
         <p className="m-0 text-body text-text-primary">Preview</p>
-        <Chip label={session.outcome === 'passed' ? 'Passed' : 'Failed'} variant={session.outcome === 'passed' ? 'success' : 'danger'} />
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex size-7 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          >
+            <Icon name="close" size={18} />
+          </button>
+        )}
       </div>
       <div className="flex flex-col gap-2xs">
-        <p className="m-0 text-body text-text-primary">{session.title}</p>
+        <div className="flex items-center justify-between gap-sm">
+          <p className="m-0 text-body text-text-primary">{session.title}</p>
+          <Chip label={session.outcome === 'passed' ? 'Passed' : 'Failed'} variant={session.outcome === 'passed' ? 'success' : 'danger'} />
+        </div>
         <p className="m-0 text-small text-text-tertiary">
           {session.channel === 'voice' ? 'Voice call' : 'Web chat'}
         </p>
@@ -868,7 +880,7 @@ export function FrontdeskTestSessionsPanel({
                 <TestWebChatPreview onClose={() => setRhsMode('none')} onEnd={handleWebchatEnded} />
               </div>
             ) : selected ? (
-              <SessionDetail session={selected} />
+              <SessionDetail session={selected} onClose={() => setRhsMode('none')} />
             ) : null}
           </div>
         )}
@@ -1031,7 +1043,7 @@ export function FrontdeskTestSessionsPanel({
             <TestWebChatPreview onClose={() => setRhsMode('session')} />
           </div>
         ) : selected ? (
-          <SessionDetail session={selected} />
+          <SessionDetail session={selected} onClose={() => setSelectedId(null)} />
         ) : (
           <div className="flex h-full flex-col">
             <p className="m-0 text-body text-text-primary">Preview</p>

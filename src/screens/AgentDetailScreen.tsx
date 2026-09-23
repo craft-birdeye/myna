@@ -11097,18 +11097,24 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       ? 'Review generation agent - North Region'
                       : isReminder
                         ? 'Reminder agent - North region'
-                        // Combined create flow (Myna): the canvas key embeds this name
-                        // (`preserveCanvasIdentity` in WorkflowEditorScreen), so switching it the
-                        // moment the draft names itself mid-chat — well before the agent is
-                        // actually created — would remount AgentBuilder and wipe the live docked
-                        // chat. Stay pinned until `ghostwriterAgentCreated`, same guard as
-                        // `createWorkflowAgentName` above.
-                        : (isMynaCombinedNav && ghostwriterCombinedFlow && !ghostwriterAgentCreated)
+                        // Combined create flow (Myna): stay pinned to a real, region-suffixed
+                        // instance name for the *whole* flow, not just until `ghostwriterAgentCreated`
+                        // — unlike `displayName` below, this prop is `agentName.replace(/ - .+$/, '')`'d
+                        // in WorkflowEditorScreen to look up the real prebuilt workflow, and
+                        // `createDraftAgentName` here is the draft's own display title (e.g. "New
+                        // front desk agent - inbound"), not an instance name — falling through to it
+                        // once created stripped to a base name matching nothing in `workflowMap`
+                        // (empty canvas) *and* changed `editorSeedKey` (`preserveCanvasIdentity` in
+                        // WorkflowEditorScreen embeds this same prop), remounting AgentBuilder and
+                        // wiping the live docked chat right as "Create agent" was clicked.
+                        : (isMynaCombinedNav && ghostwriterCombinedFlow)
                           ? 'Front desk agent - North region'
                           // Editing an existing Myna instance from the list (openAgentInstanceEditor)
                           // sets createDraftAgentName to that instance's real name (e.g. "...West
                           // region") — prefer it so the canvas's region-suffix patching (subagent
                           // chip labels) matches the instance actually being edited, not North's.
+                          // Never true inside the combined flow above (openGhostwriterWorkflow sets
+                          // ghostwriterCombinedFlow false), so it can't be shadowed by the branch above.
                           : createDraftAgentName ?? 'Front desk agent - North region'
                 }
                 displayName={createWorkflowAgentName}
