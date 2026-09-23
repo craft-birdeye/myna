@@ -55,6 +55,7 @@ import {
   isExplorationHideCanvasStartNode,
   isFrontdeskExplorationChrome,
   isFrontdeskMynaNav,
+  isFrontdeskSep23Nav,
   isLlmTaskExplorationLayout,
   isResponseAgentsExplorationChrome,
   isResponseAgentsExplorationNav,
@@ -104,6 +105,7 @@ import {
   JayRobinThinkingBlock,
 } from '../components/AgentActivityHeader/GhostwriterReadingBlock'
 import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
+import { AgentWorkSequence, type WorkPhase } from '../components/AgentActivityHeader/AgentWorkSequence'
 import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsTab/GhostwriterConnectionsTab'
 import { GhostwriterKnowledgeTab } from '../components/GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 import { GhostwriterRunTestModal } from '../components/GhostwriterRunTestModal/GhostwriterRunTestModal'
@@ -2759,6 +2761,49 @@ function ReviewAgentReply({
   )
 }
 
+/** Accept-on-recommendation: the "work" beat between the agent's initial reply and its
+ *  follow-up question, so accepting reads as real work happening rather than an instant reply. */
+const ACCEPTED_RECOMMENDATION_WORK_PHASES: WorkPhase[] = [
+  {
+    toolsLabel: 'Updating the workflow',
+    tools: [
+      'Opened the branch conditions on Evaluate conditions',
+      'Added a matching path for the rating range that was falling through',
+      'Re-ran the test suite against the updated branch',
+    ],
+    findings: ['All reviews now match a branch — nothing falls through to the fallback.'],
+  },
+]
+
+/** One accepted recommendation, paced as its own exchange: the recommendation, the agent's
+ *  initial reply, a "Worked for #s" beat, then a follow-up question — each stage gated on the
+ *  previous one finishing so multiple accepted recommendations don't race each other. */
+function AcceptedRecommendationExchange({ text }: { text: string }) {
+  const [replyDone, setReplyDone] = useState(false)
+  const [workDone, setWorkDone] = useState(false)
+  return (
+    <div>
+      <UserBubble>{text}</UserBubble>
+      <ReviewAgentReply
+        tight
+        paragraphs={["Got it — I'll update the workflow so this case gets handled correctly instead of falling through."]}
+        onComplete={() => setReplyDone(true)}
+      />
+      {replyDone && (
+        <AgentWorkSequence phases={ACCEPTED_RECOMMENDATION_WORK_PHASES} onComplete={() => setWorkDone(true)} />
+      )}
+      {workDone && (
+        <ReviewAgentReply
+          tight
+          paragraphs={[
+            "Done — this rating range now routes to a response instead of the fallback. Want me to publish this change now, or would you like to review the updated branch first?",
+          ]}
+        />
+      )}
+    </div>
+  )
+}
+
 /** Demo trigger: picking this pill simulates a mid-stream API failure. */
 function isSourcesStreamFailDemo(text: string) {
   return /^facebook only\.?$/i.test(text.trim())
@@ -3043,6 +3088,9 @@ function ReviewBuildingCard({
 /** Stable empty-set default so `fixedTestCaseIds ?? EMPTY_FIXED_IDS` doesn't create a new
  *  Set identity every render. */
 const EMPTY_FIXED_IDS: Set<number> = new Set()
+
+/** Stable empty-array default for `acceptedRecommendations`, same reasoning as `EMPTY_FIXED_IDS`. */
+const EMPTY_ACCEPTED_RECOMMENDATIONS: string[] = []
 
 /** Cumulative test-case count revealed at each animation step — each step after the first
  *  three lands exactly on (or just past) the next failing case's id, so failed tiles append
@@ -3333,6 +3381,7 @@ function ReviewResponseThread({
   autoSimulate = false,
   onAnswerCardOpenChange,
   simulationTabLabel = 'Simulation',
+  acceptedRecommendations = EMPTY_ACCEPTED_RECOMMENDATIONS,
 }: {
   onDraftReady?: (name: string | null) => void
   onCreateAgent?: (options?: { publish?: boolean }) => void
@@ -3382,6 +3431,10 @@ function ReviewResponseThread({
   /** Jay & Robin only: that shell calls the tab "Test" instead of "Simulation" — keeps this
    *  chat's own references to it (post-create/resolve option descriptions) matching. */
   simulationTabLabel?: string
+  /** 23 Sep only — recommendation text accepted from a failed Test tab review, appended to the
+   *  very end of this thread (a user bubble + a fixed acknowledgment reply) regardless of the
+   *  existing scripted flow's own state. Purely additive — never read by that flow. */
+  acceptedRecommendations?: string[]
 }) {
   /** Only Jay & Robin's shell renames the tab, so this doubles as "is this Jay & Robin"
    *  without threading yet another prop through three components. */
@@ -4533,6 +4586,9 @@ function ReviewResponseThread({
           }}
         />
       )}
+      {acceptedRecommendations.map((text, i) => (
+        <AcceptedRecommendationExchange key={i} text={text} />
+      ))}
     </>
   )
 }
@@ -6379,6 +6435,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
   simulationTabLabel = 'Simulation',
   onOpenPlanExternal,
   planOpenExternal = false,
+  acceptedRecommendations,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -6389,6 +6446,8 @@ export function HealthcareFrontdeskCreateAgentScreen({
   pageTitle?: string
   /** Hides the in-column back arrow when the shell header already provides navigation. */
   hideHeaderBack?: boolean
+  /** 23 Sep only — see `ReviewResponseThread`'s matching prop. */
+  acceptedRecommendations?: string[]
   libraryCards?: CreateLibraryCard[]
   initialPrompt?: string
   /** Auto-sends `initialPrompt` on mount instead of waiting for the user — used to "reopen" a recent chat. */
@@ -6494,6 +6553,7 @@ export function HealthcareFrontdeskCreateAgentScreen({
       simulationTabLabel={simulationTabLabel}
       onOpenPlanExternal={onOpenPlanExternal}
       planOpenExternal={planOpenExternal}
+      acceptedRecommendations={acceptedRecommendations}
     />
   )
 }
@@ -6532,6 +6592,7 @@ function HealthcareFrontdeskCreateAgentLive({
   simulationTabLabel = 'Simulation',
   onOpenPlanExternal,
   planOpenExternal = false,
+  acceptedRecommendations,
 }: {
   onCreateFromScratch: () => void
   onSelectFromLibrary: (templateId: string) => void
@@ -6541,6 +6602,8 @@ function HealthcareFrontdeskCreateAgentLive({
   onSubmittedChange?: (submitted: boolean) => void
   pageTitle?: string
   hideHeaderBack?: boolean
+  /** 23 Sep only — see `ReviewResponseThread`'s matching prop. */
+  acceptedRecommendations?: string[]
   libraryCards?: CreateLibraryCard[]
   initialPrompt?: string
   autoStart?: boolean
@@ -7502,6 +7565,7 @@ function HealthcareFrontdeskCreateAgentLive({
                   autoSimulate={autoSimulate}
                   onAnswerCardOpenChange={setAnswerCardOpen}
                   simulationTabLabel={simulationTabLabel}
+                  acceptedRecommendations={acceptedRecommendations}
                 />
               ) : isReminderFlow ? (
                 <>
@@ -9571,6 +9635,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   /** 23 Sep only: saved Test suites for the Test tab's Test suite section — lifted here for the
    *  same reason as `jayRobinTestBatches`, so it survives a trip to another tab and back. */
   const [jayRobinTestSuites, setJayRobinTestSuites] = useState<TestSuite[]>([])
+  /** 23 Sep only: recommendation text accepted from a failed Test tab review — appended to the
+   *  end of the Workflow tab's "Edit with AI" chat (see `ReviewResponseThread`'s matching prop). */
+  const [acceptedRecommendations, setAcceptedRecommendations] = useState<string[]>([])
   /** Jay & Robin and Front desk (Myna): "Open/See plan" opens a real canvas-docked RHS panel
    *  (below, next to the canvas section) instead of swapping the docked chat's own content —
    *  see `onOpenPlanExternal` on `HealthcareFrontdeskCreateAgentLive`. */
@@ -9611,6 +9678,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
     setShowCreateFlow(true)
+    // 23 Sep: a fresh draft starts with none of its own — otherwise a recommendation accepted
+    // in an earlier draft this session would still show up in this brand-new one's chat.
+    setAcceptedRecommendations([])
   }
 
   const selectAllChats = () => {
@@ -9625,6 +9695,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setCreateDraftAgentName(null)
     setCanvasProcedureId(null)
     setInlineProcedureOpen(false)
+    setAcceptedRecommendations([])
   }
 
   /** `withAiPanel: false` — "Create from scratch" opens a bare canvas: no Create with AI
@@ -9663,7 +9734,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     setGhostwriterAgentCreated(true)
     // Keep the docked AI panel on the LIVE conversation that led here (not the static trail
     // replay) — the post-create "What do you want to do next?" question and the simulation
-    // run that follows it are interactive, and the replay has no turn kind for that.
+    // run that follows it are interactive, and the replay has no turn kind for that. Force
+    // ghostwriterCombinedFlow here (not just wherever Send happened to set it) so the docked
+    // panel is guaranteed to be the one mounting — whether the user got here by typing a
+    // message or by picking a "Select from library" card — before the Test tab is ever
+    // reachable. Otherwise Accept-ing a Recommendation later mounts this panel for the first
+    // time and it replays from its very first "Hi" instead of showing the live conversation.
+    setGhostwriterCombinedFlow(true)
     setCreateGhostwriterTab('workflow')
     openCreateWorkflow({ withAiPanel: true })
     setToastMessage('Agent has been created')
@@ -10399,6 +10476,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     /** 23 Sep only — Jay & Robin's duplicate, minus the Test tab's floating panels: it opens
      *  full-page instead, canvas hidden, like Tools/Knowledge. */
     const is23SepPolish = is23SepNav(navId) && isReviewResponse
+    /** Front desk (Sep 23) only — Myna's duplicate, minus the Test tab's floating panels: same
+     *  full-page Tests/Test suite/Test cycles split `is23SepPolish` gives review-response. */
+    const isFrontdeskSep23Polish = isFrontdeskSep23Nav(navId) && isFrontdesk
     const isHealthcareFrontdesk = product === 'healthcare'
     const chatHistoryTitle = (isReviewResponse || isReviewGeneration) ? 'Reviews AI' : isReminder ? 'Reminder' : 'Front desk'
     const createVariant = isReminder ? 'reminder' : 'frontdesk'
@@ -10557,6 +10637,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           simulationTabLabel={isJayRobinPolish ? 'Test' : 'Simulation'}
           onOpenPlanExternal={(isJayRobinPolish || isMynaCombinedNav) ? () => setExternalPlanPanelOpen(true) : undefined}
           planOpenExternal={externalPlanPanelOpen}
+          acceptedRecommendations={acceptedRecommendations}
           onCreateFromScratch={() => {
             // Ghostwriter keeps the shell (top bar + tabs) and opens the canvas
             // on the Workflow tab, rather than leaving for the standalone editor.
@@ -11035,7 +11116,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
                 hideLhs
-                collapseLeftFloaterOnPanel={isJayRobinPolish}
+                collapseLeftFloaterOnPanel={isJayRobinPolish || isMynaCombinedNav}
                 existingAgent={false}
                 hideTopIdentity={isExplorationAgents}
                 /* The pinned tab shell already shows Back + the agent name, and owns the
@@ -11151,6 +11232,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                   </div>
                 ) : isMynaCombinedNav ? (
                   <FrontdeskTestSessionsPanel
+                    layout={isFrontdeskSep23Polish ? 'fullpage' : 'floating'}
                     centerContent={
                       <WorkflowEditorScreen
                         agentName="Front desk agent - North region"
@@ -11191,6 +11273,45 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                     layout={is23SepPolish ? 'fullpage' : 'floating'}
                     testSuites={jayRobinTestSuites}
                     onSaveTestSuite={(suite) => setJayRobinTestSuites((prev) => [...prev, suite])}
+                    onUpdateTestSuite={(suite) =>
+                      setJayRobinTestSuites((prev) => prev.map((s) => (s.id === suite.id ? suite : s)))
+                    }
+                    onRunTestWithSuite={(suite) =>
+                      setJayRobinTestBatches((prev) => [
+                        ...prev,
+                        {
+                          reviews: ALL_REVIEWS,
+                          testedAt: new Date().toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          }),
+                          testedBy: 'Haresh Rajamannar',
+                          suiteName: suite.name,
+                          displayReviewCount: suite.reviewCount,
+                        },
+                      ])
+                    }
+                    onAcceptRecommendation={(text) => {
+                      // Reuse the exact same handler a manual "Workflow" tab click uses,
+                      // instead of hand-rolling a subset of it — this is the one path already
+                      // proven to reveal the live canvas + docked chat without re-seeding
+                      // either. The docked AI panel only renders ReviewResponseThread (vs.
+                      // AiBuilderPanel's generic greeting) when ghostwriterCombinedFlow is
+                      // true, so force that first. ghostwriterAgentCreated is *supposed* to
+                      // already be true by the time the Test tab exists — but if it's ever
+                      // false at this exact instant (a stale closure/race), createWorkflowAgentName
+                      // falls back to the scratch title "Review response agent 1", which quietly
+                      // re-seeds AgentBuilder's live node list to the empty canvas with no
+                      // remount to make it obvious. Force it true here too so that branch can
+                      // never fire.
+                      setGhostwriterAgentCreated(true)
+                      setGhostwriterCombinedFlow(true)
+                      handleExplorationShellTabChange('workflow')
+                      setAcceptedRecommendations((prev) => [...prev, text])
+                    }}
                   />
                 ) : (
                   <GhostwriterSimulationTab

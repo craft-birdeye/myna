@@ -26,6 +26,22 @@ export interface FrontdeskTestBatch {
   /** Who ran this test — a person's name, or 'Myna' for AI-generated batches (shown with the
    *  sparkle glyph instead of a person). */
   testedBy: string
+  /** Front desk (Sep 23) full-page Test tab only — set when this batch came from "Use test
+   *  suite" rather than a one-off Test call/Test webchat run; the summary card reads it to
+   *  prefix its title and reword "Tested by" to "Suite tested by", same convention as
+   *  review-response's `TestRunBatch.suiteName`. */
+  suiteName?: string
+}
+
+/** Front desk (Sep 23) full-page Test tab only — a saved, reusable set of scenarios (same
+ *  shape "Create test cases" already collects one-off), so "Use test suite" in the Run-test
+ *  menu can re-run them without redefining scenarios every time. */
+export interface FrontdeskTestSuite {
+  id: string
+  name: string
+  scenarios: { text: string; voice: boolean; chat: boolean }[]
+  /** Pre-formatted — e.g. "Sep 23, 2026". */
+  createdAt: string
 }
 
 export const FRONTDESK_TEST_BATCHES: FrontdeskTestBatch[] = [

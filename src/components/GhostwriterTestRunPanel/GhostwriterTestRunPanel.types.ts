@@ -17,6 +17,15 @@ export interface TestRunBatch {
   /** 23 Sep only — who ran this batch (e.g. the signed-in user). Left unset by Jay & Robin, so
    *  the summary card that reads it stays 23-Sep-only too. */
   testedBy?: string
+  /** 23 Sep only — set when this batch came from "Use test suite" rather than the plain review
+   *  picker/upload; the summary card reads it to prefix its title and reword "Tested by" to
+   *  "Suite tested by". */
+  suiteName?: string
+  /** 23 Sep only — overrides the "N reviews" count shown for this batch (title, pass chip, and
+   *  the side panel header) when it differs from `reviews.length` — e.g. a suite-run batch
+   *  reports the suite's own `reviewCount` so the Test suite and Tests sections agree on the
+   *  number, even though only a small preview of actual `Review` objects backs the list. */
+  displayReviewCount?: number
 }
 
 /** 23 Sep only — a Test suite condition row (Test suite section). `field` + `operator`
@@ -33,11 +42,14 @@ export interface TestSuiteCondition {
   sourceValues?: string[]
 }
 
-/** 23 Sep only — a saved Test suite: a name plus the conditions that define it. */
+/** 23 Sep only — a saved Test suite: a name plus the conditions that define it. `reviewCount`
+ *  is the matching-reviews total shown when the suite was saved (the same mock total the
+ *  editor's "Matching reviews" preview badge shows), so the saved list card can display it too. */
 export interface TestSuite {
   id: string
   name: string
   conditions: TestSuiteCondition[]
+  reviewCount?: number
 }
 
 export interface GhostwriterTestRunPanelProps {
@@ -62,4 +74,15 @@ export interface GhostwriterTestRunPanelProps {
    *  and back, same as `batches`). Jay & Robin has no Test suite section, so both are optional. */
   testSuites?: TestSuite[]
   onSaveTestSuite?: (suite: TestSuite) => void
+  /** 23 Sep only — editing an existing suite (via its card's hover-to-edit) calls this with the
+   *  same id instead of `onSaveTestSuite`, so the caller replaces it in place. */
+  onUpdateTestSuite?: (suite: TestSuite) => void
+  /** 23 Sep only — confirming "Use test suite" in the picker calls this with the chosen suite
+   *  so the caller can append its own batch, the same way confirming the review-picker modal
+   *  does via `onRunTest`. */
+  onRunTestWithSuite?: (suite: TestSuite) => void
+  /** 23 Sep only — "Accept" on a failed review's Recommendation tab calls this with the
+   *  recommendation text; the caller switches to the Workflow tab and feeds it into the
+   *  "Edit with AI" chat. */
+  onAcceptRecommendation?: (text: string) => void
 }

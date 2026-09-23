@@ -198,6 +198,13 @@ export function isFrontdeskMynaNav(navId?: string | null) {
   return navId === FRONTDESK_MYNA_NAV_ID || navId === FRONTDESK_SEP23_NAV_ID
 }
 
+/** Front desk (Sep 23) alone — the first place Myna's duplicate diverges from it: the Test tab
+ *  opens full-page (tests/test suite/test cycles, review-response 23 Sep style) instead of
+ *  Myna's floating `FrontdeskTestSessionsPanel`. See `is23SepNav` for the identical pattern. */
+export function isFrontdeskSep23Nav(navId?: string | null) {
+  return navId === FRONTDESK_SEP23_NAV_ID
+}
+
 export function isFrontdeskExplorationChrome(navId?: string | null) {
   return navId === FRONTDESK_EXPLORATION_NAV_ID || isFrontdeskSep1StyleNav(navId)
 }
