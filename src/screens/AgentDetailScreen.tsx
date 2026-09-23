@@ -2722,13 +2722,18 @@ function ReminderCreateIntroReply({ onComplete }: { onComplete?: () => void }) {
 function ReviewAgentReply({
   paragraphs,
   onComplete,
+  tight = false,
 }: {
   paragraphs: string[]
   onComplete?: () => void
+  /** Jay & Robin: 16px instead of the usual 32px, right after a "Worked for" block collapses
+   *  — the accordion already reads as its own visual break, so the normal turn-to-turn gap
+   *  doubles up on top of it. */
+  tight?: boolean
 }) {
   const [done, setDone] = useState(false)
   return (
-    <div className="agent-build-fade mt-3xl flex gap-sm">
+    <div className={`agent-build-fade flex gap-sm ${tight ? 'mt-lg' : 'mt-3xl'}`}>
       <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-ai-summary">
         <SparkleLoader size={14} spinning={!done} />
       </span>
@@ -3895,13 +3900,15 @@ function ReviewResponseThread({
             }
             onComplete={() => setIntroDone(true)}
           />
-          {introDone && (
+          {/* Skipped for Jay & Robin: this reply is a one-line transition straight into the
+              "Worked for" block below, and the feedback row's own reserved height (it's
+              opacity-0, not unmounted, until hovered) would widen that gap past the 16px it's
+              meant to be. */}
+          {introDone && !isJayRobin && (
             <MessageActions
-              copyText={(isJayRobin
-                ? JAY_ROBIN_INTRO_PARAGRAPHS
-                : explorationModeChoice
-                  ? REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS
-                  : REVIEW_RESPONSE_INTRO_PARAGRAPHS
+              copyText={(explorationModeChoice
+                ? REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS
+                : REVIEW_RESPONSE_INTRO_PARAGRAPHS
               ).join('\n\n')}
               className="ml-3xl"
             />
@@ -3947,7 +3954,7 @@ function ReviewResponseThread({
             onConfigureSources={onOpenPlan}
           />
           {jayRobinThinkingDone && (
-            <ReviewAgentReply paragraphs={[JAY_ROBIN_MODE_LEAD_IN]} />
+            <ReviewAgentReply paragraphs={[JAY_ROBIN_MODE_LEAD_IN]} tight />
           )}
           {jayRobinThinkingDone && !modeAnswer && (
             <>
@@ -3996,7 +4003,7 @@ function ReviewResponseThread({
           {/* "Generate test cases" now lives on the Test tab's own "Run test" CTA, and
               "Activate" is a real top-bar button — the chat doesn't need to broker either
               choice anymore, so this is just a rhetorical line, not another picker. */}
-          {agentCreated && buildStepsDone && <ReviewAgentReply paragraphs={[GHOSTWRITER_POST_CREATE_QUESTION]} />}
+          {agentCreated && buildStepsDone && <ReviewAgentReply paragraphs={[GHOSTWRITER_POST_CREATE_QUESTION]} tight />}
         </>
       )}
       {/* Original Ghostwriter — unchanged sequential beats, each its own reply + block. */}
@@ -6563,12 +6570,6 @@ function HealthcareFrontdeskCreateAgentLive({
    *  `GhostwriterPlanCard`'s CTA to "Plan open" the same way the local state used to. */
   planOpenExternal?: boolean
 }) {
-  const debugInstanceId = useRef(Math.random().toString(36).slice(2, 8))
-  useEffect(() => {
-    console.log('[DEBUG-MOUNT] HealthcareFrontdeskCreateAgentLive MOUNTED', debugInstanceId.current, 'variant', variant)
-    return () => console.log('[DEBUG-MOUNT] HealthcareFrontdeskCreateAgentLive UNMOUNTED', debugInstanceId.current)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
   const isReviewGenFlow = variant === 'review-generation'
@@ -10995,11 +10996,19 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       ? 'Review generation agent - North Region'
                       : isReminder
                         ? 'Reminder agent - North region'
-                        // Editing an existing Myna instance from the list (openAgentInstanceEditor)
-                        // sets createDraftAgentName to that instance's real name (e.g. "...West
-                        // region") — prefer it so the canvas's region-suffix patching (subagent
-                        // chip labels) matches the instance actually being edited, not North's.
-                        : createDraftAgentName ?? 'Front desk agent - North region'
+                        // Combined create flow (Myna): the canvas key embeds this name
+                        // (`preserveCanvasIdentity` in WorkflowEditorScreen), so switching it the
+                        // moment the draft names itself mid-chat — well before the agent is
+                        // actually created — would remount AgentBuilder and wipe the live docked
+                        // chat. Stay pinned until `ghostwriterAgentCreated`, same guard as
+                        // `createWorkflowAgentName` above.
+                        : (isMynaCombinedNav && ghostwriterCombinedFlow && !ghostwriterAgentCreated)
+                          ? 'Front desk agent - North region'
+                          // Editing an existing Myna instance from the list (openAgentInstanceEditor)
+                          // sets createDraftAgentName to that instance's real name (e.g. "...West
+                          // region") — prefer it so the canvas's region-suffix patching (subagent
+                          // chip labels) matches the instance actually being edited, not North's.
+                          : createDraftAgentName ?? 'Front desk agent - North region'
                 }
                 displayName={createWorkflowAgentName}
                 agentStatus="Draft"

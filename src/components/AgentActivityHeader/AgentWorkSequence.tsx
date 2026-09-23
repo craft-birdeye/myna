@@ -49,11 +49,54 @@ function buildRanges(phases: WorkPhase[]): { ranges: PhaseRange[]; total: number
  *  not discrete calls, so they just fade in once revealed. */
 function ToolRow({ tool, isActive }: { tool: string; isActive: boolean }) {
   return (
-    <div className="gw-flow__in flex items-start gap-sm pl-md">
+    <div className="gw-flow__in flex items-start gap-sm">
       <span className="mt-[3px] flex size-4 shrink-0 items-center justify-center">
         {isActive ? <ActivityDots /> : <ActivityStepTick />}
       </span>
       <p className="m-0 min-w-0 text-small text-text-tertiary">{tool}</p>
+    </div>
+  )
+}
+
+/** A "Thought" or tool-call group, nested inside the outer "Worked for" accordion and
+ *  independently collapsible from it — same chevron treatment as the outer header (reused,
+ *  not reinvented), just smaller and without its own running/done state. Defaults open; there
+ *  is no auto-collapse here, only the outer accordion collapses on its own. */
+function SubAccordion({
+  label,
+  open,
+  onToggle,
+  children,
+}: {
+  label: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-xs self-start text-small text-text-tertiary"
+      >
+        {label}
+        <span
+          className={`gw-activity-chevron${open ? ' gw-activity-chevron--down' : ' gw-activity-chevron--sideways'}`}
+          aria-hidden
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M2.5 7.25 6 3.75l3.5 3.5"
+              stroke="#717182"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </button>
+      {open && children}
     </div>
   )
 }
@@ -72,6 +115,16 @@ export function AgentWorkSequence({ phases, onComplete }: AgentWorkSequenceProps
   const [revealed, setRevealed] = useState(0)
   const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null)
   const [elapsedMs, setElapsedMs] = useState(0)
+  /** Per-phase Thought/tools sub-accordions — keyed `${phaseIndex}-thought`/`-tools`, absent
+   *  from the set (the default) means open. */
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const toggleGroup = (key: string) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   const doneRef = useRef(onComplete)
   doneRef.current = onComplete
 
@@ -107,7 +160,7 @@ export function AgentWorkSequence({ phases, onComplete }: AgentWorkSequenceProps
   }, [allDone])
 
   return (
-    <div className="ml-3xl mt-sm flex max-w-full flex-col">
+    <div className="ml-3xl mt-lg flex max-w-full flex-col">
       <AgentActivityHeader
         running={!allDone}
         seconds={`${Math.round(elapsedMs / 1000)}s`}
@@ -128,23 +181,37 @@ export function AgentWorkSequence({ phases, onComplete }: AgentWorkSequenceProps
             const visibleTools = range.toolIdxs.filter((idx) => idx < revealed)
             if (!showThought && visibleTools.length === 0) return null
 
+            const thoughtKey = `${phaseIndex}-thought`
+            const toolsKey = `${phaseIndex}-tools`
+
             return (
               <div key={phaseIndex} className="flex flex-col gap-md">
                 {showThought && (
-                  <div className="flex items-start gap-sm">
-                    <span className="mt-[7px] flex size-[6px] shrink-0 rounded-full bg-text-tertiary" aria-hidden />
-                    <p className="m-0 min-w-0 text-small text-text-tertiary">{phase.thought}</p>
-                  </div>
+                  <SubAccordion
+                    label="Thought"
+                    open={!collapsedGroups.has(thoughtKey)}
+                    onToggle={() => toggleGroup(thoughtKey)}
+                  >
+                    <div className="flex items-start gap-sm pl-md">
+                      <span className="mt-[7px] flex size-[6px] shrink-0 rounded-full bg-text-tertiary" aria-hidden />
+                      <p className="m-0 min-w-0 text-small text-text-tertiary">{phase.thought}</p>
+                    </div>
+                  </SubAccordion>
                 )}
                 {visibleTools.length > 0 && (
-                  <div className="flex flex-col gap-sm">
-                    <p className="m-0 text-small text-text-tertiary">{phase.toolsLabel}</p>
-                    {phase.tools.map((tool, i) => {
-                      const idx = range.toolIdxs[i]
-                      if (idx >= revealed) return null
-                      return <ToolRow key={tool} tool={tool} isActive={idx === revealed - 1} />
-                    })}
-                  </div>
+                  <SubAccordion
+                    label={phase.toolsLabel}
+                    open={!collapsedGroups.has(toolsKey)}
+                    onToggle={() => toggleGroup(toolsKey)}
+                  >
+                    <div className="flex flex-col gap-sm pl-md">
+                      {phase.tools.map((tool, i) => {
+                        const idx = range.toolIdxs[i]
+                        if (idx >= revealed) return null
+                        return <ToolRow key={tool} tool={tool} isActive={idx === revealed - 1} />
+                      })}
+                    </div>
+                  </SubAccordion>
                 )}
                 {showFindings && (
                   <div className="flex flex-col gap-sm pl-md">
