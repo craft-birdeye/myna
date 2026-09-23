@@ -80,9 +80,10 @@ const FULL_CANVAS_VARIANT_LABELS: Record<string, string> = {
   [RESPONSE_AGENTS_GHOSTWRITER_NAV_ID]: 'Ghostwriter',
   [RESPONSE_AGENTS_JAY_ROBIN_NAV_ID]: 'Jay & Robin',
   [RESPONSE_AGENTS_23_SEP_NAV_ID]: '23 Sep',
-  // Literal id, not `FRONTDESK_MYNA_NAV_ID` — that constant is declared further down this
-  // file, and this map is built at module load, so referencing it here would be a TDZ error.
+  // Literal ids, not the constants — they're declared further down this file, and this map
+  // is built at module load, so referencing them here would be a TDZ error.
   'frontdesk-agent-myna': 'Myna',
+  'frontdesk-agent-sep-23': 'Sep 23',
 }
 
 export function fullCanvasVariantLabel(navId?: string | null) {
@@ -109,6 +110,9 @@ export const FRONTDESK_SEP1_NAV_ID = 'frontdesk-agent-sep-1'
 export const FRONTDESK_NAV_ID = 'frontdesk-agent'
 /** Duplicate of Sep 1 — same agent, same chrome, its own nav slot. */
 export const FRONTDESK_MYNA_NAV_ID = 'frontdesk-agent-myna'
+/** "Front desk agent (Sep 23)" — straight duplicate of Myna (same chrome, same combined
+ *  chat-in-canvas create flow, same Test tab), its own nav slot. See `isFrontdeskMynaNav`. */
+export const FRONTDESK_SEP23_NAV_ID = 'frontdesk-agent-sep-23'
 export const REMINDER_SEP1_NAV_ID = 'reminder-agent-sep-1'
 
 const EXPLORATION_HIDE_TOP_IDENTITY_NAV_IDS = new Set([
@@ -177,14 +181,21 @@ export function isAutoSimulationNav(navId?: string | null) {
 
 /** Production + Sep 1 front desk navs — same agent-list card chrome (not the exploration variant). */
 export function isFrontdeskSep1StyleNav(navId?: string | null) {
-  return navId === FRONTDESK_SEP1_NAV_ID || navId === FRONTDESK_NAV_ID || navId === FRONTDESK_MYNA_NAV_ID
+  return (
+    navId === FRONTDESK_SEP1_NAV_ID ||
+    navId === FRONTDESK_NAV_ID ||
+    navId === FRONTDESK_MYNA_NAV_ID ||
+    navId === FRONTDESK_SEP23_NAV_ID
+  )
 }
 
-/** Front desk (Myna) only — its create flow opens straight into canvas mode on first Send
- *  (Ghostwriter/Jay & Robin's combined chat-in-canvas mechanism), instead of the other Front
- *  desk copies' full-page scripted chat. See `isGhostwriterPolish` in AgentDetailScreen. */
+/** Front desk (Myna) and its duplicate (Sep 23) — its create flow opens straight into canvas
+ *  mode on first Send (Ghostwriter/Jay & Robin's combined chat-in-canvas mechanism), instead of
+ *  the other Front desk copies' full-page scripted chat. See `isGhostwriterPolish` in
+ *  AgentDetailScreen. Sep 23 is a straight duplicate of Myna — split this into per-nav checks
+ *  if the two ever need to diverge (see `isJayRobinNav`/`is23SepNav` for that pattern). */
 export function isFrontdeskMynaNav(navId?: string | null) {
-  return navId === FRONTDESK_MYNA_NAV_ID
+  return navId === FRONTDESK_MYNA_NAV_ID || navId === FRONTDESK_SEP23_NAV_ID
 }
 
 export function isFrontdeskExplorationChrome(navId?: string | null) {

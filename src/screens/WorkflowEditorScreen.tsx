@@ -181,6 +181,9 @@ interface WorkflowEditorScreenProps {
   /** Hides the floating AI/Trigger/Actions/Controls add-node rail — see `AgentBuilder`'s
    *  matching prop. */
   hideLeftFloater?: boolean
+  /** Hides that rail only while a picker panel is open over it — see `AgentBuilder`'s
+   *  matching prop. */
+  collapseLeftFloaterOnPanel?: boolean
   /** Drives canvas node highlighting/checkmarks from outside — see `AgentBuilder`'s matching
    *  prop. */
   externalTestRun?: { activeNodeId: string | null; doneNodeIds: string[] } | null
@@ -227,6 +230,7 @@ export function WorkflowEditorScreen({
   aiBuilderPanelContent,
   preserveCanvasIdentity = false,
   hideLeftFloater = false,
+  collapseLeftFloaterOnPanel = false,
   externalTestRun = null,
 }: WorkflowEditorScreenProps) {
   const { procedures, addProcedure } = useProcedureStore()
@@ -412,6 +416,7 @@ export function WorkflowEditorScreen({
             initialNodeDetails={workflow.nodeDetails}
             syncNodesOnSeedChange={preserveCanvasIdentity}
             hideLeftFloater={hideLeftFloater}
+            collapseLeftFloaterOnPanel={collapseLeftFloaterOnPanel}
             externalTestRun={externalTestRun}
             procedures={filteredProcedures}
             showProceduresPalette={isFrontDeskAgent}

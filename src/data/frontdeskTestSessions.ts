@@ -121,62 +121,19 @@ export const FRONTDESK_TEST_BATCHES: FrontdeskTestBatch[] = [
   },
 ]
 
-/** "Generate testcases" pool — revealed one batch at a time, each tagged `testedBy: 'Myna'`
- *  (shown with the sparkle glyph) since the AI authored them, not a person. */
-export const FRONTDESK_GENERATED_TEST_POOL: FrontdeskTestBatch[] = [
-  {
-    testedAt: 'Just now',
-    testedBy: 'Myna',
-    sessions: [
-      {
-        id: 'fd-test-gen-verify-insurance',
-        title: 'Verify insurance eligibility',
-        channel: 'chat',
-        outcome: 'passed',
-        transcript: [
-          { speaker: 'user', text: "Can you check if I'm covered for a cleaning this month?" },
-          {
-            speaker: 'business',
-            text: "Let me check — yes, your plan covers one cleaning every six months, and you're eligible now.",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    testedAt: 'Just now',
-    testedBy: 'Myna',
-    sessions: [
-      {
-        id: 'fd-test-gen-cancel-appointment',
-        title: 'Cancel appointment',
-        channel: 'voice',
-        outcome: 'passed',
-        durationSecs: 29,
-        audioUrl: voicemailSample,
-        transcript: [
-          { speaker: 'user', text: "I need to cancel my appointment on Friday." },
-          { speaker: 'business', text: "No problem — I've cancelled your Friday appointment. Would you like to rebook?" },
-          { speaker: 'user', text: 'Not right now, thanks.' },
-          { speaker: 'business', text: "Sounds good — call us back whenever you're ready." },
-        ],
-      },
-    ],
-  },
-  {
-    testedAt: 'Just now',
-    testedBy: 'Myna',
-    sessions: [
-      {
-        id: 'fd-test-gen-hours',
-        title: 'General inquiry — office hours',
-        channel: 'chat',
-        outcome: 'passed',
-        transcript: [
-          { speaker: 'user', text: 'What time do you close today?' },
-          { speaker: 'business', text: "We're open until 6 PM today. Anything else I can help with?" },
-        ],
-      },
-    ],
-  },
+/** "Create Test Cases" modal — the sparkle "Generate" button on a scenario field prefills it
+ *  with one of these, cycling through so repeat clicks (or several scenarios in one modal
+ *  session) don't repeat the same suggestion. */
+export const FRONTDESK_SCENARIO_SUGGESTIONS: string[] = [
+  "A patient calls to reschedule their appointment to next week.",
+  "A caller wants to know if their insurance covers a cleaning this month.",
+  "Someone wants to cancel their Friday appointment.",
+  "A patient asks what time the office closes today.",
+  "A caller wants to book a new patient appointment for an annual physical.",
+  "Someone wants to know if a specific insurance provider is accepted.",
 ]
+
+/** Generic reply used for sessions created from the "Create Test Cases" modal — there's no
+ *  real model behind these, so every run reads as passing with the same canned acknowledgement. */
+export const FRONTDESK_CUSTOM_TEST_REPLY =
+  "Sure, I can help with that — let me take care of it for you."

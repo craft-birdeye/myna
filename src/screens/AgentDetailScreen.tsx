@@ -108,7 +108,7 @@ import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsT
 import { GhostwriterKnowledgeTab } from '../components/GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 import { GhostwriterRunTestModal } from '../components/GhostwriterRunTestModal/GhostwriterRunTestModal'
 import { GhostwriterTestRunPanel } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel'
-import type { TestRunBatch } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel.types'
+import type { TestRunBatch, TestSuite } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel.types'
 import { ALL_REVIEWS } from '../data/reviewsData'
 import { FrontdeskTestSessionsPanel } from '../components/FrontdeskTestSessionsPanel/FrontdeskTestSessionsPanel'
 import { GhostwriterOpenQuestions } from '../components/AgentActivityHeader/GhostwriterOpenQuestions'
@@ -1721,12 +1721,20 @@ const REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS = [
 /** Jay & Robin: the intro leads straight into the "Worked for" thinking block instead of the
  *  mode question — everything that block would otherwise ask about (cadence, then the spam
  *  digest address) waits until it's done, then asks in one go with no more thinking between
- *  the two. `JAY_ROBIN_MODE_LEAD_IN` is what the exploration intro's second line said before
- *  the mode question — said here instead, once thinking has actually happened. */
+ *  the two. */
 const JAY_ROBIN_INTRO_PARAGRAPHS = [
   'A review response agent — I can do that. Let me see how you already handle this before I ask you anything.',
 ]
-const JAY_ROBIN_MODE_LEAD_IN = 'It changes the whole shape of the build:'
+/** Said once the "Worked for" block collapses — everything it found is tucked inside that
+ *  accordion now (findings, not permanent text), so this is the one place that recap has to
+ *  actually surface: a condensed readout of what got learned, then a heads-up that two
+ *  decisions are still the user's before anything gets built. Replaces the plain
+ *  "It changes the whole shape of the build:" the exploration intro used when the mode
+ *  question was asked immediately, with nothing yet to recap. */
+const JAY_ROBIN_PLANNING_RECAP = [
+  "Quick recap before I ask you anything: about 73% of your replies already come from a template, and the rest — mostly the negative ones — turned out to follow a consistent hand-written method, which I've now learned. Google and Facebook are the only sources that can actually take a reply. Roughly 1 in 100 reviews reads as spam and gets held for a human instead of a public reply. And I tested the draft against six scenarios its own rules create — two failed, both fixed now.",
+  'Two things are still yours to decide before I build this:',
+]
 
 /** Asked by the mode card — the intro paragraphs lead into it but never state it. */
 const REVIEW_RESPONSE_MODE_QUESTION =
@@ -3954,7 +3962,7 @@ function ReviewResponseThread({
             onConfigureSources={onOpenPlan}
           />
           {jayRobinThinkingDone && (
-            <ReviewAgentReply paragraphs={[JAY_ROBIN_MODE_LEAD_IN]} tight />
+            <ReviewAgentReply paragraphs={JAY_ROBIN_PLANNING_RECAP} tight />
           )}
           {jayRobinThinkingDone && !modeAnswer && (
             <>
@@ -6573,6 +6581,8 @@ function HealthcareFrontdeskCreateAgentLive({
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
   const isReviewGenFlow = variant === 'review-generation'
+  /** Only Jay & Robin's shell renames the tab — see `ReviewResponseThread`'s matching const. */
+  const isJayRobin = simulationTabLabel !== 'Simulation'
   const [prompt, setPrompt] = useState('')
   /** Exploration landing only — Option 1 = rotating placeholders; Option 2 = short seed prompt. */
   const [landingPromptOption, setLandingPromptOption] = useState<'1' | '2'>('1')
@@ -8765,17 +8775,24 @@ function HealthcareFrontdeskCreateAgentLive({
       />
 
       <p className={`m-0 text-center text-body text-text-secondary ${ghostwriterPolish ? 'mt-lg mb-lg' : 'mt-3xl'}`}>
-        <button
-          type="button"
-          onClick={onCreateFromScratch}
-          className="text-body text-text-action hover:underline"
-        >
-          {fromScratchLabel}
-        </button>
-        <span className="text-text-primary">{' or select from '}</span>
-        <button type="button" className="text-body text-text-primary hover:underline">
-          library
-        </button>
+        {isJayRobin ? (
+          // Jay & Robin: no "Create from scratch" — the cards below are the only path in.
+          <span className="text-text-primary">Select from library</span>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onCreateFromScratch}
+              className="text-body text-text-action hover:underline"
+            >
+              {fromScratchLabel}
+            </button>
+            <span className="text-text-primary">{' or select from '}</span>
+            <button type="button" className="text-body text-text-primary hover:underline">
+              library
+            </button>
+          </>
+        )}
       </p>
 
       <div className={`@container w-full ${landingCards.length === 1 ? 'flex justify-center' : ''}`}>
@@ -9551,6 +9568,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [jayRobinTestModalOpen, setJayRobinTestModalOpen] = useState(false)
   const [jayRobinTestSelectedIds, setJayRobinTestSelectedIds] = useState<string[]>([])
   const [jayRobinTestBatches, setJayRobinTestBatches] = useState<TestRunBatch[]>([])
+  /** 23 Sep only: saved Test suites for the Test tab's Test suite section — lifted here for the
+   *  same reason as `jayRobinTestBatches`, so it survives a trip to another tab and back. */
+  const [jayRobinTestSuites, setJayRobinTestSuites] = useState<TestSuite[]>([])
   /** Jay & Robin and Front desk (Myna): "Open/See plan" opens a real canvas-docked RHS panel
    *  (below, next to the canvas section) instead of swapping the docked chat's own content —
    *  see `onOpenPlanExternal` on `HealthcareFrontdeskCreateAgentLive`. */
@@ -11015,6 +11035,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 product={product ?? 'healthcare'}
                 onClose={closeCreateWorkflow}
                 hideLhs
+                collapseLeftFloaterOnPanel={isJayRobinPolish}
                 existingAgent={false}
                 hideTopIdentity={isExplorationAgents}
                 /* The pinned tab shell already shows Back + the agent name, and owns the
@@ -11168,6 +11189,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       />
                     )}
                     layout={is23SepPolish ? 'fullpage' : 'floating'}
+                    testSuites={jayRobinTestSuites}
+                    onSaveTestSuite={(suite) => setJayRobinTestSuites((prev) => [...prev, suite])}
                   />
                 ) : (
                   <GhostwriterSimulationTab
@@ -11189,11 +11212,12 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                 )
               }
               onCancel={() => setJayRobinTestModalOpen(false)}
-              onRunTest={() => {
+              showUploadTab={is23SepPolish}
+              onRunTest={(source) => {
                 setJayRobinTestBatches((prev) => [
                   ...prev,
                   {
-                    reviews: ALL_REVIEWS.filter((r) => jayRobinTestSelectedIds.includes(r.id)),
+                    reviews: source === 'upload' ? ALL_REVIEWS : ALL_REVIEWS.filter((r) => jayRobinTestSelectedIds.includes(r.id)),
                     testedAt: new Date().toLocaleString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -11201,6 +11225,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                       hour: 'numeric',
                       minute: '2-digit',
                     }),
+                    ...(is23SepPolish ? { testedBy: 'Haresh Rajamannar' } : {}),
                   },
                 ])
                 setJayRobinTestSelectedIds([])

@@ -14,6 +14,30 @@ export interface TestRunBatch {
   reviews: Review[]
   /** Pre-formatted — e.g. "Sep 22, 2026, 3:45 PM". */
   testedAt: string
+  /** 23 Sep only — who ran this batch (e.g. the signed-in user). Left unset by Jay & Robin, so
+   *  the summary card that reads it stays 23-Sep-only too. */
+  testedBy?: string
+}
+
+/** 23 Sep only — a Test suite condition row (Test suite section). `field` + `operator`
+ *  together pick which value control shows, if any: rating's "equals to"/"not equals to"/
+ *  "is greater than"/"is less than" use `ratingValue`, date's "between" uses `dateRange`,
+ *  date's "before"/"after"/"is" use `dateValue`, source's "in" uses `sourceValues`. */
+export interface TestSuiteCondition {
+  id: string
+  field: 'rating' | 'date' | 'source'
+  operator: string
+  ratingValue?: string
+  dateRange?: string
+  dateValue?: string
+  sourceValues?: string[]
+}
+
+/** 23 Sep only — a saved Test suite: a name plus the conditions that define it. */
+export interface TestSuite {
+  id: string
+  name: string
+  conditions: TestSuiteCondition[]
 }
 
 export interface GhostwriterTestRunPanelProps {
@@ -33,4 +57,9 @@ export interface GhostwriterTestRunPanelProps {
    *  `centerContent` mounts full-bleed underneath. 'fullpage' — 23 Sep: a plain full-page
    *  list+detail layout with no canvas at all; `centerContent` is never called. */
   layout?: 'floating' | 'fullpage'
+  /** 23 Sep only — saved Test suites shown in the Test suite section, and the callback to
+   *  persist a newly created one (lifted to the caller so it survives a trip to another tab
+   *  and back, same as `batches`). Jay & Robin has no Test suite section, so both are optional. */
+  testSuites?: TestSuite[]
+  onSaveTestSuite?: (suite: TestSuite) => void
 }

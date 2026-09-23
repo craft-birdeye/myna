@@ -168,6 +168,7 @@ const AUTOMOTIVE_NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
       { id: 'frontdesk-agent-myna', label: 'Front desk agent (Myna)' },
+      { id: 'frontdesk-agent-sep-23', label: 'Front desk agent (Sep 23)' },
       { id: 'frontdesk-agent', label: 'Front desk agent (coach)' },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'reminder-agent-sep-1', label: 'Reminder agent (Sep 1)' },
@@ -214,6 +215,7 @@ const HEALTHCARE_NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'frontdesk-agent-sep-1', label: 'Front desk agent (Sep 1)' },
       { id: 'frontdesk-agent-myna', label: 'Front desk agent (Myna)' },
+      { id: 'frontdesk-agent-sep-23', label: 'Front desk agent (Sep 23)' },
       { id: 'frontdesk-agent',  label: 'Front desk agent (coach)'  },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',   label: 'Waitlist agent'   },
@@ -265,6 +267,7 @@ const DENTAL_NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'frontdesk-agent-sep-1',       label: 'Front desk agent (Sep 1)'       },
       { id: 'frontdesk-agent-myna',        label: 'Front desk agent (Myna)'        },
+      { id: 'frontdesk-agent-sep-23',      label: 'Front desk agent (Sep 23)'      },
       { id: 'frontdesk-agent',             label: 'Front desk agent (coach)'             },
       { id: 'frontdesk-agent-exploration', label: 'Front desk agent (exploration)' },
       { id: 'waitlist-agent',              label: 'Waitlist agent'              },
@@ -414,6 +417,7 @@ const AGENT_NAMES: Record<string, string> = {
   'frontdesk-agent-exploration': 'Front desk agent (exploration)',
   'frontdesk-agent-sep-1':     'Front desk agent',
   'frontdesk-agent-myna':      'Front desk agent',
+  'frontdesk-agent-sep-23':    'Front desk agent',
   'reminder-agent-sep-1':      'Reminder agent',
   'reminder-agent':            'Reminder agent',
   'outreach-agent':            'Outreach agent',

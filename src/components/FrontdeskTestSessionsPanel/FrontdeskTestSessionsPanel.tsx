@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from '../Icon/Icon'
 import { Chip } from '../Chip/Chip'
 import { Tabs } from '../Tabs/Tabs'
 import { ChatBubble, ChatSystemLabel } from '../ChatBubble/ChatBubble'
 import { CallRecordingPlayer } from '../CallRecordingPlayer/CallRecordingPlayer'
 import iconAgentsTwoStarSparkle from '../../assets/icon-agents-two-star-sparkle.svg'
+import voicemailSample from '../../assets/voicemail_sample.mp3'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — untyped JS component
 import PreviewPanel from '../../workflow/Molecules/PreviewPanel/PreviewPanel'
 import {
   FRONTDESK_TEST_BATCHES,
-  FRONTDESK_GENERATED_TEST_POOL,
+  FRONTDESK_SCENARIO_SUGGESTIONS,
+  FRONTDESK_CUSTOM_TEST_REPLY,
   type FrontdeskTestBatch,
   type FrontdeskTestSession,
 } from '../../data/frontdeskTestSessions'
@@ -152,6 +155,188 @@ function TestWebChatPreview({ onClose }: { onClose: () => void }) {
   )
 }
 
+interface ScenarioDraft {
+  id: string
+  text: string
+  voice: boolean
+  chat: boolean
+}
+
+function ChannelCheckbox({
+  checked,
+  label,
+  onToggle,
+}: {
+  checked: boolean
+  label: string
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex items-center gap-xs rounded-sm py-2xs text-body text-text-primary"
+    >
+      <span
+        aria-hidden
+        className={`flex size-[18px] shrink-0 items-center justify-center rounded-[2px] border transition-colors ${
+          checked ? 'border-primary bg-primary' : 'border-control-border bg-surface'
+        }`}
+      >
+        {checked && <Icon name="check" size={14} weight={500} className="text-white" />}
+      </span>
+      {label}
+    </button>
+  )
+}
+
+/** "Create Test Cases" — opened from the LHS header. One or more scenarios, each its own
+ *  paragraph description + which channel(s) to run it on; "Run test" turns every checked
+ *  (scenario, channel) pair into a new session in its own "Myna"-tested batch. Portalled to
+ *  `<body>` for the same reason `GhostwriterRunTestModal` is — the Ghostwriter shell's tab bar
+ *  is a pinned `z-30`. */
+function CreateTestCasesModal({
+  open,
+  onCancel,
+  onRunTest,
+}: {
+  open: boolean
+  onCancel: () => void
+  onRunTest: (scenarios: { text: string; voice: boolean; chat: boolean }[]) => void
+}) {
+  const [scenarios, setScenarios] = useState<ScenarioDraft[]>([
+    { id: 'scenario-1', text: '', voice: false, chat: false },
+  ])
+  const [suggestionIndex, setSuggestionIndex] = useState(0)
+
+  if (!open) return null
+
+  const isValid = (s: ScenarioDraft) => s.text.trim().length > 0 && (s.voice || s.chat)
+  const canRunTest = scenarios.some(isValid)
+
+  function updateScenario(id: string, patch: Partial<ScenarioDraft>) {
+    setScenarios((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
+  }
+
+  function handleAddScenario() {
+    setScenarios((prev) => [
+      ...prev,
+      { id: `scenario-${prev.length + 1}-${Date.now()}`, text: '', voice: false, chat: false },
+    ])
+  }
+
+  function handleGenerateScenario(id: string) {
+    const suggestion = FRONTDESK_SCENARIO_SUGGESTIONS[suggestionIndex % FRONTDESK_SCENARIO_SUGGESTIONS.length]
+    setSuggestionIndex((i) => i + 1)
+    updateScenario(id, { text: suggestion })
+  }
+
+  function handleClose() {
+    setScenarios([{ id: 'scenario-1', text: '', voice: false, chat: false }])
+    setSuggestionIndex(0)
+    onCancel()
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[110] flex items-center justify-center" aria-hidden={!open}>
+      <div onClick={handleClose} className="absolute inset-0 bg-black/20" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-test-cases-modal-title"
+        className="relative flex max-h-[calc(100vh-130px)] w-full max-w-[640px] flex-col overflow-hidden rounded-md bg-surface shadow-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center justify-between px-2xl py-lg">
+          <h2 id="create-test-cases-modal-title" className="m-0 text-h3 text-text-primary">
+            Create test cases
+          </h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label="Close"
+            className="flex size-8 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+          >
+            <Icon name="close" size={20} />
+          </button>
+        </div>
+
+        <div className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-xl overflow-y-auto px-2xl pb-lg">
+          {scenarios.map((scenario, i) => (
+            <div key={scenario.id} className="flex flex-col gap-sm">
+              <div className="flex items-center justify-between">
+                <label className="text-small text-text-secondary">Scenario {i + 1}</label>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateScenario(scenario.id)}
+                  className="flex items-center gap-xs rounded-sm px-sm py-2xs text-small text-text-action hover:bg-surface-hover"
+                >
+                  <TwoStarSparkleIcon size={14} className="text-[#8350CE]" />
+                  Generate test case
+                </button>
+              </div>
+              <textarea
+                value={scenario.text}
+                onChange={(e) => updateScenario(scenario.id, { text: e.target.value })}
+                rows={3}
+                placeholder="Describe what the caller says or wants…"
+                className="w-full resize-none rounded-sm border border-border bg-surface px-md py-sm text-body text-text-primary outline-none focus:border-primary"
+              />
+              <div className="flex items-center gap-lg">
+                <ChannelCheckbox
+                  checked={scenario.voice}
+                  label="Call"
+                  onToggle={() => updateScenario(scenario.id, { voice: !scenario.voice })}
+                />
+                <ChannelCheckbox
+                  checked={scenario.chat}
+                  label="Web chat"
+                  onToggle={() => updateScenario(scenario.id, { chat: !scenario.chat })}
+                />
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={handleAddScenario}
+            className="flex h-9 items-center gap-xs self-start rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
+          >
+            <Icon name="add" size={18} />
+            Add Scenario
+          </button>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-md border-t border-border px-2xl py-md">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="rounded-sm px-md py-xs text-body text-text-action hover:bg-surface-hover"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!canRunTest}
+            onClick={() => {
+              onRunTest(scenarios.filter(isValid))
+              handleClose()
+            }}
+            className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+              !canRunTest
+                ? 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+                : 'bg-primary text-white hover:bg-primary-hover'
+            }`}
+          >
+            Run test
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 /** Front desk (Myna)'s Test tab — same floating-panel language as `GhostwriterTestRunPanel`
  *  (Jay & Robin): the canvas (`centerContent`) fills the whole area full-bleed, with the test
  *  list and the right-hand result floating over it on the left/right, so the built workflow
@@ -168,8 +353,7 @@ export function FrontdeskTestSessionsPanel({
 }: FrontdeskTestSessionsPanelProps) {
   const [channelTab, setChannelTab] = useState<'voice' | 'chat'>('voice')
   const [batches, setBatches] = useState<FrontdeskTestBatch[]>(FRONTDESK_TEST_BATCHES)
-  const [generating, setGenerating] = useState(false)
-  const [generateStep, setGenerateStep] = useState(0)
+  const [createTestCasesOpen, setCreateTestCasesOpen] = useState(false)
   const [rhsMode, setRhsMode] = useState<'session' | 'call-preview' | 'webchat-preview'>('session')
 
   const filteredBatches = batches
@@ -180,23 +364,33 @@ export function FrontdeskTestSessionsPanel({
   const [selectedId, setSelectedId] = useState(lastBatch?.sessions[0]?.id ?? null)
   const selected = allSessions.find((s) => s.id === selectedId) ?? lastBatch?.sessions[0] ?? null
 
-  useEffect(() => {
-    if (!generating) return
-    if (generateStep >= FRONTDESK_GENERATED_TEST_POOL.length) {
-      setGenerating(false)
-      return
-    }
-    const timer = setTimeout(() => {
-      setBatches((prev) => [...prev, FRONTDESK_GENERATED_TEST_POOL[generateStep]])
-      setGenerateStep((s) => s + 1)
-    }, 900)
-    return () => clearTimeout(timer)
-  }, [generating, generateStep])
-
-  function handleGenerateTestCases() {
-    if (generating) return
-    setGenerating(true)
-    setGenerateStep(0)
+  function handleRunTestCases(drafts: { text: string; voice: boolean; chat: boolean }[]) {
+    // One batch per resulting session — same as the seeded human-tested batches — so each
+    // case gets its own "Myna" + timestamp header instead of several cases sharing one.
+    const newBatches: FrontdeskTestBatch[] = []
+    drafts.forEach((draft, i) => {
+      const channels: ('voice' | 'chat')[] = [
+        ...(draft.voice ? (['voice'] as const) : []),
+        ...(draft.chat ? (['chat'] as const) : []),
+      ]
+      channels.forEach((channel) => {
+        const session: FrontdeskTestSession = {
+          id: `fd-test-custom-${Date.now()}-${i}-${channel}`,
+          title: draft.text,
+          channel,
+          outcome: 'passed',
+          durationSecs: channel === 'voice' ? 35 : undefined,
+          audioUrl: channel === 'voice' ? voicemailSample : undefined,
+          transcript: [
+            { speaker: 'user', text: draft.text },
+            { speaker: 'business', text: FRONTDESK_CUSTOM_TEST_REPLY },
+          ],
+        }
+        newBatches.push({ testedAt: 'Just now', testedBy: 'Myna', sessions: [session] })
+      })
+    })
+    if (newBatches.length === 0) return
+    setBatches((prev) => [...prev, ...newBatches])
   }
 
   function selectChannel(id: string) {
@@ -213,12 +407,10 @@ export function FrontdeskTestSessionsPanel({
           <p className="m-0 text-body text-text-primary">Tests</p>
           <button
             type="button"
-            onClick={handleGenerateTestCases}
-            disabled={generating}
-            className="flex items-center gap-xs rounded-sm px-sm py-xs text-body text-text-action transition-colors hover:bg-surface-hover disabled:opacity-50"
+            onClick={() => setCreateTestCasesOpen(true)}
+            className="rounded-sm px-sm py-xs text-body text-text-action transition-colors hover:bg-surface-hover"
           >
-            <TwoStarSparkleIcon size={14} />
-            {generating ? 'Generating…' : 'Generate testcases'}
+            Create test cases
           </button>
         </div>
 
@@ -300,6 +492,12 @@ export function FrontdeskTestSessionsPanel({
           </div>
         )}
       </div>
+
+      <CreateTestCasesModal
+        open={createTestCasesOpen}
+        onCancel={() => setCreateTestCasesOpen(false)}
+        onRunTest={handleRunTestCases}
+      />
     </div>
   )
 }

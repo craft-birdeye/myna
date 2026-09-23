@@ -1294,6 +1294,11 @@ export default function AgentBuilder({
   /** Hides the floating AI/Trigger/Actions/Controls add-node rail — a read-only preview
    *  mount (e.g. Jay & Robin's Test tab result canvas) has nothing to add nodes with. */
   hideLeftFloater = false,
+  /** Hides that same rail only while a picker panel is open over it (the LHS palette for
+   *  Trigger/Tasks/Controls/Procedures, or the "Create with AI" panel) — the rail and the
+   *  panel sit a few px apart rather than actually overlapping, so covering the rail is a
+   *  visibility toggle, not a z-index/position change. Reappears once the panel closes. */
+  collapseLeftFloaterOnPanel = false,
   /** Drives the same canvas node highlighting/checkmarks a self-triggered "Run test" does
    *  (see `testRunOpen` below), but from outside — Jay & Robin's Test tab runs its own
    *  `useTestRun` for its right-panel stepper and feeds the same `{ activeNodeId,
@@ -4355,7 +4360,7 @@ export default function AgentBuilder({
         className="agent-builder-wrapper"
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fb', backgroundImage: 'radial-gradient(circle, #c8cdd8 1px, transparent 1px)', backgroundSize: '28px 28px', overflow: 'hidden' }}
       >
-        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}${ghostwriterChrome ? ' agent-builder--gw' : ''}${paletteSection ? ' agent-builder--palette-open' : ''}`}>
+        <div className={`agent-builder agent-builder--rr-chrome${sep1Chrome ? ' agent-builder--lhs-labelled' : ''}${rrAiPanelRendered ? ' agent-builder--lhs-ai-open' : ''}${paletteInstant ? ' agent-builder--palette-instant' : ''}${versionHistoryOpen ? ' agent-builder--version-history-open' : ''}${versionHistoryMode ? ' agent-builder--version-history-canvas' : ''}${ghostwriterChrome ? ' agent-builder--gw' : ''}${paletteSection ? ' agent-builder--palette-open' : ''}${collapseLeftFloaterOnPanel ? ' agent-builder--collapse-left-floater' : ''}`}>
           {/* Floating canvas chrome (all agents) */}
           <>
               {!hideTopBar && !hideCanvasBackCluster && (onClose || explorationChrome) && (
@@ -4528,7 +4533,10 @@ export default function AgentBuilder({
               </div>
               )}
 
-              {!viewOnly && !versionHistoryMode && !hideLeftFloater && (
+              {!viewOnly &&
+                !versionHistoryMode &&
+                !hideLeftFloater &&
+                !(collapseLeftFloaterOnPanel && (paletteSection || rrAiPanelOpen)) && (
                 <div className={`rr-chrome-left-stack${sep1Chrome ? ' rr-chrome-left-stack--labelled' : ''}`}>
                   <Tooltip content="Create with AI" variant="brief" side="right">
                     <button

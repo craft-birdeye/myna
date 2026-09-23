@@ -1995,6 +1995,16 @@
   --rr-chrome-lhs-panel-left: 104px;
 }
 
+/* Jay & Robin: the left rail is fully hidden while this panel is open (see
+   `collapseLeftFloaterOnPanel` in AgentBuilder.jsx), so the panel expands to use the space
+   the rail vacated instead of leaving it empty — left edge flush with the rail's own 16px
+   inset, same right edge as before (76 + 360 - 16 = 420). Two classes on the same element
+   outrank the plain `.agent-builder--lhs-labelled` override above regardless of source order. */
+.agent-builder--collapse-left-floater.agent-builder--lhs-ai-open {
+  --rr-chrome-lhs-panel-left: 16px;
+  --rr-chrome-lhs-panel-width: 420px;
+}
+
 /* Palette geometry lives in vars so the bottom-controls shift below can derive from it
    instead of repeating the numbers. */
 .agent-builder--rr-chrome {
@@ -2004,6 +2014,13 @@
 
 .agent-builder--lhs-labelled {
   --rr-palette-left: 110px;
+}
+
+/* Same reasoning as the AI panel above, for the Trigger/Tasks/Controls/Procedures palette
+   (82 + 304 - 16 = 370). */
+.agent-builder--collapse-left-floater.agent-builder--palette-open {
+  --rr-palette-left: 16px;
+  --rr-palette-width: 370px;
 }
 
 .rr-chrome-palette {

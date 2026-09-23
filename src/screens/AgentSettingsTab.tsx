@@ -1176,8 +1176,10 @@ function FrontDeskSettings({ flat = false }: { flat?: boolean }) {
     setAdditionalVoiceConfigs((configs) => configs.filter((cfg) => cfg.label !== label))
   }
 
+  // `flat` (Front desk (Myna) canvas Settings tab): the content column reads cramped against
+  // the wider canvas viewport with no reserved gutter — 35% wider (720 → 972px).
   return (
-    <div className={`flex w-full max-w-[720px] flex-col gap-2xl ${flat ? 'mx-auto' : ''}`}>
+    <div className={`flex w-full flex-col gap-2xl ${flat ? 'max-w-[972px] mx-auto' : 'max-w-[720px]'}`}>
       <SettingsCard title="General" description="Core behaviour and language for this agent" flat={flat}>
       {/* System prompt */}
       <div className="flex flex-col gap-xs">
