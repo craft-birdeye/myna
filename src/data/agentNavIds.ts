@@ -23,6 +23,9 @@ export const RESPONSE_AGENTS_GHOSTWRITER_NAV_ID = 'response-agents-ghostwriter'
 /** "Response agent (Jay & Robin)" — duplicate of Ghostwriter (same chrome, same create flow),
  *  its own nav slot so it can be shared/tested independently of the original. */
 export const RESPONSE_AGENTS_JAY_ROBIN_NAV_ID = 'response-agents-jay-robin'
+/** "Response agent (23 Sep)" — duplicate of Jay & Robin (same chrome, same create flow, same
+ *  Test tab), its own nav slot so it can be shared/tested independently of Jay & Robin. */
+export const RESPONSE_AGENTS_23_SEP_NAV_ID = 'response-agents-23-sep'
 
 /**
  * Full canvas and its copies. These share the whole sandbox treatment: full-screen workflow
@@ -34,7 +37,8 @@ export function isFullCanvasStyleNav(navId?: string | null) {
   return (
     navId === RESPONSE_AGENTS_FULL_CANVAS_NAV_ID ||
     navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID ||
-    navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID
+    navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID ||
+    navId === RESPONSE_AGENTS_23_SEP_NAV_ID
   )
 }
 
@@ -44,15 +48,30 @@ export function isFullCanvasStyleNav(navId?: string | null) {
  * exploration must not pick up.
  */
 export function isGhostwriterNav(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID || navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID
+  return (
+    navId === RESPONSE_AGENTS_GHOSTWRITER_NAV_ID ||
+    navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID ||
+    navId === RESPONSE_AGENTS_23_SEP_NAV_ID
+  )
 }
 
 /**
- * Jay & Robin alone — narrower still than `isGhostwriterNav`. Gates the reduced canvas tab set
- * (Workflow + Test only, no Tools/Knowledge) that only this copy of Ghostwriter picked up.
+ * Jay & Robin and its duplicates (23 Sep) — narrower still than `isGhostwriterNav`. Gates the
+ * reduced canvas tab set (Workflow + Test only, no Tools/Knowledge) and everything built on top
+ * of it since (the floating Test tab panels, the "Worked for" accordion, "See plan", etc.) that
+ * only these copies of Ghostwriter picked up. 23 Sep is a straight duplicate of Jay & Robin —
+ * split this into per-nav checks if the two ever need to diverge.
  */
 export function isJayRobinNav(navId?: string | null) {
-  return navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID
+  return navId === RESPONSE_AGENTS_JAY_ROBIN_NAV_ID || navId === RESPONSE_AGENTS_23_SEP_NAV_ID
+}
+
+/**
+ * 23 Sep alone — the first place Jay & Robin's duplicate diverges from it: the Test tab opens
+ * full-page (canvas hidden), like Tools/Knowledge, instead of floating panels over the canvas.
+ */
+export function is23SepNav(navId?: string | null) {
+  return navId === RESPONSE_AGENTS_23_SEP_NAV_ID
 }
 
 /** Suffix shown after the agent name in the page title, per Full canvas copy. */
@@ -60,6 +79,10 @@ const FULL_CANVAS_VARIANT_LABELS: Record<string, string> = {
   [RESPONSE_AGENTS_FULL_CANVAS_NAV_ID]: 'Full canvas',
   [RESPONSE_AGENTS_GHOSTWRITER_NAV_ID]: 'Ghostwriter',
   [RESPONSE_AGENTS_JAY_ROBIN_NAV_ID]: 'Jay & Robin',
+  [RESPONSE_AGENTS_23_SEP_NAV_ID]: '23 Sep',
+  // Literal id, not `FRONTDESK_MYNA_NAV_ID` — that constant is declared further down this
+  // file, and this map is built at module load, so referencing it here would be a TDZ error.
+  'frontdesk-agent-myna': 'Myna',
 }
 
 export function fullCanvasVariantLabel(navId?: string | null) {

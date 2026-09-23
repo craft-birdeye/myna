@@ -89,7 +89,7 @@ export function AgentActivityHeader({
       aria-expanded={!collapsed}
       className={`gw-activity-head self-start${
         !pill
-          ? ' gw-activity-head--flush items-center'
+          ? ' gw-activity-head--flush'
           : running
             ? ''
             : ' gw-activity-head--done'
@@ -107,7 +107,7 @@ export function AgentActivityHeader({
         {running || !steps ? seconds : `· ${steps} steps · ${seconds}`}
       </span>
       <span
-        className={`gw-activity-chevron${
+        className={`gw-activity-chevron shrink-0${pill ? '' : ' mt-[3px]'}${
           chevronStyle === 'rightdown'
             ? collapsed ? ' gw-activity-chevron--sideways' : ' gw-activity-chevron--down'
             : collapsed ? ' gw-activity-chevron--collapsed' : ''

@@ -68,6 +68,7 @@ import {
   fullCanvasVariantLabel,
   isGhostwriterNav,
   isJayRobinNav,
+  is23SepNav,
 } from '../data/agentNavIds'
 import {
   getExpectedBehaviorBullets,
@@ -100,12 +101,7 @@ import {
   GhostwriterSimulationRunBlock,
   GhostwriterSourcesBlock,
   GhostwriterSpamScreenBlock,
-  JayRobinGuidelinesBlock,
-  JayRobinReadingBlock,
-  JayRobinSimulationFixBlock,
-  JayRobinSimulationRunBlock,
-  JayRobinSourcesBlock,
-  JayRobinSpamScreenBlock,
+  JayRobinThinkingBlock,
 } from '../components/AgentActivityHeader/GhostwriterReadingBlock'
 import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
 import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsTab/GhostwriterConnectionsTab'
@@ -118,6 +114,11 @@ import { FrontdeskTestSessionsPanel } from '../components/FrontdeskTestSessionsP
 import { GhostwriterOpenQuestions } from '../components/AgentActivityHeader/GhostwriterOpenQuestions'
 import { OPEN_QUESTIONS_INTRO, OPEN_QUESTIONS_LOCKED_IN } from '../data/ghostwriterOpenQuestions'
 import { PLAN_SECTIONS, PLAN_SECTION_PREFIX } from '../data/ghostwriterPlan'
+import {
+  FRONTDESK_PLAN_CARD,
+  FRONTDESK_PLAN_SECTIONS,
+  FRONTDESK_PLAN_SECTION_PREFIX,
+} from '../data/frontdeskPlan'
 import {
   PLAYBOOK_PLAN_CARD,
   PLAYBOOK_TEMPLATE_OPTIONS,
@@ -1717,6 +1718,16 @@ const REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS = [
   'It changes the whole shape of the build:',
 ]
 
+/** Jay & Robin: the intro leads straight into the "Worked for" thinking block instead of the
+ *  mode question — everything that block would otherwise ask about (cadence, then the spam
+ *  digest address) waits until it's done, then asks in one go with no more thinking between
+ *  the two. `JAY_ROBIN_MODE_LEAD_IN` is what the exploration intro's second line said before
+ *  the mode question — said here instead, once thinking has actually happened. */
+const JAY_ROBIN_INTRO_PARAGRAPHS = [
+  'A review response agent — I can do that. Let me see how you already handle this before I ask you anything.',
+]
+const JAY_ROBIN_MODE_LEAD_IN = 'It changes the whole shape of the build:'
+
 /** Asked by the mode card — the intro paragraphs lead into it but never state it. */
 const REVIEW_RESPONSE_MODE_QUESTION =
   'Should it keep running as reviews come in, or clear your backlog once and stop?'
@@ -2304,6 +2315,9 @@ function CreateAgentThinkingPanel({
   label = 'Thoughts',
   fast = true,
   activityChrome = false,
+  activityLabel,
+  pill,
+  chevronStyle,
 }: {
   open: boolean
   onToggle: () => void
@@ -2315,6 +2329,14 @@ function CreateAgentThinkingPanel({
   /** Ghostwriter: swap the "Thoughts" row for the shared Agent activity header — dot-grid
    *  loader + shimmer while typing, then a grey "· N steps · 1.8s" pill. */
   activityChrome?: boolean
+  /** `AgentActivityHeader`'s own `label` — left undefined to fall back to its "Agent
+   *  activity" default (the review-response beats). Front desk (Myna) passes "Worked for"
+   *  to match Jay & Robin's `AgentWorkBlock` header exactly. */
+  activityLabel?: string
+  /** Forwarded to `AgentActivityHeader` — left undefined for its own defaults (pill+updown)
+   *  unless the caller wants Jay & Robin's flush/no-pill "Worked for" treatment. */
+  pill?: boolean
+  chevronStyle?: 'updown' | 'rightdown'
 }) {
   const completedRef = useRef(false)
   /** Live elapsed while the thought streams; frozen once it finishes. */
@@ -2356,7 +2378,7 @@ function CreateAgentThinkingPanel({
   const stepCount = text.split('\n').filter((l) => l.trim()).length
 
   return (
-    <div className="agent-build-fade mt-3xl flex flex-col gap-sm">
+    <div className="agent-build-fade ml-3xl mt-3xl flex flex-col gap-sm">
       {activityChrome ? (
         <AgentActivityHeader
           running={activityRunning}
@@ -2365,6 +2387,9 @@ function CreateAgentThinkingPanel({
           collapsed={!open}
           onToggle={onToggle}
           toggleDisabled={!done}
+          label={activityLabel}
+          pill={pill}
+          chevronStyle={chevronStyle}
         />
       ) : (
       <button
@@ -3361,6 +3386,10 @@ function ReviewResponseThread({
   const [modeAnswer, setModeAnswer] = useState('')
   const [modeFollowReady, setModeFollowReady] = useState(false)
   const [modeFollowDone, setModeFollowDone] = useState(false)
+  /** Jay & Robin only — every reading/testing beat runs inside one accordion; this is the
+   *  only "done" flag that flow needs (contrast the many per-beat flags below it, which stay
+   *  reserved for the original Ghostwriter's own sequential beats). */
+  const [jayRobinThinkingDone, setJayRobinThinkingDone] = useState(false)
   /** Ghostwriter's reading block: intro reply finished, then the block itself. */
   const [readingIntroDone, setReadingIntroDone] = useState(false)
   const [readingBlockDone, setReadingBlockDone] = useState(false)
@@ -3373,11 +3402,13 @@ function ReviewResponseThread({
   const [digestEmail, setDigestEmail] = useState('')
   useEffect(() => {
     onAnswerCardOpenChange?.(
-      (explorationModeChoice && introDone && !modeAnswer) || (spamScreenDone && !digestEmail)
+      (explorationModeChoice && introDone && !modeAnswer && !isJayRobin) ||
+        (isJayRobin && jayRobinThinkingDone && (!modeAnswer || !digestEmail)) ||
+        (spamScreenDone && !digestEmail)
     )
     return () => onAnswerCardOpenChange?.(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [explorationModeChoice, introDone, modeAnswer, spamScreenDone, digestEmail])
+  }, [explorationModeChoice, introDone, modeAnswer, spamScreenDone, digestEmail, jayRobinThinkingDone])
   const [simIntroDone, setSimIntroDone] = useState(false)
   const [simRunDone, setSimRunDone] = useState(false)
   const [simFixDone, setSimFixDone] = useState(false)
@@ -3849,7 +3880,6 @@ function ReviewResponseThread({
               agentCreated={agentCreated}
               copy={PLAYBOOK_PLAN_CARD}
               openLabel={isJayRobin ? 'See plan' : undefined}
-              openIcon={isJayRobin ? 'visibility' : undefined}
             />
           )}
         </>
@@ -3857,27 +3887,31 @@ function ReviewResponseThread({
         <>
           <ReviewAgentReply
             paragraphs={
-              explorationModeChoice
-                ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
-                : REVIEW_RESPONSE_INTRO_PARAGRAPHS
+              isJayRobin
+                ? JAY_ROBIN_INTRO_PARAGRAPHS
+                : explorationModeChoice
+                  ? [...REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS]
+                  : REVIEW_RESPONSE_INTRO_PARAGRAPHS
             }
             onComplete={() => setIntroDone(true)}
           />
           {introDone && (
             <MessageActions
-              copyText={
-                (explorationModeChoice
+              copyText={(isJayRobin
+                ? JAY_ROBIN_INTRO_PARAGRAPHS
+                : explorationModeChoice
                   ? REVIEW_RESPONSE_EXPLORATION_INTRO_PARAGRAPHS
                   : REVIEW_RESPONSE_INTRO_PARAGRAPHS
-                ).join('\n\n')
-              }
+              ).join('\n\n')}
               className="ml-3xl"
             />
           )}
           {/* Docked to the bottom of the scroll viewport (sticky), right where the composer
               sits below it, instead of scrolling away as a separate card in the chat history.
-              Cancels the card's own inline chat-indent margins (`ml-3xl mt-sm`). */}
-          {explorationModeChoice && introDone && !modeAnswer && (
+              Cancels the card's own inline chat-indent margins (`ml-3xl mt-sm`). Jay & Robin
+              defers this until its "Worked for" thinking block (below) finishes — every other
+              exploration nav still asks it right here, immediately after the intro. */}
+          {explorationModeChoice && introDone && !modeAnswer && !isJayRobin && (
             <>
               {/* Consumes the slack when the conversation so far is shorter than the
                   viewport, so the card below sits flush above the composer either way —
@@ -3893,57 +3927,107 @@ function ReviewResponseThread({
           )}
         </>
       )}
-      {explorationModeChoice && modeAnswer && (
+      {explorationModeChoice && modeAnswer && !isJayRobin && (
         <AnsweredQuestionBlock question={REVIEW_RESPONSE_MODE_QUESTION} answer={modeAnswer} />
       )}
-      {/* Ghostwriter goes and reads the account rather than asking for sources/templates/
-          tone — so its follow-up is the reading block, not the sources question. */}
-      {explorationModeChoice && modeAnswer && ghostwriterPolish && (
+      {/* Jay & Robin: every reading/testing beat runs back to back inside one "Worked for"
+          block right after the intro — no mode question first. Once that block finishes, the
+          mode question and the digest-email question ask one after another, with nothing else
+          in between, then the plan. Only text that leads into a question or the plan itself
+          stays outside the block; everything else (what used to be each beat's permanent
+          summary/footnote prose) now reads as `findings` inside it.
+          The lead-in and the answered-question echo below both render *here*, after the
+          thinking block, not in the shared `explorationModeChoice && modeAnswer` line above —
+          that line is where the original (immediate-question) navs echo their answer, which
+          for Jay & Robin would wrongly show the Q&A pair above the work that preceded it. */}
+      {explorationModeChoice && ghostwriterPolish && isJayRobin && introDone && (
         <>
-          {isJayRobin ? (
-            <JayRobinReadingBlock onComplete={() => setReadingBlockDone(true)} />
-          ) : (
+          <JayRobinThinkingBlock
+            onComplete={() => setJayRobinThinkingDone(true)}
+            onConfigureSources={onOpenPlan}
+          />
+          {jayRobinThinkingDone && (
+            <ReviewAgentReply paragraphs={[JAY_ROBIN_MODE_LEAD_IN]} />
+          )}
+          {jayRobinThinkingDone && !modeAnswer && (
             <>
-              <ReviewAgentReply
-                paragraphs={[READING_INTRO_PARAGRAPH]}
-                onComplete={() => setReadingIntroDone(true)}
+              <div className="flex-1" aria-hidden />
+              <ReviewModeChoiceCards
+                question={REVIEW_RESPONSE_MODE_QUESTION}
+                onPick={setModeAnswer}
+                className="sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card"
+                dividers={false}
               />
-              {readingIntroDone && (
-                <GhostwriterReadingBlock onComplete={() => setReadingBlockDone(true)} />
-              )}
             </>
           )}
-          {readingBlockDone && isJayRobin && (
-            <JayRobinGuidelinesBlock onComplete={() => setLearningBlockDone(true)} />
+          {jayRobinThinkingDone && modeAnswer && (
+            <AnsweredQuestionBlock question={REVIEW_RESPONSE_MODE_QUESTION} answer={modeAnswer} />
           )}
-          {readingBlockDone && !isJayRobin && (
+          {jayRobinThinkingDone && modeAnswer && !digestEmail && (
+            <>
+              <div className="flex-1" aria-hidden />
+              <GhostwriterDigestPrompt
+                onSubmit={setDigestEmail}
+                className="sticky bottom-0 z-10 !ml-0 !mt-md !rounded-b-none !border-b-0 shadow-card"
+                dividers={false}
+              />
+            </>
+          )}
+          {digestEmail && <AnsweredQuestionBlock question={SPAM_DIGEST_QUESTION} answer={digestEmail} />}
+          {/* The plan is the "final output" of the thinking phase — the one other place this
+              flow still shows text outside the accordion. */}
+          {digestEmail && (
+            <ReviewAgentReply paragraphs={[PLAN_INTRO_PARAGRAPH]} onComplete={() => setPlanIntroDone(true)} />
+          )}
+          {planIntroDone && (
+            <GhostwriterPlanCard
+              onCreateAgent={() => onCreateAgent?.()}
+              onOpenPlan={onOpenPlan}
+              planOpen={planOpen}
+              agentCreated={agentCreated}
+              openLabel="See plan"
+            />
+          )}
+          {/* Stays mounted (not swapped out) once done — the checked-off list is part of the
+              permanent chat history, not a transient loading state that disappears. */}
+          {agentCreated && (
+            <GhostwriterBuildStepsBlock onDone={() => setBuildStepsDone(true)} />
+          )}
+          {/* "Generate test cases" now lives on the Test tab's own "Run test" CTA, and
+              "Activate" is a real top-bar button — the chat doesn't need to broker either
+              choice anymore, so this is just a rhetorical line, not another picker. */}
+          {agentCreated && buildStepsDone && <ReviewAgentReply paragraphs={[GHOSTWRITER_POST_CREATE_QUESTION]} />}
+        </>
+      )}
+      {/* Original Ghostwriter — unchanged sequential beats, each its own reply + block. */}
+      {explorationModeChoice && modeAnswer && ghostwriterPolish && !isJayRobin && (
+        <>
+          <ReviewAgentReply
+            paragraphs={[READING_INTRO_PARAGRAPH]}
+            onComplete={() => setReadingIntroDone(true)}
+          />
+          {readingIntroDone && (
+            <GhostwriterReadingBlock onComplete={() => setReadingBlockDone(true)} />
+          )}
+          {readingBlockDone && (
             <ReviewAgentReply
               paragraphs={[LEARNING_INTRO_PARAGRAPH]}
               onComplete={() => setLearningIntroDone(true)}
             />
           )}
-          {learningIntroDone && !isJayRobin && (
+          {learningIntroDone && (
             <GhostwriterGuidelinesBlock onComplete={() => setLearningBlockDone(true)} />
           )}
           {learningBlockDone && (
-            isJayRobin ? (
-              <JayRobinSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
-            ) : (
-              <GhostwriterSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
-            )
+            <GhostwriterSourcesBlock onComplete={() => setSourcesBlockDone(true)} />
           )}
-          {/* Jay & Robin folds `SOURCES_NEXT_PARAGRAPH` into the spam-screen block's own
-              Thought line instead of a separate reply bubble — see `JayRobinSpamScreenBlock`. */}
-          {sourcesBlockDone && isJayRobin && (
-            <JayRobinSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
-          )}
-          {sourcesBlockDone && !isJayRobin && (
+          {sourcesBlockDone && (
             <ReviewAgentReply
               paragraphs={[SOURCES_NEXT_PARAGRAPH]}
               onComplete={() => setSourcesTeaserDone(true)}
             />
           )}
-          {sourcesTeaserDone && !isJayRobin && (
+          {sourcesTeaserDone && (
             <GhostwriterSpamScreenBlock onComplete={() => setSpamScreenDone(true)} />
           )}
           {/* The question lives in the card's header — a paragraph above it said it twice.
@@ -3960,27 +4044,18 @@ function ReviewResponseThread({
           )}
           {digestEmail && <AnsweredQuestionBlock question={SPAM_DIGEST_QUESTION} answer={digestEmail} />}
           {/* The plan is only shown once the agent has tested the draft, found what breaks,
-              fixed it and re-run the suite — so what you open has already survived a pass.
-              Jay & Robin folds `SIMULATION_INTRO_PARAGRAPH` into the run block's own Thought
-              line the same way the spam-screen beat above folds its own lead-in. */}
-          {digestEmail && isJayRobin && (
-            <JayRobinSimulationRunBlock onComplete={() => setSimRunDone(true)} />
-          )}
-          {digestEmail && !isJayRobin && (
+              fixed it and re-run the suite — so what you open has already survived a pass. */}
+          {digestEmail && (
             <ReviewAgentReply
               paragraphs={[SIMULATION_INTRO_PARAGRAPH]}
               onComplete={() => setSimIntroDone(true)}
             />
           )}
-          {simIntroDone && !isJayRobin && (
+          {simIntroDone && (
             <GhostwriterSimulationRunBlock onComplete={() => setSimRunDone(true)} />
           )}
           {simRunDone && (
-            isJayRobin ? (
-              <JayRobinSimulationFixBlock onComplete={() => setSimFixDone(true)} />
-            ) : (
-              <GhostwriterSimulationFixBlock onComplete={() => setSimFixDone(true)} />
-            )
+            <GhostwriterSimulationFixBlock onComplete={() => setSimFixDone(true)} />
           )}
           {simFixDone && (
             <ReviewAgentReply
@@ -3994,20 +4069,9 @@ function ReviewResponseThread({
               onOpenPlan={onOpenPlan}
               planOpen={planOpen}
               agentCreated={agentCreated}
-              openLabel={isJayRobin ? 'See plan' : undefined}
-              openIcon={isJayRobin ? 'visibility' : undefined}
             />
           )}
-          {/* Stays mounted (not swapped out) once done — the checked-off list is part of the
-              permanent chat history, not a transient loading state that disappears. */}
-          {agentCreated && isJayRobin && (
-            <GhostwriterBuildStepsBlock onDone={() => setBuildStepsDone(true)} />
-          )}
-          {/* Jay & Robin: "Generate test cases" now lives on the Test tab's own "Run test" CTA,
-              and "Activate" is a real top-bar button — the chat doesn't need to broker either
-              choice anymore, so this is just a rhetorical line, not another picker. */}
-          {agentCreated && isJayRobin && buildStepsDone && <ReviewAgentReply paragraphs={[GHOSTWRITER_POST_CREATE_QUESTION]} />}
-          {agentCreated && !isJayRobin && !postCreateAnswer && (
+          {agentCreated && !postCreateAnswer && (
             <>
               <div className="flex-1" aria-hidden />
               <ReviewModeChoiceCards
@@ -6499,6 +6563,12 @@ function HealthcareFrontdeskCreateAgentLive({
    *  `GhostwriterPlanCard`'s CTA to "Plan open" the same way the local state used to. */
   planOpenExternal?: boolean
 }) {
+  const debugInstanceId = useRef(Math.random().toString(36).slice(2, 8))
+  useEffect(() => {
+    console.log('[DEBUG-MOUNT] HealthcareFrontdeskCreateAgentLive MOUNTED', debugInstanceId.current, 'variant', variant)
+    return () => console.log('[DEBUG-MOUNT] HealthcareFrontdeskCreateAgentLive UNMOUNTED', debugInstanceId.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const isReminderFlow = variant === 'reminder'
   const isReviewFlow = variant === 'review-response'
   const isReviewGenFlow = variant === 'review-generation'
@@ -6743,14 +6813,6 @@ function HealthcareFrontdeskCreateAgentLive({
       }),
     })
   }
-
-  // Front desk (Myna) only: the draft-review thinking panel finishing IS the creation
-  // moment — no "Yes, that's right"/"Test agent" pills to click through. Testing now lives
-  // in the canvas's own Test tab (Preview), not this chat.
-  useEffect(() => {
-    if (ghostwriterPolish && reviewThoughtsDone && !agentCreated) saveCreatedAgent()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ghostwriterPolish, reviewThoughtsDone, agentCreated])
 
   const handleStartTestAgent = (label = 'Test agent') => {
     setTestAgentAnswers((prev) => [...prev, label])
@@ -7383,6 +7445,10 @@ function HealthcareFrontdeskCreateAgentLive({
                   setThinkingOpen(false)
                   setIntroReplyReady(true)
                 }}
+                activityChrome={ghostwriterPolish}
+                activityLabel="Worked for"
+                pill={false}
+                chevronStyle="rightdown"
                 text={
                   isReviewFlow
                     ? REVIEW_RESPONSE_CREATE_THOUGHTS_TEXT
@@ -7552,6 +7618,10 @@ function HealthcareFrontdeskCreateAgentLive({
                         setDocsThoughtsOpen(false)
                         setDocsReplyReady(true)
                       }}
+                      activityChrome={ghostwriterPolish}
+                      activityLabel="Worked for"
+                      pill={false}
+                      chevronStyle="rightdown"
                       text={CREATE_AGENT_DOCS_THOUGHTS_TEXT}
                     />
                     {docsReplyReady && <GhostwriterDocsReply onComplete={() => setDocsReplyDone(true)} />}
@@ -7572,6 +7642,10 @@ function HealthcareFrontdeskCreateAgentLive({
                           setDocsPostBuildThoughtsOpen((prev) => !prev)
                         }}
                         onComplete={handlePostBuildThinkingComplete}
+                        activityChrome={ghostwriterPolish}
+                        activityLabel="Worked for"
+                        pill={false}
+                        chevronStyle="rightdown"
                         text={CREATE_AGENT_POST_BUILD_THOUGHTS_TEXT}
                       />
                     )}
@@ -7622,6 +7696,10 @@ function HealthcareFrontdeskCreateAgentLive({
                             setRefillThoughtsOpen(false)
                             setRefillReplyReady(true)
                           }}
+                          activityChrome={ghostwriterPolish}
+                          activityLabel="Worked for"
+                          pill={false}
+                          chevronStyle="rightdown"
                           text={CREATE_AGENT_REFILL_THOUGHTS_TEXT}
                         />
                         {refillReplyReady && (
@@ -7725,20 +7803,36 @@ function HealthcareFrontdeskCreateAgentLive({
                             setReviewThoughtsOpen(false)
                             setReviewThoughtsDone(true)
                           }}
+                          activityChrome={ghostwriterPolish}
+                          activityLabel="Worked for"
+                          pill={false}
+                          chevronStyle="rightdown"
                           text={CREATE_AGENT_REVIEW_THOUGHTS_TEXT}
                         />
                         {reviewThoughtsDone && (
                           ghostwriterPolish ? (
-                            // Front desk (Myna): this thinking panel finishing out is the
-                            // creation moment (see the `saveCreatedAgent` effect above) — a
-                            // plain closing line, no follow-up pills. Testing lives in the
-                            // canvas's own Test tab now.
-                            <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
-                              <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
-                              <p className="flex-1 text-body leading-6 text-text-primary">
-                                The agent is created. What else do we want to do?
-                              </p>
-                            </div>
+                            // Front desk (Myna): same plan beat as Jay & Robin — a plan card
+                            // ("See plan" docks the real RHS panel) with "Create agent" as its
+                            // only action, then a plain closing line once pressed. Testing
+                            // lives in the canvas's own Test tab now, not a follow-up pill.
+                            <>
+                              <GhostwriterPlanCard
+                                onCreateAgent={() => saveCreatedAgent()}
+                                onOpenPlan={onOpenPlanExternal}
+                                planOpen={planOpenExternal}
+                                agentCreated={agentCreated}
+                                copy={FRONTDESK_PLAN_CARD}
+                                openLabel="See plan"
+                              />
+                              {agentCreated && (
+                                <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
+                                  <AiAvatarChatIcon size={24} className="mt-[2px] shrink-0" />
+                                  <p className="flex-1 text-body leading-6 text-text-primary">
+                                    The agent is created. What else do we want to do?
+                                  </p>
+                                </div>
+                              )}
+                            </>
                           ) : (
                           <>
                             <div className="chat-turn agent-build-fade mt-3xl flex gap-sm">
@@ -9456,10 +9550,10 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
   const [jayRobinTestModalOpen, setJayRobinTestModalOpen] = useState(false)
   const [jayRobinTestSelectedIds, setJayRobinTestSelectedIds] = useState<string[]>([])
   const [jayRobinTestBatches, setJayRobinTestBatches] = useState<TestRunBatch[]>([])
-  /** Jay & Robin only: "Open plan" opens a real canvas-docked RHS panel (below, next to the
-   *  canvas section) instead of swapping the docked chat's own content — see
-   *  `onOpenPlanExternal` on `HealthcareFrontdeskCreateAgentLive`. */
-  const [jayRobinPlanPanelOpen, setJayRobinPlanPanelOpen] = useState(false)
+  /** Jay & Robin and Front desk (Myna): "Open/See plan" opens a real canvas-docked RHS panel
+   *  (below, next to the canvas section) instead of swapping the docked chat's own content —
+   *  see `onOpenPlanExternal` on `HealthcareFrontdeskCreateAgentLive`. */
+  const [externalPlanPanelOpen, setExternalPlanPanelOpen] = useState(false)
   /** Ghostwriter top bar owns the CTAs; this hands the click to AgentBuilder's handler. */
   const [ghostwriterHeaderAction, setGhostwriterHeaderAction] =
     useState<{ type: string; nonce: number } | null>(null)
@@ -10281,6 +10375,9 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
     /** Jay & Robin only — same create polish as Ghostwriter, but a reduced canvas tab set
      *  (Workflow + Test only). */
     const isJayRobinPolish = isJayRobinNav(navId) && isReviewResponse
+    /** 23 Sep only — Jay & Robin's duplicate, minus the Test tab's floating panels: it opens
+     *  full-page instead, canvas hidden, like Tools/Knowledge. */
+    const is23SepPolish = is23SepNav(navId) && isReviewResponse
     const isHealthcareFrontdesk = product === 'healthcare'
     const chatHistoryTitle = (isReviewResponse || isReviewGeneration) ? 'Reviews AI' : isReminder ? 'Reminder' : 'Front desk'
     const createVariant = isReminder ? 'reminder' : 'frontdesk'
@@ -10437,8 +10534,8 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
           explorationModeChoice={isResponseAgentsExplorationNav(navId) && isReviewResponse}
           ghostwriterPolish={isGhostwriterPolish}
           simulationTabLabel={isJayRobinPolish ? 'Test' : 'Simulation'}
-          onOpenPlanExternal={isJayRobinPolish ? () => setJayRobinPlanPanelOpen(true) : undefined}
-          planOpenExternal={jayRobinPlanPanelOpen}
+          onOpenPlanExternal={(isJayRobinPolish || isMynaCombinedNav) ? () => setExternalPlanPanelOpen(true) : undefined}
+          planOpenExternal={externalPlanPanelOpen}
           onCreateFromScratch={() => {
             // Ghostwriter keeps the shell (top bar + tabs) and opens the canvas
             // on the Workflow tab, rather than leaving for the standalone editor.
@@ -10969,13 +11066,29 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
             </section>
           )}
 
-          {/* Jay & Robin only: "Open plan" docks a real RHS panel next to the canvas — the
-              same slot/sizing a clicked node's RHS uses — instead of swapping the chat's own
-              content for the plan. Coexists with the docked "Edit with AI" chat (left) since
-              both anchor to opposite edges of this same relative container. */}
-          {isJayRobinPolish && ghostwriterShellPinned && jayRobinPlanPanelOpen && (
+          {/* Jay & Robin and Front desk (Myna): "Open/See plan" docks a real RHS panel next to
+              the canvas — the same slot/sizing a clicked node's RHS uses — instead of swapping
+              the chat's own content for the plan. Coexists with the docked "Edit with AI" chat
+              (left) since both anchor to opposite edges of this same relative container. */}
+          {(isJayRobinPolish || isMynaCombinedNav) && ghostwriterShellPinned && externalPlanPanelOpen && (
             <div className="absolute right-2 top-[64px] z-[25] h-[calc(100%-72px)] w-[420px] overflow-hidden rounded-2xl shadow-[0_2px_12px_1px_rgba(13,13,18,0.08)]">
-              <GhostwriterPlanPanel onClose={() => setJayRobinPlanPanelOpen(false)} />
+              <GhostwriterPlanPanel
+                onClose={() => setExternalPlanPanelOpen(false)}
+                {...(isMynaCombinedNav
+                  ? {
+                      card: FRONTDESK_PLAN_CARD,
+                      sections: FRONTDESK_PLAN_SECTIONS,
+                      sectionPrefix: FRONTDESK_PLAN_SECTION_PREFIX,
+                    }
+                  : {})}
+                {...(isJayRobinPolish
+                  ? {
+                      hideNotes: true,
+                      onCreateAgent: handleGhostwriterCreateAgent,
+                      agentCreated: ghostwriterAgentCreated,
+                    }
+                  : {})}
+              />
             </div>
           )}
 
@@ -11045,6 +11158,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
                         externalTestRun={testRun}
                       />
                     )}
+                    layout={is23SepPolish ? 'fullpage' : 'floating'}
                   />
                 ) : (
                   <GhostwriterSimulationTab

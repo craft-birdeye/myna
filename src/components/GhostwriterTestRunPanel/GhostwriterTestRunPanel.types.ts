@@ -29,4 +29,8 @@ export interface GhostwriterTestRunPanelProps {
   /** Empty-state / header CTA — opens the review picker. */
   onRunTest?: () => void
   className?: string
+  /** 'floating' (default) — Jay & Robin: LHS/RHS are floating cards over the canvas, which
+   *  `centerContent` mounts full-bleed underneath. 'fullpage' — 23 Sep: a plain full-page
+   *  list+detail layout with no canvas at all; `centerContent` is never called. */
+  layout?: 'floating' | 'fullpage'
 }

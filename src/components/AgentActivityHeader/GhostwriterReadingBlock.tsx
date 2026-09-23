@@ -50,7 +50,8 @@ import {
 } from '../../data/ghostwriterPlaybookBlock'
 import { GhostwriterQuestionCard } from '../GhostwriterQuestionCard/GhostwriterQuestionCard'
 import { ActivityFindingsBlock } from './ActivityFindingsBlock'
-import { AgentWorkBlock } from './AgentWorkBlock'
+import { AgentWorkSequence } from './AgentWorkSequence'
+import type { WorkPhase } from './AgentWorkSequence'
 import { VERDICT_TONE, VerdictTone } from './verdictTones'
 
 /** The one action this beat offers — a text link, not a panel. */
@@ -161,18 +162,56 @@ export function GhostwriterReadingBlock({ onComplete }: GhostwriterReadingBlockP
   )
 }
 
-/** Jay & Robin's beat 1 — same data, the "Worked for #s" treatment instead. */
-export function JayRobinReadingBlock({ onComplete }: GhostwriterReadingBlockProps) {
-  return (
-    <AgentWorkBlock
-      thought={READING_INTRO_PARAGRAPH}
-      toolsLabel={READING_HEADER_LABEL}
-      tools={READING_STEPS}
-      summary={READING_SUMMARY}
-      footnote={READING_FOOTNOTE}
-      onComplete={onComplete}
-    />
-  )
+/**
+ * Jay & Robin: every reading/testing beat (1 through 6) runs back to back inside ONE
+ * "Worked for #s" accordion instead of six separate ones — the mode and digest questions
+ * both wait until this whole thing finishes, then ask together with nothing else wedged in
+ * between. Each beat's old summary/footnote prose (previously permanent chat text) now reads
+ * as `findings` inside the accordion instead — the only text `AgentDetailScreen` still shows
+ * outside this block is what leads into a question or the plan.
+ */
+export function JayRobinThinkingBlock({
+  onComplete,
+  onConfigureSources,
+}: GhostwriterReadingBlockProps & { onConfigureSources?: () => void }) {
+  const phases: WorkPhase[] = [
+    {
+      thought: READING_INTRO_PARAGRAPH,
+      toolsLabel: READING_HEADER_LABEL,
+      tools: READING_STEPS,
+      findings: [READING_SUMMARY, READING_FOOTNOTE],
+    },
+    {
+      thought: LEARNING_INTRO_PARAGRAPH,
+      toolsLabel: LEARNING_HEADER_LABEL,
+      tools: LEARNING_STEPS,
+      findings: [LEARNING_SUMMARY, LEARNING_FOOTNOTE],
+    },
+    {
+      toolsLabel: SOURCES_HEADER_LABEL,
+      tools: SOURCES_STEPS,
+      findings: [SOURCES_SUMMARY],
+      body: <ConfigureSourcesLink onConfigure={onConfigureSources} />,
+    },
+    {
+      thought: SOURCES_NEXT_PARAGRAPH,
+      toolsLabel: SPAM_SCREEN_HEADER_LABEL,
+      tools: SPAM_SCREEN_STEPS,
+      findings: [SPAM_SCREEN_SUMMARY, SPAM_SCREEN_FOOTNOTE],
+    },
+    {
+      thought: SIMULATION_INTRO_PARAGRAPH,
+      toolsLabel: SIM_RUN_HEADER_LABEL,
+      tools: SIM_RUN_STEPS,
+      findings: [SIM_RUN_SUMMARY, SIM_RUN_FOOTNOTE],
+    },
+    {
+      toolsLabel: SIM_FIX_HEADER_LABEL,
+      tools: SIM_FIX_STEPS,
+      findings: [SIM_FIX_SUMMARY, SIM_FIX_FOOTNOTE],
+    },
+  ]
+  return <AgentWorkSequence phases={phases} onComplete={onComplete} />
 }
 
 /** Beat 3 — which sources can actually be replied to. Ends on its body, no callout. */
@@ -191,45 +230,12 @@ export function GhostwriterSourcesBlock({
   )
 }
 
-/** Jay & Robin's beat 3 — no separate lead-in exists for this one, so `toolsLabel` alone
- *  frames the tool calls. */
-export function JayRobinSourcesBlock({
-  onComplete,
-  onConfigure,
-}: GhostwriterReadingBlockProps & { onConfigure?: () => void }) {
-  return (
-    <AgentWorkBlock
-      toolsLabel={SOURCES_HEADER_LABEL}
-      tools={SOURCES_STEPS}
-      summary={SOURCES_SUMMARY}
-      body={<ConfigureSourcesLink onConfigure={onConfigure} />}
-      onComplete={onComplete}
-    />
-  )
-}
-
 /** Beat 4 — the spam gate. Opens on the risk, then explains the resolution. */
 export function GhostwriterSpamScreenBlock({ onComplete }: GhostwriterReadingBlockProps) {
   return (
     <ActivityFindingsBlock
       label={SPAM_SCREEN_HEADER_LABEL}
       steps={SPAM_SCREEN_STEPS}
-      summary={SPAM_SCREEN_SUMMARY}
-      footnote={SPAM_SCREEN_FOOTNOTE}
-      onComplete={onComplete}
-    />
-  )
-}
-
-/** Jay & Robin's beat 4 — `SOURCES_NEXT_PARAGRAPH` teases this beat in the original flow (its
- *  own separate reply, right before this block mounts), so here it becomes the Thought line
- *  instead of a preceding bubble. */
-export function JayRobinSpamScreenBlock({ onComplete }: GhostwriterReadingBlockProps) {
-  return (
-    <AgentWorkBlock
-      thought={SOURCES_NEXT_PARAGRAPH}
-      toolsLabel={SPAM_SCREEN_HEADER_LABEL}
-      tools={SPAM_SCREEN_STEPS}
       summary={SPAM_SCREEN_SUMMARY}
       footnote={SPAM_SCREEN_FOOTNOTE}
       onComplete={onComplete}
@@ -253,39 +259,12 @@ export function GhostwriterSimulationRunBlock({ onComplete }: GhostwriterReading
   )
 }
 
-/** Jay & Robin's beat 5. */
-export function JayRobinSimulationRunBlock({ onComplete }: GhostwriterReadingBlockProps) {
-  return (
-    <AgentWorkBlock
-      thought={SIMULATION_INTRO_PARAGRAPH}
-      toolsLabel={SIM_RUN_HEADER_LABEL}
-      tools={SIM_RUN_STEPS}
-      summary={SIM_RUN_SUMMARY}
-      footnote={SIM_RUN_FOOTNOTE}
-      onComplete={onComplete}
-    />
-  )
-}
-
 /** Beat 6 — both failures fixed, the same suite re-run, then it hands off to the plan. */
 export function GhostwriterSimulationFixBlock({ onComplete }: GhostwriterReadingBlockProps) {
   return (
     <ActivityFindingsBlock
       label={SIM_FIX_HEADER_LABEL}
       steps={SIM_FIX_STEPS}
-      summary={SIM_FIX_SUMMARY}
-      footnote={SIM_FIX_FOOTNOTE}
-      onComplete={onComplete}
-    />
-  )
-}
-
-/** Jay & Robin's beat 6 — no separate lead-in exists for this one either. */
-export function JayRobinSimulationFixBlock({ onComplete }: GhostwriterReadingBlockProps) {
-  return (
-    <AgentWorkBlock
-      toolsLabel={SIM_FIX_HEADER_LABEL}
-      tools={SIM_FIX_STEPS}
       summary={SIM_FIX_SUMMARY}
       footnote={SIM_FIX_FOOTNOTE}
       onComplete={onComplete}
@@ -330,7 +309,6 @@ export function GhostwriterPlanCard({
   agentCreated = false,
   copy,
   openLabel,
-  openIcon = 'open_in_new',
 }: {
   onOpenPlan?: () => void
   onCreateAgent?: () => void
@@ -339,16 +317,14 @@ export function GhostwriterPlanCard({
   /** Retires the Create agent CTA once it has been used — the agent already exists. */
   agentCreated?: boolean
   /**
-   * Per-flow overrides for the two lines that describe where the plan came from — the
-   * playbook path cites pages and rules rather than reviews and replies.
+   * Per-flow overrides for the card's text — the playbook path cites pages and rules rather
+   * than reviews and replies; Front desk (Myna) overrides title/badge too, since this card
+   * otherwise always reads "Review response agent".
    */
-  copy?: { meta?: string; description?: string }
+  copy?: { title?: string; badge?: string; meta?: string; description?: string }
   /** Jay & Robin: "See plan" reads better than "Open plan" once the plan lives in this same
    *  window rather than somewhere external — defaults to the original Ghostwriter wording. */
   openLabel?: string
-  /** Paired with `openLabel` — `open_in_new` implies leaving the window, which "See plan"
-   *  no longer does. */
-  openIcon?: string
 }) {
   return (
     <div className="ml-3xl mt-sm flex max-w-full flex-col gap-md">
@@ -357,41 +333,52 @@ export function GhostwriterPlanCard({
           <span className="flex size-5 shrink-0 items-center justify-center text-[#7c3aed]" aria-hidden>
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>description</span>
           </span>
-          <span className="text-h3 text-text-primary">{PLAN_CARD.title}</span>
+          <span className="text-h3 text-text-primary">{copy?.title ?? PLAN_CARD.title}</span>
           <span className="rounded-sm bg-[#e8f1fc] px-sm py-[2px] text-small text-text-action">
-            {PLAN_CARD.badge}
+            {copy?.badge ?? PLAN_CARD.badge}
           </span>
         </div>
 
         <p className="m-0 text-small text-text-tertiary">{copy?.meta ?? PLAN_CARD.meta}</p>
         <p className="m-0 text-body text-text-secondary">{copy?.description ?? PLAN_CARD.description}</p>
 
-        {/* Secondary — the plan is a detour, not the main action. */}
-        <button
-          type="button"
-          onClick={onOpenPlan}
-          className={`mt-xs flex h-9 w-fit items-center gap-sm rounded-sm px-lg text-body transition-colors ${
-            planOpen
-              ? 'bg-surface-selected text-text-primary'
-              : 'border border-border-selected bg-surface text-text-primary hover:bg-surface-l2'
-          }`}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }} aria-hidden>
-            {planOpen ? 'check' : openIcon}
-          </span>
-          {planOpen ? 'Plan open' : openLabel ?? PLAN_CARD.openLabel}
-        </button>
+        {/* The two options this whole card offers, together: "See plan" (a detour, so it
+            stays secondary) and "Create agent" (the primary action). Not-yet-open reads left
+            to right as label-then-chevron (no icon before the label); open swaps to a check
+            instead, unchanged. */}
+        <div className="mt-xs flex items-center gap-sm">
+          <button
+            type="button"
+            onClick={onOpenPlan}
+            className={`flex h-9 w-fit items-center justify-between gap-sm rounded-sm px-lg text-body transition-colors ${
+              planOpen
+                ? 'bg-surface-selected text-text-primary'
+                : 'border border-border-selected bg-surface text-text-primary hover:bg-surface-l2'
+            }`}
+          >
+            {planOpen ? (
+              <>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }} aria-hidden>check</span>
+                Plan open
+              </>
+            ) : (
+              <>
+                {openLabel ?? PLAN_CARD.openLabel}
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }} aria-hidden>chevron_right</span>
+              </>
+            )}
+          </button>
+          {!agentCreated && (
+            <button
+              type="button"
+              onClick={onCreateAgent}
+              className="flex h-9 w-fit items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              {PLAN_CREATE_CTA}
+            </button>
+          )}
+        </div>
       </div>
-
-      {!agentCreated && (
-        <button
-          type="button"
-          onClick={onCreateAgent}
-          className="gw-flow__in flex h-9 w-fit items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
-        >
-          {PLAN_CREATE_CTA}
-        </button>
-      )}
     </div>
   )
 }
@@ -409,16 +396,3 @@ export function GhostwriterGuidelinesBlock({ onComplete }: GhostwriterReadingBlo
   )
 }
 
-/** Jay & Robin's beat 2. */
-export function JayRobinGuidelinesBlock({ onComplete }: GhostwriterReadingBlockProps) {
-  return (
-    <AgentWorkBlock
-      thought={LEARNING_INTRO_PARAGRAPH}
-      toolsLabel={LEARNING_HEADER_LABEL}
-      tools={LEARNING_STEPS}
-      summary={LEARNING_SUMMARY}
-      footnote={LEARNING_FOOTNOTE}
-      onComplete={onComplete}
-    />
-  )
-}

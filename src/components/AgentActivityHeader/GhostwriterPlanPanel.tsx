@@ -35,6 +35,21 @@ const LINE_TINT: Record<LineState, string> = {
 
 export interface GhostwriterPlanPanelProps {
   onClose: () => void
+  /** Front desk (Myna): its own card header (title/badge/meta) instead of the review-response
+   *  default. */
+  card?: { title: string; badge: string; meta: string }
+  /** Front desk (Myna): its own plan sections instead of the review-response default. */
+  sections?: typeof PLAN_SECTIONS
+  sectionPrefix?: string
+  hint?: string
+  /** Jay & Robin: read-only plan — lines aren't clickable, there's no note popover or
+   *  amber/green tinting, and the footer swaps its notes label + "Revise plan" button for
+   *  `onCreateAgent`'s CTA instead. */
+  hideNotes?: boolean
+  /** Paired with `hideNotes` — the footer CTA. Omit `agentCreated`/leave false to keep it
+   *  showing; once the agent exists there's nothing left for it to do. */
+  onCreateAgent?: () => void
+  agentCreated?: boolean
 }
 
 /**
@@ -44,7 +59,16 @@ export interface GhostwriterPlanPanelProps {
  * note's own words take the line's place on a green tint, and the note card retires, since
  * its text is now the plan. Verbatim substitution: there's no model here to paraphrase.
  */
-export function GhostwriterPlanPanel({ onClose }: GhostwriterPlanPanelProps) {
+export function GhostwriterPlanPanel({
+  onClose,
+  card = PLAN_CARD,
+  sections = PLAN_SECTIONS,
+  sectionPrefix = PLAN_SECTION_PREFIX,
+  hint = PLAN_PANEL_HINT,
+  hideNotes = false,
+  onCreateAgent,
+  agentCreated = false,
+}: GhostwriterPlanPanelProps) {
   const [notes, setNotes] = useState<PlanNote[]>([])
   const [draft, setDraft] = useState<NoteDraft | null>(null)
   const [draftText, setDraftText] = useState('')
@@ -108,12 +132,12 @@ export function GhostwriterPlanPanel({ onClose }: GhostwriterPlanPanelProps) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-sm">
-            <span className="text-h3 text-text-primary">{PLAN_CARD.title}</span>
+            <span className="text-h3 text-text-primary">{card.title}</span>
             <span className="rounded-sm bg-[#e8f1fc] px-sm py-[2px] text-small text-text-action">
-              {PLAN_CARD.badge}
+              {card.badge}
             </span>
           </div>
-          <p className="m-0 mt-xs text-small text-text-tertiary">{PLAN_CARD.meta}</p>
+          <p className="m-0 mt-xs text-small text-text-tertiary">{card.meta}</p>
         </div>
         <button
           type="button"
@@ -125,14 +149,18 @@ export function GhostwriterPlanPanel({ onClose }: GhostwriterPlanPanelProps) {
         </button>
       </div>
 
-      <p className="m-0 shrink-0 border-b border-border bg-surface-l2 px-lg py-sm text-small text-text-secondary">
-        {PLAN_PANEL_HINT}
-      </p>
+      {/* The hint only ever explained the note-taking feature below — nothing left to say
+          once that's hidden. */}
+      {!hideNotes && (
+        <p className="m-0 shrink-0 border-b border-border bg-surface-l2 px-lg py-sm text-small text-text-secondary">
+          {hint}
+        </p>
+      )}
 
       {/* Sections — numbered, generously spaced, hairline-separated so seven of them still scan. */}
       <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto px-lg py-xl">
         <div className="flex flex-col">
-          {PLAN_SECTIONS.map((section, sectionIndex) => (
+          {sections.map((section, sectionIndex) => (
             <section
               key={section.n}
               className={`flex flex-col gap-md ${
@@ -141,7 +169,7 @@ export function GhostwriterPlanPanel({ onClose }: GhostwriterPlanPanelProps) {
             >
               <div className="flex flex-col gap-xs">
                 <span className="text-small uppercase tracking-[0.06em] text-text-tertiary">
-                  {PLAN_SECTION_PREFIX} {section.n}
+                  {sectionPrefix} {section.n}
                 </span>
                 <h3 className="m-0 text-h3 text-text-primary">{section.title}</h3>
                 {section.caption && (
@@ -168,36 +196,51 @@ export function GhostwriterPlanPanel({ onClose }: GhostwriterPlanPanelProps) {
 
                   return (
                     <div key={line.id} className="flex flex-col gap-xs">
-                      <button
-                        type="button"
-                        onClick={() => openDraftFor(line)}
-                        className={`gw-plan-line group flex w-full items-start gap-sm rounded-sm px-sm py-xs text-left transition-colors ${
-                          state === 'idle' ? '' : `gw-plan-line--tinted ${LINE_TINT[state]}`
-                        }`}
-                      >
-                        {line.kind === 'bullet' && (
+                      {hideNotes ? (
+                        <div className="flex w-full items-start gap-sm rounded-sm px-sm py-xs text-left">
+                          {line.kind === 'bullet' && (
+                            <span className="mt-[8px] size-[4px] shrink-0 rounded-full bg-text-tertiary" aria-hidden />
+                          )}
                           <span
-                            className={`mt-[8px] size-[4px] shrink-0 rounded-full ${
-                              state === 'revised' ? 'bg-[#15803d]' : 'bg-text-tertiary'
+                            className={`min-w-0 flex-1 text-body ${
+                              line.kind === 'lead' ? 'text-text-primary' : 'text-text-secondary'
                             }`}
-                            aria-hidden
-                          />
-                        )}
-                        <span
-                          className={`min-w-0 flex-1 text-body ${
-                            state === 'revised'
-                              ? 'text-[#15803d]'
-                              : line.kind === 'lead'
-                                ? 'text-text-primary'
-                                : 'text-text-secondary'
+                          >
+                            {line.text}
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openDraftFor(line)}
+                          className={`gw-plan-line group flex w-full items-start gap-sm rounded-sm px-sm py-xs text-left transition-colors ${
+                            state === 'idle' ? '' : `gw-plan-line--tinted ${LINE_TINT[state]}`
                           }`}
                         >
-                          {displayText}
-                        </span>
-                      </button>
+                          {line.kind === 'bullet' && (
+                            <span
+                              className={`mt-[8px] size-[4px] shrink-0 rounded-full ${
+                                state === 'revised' ? 'bg-[#15803d]' : 'bg-text-tertiary'
+                              }`}
+                              aria-hidden
+                            />
+                          )}
+                          <span
+                            className={`min-w-0 flex-1 text-body ${
+                              state === 'revised'
+                                ? 'text-[#15803d]'
+                                : line.kind === 'lead'
+                                  ? 'text-text-primary'
+                                  : 'text-text-secondary'
+                            }`}
+                          >
+                            {displayText}
+                          </span>
+                        </button>
+                      )}
 
                       {/* Only notes still waiting show a card — folded ones became the line. */}
-                      {pending.map((note, i) => (
+                      {!hideNotes && pending.map((note, i) => (
                         <div
                           key={`${note.lineId}-${i}`}
                           className="gw-flow__in ml-md flex items-start gap-sm rounded-sm border border-[#e8d9a8] bg-[#fffdf5] px-md py-sm"
@@ -231,21 +274,40 @@ export function GhostwriterPlanPanel({ onClose }: GhostwriterPlanPanelProps) {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="flex shrink-0 items-center justify-between gap-md border-t border-border px-lg py-md">
-        <span className="text-small text-text-tertiary">{footerLabel}</span>
-        <button
-          type="button"
-          disabled={!waiting.length}
-          onClick={revise}
-          className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
-            waiting.length
-              ? 'bg-primary text-white hover:bg-primary-hover'
-              : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
-          }`}
-        >
-          {PLAN_PANEL_COPY.revise}
-        </button>
+      {/* Footer — Jay & Robin swaps the notes label + "Revise plan" for a "Create agent" CTA,
+          the one action a read-only plan still offers. */}
+      <div
+        className={`flex shrink-0 items-center border-t border-border px-lg py-md ${
+          hideNotes ? 'justify-end' : 'justify-between gap-md'
+        }`}
+      >
+        {hideNotes ? (
+          !agentCreated && (
+            <button
+              type="button"
+              onClick={onCreateAgent}
+              className="flex h-9 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
+            >
+              Create agent
+            </button>
+          )
+        ) : (
+          <>
+            <span className="text-small text-text-tertiary">{footerLabel}</span>
+            <button
+              type="button"
+              disabled={!waiting.length}
+              onClick={revise}
+              className={`flex h-9 items-center rounded-sm px-lg text-body transition-colors ${
+                waiting.length
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'cursor-not-allowed bg-surface-selected text-text-tertiary'
+              }`}
+            >
+              {PLAN_PANEL_COPY.revise}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Note popover — centred over the panel so it never clips at the edges. */}
