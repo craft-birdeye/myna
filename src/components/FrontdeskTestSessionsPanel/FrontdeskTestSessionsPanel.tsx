@@ -27,6 +27,7 @@ import { TestPersonalitySection } from '../TestPersonalitySection/TestPersonalit
 import { FrontdeskTestSuiteEditor } from '../FrontdeskTestSuiteEditor/FrontdeskTestSuiteEditor'
 import { FrontdeskTestRunEditor } from '../FrontdeskTestRunEditor/FrontdeskTestRunEditor'
 import type { FrontdeskTestRunDraft } from '../FrontdeskTestRunEditor/FrontdeskTestRunEditor'
+import { FrontdeskTestRunReport } from '../FrontdeskTestRunReport/FrontdeskTestRunReport'
 import type { TestPersonality } from '../TestPersonalitySection/TestPersonalitySection.types'
 import { SEEDED_TEST_PERSONALITIES } from '../../data/testPersonalities'
 
@@ -45,17 +46,16 @@ const CHANNEL_TABS = [
 
 const WEBCHAT_DEFAULT_PROMPT = "I'd like to book an appointment"
 
-/** Front desk (Sep 23) full-page Test tab only — same three sections review-response's 23 Sep
- *  Test tab has (`TEST_SECTIONS` in GhostwriterTestRunPanel.tsx): a working "Tests" list, a
- *  "Test suite" saved-scenarios feature, and an inert "Test cycles" placeholder with no data
- *  model behind it yet, same as the reference. */
+/** Front desk (Sep 23) full-page Test tab — mirrors review-response's own `TestSection`/
+ *  `TEST_SECTIONS` in GhostwriterTestRunPanel.tsx: 'cycles' still exists as a type (the generic
+ *  empty-state fallback branch below still handles it) but is hidden from `FRONTDESK_TEST_SECTIONS`/
+ *  the nav — no real spec for it yet, and it clutters the tab with a dead end. */
 type FrontdeskTestSection = 'tests' | 'suite' | 'personality' | 'cycles'
 
 const FRONTDESK_TEST_SECTIONS: { id: FrontdeskTestSection; label: string; icon: string; emptyCaption: string }[] = [
   { id: 'tests', label: 'Test runs', icon: 'science', emptyCaption: 'Test a call or web chat scenario to see how your agent responds.' },
   { id: 'suite', label: 'Test suite', icon: 'fact_check', emptyCaption: 'A test suite is a saved set of call and web chat scenarios you can reuse across test runs.' },
   { id: 'personality', label: 'Personality', icon: 'psychology', emptyCaption: '' },
-  { id: 'cycles', label: 'Test cycles', icon: 'autorenew', emptyCaption: 'No test cycles yet.' },
 ]
 
 /** Two-star sparkle mask (`.ai-flat-sparkle-icon`, same asset as "Create with AI") — fills
@@ -75,7 +75,9 @@ function TwoStarSparkleIcon({ size = 14, className = '' }: { size?: number; clas
   )
 }
 
-function SessionDetail({ session, onClose }: { session: FrontdeskTestSession; onClose?: () => void }) {
+/** Exported so `FrontdeskTestRunReport` can reuse the identical recording/transcript layout for
+ *  its own row-detail popup instead of a copy that could drift. */
+export function SessionDetail({ session, onClose }: { session: FrontdeskTestSession; onClose?: () => void }) {
   return (
     <div className="flex flex-col gap-md">
       <div className="flex items-center justify-between">
@@ -592,6 +594,11 @@ export function FrontdeskTestSessionsPanel({
   const [editingSuite, setEditingSuite] = useState<FrontdeskTestSuite | null>(null)
   const [useSuiteModalOpen, setUseSuiteModalOpen] = useState(false)
   const [openBatch, setOpenBatch] = useState<FrontdeskTestBatch | null>(null)
+  /** A completed run (`batch.runName` set, i.e. one created via `FrontdeskTestRunEditor`) opens
+   *  `FrontdeskTestRunReport` in place of the Tests list instead of the plain-batch
+   *  `FrontdeskTestBatchSessionsPanel` slide-in — same split `GhostwriterTestRunPanel` makes
+   *  between `openRunReport` and `openBatch`. */
+  const [openRunReport, setOpenRunReport] = useState<FrontdeskTestBatch | null>(null)
   const [personalities, setPersonalities] = useState<TestPersonality[]>(SEEDED_TEST_PERSONALITIES)
 
   const filteredBatches = batches
@@ -644,30 +651,64 @@ export function FrontdeskTestSessionsPanel({
     setSuites((prev) => (prev.some((item) => item.id === suite.id) ? prev.map((item) => (item.id === suite.id ? suite : item)) : [...prev, suite]))
     setEditingSuite(null)
     setCreateSuiteOpen(false)
+    // "generating" reads as an in-flight AI write — flip it off after a beat so the card
+    // settles on its real scenario count instead of spinning forever.
+    if (suite.generating) {
+      window.setTimeout(() => {
+        setSuites((prev) => prev.map((item) => (item.id === suite.id ? { ...item, generating: false } : item)))
+      }, 3000)
+    }
   }
 
   function handleCreateRun(draft: FrontdeskTestRunDraft) {
-    const session: FrontdeskTestSession = {
-      id: `fd-test-run-${Date.now()}`,
-      title: draft.name,
-      channel: 'voice',
-      outcome: 'passed',
-      durationSecs: 48,
-      audioUrl: voicemailSample,
-      transcript: [
-        { speaker: 'business', text: PREVIEW_GREETING },
-        { speaker: 'user', text: 'I would like to book an appointment.' },
-      ],
-    }
+    // A selected test suite drives one session per scenario (same per-scenario/channel
+    // expansion `buildBatchesFromDrafts` does), all under this one run's batch; with no suite
+    // picked, fall back to a single canned session so "Run test" always produces something.
+    const sessions: FrontdeskTestSession[] = draft.suite
+      ? draft.suite.scenarios.flatMap((scenario, i) => {
+          const channels: ('voice' | 'chat')[] = [
+            ...(scenario.voice ? (['voice'] as const) : []),
+            ...(scenario.chat ? (['chat'] as const) : []),
+          ]
+          return channels.map((channel) => ({
+            id: `fd-test-run-${Date.now()}-${i}-${channel}`,
+            title: scenario.text,
+            channel,
+            outcome: 'passed' as const,
+            durationSecs: channel === 'voice' ? 35 : undefined,
+            audioUrl: channel === 'voice' ? voicemailSample : undefined,
+            transcript: [
+              { speaker: 'user' as const, text: scenario.text },
+              { speaker: 'business' as const, text: FRONTDESK_CUSTOM_TEST_REPLY },
+            ],
+          }))
+        })
+      : [
+          {
+            id: `fd-test-run-${Date.now()}`,
+            title: draft.name,
+            channel: 'voice',
+            outcome: 'passed',
+            durationSecs: 48,
+            audioUrl: voicemailSample,
+            transcript: [
+              { speaker: 'business', text: PREVIEW_GREETING },
+              { speaker: 'user', text: 'I would like to book an appointment.' },
+            ],
+          },
+        ]
     setBatches((prev) => [
       ...prev,
       {
-        sessions: [session],
+        sessions,
         testedAt: 'Just now',
-        testedBy: 'Myna',
+        // A real person ran this (unlike "Create test cases"/"Use test suite"'s own
+        // AI-authored batches) — no sparkle icon for a named tester.
+        testedBy: 'Haresh',
         runName: draft.name,
         personaIds: draft.personaIds,
         qualityEvaluationIds: draft.qualityEvaluationIds,
+        suiteName: draft.suite?.name,
       },
     ])
     setCreateRunOpen(false)
@@ -736,9 +777,12 @@ export function FrontdeskTestSessionsPanel({
                   key={batches.filter((batch) => batch.runName).length}
                   defaultName={`#${batches.filter((batch) => batch.runName).length + 1} test run`}
                   personalities={personalities}
+                  testSuites={suites}
                   onBack={() => setCreateRunOpen(false)}
                   onRun={handleCreateRun}
                 />
+              ) : openRunReport ? (
+                <FrontdeskTestRunReport batch={openRunReport} onBack={() => setOpenRunReport(null)} />
               ) : (
               <>
                 <div className="mb-lg flex items-center justify-between">
@@ -748,7 +792,11 @@ export function FrontdeskTestSessionsPanel({
                 {batches.length > 0 ? (
                   <div className="flex flex-col gap-md">
                     {[...batches].reverse().map((batch, i) => (
-                      <FrontdeskTestBatchSummaryCard key={i} batch={batch} onClick={() => setOpenBatch(batch)} />
+                      <FrontdeskTestBatchSummaryCard
+                        key={i}
+                        batch={batch}
+                        onClick={() => (batch.runName ? setOpenRunReport(batch) : setOpenBatch(batch))}
+                      />
                     ))}
                   </div>
                 ) : (

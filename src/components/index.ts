@@ -41,6 +41,7 @@ export { FrontdeskTestSuiteEditor } from './FrontdeskTestSuiteEditor/FrontdeskTe
 export { FrontdeskTestRunEditor } from './FrontdeskTestRunEditor/FrontdeskTestRunEditor'
 export { GhostwriterTestRunEditor } from './GhostwriterTestRunEditor/GhostwriterTestRunEditor'
 export { GhostwriterTestRunReport } from './GhostwriterTestRunReport/GhostwriterTestRunReport'
+export { FrontdeskTestRunReport } from './FrontdeskTestRunReport/FrontdeskTestRunReport'
 export type { TestPersonality, TestPersonalitySectionProps } from './TestPersonalitySection/TestPersonalitySection.types'
 export { Block } from './Block/Block'
 export type { BlockProps, BlockVariant } from './Block/Block.types'

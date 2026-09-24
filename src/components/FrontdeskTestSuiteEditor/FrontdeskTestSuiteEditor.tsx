@@ -1,8 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../Icon/Icon'
-import type { FrontdeskTestSuite } from '../../data/frontdeskTestSessions'
+import { FRONTDESK_SCENARIO_SUGGESTIONS, type FrontdeskTestSuite } from '../../data/frontdeskTestSessions'
 import type { FrontdeskTestSuiteEditorProps } from './FrontdeskTestSuiteEditor.types'
+
+/** Cycled alongside `FRONTDESK_SCENARIO_SUGGESTIONS` for the "Generate scenarios" preview table
+ *  — there's no real model behind this prototype, so each previewed row pairs a scenario with
+ *  a plausible, generic resolution rather than a genuinely-reasoned one. */
+const PREVIEW_OUTCOMES = [
+  'Agent resolves the request and confirms the details back to the caller.',
+  'Agent completes the booking and sends a confirmation.',
+  'Agent verifies the details on file and answers the question directly.',
+  'Agent cannot complete the request and hands off to a person with a summary.',
+]
+
+interface PreviewScenario {
+  summary: string
+  description: string
+  outcome: string
+}
 
 function UploadScenariosModal({
   open,
@@ -110,16 +126,36 @@ export function FrontdeskTestSuiteEditor({
   const [description, setDescription] = useState(existingSuite?.description ?? '')
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(existingSuite?.uploadedFileName ?? null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [previewScenarios, setPreviewScenarios] = useState<PreviewScenario[]>([])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  function save() {
+  /** Builds the preview table's rows — cycles the same suggestion pool "Create test cases"
+   *  draws from when there's no custom description, so a description-less generate still
+   *  produces varied rows instead of repeating one line N times. */
+  function generatePreview() {
     const count = Math.max(0, Number(scenarioCount) || 0)
-    const example = description.trim() || 'AI-generated front desk scenario'
-    const scenarios = Array.from({ length: count }, (_, index) => ({
-      text: `${example}${count > 1 ? ` (${index + 1})` : ''}`,
-      voice: true,
-      chat: true,
+    const customText = description.trim()
+    const rows: PreviewScenario[] = Array.from({ length: count }, (_, index) => ({
+      summary: `Scenario ${index + 1}`,
+      description: customText || FRONTDESK_SCENARIO_SUGGESTIONS[index % FRONTDESK_SCENARIO_SUGGESTIONS.length],
+      outcome: PREVIEW_OUTCOMES[index % PREVIEW_OUTCOMES.length],
     }))
+    setPreviewScenarios(rows)
+  }
+
+  function save() {
+    const scenarios =
+      previewScenarios.length > 0
+        ? previewScenarios.map((row) => ({ text: row.description, voice: true, chat: true }))
+        : (() => {
+            const count = Math.max(0, Number(scenarioCount) || 0)
+            const example = description.trim() || 'AI-generated front desk scenario'
+            return Array.from({ length: count }, (_, index) => ({
+              text: `${example}${count > 1 ? ` (${index + 1})` : ''}`,
+              voice: true,
+              chat: true,
+            }))
+          })()
     if (uploadedFileName) {
       scenarios.push({
         text: `Scenarios uploaded from ${uploadedFileName}.`,
@@ -132,7 +168,7 @@ export function FrontdeskTestSuiteEditor({
       name: name.trim() || 'New test suite',
       scenarios,
       createdAt: existingSuite?.createdAt ?? 'Just now',
-      scenarioCount: count,
+      scenarioCount: scenarios.length,
       description: description.trim(),
       uploadedFileName: uploadedFileName ?? undefined,
       generating: true,
@@ -174,7 +210,7 @@ export function FrontdeskTestSuiteEditor({
           onClick={save}
           className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
         >
-          Generate scenarios
+          Save test suite
         </button>
       </div>
 
@@ -213,7 +249,41 @@ export function FrontdeskTestSuiteEditor({
           placeholder="For example: a new patient calls to book a cleaning. A caller asks to reschedule, then changes their mind. Someone disputes a bill and asks to speak with a person."
           className="w-full resize-y rounded-sm border border-border bg-surface px-md py-sm text-body text-text-primary outline-none placeholder:text-text-tertiary focus:border-primary"
         />
+        <button
+          type="button"
+          onClick={generatePreview}
+          className="flex h-9 w-fit items-center rounded-sm border border-border-selected bg-surface px-lg text-body text-text-primary transition-colors hover:bg-surface-l2"
+        >
+          Generate scenarios
+        </button>
       </div>
+
+      {previewScenarios.length > 0 && (
+        <div className="overflow-hidden rounded-sm border border-border">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="bg-surface-l2">
+                <th className="border-b border-border px-md py-sm text-small text-text-secondary">Call summary</th>
+                <th className="border-b border-l border-border px-md py-sm text-small text-text-secondary">Call description</th>
+                <th className="border-b border-l border-border px-md py-sm text-small text-text-secondary">Expected outcome</th>
+              </tr>
+            </thead>
+            <tbody>
+              {previewScenarios.map((row, i) => (
+                <tr key={i} className="border-b border-border last:border-0">
+                  <td className="px-md py-md align-top text-body text-text-primary">{row.summary}</td>
+                  <td className="max-w-[320px] border-l border-border px-md py-md align-top text-body text-text-secondary">
+                    {row.description}
+                  </td>
+                  <td className="max-w-[320px] border-l border-border px-md py-md align-top text-body text-text-secondary">
+                    {row.outcome}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <UploadScenariosModal
         open={uploadOpen}

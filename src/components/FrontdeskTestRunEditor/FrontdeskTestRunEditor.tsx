@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../Icon/Icon'
 import type { TestPersonality } from '../TestPersonalitySection/TestPersonalitySection.types'
+import type { FrontdeskTestSuite } from '../../data/frontdeskTestSessions'
 
 /** Exported so `GhostwriterTestRunEditor` (Response agent (23 Sep)'s own test-run page) can
  *  show the identical evaluation criteria instead of a copy that could drift. */
@@ -49,6 +50,7 @@ export interface FrontdeskTestRunDraft {
   name: string
   personaIds: string[]
   qualityEvaluationIds: string[]
+  suite: FrontdeskTestSuite | null
 }
 
 function CheckBox({ checked }: { checked: boolean }) {
@@ -117,11 +119,13 @@ export function EvalTable({
 export function FrontdeskTestRunEditor({
   defaultName,
   personalities,
+  testSuites,
   onBack,
   onRun,
 }: {
   defaultName: string
   personalities: TestPersonality[]
+  testSuites: FrontdeskTestSuite[]
   onBack: () => void
   onRun: (draft: FrontdeskTestRunDraft) => void
 }) {
@@ -129,8 +133,11 @@ export function FrontdeskTestRunEditor({
   const [personaIds, setPersonaIds] = useState<string[]>([])
   const [qualityIds, setQualityIds] = useState<string[]>([])
   const [personasOpen, setPersonasOpen] = useState(false)
+  const [suiteId, setSuiteId] = useState<string | null>(null)
+  const [suiteOpen, setSuiteOpen] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const personasRef = useRef<HTMLDivElement>(null)
+  const suiteRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!personasOpen) return
@@ -141,6 +148,15 @@ export function FrontdeskTestRunEditor({
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [personasOpen])
 
+  useEffect(() => {
+    if (!suiteOpen) return
+    function handleOutsideClick(event: MouseEvent) {
+      if (suiteRef.current && !suiteRef.current.contains(event.target as Node)) setSuiteOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [suiteOpen])
+
   const selectedPersonas = personalities.filter((personality) => personaIds.includes(personality.id))
   const personaLabel =
     selectedPersonas.length === 0
@@ -148,6 +164,7 @@ export function FrontdeskTestRunEditor({
       : selectedPersonas.length === 1
         ? selectedPersonas[0].name
         : `${selectedPersonas.length} personas selected`
+  const selectedSuite = testSuites.find((suite) => suite.id === suiteId) ?? null
 
   return (
     <div className="flex flex-col gap-xl">
@@ -185,6 +202,7 @@ export function FrontdeskTestRunEditor({
               name: name.trim() || defaultName,
               personaIds,
               qualityEvaluationIds: qualityIds,
+              suite: selectedSuite,
             })
           }
           className="flex h-9 shrink-0 items-center rounded-sm bg-primary px-lg text-body text-white transition-colors hover:bg-primary-hover"
@@ -224,6 +242,42 @@ export function FrontdeskTestRunEditor({
                 </button>
               )
             })}
+          </div>
+        )}
+      </div>
+
+      <div ref={suiteRef} className="relative flex max-w-[420px] flex-col gap-xs">
+        <label className="text-body text-text-primary">Test suite</label>
+        <button
+          type="button"
+          aria-expanded={suiteOpen}
+          onClick={() => setSuiteOpen((open) => !open)}
+          className="flex h-9 w-full items-center justify-between rounded-sm border border-border-input bg-surface px-md text-left text-body"
+        >
+          <span className={selectedSuite ? 'truncate text-text-primary' : 'text-text-tertiary'}>
+            {selectedSuite?.name ?? 'Select a test suite'}
+          </span>
+          <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+        </button>
+        {suiteOpen && (
+          <div className="absolute top-full z-20 mt-xs max-h-64 w-full overflow-y-auto rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+            {testSuites.length === 0 ? (
+              <p className="m-0 px-md py-sm text-body text-text-tertiary">No test suites yet.</p>
+            ) : (
+              testSuites.map((suite) => (
+                <button
+                  key={suite.id}
+                  type="button"
+                  onClick={() => {
+                    setSuiteId(suite.id)
+                    setSuiteOpen(false)
+                  }}
+                  className="flex w-full items-center px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+                >
+                  <span className="min-w-0 flex-1 truncate">{suite.name}</span>
+                </button>
+              ))
+            )}
           </div>
         )}
       </div>
