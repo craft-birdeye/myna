@@ -107,6 +107,7 @@ import {
 import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
 import { AgentWorkSequence, type WorkPhase } from '../components/AgentActivityHeader/AgentWorkSequence'
 import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsTab/GhostwriterConnectionsTab'
+import { FrontdeskToolsTab } from '../components/FrontdeskToolsTab/FrontdeskToolsTab'
 import { GhostwriterKnowledgeTab } from '../components/GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 import { GhostwriterRunTestModal } from '../components/GhostwriterRunTestModal/GhostwriterRunTestModal'
 import { GhostwriterTestRunPanel } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel'
@@ -11229,7 +11230,7 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               (createGhostwriterTab === 'simulation' && (isJayRobinPolish || isMynaCombinedNav || ghostwriterSimStarted))) && (
               <div className="absolute inset-0 top-[56px] z-20 flex min-h-0 flex-col overflow-hidden">
                 {createGhostwriterTab === 'tools' ? (
-                  <GhostwriterConnectionsTab />
+                  isFrontdeskSep23Polish ? <FrontdeskToolsTab /> : <GhostwriterConnectionsTab />
                 ) : createGhostwriterTab === 'knowledge' ? (
                   <GhostwriterKnowledgeTab />
                 ) : createGhostwriterTab === 'settings' ? (

@@ -32,6 +32,7 @@ export type {
   SimulationRow,
 } from './GhostwriterSimulation/GhostwriterSimulation.types'
 export { GhostwriterConnectionsTab } from './GhostwriterConnectionsTab/GhostwriterConnectionsTab'
+export { FrontdeskToolsTab } from './FrontdeskToolsTab/FrontdeskToolsTab'
 export { GhostwriterKnowledgeTab } from './GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 export { GhostwriterRunTestModal } from './GhostwriterRunTestModal/GhostwriterRunTestModal'
 export { GhostwriterTestRunPanel } from './GhostwriterTestRunPanel/GhostwriterTestRunPanel'

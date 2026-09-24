@@ -166,18 +166,17 @@ export function FrontdeskTestRunReport({ batch, onBack, onAcceptRecommendation }
       )}
 
       {detailSession && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center" aria-hidden={!detailSession}>
+        <div className="fixed inset-0 z-[120]">
           <div onClick={() => setDetailSession(null)} className="absolute inset-0 bg-black/20" />
-          <div
+          <aside
             role="dialog"
             aria-modal="true"
-            className="relative flex h-[calc(100vh-130px)] w-full max-w-[560px] flex-col overflow-hidden rounded-md bg-surface shadow-modal"
-            onClick={(e) => e.stopPropagation()}
+            className="absolute right-0 top-0 flex h-full w-[560px] max-w-[92vw] flex-col bg-surface shadow-dropdown"
           >
             <div className="scrollbar-subtle flex-1 overflow-y-auto p-2xl">
               <SessionDetail session={detailSession} onClose={() => setDetailSession(null)} />
             </div>
-          </div>
+          </aside>
         </div>
       )}
     </div>
