@@ -126,16 +126,11 @@ export function FrontdeskTestRunReport({ batch, onBack, onAcceptRecommendation }
                     </p>
                   </td>
                   <td className="border-l border-border px-md py-md align-top">
-                    <div className="flex items-center gap-sm">
-                      <Icon
-                        name={session.outcome === 'passed' ? 'check_circle' : 'cancel'}
-                        size={16}
-                        className={session.outcome === 'passed' ? 'text-accent-positive' : 'text-chip-danger-text'}
-                      />
-                      <p className="m-0 text-body text-text-primary">
-                        {session.outcome === 'passed' ? 'Passed' : 'Failed'}
-                      </p>
-                    </div>
+                    <Icon
+                      name={session.outcome === 'passed' ? 'check_circle' : 'cancel'}
+                      size={16}
+                      className={session.outcome === 'passed' ? 'text-accent-positive' : 'text-chip-danger-text'}
+                    />
                   </td>
                   {metrics.map((metric) => (
                     <td key={metric.id} className="border-l border-border px-md py-md align-top text-body text-text-primary">

@@ -131,7 +131,16 @@ export function FrontdeskTestSuiteEditor({
   const [description, setDescription] = useState(existingSuite?.description ?? DEFAULT_SCENARIO_DESCRIPTION)
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(existingSuite?.uploadedFileName ?? null)
   const [uploadOpen, setUploadOpen] = useState(false)
-  const [previewScenarios, setPreviewScenarios] = useState<PreviewScenario[]>([])
+  // A suite that already has scenarios (seeded defaults, or one saved earlier) reopens with its
+  // scenarios already generated — no need to re-click "Generate scenarios" to see them again.
+  const [previewScenarios, setPreviewScenarios] = useState<PreviewScenario[]>(
+    existingSuite && existingSuite.scenarios.length > 0
+      ? existingSuite.scenarios.map((scenario, index) => ({
+          description: scenario.text,
+          outcome: PREVIEW_OUTCOMES[index % PREVIEW_OUTCOMES.length],
+        }))
+      : [],
+  )
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   /** Builds the preview table's rows — cycles the same suggestion pool "Create test cases"

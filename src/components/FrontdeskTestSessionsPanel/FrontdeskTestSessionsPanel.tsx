@@ -662,39 +662,36 @@ export function FrontdeskTestSessionsPanel({
   }
 
   function handleCreateRun(draft: FrontdeskTestRunDraft) {
-    // A selected test suite drives one session per scenario (same per-scenario/channel
-    // expansion `buildBatchesFromDrafts` does), all under this one run's batch; with no suite
-    // picked, fall back to a single canned session so "Run test" always produces something.
+    // A selected test suite drives one session per scenario that supports the chosen channel
+    // (same per-scenario expansion `buildBatchesFromDrafts` does, just filtered to one channel
+    // instead of every channel the scenario supports); with no suite picked, fall back to a
+    // single canned session on that channel so "Run test" always produces something.
     const sessions: FrontdeskTestSession[] = draft.suite
-      ? draft.suite.scenarios.flatMap((scenario, i) => {
-          const channels: ('voice' | 'chat')[] = [
-            ...(scenario.voice ? (['voice'] as const) : []),
-            ...(scenario.chat ? (['chat'] as const) : []),
-          ]
-          return channels.map((channel) => ({
-            id: `fd-test-run-${Date.now()}-${i}-${channel}`,
+      ? draft.suite.scenarios
+          .filter((scenario) => (draft.channel === 'voice' ? scenario.voice : scenario.chat))
+          .map((scenario, i) => ({
+            id: `fd-test-run-${Date.now()}-${i}-${draft.channel}`,
             title: scenario.text,
-            channel,
+            channel: draft.channel,
             outcome: 'passed' as const,
-            durationSecs: channel === 'voice' ? 35 : undefined,
-            audioUrl: channel === 'voice' ? voicemailSample : undefined,
+            durationSecs: draft.channel === 'voice' ? 35 : undefined,
+            audioUrl: draft.channel === 'voice' ? voicemailSample : undefined,
             transcript: [
               { speaker: 'user' as const, text: scenario.text },
               { speaker: 'business' as const, text: FRONTDESK_CUSTOM_TEST_REPLY },
             ],
           }))
-        })
       : [
           {
             id: `fd-test-run-${Date.now()}`,
             title: draft.name,
-            channel: 'voice',
-            outcome: 'passed',
-            durationSecs: 48,
-            audioUrl: voicemailSample,
+            channel: draft.channel,
+            outcome: 'passed' as const,
+            durationSecs: draft.channel === 'voice' ? 48 : undefined,
+            audioUrl: draft.channel === 'voice' ? voicemailSample : undefined,
             transcript: [
-              { speaker: 'business', text: PREVIEW_GREETING },
-              { speaker: 'user', text: 'I would like to book an appointment.' },
+              { speaker: 'business' as const, text: PREVIEW_GREETING },
+              { speaker: 'user' as const, text: 'I would like to book an appointment.' },
             ],
           },
         ]

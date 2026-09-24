@@ -48,10 +48,16 @@ export const QUALITY_EVALUATIONS = [
 
 export interface FrontdeskTestRunDraft {
   name: string
+  channel: 'voice' | 'chat'
   personaIds: string[]
   qualityEvaluationIds: string[]
   suite: FrontdeskTestSuite | null
 }
+
+const CHANNEL_OPTIONS: { id: 'voice' | 'chat'; label: string }[] = [
+  { id: 'voice', label: 'Call' },
+  { id: 'chat', label: 'Webchat' },
+]
 
 function CheckBox({ checked }: { checked: boolean }) {
   return (
@@ -130,14 +136,26 @@ export function FrontdeskTestRunEditor({
   onRun: (draft: FrontdeskTestRunDraft) => void
 }) {
   const [name, setName] = useState(defaultName)
+  const [channel, setChannel] = useState<'voice' | 'chat'>('voice')
   const [personaIds, setPersonaIds] = useState<string[]>([])
   const [qualityIds, setQualityIds] = useState<string[]>([])
+  const [channelOpen, setChannelOpen] = useState(false)
   const [personasOpen, setPersonasOpen] = useState(false)
   const [suiteId, setSuiteId] = useState<string | null>(null)
   const [suiteOpen, setSuiteOpen] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const channelRef = useRef<HTMLDivElement>(null)
   const personasRef = useRef<HTMLDivElement>(null)
   const suiteRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!channelOpen) return
+    function handleOutsideClick(event: MouseEvent) {
+      if (channelRef.current && !channelRef.current.contains(event.target as Node)) setChannelOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [channelOpen])
 
   useEffect(() => {
     if (!personasOpen) return
@@ -200,6 +218,7 @@ export function FrontdeskTestRunEditor({
           onClick={() =>
             onRun({
               name: name.trim() || defaultName,
+              channel,
               personaIds,
               qualityEvaluationIds: qualityIds,
               suite: selectedSuite,
@@ -209,6 +228,36 @@ export function FrontdeskTestRunEditor({
         >
           Run test
         </button>
+      </div>
+
+      <div ref={channelRef} className="relative flex max-w-[420px] flex-col gap-xs">
+        <label className="text-body text-text-primary">Channel</label>
+        <button
+          type="button"
+          aria-expanded={channelOpen}
+          onClick={() => setChannelOpen((open) => !open)}
+          className="flex h-9 w-full items-center justify-between rounded-sm border border-border-input bg-surface px-md text-left text-body"
+        >
+          <span className="truncate text-text-primary">{CHANNEL_OPTIONS.find((option) => option.id === channel)?.label}</span>
+          <Icon name="expand_more" size={18} className="shrink-0 text-text-icon" />
+        </button>
+        {channelOpen && (
+          <div className="absolute top-full z-20 mt-xs w-full overflow-hidden rounded-sm border border-border bg-surface py-xs shadow-dropdown">
+            {CHANNEL_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => {
+                  setChannel(option.id)
+                  setChannelOpen(false)
+                }}
+                className="flex w-full items-center px-md py-sm text-left text-body text-text-primary hover:bg-surface-hover"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div ref={personasRef} className="relative flex max-w-[420px] flex-col gap-xs">
