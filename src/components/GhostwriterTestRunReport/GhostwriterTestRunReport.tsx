@@ -6,13 +6,11 @@ import type { Tab } from '../Tabs/Tabs.types'
 import { DEFAULT_EVALUATIONS, QUALITY_EVALUATIONS } from '../FrontdeskTestRunEditor/FrontdeskTestRunEditor'
 import {
   RecommendationGroupCard,
-  TestReviewDetailModal,
   batchReviewCount,
   getBatchRecommendationGroups,
   reviewPassedInBatch,
   testRunSubtitle,
 } from '../GhostwriterTestRunPanel/GhostwriterTestRunPanel'
-import type { Review } from '../../data/reviewsData'
 import type { GhostwriterTestRunReportProps } from './GhostwriterTestRunReport.types'
 
 const REPORT_TABS: Tab[] = [
@@ -46,13 +44,11 @@ function formatScore(metricId: string, value: number) {
  *  results are fixed once it's been run — there is no edit path back into the editor from
  *  here. Below the header, one stat tile per metric the run was created with (the always-on
  *  defaults plus whichever response-quality ones were turned on), then Details (the per-review
- *  score table — clicking a row reopens the same `TestReviewDetailModal` pop-up
- *  `TestBatchReviewsPanel` used to open, Details/Preview tabs plus a third Recommendation tab
- *  on a failed review) and Recommendations (the same theme-grouped fixes `TestBatchReviewsPanel`
- *  shows, reused here rather than re-derived) tabs. */
-export function GhostwriterTestRunReport({ batch, onBack, onAcceptRecommendation }: GhostwriterTestRunReportProps) {
+ *  score table — clicking a row calls `onSelectReview`, which replaces this page with that
+ *  review's finished run on the canvas) and Recommendations (the same theme-grouped fixes
+ *  `TestBatchReviewsPanel` shows, reused here rather than re-derived) tabs. */
+export function GhostwriterTestRunReport({ batch, onBack, onAcceptRecommendation, onSelectReview }: GhostwriterTestRunReportProps) {
   const [resultTab, setResultTab] = useState<'details' | 'recommendations'>('details')
-  const [detailReview, setDetailReview] = useState<Review | null>(null)
   const metrics = [
     ...DEFAULT_EVALUATIONS,
     ...QUALITY_EVALUATIONS.filter((metric) => batch.qualityEvaluationIds?.includes(metric.id)),
@@ -98,6 +94,7 @@ export function GhostwriterTestRunReport({ batch, onBack, onAcceptRecommendation
             <thead>
               <tr className="bg-surface-l2">
                 <th className="border-b border-border px-md py-sm text-small text-text-secondary">Review</th>
+                <th className="border-b border-l border-border px-md py-sm text-small text-text-secondary">Status</th>
                 {metrics.map((metric) => (
                   <th key={metric.id} className="border-b border-l border-border px-md py-sm text-small text-text-secondary">
                     {metric.label}
@@ -109,7 +106,7 @@ export function GhostwriterTestRunReport({ batch, onBack, onAcceptRecommendation
               {batch.reviews.map((review) => (
                 <tr
                   key={review.id}
-                  onClick={() => setDetailReview(review)}
+                  onClick={() => onSelectReview(review)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-hover"
                 >
                   <td className="max-w-[360px] px-md py-md align-top">
@@ -118,6 +115,13 @@ export function GhostwriterTestRunReport({ batch, onBack, onAcceptRecommendation
                       <StarRating rating={review.rating} size={14} />
                     </div>
                     <p className="m-0 mt-2xs line-clamp-2 text-small text-text-tertiary">{review.text}</p>
+                  </td>
+                  <td className="border-l border-border px-md py-md align-top">
+                    <Icon
+                      name={reviewPassedInBatch(review, batch) ? 'check_circle' : 'cancel'}
+                      size={16}
+                      className={reviewPassedInBatch(review, batch) ? 'text-accent-positive' : 'text-chip-danger-text'}
+                    />
                   </td>
                   {metrics.map((metric) => (
                     <td key={metric.id} className="border-l border-border px-md py-md align-top text-body text-text-primary">
@@ -138,13 +142,6 @@ export function GhostwriterTestRunReport({ batch, onBack, onAcceptRecommendation
       ) : (
         <p className="m-0 text-body text-text-tertiary">No recommendations — every review in this run passed.</p>
       )}
-
-      <TestReviewDetailModal
-        open={detailReview !== null}
-        review={detailReview}
-        passed={detailReview ? reviewPassedInBatch(detailReview, batch) : true}
-        onClose={() => setDetailReview(null)}
-      />
     </div>
   )
 }

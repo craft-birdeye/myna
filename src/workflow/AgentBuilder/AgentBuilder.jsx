@@ -4814,19 +4814,18 @@ export default function AgentBuilder({
             </div>
           )}
 
+          {testRunLive && <style>{testRunCss}</style>}
+
           {testRunOpen && (
-            <>
-              <style>{testRunCss}</style>
-              <div className="agent-builder__rhs agent-builder__rhs--opening">
-                <TestRunPanel
-                  steps={testRunSteps}
-                  stepStatuses={testRun.stepStatuses}
-                  activeIndex={testRun.activeIndex}
-                  status={testRun.status}
-                  onExit={() => setTestRunOpen(false)}
-                />
-              </div>
-            </>
+            <div className="agent-builder__rhs agent-builder__rhs--opening">
+              <TestRunPanel
+                steps={testRunSteps}
+                stepStatuses={testRun.stepStatuses}
+                activeIndex={testRun.activeIndex}
+                status={testRun.status}
+                onExit={() => setTestRunOpen(false)}
+              />
+            </div>
           )}
 
           {spamGateOpen && (

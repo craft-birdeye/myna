@@ -107,12 +107,14 @@ import {
 import { GhostwriterPlanPanel } from '../components/AgentActivityHeader/GhostwriterPlanPanel'
 import { AgentWorkSequence, type WorkPhase } from '../components/AgentActivityHeader/AgentWorkSequence'
 import { GhostwriterConnectionsTab } from '../components/GhostwriterConnectionsTab/GhostwriterConnectionsTab'
+import { AgentToolsTab } from '../components/AgentToolsTab/AgentToolsTab'
 import { FrontdeskToolsTab } from '../components/FrontdeskToolsTab/FrontdeskToolsTab'
 import { GhostwriterKnowledgeTab } from '../components/GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 import { GhostwriterRunTestModal } from '../components/GhostwriterRunTestModal/GhostwriterRunTestModal'
 import { GhostwriterTestRunPanel } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel'
 import type { TestRunBatch, TestSuite } from '../components/GhostwriterTestRunPanel/GhostwriterTestRunPanel.types'
 import { ALL_REVIEWS } from '../data/reviewsData'
+import { DEFAULT_23SEP_TEST_BATCHES, DEFAULT_23SEP_TEST_SUITES } from '../data/ghostwriterTestRuns'
 import { FrontdeskTestSessionsPanel } from '../components/FrontdeskTestSessionsPanel/FrontdeskTestSessionsPanel'
 import { GhostwriterOpenQuestions } from '../components/AgentActivityHeader/GhostwriterOpenQuestions'
 import { OPEN_QUESTIONS_INTRO, OPEN_QUESTIONS_LOCKED_IN } from '../data/ghostwriterOpenQuestions'
@@ -9633,10 +9635,18 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
    *  last one, so re-running with more test cases keeps the earlier results in view too. */
   const [jayRobinTestModalOpen, setJayRobinTestModalOpen] = useState(false)
   const [jayRobinTestSelectedIds, setJayRobinTestSelectedIds] = useState<string[]>([])
-  const [jayRobinTestBatches, setJayRobinTestBatches] = useState<TestRunBatch[]>([])
+  /** 23 Sep only: starts seeded with 2 dummy runs (`DEFAULT_23SEP_TEST_BATCHES`) instead of
+   *  empty, so the tab reads like an account with a history on first open — Jay & Robin still
+   *  gets the real empty state, since it never reaches `is23SepNav`. */
+  const [jayRobinTestBatches, setJayRobinTestBatches] = useState<TestRunBatch[]>(() =>
+    is23SepNav(navId) && isReviewResponseAgentName(agentName) ? DEFAULT_23SEP_TEST_BATCHES : [],
+  )
   /** 23 Sep only: saved Test suites for the Test tab's Test suite section — lifted here for the
-   *  same reason as `jayRobinTestBatches`, so it survives a trip to another tab and back. */
-  const [jayRobinTestSuites, setJayRobinTestSuites] = useState<TestSuite[]>([])
+   *  same reason as `jayRobinTestBatches`, so it survives a trip to another tab and back.
+   *  Starts seeded with 5 dummy suites (`DEFAULT_23SEP_TEST_SUITES`) for the same reason. */
+  const [jayRobinTestSuites, setJayRobinTestSuites] = useState<TestSuite[]>(() =>
+    is23SepNav(navId) && isReviewResponseAgentName(agentName) ? DEFAULT_23SEP_TEST_SUITES : [],
+  )
   /** 23 Sep only: recommendation text accepted from a failed Test tab review — appended to the
    *  end of the Workflow tab's "Edit with AI" chat (see `ReviewResponseThread`'s matching prop). */
   const [acceptedRecommendations, setAcceptedRecommendations] = useState<string[]>([])
@@ -11230,7 +11240,13 @@ export function AgentDetailScreen({ agentName, navId, onEditAgent, onAgentSetupA
               (createGhostwriterTab === 'simulation' && (isJayRobinPolish || isMynaCombinedNav || ghostwriterSimStarted))) && (
               <div className="absolute inset-0 top-[56px] z-20 flex min-h-0 flex-col overflow-hidden">
                 {createGhostwriterTab === 'tools' ? (
-                  isFrontdeskSep23Polish ? <FrontdeskToolsTab /> : <GhostwriterConnectionsTab />
+                  isFrontdeskSep23Polish ? (
+                    <FrontdeskToolsTab />
+                  ) : isReviewResponse ? (
+                    <AgentToolsTab variant="review" />
+                  ) : (
+                    <GhostwriterConnectionsTab />
+                  )
                 ) : createGhostwriterTab === 'knowledge' ? (
                   <GhostwriterKnowledgeTab />
                 ) : createGhostwriterTab === 'settings' ? (

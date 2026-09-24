@@ -33,6 +33,8 @@ export type {
 } from './GhostwriterSimulation/GhostwriterSimulation.types'
 export { GhostwriterConnectionsTab } from './GhostwriterConnectionsTab/GhostwriterConnectionsTab'
 export { FrontdeskToolsTab } from './FrontdeskToolsTab/FrontdeskToolsTab'
+export { AgentToolsTab } from './AgentToolsTab/AgentToolsTab'
+export type { AgentToolsTabProps, AgentToolsVariant } from './AgentToolsTab/AgentToolsTab.types'
 export { GhostwriterKnowledgeTab } from './GhostwriterKnowledgeTab/GhostwriterKnowledgeTab'
 export { GhostwriterRunTestModal } from './GhostwriterRunTestModal/GhostwriterRunTestModal'
 export { GhostwriterTestRunPanel } from './GhostwriterTestRunPanel/GhostwriterTestRunPanel'

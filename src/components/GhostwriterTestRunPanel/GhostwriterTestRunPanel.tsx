@@ -603,7 +603,9 @@ function TestSuiteEditorPage({
     existingSuite?.conditions ?? [defaultConditionForField('rating')],
   )
   const [uploadedFile, setUploadedFile] = useState<UploadedReviewsFile | null>(null)
-  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiPrompt, setAiPrompt] = useState(
+    'A mix of 1- to 5-star reviews from Google and Facebook about wait time, staff, and billing.',
+  )
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiGenerated, setAiGenerated] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -1091,17 +1093,21 @@ function TestResultBody({
   stepStatuses,
   showReviewerHeader = false,
   passed = true,
+  tabsOnly = false,
 }: {
   review: Review
   status: TestRunStatus
   stepStatuses: ('pending' | 'running' | 'done')[]
   showReviewerHeader?: boolean
   passed?: boolean
+  /** Skip the title row. The finished-run page already shows the review above the canvas. */
+  tabsOnly?: boolean
 }) {
   const [resultTab, setResultTab] = useState<'details' | 'preview'>('details')
 
   return (
     <div className="flex flex-col gap-md">
+      {!tabsOnly && (
       <div className="flex items-center justify-between">
         {showReviewerHeader ? (
           <div>
@@ -1115,6 +1121,7 @@ function TestResultBody({
         )}
         <Chip label={passed ? 'Passed' : 'Failed'} variant={passed ? 'success' : 'danger'} />
       </div>
+      )}
       <Tabs
         tabs={TEST_RESULT_TABS}
         activeTab={resultTab}
@@ -1167,6 +1174,66 @@ function ReviewWorkflowRun({
         <TestResultBody review={review} status={status} stepStatuses={stepStatuses} />
       </div>
     </>
+  )
+}
+
+const COMPLETED_STEP_STATUSES = JAY_ROBIN_TEST_RUN_STEPS.map(() => 'done' as const)
+const COMPLETED_TEST_RUN = {
+  activeNodeId: null,
+  doneNodeIds: JAY_ROBIN_TEST_RUN_STEPS.map((step) => step.nodeId),
+}
+
+/** One review inside a finished test run. The run already happened, so the canvas and the
+ *  Details stepper open on the end state — every node done, nothing replaying. Back returns
+ *  to the test-run report this review was opened from. */
+function CompletedReviewRun({
+  review,
+  passed,
+  centerContent,
+  onBack,
+  className = '',
+}: {
+  review: Review
+  passed: boolean
+  centerContent: GhostwriterTestRunPanelProps['centerContent']
+  onBack: () => void
+  className?: string
+}) {
+  return (
+    <div className={`flex h-full min-h-0 w-full flex-col bg-surface ${className}`}>
+      <div className="flex shrink-0 items-start gap-sm border-b border-border px-lg py-md">
+        <button
+          type="button"
+          aria-label="Back"
+          onClick={onBack}
+          className="flex size-8 shrink-0 items-center justify-center rounded-sm text-text-icon hover:bg-surface-hover"
+        >
+          <Icon name="arrow_back" size={20} />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="m-0 text-h3 text-text-primary">{review.reviewerName}</p>
+          <div className="mt-2xs">
+            <StarRating rating={review.rating} size={16} />
+          </div>
+          <p className="m-0 mt-xs text-body text-text-secondary">{review.text}</p>
+        </div>
+        <Chip label={passed ? 'Passed' : 'Failed'} variant={passed ? 'success' : 'danger'} />
+      </div>
+      <div className="flex min-h-0 flex-1">
+        <div className="relative min-w-0 flex-1">
+          <div className="absolute inset-0">{centerContent(COMPLETED_TEST_RUN)}</div>
+        </div>
+        <aside className="scrollbar-subtle w-[420px] shrink-0 overflow-y-auto border-l border-border bg-surface p-lg">
+          <TestResultBody
+            review={review}
+            status="complete"
+            stepStatuses={COMPLETED_STEP_STATUSES}
+            passed={passed}
+            tabsOnly
+          />
+        </aside>
+      </div>
+    </div>
   )
 }
 
@@ -1382,18 +1449,35 @@ export function GhostwriterTestRunPanel({
    *  instead of the plain-batch `TestBatchReviewsPanel` slide-in; older batches have no
    *  evaluation metrics to show and keep using `openBatch`. */
   const [openRunReport, setOpenRunReport] = useState<TestRunBatch | null>(null)
+  /** A review picked from `GhostwriterTestRunReport`. Replaces the report with the finished
+   *  canvas + RHS until Back. */
+  const [reportReview, setReportReview] = useState<Review | null>(null)
 
   if (layout === 'fullpage') {
     const sectionMeta = TEST_SECTIONS.find((s) => s.id === section) ?? TEST_SECTIONS[0]
+    const showingReview = section === 'cases' && openRunReport !== null && reportReview !== null
 
     return (
-      <div className={`scrollbar-subtle flex h-full min-h-0 w-full flex-col overflow-y-auto bg-surface px-lg py-xl ${className}`}>
-        <div className="flex w-full flex-1 gap-2xl">
+      <div className={`scrollbar-subtle flex h-full min-h-0 w-full flex-col bg-surface px-lg py-xl ${showingReview ? 'overflow-hidden' : 'overflow-y-auto'} ${className}`}>
+        <div className="flex min-h-0 w-full flex-1 gap-2xl">
           <div className="flex w-[200px] shrink-0 flex-col border-r border-border pr-lg">
-            <TestSectionNav active={section} onSelect={setSection} />
+            <TestSectionNav
+              active={section}
+              onSelect={(next) => {
+                setSection(next)
+                setReportReview(null)
+              }}
+            />
           </div>
-          <div className="flex min-w-0 flex-1 flex-col pl-lg">
-            {section === 'cases' ? (
+          <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${showingReview ? '' : 'pl-lg'}`}>
+            {showingReview && openRunReport && reportReview ? (
+              <CompletedReviewRun
+                review={reportReview}
+                passed={reviewPassedInBatch(reportReview, openRunReport)}
+                centerContent={centerContent}
+                onBack={() => setReportReview(null)}
+              />
+            ) : section === 'cases' ? (
               createRunOpen ? (
                 <GhostwriterTestRunEditor
                   key={batches.filter((batch) => batch.runName).length}
@@ -1408,7 +1492,11 @@ export function GhostwriterTestRunPanel({
               ) : openRunReport ? (
                 <GhostwriterTestRunReport
                   batch={openRunReport}
-                  onBack={() => setOpenRunReport(null)}
+                  onBack={() => {
+                    setReportReview(null)
+                    setOpenRunReport(null)
+                  }}
+                  onSelectReview={setReportReview}
                   onAcceptRecommendation={onAcceptRecommendation}
                 />
               ) : (
